@@ -1,9 +1,0 @@
-{
-  "connector": "hyperpg",
-  "supported_suites": [
-    "authorize",
-    "get",
-    "refund",
-    "refund_sync"
-  ]
-}

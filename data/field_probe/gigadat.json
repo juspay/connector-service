@@ -231,7 +231,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"userId\":\"cust_probe_123\",\"site\":\"probe_site\",\"userIp\":\"1.2.3.4\",\"currency\":\"USD\",\"amount\":10.0,\"transactionId\":\"probe_txn_001\",\"type\":\"CPI\",\"sandbox\":false,\"name\":\"John Doe\",\"email\":\"test@example.com\",\"mobile\":\"+14155552671\"}"
+          "body": "{\"userId\":\"cust_probe_123\",\"site\":\"probe_site\",\"userIp\":\"***.4\",\"currency\":\"USD\",\"amount\":10.0,\"transactionId\":\"probe_txn_001\",\"type\":\"CPI\",\"sandbox\":false,\"name\":\"John Doe\",\"email\":\"test@example.com\",\"mobile\":\"+14155552671\"}"
         }
       },
       "Klarna": {

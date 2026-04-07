@@ -387,7 +387,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=UPI&vpa=test%40upi&txn_s2s_flow=2&s2s_client_ip=1.2.3.4&s2s_device_info=web&api_version=2.0&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId&upi_app_name=test%40upi"
+          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=UPI&vpa=test%40upi&txn_s2s_flow=2&s2s_client_ip=***.4&s2s_device_info=web&api_version=2.0&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId&upi_app_name=test%40upi"
         }
       },
       "UpiIntent": {
@@ -424,7 +424,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=INTENT&txn_s2s_flow=2&s2s_client_ip=1.2.3.4&s2s_device_info=web&api_version=2.0&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId"
+          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=INTENT&txn_s2s_flow=2&s2s_client_ip=***.4&s2s_device_info=web&api_version=2.0&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId"
         }
       },
       "UpiQr": {
@@ -461,7 +461,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=INTENT&txn_s2s_flow=2&s2s_client_ip=1.2.3.4&s2s_device_info=web&api_version=2.0&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId"
+          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=INTENT&txn_s2s_flow=2&s2s_client_ip=***.4&s2s_device_info=web&api_version=2.0&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId"
         }
       },
       "WeChatPayQr": {

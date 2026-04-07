@@ -582,7 +582,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"request_id\":\"create_probe_order_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"merchant_order_id\":\"probe_order_001\",\"referrer_data\":{\"type\":\"hyperswitch\",\"version\":\"1.0.0\"},\"order\":null}"
+          "body": "{\"request_id\":\"create_probe_order_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"merchant_order_id\":\"probe_order_001\",\"referrer_data\":{\"type\":\"hyperswitch\",\"version\":\"***\"},\"order\":null}"
         }
       }
     },

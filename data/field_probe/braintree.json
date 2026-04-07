@@ -53,7 +53,7 @@
           },
           "payment_method": {
             "apple_pay_third_party_sdk": {
-              "token": "probe_apple_pay_third_party_token"
+              "token": "probe_appl***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -226,7 +226,7 @@
           },
           "payment_method": {
             "google_pay_third_party_sdk": {
-              "token": "probe_google_pay_third_party_token"
+              "token": "probe_goog***token"
             }
           },
           "capture_method": "AUTOMATIC",

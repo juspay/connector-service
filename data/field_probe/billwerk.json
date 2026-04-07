@@ -232,7 +232,7 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+                "encrypted_data": "eyJ2ZXJzaW***iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
@@ -319,7 +319,7 @@
           },
           "payment_method": {
             "apple_pay_third_party_sdk": {
-              "token": "probe_apple_pay_third_party_token"
+              "token": "probe_appl***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -1135,7 +1135,7 @@
           },
           "payment_method": {
             "google_pay_third_party_sdk": {
-              "token": "probe_google_pay_third_party_token"
+              "token": "probe_goog***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -2286,7 +2286,7 @@
                 "token_data": {
                   "type": "S",
                   "version": "100",
-                  "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
+                  "data": "eyJ***.***.0dXJl"
                 }
               }
             }
@@ -2976,73 +2976,14 @@
     },
     "token_authorize": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_tokenized_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "connector_token": "pm_1AbcXyzStripeTestToken",
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://api.reepay.com/v1/charge",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfa2V5Og==",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"handle\":\"probe_tokenized_txn_001\",\"amount\":1000,\"source\":\"pm_1AbcXyzStripeTestToken\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":null,\"address\":null,\"address2\":null,\"city\":null,\"country\":null,\"first_name\":null,\"last_name\":null},\"metadata\":null,\"settle\":true}"
-        }
+        "status": "error",
+        "error": "Stuck on field: payment_method_token — Missing required field: payment_method_token"
       }
     },
     "token_setup_recurring": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_recurring_payment_id": "probe_tokenized_mandate_001",
-          "amount": {
-            "minor_amount": 0,
-            "currency": "USD"
-          },
-          "connector_token": "pm_1AbcXyzStripeTestToken",
-          "address": {
-            "billing_address": {}
-          },
-          "customer_acceptance": {
-            "acceptance_type": "ONLINE",
-            "accepted_at": 0,
-            "online_mandate_details": {
-              "ip_address": "127.0.0.1",
-              "user_agent": "Mozilla/5.0"
-            }
-          },
-          "setup_mandate_details": {
-            "mandate_type": {
-              "multi_use": {
-                "amount": 0,
-                "currency": "USD"
-              }
-            }
-          },
-          "setup_future_usage": "OFF_SESSION"
-        },
-        "sample": {
-          "url": "https://api.reepay.com/v1/charge",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfa2V5Og==",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"handle\":\"probe_tokenized_mandate_001\",\"amount\":0,\"source\":\"pm_1AbcXyzStripeTestToken\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":null,\"address\":null,\"address2\":null,\"city\":null,\"country\":null,\"first_name\":null,\"last_name\":null},\"settle\":false,\"recurring\":true}"
-        }
+        "status": "error",
+        "error": "Stuck on field: payment_method_token — Missing required field: payment_method_token"
       }
     },
     "tokenize": {

@@ -41,7 +41,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -90,7 +90,7 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+                "encrypted_data": "eyJ2ZXJzaW***iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
@@ -118,7 +118,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -173,7 +173,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -264,7 +264,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -366,7 +366,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -419,7 +419,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -605,7 +605,7 @@
                 "token_data": {
                   "type": "S",
                   "version": "100",
-                  "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
+                  "data": "eyJ***.***.0dXJl"
                 }
               }
             }
@@ -628,7 +628,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -708,7 +708,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -785,7 +785,7 @@
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -839,7 +839,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -879,7 +879,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -922,7 +922,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -970,7 +970,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -994,7 +994,7 @@
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -1024,7 +1024,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -1048,7 +1048,7 @@
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -1110,7 +1110,7 @@
             "content-type": "application/json;charset=utf-8",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "apitest.cybersource.com",
+            "host": "eyJ***.***.com",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"

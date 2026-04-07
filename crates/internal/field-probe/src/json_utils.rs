@@ -105,14 +105,76 @@ pub(crate) fn flatten_oneof_wrappers(value: &serde_json::Value) -> serde_json::V
     }
 }
 
+/// Mask sensitive values in JSON to prevent gitleaks from flagging dummy/test data.
+///
+/// This is a defensive measure to avoid false positives from security scanners that
+/// may flag dummy/test values as potential secrets.
+///
+/// Patterns masked:
+/// - JWT tokens (base64url format with header.payload.signature)
+/// - High-entropy strings that look like API keys
+pub(crate) fn mask_sensitive_values(value: &serde_json::Value) -> serde_json::Value {
+    use regex::Regex;
+    use std::sync::LazyLock;
+
+    // JWT pattern: base64url.base64url.base64url (no padding)
+    static JWT_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$").unwrap());
+
+    // High-entropy API key patterns (long strings of alphanumeric chars)
+    // Matches strings that look like API keys: 20+ chars, mix of upper/lower/digits
+    static API_KEY_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_-]{20,}$").unwrap());
+
+    match value {
+        serde_json::Value::Object(map) => {
+            let mut result = serde_json::Map::new();
+            for (k, v) in map {
+                result.insert(k.clone(), mask_sensitive_values(v));
+            }
+            serde_json::Value::Object(result)
+        }
+        serde_json::Value::Array(arr) => {
+            serde_json::Value::Array(arr.iter().map(mask_sensitive_values).collect())
+        }
+        serde_json::Value::String(s) => {
+            // Mask JWT tokens
+            if JWT_RE.is_match(s) {
+                // Keep first 10 chars and last 5 chars, mask the rest
+                if s.len() > 20 {
+                    let parts: Vec<&str> = s.split('.').collect();
+                    if parts.len() == 3 {
+                        return serde_json::Value::String(format!(
+                            "eyJ***.***.{}",
+                            &parts[2][parts[2].len().saturating_sub(5)..]
+                        ));
+                    }
+                }
+                return serde_json::Value::String("***".to_string());
+            }
+            // Mask high-entropy strings that look like API keys (but not short strings)
+            if s.len() >= 32 && API_KEY_RE.is_match(s) {
+                return serde_json::Value::String(format!(
+                    "{}***{}",
+                    &s[..10.min(s.len())],
+                    &s[s.len().saturating_sub(5)..]
+                ));
+            }
+            serde_json::Value::String(s.clone())
+        }
+        other => other.clone(),
+    }
+}
+
 /// Clean a proto_request for documentation output:
 ///   1. Remove probe-internal keys (connector_feature_data, etc.)
 ///   2. Remove null values and empty arrays
 ///   3. Remove proto3 default enum values (*_UNSPECIFIED / *_UNKNOWN)
 ///   4. Collapse proto3 oneof wrappers
 ///   5. Remove empty objects (e.g. `"billing_address": {}` — artifact of domain-layer gate)
+///   6. Mask sensitive values to prevent gitleaks false positives
 pub(crate) fn clean_proto_request(value: &serde_json::Value) -> serde_json::Value {
-    match value {
+    let cleaned = match value {
         serde_json::Value::Object(map) => {
             let mut result = serde_json::Map::new();
             for (k, v) in map {
@@ -144,5 +206,8 @@ pub(crate) fn clean_proto_request(value: &serde_json::Value) -> serde_json::Valu
             serde_json::Value::Array(arr.iter().map(clean_proto_request).collect())
         }
         other => other.clone(),
-    }
+    };
+
+    // Apply masking to prevent gitleaks false positives
+    mask_sensitive_values(&cleaned)
 }

@@ -26,6 +26,7 @@ tonic = { workspace = true }
 rayon = "1.10"
 toml = "0.8"
 base64 = "0.21"
+regex = "1.11"
 
 [lints]
 workspace = true

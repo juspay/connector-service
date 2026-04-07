@@ -131,7 +131,7 @@
             "idempotency-key": "HS_probe00000000000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":10.0,\"currency\":\"USD\",\"ipAddress\":\"1.2.3.4\",\"cardData\":{\"cardNumber\":\"4111111111111111\",\"cardExpiry\":\"0330\",\"cardCVV\":\"737\"},\"invoice\":{\"invoiceNumber\":\"probe_txn_001\",\"lineItems\":[{\"description\":\"No Description\",\"quantity\":1,\"price\":10.0,\"total\":10.0}]},\"billingAddress\":{\"name\":\"John\",\"street1\":\"123 Main St\",\"postalCode\":\"98101\"}}"
+          "body": "{\"amount\":10.0,\"currency\":\"USD\",\"ipAddress\":\"***.4\",\"cardData\":{\"cardNumber\":\"4111111111111111\",\"cardExpiry\":\"0330\",\"cardCVV\":\"737\"},\"invoice\":{\"invoiceNumber\":\"probe_txn_001\",\"lineItems\":[{\"description\":\"No Description\",\"quantity\":1,\"price\":10.0,\"total\":10.0}]},\"billingAddress\":{\"name\":\"John\",\"street1\":\"123 Main St\",\"postalCode\":\"98101\"}}"
         }
       },
       "CashappQr": {
@@ -444,7 +444,7 @@
             "idempotency-key": "HS_probe00000000000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"preAuthTransactionId\":12345,\"amount\":10.0,\"ipAddress\":\"1.2.3.4\"}"
+          "body": "{\"preAuthTransactionId\":12345,\"amount\":10.0,\"ipAddress\":\"***.4\"}"
         }
       }
     },
@@ -580,7 +580,7 @@
             "idempotency-key": "HS_probe00000000000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":10.0,\"currency\":\"USD\",\"ipAddress\":\"1.2.3.4\",\"cardData\":{\"cardNumber\":\"4111111111111111\",\"cardExpiry\":\"0330\",\"cardCVV\":\"123\"},\"invoice\":{\"invoiceNumber\":\"probe_proxy_txn_001\",\"lineItems\":[{\"description\":\"No Description\",\"quantity\":1,\"price\":10.0,\"total\":10.0}]},\"billingAddress\":{\"name\":\"John\",\"street1\":\"123 Main St\",\"postalCode\":\"98101\"}}"
+          "body": "{\"amount\":10.0,\"currency\":\"USD\",\"ipAddress\":\"***.4\",\"cardData\":{\"cardNumber\":\"4111111111111111\",\"cardExpiry\":\"0330\",\"cardCVV\":\"123\"},\"invoice\":{\"invoiceNumber\":\"probe_proxy_txn_001\",\"lineItems\":[{\"description\":\"No Description\",\"quantity\":1,\"price\":10.0,\"total\":10.0}]},\"billingAddress\":{\"name\":\"John\",\"street1\":\"123 Main St\",\"postalCode\":\"98101\"}}"
         }
       }
     },
@@ -624,7 +624,7 @@
             "idempotency-key": "HS_probe00000000000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":10.0,\"originalTransactionId\":12345,\"ipAddress\":\"1.2.3.4\"}"
+          "body": "{\"amount\":10.0,\"originalTransactionId\":12345,\"ipAddress\":\"***.4\"}"
         }
       }
     },
@@ -708,7 +708,7 @@
             "idempotency-key": "HS_probe00000000000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"cardTransactionId\":12345,\"ipAddress\":\"1.2.3.4\"}"
+          "body": "{\"cardTransactionId\":12345,\"ipAddress\":\"***.4\"}"
         }
       }
     }

@@ -25,7 +25,7 @@
             "eci": "05",
             "cavv": "AAAAAAAAAA==",
             "threeds_server_transaction_id": "probe-3ds-txn-001",
-            "message_version": "2.1.0",
+            "message_version": "***",
             "ds_transaction_id": "probe-ds-txn-001"
           },
           "return_url": "https://example.com/3ds-return",
@@ -512,7 +512,7 @@
             "soapaction": "consultaOperaciones",
             "via": "HyperSwitch"
           },
-          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:web=\"http://webservices.apl02.redsys.es\"><soapenv:Header/><soapenv:Body><web:consultaOperaciones><cadenaXML><![CDATA[<Messages><Version Ds_Version=\"0.0\"><Message><Monitor><Ds_MerchantCode>probe_merchant</Ds_MerchantCode><Ds_Terminal>probe_id</Ds_Terminal><Ds_Order>probe_merchant_txn_001</Ds_Order></Monitor></Message></Version><Signature>cHJvYmVfa2V5OnByb2JlX3NlY3JldA==</Signature><SignatureVersion>HMAC_SHA256_V1</SignatureVersion></Messages>]]></cadenaXML></web:consultaOperaciones></soapenv:Body></soapenv:Envelope>"
+          "body": "<soapenv:Envelope xmlns:soapenv=\"http://***/soap/envelope/\" xmlns:web=\"http://eyJ***.***.edsys.es\"><soapenv:Header/><soapenv:Body><web:consultaOperaciones><cadenaXML><![CDATA[<Messages><Version Ds_Version=\"0.0\"><Message><Monitor><Ds_MerchantCode>probe_merchant</Ds_MerchantCode><Ds_Terminal>probe_id</Ds_Terminal><Ds_Order>probe_merchant_txn_001</Ds_Order></Monitor></Message></Version><Signature>cHJvYmVfa2V5OnByb2JlX3NlY3JldA==</Signature><SignatureVersion>HMAC_SHA256_V1</SignatureVersion></Messages>]]></cadenaXML></web:consultaOperaciones></soapenv:Body></soapenv:Envelope>"
         }
       }
     },
@@ -626,7 +626,7 @@
             "soapaction": "consultaOperaciones",
             "via": "HyperSwitch"
           },
-          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:web=\"http://webservices.apl02.redsys.es\"><soapenv:Header/><soapenv:Body><web:consultaOperaciones><cadenaXML><![CDATA[<Messages><Version Ds_Version=\"0.0\"><Message><Transaction><Ds_MerchantCode>probe_merchant</Ds_MerchantCode><Ds_Terminal>probe_id</Ds_Terminal><Ds_Order>probe_connector_txn_001</Ds_Order><Ds_TransactionType>3</Ds_TransactionType></Transaction></Message></Version><Signature>cHJvYmVfa2V5OnByb2JlX3NlY3JldA==</Signature><SignatureVersion>HMAC_SHA256_V1</SignatureVersion></Messages>]]></cadenaXML></web:consultaOperaciones></soapenv:Body></soapenv:Envelope>"
+          "body": "<soapenv:Envelope xmlns:soapenv=\"http://***/soap/envelope/\" xmlns:web=\"http://eyJ***.***.edsys.es\"><soapenv:Header/><soapenv:Body><web:consultaOperaciones><cadenaXML><![CDATA[<Messages><Version Ds_Version=\"0.0\"><Message><Transaction><Ds_MerchantCode>probe_merchant</Ds_MerchantCode><Ds_Terminal>probe_id</Ds_Terminal><Ds_Order>probe_connector_txn_001</Ds_Order><Ds_TransactionType>3</Ds_TransactionType></Transaction></Message></Version><Signature>cHJvYmVfa2V5OnByb2JlX3NlY3JldA==</Signature><SignatureVersion>HMAC_SHA256_V1</SignatureVersion></Messages>]]></cadenaXML></web:consultaOperaciones></soapenv:Body></soapenv:Envelope>"
         }
       }
     },

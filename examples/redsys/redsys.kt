@@ -100,7 +100,7 @@ fun authenticate(txnId: String) {
             eci = "05"  // Electronic Commerce Indicator (ECI) from 3DS.
             cavv = "AAAAAAAAAA=="  // Cardholder Authentication Verification Value (CAVV).
             threedsServerTransactionId = "probe-3ds-txn-001"  // 3DS Server Transaction ID.
-            messageVersion = "2.1.0"  // 3DS Message Version (e.g., "2.1.0", "2.2.0").
+            messageVersion = "***"  // 3DS Message Version (e.g., "2.1.0", "2.2.0").
             dsTransactionId = "probe-ds-txn-001"  // Directory Server Transaction ID (DS Trans ID).
         }
         returnUrl = "https://example.com/3ds-return"  // URLs for Redirection.

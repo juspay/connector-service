@@ -19,6 +19,8 @@ pub(crate) fn normalize_content(s: &str) -> String {
     result = replace_base64_signatures(&result);
     // 6. Known-random JSON field values (nonce, invoiceNumber, etc.)
     result = replace_json_dynamic_fields(&result);
+    // 7. Mask JWT tokens and high-entropy values (prevent gitleaks false positives)
+    result = mask_sensitive_in_content(&result);
 
     result
 }
@@ -455,6 +457,91 @@ pub(crate) fn normalize_header_value(name: &str, value: String) -> String {
     }
 }
 
+/// Mask sensitive values in headers to prevent gitleaks false positives.
+/// This applies the same masking rules as mask_sensitive_values in json_utils.rs.
+fn mask_header_value(value: &str) -> String {
+    use regex::Regex;
+    use std::sync::LazyLock;
+
+    // JWT pattern: base64url.base64url.base64url (no padding)
+    static JWT_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$").unwrap());
+
+    // High-entropy API key patterns (long strings of alphanumeric chars)
+    static API_KEY_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_-]{20,}$").unwrap());
+
+    // Base64 pattern (long base64 strings)
+    static BASE64_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^[A-Za-z0-9+/=]{32,}$").unwrap());
+
+    // Mask JWT tokens
+    if JWT_RE.is_match(value) {
+        if value.len() > 20 {
+            let parts: Vec<&str> = value.split('.').collect();
+            if parts.len() == 3 {
+                return format!(
+                    "eyJ***.***.{}",
+                    &parts[2][parts[2].len().saturating_sub(5)..]
+                );
+            }
+        }
+        return "***".to_string();
+    }
+
+    // Mask base64-encoded values (looks like encoded secrets)
+    if value.len() >= 32 && BASE64_RE.is_match(value) {
+        return format!(
+            "{}***{}",
+            &value[..10.min(value.len())],
+            &value[value.len().saturating_sub(5)..]
+        );
+    }
+
+    // Mask high-entropy strings that look like API keys
+    if value.len() >= 32 && API_KEY_RE.is_match(value) {
+        return format!(
+            "{}***{}",
+            &value[..10.min(value.len())],
+            &value[value.len().saturating_sub(5)..]
+        );
+    }
+
+    value.to_string()
+}
+
+/// Mask sensitive values in arbitrary content (body strings) to prevent gitleaks false positives.
+/// This applies the same masking rules as mask_header_value but for arbitrary strings.
+fn mask_sensitive_in_content(s: &str) -> String {
+    use regex::Regex;
+    use std::sync::LazyLock;
+
+    // JWT pattern: base64url.base64url.base64url (no padding)
+    static JWT_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+").unwrap());
+
+    let mut result = s.to_string();
+
+    // Replace JWT tokens
+    result = JWT_RE
+        .replace_all(&result, |caps: &regex::Captures<'_>| {
+            let token = caps.get(0).unwrap().as_str();
+            if token.len() > 20 {
+                let parts: Vec<&str> = token.split('.').collect();
+                if parts.len() == 3 {
+                    return format!(
+                        "eyJ***.***.{}",
+                        &parts[2][parts[2].len().saturating_sub(5)..]
+                    );
+                }
+            }
+            "***".to_string()
+        })
+        .to_string();
+
+    result
+}
+
 pub(crate) fn extract_sample(req: &common_utils::request::Request) -> SamplePayload {
     use hyperswitch_masking::ExposeInterface;
     let method = format!("{:?}", req.method);
@@ -463,7 +550,8 @@ pub(crate) fn extract_sample(req: &common_utils::request::Request) -> SamplePayl
         .into_iter()
         .map(|(k, v)| {
             let normalized = normalize_header_value(&k, v);
-            (k, normalized)
+            let masked = mask_header_value(&normalized);
+            (k, masked)
         })
         .collect();
     let body = req.body.as_ref().map(|b| {

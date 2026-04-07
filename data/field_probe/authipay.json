@@ -120,9 +120,9 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
-            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "message-signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -422,9 +422,9 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
-            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "message-signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -498,9 +498,9 @@
           "method": "Get",
           "headers": {
             "api-key": "probe_key",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
-            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "message-signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -556,9 +556,9 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
-            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "message-signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -599,9 +599,9 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
-            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "message-signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -622,9 +622,9 @@
           "method": "Get",
           "headers": {
             "api-key": "probe_key",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
-            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "message-signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -675,9 +675,9 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
-            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "message-signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },

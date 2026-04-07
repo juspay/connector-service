@@ -211,7 +211,7 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+                "encrypted_data": "eyJ2ZXJzaW***iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
@@ -1521,31 +1521,8 @@
     },
     "token_authorize": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_tokenized_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "connector_token": "pm_1AbcXyzStripeTestToken",
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://api.stripe.com/v1/payment_intents",
-          "method": "Post",
-          "headers": {
-            "authorization": "Bearer probe_key",
-            "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
-            "via": "HyperSwitch"
-          },
-          "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_tokenized_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method=pm_1AbcXyzStripeTestToken&capture_method=automatic&expand%5B0%5D=latest_charge"
-        }
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through stripe"
       }
     },
     "token_setup_recurring": {

@@ -1,8 +1,0 @@
-{
-  "connector": "gigadat",
-  "supported_suites": [
-    "authorize",
-    "get",
-    "refund"
-  ]
-}

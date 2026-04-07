@@ -169,7 +169,7 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+                "encrypted_data": "eyJ2ZXJzaW***iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
@@ -331,7 +331,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"brand\":\"bcmc\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"brand\":\"bcmc\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "BcaBankTransfer": {
@@ -409,7 +409,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"bizum\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"bizum\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "Blik": {
@@ -453,7 +453,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"blik\",\"blikCode\":\"777124\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"blik\",\"blikCode\":\"777124\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "Bluecode": {
@@ -598,7 +598,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"737\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"737\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"***.4\"}"
         }
       },
       "CashappQr": {
@@ -734,7 +734,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"eps\",\"issuer\":\"1154\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"eps\",\"issuer\":\"1154\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "FamilyMart": {
@@ -831,7 +831,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"googlepay\",\"googlePayToken\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"googlepay\",\"googlePayToken\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"***.4\"}"
         }
       },
       "GooglePayDecrypted": {
@@ -889,7 +889,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"brand\":\"googlepay\"},\"mpiData\":{\"directoryResponse\":\"Y\",\"authenticationResponse\":\"Y\",\"cavv\":\"AAAAAA==\",\"eci\":\"05\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"brand\":\"googlepay\"},\"mpiData\":{\"directoryResponse\":\"Y\",\"authenticationResponse\":\"Y\",\"cavv\":\"AAAAAA==\",\"eci\":\"05\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"***.4\"}"
         }
       },
       "GooglePayThirdPartySdk": {
@@ -935,7 +935,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"ideal\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"ideal\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "Indomaret": {
@@ -1186,7 +1186,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"onlineBanking_CZ\",\"issuer\":\"cs\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"onlineBanking_CZ\",\"issuer\":\"cs\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "OnlineBankingFinland": {
@@ -1230,7 +1230,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"ebanking_FI\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"ebanking_FI\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "OnlineBankingFpx": {
@@ -1274,7 +1274,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"molpay_ebanking_fpx_MY\",\"issuer\":\"fpxMb2u\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"molpay_ebanking_fpx_MY\",\"issuer\":\"fpxMb2u\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "OnlineBankingPoland": {
@@ -1322,7 +1322,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"onlineBanking_SK\",\"issuer\":\"tatra\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"onlineBanking_SK\",\"issuer\":\"tatra\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "OnlineBankingThailand": {
@@ -1366,7 +1366,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"molpay_ebanking_TH\",\"issuer\":\"molpay_bangkokbank\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"molpay_ebanking_TH\",\"issuer\":\"molpay_bangkokbank\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "OpenBanking": {
@@ -1416,7 +1416,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"paybybank\",\"issuer\":null},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"shopperLocale\":\"en-US\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"paybybank\",\"issuer\":null},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"shopperLocale\":\"en-US\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "Oxxo": {
@@ -1744,7 +1744,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"trustly\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"shopperLocale\":\"en-US\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"trustly\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"***.4\",\"shopperLocale\":\"en-US\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
       },
       "UpiCollect": {
@@ -1987,7 +1987,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"123\"},\"reference\":\"probe_proxy_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"123\"},\"reference\":\"probe_proxy_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"***.4\"}"
         }
       }
     },
@@ -2042,7 +2042,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":0},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"123\"},\"reference\":\"probe_proxy_mandate_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"recurringProcessingModel\":\"UnscheduledCardOnFile\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperReference\":\"DefaultMerchantId_probe_customer_001\",\"storePaymentMethod\":true,\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":0},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"123\"},\"reference\":\"probe_proxy_mandate_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"recurringProcessingModel\":\"UnscheduledCardOnFile\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperReference\":\"DefaultMerchantId_probe_customer_001\",\"storePaymentMethod\":true,\"shopperName\":{},\"shopperIP\":\"***.4\"}"
         }
       }
     },
@@ -2178,7 +2178,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":0},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"737\"},\"reference\":\"probe_mandate_001\",\"returnUrl\":\"https://example.com/mandate-return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"recurringProcessingModel\":\"UnscheduledCardOnFile\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperReference\":\"DefaultMerchantId_cust_probe_123\",\"storePaymentMethod\":true,\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":0},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"737\"},\"reference\":\"probe_mandate_001\",\"returnUrl\":\"https://example.com/mandate-return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"recurringProcessingModel\":\"UnscheduledCardOnFile\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperReference\":\"DefaultMerchantId_cust_probe_123\",\"storePaymentMethod\":true,\"shopperName\":{},\"shopperIP\":\"***.4\"}"
         }
       }
     },

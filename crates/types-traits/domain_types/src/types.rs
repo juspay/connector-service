@@ -11561,10 +11561,6 @@ fn card_proxy_pm(card: grpc_payment_types::CardDetails) -> grpc_payment_types::P
 pub fn tokenized_authorize_to_base(
     v: grpc_payment_types::PaymentServiceTokenAuthorizeRequest,
 ) -> PaymentServiceAuthorizeRequest {
-    // Clone connector_token so we can use it in both payment_method and payment_method_token.
-    // Connectors that handle CardToken via payment_method_data[card][token] (e.g. Stripe) need
-    // the raw token value in resource_common_data.payment_method_token.
-    let connector_token_clone = v.connector_token.clone();
     PaymentServiceAuthorizeRequest {
         merchant_transaction_id: v.merchant_transaction_id,
         amount: v.amount,
@@ -11606,9 +11602,7 @@ pub fn tokenized_authorize_to_base(
         order_category: None,
         order_details: Vec::new(),
         order_tax_amount: None,
-        // Pass connector_token as payment_method_token so connector transformers
-        // (e.g. Stripe) can use it via resource_common_data.payment_method_token.
-        payment_method_token: connector_token_clone,
+        payment_method_token: None,
         redirection_response: None,
         request_extended_authorization: None,
         request_incremental_authorization: None,
@@ -11672,8 +11666,6 @@ impl<
 pub fn tokenized_setup_recurring_to_base(
     v: grpc_payment_types::PaymentServiceTokenSetupRecurringRequest,
 ) -> PaymentServiceSetupRecurringRequest {
-    // Clone connector_token so we can use it in both payment_method and payment_method_token.
-    let connector_token_clone = v.connector_token.clone();
     PaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: v.merchant_recurring_payment_id,
         amount: v.amount,
@@ -11712,9 +11704,7 @@ pub fn tokenized_setup_recurring_to_base(
         order_tax_amount: None,
         payment_channel: None,
         payment_experience: None,
-        // Pass connector_token as payment_method_token so connector transformers
-        // (e.g. Stripe) can use it via resource_common_data.payment_method_token.
-        payment_method_token: connector_token_clone,
+        payment_method_token: None,
         request_extended_authorization: None,
         request_incremental_authorization: false,
         session_token: None,

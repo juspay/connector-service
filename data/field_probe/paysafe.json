@@ -232,7 +232,7 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+                "encrypted_data": "eyJ2ZXJzaW***iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
@@ -319,7 +319,7 @@
           },
           "payment_method": {
             "apple_pay_third_party_sdk": {
-              "token": "probe_apple_pay_third_party_token"
+              "token": "probe_appl***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -1135,7 +1135,7 @@
           },
           "payment_method": {
             "google_pay_third_party_sdk": {
-              "token": "probe_google_pay_third_party_token"
+              "token": "probe_goog***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -2286,7 +2286,7 @@
                 "token_data": {
                   "type": "S",
                   "version": "100",
-                  "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
+                  "data": "eyJ***.***.0dXJl"
                 }
               }
             }
@@ -2904,30 +2904,8 @@
     },
     "token_authorize": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_tokenized_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "connector_token": "pm_1AbcXyzStripeTestToken",
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"merchantRefNum\":\"probe_tokenized_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"pm_1AbcXyzStripeTestToken\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
-        }
+        "status": "error",
+        "error": "Stuck on field: payment_method_token — Missing required field: payment_method_token"
       }
     },
     "token_setup_recurring": {

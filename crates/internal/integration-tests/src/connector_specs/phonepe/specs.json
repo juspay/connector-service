@@ -1,7 +1,0 @@
-{
-  "connector": "phonepe",
-  "supported_suites": [
-    "authorize",
-    "get"
-  ]
-}

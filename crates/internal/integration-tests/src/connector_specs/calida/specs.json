@@ -1,7 +1,0 @@
-{
-  "connector": "calida",
-  "supported_suites": [
-    "authorize",
-    "get"
-  ]
-}

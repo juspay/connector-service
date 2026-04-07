@@ -1,9 +1,0 @@
-{
-  "connector": "volt",
-  "supported_suites": [
-    "authorize",
-    "get",
-    "refund",
-    "server_authentication_token"
-  ]
-}

@@ -300,7 +300,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 "payment_method": {
     "apple_pay": {  # Apple Pay.
         "payment_data": {
-            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string.
+            "encrypted_data": "eyJ2ZXJzaW***iZSJ9"  # Encrypted Apple Pay payment data as string.
         },
         "payment_method": {
             "display_name": "Visa 1111",
@@ -438,7 +438,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
             "token_data": {
                 "type": "S",  # 3DS type.
                 "version": "100",  # 3DS version.
-                "data": {"value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"}  # Token data.
+                "data": {"value": "eyJ***.***.0dXJl"}  # Token data.
             }
         }
     }

@@ -52,7 +52,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -84,7 +84,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -102,7 +102,7 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+                "encrypted_data": "eyJ2ZXJzaW***iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
@@ -126,7 +126,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -147,7 +147,7 @@
           },
           "payment_method": {
             "apple_pay_third_party_sdk": {
-              "token": "probe_apple_pay_third_party_token"
+              "token": "probe_appl***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -164,7 +164,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -224,7 +224,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -274,7 +274,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -306,7 +306,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -399,7 +399,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -420,7 +420,7 @@
           },
           "payment_method": {
             "google_pay_third_party_sdk": {
-              "token": "probe_google_pay_third_party_token"
+              "token": "probe_goog***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -437,7 +437,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -517,7 +517,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -552,7 +552,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -646,7 +646,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -680,7 +680,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -740,7 +740,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -765,7 +765,7 @@
                 "token_data": {
                   "type": "S",
                   "version": "100",
-                  "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
+                  "data": "eyJ***.***.0dXJl"
                 }
               }
             }
@@ -784,7 +784,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -816,7 +816,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -888,7 +888,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -920,7 +920,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -946,7 +946,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -1022,7 +1022,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -1080,7 +1080,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -1123,7 +1123,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -1146,7 +1146,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
@@ -1199,7 +1199,7 @@
             "access_key": "probe_key",
             "content-type": "application/json",
             "salt": "probeSaltVal0001",
-            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "signature": "cHJvYmVfa2***ldA==",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },

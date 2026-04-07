@@ -89,23 +89,6 @@ function _buildRefundGetRequest(): RefundServiceGetRequest {
     };
 }
 
-function _buildTokenAuthorizeRequest(): PaymentServiceTokenAuthorizeRequest {
-    return {
-        "merchantTransactionId": "probe_tokenized_txn_001",
-        "amount": {
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        },
-        "connectorToken": {"value": "pm_1AbcXyzStripeTestToken"},  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
-        "address": {
-            "billingAddress": {
-            }
-        },
-        "captureMethod": CaptureMethod.AUTOMATIC,
-        "returnUrl": "https://example.com/return"
-    };
-}
-
 function _buildTokenizeRequest(): PaymentMethodServiceTokenizeRequest {
     return {
         "amount": {  // Payment Information.
@@ -302,15 +285,6 @@ async function refundGet(merchantTransactionId: string, config: ConnectorConfig 
     return { status: refundResponse.status };
 }
 
-// Flow: PaymentService.TokenAuthorize
-async function tokenAuthorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceAuthorizeResponse> {
-    const paymentClient = new PaymentClient(config);
-
-    const tokenResponse = await paymentClient.tokenAuthorize(_buildTokenAuthorizeRequest());
-
-    return { status: tokenResponse.status };
-}
-
 // Flow: PaymentMethodService.Tokenize
 async function tokenize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentMethodServiceTokenizeResponse> {
     const paymentMethodClient = new PaymentMethodClient(config);
@@ -332,7 +306,7 @@ async function voidPayment(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, refund, refundGet, tokenAuthorize, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenAuthorizeRequest, _buildTokenizeRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, refund, refundGet, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenizeRequest, _buildVoidRequest
 };
 
 // CLI runner

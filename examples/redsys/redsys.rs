@@ -46,7 +46,7 @@ pub fn build_authenticate_request() -> PaymentMethodAuthenticationServiceAuthent
         "eci": "05",  // Electronic Commerce Indicator (ECI) from 3DS.
         "cavv": "AAAAAAAAAA==",  // Cardholder Authentication Verification Value (CAVV).
         "threeds_server_transaction_id": "probe-3ds-txn-001",  // 3DS Server Transaction ID.
-        "message_version": "2.1.0",  // 3DS Message Version (e.g., "2.1.0", "2.2.0").
+        "message_version": "***",  // 3DS Message Version (e.g., "2.1.0", "2.2.0").
         "ds_transaction_id": "probe-ds-txn-001",  // Directory Server Transaction ID (DS Trans ID).
     },
     "return_url": "https://example.com/3ds-return",  // URLs for Redirection.

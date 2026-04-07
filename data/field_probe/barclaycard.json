@@ -134,7 +134,7 @@
             "content-type": "application/json",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "api.smartpayfuse-test.barclaycard",
+            "host": "eyJ***.***.ycard",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -438,7 +438,7 @@
             "content-type": "application/json",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "api.smartpayfuse-test.barclaycard",
+            "host": "eyJ***.***.ycard",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -515,7 +515,7 @@
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json",
             "date": "2020-01-01T00:00:00+00:00",
-            "host": "api.smartpayfuse-test.barclaycard",
+            "host": "eyJ***.***.ycard",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -586,7 +586,7 @@
             "content-type": "application/json",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "api.smartpayfuse-test.barclaycard",
+            "host": "eyJ***.***.ycard",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -631,7 +631,7 @@
             "content-type": "application/json",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "api.smartpayfuse-test.barclaycard",
+            "host": "eyJ***.***.ycard",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -655,7 +655,7 @@
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json",
             "date": "2020-01-01T00:00:00+00:00",
-            "host": "api.smartpayfuse-test.barclaycard",
+            "host": "eyJ***.***.ycard",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
@@ -715,7 +715,7 @@
             "content-type": "application/json",
             "date": "2020-01-01T00:00:00+00:00",
             "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "api.smartpayfuse-test.barclaycard",
+            "host": "eyJ***.***.ycard",
             "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"

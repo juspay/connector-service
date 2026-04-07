@@ -303,7 +303,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 "payment_method": {
     "apple_pay": {  # Apple Pay.
         "payment_data": {
-            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string.
+            "encrypted_data": "eyJ2ZXJzaW***iZSJ9"  # Encrypted Apple Pay payment data as string.
         },
         "payment_method": {
             "display_name": "Visa 1111",

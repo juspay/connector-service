@@ -130,7 +130,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"probe_order_001\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"737\"},\"authentication\":{\"authentication_channel\":\"app\"},\"browser\":null,\"ip\":\"127.0.0.1\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0\"}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"probe_order_001\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"737\"},\"authentication\":{\"authentication_channel\":\"app\"},\"browser\":null,\"ip\":\"***.1\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0\"}"
         }
       },
       "CashappQr": {
@@ -419,7 +419,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "currency=USD&amount=1000&order_id=probe_order_001&method=upi&vpa=test%40upi&callback_url=https%3A%2F%2Fexample.com%2Freturn&ip=127.0.0.1&referer=https%3A%2F%2Fexample.com&user_agent=Mozilla%2F5.0&description="
+          "body": "currency=USD&amount=1000&order_id=probe_order_001&method=upi&vpa=test%40upi&callback_url=https%3A%2F%2Fexample.com%2Freturn&ip=***.1&referer=https%3A%2F%2Fexample.com&user_agent=Mozilla%2F5.0&description="
         }
       },
       "UpiIntent": {
@@ -450,7 +450,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "currency=USD&amount=1000&order_id=probe_order_001&method=upi&callback_url=https%3A%2F%2Fexample.com%2Freturn&ip=127.0.0.1&referer=https%3A%2F%2Fexample.com&user_agent=Mozilla%2F5.0&description=&flow=intent"
+          "body": "currency=USD&amount=1000&order_id=probe_order_001&method=upi&callback_url=https%3A%2F%2Fexample.com%2Freturn&ip=***.1&referer=https%3A%2F%2Fexample.com&user_agent=Mozilla%2F5.0&description=&flow=intent"
         }
       },
       "UpiQr": {
@@ -481,7 +481,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "currency=USD&amount=1000&order_id=probe_order_001&method=upi&callback_url=https%3A%2F%2Fexample.com%2Freturn&ip=127.0.0.1&referer=https%3A%2F%2Fexample.com&user_agent=Mozilla%2F5.0&description=&flow=intent"
+          "body": "currency=USD&amount=1000&order_id=probe_order_001&method=upi&callback_url=https%3A%2F%2Fexample.com%2Freturn&ip=***.1&referer=https%3A%2F%2Fexample.com&user_agent=Mozilla%2F5.0&description=&flow=intent"
         }
       },
       "WeChatPayQr": {
@@ -665,7 +665,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"probe_order_001\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"123\"},\"authentication\":{\"authentication_channel\":\"app\"},\"browser\":null,\"ip\":\"127.0.0.1\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0\"}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"probe_order_001\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"123\"},\"authentication\":{\"authentication_channel\":\"app\"},\"browser\":null,\"ip\":\"***.1\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0\"}"
         }
       }
     },

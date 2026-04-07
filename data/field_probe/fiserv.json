@@ -121,8 +121,8 @@
           "headers": {
             "api-key": "probe_key",
             "auth-token-type": "HMAC",
-            "authorization": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "authorization": "cHJvYmVfa2***ldA==",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
@@ -424,8 +424,8 @@
           "headers": {
             "api-key": "probe_key",
             "auth-token-type": "HMAC",
-            "authorization": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "authorization": "cHJvYmVfa2***ldA==",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
@@ -501,8 +501,8 @@
           "headers": {
             "api-key": "probe_key",
             "auth-token-type": "HMAC",
-            "authorization": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "authorization": "cHJvYmVfa2***ldA==",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
@@ -560,8 +560,8 @@
           "headers": {
             "api-key": "probe_key",
             "auth-token-type": "HMAC",
-            "authorization": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "authorization": "cHJvYmVfa2***ldA==",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
@@ -604,8 +604,8 @@
           "headers": {
             "api-key": "probe_key",
             "auth-token-type": "HMAC",
-            "authorization": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "authorization": "cHJvYmVfa2***ldA==",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
@@ -628,8 +628,8 @@
           "headers": {
             "api-key": "probe_key",
             "auth-token-type": "HMAC",
-            "authorization": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "authorization": "cHJvYmVfa2***ldA==",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
             "timestamp": "0000000000",
             "via": "HyperSwitch"
@@ -682,8 +682,8 @@
           "headers": {
             "api-key": "probe_key",
             "auth-token-type": "HMAC",
-            "authorization": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "authorization": "cHJvYmVfa2***ldA==",
+            "client-request-id": "00000000-0***00000",
             "content-type": "application/json",
             "timestamp": "0000000000",
             "via": "HyperSwitch"

@@ -1,9 +1,0 @@
-{
-  "connector": "multisafepay",
-  "supported_suites": [
-    "authorize",
-    "refund",
-    "get",
-    "refund_sync"
-  ]
-}

@@ -1,7 +1,0 @@
-{
-  "connector": "payu",
-  "supported_suites": [
-    "authorize",
-    "get"
-  ]
-}

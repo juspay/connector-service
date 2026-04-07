@@ -232,7 +232,7 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+                "encrypted_data": "eyJ2ZXJzaW***iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
@@ -319,7 +319,7 @@
           },
           "payment_method": {
             "apple_pay_third_party_sdk": {
-              "token": "probe_apple_pay_third_party_token"
+              "token": "probe_appl***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -1135,7 +1135,7 @@
           },
           "payment_method": {
             "google_pay_third_party_sdk": {
-              "token": "probe_google_pay_third_party_token"
+              "token": "probe_goog***token"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -2286,7 +2286,7 @@
                 "token_data": {
                   "type": "S",
                   "version": "100",
-                  "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
+                  "data": "eyJ***.***.0dXJl"
                 }
               }
             }
