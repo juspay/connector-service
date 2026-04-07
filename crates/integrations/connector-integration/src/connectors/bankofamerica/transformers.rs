@@ -20,7 +20,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_address::Address,
     payment_method_data::{
         self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -780,7 +780,7 @@ impl From<BankOfAmericaRefundResponse> for common_enums::RefundStatus {
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BankOfAmericaRefundResponse, Self>,
@@ -840,7 +840,7 @@ pub struct BankOfAmericaRsyncResponse {
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaRsyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BankOfAmericaRsyncResponse, Self>,
@@ -921,7 +921,7 @@ pub type BankOfAmericaRsyncResponseForRSync = BankOfAmericaRsyncResponse;
 impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponseForCapture, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BankofamericaPaymentsResponseForCapture, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1607,7 +1607,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
@@ -2012,7 +2012,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2109,7 +2109,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2190,7 +2190,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2214,7 +2214,7 @@ impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
 impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BankOfAmericaTransactionResponse, Self>,
     ) -> Result<Self, Self::Error> {

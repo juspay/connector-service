@@ -16,7 +16,7 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{
         ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
@@ -336,7 +336,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BillwerkTokenResponse
         PaymentMethodTokenResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BillwerkTokenResponse, Self>,
@@ -353,7 +353,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BillwerkTokenResponse
 impl<F, T> TryFrom<ResponseRouterData<BillwerkPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BillwerkPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -498,7 +498,7 @@ impl From<RefundState> for common_enums::RefundStatus {
 impl<F> TryFrom<RefundsResponseRouterData<F, RefundResponse>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: RefundsResponseRouterData<F, RefundResponse>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
@@ -514,7 +514,7 @@ impl<F> TryFrom<RefundsResponseRouterData<F, RefundResponse>>
 impl TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {

@@ -740,6 +740,7 @@ enum Connector {
   PEACHPAYMENTS = 112;
   PPRO = 113;
   FISERVCOMMERCEHUB = 114;
+  TRUSTLY = 115;
 }
 
 // Payment method types
@@ -822,7 +823,7 @@ enum PaymentMethodType {
   SOFORT = 75;
   SWISH = 76;
   TOUCH_N_GO = 77;
-  TRUSTLY = 78;
+  TRUSTLY_BANK_REDIRECT = 78;
   TWINT = 79;
   UPI_COLLECT = 80;
   UPI_INTENT = 81;
@@ -3870,6 +3871,13 @@ message PaypalConfig {
   optional string base_url = 50;
 }
 
+message TrustlyConfig {
+  SecretString username = 1;
+  SecretString password = 2;
+  SecretString private_key = 3;
+  optional string base_url = 50;
+}
+
 message TruelayerConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
@@ -4119,6 +4127,9 @@ message ConnectorSpecificConfig {
 
     // PPRO = 113
     PproConfig ppro = 114;
+
+    // TRUSTLY = 116
+    TrustlyConfig trustly = 115;
   }
 }
 
@@ -4203,6 +4214,9 @@ message PaymentServiceProxyAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 21;
   optional string merchant_order_id = 22;
   optional bool test_mode = 23;
+  // Order Details
+  optional string order_category = 24; // Category of the order/service
+  optional string description = 25; // Description of the transaction
 }
 
 message PaymentServiceProxySetupRecurringRequest {
@@ -4222,4 +4236,7 @@ message PaymentServiceProxySetupRecurringRequest {
   optional AuthenticationData authentication_data = 13;
   optional FutureUsage setup_future_usage = 14;
   optional BrowserInformation browser_info = 15;
+  // Order Details
+  optional string order_category = 16; // Category of the order/service
+  optional string description = 17; // Description of the mandate setup
 }

@@ -1,7 +1,7 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::consts;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},
@@ -1136,7 +1136,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
@@ -1212,7 +1212,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
         PaymentsResponseData,
     >
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
@@ -1272,7 +1272,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
@@ -1325,7 +1325,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
@@ -1384,7 +1384,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
         PaymentsResponseData,
     >
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
@@ -1468,7 +1468,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
 impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
@@ -1509,7 +1509,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<WellsfargoRSyncResponse, Self>,

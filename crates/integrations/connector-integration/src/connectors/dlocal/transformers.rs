@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -498,7 +498,7 @@ pub struct DlocalPaymentsResponse {
 impl<F, T> TryFrom<ResponseRouterData<DlocalPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<DlocalPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -541,7 +541,7 @@ pub struct DlocalPaymentsSyncResponse {
 impl<F> TryFrom<ResponseRouterData<DlocalPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<DlocalPaymentsSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -575,7 +575,7 @@ pub struct DlocalPaymentsCaptureResponse {
 impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<DlocalPaymentsCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -607,7 +607,7 @@ pub struct DlocalPaymentsCancelResponse {
 impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCancelResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<DlocalPaymentsCancelResponse, Self>,
@@ -697,7 +697,7 @@ pub struct RefundResponse {
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = common_enums::RefundStatus::from(item.response.status);
         Ok(Self {
@@ -714,7 +714,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = common_enums::RefundStatus::from(item.response.status);
         Ok(Self {

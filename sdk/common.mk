@@ -50,13 +50,21 @@ endif
 # Build profile (release or debug)
 PROFILE ?= release-fast
 
+# Cargo uses 'debug' as the output directory name for the built-in 'dev' profile.
+# All other profiles (release, release-fast, custom) use their name as the directory.
+ifeq ($(PROFILE),dev)
+  _PROFILE_DIR := debug
+else
+  _PROFILE_DIR := $(PROFILE)
+endif
+
 # Pre-built FFI library for the current platform (output of build-ffi-lib).
-LIBRARY          := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libconnector_service_ffi.$(LIB_EXT)
+LIBRARY          := $(REPO_ROOT)/target/$(PLATFORM)/$(_PROFILE_DIR)/libconnector_service_ffi.$(LIB_EXT)
 # Pre-built gRPC FFI library (output of build-grpc-ffi-lib).
-GRPC_FFI_LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/libhyperswitch_grpc_ffi.$(LIB_EXT)
+GRPC_FFI_LIBRARY := $(REPO_ROOT)/target/$(PLATFORM)/$(_PROFILE_DIR)/libhyperswitch_grpc_ffi.$(LIB_EXT)
 
 # UniFFI bindgen binary path (used by Python/Java for code generation)
-BINDGEN := $(REPO_ROOT)/target/$(PLATFORM)/$(PROFILE)/uniffi-bindgen
+BINDGEN := $(REPO_ROOT)/target/$(PLATFORM)/$(_PROFILE_DIR)/uniffi-bindgen
 
 # ---------------------------------------------------------------------------
 # build-ffi-lib

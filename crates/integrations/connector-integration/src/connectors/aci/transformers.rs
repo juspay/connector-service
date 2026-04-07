@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{
         BankRedirectData, Card, NetworkTokenData, PayLaterData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -1245,7 +1245,7 @@ fn map_aci_attempt_status(
 }
 
 impl FromStr for AciPaymentStatus {
-    type Err = error_stack::Report<ConnectorResponseTransformationError>;
+    type Err = error_stack::Report<ConnectorError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1255,8 +1255,7 @@ impl FromStr for AciPaymentStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
-                ),
+                ConnectorError::unexpected_response_error_http_status_unknown(),
             )
             .attach_printable(s.to_owned()))
         }
@@ -1327,7 +1326,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AciPaymentsResponse, Self>>
 where
     Req: GetCaptureMethod,
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<AciPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let redirection_data = item.response.redirect.map(|data| {
             let mut form_fields = std::collections::HashMap::<_, _>::from_iter(
@@ -1506,7 +1505,7 @@ pub enum AciStatus {
 }
 
 impl FromStr for AciStatus {
-    type Err = error_stack::Report<ConnectorResponseTransformationError>;
+    type Err = error_stack::Report<ConnectorError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1516,8 +1515,7 @@ impl FromStr for AciStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
-                ),
+                ConnectorError::unexpected_response_error_http_status_unknown(),
             )
             .attach_printable(s.to_owned()))
         }
@@ -1535,7 +1533,7 @@ fn map_aci_capture_status(item: AciStatus) -> common_enums::AttemptStatus {
 impl<F, T> TryFrom<ResponseRouterData<AciCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<AciCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let status = map_aci_capture_status(AciStatus::from_str(&item.response.result.code)?);
         let response = if status == common_enums::AttemptStatus::Failure {
@@ -1600,7 +1598,7 @@ fn map_aci_void_status(item: AciStatus) -> common_enums::AttemptStatus {
 impl<F, T> TryFrom<ResponseRouterData<AciVoidResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<AciVoidResponse, Self>) -> Result<Self, Self::Error> {
         let status = map_aci_void_status(AciStatus::from_str(&item.response.result.code)?);
         let response = if status == common_enums::AttemptStatus::Failure {
@@ -1689,7 +1687,7 @@ pub enum AciRefundStatus {
 }
 
 impl FromStr for AciRefundStatus {
-    type Err = error_stack::Report<ConnectorResponseTransformationError>;
+    type Err = error_stack::Report<ConnectorError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if FAILURE_CODES.contains(&s) {
             Ok(Self::Failed)
@@ -1699,8 +1697,7 @@ impl FromStr for AciRefundStatus {
             Ok(Self::Succeeded)
         } else {
             Err(error_stack::Report::from(
-                ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown(
-                ),
+                ConnectorError::unexpected_response_error_http_status_unknown(),
             )
             .attach_printable(s.to_owned()))
         }
@@ -1731,7 +1728,7 @@ pub struct AciRefundResponse {
 impl<F> TryFrom<ResponseRouterData<AciRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<AciRefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = common_enums::RefundStatus::from(AciRefundStatus::from_str(
@@ -1767,7 +1764,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<AciMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<AciMandateResponse, Self>) -> Result<Self, Self::Error> {
         let mandate_reference = Some(MandateReference {
             connector_mandate_id: Some(item.response.id.clone()),
