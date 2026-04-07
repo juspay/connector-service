@@ -11284,9 +11284,15 @@ impl ForeignTryFrom<RecurringPaymentServiceRevokeRequest> for MandateRevokeReque
     fn foreign_try_from(
         value: RecurringPaymentServiceRevokeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let mandate_reference_id = value.connector_mandate_id.map(|id| {
+            MandateReferenceId::ConnectorMandateId(
+                connector_types::ConnectorMandateReferenceId::new(Some(id), None, None, None, None),
+            )
+        });
+
         Ok(Self {
             mandate_id: Secret::new(value.mandate_id),
-            connector_mandate_id: value.connector_mandate_id.map(Secret::new),
+            mandate_reference_id,
             payment_method_type: None,
         })
     }

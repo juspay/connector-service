@@ -1721,7 +1721,7 @@ pub struct ConnectorCustomerResponse {
 #[derive(Debug, Clone)]
 pub struct MandateRevokeRequestData {
     pub mandate_id: Secret<String>,
-    pub connector_mandate_id: Option<Secret<String>>,
+    pub mandate_reference_id: Option<MandateReferenceId>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 

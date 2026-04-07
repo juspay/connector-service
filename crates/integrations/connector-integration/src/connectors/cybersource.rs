@@ -1090,15 +1090,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             MandateRevokeResponseData,
         >,
     ) -> CustomResult<String, IntegrationError> {
-        let connector_mandate_id = req
-            .request
-            .connector_mandate_id
-            .clone()
-            .ok_or_else(utils::missing_field_err("connector_mandate_id"))?;
+        let connector_mandate_id = match &req.request.mandate_reference_id {
+            Some(domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
+                connector_mandate_ref,
+            )) => connector_mandate_ref
+                .get_connector_mandate_id()
+                .ok_or_else(utils::missing_field_err("connector_mandate_id"))?,
+            _ => return Err(utils::missing_field_err("mandate_reference_id")()),
+        };
         Ok(format!(
             "{}tms/v1/paymentinstruments/{}",
             self.connector_base_url_payments(req),
-            connector_mandate_id.expose(),
+            connector_mandate_id,
         ))
     }
     fn get_request_body(

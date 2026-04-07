@@ -27,7 +27,7 @@ use domain_types::{
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, MandateReferenceId,
         MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
@@ -1421,8 +1421,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<String, IntegrationError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
         let customer_id = req.request.mandate_id.peek();
-        let token_id =
-            crate::utils::get_connector_mandate_id_as_string(&req.request.connector_mandate_id)?;
+        let token_id = match &req.request.mandate_reference_id {
+            Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ref)) => {
+                connector_mandate_ref.get_connector_mandate_id().ok_or(
+                    IntegrationError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                        context: Default::default(),
+                    },
+                )?
+            }
+            _ => {
+                return Err(IntegrationError::MissingRequiredField {
+                    field_name: "mandate_reference_id",
+                    context: Default::default(),
+                }
+                .into())
+            }
+        };
         Ok(format!(
             "{base_url}v1/customers/{customer_id}/tokens/{token_id}"
         ))
