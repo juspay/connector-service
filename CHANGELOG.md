@@ -19,6 +19,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.07.0
+
+### Refactors
+
+- **docs:**
+  - Remove services.desc and manifest.json from docs generation ([#940](https://github.com/juspay/connector-service/pull/940)) ([`33dc492`](https://github.com/juspay/connector-service/commit/33dc492a44d6843c7cda24771d356a6549499f55))
+  - Auto update docs in CI check itself ([#942](https://github.com/juspay/connector-service/pull/942)) ([`b492c3f`](https://github.com/juspay/connector-service/commit/b492c3ff559d9f2b99ad69fa1f68b124498425bc))
+
+### Miscellaneous Tasks
+
+- Add publish command ([#945](https://github.com/juspay/connector-service/pull/945)) ([`8a77eaa`](https://github.com/juspay/connector-service/commit/8a77eaae9e0232aeacf1b8d2dc0a059619829927))
+- Resolve manual docs ([#935](https://github.com/juspay/connector-service/pull/935)) ([`9840d0f`](https://github.com/juspay/connector-service/commit/9840d0f819284015f3aa94e996c396add0dee31d))
+
+**Full Changelog:** [`2026.04.06.1...2026.04.07.0`](https://github.com/juspay/connector-service/compare/2026.04.06.1...2026.04.07.0)
+
+- - -
+
+## 2026.04.06.1
+
+### Features
+
+- **connector:** [Trustly] Implement Trustly flows ([#752](https://github.com/juspay/connector-service/pull/752)) ([`981a52b`](https://github.com/juspay/connector-service/commit/981a52bd3c64b38d5df56d303a4611b01ce46099))
+- Stripe pm token ([#776](https://github.com/juspay/connector-service/pull/776)) ([`447a3b7`](https://github.com/juspay/connector-service/commit/447a3b713135e9ae7b72abf02062eda26cf78e21))
+- Rename connectortransformationerror to connectorerror and connector 4xx and 5xx as connectorerror exception in sdk ([#928](https://github.com/juspay/connector-service/pull/928)) ([`93cab32`](https://github.com/juspay/connector-service/commit/93cab32440bb2fabebecb26c04e5944f632529b5))
+
+### Bug Fixes
+
+- Avoid panic when kafka is not available during start up with event enabled config set ([#887](https://github.com/juspay/connector-service/pull/887)) ([`41a7c5a`](https://github.com/juspay/connector-service/commit/41a7c5a2970eec7e3dc271d19afbf461a96fa99b))
+- Authorize error inconsistency and remove ApplicationErrorResponse ([#892](https://github.com/juspay/connector-service/pull/892)) ([`bdb8635`](https://github.com/juspay/connector-service/commit/bdb8635d4707700c2f4bfcc716583fca9922deaf))
+
+### Refactors
+
+- **client:** Refactor rust connector client ([#939](https://github.com/juspay/connector-service/pull/939)) ([`6edb68c`](https://github.com/juspay/connector-service/commit/6edb68c141d67082f4c64ec8ef1c2e65219f2d21))
+- **docs:** Update all_connector.md for newly added flows ([#929](https://github.com/juspay/connector-service/pull/929)) ([`64bdb09`](https://github.com/juspay/connector-service/commit/64bdb092221484c91baca470bd60ddb1873d9ea3))
+
+### Documentation
+
+- Clarify first-payment non-PCI client auth flow ([#938](https://github.com/juspay/connector-service/pull/938)) ([`870337e`](https://github.com/juspay/connector-service/commit/870337ebb78fefb22999036f1ae92d8575ea4c57))
+
+**Full Changelog:** [`2026.04.06.0...2026.04.06.1`](https://github.com/juspay/connector-service/compare/2026.04.06.0...2026.04.06.1)
+
+- - -
+
 ## 2026.04.06.0
 
 ### Features
