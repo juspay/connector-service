@@ -1555,6 +1555,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     PaytmClientAuthenticationResponse paytm = 21;
     MifinityClientAuthenticationResponse mifinity = 22;
     RedsysClientAuthenticationResponse redsys = 23;
+    JpmorganClientAuthenticationResponse jpmorgan = 24;
   }
 }
 
@@ -1579,6 +1580,14 @@ message RedsysClientAuthenticationResponse {
   SecretString signature = 2;
   // Signature version identifier (e.g., "HMAC_SHA256_V1")
   string signature_version = 3;
+}
+
+// Jpmorgan SDK initialization data — transaction_id for client-side payment session
+message JpmorganClientAuthenticationResponse {
+  // The transaction ID that serves as the client authentication token
+  string transaction_id = 1;
+  // The request ID for tracking purposes
+  string request_id = 2;
 }
 
 // Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK

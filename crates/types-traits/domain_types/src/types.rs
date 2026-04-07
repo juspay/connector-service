@@ -9984,6 +9984,18 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Jpmorgan(jpmorgan_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Jpmorgan(
+                        grpc_api_types::payments::JpmorganClientAuthenticationResponse {
+                            transaction_id: jpmorgan_data.transaction_id,
+                            request_id: jpmorgan_data.request_id,
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(
