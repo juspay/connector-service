@@ -3446,6 +3446,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Bluesnap(BluesnapClientAuthenticationResponse),
     /// Rapyd SDK initialization data — checkout_id and redirect_url for client-side checkout
     Rapyd(RapydClientAuthenticationResponse),
+    /// Shift4 SDK initialization data — signature token for Checkout Form initialization
+    Shift4(Shift4ClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3522,6 +3524,13 @@ pub struct RapydClientAuthenticationResponse {
     pub checkout_id: String,
     /// The redirect URL for the client-side checkout experience
     pub redirect_url: String,
+}
+
+/// Shift4's client_secret for client-side Checkout Session initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Shift4ClientAuthenticationResponse {
+    /// The client secret for Shift4 Checkout Session SDK initialization
+    pub client_secret: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

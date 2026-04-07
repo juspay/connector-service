@@ -3,13 +3,16 @@ use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii, request::Method, types::MinorUnit};
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment,
+        Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer, PSync, RSync,
+        Refund, RepeatPayment,
     },
     connector_types::{
-        ConnectorCustomerData, ConnectorCustomerResponse, MandateReferenceId, PaymentFlowData,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorCustomerData, ConnectorCustomerResponse,
+        ConnectorSpecificClientAuthenticationResponse, MandateReferenceId, PaymentFlowData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId,
+        ResponseId, Shift4ClientAuthenticationResponse as Shift4ClientAuthenticationResponseDomain,
     },
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
@@ -1028,6 +1031,114 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4RepeatPaymentRe
                 status,
                 ..item.router_data.resource_common_data
             },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== CLIENT AUTHENTICATION TOKEN FLOW STRUCTURES =====
+
+/// Shift4 Checkout Session Request — creates a checkout session for client-side SDK initialization.
+/// The response contains a `clientSecret` used by the Shift4 Checkout Session SDK.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4ClientAuthRequest {
+    pub line_items: Vec<Shift4LineItem>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4LineItem {
+    pub product: Shift4InlineProduct,
+    pub quantity: i64,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4InlineProduct {
+    pub name: String,
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        Shift4RouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for Shift4ClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: Shift4RouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        Ok(Self {
+            line_items: vec![Shift4LineItem {
+                product: Shift4InlineProduct {
+                    name: "Payment".to_string(),
+                    amount: router_data.request.amount,
+                    currency: router_data.request.currency,
+                },
+                quantity: 1,
+            }],
+        })
+    }
+}
+
+/// Shift4 Checkout Session Response — contains the clientSecret for SDK initialization.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shift4ClientAuthResponse {
+    pub client_secret: Secret<String>,
+}
+
+impl TryFrom<ResponseRouterData<Shift4ClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<Shift4ClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Shift4(
+                Shift4ClientAuthenticationResponseDomain {
+                    client_secret: response.client_secret,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
             ..item.router_data
         })
     }

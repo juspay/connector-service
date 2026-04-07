@@ -1541,6 +1541,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     GlobalpayClientAuthenticationResponse globalpay = 7;
     BluesnapClientAuthenticationResponse bluesnap = 8;
     RapydClientAuthenticationResponse rapyd = 9;
+    Shift4ClientAuthenticationResponse shift4 = 10;
   }
 }
 
@@ -1566,6 +1567,11 @@ message BluesnapClientAuthenticationResponse {
 message RapydClientAuthenticationResponse {
   string checkout_id = 1;
   string redirect_url = 2;
+}
+
+// Shift4 SDK initialization data — client_secret for client-side Checkout Session
+message Shift4ClientAuthenticationResponse {
+  SecretString client_secret = 1;
 }
 
 // Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
