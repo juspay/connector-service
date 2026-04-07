@@ -1,0 +1,15 @@
+{
+  "submit_dispute_evidence": {
+    "grpc_req": {
+      "dispute_id": "auto_generate",
+      "connector_dispute_id": "auto_generate"
+    },
+    "assert": {
+      "error": {
+        "must_not_exist": true
+      }
+    },
+    "is_default": true,
+    "display_name": "Submit Dispute Evidence"
+  }
+}

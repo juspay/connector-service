@@ -1,0 +1,16 @@
+{
+  "defend_dispute": {
+    "grpc_req": {
+      "dispute_id": "auto_generate",
+      "connector_dispute_id": "auto_generate",
+      "reason": "FRAUD"
+    },
+    "assert": {
+      "error": {
+        "must_not_exist": true
+      }
+    },
+    "is_default": true,
+    "display_name": "Defend Dispute"
+  }
+}

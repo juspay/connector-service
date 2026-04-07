@@ -29,6 +29,7 @@ GRPC_PID_FILE := .grpc-server.pid
         setup-connector-tests \
         start-grpc stop-grpc \
         test-prism test-ucs test-connector test-scenario cargo \
+        test-python-sdk check-python-sdk-coverage \
         validate-pre-push \
         ai \
         gen-tech-spec \
@@ -190,6 +191,37 @@ test-scenario:
 	   --interface $(interface) || EXIT_CODE=$$?; \
 	 [ "$(interface)" = "grpc" ] && $(MAKE) stop-grpc || true; \
 	 exit $$EXIT_CODE
+
+# ── Python SDK integration tests ──────────────────────────────────────────────
+
+## Run Python SDK integration tests for a connector (all supported suites).
+##
+##   make test-python-sdk connector=stripe
+##   make test-python-sdk connector=stripe suite=authorize
+##   make test-python-sdk connector=stripe --report
+test-python-sdk:
+	@if [ -z "$(connector)" ]; then \
+	  echo "Error: connector is required."; \
+	  echo "Usage: make test-python-sdk connector=stripe"; \
+	  echo "       make test-python-sdk connector=stripe suite=authorize"; \
+	  exit 1; \
+	fi
+	@echo "▶ Running Python SDK tests for connector '$(connector)'…"
+	@EXIT_CODE=0; \
+	 [ -f .env.connector-tests ] && export $$(grep -v '^#' .env.connector-tests | xargs) 2>/dev/null || true; \
+	 if [ -n "$(suite)" ]; then \
+	   cargo run -p integration-tests --bin python_sdk_test -- \
+	     --suite $(suite) --connector $(connector) $(if $(filter true,$(report)),--report,) || EXIT_CODE=$$?; \
+	 else \
+	   cargo run -p integration-tests --bin python_sdk_test -- \
+	     --all --connector $(connector) $(if $(filter true,$(report)),--report,) || EXIT_CODE=$$?; \
+	 fi; \
+	 exit $$EXIT_CODE
+
+## Print Python SDK coverage report (which suites are supported).
+check-python-sdk-coverage:
+	@echo "▶ Python SDK coverage report…"
+	@cargo run -p integration-tests --bin python_sdk_test -- --coverage
 
 # ── Cargo with environment ─────────────────────────────────────────────────────
 
@@ -482,5 +514,17 @@ help:
 	@echo "  test-grpc              Run gRPC smoke tests for all SDKs (Rust + JS + Python)"
 	@echo "    CONNECTORS=stripe    Connector(s) to test (comma-separated)"
 	@echo "    GRPC_PROFILE=...     Cargo profile (default: release-fast)"
+	@echo ""
+	@echo "Python SDK Test Targets:"
+	@echo "  test-python-sdk connector=<name> [suite=<suite>] [report=true]"
+	@echo "    Run Python SDK integration tests for a connector."
+	@echo "    Runs all supported suites unless a specific suite is given."
+	@echo "    Example: make test-python-sdk connector=stripe"
+	@echo "             make test-python-sdk connector=stripe suite=authorize"
+	@echo "             make test-python-sdk connector=stripe report=true"
+	@echo ""
+	@echo "  check-python-sdk-coverage"
+	@echo "    Print which suites are supported by the Python SDK executor."
+	@echo ""
 	@echo "  test-ucs               Run interactive UCS connector tests"
 	@echo "  help                   Show this help message"

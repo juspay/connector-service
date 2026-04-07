@@ -235,3 +235,85 @@ jobs:
         shell: bash
         run: |
           git diff --exit-code || (echo "ERROR: Generated SDK code is out of date. Run 'make -C sdk generate' and commit the changes." && exit 1)
+
+  python-sdk-comprehensive-test:
+    name: Python SDK Comprehensive Tests
+    runs-on: macos-latest
+    needs: [check]
+
+    env:
+      RUSTFLAGS: "-D warnings"
+      RUN_TESTS: ${{ (github.event_name == 'push') || ((github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name)) || (github.event_name == 'merge_group') }}
+
+    steps:
+      - name: Skip tests for PRs from forks
+        if: ${{ env.RUN_TESTS == 'false' }}
+        shell: bash
+        run: echo 'Skipping Python SDK comprehensive tests for PRs from forks'
+
+      - name: Checkout code
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Protoc
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python SDK dependencies
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          pip install -e sdk/python
+          pip install pytest
+
+      - uses: Swatinem/rust-cache@v2.7.8
+        if: ${{ env.RUN_TESTS == 'true' }}
+        with:
+          cache-on-failure: true
+
+      - name: Create connector credentials for Python SDK tests
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        env:
+          CONNECTOR_SPECIFIC_AUTH: ${{ secrets.CONNECTOR_SPECIFIC_AUTH }}
+        run: |
+          if [[ -n "${CONNECTOR_SPECIFIC_AUTH}" ]]; then
+            echo "${CONNECTOR_SPECIFIC_AUTH}" > creds.json
+            echo "CONNECTOR_AUTH_FILE_PATH=${{ github.workspace }}/creds.json" >> $GITHUB_ENV
+            echo "Connector credentials created for Python SDK tests"
+          else
+            echo "No CONNECTOR_SPECIFIC_AUTH secret found, will run coverage check only"
+          fi
+
+      - name: Run Python SDK structural and smoke tests
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          cd sdk/python
+          python -m pytest tests/test_flow_structure.py tests/test_all_flows_smoke.py -v
+
+      - name: Check Python SDK flow coverage
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          python scripts/check_python_sdk_coverage.py --strict
+
+      - name: Print Python SDK executor coverage
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          cargo run -p integration-tests --bin python_sdk_test -- --coverage

@@ -1,0 +1,6 @@
+{
+  "suite": "payout_create_link",
+  "suite_type": "independent",
+  "depends_on": [],
+  "strict_dependencies": true
+}

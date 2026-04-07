@@ -1,0 +1,12 @@
+{
+  "enroll_disburse_account": {
+    "grpc_req": {},
+    "assert": {
+      "error": {
+        "must_not_exist": true
+      }
+    },
+    "is_default": true,
+    "display_name": "Enroll Disburse Account"
+  }
+}

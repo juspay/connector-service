@@ -1,0 +1,17 @@
+{
+  "create_payout": {
+    "grpc_req": {
+      "amount": {
+        "minor_amount": 1000,
+        "currency": "USD"
+      }
+    },
+    "assert": {
+      "error": {
+        "must_not_exist": true
+      }
+    },
+    "is_default": true,
+    "display_name": "Create Payout"
+  }
+}

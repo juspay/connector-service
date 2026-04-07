@@ -1,0 +1,14 @@
+{
+  "void_payout": {
+    "grpc_req": {
+      "payout_id": "auto_generate"
+    },
+    "assert": {
+      "error": {
+        "must_not_exist": true
+      }
+    },
+    "is_default": true,
+    "display_name": "Void Payout"
+  }
+}

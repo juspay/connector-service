@@ -1,0 +1,18 @@
+{
+  "transfer_payout": {
+    "grpc_req": {
+      "payout_id": "auto_generate",
+      "amount": {
+        "minor_amount": 1000,
+        "currency": "USD"
+      }
+    },
+    "assert": {
+      "error": {
+        "must_not_exist": true
+      }
+    },
+    "is_default": true,
+    "display_name": "Transfer Payout"
+  }
+}

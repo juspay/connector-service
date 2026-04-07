@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use grpc_api_types::payments::{
-    self, connector_specific_config, ffi_result, ConnectorResponseTransformationError,
-    ConnectorSpecificConfig, Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse,
-    FfiOptions, FfiResult, IntegrationError,
+    self, ffi_result, ConnectorResponseTransformationError, ConnectorSpecificConfig, Environment,
+    FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, FfiResult, IntegrationError,
 };
+use grpc_api_types::payouts;
 use prost::Message;
 use reqwest::{blocking::Client, Method};
 use serde::{de::DeserializeOwned, Serialize};
@@ -24,23 +24,56 @@ type ResponseTransformer = fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Vec<u8>;
 pub fn supports_sdk_suite(suite: &str) -> bool {
     matches!(
         suite,
+        // MerchantAuthenticationService
         "server_authentication_token"
             | "server_session_authentication_token"
             | "client_authentication_token"
+            // CustomerService
             | "create_customer"
+            // PaymentService
             | "authorize"
             | "capture"
             | "void"
             | "refund"
             | "get"
             | "setup_recurring"
+            | "create_order"
+            | "reverse"
+            | "proxy_authorize"
+            | "proxy_setup_recurring"
+            | "token_authorize"
+            | "token_setup_recurring"
+            // RecurringPaymentService
             | "recurring_charge"
+            // PaymentMethodAuthenticationService
+            | "authenticate"
+            | "pre_authenticate"
+            | "post_authenticate"
+            // PaymentMethodService
+            | "tokenize_payment_method"
+            // DisputeService
+            | "accept"
+            | "defend"
+            | "submit_evidence"
+            // PayoutService
+            | "payout_create"
+            | "payout_create_link"
+            | "payout_create_recipient"
+            | "payout_enroll_disburse_account"
+            | "payout_get"
+            | "payout_stage"
+            | "payout_transfer"
+            | "payout_void"
     )
 }
 
 /// Returns whether a connector has SDK transformer/auth support in this harness.
-pub fn supports_sdk_connector(connector: &str) -> bool {
-    matches!(connector, "stripe" | "authorizedotnet" | "paypal")
+///
+/// All connectors are supported — the credentials file and proto
+/// `ConnectorSpecificConfig` oneof handle connector-specific auth shapes
+/// generically via serde deserialization.  No hardcoded allowlist is needed.
+pub fn supports_sdk_connector(_connector: &str) -> bool {
+    true
 }
 
 /// SDK interface coverage report: which proto suites are supported vs. missing.
@@ -221,6 +254,261 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::charge_req_transformer,
             ffi_bindings::charge_res_transformer,
         ),
+        // ── PaymentMethodAuthenticationService ────────────────────────────
+        "authenticate" => execute_sdk_flow::<
+            payments::PaymentMethodAuthenticationServiceAuthenticateRequest,
+            payments::PaymentMethodAuthenticationServiceAuthenticateResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::authenticate_req_transformer,
+            ffi_bindings::authenticate_res_transformer,
+        ),
+        "pre_authenticate" => execute_sdk_flow::<
+            payments::PaymentMethodAuthenticationServicePreAuthenticateRequest,
+            payments::PaymentMethodAuthenticationServicePreAuthenticateResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::pre_authenticate_req_transformer,
+            ffi_bindings::pre_authenticate_res_transformer,
+        ),
+        "post_authenticate" => execute_sdk_flow::<
+            payments::PaymentMethodAuthenticationServicePostAuthenticateRequest,
+            payments::PaymentMethodAuthenticationServicePostAuthenticateResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::post_authenticate_req_transformer,
+            ffi_bindings::post_authenticate_res_transformer,
+        ),
+        // ── Additional PaymentService flows ───────────────────────────────
+        "create_order" => execute_sdk_flow::<
+            payments::PaymentServiceCreateOrderRequest,
+            payments::PaymentServiceCreateOrderResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::create_order_req_transformer,
+            ffi_bindings::create_order_res_transformer,
+        ),
+        "reverse" => execute_sdk_flow::<
+            payments::PaymentServiceReverseRequest,
+            payments::PaymentServiceReverseResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::reverse_req_transformer,
+            ffi_bindings::reverse_res_transformer,
+        ),
+        "proxy_authorize" => execute_sdk_flow::<
+            payments::PaymentServiceProxyAuthorizeRequest,
+            payments::PaymentServiceAuthorizeResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::proxy_authorize_req_transformer,
+            ffi_bindings::proxy_authorize_res_transformer,
+        ),
+        "proxy_setup_recurring" => execute_sdk_flow::<
+            payments::PaymentServiceProxySetupRecurringRequest,
+            payments::PaymentServiceSetupRecurringResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::proxy_setup_recurring_req_transformer,
+            ffi_bindings::proxy_setup_recurring_res_transformer,
+        ),
+        "token_authorize" => execute_sdk_flow::<
+            payments::PaymentServiceTokenAuthorizeRequest,
+            payments::PaymentServiceAuthorizeResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::token_authorize_req_transformer,
+            ffi_bindings::token_authorize_res_transformer,
+        ),
+        "token_setup_recurring" => execute_sdk_flow::<
+            payments::PaymentServiceTokenSetupRecurringRequest,
+            payments::PaymentServiceSetupRecurringResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::token_setup_recurring_req_transformer,
+            ffi_bindings::token_setup_recurring_res_transformer,
+        ),
+        // ── PaymentMethodService ──────────────────────────────────────────
+        "tokenize_payment_method" => execute_sdk_flow::<
+            payments::PaymentMethodServiceTokenizeRequest,
+            payments::PaymentMethodServiceTokenizeResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::tokenize_req_transformer,
+            ffi_bindings::tokenize_res_transformer,
+        ),
+        // ── DisputeService ────────────────────────────────────────────────
+        "accept" => execute_sdk_flow::<
+            payments::DisputeServiceAcceptRequest,
+            payments::DisputeServiceAcceptResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::accept_req_transformer,
+            ffi_bindings::accept_res_transformer,
+        ),
+        "defend" => execute_sdk_flow::<
+            payments::DisputeServiceDefendRequest,
+            payments::DisputeServiceDefendResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::defend_req_transformer,
+            ffi_bindings::defend_res_transformer,
+        ),
+        "submit_evidence" => execute_sdk_flow::<
+            payments::DisputeServiceSubmitEvidenceRequest,
+            payments::DisputeServiceSubmitEvidenceResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::submit_evidence_req_transformer,
+            ffi_bindings::submit_evidence_res_transformer,
+        ),
+        // ── PayoutService ─────────────────────────────────────────────────
+        "payout_create" => execute_sdk_flow::<
+            payouts::PayoutServiceCreateRequest,
+            payouts::PayoutServiceCreateResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::payout_create_req_transformer,
+            ffi_bindings::payout_create_res_transformer,
+        ),
+        "payout_create_link" => execute_sdk_flow::<
+            payouts::PayoutServiceCreateLinkRequest,
+            payouts::PayoutServiceCreateLinkResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::payout_create_link_req_transformer,
+            ffi_bindings::payout_create_link_res_transformer,
+        ),
+        "payout_create_recipient" => execute_sdk_flow::<
+            payouts::PayoutServiceCreateRecipientRequest,
+            payouts::PayoutServiceCreateRecipientResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::payout_create_recipient_req_transformer,
+            ffi_bindings::payout_create_recipient_res_transformer,
+        ),
+        "payout_enroll_disburse_account" => execute_sdk_flow::<
+            payouts::PayoutServiceEnrollDisburseAccountRequest,
+            payouts::PayoutServiceEnrollDisburseAccountResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::payout_enroll_disburse_account_req_transformer,
+            ffi_bindings::payout_enroll_disburse_account_res_transformer,
+        ),
+        "payout_get" => {
+            execute_sdk_flow::<payouts::PayoutServiceGetRequest, payouts::PayoutServiceGetResponse>(
+                suite,
+                scenario,
+                connector,
+                grpc_req,
+                &options_bytes,
+                ffi_bindings::payout_get_req_transformer,
+                ffi_bindings::payout_get_res_transformer,
+            )
+        }
+        "payout_stage" => execute_sdk_flow::<
+            payouts::PayoutServiceStageRequest,
+            payouts::PayoutServiceStageResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::payout_stage_req_transformer,
+            ffi_bindings::payout_stage_res_transformer,
+        ),
+        "payout_transfer" => execute_sdk_flow::<
+            payouts::PayoutServiceTransferRequest,
+            payouts::PayoutServiceTransferResponse,
+        >(
+            suite,
+            scenario,
+            connector,
+            grpc_req,
+            &options_bytes,
+            ffi_bindings::payout_transfer_req_transformer,
+            ffi_bindings::payout_transfer_res_transformer,
+        ),
+        "payout_void" => {
+            execute_sdk_flow::<payouts::PayoutServiceVoidRequest, payouts::PayoutServiceVoidResponse>(
+                suite,
+                scenario,
+                connector,
+                grpc_req,
+                &options_bytes,
+                ffi_bindings::payout_void_req_transformer,
+                ffi_bindings::payout_void_res_transformer,
+            )
+        }
         _ => Err(ScenarioError::UnsupportedSuite {
             suite: suite.to_string(),
         }),
@@ -463,104 +751,23 @@ fn environment_discriminant(environment: Environment) -> i32 {
 /// ```json
 /// {"config":{"Stripe":{"api_key":"sk_test_..."}}}
 /// ```
-/// The `{"value":"..."}` wrappers are already unwrapped by
-/// `credentials::load_connector_config`, so we must NOT try to read `.value`.
+/// This is exactly the serde representation of `ConnectorSpecificConfig`, so we
+/// deserialize it directly — no per-connector match arms needed.
 #[allow(clippy::indexing_slicing)] // serde_json::Value indexing returns Null, never panics
 fn build_proto_connector_config(
     connector: &str,
     connector_config: &ConnectorConfig,
 ) -> Result<ConnectorSpecificConfig, ScenarioError> {
-    // header_value() is {"config":{"<PascalConnector>":{...flat auth fields...}}}
-    let header_json: Value =
-        serde_json::from_str(connector_config.header_value()).map_err(|e| {
-            ScenarioError::SdkExecution {
-                message: format!("Failed to parse connector config JSON: {}", e),
-            }
-        })?;
-
-    // Navigate to the connector-specific auth object.
-    // pascal_name mirrors credentials::pascal_connector_name.
-    let pascal_name: String = {
-        let mut chars = connector.chars();
-        match chars.next() {
-            None => String::new(),
-            Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+    serde_json::from_str(connector_config.header_value()).map_err(|e| {
+        ScenarioError::SdkExecution {
+            message: format!(
+                "Failed to parse connector config JSON for '{}' into ConnectorSpecificConfig: {} (raw: {})",
+                connector,
+                e,
+                &connector_config.header_value()[..connector_config.header_value().len().min(200)]
+            ),
         }
-    };
-    let auth = &header_json["config"][&pascal_name];
-
-    match connector {
-        "stripe" => {
-            let api_key = auth["api_key"]
-                .as_str()
-                .ok_or_else(|| ScenarioError::SdkExecution {
-                    message: "Missing api_key in stripe config".to_string(),
-                })?;
-            Ok(ConnectorSpecificConfig {
-                config: Some(connector_specific_config::Config::Stripe(
-                    payments::StripeConfig {
-                        api_key: Some(api_key.to_string().into()),
-                        base_url: None,
-                    },
-                )),
-            })
-        }
-        "authorizedotnet" => {
-            let name = auth["api_key"]
-                .as_str()
-                .ok_or_else(|| ScenarioError::SdkExecution {
-                    message: "Missing api_key in authorizedotnet config".to_string(),
-                })?;
-            let transaction_key =
-                auth["key1"]
-                    .as_str()
-                    .ok_or_else(|| ScenarioError::SdkExecution {
-                        message: "Missing key1 in authorizedotnet config".to_string(),
-                    })?;
-            Ok(ConnectorSpecificConfig {
-                config: Some(connector_specific_config::Config::Authorizedotnet(
-                    payments::AuthorizedotnetConfig {
-                        name: Some(name.to_string().into()),
-                        transaction_key: Some(transaction_key.to_string().into()),
-                        base_url: None,
-                    },
-                )),
-            })
-        }
-        "paypal" => {
-            // Support both field-name conventions (key1/client_id, api_key/client_secret, etc.)
-            let client_id = auth["key1"]
-                .as_str()
-                .or_else(|| auth["client_id"].as_str())
-                .ok_or_else(|| ScenarioError::SdkExecution {
-                    message: "Missing key1/client_id in paypal config".to_string(),
-                })?;
-            let client_secret = auth["api_key"]
-                .as_str()
-                .or_else(|| auth["client_secret"].as_str())
-                .ok_or_else(|| ScenarioError::SdkExecution {
-                    message: "Missing api_key/client_secret in paypal config".to_string(),
-                })?;
-            let payer_id = auth["api_secret"]
-                .as_str()
-                .or_else(|| auth["payer_id"].as_str())
-                .map(|s| s.to_string().into());
-            Ok(ConnectorSpecificConfig {
-                config: Some(connector_specific_config::Config::Paypal(
-                    payments::PaypalConfig {
-                        client_id: Some(client_id.to_string().into()),
-                        client_secret: Some(client_secret.to_string().into()),
-                        payer_id,
-                        base_url: None,
-                    },
-                )),
-            })
-        }
-        _ => Err(ScenarioError::CredentialLoad {
-            connector: connector.to_string(),
-            message: "unsupported connector auth shape for SDK harness".to_string(),
-        }),
-    }
+    })
 }
 
 /// SDK environment selector (defaults to sandbox for safety).
@@ -645,14 +852,63 @@ mod tests {
 
     #[test]
     fn sdk_support_matrix_matches_current_scope() {
+        // All connectors are now supported (generic serde deserialization)
         assert!(supports_sdk_connector("stripe"));
         assert!(supports_sdk_connector("paypal"));
         assert!(supports_sdk_connector("authorizedotnet"));
-        assert!(!supports_sdk_connector("adyen"));
+        assert!(supports_sdk_connector("adyen"));
+        assert!(supports_sdk_connector("cybersource"));
+        assert!(supports_sdk_connector("braintree"));
 
+        // Payment flows
         assert!(supports_sdk_suite("authorize"));
+        assert!(supports_sdk_suite("capture"));
+        assert!(supports_sdk_suite("void"));
+        assert!(supports_sdk_suite("refund"));
+        assert!(supports_sdk_suite("get"));
+        assert!(supports_sdk_suite("setup_recurring"));
+        assert!(supports_sdk_suite("recurring_charge"));
+        assert!(supports_sdk_suite("create_order"));
+        assert!(supports_sdk_suite("reverse"));
+        assert!(supports_sdk_suite("proxy_authorize"));
+        assert!(supports_sdk_suite("proxy_setup_recurring"));
+        assert!(supports_sdk_suite("token_authorize"));
+        assert!(supports_sdk_suite("token_setup_recurring"));
+
+        // Authentication flows
         assert!(supports_sdk_suite("server_authentication_token"));
+        assert!(supports_sdk_suite("server_session_authentication_token"));
+        assert!(supports_sdk_suite("client_authentication_token"));
+        assert!(supports_sdk_suite("authenticate"));
+        assert!(supports_sdk_suite("pre_authenticate"));
+        assert!(supports_sdk_suite("post_authenticate"));
+
+        // Customer / TokenizePaymentMethod
+        assert!(supports_sdk_suite("create_customer"));
+        assert!(supports_sdk_suite("tokenize_payment_method"));
+
+        // Dispute flows
+        assert!(supports_sdk_suite("accept"));
+        assert!(supports_sdk_suite("defend"));
+        assert!(supports_sdk_suite("submit_evidence"));
+
+        // Payout flows
+        assert!(supports_sdk_suite("payout_create"));
+        assert!(supports_sdk_suite("payout_create_link"));
+        assert!(supports_sdk_suite("payout_create_recipient"));
+        assert!(supports_sdk_suite("payout_enroll_disburse_account"));
+        assert!(supports_sdk_suite("payout_get"));
+        assert!(supports_sdk_suite("payout_stage"));
+        assert!(supports_sdk_suite("payout_transfer"));
+        assert!(supports_sdk_suite("payout_void"));
+
+        // Suites without FFI flow support
         assert!(!supports_sdk_suite("refund_sync"));
+        assert!(!supports_sdk_suite("complete_authorize"));
+        assert!(!supports_sdk_suite("revoke_mandate"));
+        assert!(!supports_sdk_suite("verify_redirect_response"));
+        assert!(!supports_sdk_suite("incremental_authorization"));
+        assert!(!supports_sdk_suite("payment_method_eligibility"));
     }
 
     #[test]

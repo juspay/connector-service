@@ -10,6 +10,7 @@ pub mod cred_masking;
 pub mod credentials;
 pub mod executor;
 pub mod metadata;
+pub mod python_executor;
 pub mod report;
 pub mod scenario_api;
 pub mod scenario_assert;

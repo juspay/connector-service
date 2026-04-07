@@ -1,0 +1,17 @@
+{
+  "create_payout_recipient": {
+    "grpc_req": {
+      "name": "auto_generate",
+      "email": {
+        "value": "auto_generate"
+      }
+    },
+    "assert": {
+      "error": {
+        "must_not_exist": true
+      }
+    },
+    "is_default": true,
+    "display_name": "Create Payout Recipient"
+  }
+}

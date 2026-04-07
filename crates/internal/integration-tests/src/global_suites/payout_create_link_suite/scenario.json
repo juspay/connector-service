@@ -1,0 +1,15 @@
+{
+  "create_payout_link": {
+    "grpc_req": {
+      "payout_id": "auto_generate",
+      "recipient_id": "auto_generate"
+    },
+    "assert": {
+      "error": {
+        "must_not_exist": true
+      }
+    },
+    "is_default": true,
+    "display_name": "Create Payout Link"
+  }
+}

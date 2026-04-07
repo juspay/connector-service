@@ -17,10 +17,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::harness::cred_masking::{mask_json_value, mask_sensitive_text};
+use crate::harness::python_executor::python_sdk_coverage_report;
 use crate::harness::scenario_display_name::generate_style_a_display_name;
 use crate::harness::scenario_loader::{
     discover_all_connectors, load_connector_spec, load_suite_scenarios, load_suite_spec,
 };
+use crate::harness::sdk_executor::sdk_coverage_report;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -811,6 +813,56 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
 > Each percentage links to connector-specific suite results.
 ",
     );
+
+    // ── SDK / Python SDK Coverage Section ─────────────────────────────────
+    md.push_str(
+        "
+## SDK Interface Coverage
+
+",
+    );
+
+    let rust_sdk_report = sdk_coverage_report();
+    let python_sdk_report = python_sdk_coverage_report();
+
+    let rust_total = rust_sdk_report.supported.len() + rust_sdk_report.not_supported.len();
+    let python_total = python_sdk_report.supported.len() + python_sdk_report.not_supported.len();
+
+    md.push_str("| Interface | Supported | Not Supported | Total | Coverage |\n");
+    md.push_str("|:----------|----------:|--------------:|------:|---------:|\n");
+    md.push_str(&format!(
+        "| Rust FFI | {} | {} | {} | {:.1}% |\n",
+        rust_sdk_report.supported.len(),
+        rust_sdk_report.not_supported.len(),
+        rust_total,
+        percent(rust_sdk_report.supported.len(), rust_total),
+    ));
+    md.push_str(&format!(
+        "| Python SDK | {} | {} | {} | {:.1}% |\n",
+        python_sdk_report.supported.len(),
+        python_sdk_report.not_supported.len(),
+        python_total,
+        percent(python_sdk_report.supported.len(), python_total),
+    ));
+
+    if !rust_sdk_report.not_supported.is_empty() || !python_sdk_report.not_supported.is_empty() {
+        md.push_str("\n<details>\n<summary>Suites not yet supported</summary>\n\n");
+        if !rust_sdk_report.not_supported.is_empty() {
+            md.push_str(&format!(
+                "**Rust FFI**: {}\n\n",
+                rust_sdk_report.not_supported.join(", ")
+            ));
+        }
+        if !python_sdk_report.not_supported.is_empty() {
+            md.push_str(&format!(
+                "**Python SDK**: {}\n\n",
+                python_sdk_report.not_supported.join(", ")
+            ));
+        }
+        md.push_str("</details>\n");
+    }
+
+    md.push('\n');
 
     // 4. Write overview markdown.
     let out_path = md_path(json_path);
