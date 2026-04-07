@@ -12,10 +12,11 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId,
     },
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
+    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -100,6 +101,12 @@ pub struct MolliePaymentsRequest {
 pub enum MolliePaymentMethodData {
     #[serde(rename = "creditcard")]
     CreditCard(Box<CreditCardMethodData>),
+    #[serde(rename = "applepay")]
+    ApplePay(Box<ApplePayMethodData>),
+    #[serde(rename = "googlepay")]
+    GooglePay(Box<GooglePayMethodData>),
+    #[serde(rename = "paypal")]
+    PayPal(Box<PayPalMethodData>),
 }
 
 // Credit Card Method Data
@@ -110,6 +117,25 @@ pub struct CreditCardMethodData {
     pub billing_address: Option<MollieAddress>,
     pub shipping_address: Option<MollieAddress>,
 }
+
+// Apple Pay Method Data
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayMethodData {
+    pub apple_pay_payment_token: Secret<String>,
+}
+
+// Google Pay Method Data
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayMethodData {
+    pub google_pay_payment_token: Secret<String>,
+}
+
+// PayPal Method Data (redirect-based, no additional fields required)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayPalMethodData {}
 
 // Mollie Address structure
 #[derive(Debug, Serialize)]
@@ -215,12 +241,94 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     shipping_address: None,
                 }))
             }
-            _ => {
-                return Err(IntegrationError::NotSupported {
-                    message: "Payment method ".to_string(),
-                    connector: "mollie",
-                    context: Default::default(),
+            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                WalletData::ApplePay(apple_pay_data) => {
+                    let encrypted_payment_data = apple_pay_data
+                        .payment_data
+                        .get_encrypted_apple_pay_payment_data_mandatory()
+                        .change_context(IntegrationError::MissingRequiredField {
+                            field_name: "apple_pay_payment_token",
+                            context: Default::default(),
+                        })?;
+                    MolliePaymentMethodData::ApplePay(Box::new(ApplePayMethodData {
+                        apple_pay_payment_token: Secret::new(encrypted_payment_data.clone()),
+                    }))
                 }
+                WalletData::GooglePay(gpay_data) => {
+                    let token = gpay_data
+                        .tokenization_data
+                        .get_encrypted_google_pay_token()
+                        .change_context(IntegrationError::MissingRequiredField {
+                            field_name: "google_pay_payment_token",
+                            context: Default::default(),
+                        })?;
+                    MolliePaymentMethodData::GooglePay(Box::new(GooglePayMethodData {
+                        google_pay_payment_token: Secret::new(token),
+                    }))
+                }
+                WalletData::PaypalRedirect(_) => {
+                    MolliePaymentMethodData::PayPal(Box::new(PayPalMethodData {}))
+                }
+                WalletData::AliPayQr(_)
+                | WalletData::AliPayRedirect(_)
+                | WalletData::AliPayHkRedirect(_)
+                | WalletData::BluecodeRedirect {}
+                | WalletData::AmazonPayRedirect(_)
+                | WalletData::MomoRedirect(_)
+                | WalletData::KakaoPayRedirect(_)
+                | WalletData::GoPayRedirect(_)
+                | WalletData::GcashRedirect(_)
+                | WalletData::ApplePayRedirect(_)
+                | WalletData::ApplePayThirdPartySdk(_)
+                | WalletData::DanaRedirect {}
+                | WalletData::GooglePayRedirect(_)
+                | WalletData::GooglePayThirdPartySdk(_)
+                | WalletData::MbWayRedirect(_)
+                | WalletData::MobilePayRedirect(_)
+                | WalletData::PaypalSdk(_)
+                | WalletData::Paze(_)
+                | WalletData::SamsungPay(_)
+                | WalletData::TwintRedirect {}
+                | WalletData::VippsRedirect {}
+                | WalletData::TouchNGoRedirect(_)
+                | WalletData::WeChatPayRedirect(_)
+                | WalletData::WeChatPayQr(_)
+                | WalletData::CashappQr(_)
+                | WalletData::SwishQr(_)
+                | WalletData::Mifinity(_)
+                | WalletData::RevolutPay(_)
+                | WalletData::MbWay(_)
+                | WalletData::Satispay(_)
+                | WalletData::Wero(_) => {
+                    return Err(IntegrationError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("mollie"),
+                        Default::default(),
+                    )
+                    .into());
+                }
+            },
+            PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_) => {
+                return Err(IntegrationError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("mollie"),
+                    Default::default(),
+                )
                 .into());
             }
         };
