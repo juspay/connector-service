@@ -374,11 +374,37 @@ jobs:
           name: sdk-javascript
           path: artifacts/sdk-javascript/*.tgz
 
+  # Job 4d: Package Rust SDK — disabled until Rust SDK is ready for release
+  # package-sdk-rust:
+  #   name: Package Rust SDK
+  #   runs-on: ubuntu-latest
+  #   needs: [build-binaries, version-and-changelog]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@master
+  #       with:
+  #         toolchain: stable
+  #     - name: Cache Rust dependencies
+  #       uses: Swatinem/rust-cache@v2
+  #       with:
+  #         shared-key: "sdk-rust"
+  #     - uses: arduino/setup-protoc@v3
+  #       with:
+  #         repo-token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Package Rust SDK
+  #       run: make -C sdk/rust dist
+  #     - name: Upload Rust SDK artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: sdk-rust
+  #         path: artifacts/sdk-rust/*.zip
+
   # Job 4e: Collect SDK Artifacts
   collect-sdks:
     name: Collect SDK Artifacts
     runs-on: ubuntu-latest
     needs: [package-sdk-java, package-sdk-python, package-sdk-javascript]
+    # When re-enabling Rust SDK, add package-sdk-rust back to needs above
     steps:
       - name: Download all SDK artifacts
         uses: actions/download-artifact@v4
