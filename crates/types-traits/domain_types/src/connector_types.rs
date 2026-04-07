@@ -3480,6 +3480,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Payload(PayloadClientAuthenticationResponse),
     /// Billwerk SDK initialization data — session_id for Billwerk Checkout session
     Billwerk(BillwerkClientAuthenticationResponse),
+    /// Multisafepay SDK initialization data — api_token for Payment Components initialization
+    Multisafepay(MultisafepayClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3685,6 +3687,13 @@ pub struct PayloadClientAuthenticationResponse {
 pub struct BillwerkClientAuthenticationResponse {
     /// The checkout session ID for client-side Billwerk Checkout initialization
     pub session_id: String,
+}
+
+/// Multisafepay's api_token for client-side Payment Components initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultisafepayClientAuthenticationResponse {
+    /// The API token for encrypting sensitive payment details (valid for 600 seconds)
+    pub api_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

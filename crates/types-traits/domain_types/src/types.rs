@@ -10018,6 +10018,17 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Multisafepay(multisafepay_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Multisafepay(
+                        grpc_api_types::payments::MultisafepayClientAuthenticationResponse {
+                            api_token: Some(multisafepay_data.api_token),
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(

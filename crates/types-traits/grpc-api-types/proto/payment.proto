@@ -1558,6 +1558,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     JpmorganClientAuthenticationResponse jpmorgan = 24;
     PayloadClientAuthenticationResponse payload = 25;
     BillwerkClientAuthenticationResponse billwerk = 26;
+    MultisafepayClientAuthenticationResponse multisafepay = 27;
   }
 }
 
@@ -1602,6 +1603,12 @@ message PayloadClientAuthenticationResponse {
 message BillwerkClientAuthenticationResponse {
   // The checkout session ID for client-side Billwerk Checkout initialization
   string session_id = 1;
+}
+
+// Multisafepay SDK initialization data — api_token for Payment Components initialization
+message MultisafepayClientAuthenticationResponse {
+  // The API token for client-side Payment Components initialization (valid for 600 seconds)
+  SecretString api_token = 1;
 }
 
 // Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK
