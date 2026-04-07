@@ -101,13 +101,15 @@ jobs:
           echo "Validating linked files..."
           MISSING_FILES=0
           while IFS= read -r line; do
-            # Extract markdown links: [text](path)
-            if [[ "$line" =~ \[([^\]]+)\]\(([^)]+)\) ]]; then
-              link_path="${BASH_REMATCH[2]}"
+            # Extract markdown links using grep - look for [text](path) patterns
+            link_path=$(echo "$line" | grep -oE '\[([^\]]+)\]\(([^)]+)\)' | grep -oE '\([^)]+\)' | tr -d '()' | head -1)
+            if [ -n "$link_path" ]; then
               # Skip external links (http/https) and anchors
-              if [[ "$link_path" == http* ]] || [[ "$link_path" == \#* ]]; then
-                continue
-              fi
+              case "$link_path" in
+                http*|\#*)
+                  continue
+                  ;;
+              esac
               # Remove any anchor suffix
               link_path="${link_path%%#*}"
               # Check if file exists
