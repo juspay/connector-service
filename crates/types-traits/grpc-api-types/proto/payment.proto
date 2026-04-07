@@ -1536,7 +1536,16 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    RevolutClientAuthenticationResponse revolut = 32;
   }
+}
+
+// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+message RevolutClientAuthenticationResponse {
+  // The order ID created on Revolut
+  string order_id = 1;
+  // The client authentication token for SDK initialization
+  SecretString token = 2;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations

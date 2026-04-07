@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+    Revolut(RevolutClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3451,6 +3453,14 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub expires_in: Option<i64>,
 }
 
+/// Revolut's order_id and token for client-side Revolut Pay widget initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RevolutClientAuthenticationResponse {
+    /// The order ID created on Revolut
+    pub order_id: String,
+    /// The client authentication token for SDK initialization
+    pub token: Secret<String>,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum GpayClientAuthenticationResponse {
