@@ -8,7 +8,7 @@
 import asyncio
 import sys
 from google.protobuf.json_format import ParseDict
-from payments import EventClient
+from payments import PaymentClient
 from payments.generated import sdk_config_pb2, payment_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
@@ -20,19 +20,16 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 # ))
 
 
-
-
-def _build_handle_event_request():
-    return ParseDict(
-        {
-        },
-        payment_pb2.EventServiceHandleRequest(),
-    )
 async def handle_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: EventService.HandleEvent"""
-    event_client = EventClient(config)
+    """Flow: PaymentService.handle_event"""
+    payment_client = PaymentClient(config)
 
-    handle_response = await event_client.handle_event(_build_handle_event_request())
+    # Step 1: handle_event
+    handle_response = await payment_client.handle_event(ParseDict(
+        {
+            # No required fields
+        },
+    ))
 
     return {"status": handle_response.status}
 

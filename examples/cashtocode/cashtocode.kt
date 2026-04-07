@@ -7,8 +7,7 @@
 
 package examples.cashtocode
 
-import payments.EventClient
-import payments.EventServiceHandleRequest
+import payments.PaymentClient
 import payments.ConnectorConfig
 import payments.SdkOptions
 import payments.Environment
@@ -19,22 +18,14 @@ val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     .build()
 
 
-// Flow: EventService.HandleEvent
-fun handleEvent(txnId: String) {
-    val client = EventClient(_defaultConfig)
-    val request = EventServiceHandleRequest.newBuilder().apply {
 
-    }.build()
-    val response = client.handle_event(request)
-    println("Status: ${response.status.name}")
-}
 
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
-    val flow = args.firstOrNull() ?: "handleEvent"
+    val flow = args.firstOrNull() ?: "authorize"
     when (flow) {
-        "handleEvent" -> handleEvent(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: handleEvent")
+
+        else -> System.err.println("Unknown flow: $flow. Available: ")
     }
 }

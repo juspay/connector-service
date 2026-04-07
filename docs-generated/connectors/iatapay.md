@@ -96,22 +96,15 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [MerchantAuthenticationService.CreateServerAuthenticationToken](#merchantauthenticationservicecreateserverauthenticationtoken) | Authentication | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [create_server_authentication_token](#create_server_authentication_token) | Other | `—` |
+| [get](#get) | Other | `—` |
+| [refund](#refund) | Other | `—` |
+| [refund_get](#refund_get) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -215,8 +208,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "ideal": {
-    }
 }
 ```
 
@@ -224,58 +215,24 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "upi_collect": {  # UPI Collect.
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address.
-    }
+    "vpa_id": "test@upi"
 }
 ```
 
-**Examples:** [Python](../../examples/iatapay/iatapay.py#L125) · [TypeScript](../../examples/iatapay/iatapay.ts#L114) · [Kotlin](../../examples/iatapay/iatapay.kt#L102) · [Rust](../../examples/iatapay/iatapay.rs#L120)
+**Examples:** [Python](../../examples/iatapay/iatapay.py#L23) · [TypeScript](../../examples/iatapay/iatapay.ts#L24) · [Kotlin](../../examples/iatapay/iatapay.kt) · [Rust](../../examples/iatapay/iatapay.rs#L26)
 
-#### PaymentService.Get
+#### create_server_authentication_token
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+**Examples:** [Python](../../examples/iatapay/iatapay.py#L60) · [TypeScript](../../examples/iatapay/iatapay.ts#L59) · [Kotlin](../../examples/iatapay/iatapay.kt) · [Rust](../../examples/iatapay/iatapay.rs#L63)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+#### get
 
-**Examples:** [Python](../../examples/iatapay/iatapay.py#L143) · [TypeScript](../../examples/iatapay/iatapay.ts#L132) · [Kotlin](../../examples/iatapay/iatapay.kt#L124) · [Rust](../../examples/iatapay/iatapay.rs#L139)
+**Examples:** [Python](../../examples/iatapay/iatapay.py#L74) · [TypeScript](../../examples/iatapay/iatapay.ts#L69) · [Kotlin](../../examples/iatapay/iatapay.kt) · [Rust](../../examples/iatapay/iatapay.rs#L72)
 
-#### PaymentService.Refund
+#### refund
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+**Examples:** [Python](../../examples/iatapay/iatapay.py#L99) · [TypeScript](../../examples/iatapay/iatapay.ts#L90) · [Kotlin](../../examples/iatapay/iatapay.kt) · [Rust](../../examples/iatapay/iatapay.rs#L94)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
+#### refund_get
 
-**Examples:** [Python](../../examples/iatapay/iatapay.py#L152) · [TypeScript](../../examples/iatapay/iatapay.ts#L141) · [Kotlin](../../examples/iatapay/iatapay.kt#L132) · [Rust](../../examples/iatapay/iatapay.rs#L146)
-
-### Refunds
-
-#### RefundService.Get
-
-Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
-
-| | Message |
-|---|---------|
-| **Request** | `RefundServiceGetRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/iatapay/iatapay.py#L161) · [TypeScript](../../examples/iatapay/iatapay.ts#L150) · [Kotlin](../../examples/iatapay/iatapay.kt#L142) · [Rust](../../examples/iatapay/iatapay.rs#L153)
-
-### Authentication
-
-#### MerchantAuthenticationService.CreateServerAuthenticationToken
-
-Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
-
-| | Message |
-|---|---------|
-| **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
-
-**Examples:** [Python](../../examples/iatapay/iatapay.py#L134) · [TypeScript](../../examples/iatapay/iatapay.ts#L123) · [Kotlin](../../examples/iatapay/iatapay.kt#L114) · [Rust](../../examples/iatapay/iatapay.rs#L132)
+**Examples:** [Python](../../examples/iatapay/iatapay.py#L129) · [TypeScript](../../examples/iatapay/iatapay.ts#L117) · [Kotlin](../../examples/iatapay/iatapay.kt) · [Rust](../../examples/iatapay/iatapay.rs#L118)

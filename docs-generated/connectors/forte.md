@@ -108,40 +108,33 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/forte/forte.py#L113) · [JavaScript](../../examples/forte/forte.js) · [Kotlin](../../examples/forte/forte.kt#L78) · [Rust](../../examples/forte/forte.rs#L109)
+**Examples:** [Python](../../examples/forte/forte.py#L23) · [JavaScript](../../examples/forte/forte.js) · [Kotlin](../../examples/forte/forte.kt#L23) · [Rust](../../examples/forte/forte.rs#L27)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/forte/forte.py#L132) · [JavaScript](../../examples/forte/forte.js) · [Kotlin](../../examples/forte/forte.kt#L94) · [Rust](../../examples/forte/forte.rs#L125)
+**Examples:** [Python](../../examples/forte/forte.py#L63) · [JavaScript](../../examples/forte/forte.js) · [Kotlin](../../examples/forte/forte.kt#L52) · [Rust](../../examples/forte/forte.rs#L66)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/forte/forte.py#L154) · [JavaScript](../../examples/forte/forte.js) · [Kotlin](../../examples/forte/forte.kt#L113) · [Rust](../../examples/forte/forte.rs#L144)
+**Examples:** [Python](../../examples/forte/forte.py#L111) · [JavaScript](../../examples/forte/forte.js) · [Kotlin](../../examples/forte/forte.kt#L87) · [Rust](../../examples/forte/forte.rs#L111)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
-| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
-| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [get](#get) | Other | `—` |
+| [proxy_authorize](#proxy_authorize) | Other | `—` |
+| [refund_get](#refund_get) | Other | `—` |
+| [void](#void) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -245,13 +238,11 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "card": {  # Generic card payment.
-        "card_number": {"value": "4111111111111111"},  # Card Identification.
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-    }
+    "card_number": "4111111111111111",
+    "card_exp_month": "03",
+    "card_exp_year": "2030",
+    "card_cvc": "737",
+    "card_holder_name": "John Doe"
 }
 ```
 
@@ -259,58 +250,26 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "ach": {  # Ach - Automated Clearing House.
-        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment.
-        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment.
-        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name.
-    }
+    "account_number": "000123456789",
+    "routing_number": "110000000",
+    "bank_account_holder_name": "John Doe"
 }
 ```
 
-**Examples:** [Python](../../examples/forte/forte.py#L176) · [TypeScript](../../examples/forte/forte.ts#L166) · [Kotlin](../../examples/forte/forte.kt#L131) · [Rust](../../examples/forte/forte.rs#L162)
+**Examples:** [Python](../../examples/forte/forte.py#L163) · [TypeScript](../../examples/forte/forte.ts#L154) · [Kotlin](../../examples/forte/forte.kt) · [Rust](../../examples/forte/forte.rs#L159)
 
-#### PaymentService.Get
+#### get
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+**Examples:** [Python](../../examples/forte/forte.py#L200) · [TypeScript](../../examples/forte/forte.ts#L189) · [Kotlin](../../examples/forte/forte.kt) · [Rust](../../examples/forte/forte.rs#L194)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+#### proxy_authorize
 
-**Examples:** [Python](../../examples/forte/forte.py#L185) · [TypeScript](../../examples/forte/forte.ts#L175) · [Kotlin](../../examples/forte/forte.kt#L143) · [Rust](../../examples/forte/forte.rs#L174)
+**Examples:** [Python](../../examples/forte/forte.py#L219) · [TypeScript](../../examples/forte/forte.ts#L204) · [Kotlin](../../examples/forte/forte.kt) · [Rust](../../examples/forte/forte.rs#L208)
 
-#### PaymentService.ProxyAuthorize
+#### refund_get
 
-Authorize using vault-aliased card data. Proxy substitutes before connector.
+**Examples:** [Python](../../examples/forte/forte.py#L250) · [TypeScript](../../examples/forte/forte.ts#L231) · [Kotlin](../../examples/forte/forte.kt) · [Rust](../../examples/forte/forte.rs#L236)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceProxyAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### void
 
-**Examples:** [Python](../../examples/forte/forte.py#L194) · [TypeScript](../../examples/forte/forte.ts#L184) · [Kotlin](../../examples/forte/forte.kt#L151) · [Rust](../../examples/forte/forte.rs#L181)
-
-#### PaymentService.Void
-
-Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceVoidRequest` |
-| **Response** | `PaymentServiceVoidResponse` |
-
-**Examples:** [Python](../../examples/forte/forte.py#L212) · [TypeScript](../../examples/forte/forte.ts) · [Kotlin](../../examples/forte/forte.kt#L192) · [Rust](../../examples/forte/forte.rs#L195)
-
-### Refunds
-
-#### RefundService.Get
-
-Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
-
-| | Message |
-|---|---------|
-| **Request** | `RefundServiceGetRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/forte/forte.py#L203) · [TypeScript](../../examples/forte/forte.ts#L193) · [Kotlin](../../examples/forte/forte.kt#L180) · [Rust](../../examples/forte/forte.rs#L188)
+**Examples:** [Python](../../examples/forte/forte.py#L266) · [TypeScript](../../examples/forte/forte.ts) · [Kotlin](../../examples/forte/forte.kt) · [Rust](../../examples/forte/forte.rs#L247)

@@ -9,9 +9,6 @@ import asyncio
 import sys
 from google.protobuf.json_format import ParseDict
 from payments import PaymentClient
-from payments import RecurringPaymentClient
-from payments import RefundClient
-from payments import PaymentMethodClient
 from payments.generated import sdk_config_pb2, payment_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
@@ -23,181 +20,6 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 # ))
 
 
-
-
-def _build_authorize_request(capture_method: str):
-    return ParseDict(
-        {
-            "merchant_transaction_id": "probe_txn_001",  # Identification.
-            "amount": {  # The amount for the payment.
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            },
-            "payment_method": {  # Payment method to be used.
-                "card": {  # Generic card payment.
-                    "card_number": {"value": "4111111111111111"},  # Card Identification.
-                    "card_exp_month": {"value": "03"},
-                    "card_exp_year": {"value": "2030"},
-                    "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-                }
-            },
-            "capture_method": capture_method,  # Method for capturing the payment.
-            "address": {  # Address Information.
-                "billing_address": {
-                }
-            },
-            "auth_type": "NO_THREE_DS",  # Authentication Details.
-            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks.
-            "payment_method_token": {"value": "probe_pm_token"}  # Payment Method Token.
-        },
-        payment_pb2.PaymentServiceAuthorizeRequest(),
-    )
-
-def _build_capture_request(connector_transaction_id: str):
-    return ParseDict(
-        {
-            "merchant_capture_id": "probe_capture_001",  # Identification.
-            "connector_transaction_id": connector_transaction_id,
-            "amount_to_capture": {  # Capture Details.
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            }
-        },
-        payment_pb2.PaymentServiceCaptureRequest(),
-    )
-
-def _build_get_request(connector_transaction_id: str):
-    return ParseDict(
-        {
-            "merchant_transaction_id": "probe_merchant_txn_001",  # Identification.
-            "connector_transaction_id": connector_transaction_id,
-            "amount": {  # Amount Information.
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            },
-            "connector_order_reference_id": "probe_order_ref_001"  # Connector Reference Id.
-        },
-        payment_pb2.PaymentServiceGetRequest(),
-    )
-
-def _build_recurring_charge_request():
-    return ParseDict(
-        {
-            "connector_recurring_payment_id": {  # Reference to existing mandate.
-                "connector_mandate_id": {  # mandate_id sent by the connector.
-                    "connector_mandate_id": "probe-mandate-123"
-                }
-            },
-            "amount": {  # Amount Information.
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            },
-            "payment_method": {  # Optional payment Method Information (for network transaction flows).
-                "token": {  # Payment tokens.
-                    "token": {"value": "probe_pm_token"}  # The token string representing a payment method.
-                }
-            },
-            "return_url": "https://example.com/recurring-return",
-            "connector_customer_id": "cust_probe_123",
-            "payment_method_type": "PAY_PAL",
-            "off_session": True  # Behavioral Flags and Preferences.
-        },
-        payment_pb2.RecurringPaymentServiceChargeRequest(),
-    )
-
-def _build_refund_request(connector_transaction_id: str):
-    return ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",  # Identification.
-            "connector_transaction_id": connector_transaction_id,
-            "payment_amount": 1000,  # Amount Information.
-            "refund_amount": {
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            },
-            "reason": "customer_request"  # Reason for the refund.
-        },
-        payment_pb2.PaymentServiceRefundRequest(),
-    )
-
-def _build_refund_get_request():
-    return ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",  # Identification.
-            "connector_transaction_id": "probe_connector_txn_001",
-            "refund_id": "probe_refund_id_001"
-        },
-        payment_pb2.RefundServiceGetRequest(),
-    )
-
-def _build_setup_recurring_request():
-    return ParseDict(
-        {
-            "merchant_recurring_payment_id": "probe_mandate_001",  # Identification.
-            "amount": {  # Mandate Details.
-                "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            },
-            "payment_method": {
-                "card": {  # Generic card payment.
-                    "card_number": {"value": "4111111111111111"},  # Card Identification.
-                    "card_exp_month": {"value": "03"},
-                    "card_exp_year": {"value": "2030"},
-                    "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-                }
-            },
-            "address": {  # Address Information.
-                "billing_address": {
-                }
-            },
-            "auth_type": "NO_THREE_DS",  # Type of authentication to be used.
-            "enrolled_for_3ds": False,  # Indicates if the customer is enrolled for 3D Secure.
-            "return_url": "https://example.com/mandate-return",  # URL to redirect after setup.
-            "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention.
-            "request_incremental_authorization": False,  # Indicates if incremental authorization is requested.
-            "customer_acceptance": {  # Details of customer acceptance.
-                "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
-                "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-            },
-            "payment_method_token": {"value": "probe_pm_token"}  # Payment Method Token.
-        },
-        payment_pb2.PaymentServiceSetupRecurringRequest(),
-    )
-
-def _build_tokenize_request():
-    return ParseDict(
-        {
-            "amount": {  # Payment Information.
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            },
-            "payment_method": {
-                "card": {  # Generic card payment.
-                    "card_number": {"value": "4111111111111111"},  # Card Identification.
-                    "card_exp_month": {"value": "03"},
-                    "card_exp_year": {"value": "2030"},
-                    "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-                }
-            },
-            "address": {  # Address Information.
-                "billing_address": {
-                }
-            }
-        },
-        payment_pb2.PaymentMethodServiceTokenizeRequest(),
-    )
-
-def _build_void_request(connector_transaction_id: str):
-    return ParseDict(
-        {
-            "merchant_void_id": "probe_void_001",  # Identification.
-            "connector_transaction_id": connector_transaction_id
-        },
-        payment_pb2.PaymentServiceVoidRequest(),
-    )
 async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """One-step Payment (Authorize + Capture)
 
@@ -206,7 +28,28 @@ async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk
     payment_client = PaymentClient(config)
 
     # Step 1: Authorize — reserve funds on the payment method
-    authorize_response = await payment_client.authorize(_build_authorize_request("AUTOMATIC"))
+    authorize_response = await payment_client.authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe"
+            },
+            "capture_method": "AUTOMATIC",
+            "address": {
+            },
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "payment_method_token": "probe_pm_token"
+        },
+    ))
 
     if authorize_response.status == "FAILED":
         raise RuntimeError(f"Payment failed: {authorize_response.error}")
@@ -225,7 +68,28 @@ async def process_checkout_card(merchant_transaction_id: str, config: sdk_config
     payment_client = PaymentClient(config)
 
     # Step 1: Authorize — reserve funds on the payment method
-    authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
+    authorize_response = await payment_client.authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe"
+            },
+            "capture_method": "MANUAL",
+            "address": {
+            },
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "payment_method_token": "probe_pm_token"
+        },
+    ))
 
     if authorize_response.status == "FAILED":
         raise RuntimeError(f"Payment failed: {authorize_response.error}")
@@ -234,7 +98,16 @@ async def process_checkout_card(merchant_transaction_id: str, config: sdk_config
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Capture — settle the reserved funds
-    capture_response = await payment_client.capture(_build_capture_request(authorize_response.connector_transaction_id))
+    capture_response = await payment_client.capture(ParseDict(
+        {
+            "merchant_capture_id": "probe_capture_001",
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+            "amount_to_capture": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            }
+        },
+    ))
 
     if capture_response.status == "FAILED":
         raise RuntimeError(f"Capture failed: {capture_response.error}")
@@ -250,7 +123,28 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
     payment_client = PaymentClient(config)
 
     # Step 1: Authorize — reserve funds on the payment method
-    authorize_response = await payment_client.authorize(_build_authorize_request("AUTOMATIC"))
+    authorize_response = await payment_client.authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe"
+            },
+            "capture_method": "AUTOMATIC",
+            "address": {
+            },
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "payment_method_token": "probe_pm_token"
+        },
+    ))
 
     if authorize_response.status == "FAILED":
         raise RuntimeError(f"Payment failed: {authorize_response.error}")
@@ -259,7 +153,18 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Refund — return funds to the customer
-    refund_response = await payment_client.refund(_build_refund_request(authorize_response.connector_transaction_id))
+    refund_response = await payment_client.refund(ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+            "payment_amount": 1000,
+            "refund_amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "reason": "customer_request"
+        },
+    ))
 
     if refund_response.status == "FAILED":
         raise RuntimeError(f"Refund failed: {refund_response.error}")
@@ -275,7 +180,28 @@ async def process_void_payment(merchant_transaction_id: str, config: sdk_config_
     payment_client = PaymentClient(config)
 
     # Step 1: Authorize — reserve funds on the payment method
-    authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
+    authorize_response = await payment_client.authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe"
+            },
+            "capture_method": "MANUAL",
+            "address": {
+            },
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "payment_method_token": "probe_pm_token"
+        },
+    ))
 
     if authorize_response.status == "FAILED":
         raise RuntimeError(f"Payment failed: {authorize_response.error}")
@@ -284,7 +210,12 @@ async def process_void_payment(merchant_transaction_id: str, config: sdk_config_
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Void — release reserved funds (cancel authorization)
-    void_response = await payment_client.void(_build_void_request(authorize_response.connector_transaction_id))
+    void_response = await payment_client.void(ParseDict(
+        {
+            "merchant_void_id": "probe_void_001",
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+        },
+    ))
 
     return {"status": getattr(void_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(void_response, "error", None)}
 
@@ -297,7 +228,28 @@ async def process_get_payment(merchant_transaction_id: str, config: sdk_config_p
     payment_client = PaymentClient(config)
 
     # Step 1: Authorize — reserve funds on the payment method
-    authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
+    authorize_response = await payment_client.authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe"
+            },
+            "capture_method": "MANUAL",
+            "address": {
+            },
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "payment_method_token": "probe_pm_token"
+        },
+    ))
 
     if authorize_response.status == "FAILED":
         raise RuntimeError(f"Payment failed: {authorize_response.error}")
@@ -306,88 +258,250 @@ async def process_get_payment(merchant_transaction_id: str, config: sdk_config_p
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Get — retrieve current payment status from the connector
-    get_response = await payment_client.get(_build_get_request(authorize_response.connector_transaction_id))
+    get_response = await payment_client.get(ParseDict(
+        {
+            "merchant_transaction_id": "probe_merchant_txn_001",
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "connector_order_reference_id": "probe_order_ref_001"
+        },
+    ))
 
     return {"status": getattr(get_response, "status", ""), "transaction_id": getattr(get_response, "connector_transaction_id", ""), "error": getattr(get_response, "error", None)}
 
 
 async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Authorize (Card)"""
+    """Flow: PaymentService.authorize (Card)"""
     payment_client = PaymentClient(config)
 
-    authorize_response = await payment_client.authorize(_build_authorize_request("AUTOMATIC"))
+    # Step 1: Authorize — reserve funds on the payment method
+    authorize_response = await payment_client.authorize(ParseDict(
+        {
+            "merchant_transaction_id": "probe_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe"
+            },
+            "capture_method": "AUTOMATIC",
+            "address": {
+            },
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "payment_method_token": "probe_pm_token"
+        },
+    ))
+
+    if authorize_response.status == "FAILED":
+        raise RuntimeError(f"Payment failed: {authorize_response.error}")
+    if authorize_response.status == "PENDING":
+        # Awaiting async confirmation — handle via webhook
+        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
 
 async def capture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Capture"""
+    """Flow: PaymentService.capture"""
     payment_client = PaymentClient(config)
 
-    capture_response = await payment_client.capture(_build_capture_request("probe_connector_txn_001"))
+    # Step 1: Capture — settle the reserved funds
+    capture_response = await payment_client.capture(ParseDict(
+        {
+            "merchant_capture_id": "probe_capture_001",
+            "connector_transaction_id": "probe_connector_txn_001",
+            "amount_to_capture": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            }
+        },
+    ))
+
+    if capture_response.status == "FAILED":
+        raise RuntimeError(f"Capture failed: {capture_response.error}")
 
     return {"status": capture_response.status}
 
 
 async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Get"""
+    """Flow: PaymentService.get"""
     payment_client = PaymentClient(config)
 
-    get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
+    # Step 1: Get — retrieve current payment status from the connector
+    get_response = await payment_client.get(ParseDict(
+        {
+            "merchant_transaction_id": "probe_merchant_txn_001",
+            "connector_transaction_id": "probe_connector_txn_001",
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "connector_order_reference_id": "probe_order_ref_001"
+        },
+    ))
 
     return {"status": get_response.status}
 
 
 async def recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: RecurringPaymentService.Charge"""
-    recurringpayment_client = RecurringPaymentClient(config)
+    """Flow: PaymentService.recurring_charge"""
+    payment_client = PaymentClient(config)
 
-    recurring_response = await recurringpayment_client.charge(_build_recurring_charge_request())
+    # Step 1: Recurring Charge — charge against the stored mandate
+    recurring_response = await payment_client.charge(ParseDict(
+        {
+            "connector_recurring_payment_id": {
+                "connector_mandate_id": "probe-mandate-123"
+            },
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "token": "probe_pm_token"
+            },
+            "return_url": "https://example.com/recurring-return",
+            "connector_customer_id": "cust_probe_123",
+            "payment_method_type": "PAY_PAL",
+            "off_session": True
+        },
+    ))
+
+    if recurring_response.status == "FAILED":
+        raise RuntimeError(f"Recurring_Charge failed: {recurring_response.error}")
 
     return {"status": recurring_response.status}
 
 
 async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Refund"""
+    """Flow: PaymentService.refund"""
     payment_client = PaymentClient(config)
 
-    refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
+    # Step 1: Refund — return funds to the customer
+    refund_response = await payment_client.refund(ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",
+            "connector_transaction_id": "probe_connector_txn_001",
+            "payment_amount": 1000,
+            "refund_amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "reason": "customer_request"
+        },
+    ))
+
+    if refund_response.status == "FAILED":
+        raise RuntimeError(f"Refund failed: {refund_response.error}")
 
     return {"status": refund_response.status}
 
 
 async def refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: RefundService.Get"""
-    refund_client = RefundClient(config)
+    """Flow: PaymentService.refund_get"""
+    payment_client = PaymentClient(config)
 
-    refund_response = await refund_client.refund_get(_build_refund_get_request())
+    # Step 1: refund_get
+    refund_response = await payment_client.refund_get(ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",
+            "connector_transaction_id": "probe_connector_txn_001",
+            "refund_id": "probe_refund_id_001"
+        },
+    ))
 
     return {"status": refund_response.status}
 
 
 async def setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.SetupRecurring"""
+    """Flow: PaymentService.setup_recurring"""
     payment_client = PaymentClient(config)
 
-    setup_response = await payment_client.setup_recurring(_build_setup_recurring_request())
+    # Step 1: Setup Recurring — store the payment mandate
+    setup_response = await payment_client.setup_recurring(ParseDict(
+        {
+            "merchant_recurring_payment_id": "probe_mandate_001",
+            "amount": {
+                "minor_amount": 0,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe"
+            },
+            "address": {
+            },
+            "auth_type": "NO_THREE_DS",
+            "enrolled_for_3ds": False,
+            "return_url": "https://example.com/mandate-return",
+            "setup_future_usage": "OFF_SESSION",
+            "request_incremental_authorization": False,
+            "customer_acceptance": {
+                "acceptance_type": "OFFLINE",
+                "accepted_at": 0
+            },
+            "payment_method_token": "probe_pm_token"
+        },
+    ))
+
+    if setup_response.status == "FAILED":
+        raise RuntimeError(f"Recurring setup failed: {setup_response.error}")
+    if setup_response.status == "PENDING":
+        # Mandate stored asynchronously — save connector_recurring_payment_id
+        return {"status": "pending", "mandate_id": setup_response.connector_recurring_payment_id}
 
     return {"status": setup_response.status, "mandate_id": setup_response.connector_transaction_id}
 
 
 async def tokenize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentMethodService.Tokenize"""
-    paymentmethod_client = PaymentMethodClient(config)
+    """Flow: PaymentService.tokenize"""
+    payment_client = PaymentClient(config)
 
-    tokenize_response = await paymentmethod_client.tokenize(_build_tokenize_request())
+    # Step 1: Tokenize — store card details and return a reusable token
+    tokenize_response = await payment_client.tokenize(ParseDict(
+        {
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+            },
+            "payment_method": {
+                "card_number": "4111111111111111",
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe"
+            },
+            "address": {
+            }
+        },
+    ))
 
     return {"status": tokenize_response.status}
 
 
 async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.Void"""
+    """Flow: PaymentService.void"""
     payment_client = PaymentClient(config)
 
-    void_response = await payment_client.void(_build_void_request("probe_connector_txn_001"))
+    # Step 1: Void — release reserved funds (cancel authorization)
+    void_response = await payment_client.void(ParseDict(
+        {
+            "merchant_void_id": "probe_void_001",
+            "connector_transaction_id": "probe_connector_txn_001"
+        },
+    ))
 
     return {"status": void_response.status}
 

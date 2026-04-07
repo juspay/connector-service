@@ -96,19 +96,12 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [get](#get) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -212,21 +205,12 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "upi_collect": {  # UPI Collect.
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address.
-    }
+    "vpa_id": "test@upi"
 }
 ```
 
-**Examples:** [Python](../../examples/payu/payu.py#L68) · [TypeScript](../../examples/payu/payu.ts#L65) · [Kotlin](../../examples/payu/payu.kt#L68) · [Rust](../../examples/payu/payu.rs#L70)
+**Examples:** [Python](../../examples/payu/payu.py#L23) · [TypeScript](../../examples/payu/payu.ts#L24) · [Kotlin](../../examples/payu/payu.kt) · [Rust](../../examples/payu/payu.rs#L26)
 
-#### PaymentService.Get
+#### get
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
-
-**Examples:** [Python](../../examples/payu/payu.py#L77) · [TypeScript](../../examples/payu/payu.ts#L74) · [Kotlin](../../examples/payu/payu.kt#L80) · [Rust](../../examples/payu/payu.rs#L82)
+**Examples:** [Python](../../examples/payu/payu.py#L62) · [TypeScript](../../examples/payu/payu.ts#L61) · [Kotlin](../../examples/payu/payu.kt) · [Rust](../../examples/payu/payu.rs#L63)

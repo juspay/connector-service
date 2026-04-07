@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L200) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L144) · [Rust](../../examples/getnet/getnet.rs#L190)
+**Examples:** [Python](../../examples/getnet/getnet.py#L23) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L23) · [Rust](../../examples/getnet/getnet.rs#L27)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,49 +122,42 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L219) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L160) · [Rust](../../examples/getnet/getnet.rs#L206)
+**Examples:** [Python](../../examples/getnet/getnet.py#L67) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L54) · [Rust](../../examples/getnet/getnet.rs#L72)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L244) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L182) · [Rust](../../examples/getnet/getnet.rs#L229)
+**Examples:** [Python](../../examples/getnet/getnet.py#L131) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L99) · [Rust](../../examples/getnet/getnet.rs#L138)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L269) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L204) · [Rust](../../examples/getnet/getnet.rs#L252)
+**Examples:** [Python](../../examples/getnet/getnet.py#L197) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L146) · [Rust](../../examples/getnet/getnet.rs#L206)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L291) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L223) · [Rust](../../examples/getnet/getnet.rs#L271)
+**Examples:** [Python](../../examples/getnet/getnet.py#L258) · [JavaScript](../../examples/getnet/getnet.js) · [Kotlin](../../examples/getnet/getnet.kt#L188) · [Rust](../../examples/getnet/getnet.rs#L268)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
-| [MerchantAuthenticationService.CreateServerAuthenticationToken](#merchantauthenticationservicecreateserverauthenticationtoken) | Authentication | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
-| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [capture](#capture) | Other | `—` |
+| [create_server_authentication_token](#create_server_authentication_token) | Other | `—` |
+| [get](#get) | Other | `—` |
+| [proxy_authorize](#proxy_authorize) | Other | `—` |
+| [refund](#refund) | Other | `—` |
+| [refund_get](#refund_get) | Other | `—` |
+| [void](#void) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -268,95 +261,40 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "card": {  # Generic card payment.
-        "card_number": {"value": "4111111111111111"},  # Card Identification.
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-    }
+    "card_number": "4111111111111111",
+    "card_exp_month": "03",
+    "card_exp_year": "2030",
+    "card_cvc": "737",
+    "card_holder_name": "John Doe"
 }
 ```
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L313) · [TypeScript](../../examples/getnet/getnet.ts#L298) · [Kotlin](../../examples/getnet/getnet.kt#L241) · [Rust](../../examples/getnet/getnet.rs#L289)
+**Examples:** [Python](../../examples/getnet/getnet.py#L319) · [TypeScript](../../examples/getnet/getnet.ts#L304) · [Kotlin](../../examples/getnet/getnet.kt) · [Rust](../../examples/getnet/getnet.rs#L329)
 
-#### PaymentService.Capture
+#### capture
 
-Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
+**Examples:** [Python](../../examples/getnet/getnet.py#L360) · [TypeScript](../../examples/getnet/getnet.ts#L343) · [Kotlin](../../examples/getnet/getnet.kt) · [Rust](../../examples/getnet/getnet.rs#L370)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceCaptureRequest` |
-| **Response** | `PaymentServiceCaptureResponse` |
+#### create_server_authentication_token
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L322) · [TypeScript](../../examples/getnet/getnet.ts#L307) · [Kotlin](../../examples/getnet/getnet.kt#L253) · [Rust](../../examples/getnet/getnet.rs#L301)
+**Examples:** [Python](../../examples/getnet/getnet.py#L387) · [TypeScript](../../examples/getnet/getnet.ts#L367) · [Kotlin](../../examples/getnet/getnet.kt) · [Rust](../../examples/getnet/getnet.rs#L391)
 
-#### PaymentService.Get
+#### get
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+**Examples:** [Python](../../examples/getnet/getnet.py#L401) · [TypeScript](../../examples/getnet/getnet.ts#L377) · [Kotlin](../../examples/getnet/getnet.kt) · [Rust](../../examples/getnet/getnet.rs#L400)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+#### proxy_authorize
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L340) · [TypeScript](../../examples/getnet/getnet.ts#L325) · [Kotlin](../../examples/getnet/getnet.kt#L273) · [Rust](../../examples/getnet/getnet.rs#L315)
+**Examples:** [Python](../../examples/getnet/getnet.py#L425) · [TypeScript](../../examples/getnet/getnet.ts#L397) · [Kotlin](../../examples/getnet/getnet.kt) · [Rust](../../examples/getnet/getnet.rs#L421)
 
-#### PaymentService.ProxyAuthorize
+#### refund
 
-Authorize using vault-aliased card data. Proxy substitutes before connector.
+**Examples:** [Python](../../examples/getnet/getnet.py#L460) · [TypeScript](../../examples/getnet/getnet.ts#L428) · [Kotlin](../../examples/getnet/getnet.kt) · [Rust](../../examples/getnet/getnet.rs#L455)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceProxyAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### refund_get
 
-**Examples:** [Python](../../examples/getnet/getnet.py#L349) · [TypeScript](../../examples/getnet/getnet.ts#L334) · [Kotlin](../../examples/getnet/getnet.kt#L281) · [Rust](../../examples/getnet/getnet.rs#L322)
+**Examples:** [Python](../../examples/getnet/getnet.py#L489) · [TypeScript](../../examples/getnet/getnet.ts#L454) · [Kotlin](../../examples/getnet/getnet.kt) · [Rust](../../examples/getnet/getnet.rs#L478)
 
-#### PaymentService.Refund
+#### void
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/getnet/getnet.py#L358) · [TypeScript](../../examples/getnet/getnet.ts#L343) · [Kotlin](../../examples/getnet/getnet.kt#L316) · [Rust](../../examples/getnet/getnet.rs#L329)
-
-#### PaymentService.Void
-
-Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceVoidRequest` |
-| **Response** | `PaymentServiceVoidResponse` |
-
-**Examples:** [Python](../../examples/getnet/getnet.py#L376) · [TypeScript](../../examples/getnet/getnet.ts) · [Kotlin](../../examples/getnet/getnet.kt#L345) · [Rust](../../examples/getnet/getnet.rs#L343)
-
-### Refunds
-
-#### RefundService.Get
-
-Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
-
-| | Message |
-|---|---------|
-| **Request** | `RefundServiceGetRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/getnet/getnet.py#L367) · [TypeScript](../../examples/getnet/getnet.ts#L352) · [Kotlin](../../examples/getnet/getnet.kt#L326) · [Rust](../../examples/getnet/getnet.rs#L336)
-
-### Authentication
-
-#### MerchantAuthenticationService.CreateServerAuthenticationToken
-
-Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
-
-| | Message |
-|---|---------|
-| **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
-
-**Examples:** [Python](../../examples/getnet/getnet.py#L331) · [TypeScript](../../examples/getnet/getnet.ts#L316) · [Kotlin](../../examples/getnet/getnet.kt#L263) · [Rust](../../examples/getnet/getnet.rs#L308)
+**Examples:** [Python](../../examples/getnet/getnet.py#L510) · [TypeScript](../../examples/getnet/getnet.ts) · [Kotlin](../../examples/getnet/getnet.kt) · [Rust](../../examples/getnet/getnet.rs#L496)
