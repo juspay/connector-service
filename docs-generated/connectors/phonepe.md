@@ -96,19 +96,12 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [get](#get) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -212,21 +205,12 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "upi_collect": {  # UPI Collect.
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address.
-    }
+    "vpa_id": "test@upi"
 }
 ```
 
-**Examples:** [Python](../../examples/phonepe/phonepe.py#L63) · [TypeScript](../../examples/phonepe/phonepe.ts#L60) · [Kotlin](../../examples/phonepe/phonepe.kt#L63) · [Rust](../../examples/phonepe/phonepe.rs#L65)
+**Examples:** [Python](../../examples/phonepe/phonepe.py#L23) · [TypeScript](../../examples/phonepe/phonepe.ts#L24) · [Kotlin](../../examples/phonepe/phonepe.kt) · [Rust](../../examples/phonepe/phonepe.rs#L26)
 
-#### PaymentService.Get
+#### get
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
-
-**Examples:** [Python](../../examples/phonepe/phonepe.py#L72) · [TypeScript](../../examples/phonepe/phonepe.ts#L69) · [Kotlin](../../examples/phonepe/phonepe.kt#L75) · [Rust](../../examples/phonepe/phonepe.rs#L77)
+**Examples:** [Python](../../examples/phonepe/phonepe.py#L56) · [TypeScript](../../examples/phonepe/phonepe.ts#L55) · [Kotlin](../../examples/phonepe/phonepe.kt) · [Rust](../../examples/phonepe/phonepe.rs#L57)

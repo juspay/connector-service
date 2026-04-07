@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L144) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L109) · [Rust](../../examples/paysafe/paysafe.rs#L137)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L23) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L23) · [Rust](../../examples/paysafe/paysafe.rs#L27)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,48 +122,41 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L163) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L125) · [Rust](../../examples/paysafe/paysafe.rs#L153)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L63) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L52) · [Rust](../../examples/paysafe/paysafe.rs#L66)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L188) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L147) · [Rust](../../examples/paysafe/paysafe.rs#L176)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L118) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L92) · [Rust](../../examples/paysafe/paysafe.rs#L119)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L213) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L169) · [Rust](../../examples/paysafe/paysafe.rs#L199)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L175) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L134) · [Rust](../../examples/paysafe/paysafe.rs#L174)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L235) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L188) · [Rust](../../examples/paysafe/paysafe.rs#L218)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L227) · [JavaScript](../../examples/paysafe/paysafe.js) · [Kotlin](../../examples/paysafe/paysafe.kt#L171) · [Rust](../../examples/paysafe/paysafe.rs#L223)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
-| [PaymentMethodService.Tokenize](#paymentmethodservicetokenize) | Payments | `PaymentMethodServiceTokenizeRequest` |
-| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [capture](#capture) | Other | `—` |
+| [get](#get) | Other | `—` |
+| [refund](#refund) | Other | `—` |
+| [refund_get](#refund_get) | Other | `—` |
+| [tokenize](#tokenize) | Other | `—` |
+| [void](#void) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -267,13 +260,11 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "card": {  # Generic card payment.
-        "card_number": {"value": "4111111111111111"},  # Card Identification.
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-    }
+    "card_number": "4111111111111111",
+    "card_exp_month": "03",
+    "card_exp_year": "2030",
+    "card_cvc": "737",
+    "card_holder_name": "John Doe"
 }
 ```
 
@@ -281,20 +272,12 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "google_pay": {  # Google Pay.
-        "type": "CARD",  # Type of payment method.
-        "description": "Visa 1111",  # User-facing description of the payment method.
-        "info": {
-            "card_network": "VISA",  # Card network name.
-            "card_details": "1111"  # Card details (usually last 4 digits).
-        },
-        "tokenization_data": {
-            "encrypted_data": {  # Encrypted Google Pay payment data.
-                "token_type": "PAYMENT_GATEWAY",  # The type of the token.
-                "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet.
-            }
-        }
-    }
+    "type": "CARD",
+    "description": "Visa 1111",
+    "card_network": "VISA",
+    "card_details": "1111"
+    "token_type": "PAYMENT_GATEWAY",
+    "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"
 }
 ```
 
@@ -302,17 +285,11 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "apple_pay": {  # Apple Pay.
-        "payment_data": {
-            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string.
-        },
-        "payment_method": {
-            "display_name": "Visa 1111",
-            "network": "Visa",
-            "type": "debit"
-        },
-        "transaction_identifier": "probe_txn_id"  # Transaction identifier.
-    }
+    "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+    "display_name": "Visa 1111",
+    "network": "Visa",
+    "type": "debit"
+    "transaction_identifier": "probe_txn_id"
 }
 ```
 
@@ -320,10 +297,8 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "sepa": {  # Sepa - Single Euro Payments Area direct debit.
-        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA.
-        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit.
-    }
+    "iban": "DE89370400440532013000",
+    "bank_account_holder_name": "John Doe"
 }
 ```
 
@@ -331,11 +306,9 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "bacs": {  # Bacs - Bankers' Automated Clearing Services.
-        "account_number": {"value": "55779911"},  # Account number for Bacs payment method.
-        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method.
-        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit.
-    }
+    "account_number": "55779911",
+    "sort_code": "200000",
+    "bank_account_holder_name": "John Doe"
 }
 ```
 
@@ -343,11 +316,9 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "ach": {  # Ach - Automated Clearing House.
-        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment.
-        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment.
-        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name.
-    }
+    "account_number": "000123456789",
+    "routing_number": "110000000",
+    "bank_account_holder_name": "John Doe"
 }
 ```
 
@@ -355,11 +326,9 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit.
-        "account_number": {"value": "000123456"},  # Account number for Becs payment method.
-        "bsb_number": {"value": "000000"},  # Bank-State-Branch (bsb) number.
-        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit.
-    }
+    "account_number": "000123456",
+    "bsb_number": "000000",
+    "bank_account_holder_name": "John Doe"
 }
 ```
 
@@ -367,8 +336,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "ideal": {
-    }
 }
 ```
 
@@ -376,9 +343,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "paypal_redirect": {  # PayPal.
-        "email": {"value": "test@example.com"}  # PayPal's email address.
-    }
+    "email": "test@example.com"
 }
 ```
 
@@ -386,9 +351,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "blik": {
-        "blik_code": "777124"
-    }
+    "blik_code": "777124"
 }
 ```
 
@@ -396,8 +359,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "klarna": {  # Klarna - Swedish BNPL service.
-    }
 }
 ```
 
@@ -405,8 +366,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service.
-    }
 }
 ```
 
@@ -414,9 +373,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "upi_collect": {  # UPI Collect.
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address.
-    }
+    "vpa_id": "test@upi"
 }
 ```
 
@@ -424,8 +381,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "affirm": {  # Affirm - US BNPL service.
-    }
 }
 ```
 
@@ -433,88 +388,38 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "samsung_pay": {  # Samsung.
-        "payment_credential": {
-            "method": "3DS",  # Method type.
-            "recurring_payment": False,  # Whether this is a recurring payment.
-            "card_brand": "VISA",
-            "card_last_four_digits": {"value": "1234"},  # Last four digits of card.
-            "token_data": {
-                "type": "S",  # 3DS type.
-                "version": "100",  # 3DS version.
-                "data": {"value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"}  # Token data.
-            }
-        }
-    }
+    "method": "3DS",
+    "recurring_payment": False,
+    "card_brand": "VISA",
+    "card_last_four_digits": "1234",
+    "type": "S",
+    "version": "100",
+    "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
 }
 ```
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L257) · [TypeScript](../../examples/paysafe/paysafe.ts#L244) · [Kotlin](../../examples/paysafe/paysafe.kt#L206) · [Rust](../../examples/paysafe/paysafe.rs#L236)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L279) · [TypeScript](../../examples/paysafe/paysafe.ts#L264) · [Kotlin](../../examples/paysafe/paysafe.kt) · [Rust](../../examples/paysafe/paysafe.rs#L271)
 
-#### PaymentService.Capture
+#### capture
 
-Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L316) · [TypeScript](../../examples/paysafe/paysafe.ts#L299) · [Kotlin](../../examples/paysafe/paysafe.kt) · [Rust](../../examples/paysafe/paysafe.rs#L306)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceCaptureRequest` |
-| **Response** | `PaymentServiceCaptureResponse` |
+#### get
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L266) · [TypeScript](../../examples/paysafe/paysafe.ts#L253) · [Kotlin](../../examples/paysafe/paysafe.kt#L218) · [Rust](../../examples/paysafe/paysafe.rs#L248)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L338) · [TypeScript](../../examples/paysafe/paysafe.ts#L318) · [Kotlin](../../examples/paysafe/paysafe.kt) · [Rust](../../examples/paysafe/paysafe.rs#L320)
 
-#### PaymentService.Get
+#### refund
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L357) · [TypeScript](../../examples/paysafe/paysafe.ts#L333) · [Kotlin](../../examples/paysafe/paysafe.kt) · [Rust](../../examples/paysafe/paysafe.rs#L334)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+#### refund_get
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L275) · [TypeScript](../../examples/paysafe/paysafe.ts#L262) · [Kotlin](../../examples/paysafe/paysafe.kt#L228) · [Rust](../../examples/paysafe/paysafe.rs#L255)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L381) · [TypeScript](../../examples/paysafe/paysafe.ts#L354) · [Kotlin](../../examples/paysafe/paysafe.kt) · [Rust](../../examples/paysafe/paysafe.rs#L350)
 
-#### PaymentService.Refund
+#### tokenize
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L397) · [TypeScript](../../examples/paysafe/paysafe.ts#L366) · [Kotlin](../../examples/paysafe/paysafe.kt) · [Rust](../../examples/paysafe/paysafe.rs#L361)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
+#### void
 
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L284) · [TypeScript](../../examples/paysafe/paysafe.ts#L271) · [Kotlin](../../examples/paysafe/paysafe.kt#L236) · [Rust](../../examples/paysafe/paysafe.rs#L262)
-
-#### PaymentMethodService.Tokenize
-
-Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodServiceTokenizeRequest` |
-| **Response** | `PaymentMethodServiceTokenizeResponse` |
-
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L302) · [TypeScript](../../examples/paysafe/paysafe.ts#L289) · [Kotlin](../../examples/paysafe/paysafe.kt#L258) · [Rust](../../examples/paysafe/paysafe.rs#L276)
-
-#### PaymentService.Void
-
-Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceVoidRequest` |
-| **Response** | `PaymentServiceVoidResponse` |
-
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L311) · [TypeScript](../../examples/paysafe/paysafe.ts) · [Kotlin](../../examples/paysafe/paysafe.kt#L285) · [Rust](../../examples/paysafe/paysafe.rs#L283)
-
-### Refunds
-
-#### RefundService.Get
-
-Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
-
-| | Message |
-|---|---------|
-| **Request** | `RefundServiceGetRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/paysafe/paysafe.py#L293) · [TypeScript](../../examples/paysafe/paysafe.ts#L280) · [Kotlin](../../examples/paysafe/paysafe.kt#L246) · [Rust](../../examples/paysafe/paysafe.rs#L269)
+**Examples:** [Python](../../examples/paysafe/paysafe.py#L424) · [TypeScript](../../examples/paysafe/paysafe.ts) · [Kotlin](../../examples/paysafe/paysafe.kt) · [Rust](../../examples/paysafe/paysafe.rs#L387)

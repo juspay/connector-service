@@ -6,7 +6,7 @@
 // Run a scenario:  npx tsx mifinity.ts checkout_autocapture
 
 import { PaymentClient, types } from 'hyperswitch-prism';
-const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, Currency } = types;
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = types;
 
 const _defaultConfig: ConnectorConfig = {
     options: {
@@ -19,24 +19,18 @@ const _defaultConfig: ConnectorConfig = {
 // };
 
 
-function _buildGetRequest(connectorTransactionId: string): PaymentServiceGetRequest {
-    return {
-        "merchantTransactionId": "probe_merchant_txn_001",  // Identification.
-        "connectorTransactionId": connectorTransactionId,
-        "amount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        }
-    };
-}
-
-
 // ANCHOR: scenario_functions
-// Flow: PaymentService.Get
-async function get(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceGetResponse> {
-    const paymentClient = new PaymentClient(config);
-
-    const getResponse = await paymentClient.get(_buildGetRequest('probe_connector_txn_001'));
+// Flow: PaymentService.get
+async function get(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+    // Step 1: Get — retrieve current payment status from the connector
+    const getResponse = await paymentClient.get({
+        "merchantTransactionId": "probe_merchant_txn_001",
+        "connectorTransactionId": "probe_connector_txn_001",
+        "amount": {
+            "minorAmount": 1000,
+            "currency": "USD"
+        }
+    });
 
     return { status: getResponse.status };
 }
@@ -44,7 +38,7 @@ async function get(merchantTransactionId: string, config: ConnectorConfig = _def
 
 // Export all process* functions for the smoke test
 export {
-    get, _buildGetRequest
+    get
 };
 
 // CLI runner

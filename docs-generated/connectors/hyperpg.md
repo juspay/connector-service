@@ -108,40 +108,33 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L118) · [JavaScript](../../examples/hyperpg/hyperpg.js) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L84) · [Rust](../../examples/hyperpg/hyperpg.rs#L114)
+**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L23) · [JavaScript](../../examples/hyperpg/hyperpg.js) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L23) · [Rust](../../examples/hyperpg/hyperpg.rs#L27)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L137) · [JavaScript](../../examples/hyperpg/hyperpg.js) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L100) · [Rust](../../examples/hyperpg/hyperpg.rs#L130)
+**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L62) · [JavaScript](../../examples/hyperpg/hyperpg.js) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L51) · [Rust](../../examples/hyperpg/hyperpg.rs#L65)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L162) · [JavaScript](../../examples/hyperpg/hyperpg.js) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L122) · [Rust](../../examples/hyperpg/hyperpg.rs#L153)
+**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L118) · [JavaScript](../../examples/hyperpg/hyperpg.js) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L92) · [Rust](../../examples/hyperpg/hyperpg.rs#L119)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [get](#get) | Other | `—` |
+| [proxy_authorize](#proxy_authorize) | Other | `—` |
+| [refund](#refund) | Other | `—` |
+| [refund_get](#refund_get) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -245,60 +238,28 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "card": {  # Generic card payment.
-        "card_number": {"value": "4111111111111111"},  # Card Identification.
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-    }
+    "card_number": "4111111111111111",
+    "card_exp_month": "03",
+    "card_exp_year": "2030",
+    "card_cvc": "737",
+    "card_holder_name": "John Doe"
 }
 ```
 
-**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L184) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L175) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L140) · [Rust](../../examples/hyperpg/hyperpg.rs#L171)
+**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L170) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L162) · [Kotlin](../../examples/hyperpg/hyperpg.kt) · [Rust](../../examples/hyperpg/hyperpg.rs#L167)
 
-#### PaymentService.Get
+#### get
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L206) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L196) · [Kotlin](../../examples/hyperpg/hyperpg.kt) · [Rust](../../examples/hyperpg/hyperpg.rs#L201)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+#### proxy_authorize
 
-**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L193) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L184) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L152) · [Rust](../../examples/hyperpg/hyperpg.rs#L183)
+**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L226) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L212) · [Kotlin](../../examples/hyperpg/hyperpg.kt) · [Rust](../../examples/hyperpg/hyperpg.rs#L216)
 
-#### PaymentService.ProxyAuthorize
+#### refund
 
-Authorize using vault-aliased card data. Proxy substitutes before connector.
+**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L256) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L238) · [Kotlin](../../examples/hyperpg/hyperpg.kt) · [Rust](../../examples/hyperpg/hyperpg.rs#L243)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceProxyAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### refund_get
 
-**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L202) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L193) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L160) · [Rust](../../examples/hyperpg/hyperpg.rs#L190)
-
-#### PaymentService.Refund
-
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L211) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L202) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L188) · [Rust](../../examples/hyperpg/hyperpg.rs#L197)
-
-### Refunds
-
-#### RefundService.Get
-
-Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
-
-| | Message |
-|---|---------|
-| **Request** | `RefundServiceGetRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L220) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L211) · [Kotlin](../../examples/hyperpg/hyperpg.kt#L198) · [Rust](../../examples/hyperpg/hyperpg.rs#L204)
+**Examples:** [Python](../../examples/hyperpg/hyperpg.py#L280) · [TypeScript](../../examples/hyperpg/hyperpg.ts#L259) · [Kotlin](../../examples/hyperpg/hyperpg.kt) · [Rust](../../examples/hyperpg/hyperpg.rs#L259)
