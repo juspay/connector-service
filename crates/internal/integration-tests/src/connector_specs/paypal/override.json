@@ -1,5 +1,5 @@
 {
-  "authorize": {
+  "PaymentService/Authorize": {
     "threeds_manual_capture_credit_card": {
       "assert": {
         "status": {
@@ -18,7 +18,7 @@
       }
     }
   },
-  "recurring_charge": {
+  "RecurringPaymentService/Charge": {
     "recurring_charge": {
       "grpc_req": {
         "payment_method_type": "CREDIT",
@@ -41,7 +41,7 @@
       }
     }
   },
-  "handle_event": {
+  "EventService/HandleEvent": {
     "payment_succeeded": {
       "assert": {
         "source_verified": {

@@ -24,17 +24,17 @@ type ResponseTransformer = fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Vec<u8>;
 pub fn supports_sdk_suite(suite: &str) -> bool {
     matches!(
         suite,
-        "server_authentication_token"
-            | "server_session_authentication_token"
-            | "client_authentication_token"
-            | "create_customer"
-            | "authorize"
-            | "capture"
-            | "void"
-            | "refund"
-            | "get"
-            | "setup_recurring"
-            | "recurring_charge"
+        "MerchantAuthenticationService/CreateServerAuthenticationToken"
+            | "MerchantAuthenticationService/CreateServerSessionAuthenticationToken"
+            | "MerchantAuthenticationService/CreateClientAuthenticationToken"
+            | "CustomerService/Create"
+            | "PaymentService/Authorize"
+            | "PaymentService/Capture"
+            | "PaymentService/Void"
+            | "PaymentService/Refund"
+            | "PaymentService/Get"
+            | "PaymentService/SetupRecurring"
+            | "RecurringPaymentService/Charge"
     )
 }
 
@@ -90,7 +90,7 @@ pub fn execute_sdk_request_from_payload(
     let options_bytes = options.encode_to_vec();
 
     match suite {
-        "server_authentication_token" => execute_sdk_flow::<
+        "MerchantAuthenticationService/CreateServerAuthenticationToken" => execute_sdk_flow::<
             payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
             payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
         >(
@@ -102,7 +102,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::create_server_authentication_token_req_transformer,
             ffi_bindings::create_server_authentication_token_res_transformer,
         ),
-        "server_session_authentication_token" => execute_sdk_flow::<
+        "MerchantAuthenticationService/CreateServerSessionAuthenticationToken" => execute_sdk_flow::<
             payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenRequest,
             payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse,
         >(
@@ -114,7 +114,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::create_server_session_authentication_token_req_transformer,
             ffi_bindings::create_server_session_authentication_token_res_transformer,
         ),
-        "client_authentication_token" => execute_sdk_flow::<
+        "MerchantAuthenticationService/CreateClientAuthenticationToken" => execute_sdk_flow::<
             payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
             payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
         >(
@@ -126,7 +126,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::create_client_authentication_token_req_transformer,
             ffi_bindings::create_client_authentication_token_res_transformer,
         ),
-        "create_customer" => execute_sdk_flow::<
+        "CustomerService/Create" => execute_sdk_flow::<
             payments::CustomerServiceCreateRequest,
             payments::CustomerServiceCreateResponse,
         >(
@@ -138,7 +138,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::create_req_transformer,
             ffi_bindings::create_res_transformer,
         ),
-        "authorize" => execute_sdk_flow::<
+        "PaymentService/Authorize" => execute_sdk_flow::<
             payments::PaymentServiceAuthorizeRequest,
             payments::PaymentServiceAuthorizeResponse,
         >(
@@ -150,7 +150,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::authorize_req_transformer,
             ffi_bindings::authorize_res_transformer,
         ),
-        "capture" => execute_sdk_flow::<
+        "PaymentService/Capture" => execute_sdk_flow::<
             payments::PaymentServiceCaptureRequest,
             payments::PaymentServiceCaptureResponse,
         >(
@@ -162,7 +162,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::capture_req_transformer,
             ffi_bindings::capture_res_transformer,
         ),
-        "void" => execute_sdk_flow::<
+        "PaymentService/Void" => execute_sdk_flow::<
             payments::PaymentServiceVoidRequest,
             payments::PaymentServiceVoidResponse,
         >(
@@ -174,7 +174,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::void_req_transformer,
             ffi_bindings::void_res_transformer,
         ),
-        "refund" => {
+        "PaymentService/Refund" => {
             execute_sdk_flow::<payments::PaymentServiceRefundRequest, payments::RefundResponse>(
                 suite,
                 scenario,
@@ -185,7 +185,7 @@ pub fn execute_sdk_request_from_payload(
                 ffi_bindings::refund_res_transformer,
             )
         }
-        "get" => execute_sdk_flow::<
+        "PaymentService/Get" => execute_sdk_flow::<
             payments::PaymentServiceGetRequest,
             payments::PaymentServiceGetResponse,
         >(
@@ -197,7 +197,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::get_req_transformer,
             ffi_bindings::get_res_transformer,
         ),
-        "setup_recurring" => execute_sdk_flow::<
+        "PaymentService/SetupRecurring" => execute_sdk_flow::<
             payments::PaymentServiceSetupRecurringRequest,
             payments::PaymentServiceSetupRecurringResponse,
         >(
@@ -209,7 +209,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::setup_recurring_req_transformer,
             ffi_bindings::setup_recurring_res_transformer,
         ),
-        "recurring_charge" => execute_sdk_flow::<
+        "RecurringPaymentService/Charge" => execute_sdk_flow::<
             payments::RecurringPaymentServiceChargeRequest,
             payments::RecurringPaymentServiceChargeResponse,
         >(
@@ -656,9 +656,11 @@ mod tests {
         assert!(supports_sdk_connector("authorizedotnet"));
         assert!(!supports_sdk_connector("adyen"));
 
-        assert!(supports_sdk_suite("authorize"));
-        assert!(supports_sdk_suite("server_authentication_token"));
-        assert!(!supports_sdk_suite("refund_sync"));
+        assert!(supports_sdk_suite("PaymentService/Authorize"));
+        assert!(supports_sdk_suite(
+            "MerchantAuthenticationService/CreateServerAuthenticationToken"
+        ));
+        assert!(!supports_sdk_suite("RefundService/Get"));
     }
 
     #[test]
@@ -700,14 +702,14 @@ mod tests {
     #[test]
     fn authorize_scenario_maps_to_card_payment_method() {
         let req = get_the_grpc_req_for_connector(
-            "authorize",
+            "PaymentService/Authorize",
             "no3ds_auto_capture_credit_card",
             "authorizedotnet",
         )
         .expect("authorize scenario should load");
 
         let parsed: payments::PaymentServiceAuthorizeRequest = parse_sdk_payload(
-            "authorize",
+            "PaymentService/Authorize",
             "no3ds_auto_capture_credit_card",
             "authorizedotnet",
             &req,
