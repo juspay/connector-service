@@ -52,7 +52,7 @@ use crate::connectors::macros;
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
 use crate::with_response_body;
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
 pub(crate) mod headers {
@@ -789,7 +789,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ServerAuthenticationTokenRequestData,
             ServerAuthenticationTokenResponseData,
         >,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     > {
         let response: globalpay::GlobalpayAccessTokenResponse = res
             .response
@@ -813,7 +813,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -906,7 +906,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: globalpay::GlobalpayErrorResponse = res
             .response
             .parse_struct("GlobalpayErrorResponse")

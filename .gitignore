@@ -440,3 +440,7 @@ opencode.json
 
 # Generated proto descriptor files
 # scripts/generators/code/services.desc
+scripts/generators/code/services.desc
+
+# Field probe manifest (generated at runtime)
+data/field_probe/manifest.json
