@@ -48,7 +48,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers as billwerk;
 use transformers::{
-    BillwerkCaptureRequest, BillwerkClientAuthRequest, BillwerkClientAuthResponse,
+    BillwerkCaptureRequest, BillwerkCreateOrderRequest, BillwerkCreateOrderResponse,
+    BillwerkClientAuthRequest, BillwerkClientAuthResponse,
     BillwerkPaymentsRequest, BillwerkPaymentsResponse,
     BillwerkPaymentsResponse as BillwerkPaymentsSyncResponse,
     BillwerkPaymentsResponse as BillwerkPaymentsVoidResponse,
@@ -221,6 +222,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> bool {
         true
     }
+
+    fn should_do_order_create(&self) -> bool {
+        true
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -243,15 +248,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Billwerk<T>
-{
-}
+// CreateOrder implementation moved to macro below
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -408,6 +405,12 @@ macros::create_all_prerequisites!(
             request_body: BillwerkClientAuthRequest,
             response_body: BillwerkClientAuthResponse,
             router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: BillwerkCreateOrderRequest,
+            response_body: BillwerkCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         )
 
     ],
@@ -814,6 +817,38 @@ macros::macro_connector_implementation!(
             // Billwerk checkout sessions are on checkout-api.reepay.com
             // Derive from base_url (api.reepay.com -> checkout-api.reepay.com)
             let base_url = self.connector_base_url_payments(req);
+            let checkout_url = base_url.replace("://api.", "://checkout-api.");
+            Ok(format!("{checkout_url}v1/session/charge"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Billwerk,
+    curl_request: Json(BillwerkCreateOrderRequest),
+    curl_response: BillwerkCreateOrderResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, IntegrationError> {
+            // The checkout session API uses a different base URL from the main API
+            let base_url = &req.resource_common_data.connectors.billwerk.base_url;
+            // Replace "api" with "checkout-api" in the base URL for session creation
             let checkout_url = base_url.replace("://api.", "://checkout-api.");
             Ok(format!("{checkout_url}v1/session/charge"))
         }

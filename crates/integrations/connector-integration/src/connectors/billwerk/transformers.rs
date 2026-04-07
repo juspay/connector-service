@@ -10,13 +10,15 @@ use crate::{connectors::billwerk::BillwerkRouterData, types::ResponseRouterData,
 
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, ClientAuthenticationToken, PaymentMethodToken, RSync, RepeatPayment,
+        
+        Authorize, Capture, ClientAuthenticationToken, CreateOrder, PaymentMethodToken, RSync, RepeatPayment,
         SetupMandate,
+    ,
     },
     connector_types::{
         BillwerkClientAuthenticationResponse as BillwerkClientAuthenticationResponseDomain,
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId,
+        ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
@@ -878,6 +880,177 @@ impl TryFrom<ResponseRouterData<BillwerkClientAuthResponse, Self>>
                 session_data,
                 status_code: item.http_code,
             }),
+            ..item.router_data
+        })
+    }
+}
+
+// CreateOrder Flow Types
+
+#[derive(Debug, Serialize)]
+pub struct BillwerkCreateOrderRequest {
+    pub order: BillwerkOrderObject,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settle: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locale: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accept_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancel_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurring: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BillwerkOrderObject {
+    pub handle: String,
+    pub amount: MinorUnit,
+    pub currency: common_enums::Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_handle: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer: Option<BillwerkSessionCustomer>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BillwerkSessionCustomer {
+    pub handle: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BillwerkCreateOrderResponse {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+}
+
+// CreateOrder Flow - Request Transformation
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BillwerkRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for BillwerkCreateOrderRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: BillwerkRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        let reference_id = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        // Build inline customer for the session (Billwerk requires a customer)
+        let customer = BillwerkSessionCustomer {
+            handle: format!("cust_{reference_id}"),
+            email: None,
+            first_name: None,
+            last_name: None,
+        };
+
+        Ok(Self {
+            order: BillwerkOrderObject {
+                handle: reference_id,
+                amount: router_data.request.amount,
+                currency: router_data.request.currency,
+                order_text: None,
+                customer_handle: None,
+                customer: Some(customer),
+            },
+            settle: None,
+            locale: None,
+            accept_url: router_data.resource_common_data.get_return_url(),
+            cancel_url: router_data.resource_common_data.get_return_url(),
+            recurring: None,
+        })
+    }
+}
+
+// CreateOrder Flow - Response Transformation
+
+impl TryFrom<BillwerkCreateOrderResponse> for PaymentCreateOrderResponse {
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+
+    fn try_from(response: BillwerkCreateOrderResponse) -> Result<Self, Self::Error> {
+        Ok(Self {
+            order_id: response.id,
+            session_data: None,
+        })
+    }
+}
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            BillwerkCreateOrderResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            BillwerkCreateOrderResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        Ok(Self {
+            response: Ok(PaymentCreateOrderResponse {
+                order_id: response.id.clone(),
+                session_data: None,
+            }),
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::Pending,
+                reference_id: Some(response.id),
+                ..item.router_data.resource_common_data
+            },
             ..item.router_data
         })
     }
