@@ -5,11 +5,11 @@ use domain_types::{
     connector_flow::{Authorize, Capture, ClientAuthenticationToken, Void},
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
+        ConnectorSpecificClientAuthenticationResponse, MandateReference,
         NexinetsClientAuthenticationResponse as NexinetsClientAuthenticationResponseDomain,
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
@@ -921,7 +921,7 @@ pub struct NexinetsClientAuthRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::NexinetsRouterData<
+        NexinetsRouterData<
             RouterDataV2<
                 ClientAuthenticationToken,
                 PaymentFlowData,
@@ -934,7 +934,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(
-        item: super::NexinetsRouterData<
+        item: NexinetsRouterData<
             RouterDataV2<
                 ClientAuthenticationToken,
                 PaymentFlowData,
