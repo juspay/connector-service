@@ -6,6 +6,7 @@
     "get",
     "refund",
     "refund_sync",
-    "void"
+    "void",
+    "client_authentication_token"
   ]
 }
