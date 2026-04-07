@@ -293,6 +293,8 @@ docs:
 		fi; \
 		python3 scripts/generators/docs/generate.py stripe --probe-path data/field_probe; \
 	fi
+	@echo "▶ Formatting Rust code (nightly)…"
+	@cargo $(NIGHTLY) fmt --all
 
 ## Generate the all-connectors coverage document
 all-connectors-doc: field-probe

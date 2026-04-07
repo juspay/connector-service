@@ -2015,6 +2015,7 @@ dependencies = [
 name = "field-probe"
 version = "0.1.0"
 dependencies = [
+ "base64 0.21.7",
  "domain_types",
  "ffi",
  "grpc-api-types",

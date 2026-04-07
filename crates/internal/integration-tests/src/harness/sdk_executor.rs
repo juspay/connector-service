@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use grpc_api_types::payments::{
-    self, connector_specific_config, ffi_result, ConnectorResponseTransformationError,
-    ConnectorSpecificConfig, Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse,
-    FfiOptions, FfiResult, IntegrationError,
+    self, connector_specific_config, ffi_result, ConnectorError, ConnectorSpecificConfig,
+    Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, FfiResult,
+    IntegrationError,
 };
 use prost::Message;
 use reqwest::{blocking::Client, Method};
@@ -299,9 +299,12 @@ fn decode_ffi_result_as_http_request(
             scenario,
             e,
         )),
-        Some(ffi_result::Payload::ConnectorResponseTransformationError(e)) => Err(
-            map_response_transformation_error("request transformer", suite, scenario, e),
-        ),
+        Some(ffi_result::Payload::ConnectorError(e)) => Err(map_response_transformation_error(
+            "request transformer",
+            suite,
+            scenario,
+            e,
+        )),
         other => Err(ScenarioError::SdkExecution {
             message: format!(
                 "sdk req transformer returned unexpected FfiResult payload for '{}/{}': {:?}",
@@ -339,9 +342,12 @@ fn decode_ffi_result_as_proto_response<Res: Message + Default>(
                 }
             })
         }
-        Some(ffi_result::Payload::ConnectorResponseTransformationError(e)) => Err(
-            map_response_transformation_error("response transformer", suite, scenario, e),
-        ),
+        Some(ffi_result::Payload::ConnectorError(e)) => Err(map_response_transformation_error(
+            "response transformer",
+            suite,
+            scenario,
+            e,
+        )),
         Some(ffi_result::Payload::IntegrationError(e)) => Err(map_integration_error(
             "response transformer",
             suite,
@@ -604,7 +610,7 @@ fn map_response_transformation_error(
     stage: &str,
     suite: &str,
     scenario: &str,
-    error: ConnectorResponseTransformationError,
+    error: ConnectorError,
 ) -> ScenarioError {
     let mut details = Vec::new();
     details.push(error.error_message);
