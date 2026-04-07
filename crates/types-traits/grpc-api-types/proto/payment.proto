@@ -1559,6 +1559,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     PayloadClientAuthenticationResponse payload = 25;
     BillwerkClientAuthenticationResponse billwerk = 26;
     MultisafepayClientAuthenticationResponse multisafepay = 27;
+    NexinetsClientAuthenticationResponse nexinets = 28;
   }
 }
 
@@ -1609,6 +1610,12 @@ message BillwerkClientAuthenticationResponse {
 message MultisafepayClientAuthenticationResponse {
   // The API token for client-side Payment Components initialization (valid for 600 seconds)
   SecretString api_token = 1;
+}
+
+// Nexinets SDK initialization data — order_id for client-side hosted payment page initialization
+message NexinetsClientAuthenticationResponse {
+  // The order ID that serves as the client authentication token for hosted checkout
+  string order_id = 1;
 }
 
 // Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK

@@ -3482,6 +3482,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Billwerk(BillwerkClientAuthenticationResponse),
     /// Multisafepay SDK initialization data — api_token for Payment Components initialization
     Multisafepay(MultisafepayClientAuthenticationResponse),
+    /// Nexinets SDK initialization data — order_id for client-side hosted payment page initialization
+    Nexinets(NexinetsClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3694,6 +3696,13 @@ pub struct BillwerkClientAuthenticationResponse {
 pub struct MultisafepayClientAuthenticationResponse {
     /// The API token for encrypting sensitive payment details (valid for 600 seconds)
     pub api_token: Secret<String>,
+}
+
+/// Nexinets' order_id for client-side hosted payment page initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexinetsClientAuthenticationResponse {
+    /// The order ID that serves as the client authentication token for hosted checkout
+    pub order_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
