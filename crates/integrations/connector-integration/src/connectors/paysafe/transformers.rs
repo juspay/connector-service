@@ -14,8 +14,8 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId,
     },
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
+    payment_method_data::{BankDebitData, CardToken, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenEnum, PaysafePaymentMethodDetails},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -283,10 +283,40 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         account_id,
                     )
                 }
+                // TODO: CardToken flow bypasses payment handle creation since the token
+                // (paymentHandleToken/singleUseCustomerToken) is already available from
+                // the client SDK. The token is extracted from payment_method_token and
+                // passed directly to the Authorize flow via PaysafePaymentsRequest.
+                PaymentMethodData::CardToken(CardToken { .. }) => {
+                    let _token = router_data
+                        .resource_common_data
+                        .payment_method_token
+                        .as_ref()
+                        .and_then(|t| match t {
+                            PaymentMethodTokenEnum::Token(s) => Some(s.clone()),
+                        })
+                        .ok_or_else(|| {
+                            error_stack::report!(IntegrationError::MissingRequiredField {
+                                field_name: "payment_method_token",
+                                context: Default::default(),
+                            })
+                        })?;
+                    // CardToken already has a paymentHandleToken from the client SDK,
+                    // so we do not need to create a new payment handle via this flow.
+                    // The Authorize flow will pick up the token from payment_method_token.
+                    return Err(IntegrationError::NotSupported {
+                        message:
+                            "CardToken does not require PaymentMethodToken creation - token is passed directly to Authorize"
+                                .to_string(),
+                        connector: "Paysafe",
+                        context: Default::default(),
+                    }
+                    .into())
+                }
                 _ => {
                     return Err(IntegrationError::NotSupported {
                         message:
-                            "Only card and ACH payment methods are supported for PaymentMethodToken"
+                            "Only card, ACH, and CardToken payment methods are supported for PaymentMethodToken"
                                 .to_string(),
                         connector: "Paysafe",
                         context: Default::default(),
