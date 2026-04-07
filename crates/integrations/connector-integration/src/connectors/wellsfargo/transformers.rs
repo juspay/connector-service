@@ -4,17 +4,21 @@ use common_utils::consts;
 use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
         WellsfargoClientAuthenticationResponse as WellsfargoClientAuthenticationResponseDomain,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, SetupMandateRequestData,
     },
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ErrorResponse},
+    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::{
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ErrorResponse,
+        PaymentMethodToken,
+    },
     router_data_v2::RouterDataV2,
     utils::CardIssuer,
 };
@@ -68,6 +72,22 @@ pub struct ProcessingInformation {
 #[serde(untagged)]
 pub enum PaymentInformation<T: PaymentMethodDataTypes> {
     Cards(Box<CardPaymentInformation<T>>),
+    // TODO: Add additional token-based variants (e.g., ApplePay, GooglePay) as needed
+    TokenizedCard(Box<TokenizedCardPaymentInformation>),
+}
+
+/// Payment information for tokenized card payments (Flex Microform transient token)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenizedCardPaymentInformation {
+    fluid_data: FluidData,
+}
+
+/// FluidData for passing transient tokens from Flex Microform SDK
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FluidData {
+    value: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -575,12 +595,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 };
                 PaymentInformation::Cards(Box::new(CardPaymentInformation { card }))
             }
+            // TODO: Handle the transient token value from CardToken struct fields once
+            // the SDK flow passes it through; currently we rely on payment_method_token
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                PaymentInformation::TokenizedCard(Box::new(TokenizedCardPaymentInformation {
+                    fluid_data: FluidData { value: token },
+                }))
+            }
             // Connector supports these but not yet implemented
-            PaymentMethodData::Wallet(_)
-            | PaymentMethodData::CardToken(_)
-            | PaymentMethodData::NetworkToken(_) => Err(IntegrationError::not_implemented(
-                "Payment method supported by connector but not yet implemented".to_string(),
-            ))?,
+            PaymentMethodData::Wallet(_) | PaymentMethodData::NetworkToken(_) => {
+                Err(IntegrationError::not_implemented(
+                    "Payment method supported by connector but not yet implemented".to_string(),
+                ))?
+            }
             // Connector does not support these payment methods
             PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardRedirect(_)
@@ -1812,7 +1852,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Extract the origin from the return_url for target_origins
         let target_origin = url::Url::parse(&return_url)
-            .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or("hyperswitch.io")))
+            .map(|u| {
+                format!(
+                    "{}://{}",
+                    u.scheme(),
+                    u.host_str().unwrap_or("hyperswitch.io")
+                )
+            })
             .unwrap_or_else(|_| "https://hyperswitch.io".to_string());
 
         Ok(Self {
@@ -1865,12 +1911,13 @@ impl<'de> Deserialize<'de> for WellsfargoClientAuthResponse {
             }
 
             fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Self::Value, E> {
-                Ok(WellsfargoClientAuthResponse {
-                    capture_context: v,
-                })
+                Ok(WellsfargoClientAuthResponse { capture_context: v })
             }
 
-            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Self::Value, A::Error> {
                 let mut key_id = None;
                 while let Some(key) = map.next_key::<String>()? {
                     if key == "keyId" {
@@ -1907,9 +1954,7 @@ impl TryFrom<ResponseRouterData<WellsfargoClientAuthResponse, Self>>
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
             ConnectorSpecificClientAuthenticationResponse::Wellsfargo(
-                WellsfargoClientAuthenticationResponseDomain {
-                    capture_context,
-                },
+                WellsfargoClientAuthenticationResponseDomain { capture_context },
             ),
         ));
 
