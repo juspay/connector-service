@@ -2734,7 +2734,28 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_client_session_id": "probe_sdk_session_001",
+          "domain_context": {
+            "payment": {
+              "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+              }
+            }
+          }
+        },
+        "sample": {
+          "url": "https://checkout-api.reepay.com/v1/session/charge",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"order\":{\"handle\":\"probe_sdk_session_001\",\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"handle\":\"probe_sdk_session_001\"}},\"accept_url\":\"https://hyperswitch.io\",\"cancel_url\":\"https://hyperswitch.io\"}"
+        }
       }
     },
     "create_customer": {
