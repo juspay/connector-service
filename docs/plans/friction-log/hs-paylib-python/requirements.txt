@@ -1,0 +1,4 @@
+fastapi>=0.110.0
+uvicorn>=0.27.0
+pydantic>=2.0.0
+hs-paylib>=0.0.4

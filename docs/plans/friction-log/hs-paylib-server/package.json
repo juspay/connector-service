@@ -1,0 +1,19 @@
+{
+  "name": "hs-paylib-server",
+  "version": "1.0.0",
+  "description": "Node.js server integrating hs-paylib with Stripe and Adyen routing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js",
+    "dev": "node -r dotenv/config server.js"
+  },
+  "keywords": ["payment", "stripe", "adyen", "hs-paylib"],
+  "author": "Hyperswitch",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "hs-paylib": "^0.0.4"
+  }
+}
