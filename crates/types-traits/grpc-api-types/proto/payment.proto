@@ -1536,7 +1536,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    WellsfargoClientAuthenticationResponse wellsfargo = 8;
   }
+}
+
+// Wellsfargo SDK initialization data — capture_context JWT for Flex Microform SDK
+message WellsfargoClientAuthenticationResponse {
+  SecretString capture_context = 1;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations
