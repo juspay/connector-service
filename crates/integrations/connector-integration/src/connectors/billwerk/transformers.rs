@@ -23,7 +23,7 @@ use domain_types::{
         SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{
         ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
     },
@@ -282,10 +282,33 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .into());
         };
-        let PaymentMethodTokenFlow::Token(source) = item
-            .router_data
-            .resource_common_data
-            .get_payment_method_token()?;
+        let source = match &item.router_data.request.payment_method_data {
+            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = item
+                    .router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|t| match t {
+                        PaymentMethodTokenFlow::Token(s) => Some(s.clone()),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+                token
+            }
+            _ => {
+                let PaymentMethodTokenFlow::Token(source) = item
+                    .router_data
+                    .resource_common_data
+                    .get_payment_method_token()?;
+                source
+            }
+        };
         let recurring = if item.router_data.request.setup_future_usage.is_some() {
             Some(true)
         } else {
