@@ -27,12 +27,12 @@ use domain_types::{
     payment_address::Address,
     payment_method_data::{
         self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
-        GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData, PaymentMethodData,
-        PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
+        CardToken, GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData,
+        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorSpecificConfig, ErrorResponse,
-        PazeDecryptedData,
+        PazeDecryptedData, PaymentMethodToken,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -362,6 +362,14 @@ pub struct CybersourcePaymentsRequest<
     consumer_authentication_information: Option<CybersourceConsumerAuthInformation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     merchant_defined_information: Option<Vec<utils::MerchantDefinedInformation>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    token_information: Option<CybersourceTokenInformationRequest>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceTokenInformationRequest {
+    transient_token_jwt: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -796,7 +804,14 @@ pub enum PaymentInformation<
     MandatePayment(Box<MandatePaymentInformation>),
     SamsungPay(Box<SamsungPayPaymentInformation>),
     NetworkToken(Box<NetworkTokenPaymentInformation>),
+    /// Used when payment info comes from tokenInformation.transientTokenJwt
+    CardToken(Box<CardTokenPaymentInformation>),
 }
+
+/// Empty payment information used when a transient token JWT is provided
+/// via token_information. The token contains all card details.
+#[derive(Debug, Serialize)]
+pub struct CardTokenPaymentInformation {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CybersoucrePaymentInstrument {
@@ -1328,6 +1343,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             client_reference_information,
             consumer_authentication_information,
             merchant_defined_information,
+            token_information: None,
         })
     }
 }
@@ -1410,6 +1426,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             client_reference_information,
             consumer_authentication_information: None,
             merchant_defined_information,
+            token_information: None,
         })
     }
 }
@@ -1524,6 +1541,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             client_reference_information,
             consumer_authentication_information: None,
             merchant_defined_information,
+            token_information: None,
         })
     }
 }
@@ -1645,6 +1663,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 cavv_algorithm: None,
             }),
             merchant_defined_information,
+            token_information: None,
         })
     }
 }
@@ -1728,6 +1747,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             client_reference_information,
             consumer_authentication_information: None,
             merchant_defined_information,
+            token_information: None,
         })
     }
 }
@@ -1850,6 +1870,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 cavv_algorithm: None,
             }),
             merchant_defined_information,
+            token_information: None,
         })
     }
 }
@@ -1919,6 +1940,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             client_reference_information,
             consumer_authentication_information: None,
             merchant_defined_information,
+            token_information: None,
         })
     }
 }
@@ -2098,6 +2120,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     cavv_algorithm: None,
                                 },
                             ),
+                            token_information: None,
                         })
                     }
                 },
@@ -2169,6 +2192,60 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .into()),
             },
             PaymentMethodData::NetworkToken(token_data) => Self::try_from((&item, token_data)),
+            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = item
+                    .router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|t| match t {
+                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                let email = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_email()
+                    .or(item.router_data.request.get_email())?;
+                let bill_to = build_bill_to(
+                    item.router_data.resource_common_data.get_optional_billing(),
+                    email,
+                )?;
+                let order_information =
+                    OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
+                let processing_information =
+                    ProcessingInformation::try_from((&item, None, None))?;
+                let client_reference_information = ClientReferenceInformation::from(&item);
+                let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+                    item.router_data
+                        .request
+                        .metadata
+                        .clone()
+                        .map(|metadata| metadata.expose()),
+                    item.router_data.request.merchant_order_id.clone(),
+                );
+
+                Ok(Self {
+                    processing_information,
+                    payment_information: PaymentInformation::CardToken(Box::new(
+                        CardTokenPaymentInformation {},
+                    )),
+                    order_information,
+                    client_reference_information,
+                    consumer_authentication_information: None,
+                    merchant_defined_information,
+                    token_information: Some(CybersourceTokenInformationRequest {
+                        transient_token_jwt: token,
+                    }),
+                })
+            }
             PaymentMethodData::MandatePayment
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardRedirect(_)
@@ -2184,11 +2261,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::Voucher(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::CardToken(_) => Err(IntegrationError::not_implemented(
-                domain_types::utils::get_unimplemented_payment_method_error_message("Cybersource"),
-            )
-            .into()),
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_) => {
+                Err(IntegrationError::not_implemented(
+                    domain_types::utils::get_unimplemented_payment_method_error_message(
+                        "Cybersource",
+                    ),
+                )
+                .into())
+            }
         }
     }
 }
