@@ -1544,6 +1544,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     Shift4ClientAuthenticationResponse shift4 = 10;
     BankOfAmericaClientAuthenticationResponse bank_of_america = 11;
     WellsfargoClientAuthenticationResponse wellsfargo = 12;
+    FiservClientAuthenticationResponse fiserv = 13;
   }
 }
 
@@ -1555,6 +1556,11 @@ message BankOfAmericaClientAuthenticationResponse {
 // Wellsfargo SDK initialization data — capture_context JWT for Flex Microform SDK
 message WellsfargoClientAuthenticationResponse {
   SecretString capture_context = 1;
+}
+
+// Fiserv SDK initialization data — session_id for Payment.js SDK initialization
+message FiservClientAuthenticationResponse {
+  SecretString session_id = 1;
 }
 
 // Mollie SDK initialization data — payment_id + checkout_url for client-side redirect
