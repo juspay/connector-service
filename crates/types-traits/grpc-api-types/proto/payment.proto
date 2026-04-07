@@ -1552,7 +1552,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     BarclaycardClientAuthenticationResponse barclaycard = 18;
     BamboraClientAuthenticationResponse bambora = 19;
     BamboraapacClientAuthenticationResponse bamboraapac = 20;
+    PaytmClientAuthenticationResponse paytm = 21;
   }
+}
+
+// Paytm SDK initialization data — txn_token for Paytm JS Checkout SDK
+message PaytmClientAuthenticationResponse {
+  SecretString txn_token = 1;
 }
 
 // Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK

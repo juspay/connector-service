@@ -3468,6 +3468,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Bambora(BamboraClientAuthenticationResponse),
     /// Bambora APAC SDK initialization data — token for client-side tokenization
     Bamboraapac(BamboraapacClientAuthenticationResponse),
+    /// Paytm SDK initialization data — txn_token for Paytm JS Checkout SDK
+    Paytm(PaytmClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3623,6 +3625,13 @@ pub struct BamboraClientAuthenticationResponse {
 pub struct BamboraapacClientAuthenticationResponse {
     /// The tokenization token returned from Bambora APAC's SOAP tokenization API
     pub token: Secret<String>,
+}
+
+/// Paytm's txn_token for client-side Paytm JS Checkout SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaytmClientAuthenticationResponse {
+    /// The transaction token returned from Paytm's initiateTransaction API
+    pub txn_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
