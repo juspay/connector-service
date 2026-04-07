@@ -10,8 +10,8 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorSpecificConfig,
+    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -86,7 +86,10 @@ pub struct BamboraPaymentsRequest<T: PaymentMethodDataTypes> {
     pub order_number: String,
     pub amount: FloatMajorUnit,
     pub payment_method: PaymentMethodType,
-    pub card: BamboraCard<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card: Option<BamboraCard<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<BamboraToken>,
     pub billing: BamboraBillingAddress,
 }
 
@@ -94,6 +97,20 @@ pub struct BamboraPaymentsRequest<T: PaymentMethodDataTypes> {
 #[serde(rename_all = "snake_case")]
 pub enum PaymentMethodType {
     Card,
+    Token,
+}
+
+/// Token object for Bambora tokenized payments.
+/// Used when the client-side SDK (Custom Checkout) tokenizes card data
+/// and returns a single-use token code.
+#[derive(Debug, Serialize)]
+pub struct BamboraToken {
+    /// The single-use token code from the tokenization API
+    pub code: Secret<String>,
+    /// Cardholder name
+    pub name: Secret<String>,
+    /// true for auto-capture, false for pre-authorization
+    pub complete: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -252,9 +269,11 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        // Extract card data
+        // Extract payment method data — supports raw Card and CardToken (from tokenization)
         let payment_method_data = &item.request.payment_method_data;
-        let card = match payment_method_data {
+        let is_auto_capture = !crate::utils::is_manual_capture(item.request.capture_method);
+
+        let (payment_method, card, token) = match payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Get cardholder name - prefer billing full name, fallback to customer name
                 let cardholder_name = item
@@ -266,21 +285,60 @@ impl<T: PaymentMethodDataTypes>
                         context: Default::default(),
                     })?;
 
-                // Determine if this should be auto-capture or authorization
-                let is_auto_capture = !crate::utils::is_manual_capture(item.request.capture_method);
-
                 // Get 2-digit expiry year using utility function
                 let expiry_year = card_data.get_card_expiry_year_2_digit()?;
 
-                BamboraCard {
-                    name: cardholder_name,
-                    number: card_data.card_number.clone(),
-                    expiry_month: card_data.card_exp_month.clone(),
-                    expiry_year,
-                    cvd: card_data.card_cvc.clone(),
-                    complete: is_auto_capture,
-                }
+                (
+                    PaymentMethodType::Card,
+                    Some(BamboraCard {
+                        name: cardholder_name,
+                        number: card_data.card_number.clone(),
+                        expiry_month: card_data.card_exp_month.clone(),
+                        expiry_year,
+                        cvd: card_data.card_cvc.clone(),
+                        complete: is_auto_capture,
+                    }),
+                    None,
+                )
             }
+
+            // TODO: Add payment method token field to CardToken struct and rename
+            // it to PaymentMethodToken since it is not being used anywhere
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token_code = item
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                let cardholder_name = item
+                    .resource_common_data
+                    .get_optional_billing_full_name()
+                    .or_else(|| item.request.customer_name.clone().map(Secret::new))
+                    .ok_or(IntegrationError::MissingRequiredField {
+                        field_name: "billing.first_name or customer_name",
+                        context: Default::default(),
+                    })?;
+
+                (
+                    PaymentMethodType::Token,
+                    None,
+                    Some(BamboraToken {
+                        code: token_code,
+                        name: cardholder_name,
+                        complete: is_auto_capture,
+                    }),
+                )
+            }
+
             PaymentMethodData::Wallet(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
@@ -294,7 +352,6 @@ impl<T: PaymentMethodDataTypes>
             | PaymentMethodData::Upi(_)
             | PaymentMethodData::Voucher(_)
             | PaymentMethodData::GiftCard(_)
-            | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::MobilePayment(_)
             | PaymentMethodData::OpenBanking(_)
@@ -367,8 +424,9 @@ impl<T: PaymentMethodDataTypes>
                 .connector_request_reference_id
                 .clone(),
             amount,
-            payment_method: PaymentMethodType::Card,
+            payment_method,
             card,
+            token,
             billing,
         })
     }
