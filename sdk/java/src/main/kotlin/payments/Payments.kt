@@ -77,6 +77,9 @@ typealias PaymentMethodServiceTokenizeResponse = types.Payment.PaymentMethodServ
 typealias RecurringPaymentServiceChargeRequest = types.Payment.RecurringPaymentServiceChargeRequest
 typealias RecurringPaymentServiceChargeResponse = types.Payment.RecurringPaymentServiceChargeResponse
 
+// Refund service
+typealias RefundServiceGetRequest = types.Payment.RefundServiceGetRequest
+
 // Customer service
 typealias CustomerServiceCreateRequest = types.Payment.CustomerServiceCreateRequest
 typealias CustomerServiceCreateResponse = types.Payment.CustomerServiceCreateResponse
