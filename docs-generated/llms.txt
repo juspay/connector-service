@@ -347,7 +347,7 @@ connector_id: multisafepay
 doc: docs/connectors/multisafepay.md
 scenarios: checkout_autocapture, refund, get_payment
 payment_methods: AliPayRedirect, Card, Eps, Giropay, GooglePay, GooglePayDecrypted, Ideal, PaypalRedirect, Sepa, Sofort, Trustly
-flows: authorize, get, proxy_authorize, refund, refund_get
+flows: authorize, create_client_authentication_token, get, proxy_authorize, refund, refund_get
 examples_python: examples/multisafepay/multisafepay.py
 
 ## Nexinets
