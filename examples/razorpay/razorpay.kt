@@ -9,6 +9,7 @@ package examples.razorpay
 
 import payments.PaymentClient
 import payments.EventClient
+import payments.RecurringPaymentClient
 import payments.RefundClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
@@ -17,6 +18,7 @@ import payments.PaymentServiceGetRequest
 import payments.PaymentServiceCreateOrderRequest
 import payments.EventServiceHandleRequest
 import payments.PaymentServiceProxyAuthorizeRequest
+import payments.RecurringPaymentServiceRevokeRequest
 import payments.RefundServiceGetRequest
 import payments.AuthenticationType
 import payments.CaptureMethod
@@ -264,6 +266,18 @@ fun proxyAuthorize(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: RecurringPaymentService.Revoke
+fun recurringRevoke(txnId: String) {
+    val client = RecurringPaymentClient(_defaultConfig)
+    val request = RecurringPaymentServiceRevokeRequest.newBuilder().apply {
+        merchantRevokeId = "probe_revoke_001"  // Identification.
+        mandateId = "probe_mandate_001"  // Mandate Details.
+        connectorMandateId = "probe_connector_mandate_001"
+    }.build()
+    val response = client.recurring_revoke(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -301,8 +315,9 @@ fun main(args: Array<String>) {
         "get" -> get(txnId)
         "handleEvent" -> handleEvent(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
+        "recurringRevoke" -> recurringRevoke(txnId)
         "refund" -> refund(txnId)
         "refundGet" -> refundGet(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processGetPayment, authorize, capture, createOrder, get, handleEvent, proxyAuthorize, refund, refundGet")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processGetPayment, authorize, capture, createOrder, get, handleEvent, proxyAuthorize, recurringRevoke, refund, refundGet")
     }
 }
