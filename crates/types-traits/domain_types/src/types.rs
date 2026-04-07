@@ -3231,6 +3231,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -3359,6 +3360,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             access_token,
             session_token: value.session_token,
             reference_id: value.merchant_order_id.clone(),
+            connector_order_id: value.connector_order_id,
             payment_method_token: value
                 .payment_method_token
                 .map(router_data::PaymentMethodToken::Token),
@@ -3458,6 +3460,7 @@ impl
             access_token,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -3535,6 +3538,7 @@ impl
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -3606,6 +3610,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             access_token,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -6140,6 +6145,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -6248,6 +6254,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -6855,6 +6862,7 @@ impl
             access_token,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -6926,6 +6934,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -7269,6 +7278,7 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: value
                 .payment_method_token
                 .map(router_data::PaymentMethodToken::Token),
@@ -7377,6 +7387,7 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: value
                 .payment_method_token
                 .map(router_data::PaymentMethodToken::Token),
@@ -8451,6 +8462,7 @@ impl
             access_token,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -8956,6 +8968,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -9135,6 +9148,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -9283,6 +9297,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -10745,6 +10760,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -10834,6 +10850,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -10932,6 +10949,7 @@ impl
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -11008,6 +11026,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -11629,6 +11648,7 @@ pub fn tokenized_authorize_to_base(
         statement_descriptor_suffix: None,
         threeds_completion_indicator: None,
         tokenization_strategy: None,
+        connector_order_id: None,
     }
 }
 
@@ -11838,6 +11858,7 @@ pub fn proxied_authorize_to_base(
         tokenization_strategy: None,
         setup_mandate_details: None,
         test_mode: None,
+        connector_order_id: None,
     })
 }
 

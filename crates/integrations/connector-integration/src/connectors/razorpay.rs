@@ -567,10 +567,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<String, IntegrationError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
 
-        // Check if request_ref_id is provided to determine URL pattern
-        match &req.resource_common_data.reference_id {
+        // Check if connector_order_id is provided to determine URL pattern
+        match &req.resource_common_data.connector_order_id {
             Some(ref_id) => {
-                // Use orders endpoint when request_ref_id is provided
+                // Use orders endpoint when connector_order_id is provided
                 Ok(format!("{base_url}v1/orders/{ref_id}/payments"))
             }
             None => {
