@@ -7,12 +7,12 @@ use domain_types::{
         Refund, RepeatPayment,
     },
     connector_types::{
-        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorCustomerData, ConnectorCustomerResponse,
-        ConnectorSpecificClientAuthenticationResponse, MandateReferenceId, PaymentFlowData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, Shift4ClientAuthenticationResponse as Shift4ClientAuthenticationResponseDomain,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorSpecificClientAuthenticationResponse,
+        MandateReferenceId, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId,
+        Shift4ClientAuthenticationResponse as Shift4ClientAuthenticationResponseDomain,
     },
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
