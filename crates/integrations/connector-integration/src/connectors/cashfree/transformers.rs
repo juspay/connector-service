@@ -1,9 +1,9 @@
 use common_enums;
 use domain_types::{
-    connector_flow::{Authorize, CreateOrder},
+    connector_flow::{Authorize, CreateOrder, SetupMandate},
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, ResponseId,
+        CancelRecurringData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentsAuthorizeData, PaymentsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorResponseTransformationError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -634,4 +634,242 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ..item.router_data
         })
     }
+}
+
+// ============================================================================
+// SetupMandate Flow (Subscription Creation)
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct CashfreeSetupMandateRequest {
+    pub subscription_id: String,
+    pub customer_details: CashfreeSubscriptionCustomerDetails,
+    pub plan_details: CashfreeSubscriptionPlanDetails,
+    pub authorization_details: CashfreeAuthorizationDetails,
+    pub subscription_meta: CashfreeSubscriptionMeta,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CashfreeSubscriptionCustomerDetails {
+    pub customer_email: String,
+    pub customer_phone: String,
+    pub customer_name: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CashfreeSubscriptionPlanDetails {
+    pub plan_name: String,
+    pub plan_type: String,
+    pub plan_currency: String,
+    pub plan_max_amount: i64,
+    pub plan_max_cycles: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CashfreeAuthorizationDetails {
+    pub authorization_amount: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CashfreeSubscriptionMeta {
+    pub return_url: String,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    > for CashfreeSetupMandateRequest
+{
+    type Error = Report<IntegrationError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let subscription_id = item.request.merchant_order_id.clone().unwrap_or_else(|| {
+            format!(
+                "sub_{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs()
+            )
+        });
+
+        let email = item
+            .request
+            .email
+            .as_ref()
+            .map(|e| e.peek().to_string())
+            .unwrap_or_else(|| "test@example.com".to_string());
+
+        let phone = item
+            .resource_common_data
+            .address
+            .get_payment_billing()
+            .and_then(|b| b.phone.as_ref())
+            .and_then(|p| p.number.as_ref())
+            .map(|n| n.peek().to_string())
+            .unwrap_or_else(|| "9999999999".to_string());
+
+        // Extract plan details from metadata JSON
+        let metadata = item.request.metadata.as_ref();
+        let meta_obj = metadata.and_then(|m| m.peek().as_object().cloned());
+
+        let plan_name = meta_obj
+            .as_ref()
+            .and_then(|o| o.get("plan_name"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("Default Plan")
+            .to_string();
+
+        let plan_type = meta_obj
+            .as_ref()
+            .and_then(|o| o.get("plan_type"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("ON_DEMAND")
+            .to_string();
+
+        let plan_max_amount = meta_obj
+            .as_ref()
+            .and_then(|o| o.get("plan_max_amount"))
+            .and_then(|v| {
+                v.as_str()
+                    .and_then(|s| s.parse::<i64>().ok())
+                    .or(v.as_i64())
+            })
+            .unwrap_or(10000);
+
+        let plan_max_cycles = meta_obj
+            .as_ref()
+            .and_then(|o| o.get("plan_max_cycles"))
+            .and_then(|v| {
+                v.as_str()
+                    .and_then(|s| s.parse::<i64>().ok())
+                    .or(v.as_i64())
+            })
+            .unwrap_or(12);
+
+        let authorization_amount = item
+            .request
+            .minor_amount
+            .map(|a| a.0)
+            .or(item.request.amount)
+            .unwrap_or(1);
+
+        let return_url = item
+            .request
+            .router_return_url
+            .clone()
+            .or(item.request.return_url.clone())
+            .unwrap_or_else(|| "https://example.com/return".to_string());
+
+        Ok(Self {
+            subscription_id,
+            customer_details: CashfreeSubscriptionCustomerDetails {
+                customer_email: email,
+                customer_phone: phone,
+                customer_name: item.request.customer_name.clone(),
+            },
+            plan_details: CashfreeSubscriptionPlanDetails {
+                plan_name,
+                plan_type,
+                plan_currency: item.request.currency.to_string(),
+                plan_max_amount,
+                plan_max_cycles,
+            },
+            authorization_details: CashfreeAuthorizationDetails {
+                authorization_amount,
+            },
+            subscription_meta: CashfreeSubscriptionMeta { return_url },
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeSetupMandateResponse {
+    pub subscription_id: Option<String>,
+    pub cf_subscription_id: Option<String>,
+    pub subscription_status: Option<String>,
+    pub subscription_session_id: Option<String>,
+}
+
+impl<F, T: Clone> TryFrom<ResponseRouterData<CashfreeSetupMandateResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+{
+    type Error = Report<ConnectorResponseTransformationError>;
+
+    fn try_from(
+        item: ResponseRouterData<CashfreeSetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+        let status = match response.subscription_status.as_deref() {
+            Some("INITIALIZED") => common_enums::AttemptStatus::AuthenticationPending,
+            Some("ACTIVE") => common_enums::AttemptStatus::Charged,
+            Some("CANCELLED") => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::Pending,
+        };
+
+        let connector_metadata = response
+            .subscription_session_id
+            .as_ref()
+            .map(|sid| serde_json::json!({"subscription_session_id": sid}));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response.cf_subscription_id.clone().unwrap_or_default(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata,
+                network_txn_id: None,
+                connector_response_reference_id: response.subscription_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ============================================================================
+// CancelRecurring Flow
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct CashfreeCancelRecurringRequest {
+    pub subscription_id: String,
+    pub action: String,
+}
+
+impl TryFrom<&CancelRecurringData> for CashfreeCancelRecurringRequest {
+    type Error = Report<IntegrationError>;
+
+    fn try_from(data: &CancelRecurringData) -> Result<Self, Self::Error> {
+        Ok(Self {
+            subscription_id: data.subscription_id.clone(),
+            action: "CANCEL".to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeCancelRecurringResponse {
+    pub subscription_status: Option<String>,
+    pub subscription_id: Option<String>,
+    pub cf_subscription_id: Option<String>,
 }
