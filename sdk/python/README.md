@@ -66,15 +66,17 @@ request_config: types.RequestConfig = {
 ### 2. Process a Payment
 
 ```python
+from payments import Currency, CaptureMethod, AuthenticationType
+
 client = PaymentClient(stripe_config, request_config)
 
-authorize_request: types.PaymentServiceAuthorizeRequest = {
+authorize_request = {
     "merchantTransactionId": "txn_order_001",
     "amount": {
         "minorAmount": 1000,  # $10.00
-        "currency": "USD"
+        "currency": Currency.USD
     },
-    "captureMethod": "AUTOMATIC",
+    "captureMethod": CaptureMethod.AUTOMATIC,
     "paymentMethod": {
         "card": {
             "cardNumber": {"value": "4111111111111111"},
@@ -84,11 +86,10 @@ authorize_request: types.PaymentServiceAuthorizeRequest = {
             "cardHolderName": {"value": "John Doe"}
         }
     },
-    "customer": {
-        "email": {"value": "customer@example.com"},
-        "name": "John Doe"
-    },
-    "testMode": True
+    "address": {"billingAddress": {}},
+    "authType": AuthenticationType.NO_THREE_DS,
+    "returnUrl": "https://example.com/return",
+    "orderDetails": []
 }
 
 response = client.authorize(authorize_request)
