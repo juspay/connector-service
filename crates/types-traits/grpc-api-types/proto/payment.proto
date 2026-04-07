@@ -1535,12 +1535,21 @@ message ConnectorSpecificClientAuthenticationResponse {
     StripeClientAuthenticationResponse stripe = 1;
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
+    PproClientAuthenticationResponse ppro = 31;
   }
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
 message StripeClientAuthenticationResponse {
   SecretString client_secret = 1;
+}
+
+// Ppro SDK initialization data — charge_id and redirect_url for client-side payment authentication
+message PproClientAuthenticationResponse {
+  // The payment charge ID for tracking the payment
+  string charge_id = 1;
+  // The redirect URL for client-side payment authentication
+  optional string redirect_url = 2;
 }
 
 // Google Pay Session Data
