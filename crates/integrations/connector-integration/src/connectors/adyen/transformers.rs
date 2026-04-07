@@ -25,13 +25,13 @@ use domain_types::{
     },
     payment_method_data::{
         ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
-        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, NetworkTokenData,
-        PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
-        VoucherNextStepData, WalletData,
+        CardRedirectData, CardToken, DefaultPCIHolder, GiftCardData, GpayTokenizationData,
+        NetworkTokenData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        VoucherData, VoucherNextStepData, WalletData,
     },
     router_data::{
         ConnectorResponseData, ConnectorSpecificConfig, ErrorResponse,
-        ExtendedAuthorizationResponseData,
+        ExtendedAuthorizationResponseData, PaymentMethodToken,
     },
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
@@ -3644,6 +3644,122 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::NetworkToken(ref token_data) => {
                     Self::try_from((item, token_data))
                 }
+                // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
+                PaymentMethodData::CardToken(CardToken { .. }) => {
+                    let token = item
+                        .router_data
+                        .resource_common_data
+                        .payment_method_token
+                        .as_ref()
+                        .and_then(|t| match t {
+                            PaymentMethodToken::Token(s) => Some(s.clone()),
+                        })
+                        .ok_or_else(|| {
+                            error_stack::report!(IntegrationError::MissingRequiredField {
+                                field_name: "payment_method_token",
+                                context: Default::default(),
+                            })
+                        })?;
+
+                    let amount = get_amount_data(&item);
+                    let auth_type =
+                        AdyenAuthType::try_from(&item.router_data.connector_config)?;
+                    let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+                    let (recurring_processing_model, store_payment_method, shopper_reference) =
+                        get_recurring_processing_model(&item.router_data)?;
+                    let return_url = item.router_data.request.get_router_return_url()?;
+                    let billing_address = get_address_info(
+                        item.router_data
+                            .resource_common_data
+                            .get_optional_billing(),
+                    )
+                    .and_then(Result::ok);
+                    let additional_data = get_additional_data(&item.router_data);
+                    let adyen_metadata = get_adyen_metadata(
+                        item.router_data.request.metadata.clone().expose_option(),
+                    );
+                    let store = adyen_metadata.store.clone();
+                    let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+                    let platform_chargeback_logic =
+                        adyen_metadata.platform_chargeback_logic.clone();
+                    let country_code = get_country_code(
+                        item.router_data.resource_common_data.get_optional_billing(),
+                    );
+
+                    let payment_method =
+                        PaymentMethod::AdyenMandatePaymentMethod(Box::new(AdyenMandate {
+                            payment_type: PaymentType::Scheme,
+                            stored_payment_method_id: token,
+                            holder_name: None,
+                        }));
+
+                    Ok(Self {
+                        amount,
+                        merchant_account: auth_type.merchant_account,
+                        payment_method,
+                        reference: item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        return_url,
+                        shopper_interaction,
+                        recurring_processing_model,
+                        browser_info: get_browser_info(&item.router_data)?,
+                        additional_data,
+                        mpi_data: None,
+                        telephone_number: item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_phone_number(),
+                        shopper_name: get_shopper_name(
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_billing(),
+                        ),
+                        shopper_email: item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_email(),
+                        shopper_locale: item.router_data.request.locale.clone(),
+                        social_security_number: None,
+                        billing_address,
+                        delivery_address: get_address_info(
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_shipping(),
+                        )
+                        .and_then(Result::ok),
+                        country_code,
+                        line_items: None,
+                        shopper_reference,
+                        store_payment_method,
+                        channel: None,
+                        shopper_statement: get_shopper_statement(&item.router_data),
+                        shopper_ip: item
+                            .router_data
+                            .request
+                            .get_ip_address_as_optional(),
+                        merchant_order_reference: item
+                            .router_data
+                            .request
+                            .merchant_order_id
+                            .clone(),
+                        store,
+                        splits: None,
+                        device_fingerprint,
+                        metadata: item
+                            .router_data
+                            .request
+                            .metadata
+                            .clone()
+                            .map(|value| {
+                                Secret::new(filter_adyen_metadata(value.expose()))
+                            }),
+                        platform_chargeback_logic,
+                        session_validity: None,
+                    })
+                }
                 PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
@@ -3652,8 +3768,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-                | PaymentMethodData::MobilePayment(_)
-                | PaymentMethodData::CardToken(_) => {
+                | PaymentMethodData::MobilePayment(_) => {
                     Err(IntegrationError::not_implemented("payment method").into())
                 }
             },
