@@ -8,513 +8,368 @@
     },
     "authorize": {
       "Ach": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "AchBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Affirm": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Afterpay": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Alfamart": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "AliPayRedirect": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "AmazonPayRedirect": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "ApplePay": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "ApplePayDecrypted": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "ApplePayThirdPartySdk": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Bacs": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "BacsBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "BancontactCard": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "BcaBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Becs": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Bizum": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Blik": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "blik": {
-              "blik_code": "777124"
-            }
-          },
-          "capture_method": "AUTOMATIC",
-          "address": {
-            "billing_address": {
-              "first_name": "John"
-            }
-          },
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "merchant_order_id": "probe_order_001",
-          "state": {
-            "access_token": {
-              "token": "probe_access_token",
-              "expires_in_seconds": 3600,
-              "token_type": "Bearer"
-            }
-          }
-        },
-        "sample": {
-          "url": "https://api-demo.airwallex.com/api/v1/pa/payment_intents/probe_order_001/confirm",
-          "method": "Post",
-          "headers": {
-            "authorization": "Bearer probe_access_token",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"blik\":{\"shopper_name\":\"John\"},\"type\":\"blik\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":null}"
-        }
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Bluecode": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "BniVaBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Boleto": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "BriVaBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Card": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "card": {
-              "card_number": "4111111111111111",
-              "card_exp_month": "03",
-              "card_exp_year": "2030",
-              "card_cvc": "737",
-              "card_holder_name": "John Doe"
-            }
-          },
-          "capture_method": "AUTOMATIC",
-          "address": {
-            "billing_address": {}
-          },
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "merchant_order_id": "probe_order_001",
-          "state": {
-            "access_token": {
-              "token": "probe_access_token",
-              "expires_in_seconds": 3600,
-              "token_type": "Bearer"
-            }
-          }
-        },
-        "sample": {
-          "url": "https://api-demo.airwallex.com/api/v1/pa/payment_intents/probe_order_001/confirm",
-          "method": "Post",
-          "headers": {
-            "authorization": "Bearer probe_access_token",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvc\":\"737\",\"name\":\"John Doe\"},\"type\":\"card\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":null}"
-        }
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "CashappQr": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "CimbVaBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "ClassicReward": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Crypto": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "DanamonVaBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "DuitNow": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "EVoucher": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Efecty": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Eft": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Eps": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "FamilyMart": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Giropay": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "GooglePay": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "GooglePayDecrypted": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "GooglePayThirdPartySdk": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Ideal": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "ideal": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "address": {
-            "billing_address": {}
-          },
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "merchant_order_id": "probe_order_001",
-          "state": {
-            "access_token": {
-              "token": "probe_access_token",
-              "expires_in_seconds": 3600,
-              "token_type": "Bearer"
-            }
-          }
-        },
-        "sample": {
-          "url": "https://api-demo.airwallex.com/api/v1/pa/payment_intents/probe_order_001/confirm",
-          "method": "Post",
-          "headers": {
-            "authorization": "Bearer probe_access_token",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"ideal\":{},\"type\":\"ideal\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":null}"
-        }
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Indomaret": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "IndonesianBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "InstantBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "InstantBankTransferFinland": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "InstantBankTransferPoland": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Interac": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Klarna": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Lawson": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "LocalBankRedirect": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "LocalBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "MandiriVaBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "MbWay": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Mifinity": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "MiniStop": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "MultibancoBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "OnlineBankingCzechRepublic": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "OnlineBankingFinland": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "OnlineBankingFpx": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "OnlineBankingPoland": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "OnlineBankingSlovakia": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "OnlineBankingThailand": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "OpenBanking": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "OpenBankingPis": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "OpenBankingUk": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Oxxo": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "PagoEfectivo": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "PayEasy": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "PaySafeCard": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "PaypalRedirect": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "PaypalSdk": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "PermataBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Pix": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Przelewy24": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Pse": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "RedCompra": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "RedPagos": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "RevolutPay": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "SamsungPay": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Satispay": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Seicomart": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Sepa": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "SepaBankTransfer": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "SepaGuaranteedDebit": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "SevenEleven": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Sofort": {
-        "status": "not_supported",
-        "error": "Bank Redirect Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Trustly": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "trustly": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "address": {
-            "billing_address": {
-              "first_name": "John",
-              "country_alpha2_code": "US"
-            }
-          },
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "merchant_order_id": "probe_order_001",
-          "state": {
-            "access_token": {
-              "token": "probe_access_token",
-              "expires_in_seconds": 3600,
-              "token_type": "Bearer"
-            }
-          }
-        },
-        "sample": {
-          "url": "https://api-demo.airwallex.com/api/v1/pa/payment_intents/probe_order_001/confirm",
-          "method": "Post",
-          "headers": {
-            "authorization": "Bearer probe_access_token",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"trustly\":{\"shopper_name\":\"John\",\"country_code\":\"US\"},\"type\":\"trustly\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":null}"
-        }
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "UpiCollect": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "UpiIntent": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "UpiQr": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "WeChatPayQr": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       },
       "Wero": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       }
     },
     "capture": {
@@ -685,45 +540,8 @@
     },
     "proxy_authorize": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_proxy_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "card_proxy": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "123",
-            "card_holder_name": "John Doe"
-          },
-          "address": {
-            "billing_address": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "state": {
-            "access_token": {
-              "token": "probe_access_token",
-              "expires_in_seconds": 3600,
-              "token_type": "Bearer"
-            }
-          },
-          "merchant_order_id": "probe_order_001"
-        },
-        "sample": {
-          "url": "https://api-demo.airwallex.com/api/v1/pa/payment_intents/probe_order_001/confirm",
-          "method": "Post",
-          "headers": {
-            "authorization": "Bearer probe_access_token",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"request_id\":\"confirm_probe_proxy_txn_001\",\"payment_method\":{\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvc\":\"123\",\"name\":\"John Doe\"},\"type\":\"card\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":null}"
-        }
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       }
     },
     "proxy_setup_recurring": {
@@ -812,8 +630,8 @@
     },
     "token_authorize": {
       "default": {
-        "status": "not_supported",
-        "error": "Payment Method is not supported by Airwallex"
+        "status": "error",
+        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id"
       }
     },
     "token_setup_recurring": {
