@@ -7,8 +7,8 @@ use domain_types::{
         BluesnapClientAuthenticationResponse as BluesnapClientAuthenticationResponseDomain,
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, ResponseId,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
@@ -904,11 +904,11 @@ impl TryFrom<ResponseRouterData<BluesnapClientAuthResponse, Self>>
         let response = item.response;
 
         // Extract the pfToken from the response
-        let pf_token = response.pf_token.ok_or(
-            ConnectorError::ResponseDeserializationFailed {
+        let pf_token = response
+            .pf_token
+            .ok_or(ConnectorError::ResponseDeserializationFailed {
                 context: Default::default(),
-            },
-        )?;
+            })?;
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
             ConnectorSpecificClientAuthenticationResponse::Bluesnap(

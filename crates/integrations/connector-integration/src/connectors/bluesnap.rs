@@ -699,14 +699,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_headers(
         &self,
-        req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        req: &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
-        req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        req: &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
     ) -> CustomResult<String, IntegrationError> {
         let base_url = self.connector_base_url_payments(req);
         Ok(format!("{}/services/2/payment-fields-tokens", base_url))
@@ -714,11 +724,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        data: &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
         _event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
-        RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
         ConnectorError,
     > {
         // Bluesnap returns the pfToken in the Location header, not in the body.
@@ -732,12 +752,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 context: Default::default(),
             })?;
 
-        let pf_token = location
-            .rsplit('/')
-            .next()
-            .ok_or(ConnectorError::ResponseDeserializationFailed {
-                context: Default::default(),
-            })?;
+        let pf_token =
+            location
+                .rsplit('/')
+                .next()
+                .ok_or(ConnectorError::ResponseDeserializationFailed {
+                    context: Default::default(),
+                })?;
 
         let response = BluesnapClientAuthResponse {
             pf_token: Some(hyperswitch_masking::Secret::new(pf_token.to_string())),
@@ -749,10 +770,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             http_code: res.status_code,
         };
 
-        RouterDataV2::<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>::try_from(response_router_data)
-            .change_context(ConnectorError::ResponseHandlingFailed {
-                context: Default::default(),
-            })
+        RouterDataV2::<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >::try_from(response_router_data)
+        .change_context(ConnectorError::ResponseHandlingFailed {
+            context: Default::default(),
+        })
     }
 
     fn get_error_response_v2(
@@ -830,7 +856,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Bluesnap<T>
 {
 }
-
 
 // Dispute Accept
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
