@@ -1535,7 +1535,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     StripeClientAuthenticationResponse stripe = 1;
     AdyenClientAuthenticationResponse adyen = 2;
     CheckoutClientAuthenticationResponse checkout = 3;
+    CybersourceClientAuthenticationResponse cybersource = 4;
   }
+}
+
+// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
+message CybersourceClientAuthenticationResponse {
+  SecretString capture_context = 1;
 }
 
 // Checkout.com SDK initialization data — payment_session_token + payment_session_secret for Frames/Flow

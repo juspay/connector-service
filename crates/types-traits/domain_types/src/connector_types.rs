@@ -3434,6 +3434,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Adyen(AdyenClientAuthenticationResponse),
     /// Checkout.com SDK initialization data — payment_session_token + payment_session_secret for Frames/Flow
     Checkout(CheckoutClientAuthenticationResponse),
+    /// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
+    Cybersource(CybersourceClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3460,6 +3462,13 @@ pub struct CheckoutClientAuthenticationResponse {
     pub payment_session_token: Secret<String>,
     /// The secret for secure client-side operations
     pub payment_session_secret: Secret<String>,
+}
+
+/// Cybersource's capture_context JWT for Flex Microform SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CybersourceClientAuthenticationResponse {
+    /// The capture context JWT token for client-side Flex Microform SDK
+    pub capture_context: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
