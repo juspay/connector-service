@@ -222,7 +222,7 @@ async function runConnector(
   examplesDir:   string,
   cred:          CredEntry,
 ): Promise<boolean> {
-  const jsFile = path.join(examplesDir, connectorName, "javascript", `${connectorName}.js`);
+  const jsFile = path.join(examplesDir, connectorName, `${connectorName}.js`);
   if (!fs.existsSync(jsFile)) {
     console.log(_grey(`  [${connectorName}] No JavaScript file found at ${jsFile}, skipping.`));
     return true;

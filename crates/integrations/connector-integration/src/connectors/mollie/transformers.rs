@@ -3,7 +3,7 @@ use common_utils::{
     pii::Email,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
 };
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -344,7 +344,7 @@ impl MolliePaymentStatus {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
@@ -386,7 +386,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MolliePaymentsRespons
 impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
@@ -527,7 +527,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<MollieRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -545,7 +545,7 @@ impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<MollieRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -566,7 +566,7 @@ impl TryFrom<ResponseRouterData<MollieRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
@@ -735,7 +735,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MollieCardTokenRespon
         PaymentMethodTokenResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MollieCardTokenResponse, Self>,
@@ -809,7 +809,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MolliePaymentsResponse, Self>,
