@@ -39,6 +39,21 @@ pub struct CardPaymentInformation<T: PaymentMethodDataTypes + Sync + Send + 'sta
 #[serde(untagged)]
 pub enum PaymentInformation<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize> {
     Cards(Box<CardPaymentInformation<T>>),
+    FlexToken(Box<FlexTokenPaymentInformation>),
+}
+
+/// Payment information using a Flex Microform transient token (from SDK tokenization)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlexTokenPaymentInformation {
+    pub fluid_data: FluidData,
+}
+
+/// Wrapper for the transient token value returned by Flex Microform SDK
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FluidData {
+    pub value: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]

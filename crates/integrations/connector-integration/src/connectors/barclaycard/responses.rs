@@ -238,12 +238,13 @@ impl<'de> Deserialize<'de> for BarclaycardClientAuthResponse {
             }
 
             fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Self::Value, E> {
-                Ok(BarclaycardClientAuthResponse {
-                    capture_context: v,
-                })
+                Ok(BarclaycardClientAuthResponse { capture_context: v })
             }
 
-            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Self::Value, A::Error> {
                 let mut key_id = None;
                 while let Some(key) = map.next_key::<String>()? {
                     if key == "keyId" {

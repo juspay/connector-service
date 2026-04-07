@@ -3,16 +3,15 @@ use std::fmt::Debug;
 use domain_types::{
     connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void},
     connector_types::{
-        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
         BarclaycardClientAuthenticationResponse as BarclaycardClientAuthenticationResponseDomain,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificConfig, ErrorResponse},
+    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
@@ -423,29 +422,53 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data.request.currency,
         )?;
 
-        let ccard = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(IntegrationError::not_implemented(
-                "Only card payments are supported".to_string(),
-            )),
-        }?;
+        let payment_information = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(ccard) => {
+                let card_network = ccard.card_network.clone();
+                let card_type = card_network
+                    .and_then(get_barclaycard_card_type)
+                    .map(|s| s.to_string());
 
-        let card_network = ccard.card_network.clone();
-        let card_type = card_network
-            .and_then(get_barclaycard_card_type)
-            .map(|s| s.to_string());
+                requests::PaymentInformation::Cards(Box::new(requests::CardPaymentInformation {
+                    card: requests::Card {
+                        number: ccard.card_number.clone(),
+                        expiration_month: ccard.card_exp_month.clone(),
+                        expiration_year: ccard.get_expiry_year_4_digit(),
+                        security_code: ccard.card_cvc.clone(),
+                        card_type,
+                        type_selection_indicator: Some("1".to_owned()),
+                    },
+                }))
+            }
+            // TODO: Rename CardToken to PaymentMethodToken once the domain type is updated upstream
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
 
-        let payment_information =
-            requests::PaymentInformation::Cards(Box::new(requests::CardPaymentInformation {
-                card: requests::Card {
-                    number: ccard.card_number.clone(),
-                    expiration_month: ccard.card_exp_month.clone(),
-                    expiration_year: ccard.get_expiry_year_4_digit(),
-                    security_code: ccard.card_cvc.clone(),
-                    card_type,
-                    type_selection_indicator: Some("1".to_owned()),
-                },
-            }));
+                requests::PaymentInformation::FlexToken(Box::new(
+                    requests::FlexTokenPaymentInformation {
+                        fluid_data: requests::FluidData { value: token },
+                    },
+                ))
+            }
+            _ => {
+                return Err(IntegrationError::not_implemented(
+                    "Only card and card token payments are supported".to_string(),
+                )
+                .into())
+            }
+        };
 
         let email = router_data
             .resource_common_data
@@ -889,7 +912,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRsyncResponse, Self>>
 
 // ---- ClientAuthenticationToken flow types ----
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BarclaycardRouterData<
             RouterDataV2<
@@ -924,7 +947,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Extract the origin from the return_url for target_origins
         let target_origin = url::Url::parse(&return_url)
-            .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or("hyperswitch.io")))
+            .map(|u| {
+                format!(
+                    "{}://{}",
+                    u.scheme(),
+                    u.host_str().unwrap_or("hyperswitch.io")
+                )
+            })
             .unwrap_or_else(|_| "https://hyperswitch.io".to_string());
 
         Ok(Self {
@@ -966,9 +995,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardClientAuthResponse, Self>>
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
             ConnectorSpecificClientAuthenticationResponse::Barclaycard(
-                BarclaycardClientAuthenticationResponseDomain {
-                    capture_context,
-                },
+                BarclaycardClientAuthenticationResponseDomain { capture_context },
             ),
         ));
 
