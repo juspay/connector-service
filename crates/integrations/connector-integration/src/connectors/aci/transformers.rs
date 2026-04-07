@@ -413,7 +413,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::OpenBankingUk { .. }
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 "Payment method".to_string(),
             ))?,
         };
@@ -741,7 +742,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::Reward
             | PaymentMethodData::RealTimePayment(_)
             | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Netbanking(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Upi(_)

@@ -614,13 +614,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::Netbanking(_) => Err(IntegrationError::not_implemented(
-                domain_types::utils::get_unimplemented_payment_method_error_message(
-                    "Bank of America",
-                ),
-            )
-            .into()),
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(IntegrationError::NotImplemented(
+                    domain_types::utils::get_unimplemented_payment_method_error_message(
+                        "Bank of America",
+                    ),
+                    Default::default(),
+                )
+                .into())
+            }
         }
     }
 }
@@ -1777,10 +1779,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::Netbanking(_) => Err(IntegrationError::not_implemented(
-                utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
-            ))?,
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(IntegrationError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
+                    Default::default(),
+                ))?
+            }
         }
     }
 }
@@ -2156,8 +2160,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     | common_enums::PaymentMethod::Voucher
                     | common_enums::PaymentMethod::OpenBanking
                     | common_enums::PaymentMethod::NetworkToken
-                    | common_enums::PaymentMethod::GiftCard
-                    | common_enums::PaymentMethod::Netbanking => None,
+                    | common_enums::PaymentMethod::GiftCard => None,
                 };
 
                 Ok(Self {

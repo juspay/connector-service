@@ -1167,7 +1167,8 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             | BankRedirectData::OpenBankingUk { .. }
             | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )),
         }
@@ -1514,7 +1515,6 @@ fn create_stripe_payment_method<
         PaymentMethodData::Upi(_)
         | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
-        | PaymentMethodData::Netbanking(_)
         | PaymentMethodData::MandatePayment
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
@@ -1774,7 +1774,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | BankRedirectData::Sofort { .. }
             | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -4646,7 +4647,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::Reward
             | PaymentMethodData::RealTimePayment(_)
             | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Netbanking(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::Upi(_)
             | PaymentMethodData::CardRedirect(_)
@@ -5048,7 +5048,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         | PaymentMethodData::Reward
                         | PaymentMethodData::RealTimePayment(_)
                         | PaymentMethodData::MobilePayment(_)
-                        | PaymentMethodData::Netbanking(_)
                         | PaymentMethodData::Upi(_)
                         | PaymentMethodData::Voucher(_)
                         | PaymentMethodData::GiftCard(_)

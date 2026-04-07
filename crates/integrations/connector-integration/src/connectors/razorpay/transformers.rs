@@ -11,7 +11,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -306,7 +306,6 @@ fn extract_payment_method_and_data<
         | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
-        | PaymentMethodData::Netbanking(_)
         | PaymentMethodData::OpenBanking(_) => Err(IntegrationError::not_implemented(
             "Only Card payment method is supported for Razorpay".to_string(),
         )),
@@ -813,7 +812,7 @@ impl<F, Req>
                         domain_types::router_data::ConnectorResponseData::
                             with_additional_payment_method_data(
                                 domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                                    upi_mode: Some(domain_types::payment_method_data::UpiSource::UpiCc)
+                                    upi_mode: Some(payment_method_data::UpiSource::UpiCc)
 },
                             )
                     });
@@ -1537,6 +1536,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // ============ Netbanking Request ============
 
+fn map_bank_name_to_razorpay_code(bank: &common_enums::BankNames) -> String {
+    match bank {
+        common_enums::BankNames::StateBank => "SBIN".to_string(),
+        common_enums::BankNames::HdfcBank => "HDFC".to_string(),
+        common_enums::BankNames::IciciBank => "ICIC".to_string(),
+        common_enums::BankNames::AxisBank => "UTIB".to_string(),
+        common_enums::BankNames::KotakMahindraBank => "KKBK".to_string(),
+        common_enums::BankNames::PunjabNationalBank => "PUNB".to_string(),
+        common_enums::BankNames::BankOfBaroda => "BARB".to_string(),
+        common_enums::BankNames::UnionBankOfIndia => "UBIN".to_string(),
+        common_enums::BankNames::CanaraBank => "CNRB".to_string(),
+        common_enums::BankNames::IndusIndBank => "INDB".to_string(),
+        common_enums::BankNames::YesBank => "YESB".to_string(),
+        common_enums::BankNames::IdbiBank => "IBKL".to_string(),
+        common_enums::BankNames::FederalBank => "FDRL".to_string(),
+        common_enums::BankNames::IndianOverseasBank => "IOBA".to_string(),
+        common_enums::BankNames::CentralBankOfIndia => "CBIN".to_string(),
+        _ => format!("{:?}", bank),
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct RazorpayNetbankingRequest {
     pub amount: MinorUnit,
@@ -1582,8 +1602,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let nb_data = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Netbanking(nb) => nb,
+        let bank_code = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::BankRedirect(
+                payment_method_data::BankRedirectData::Netbanking { issuer },
+            ) => map_bank_name_to_razorpay_code(issuer),
             _ => {
                 return Err(IntegrationError::MissingRequiredField {
                     field_name: "netbanking payment_method_data",
@@ -1631,7 +1653,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_billing_phone_number()
                 .ok(),
             method: PaymentMethodType::Netbanking,
-            bank: nb_data.bank_code.clone(),
+            bank: bank_code,
             callback_url: item.router_data.request.get_router_return_url()?,
             ip: item
                 .router_data

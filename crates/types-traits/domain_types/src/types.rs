@@ -1827,11 +1827,11 @@ impl<
                 }
 
                 grpc_api_types::payments::payment_method::PaymentMethod::Netbanking(nb) => {
-                    Ok(Self::Netbanking(
-                        crate::payment_method_data::NetbankingData {
-                            bank_code: nb.bank_code,
-                            bank_name: nb.bank_name,
-                        },
+                    let grpc_bank = grpc_api_types::payments::BankNames::try_from(nb.issuer)
+                        .unwrap_or_default();
+                    let issuer = common_enums::BankNames::foreign_try_from(grpc_bank)?;
+                    Ok(Self::BankRedirect(
+                        crate::payment_method_data::BankRedirectData::Netbanking { issuer },
                     ))
                 }
 
@@ -4519,7 +4519,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Netbanking(_)),
-            } => Ok(Self::Netbanking),
+            } => Ok(Self::BankRedirect),
             _ => Err(report!(IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Unsupported payment method".to_string()), ..Default::default() } })),
         }
     }
@@ -5475,7 +5475,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
 
             grpc_api_types::payments::PaymentMethodType::NetworkToken => Ok(Self::Card),
 
-            grpc_api_types::payments::PaymentMethodType::Netbanking => Ok(Self::Netbanking),
+            grpc_api_types::payments::PaymentMethodType::Netbanking => Ok(Self::BankRedirect),
 
             _ => Err(IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_type",
@@ -10361,6 +10361,22 @@ impl ForeignTryFrom<grpc_api_types::payments::BankNames> for common_enums::BankN
             grpc_api_types::payments::BankNames::NationaleNederlanden => {
                 Ok(Self::NationaleNederlanden)
             }
+            // Indian banks
+            grpc_api_types::payments::BankNames::StateBank => Ok(Self::StateBank),
+            grpc_api_types::payments::BankNames::HdfcBank => Ok(Self::HdfcBank),
+            grpc_api_types::payments::BankNames::IciciBank => Ok(Self::IciciBank),
+            grpc_api_types::payments::BankNames::AxisBank => Ok(Self::AxisBank),
+            grpc_api_types::payments::BankNames::KotakMahindraBank => Ok(Self::KotakMahindraBank),
+            grpc_api_types::payments::BankNames::PunjabNationalBank => Ok(Self::PunjabNationalBank),
+            grpc_api_types::payments::BankNames::BankOfBaroda => Ok(Self::BankOfBaroda),
+            grpc_api_types::payments::BankNames::UnionBankOfIndia => Ok(Self::UnionBankOfIndia),
+            grpc_api_types::payments::BankNames::CanaraBank => Ok(Self::CanaraBank),
+            grpc_api_types::payments::BankNames::IndusIndBank => Ok(Self::IndusIndBank),
+            grpc_api_types::payments::BankNames::YesBank => Ok(Self::YesBank),
+            grpc_api_types::payments::BankNames::IdbiBank => Ok(Self::IdbiBank),
+            grpc_api_types::payments::BankNames::FederalBank => Ok(Self::FederalBank),
+            grpc_api_types::payments::BankNames::IndianOverseasBank => Ok(Self::IndianOverseasBank),
+            grpc_api_types::payments::BankNames::CentralBankOfIndia => Ok(Self::CentralBankOfIndia),
         }
     }
 }

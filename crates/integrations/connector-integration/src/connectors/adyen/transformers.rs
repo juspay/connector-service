@@ -1719,7 +1719,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::Przelewy24 { .. }
             | BankRedirectData::Sofort { .. }
-            | BankRedirectData::OpenBanking { .. } => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking { .. }
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("Adyen"),
             )
             .into()),
@@ -3651,7 +3652,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::MobilePayment(_)
-                | PaymentMethodData::Netbanking(_)
                 | PaymentMethodData::CardToken(_) => {
                     Err(IntegrationError::not_implemented("payment method").into())
                 }
@@ -5987,7 +5987,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
-                | PaymentMethodData::Netbanking(_)
                 | PaymentMethodData::CardToken(_) => {
                     Err(IntegrationError::not_implemented("payment method").into())
                 }

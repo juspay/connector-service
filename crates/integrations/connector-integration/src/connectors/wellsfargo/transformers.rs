@@ -594,8 +594,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Netbanking(_) => Err(IntegrationError::NotSupported {
+            | PaymentMethodData::MobilePayment(_) => Err(IntegrationError::NotSupported {
                 message: "Payment method".to_string(),
                 connector: "Wellsfargo",
                 context: Default::default(),

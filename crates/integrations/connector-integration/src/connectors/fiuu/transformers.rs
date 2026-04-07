@@ -604,7 +604,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | BankRedirectData::Trustly { .. }
                 | BankRedirectData::OnlineBankingThailand { .. }
                 | BankRedirectData::LocalBankRedirect {}
-                | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+                | BankRedirectData::OpenBanking {}
+                | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("fiuu"),
                 )
                 .into()),
@@ -665,7 +666,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::MandatePayment
             | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Netbanking(_)
             | PaymentMethodData::Reward
             | PaymentMethodData::Upi(_)
             | PaymentMethodData::Voucher(_)

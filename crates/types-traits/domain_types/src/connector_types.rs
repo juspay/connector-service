@@ -2943,6 +2943,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 }
                 payment_method_data::BankRedirectData::Eft { .. } => Self::Eft,
                 payment_method_data::BankRedirectData::OpenBanking {} => Self::OpenBanking,
+                payment_method_data::BankRedirectData::Netbanking { .. } => Self::Netbanking,
             },
             PaymentMethodData::BankDebit(bank_debit_data) => match bank_debit_data {
                 payment_method_data::BankDebitData::AchBankDebit { .. } => Self::AchBankDebit,
@@ -3053,7 +3054,6 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                     Self::DirectCarrierBilling
                 }
             },
-            PaymentMethodData::Netbanking(_) => Self::Netbanking,
         }
     }
 }

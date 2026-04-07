@@ -221,7 +221,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | BankRedirectData::Trustly { .. }
                     | BankRedirectData::OnlineBankingFpx { .. }
                     | BankRedirectData::OnlineBankingThailand { .. }
-                    | BankRedirectData::LocalBankRedirect {} => {
+                    | BankRedirectData::LocalBankRedirect {}
+                    | BankRedirectData::Netbanking { .. } => {
                         Err(IntegrationError::not_implemented(
                             utils::get_unimplemented_payment_method_error_message("Volt"),
                         ))
@@ -288,7 +289,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::Reward
             | PaymentMethodData::RealTimePayment(_)
             | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Netbanking(_)
             | PaymentMethodData::Upi(_)
             | PaymentMethodData::Voucher(_)
             | PaymentMethodData::GiftCard(_)

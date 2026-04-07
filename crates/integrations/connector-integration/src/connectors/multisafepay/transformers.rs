@@ -137,7 +137,8 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Bank redirect payment method not supported")?,
@@ -149,7 +150,6 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
         | PaymentMethodData::Reward
         | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
-        | PaymentMethodData::Netbanking(_)
         | PaymentMethodData::Upi(_)
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
@@ -262,7 +262,8 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Bank redirect payment method not supported")?,
@@ -330,7 +331,6 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
         | PaymentMethodData::Reward
         | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
-        | PaymentMethodData::Netbanking(_)
         | PaymentMethodData::Upi(_)
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
