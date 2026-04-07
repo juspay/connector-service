@@ -558,9 +558,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 Ok(FiservCheckoutChargesRequest::Charges(
                     ChargesPaymentRequest {
-                        source: Source::PaymentToken {
-                            token_data: token,
-                        },
+                        source: Source::PaymentToken { token_data: token },
                         transaction_details: TransactionDetails {
                             capture_flag: Some(matches!(
                                 item.router_data.request.capture_method,
@@ -1366,12 +1364,11 @@ impl TryFrom<ResponseRouterData<FiservClientAuthResponse, Self>>
         let response = item.response;
 
         // Fiserv may return access_token or session_id depending on the API version
-        let session_id = response
-            .access_token
-            .or(response.session_id)
-            .ok_or(ConnectorError::ResponseDeserializationFailed {
+        let session_id = response.access_token.or(response.session_id).ok_or(
+            ConnectorError::ResponseDeserializationFailed {
                 context: Default::default(),
-            })?;
+            },
+        )?;
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
             ConnectorSpecificClientAuthenticationResponse::Fiserv(
