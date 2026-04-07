@@ -426,7 +426,27 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_client_session_id": "probe_sdk_session_001",
+          "domain_context": {
+            "payment": {
+              "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+              }
+            }
+          }
+        },
+        "sample": {
+          "url": "https://demo.ippayments.com.au/interface/api/sipp.asmx",
+          "method": "Post",
+          "headers": {
+            "content-type": "text/xml",
+            "via": "HyperSwitch"
+          },
+          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:sipp=\"http://www.ippayments.com.au/interface/api/sipp\">\n<soapenv:Header/>\n<soapenv:Body>\n<sipp:TokeniseCreditCard>\n<sipp:tokeniseCreditCardXML><![CDATA[\n<TokeniseCreditCard>\n    <CardNumber>4242424242424242</CardNumber>\n    <ExpM>12</ExpM>\n    <ExpY>30</ExpY>\n    <TokeniseAlgorithmID>2</TokeniseAlgorithmID>\n    <UserName>probe_user</UserName>\n    <Password>probe_pass</Password>\n</TokeniseCreditCard>\n]]></sipp:tokeniseCreditCardXML>\n</sipp:TokeniseCreditCard>\n</soapenv:Body>\n</soapenv:Envelope>"
+        }
       }
     },
     "create_customer": {
