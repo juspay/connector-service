@@ -65,17 +65,6 @@ def _build_capture_request(connector_transaction_id: str):
         payment_pb2.PaymentServiceCaptureRequest(),
     )
 
-def _build_create_customer_request():
-    return ParseDict(
-        {
-            "merchant_customer_id": "cust_probe_123",  # Identification.
-            "customer_name": "John Doe",  # Name of the customer.
-            "email": {"value": "test@example.com"},  # Email address of the customer.
-            "phone_number": "4155552671"  # Phone number of the customer.
-        },
-        payment_pb2.CustomerServiceCreateRequest(),
-    )
-
 def _build_get_request(connector_transaction_id: str):
     return ParseDict(
         {
@@ -320,15 +309,6 @@ async def capture(merchant_transaction_id: str, config: sdk_config_pb2.Connector
     capture_response = await payment_client.capture(_build_capture_request("probe_connector_txn_001"))
 
     return {"status": capture_response.status}
-
-
-async def create_customer(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: CustomerService.Create"""
-    customer_client = CustomerClient(config)
-
-    create_response = await customer_client.create(_build_create_customer_request())
-
-    return {"status": create_response.status}
 
 
 async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):

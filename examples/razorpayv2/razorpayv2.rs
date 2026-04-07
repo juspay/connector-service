@@ -260,7 +260,6 @@ async fn main() {
         "process_get_payment" => process_get_payment(&client, "order_001").await,
         "authorize" => authorize(&client, "order_001").await,
         "create_order" => create_order(&client, "order_001").await,
-        "create_server_authentication_token" => create_server_authentication_token(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
         "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,

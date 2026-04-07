@@ -8,7 +8,6 @@
 package examples.nexinets
 
 import payments.PaymentClient
-import payments.RefundClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceGetRequest
@@ -190,18 +189,6 @@ fun refund(txnId: String) {
     if (response.status.name == "FAILED")
         throw RuntimeException("Refund failed: ${response.error.unifiedDetails.message}")
     println("Done: ${response.status.name}")
-}
-
-// Flow: RefundService.Get
-fun refundGet(txnId: String) {
-    val client = RefundClient(_defaultConfig)
-    val request = RefundServiceGetRequest.newBuilder().apply {
-        merchantRefundId = "probe_refund_001"  // Identification.
-        connectorTransactionId = "probe_connector_txn_001"
-        refundId = "probe_refund_id_001"
-    }.build()
-    val response = client.refund_get(request)
-    println("Status: ${response.status.name}")
 }
 
 

@@ -8,7 +8,6 @@
 package examples.dlocal
 
 import payments.PaymentClient
-import payments.EventClient
 import payments.RecurringPaymentClient
 import payments.RefundClient
 import payments.PaymentServiceAuthorizeRequest
@@ -23,7 +22,6 @@ import payments.AuthenticationType
 import payments.CaptureMethod
 import payments.CountryAlpha2
 import payments.Currency
-import payments.FutureUsage
 import payments.PaymentMethodType
 import payments.ConnectorConfig
 import payments.SdkOptions
@@ -309,18 +307,6 @@ fun recurringCharge(txnId: String) {
     println("Done: ${response.status.name}")
 }
 
-// Flow: RecurringPaymentService.Revoke
-fun recurringRevoke(txnId: String) {
-    val client = RecurringPaymentClient(_defaultConfig)
-    val request = RecurringPaymentServiceRevokeRequest.newBuilder().apply {
-        merchantRevokeId = "probe_revoke_001"  // Identification.
-        mandateId = "probe_mandate_001"  // Mandate Details.
-        connectorMandateId = "probe_connector_mandate_001"
-    }.build()
-    val response = client.recurring_revoke(request)
-    println("Status: ${response.status.name}")
-}
-
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -368,7 +354,6 @@ fun main(args: Array<String>) {
         "get" -> get(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
         "recurringCharge" -> recurringCharge(txnId)
-        "recurringRevoke" -> recurringRevoke(txnId)
         "refund" -> refund(txnId)
         "refundGet" -> refundGet(txnId)
         "void" -> void(txnId)

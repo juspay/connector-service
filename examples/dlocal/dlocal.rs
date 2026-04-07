@@ -347,7 +347,6 @@ async fn main() {
         "get" => get(&client, "order_001").await,
         "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "recurring_charge" => recurring_charge(&client, "order_001").await,
-        "recurring_revoke" => recurring_revoke(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "refund_get" => refund_get(&client, "order_001").await,
         "void" => void(&client, "order_001").await,

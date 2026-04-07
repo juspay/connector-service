@@ -265,16 +265,6 @@ fun createServerAuthenticationToken(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
-// Flow: MerchantAuthenticationService.CreateServerAuthenticationToken
-fun createServerAuthenticationToken(txnId: String) {
-    val client = MerchantAuthenticationClient(_defaultConfig)
-    val request = MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest.newBuilder().apply {
-
-    }.build()
-    val response = client.create_server_authentication_token(request)
-    println("Status: ${response.status.name}")
-}
-
 // Flow: PaymentService.Get
 fun get(txnId: String) {
     val client = PaymentClient(_defaultConfig)
