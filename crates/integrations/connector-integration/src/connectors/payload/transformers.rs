@@ -7,25 +7,27 @@ use common_utils::{
     types::FloatMajorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse, MandateReference, PaymentFlowData,
+        ConnectorSpecificClientAuthenticationResponse, MandateReference,
         PayloadClientAuthenticationResponse as PayloadClientAuthenticationResponseDomain,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{BankDebitData, CardToken, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
-        ErrorResponse,
+        ErrorResponse, PaymentMethodToken,
     },
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
+use hyperswitch_masking::{ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::{requests, responses};
@@ -384,6 +386,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
                 .into()),
             },
+            // TODO: Map CardToken payment_method_id into Payload's payment request body
+            // once the exact field mapping is confirmed. Payload.js Secure Inputs
+            // return a payment_method_id that must be sent server-side.
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                let is_mandate = router_data.request.is_mandate_payment();
+
+                let cards_data = build_payload_cards_request_data(
+                    &router_data.request.payment_method_data,
+                    &router_data.connector_config,
+                    router_data.request.currency,
+                    amount,
+                    &router_data.resource_common_data,
+                    router_data.request.capture_method,
+                    is_mandate,
+                )?;
+
+                // TODO: Attach `token` to the request body once the Payload API
+                // field for pre-tokenized payment methods is confirmed.
+                let _ = token;
+
+                Ok(Self::PayloadCardsRequest(Box::new(cards_data)))
+            }
             _ => Err(IntegrationError::NotSupported {
                 message: "Payment method".to_string(),
                 connector: "Payload",
