@@ -1,12 +1,18 @@
 use common_enums::enums;
 use common_utils::{ext_traits::ValueExt, request::Method};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PaymentMethodToken, RSync, Refund, RepeatPayment, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, PaymentMethodToken, RSync, Refund,
+        RepeatPayment, Void,
+    },
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId,
+        PaysafeClientAuthenticationResponse as PaysafeClientAuthenticationResponseDomain,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId,
     },
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
@@ -929,6 +935,133 @@ impl TryFrom<ResponseRouterData<PaysafeRSyncResponse, Self>>
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id.clone(),
                 refund_status: enums::RefundStatus::from(item.response.status),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow ----
+
+// ClientAuthenticationToken Flow - Request
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PaysafeRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PaysafeClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: PaysafeRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        let auth = PaysafeAuthType::try_from(&router_data.connector_config)?;
+        let account_id = auth
+            .account_id
+            .ok_or(IntegrationError::InvalidConnectorConfig {
+                config: "account_id",
+                context: Default::default(),
+            })?;
+
+        // Default to card account_id for client authentication (no 3DS)
+        let account_id = account_id.get_no_three_ds_account_id(router_data.request.currency)?;
+
+        // Billing details are optional for ClientAuthenticationToken flow
+        let billing_details = create_paysafe_billing_details(&router_data.resource_common_data)
+            .unwrap_or(None);
+
+        // Build return_links from the return URL if available
+        let return_links = router_data
+            .resource_common_data
+            .get_return_url()
+            .map(|redirect_url: String| {
+                vec![
+                    ReturnLink {
+                        rel: LinkType::Default,
+                        href: redirect_url.clone(),
+                        method: Method::Get.to_string(),
+                    },
+                    ReturnLink {
+                        rel: LinkType::OnCompleted,
+                        href: redirect_url.clone(),
+                        method: Method::Get.to_string(),
+                    },
+                    ReturnLink {
+                        rel: LinkType::OnFailed,
+                        href: redirect_url.clone(),
+                        method: Method::Get.to_string(),
+                    },
+                    ReturnLink {
+                        rel: LinkType::OnCancelled,
+                        href: redirect_url,
+                        method: Method::Get.to_string(),
+                    },
+                ]
+            });
+
+        Ok(Self {
+            merchant_ref_num: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            amount: router_data.request.amount,
+            currency_code: router_data.request.currency,
+            payment_type: PaysafePaymentType::Card,
+            transaction_type: TransactionType::Payment,
+            account_id,
+            return_links,
+            billing_details,
+        })
+    }
+}
+
+// ClientAuthenticationToken Flow - Response
+
+impl TryFrom<ResponseRouterData<PaysafeClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<PaysafeClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Paysafe(
+                PaysafeClientAuthenticationResponseDomain {
+                    payment_handle_token: response.payment_handle_token,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
                 status_code: item.http_code,
             }),
             ..item.router_data

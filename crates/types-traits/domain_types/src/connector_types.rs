@@ -3458,6 +3458,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Elavon(ElavonClientAuthenticationResponse),
     /// Noon SDK initialization data — order_id and checkout_url for client-side checkout
     Noon(NoonClientAuthenticationResponse),
+    /// Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK
+    Paysafe(PaysafeClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3578,6 +3580,13 @@ pub struct NoonClientAuthenticationResponse {
     pub order_id: u64,
     /// The checkout URL for client-side redirect to complete payment
     pub checkout_url: Secret<String>,
+}
+
+/// Paysafe's payment_handle_token for client-side Paysafe.js SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaysafeClientAuthenticationResponse {
+    /// The payment handle token for client-side Paysafe.js SDK
+    pub payment_handle_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

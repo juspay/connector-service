@@ -43,8 +43,9 @@ use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
     self as paysafe, PaysafeAuthorizeResponse, PaysafeCaptureRequest, PaysafeCaptureResponse,
-    PaysafeErrorResponse, PaysafePaymentMethodTokenRequest, PaysafePaymentMethodTokenResponse,
-    PaysafePaymentsRequest, PaysafeRSyncResponse, PaysafeRefundRequest, PaysafeRefundResponse,
+    PaysafeClientAuthRequest, PaysafeClientAuthResponse, PaysafeErrorResponse,
+    PaysafePaymentMethodTokenRequest, PaysafePaymentMethodTokenResponse, PaysafePaymentsRequest,
+    PaysafeRSyncResponse, PaysafeRefundRequest, PaysafeRefundResponse,
     PaysafeRepeatPaymentRequest, PaysafeRepeatPaymentResponse, PaysafeSyncResponse,
     PaysafeVoidRequest, PaysafeVoidResponse,
 };
@@ -254,6 +255,12 @@ macros::create_all_prerequisites!(
             request_body: PaysafeRepeatPaymentRequest,
             response_body: PaysafeRepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: PaysafeClientAuthRequest,
+            response_body: PaysafeClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -642,6 +649,34 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Paysafe,
+    curl_request: Json(PaysafeClientAuthRequest),
+    curl_response: PaysafeClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}v1/paymenthandles", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
 // SourceVerification implementations for all flows
 
 // Stub implementations for unsupported flows
@@ -665,15 +700,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    > for Paysafe<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<

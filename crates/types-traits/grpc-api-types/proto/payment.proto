@@ -1547,7 +1547,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     FiservClientAuthenticationResponse fiserv = 13;
     ElavonClientAuthenticationResponse elavon = 14;
     NoonClientAuthenticationResponse noon = 15;
+    PaysafeClientAuthenticationResponse paysafe = 16;
   }
+}
+
+// Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK
+message PaysafeClientAuthenticationResponse {
+  SecretString payment_handle_token = 1;
 }
 
 // Noon SDK initialization data — order_id and checkout_url for client-side checkout
