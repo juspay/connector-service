@@ -5017,7 +5017,6 @@ pub struct CybersourceClientAuthRequest {
     pub fields: serde_json::Value,
 }
 
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CybersourceRouterData<
@@ -5053,7 +5052,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Extract the origin from the return_url for target_origins
         let target_origin = url::Url::parse(&return_url)
-            .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or("hyperswitch.io")))
+            .map(|u| {
+                format!(
+                    "{}://{}",
+                    u.scheme(),
+                    u.host_str().unwrap_or("hyperswitch.io")
+                )
+            })
             .unwrap_or_else(|_| "https://hyperswitch.io".to_string());
 
         Ok(Self {
@@ -5108,12 +5113,13 @@ impl<'de> Deserialize<'de> for CybersourceClientAuthResponse {
             }
 
             fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Self::Value, E> {
-                Ok(CybersourceClientAuthResponse {
-                    capture_context: v,
-                })
+                Ok(CybersourceClientAuthResponse { capture_context: v })
             }
 
-            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Self::Value, A::Error> {
                 let mut key_id = None;
                 while let Some(key) = map.next_key::<String>()? {
                     if key == "keyId" {
@@ -5150,9 +5156,7 @@ impl TryFrom<ResponseRouterData<CybersourceClientAuthResponse, Self>>
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
             ConnectorSpecificClientAuthenticationResponse::Cybersource(
-                CybersourceClientAuthenticationResponseDomain {
-                    capture_context,
-                },
+                CybersourceClientAuthenticationResponseDomain { capture_context },
             ),
         ));
 
