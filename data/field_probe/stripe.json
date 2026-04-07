@@ -201,92 +201,12 @@
         }
       },
       "ApplePay": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "apple_pay": {
-              "payment_data": {
-                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
-              },
-              "payment_method": {
-                "display_name": "Visa 1111",
-                "network": "Visa",
-                "type": "debit"
-              },
-              "transaction_identifier": "probe_txn_id"
-            }
-          },
-          "capture_method": "AUTOMATIC",
-          "address": {
-            "billing_address": {}
-          },
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://api.stripe.com/v1/payment_intents",
-          "method": "Post",
-          "headers": {
-            "authorization": "Bearer probe_key",
-            "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
-            "via": "HyperSwitch"
-          },
-          "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Bcard%5D%5Btoken%5D=probe_pm_token&payment_method_data%5Btype%5D=card&capture_method=automatic&expand%5B0%5D=latest_charge"
-        }
+        "status": "error",
+        "error": "Stuck on field: payment_method_token — Failed to parse Apple Pay wallet token"
       },
       "ApplePayDecrypted": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "apple_pay": {
-              "payment_data": {
-                "decrypted_data": {
-                  "application_primary_account_number": "4111111111111111",
-                  "application_expiration_month": "03",
-                  "application_expiration_year": "2030",
-                  "payment_data": {
-                    "online_payment_cryptogram": "AAAAAA==",
-                    "eci_indicator": "05"
-                  }
-                }
-              },
-              "payment_method": {
-                "display_name": "Visa 1111",
-                "network": "Visa",
-                "type": "debit"
-              },
-              "transaction_identifier": "probe_txn_id"
-            }
-          },
-          "capture_method": "AUTOMATIC",
-          "address": {
-            "billing_address": {}
-          },
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return"
-        },
-        "sample": {
-          "url": "https://api.stripe.com/v1/payment_intents",
-          "method": "Post",
-          "headers": {
-            "authorization": "Bearer probe_key",
-            "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
-            "via": "HyperSwitch"
-          },
-          "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Bcard%5D%5Btoken%5D=probe_pm_token&payment_method_data%5Btype%5D=card&capture_method=automatic&expand%5B0%5D=latest_charge"
-        }
+        "status": "error",
+        "error": "Stuck on field: payment_method_token — Failed to parse Apple Pay wallet token"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
@@ -692,7 +612,7 @@
       },
       "GooglePayDecrypted": {
         "status": "error",
-        "error": "Stuck on field: gpay wallet_token \u2014 Missing required field: gpay wallet_token"
+        "error": "Stuck on field: gpay wallet_token — Missing required field: gpay wallet_token"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",

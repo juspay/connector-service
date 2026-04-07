@@ -135,7 +135,7 @@
       },
       "ApplePayDecrypted": {
         "status": "error",
-        "error": "Stuck on field: Apple pay encrypted data \u2014 Missing required field: Apple pay encrypted data"
+        "error": "Stuck on field: Apple pay encrypted data — Missing required field: Apple pay encrypted data"
       },
       "ApplePayThirdPartySdk": {
         "status": "supported",
@@ -408,7 +408,7 @@
       },
       "GooglePayDecrypted": {
         "status": "error",
-        "error": "Stuck on field: gpay wallet_token \u2014 Missing required field: gpay wallet_token"
+        "error": "Stuck on field: gpay wallet_token — Missing required field: gpay wallet_token"
       },
       "GooglePayThirdPartySdk": {
         "status": "supported",
