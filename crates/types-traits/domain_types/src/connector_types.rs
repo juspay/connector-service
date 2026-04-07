@@ -3430,12 +3430,21 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Bambora APAC SDK initialization data — token for client-side tokenization
+    Bamboraapac(BamboraapacClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
+}
+
+/// Bambora APAC's token for client-side tokenization via SOAP API
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BamboraapacClientAuthenticationResponse {
+    /// The tokenization token returned from Bambora APAC's SOAP tokenization API
+    pub token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

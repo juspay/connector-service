@@ -1533,9 +1533,13 @@ message ClientAuthenticationTokenData {
 message ConnectorSpecificClientAuthenticationResponse {
   oneof connector {
     StripeClientAuthenticationResponse stripe = 1;
-    // AdyenClientAuthenticationResponse adyen = 2;    // future
-    // CheckoutClientAuthenticationResponse checkout = 3; // future
+    BamboraapacClientAuthenticationResponse bamboraapac = 2;
   }
+}
+
+// Bambora APAC SDK initialization data — token for client-side tokenization
+message BamboraapacClientAuthenticationResponse {
+  SecretString token = 1;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
