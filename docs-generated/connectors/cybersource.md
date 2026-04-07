@@ -96,9 +96,23 @@ let config = ConnectorConfig {
 
 Complete, runnable examples for common integration patterns. Each example shows the full flow with status handling. Copy-paste into your app and replace placeholder values.
 
+### One-step Payment (Authorize + Capture)
+
+Simple payment that authorizes and captures in one call. Use for immediate charges.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L278) · [JavaScript](../../examples/cybersource/cybersource.js) · [Kotlin](../../examples/cybersource/cybersource.kt#L119) · [Rust](../../examples/cybersource/cybersource.rs#L268)
+
 ### Card Payment (Authorize + Capture)
 
-Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+Two-step card payment. First authorize, then capture. Use when you need to verify funds before finalizing.
 
 **Response status handling:**
 
@@ -108,78 +122,41 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L97) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L86) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L117) · [Rust](../../examples/cybersource/rust/cybersource.rs#L106)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L297) · [JavaScript](../../examples/cybersource/cybersource.js) · [Kotlin](../../examples/cybersource/cybersource.kt#L135) · [Rust](../../examples/cybersource/cybersource.rs#L284)
 
-### Card Payment (Automatic Capture)
+### Refund
 
-Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+Return funds to the customer for a completed payment.
 
-**Response status handling:**
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L322) · [JavaScript](../../examples/cybersource/cybersource.js) · [Kotlin](../../examples/cybersource/cybersource.kt#L157) · [Rust](../../examples/cybersource/cybersource.rs#L307)
 
-| Status | Recommended action |
-|--------|-------------------|
-| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
-| `PENDING` | Payment processing — await webhook for final status before fulfilling |
-| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+### Void Payment
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L122) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L112) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L139) · [Rust](../../examples/cybersource/rust/cybersource.rs#L129)
+Cancel an authorized but not-yet-captured payment.
 
-### Wallet Payment (Google Pay / Apple Pay)
-
-Wallet payments pass an encrypted token from the browser/device SDK. Pass the token blob directly — do not decrypt client-side.
-
-**Response status handling:**
-
-| Status | Recommended action |
-|--------|-------------------|
-| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
-| `PENDING` | Payment processing — await webhook for final status before fulfilling |
-| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
-
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L141) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L131) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L155) · [Rust](../../examples/cybersource/rust/cybersource.rs#L145)
-
-### Refund a Payment
-
-Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
-
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L195) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L182) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L203) · [Rust](../../examples/cybersource/rust/cybersource.rs#L195)
-
-### Recurring / Mandate Payments
-
-Store a payment mandate with SetupRecurring, then charge it repeatedly with RecurringPaymentService.Charge without requiring customer action.
-
-**Response status handling:**
-
-| Status | Recommended action |
-|--------|-------------------|
-| `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
-| `FAILED` | Setup failed — customer must re-enter payment details |
-
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L232) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L217) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L225) · [Rust](../../examples/cybersource/rust/cybersource.rs#L218)
-
-### Void a Payment
-
-Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
-
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L305) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L281) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L291) · [Rust](../../examples/cybersource/rust/cybersource.rs#L282)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L347) · [JavaScript](../../examples/cybersource/cybersource.js) · [Kotlin](../../examples/cybersource/cybersource.kt#L179) · [Rust](../../examples/cybersource/cybersource.rs#L330)
 
 ### Get Payment Status
 
-Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L327) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L303) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L310) · [Rust](../../examples/cybersource/rust/cybersource.rs#L301)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L369) · [JavaScript](../../examples/cybersource/cybersource.js) · [Kotlin](../../examples/cybersource/cybersource.kt#L198) · [Rust](../../examples/cybersource/cybersource.rs#L349)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
+| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
+| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
 | [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
+| [RecurringPaymentService.Revoke](#recurringpaymentservicerevoke) | Mandates | `RecurringPaymentServiceRevokeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
 ### Payments
@@ -198,20 +175,96 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Google Pay | ✓ |
+| Bancontact | ⚠ |
 | Apple Pay | ✓ |
+| Apple Pay Dec | ✓ |
+| Apple Pay SDK | ⚠ |
+| Google Pay | ✓ |
+| Google Pay Dec | ✓ |
+| Google Pay SDK | ⚠ |
+| PayPal SDK | ⚠ |
+| Amazon Pay | ⚠ |
+| Cash App | ⚠ |
+| PayPal | ⚠ |
+| WeChat Pay | ⚠ |
+| Alipay | ⚠ |
+| Revolut Pay | ⚠ |
+| MiFinity | ⚠ |
+| Bluecode | ⚠ |
+| Paze | x |
+| Samsung Pay | ✓ |
+| MB Way | ⚠ |
+| Satispay | ⚠ |
+| Wero | ⚠ |
+| Affirm | ⚠ |
+| Afterpay | ⚠ |
+| Klarna | ⚠ |
+| UPI Collect | ⚠ |
+| UPI Intent | ⚠ |
+| UPI QR | ⚠ |
+| Thailand | ⚠ |
+| Czech | ⚠ |
+| Finland | ⚠ |
+| FPX | ⚠ |
+| Poland | ⚠ |
+| Slovakia | ⚠ |
+| UK | ⚠ |
+| PIS | x |
+| Generic | ⚠ |
+| Local | ⚠ |
+| iDEAL | ⚠ |
+| Sofort | ⚠ |
+| Trustly | ⚠ |
+| Giropay | ⚠ |
+| EPS | ⚠ |
+| Przelewy24 | ⚠ |
+| PSE | ⚠ |
+| BLIK | ⚠ |
+| Interac | ⚠ |
+| Bizum | ⚠ |
+| EFT | ⚠ |
+| DuitNow | x |
+| ACH | ⚠ |
 | SEPA | ⚠ |
 | BACS | ⚠ |
+| Multibanco | ⚠ |
+| Instant | ⚠ |
+| Instant FI | ⚠ |
+| Instant PL | ⚠ |
+| Pix | ⚠ |
+| Permata | ⚠ |
+| BCA | ⚠ |
+| BNI VA | ⚠ |
+| BRI VA | ⚠ |
+| CIMB VA | ⚠ |
+| Danamon VA | ⚠ |
+| Mandiri VA | ⚠ |
+| Local | ⚠ |
+| Indonesian | ⚠ |
 | ACH | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
 | BECS | ⚠ |
-| iDEAL | ⚠ |
-| PayPal | ⚠ |
-| BLIK | ⚠ |
-| Klarna | ⚠ |
-| Afterpay | ⚠ |
-| UPI | ⚠ |
-| Affirm | ⚠ |
-| Samsung Pay | ? |
+| SEPA Guaranteed | ⚠ |
+| Crypto | x |
+| Reward | ⚠ |
+| Givex | x |
+| PaySafeCard | x |
+| E-Voucher | ⚠ |
+| Boleto | ⚠ |
+| Efecty | ⚠ |
+| Pago Efectivo | ⚠ |
+| Red Compra | ⚠ |
+| Red Pagos | ⚠ |
+| Alfamart | ⚠ |
+| Indomaret | ⚠ |
+| Oxxo | ⚠ |
+| 7-Eleven | ⚠ |
+| Lawson | ⚠ |
+| Mini Stop | ⚠ |
+| Family Mart | ⚠ |
+| Seicomart | ⚠ |
+| Pay Easy | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -219,12 +272,12 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "card": {  # Generic card payment
-        "card_number": "4111111111111111",  # Card Identification
-        "card_exp_month": "03",
-        "card_exp_year": "2030",
-        "card_cvc": "737",
-        "card_holder_name": "John Doe"  # Cardholder Information
+    "card": {  # Generic card payment.
+        "card_number": {"value": "4111111111111111"},  # Card Identification.
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
     }
 }
 ```
@@ -233,17 +286,17 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "google_pay": {  # Google Pay
-        "type": "CARD",  # Type of payment method
-        "description": "Visa 1111",  # User-facing description of the payment method
+    "google_pay": {  # Google Pay.
+        "type": "CARD",  # Type of payment method.
+        "description": "Visa 1111",  # User-facing description of the payment method.
         "info": {
-            "card_network": "VISA",  # Card network name
-            "card_details": "1111"  # Card details (usually last 4 digits)
+            "card_network": "VISA",  # Card network name.
+            "card_details": "1111"  # Card details (usually last 4 digits).
         },
         "tokenization_data": {
-            "encrypted_data": {  # Encrypted Google Pay payment data
-                "token_type": "PAYMENT_GATEWAY",  # The type of the token
-                "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet
+            "encrypted_data": {  # Encrypted Google Pay payment data.
+                "token_type": "PAYMENT_GATEWAY",  # The type of the token.
+                "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet.
             }
         }
     }
@@ -254,32 +307,52 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "apple_pay": {  # Apple Pay
+    "apple_pay": {  # Apple Pay.
         "payment_data": {
-            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string
+            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string.
         },
         "payment_method": {
             "display_name": "Visa 1111",
             "network": "Visa",
             "type": "debit"
         },
-        "transaction_identifier": "probe_txn_id"  # Transaction identifier
+        "transaction_identifier": "probe_txn_id"  # Transaction identifier.
     }
 }
 ```
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L349) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L324) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L328) · [Rust](../../examples/cybersource/rust/cybersource.rs#L319)
+##### Samsung Pay
+
+```python
+"payment_method": {
+    "samsung_pay": {  # Samsung.
+        "payment_credential": {
+            "method": "3DS",  # Method type.
+            "recurring_payment": False,  # Whether this is a recurring payment.
+            "card_brand": "VISA",
+            "card_last_four_digits": {"value": "1234"},  # Last four digits of card.
+            "token_data": {
+                "type": "S",  # 3DS type.
+                "version": "100",  # 3DS version.
+                "data": {"value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"}  # Token data.
+            }
+        }
+    }
+}
+```
+
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L400) · [TypeScript](../../examples/cybersource/cybersource.ts#L376) · [Kotlin](../../examples/cybersource/cybersource.kt#L253) · [Rust](../../examples/cybersource/cybersource.rs#L374)
 
 #### PaymentService.Capture
 
-Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L358) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L333) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L340) · [Rust](../../examples/cybersource/rust/cybersource.rs#L331)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L409) · [TypeScript](../../examples/cybersource/cybersource.ts#L385) · [Kotlin](../../examples/cybersource/cybersource.kt#L265) · [Rust](../../examples/cybersource/cybersource.rs#L386)
 
 #### PaymentService.Get
 
@@ -290,40 +363,53 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L367) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L342) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L350) · [Rust](../../examples/cybersource/rust/cybersource.rs#L338)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L418) · [TypeScript](../../examples/cybersource/cybersource.ts#L394) · [Kotlin](../../examples/cybersource/cybersource.kt#L275) · [Rust](../../examples/cybersource/cybersource.rs#L393)
+
+#### PaymentService.ProxyAuthorize
+
+Authorize using vault-aliased card data. Proxy substitutes before connector.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceProxyAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
+
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L445) · [TypeScript](../../examples/cybersource/cybersource.ts#L421) · [Kotlin](../../examples/cybersource/cybersource.kt#L343) · [Rust](../../examples/cybersource/cybersource.rs#L414)
 
 #### PaymentService.Refund
 
-Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L195) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L182) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L413) · [Rust](../../examples/cybersource/rust/cybersource.rs#L400)
-
-#### PaymentService.SetupRecurring
-
-Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceSetupRecurringRequest` |
-| **Response** | `PaymentServiceSetupRecurringResponse` |
-
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L442) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L408) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L423) · [Rust](../../examples/cybersource/rust/cybersource.rs#L407)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L472) · [TypeScript](../../examples/cybersource/cybersource.ts#L448) · [Kotlin](../../examples/cybersource/cybersource.kt#L417) · [Rust](../../examples/cybersource/cybersource.rs#L435)
 
 #### PaymentService.Void
 
-Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
 
 | | Message |
 |---|---------|
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L493) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L452) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L466) · [Rust](../../examples/cybersource/rust/cybersource.rs#L451)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L490) · [TypeScript](../../examples/cybersource/cybersource.ts) · [Kotlin](../../examples/cybersource/cybersource.kt#L439) · [Rust](../../examples/cybersource/cybersource.rs#L449)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L481) · [TypeScript](../../examples/cybersource/cybersource.ts#L457) · [Kotlin](../../examples/cybersource/cybersource.kt#L427) · [Rust](../../examples/cybersource/cybersource.rs#L442)
 
 ### Mandates
 
@@ -336,9 +422,42 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L409) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L379) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L386) · [Rust](../../examples/cybersource/rust/cybersource.rs#L374)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L454) · [TypeScript](../../examples/cybersource/cybersource.ts#L430) · [Kotlin](../../examples/cybersource/cybersource.kt#L374) · [Rust](../../examples/cybersource/cybersource.rs#L421)
+
+#### RecurringPaymentService.Revoke
+
+Cancel an existing recurring payment mandate. Stops future automatic charges on customer's stored consent for subscription cancellations.
+
+| | Message |
+|---|---------|
+| **Request** | `RecurringPaymentServiceRevokeRequest` |
+| **Response** | `RecurringPaymentServiceRevokeResponse` |
+
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L463) · [TypeScript](../../examples/cybersource/cybersource.ts#L439) · [Kotlin](../../examples/cybersource/cybersource.kt#L405) · [Rust](../../examples/cybersource/cybersource.rs#L428)
 
 ### Authentication
+
+#### PaymentMethodAuthenticationService.Authenticate
+
+Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
+
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L391) · [TypeScript](../../examples/cybersource/cybersource.ts#L367) · [Kotlin](../../examples/cybersource/cybersource.kt#L216) · [Rust](../../examples/cybersource/cybersource.rs#L367)
+
+#### PaymentMethodAuthenticationService.PostAuthenticate
+
+Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
+
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L427) · [TypeScript](../../examples/cybersource/cybersource.ts#L403) · [Kotlin](../../examples/cybersource/cybersource.kt#L283) · [Rust](../../examples/cybersource/cybersource.rs#L400)
 
 #### PaymentMethodAuthenticationService.PreAuthenticate
 
@@ -349,4 +468,4 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
 
-**Examples:** [Python](../../examples/cybersource/python/cybersource.py#L376) · [JavaScript](../../examples/cybersource/javascript/cybersource.js#L351) · [Kotlin](../../examples/cybersource/kotlin/cybersource.kt#L358) · [Rust](../../examples/cybersource/rust/cybersource.rs#L345)
+**Examples:** [Python](../../examples/cybersource/cybersource.py#L436) · [TypeScript](../../examples/cybersource/cybersource.ts#L412) · [Kotlin](../../examples/cybersource/cybersource.kt#L315) · [Rust](../../examples/cybersource/cybersource.rs#L407)

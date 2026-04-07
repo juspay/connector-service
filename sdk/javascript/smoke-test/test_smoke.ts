@@ -123,7 +123,7 @@ async function testConnectorScenarios(
         return result;
     }
 
-    const connectorDir = path.join(examplesDir, connectorName, "javascript");
+    const connectorDir = path.join(examplesDir, connectorName);
     if (!fs.existsSync(connectorDir)) {
         result.status = "skipped";
         (result.scenarios as any) = { skipped: true, reason: "no_examples_dir" };

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::error::SdkError;
 use crate::http_client::{
-    HttpClient, HttpOptions as NativeHttpOptions, HttpRequest as ClientHttpRequest, NetworkError,
+    HttpClient, HttpOptions as NativeHttpOptions, HttpRequest as ClientHttpRequest,
 };
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
@@ -181,25 +181,22 @@ macro_rules! impl_flow_method {
 impl ConnectorClient {
     /// Initialize a new ConnectorClient.
     ///
+    /// Returns `Err(SdkError::NetworkError)` if the HTTP client cannot be constructed
+    /// (e.g. invalid proxy URL or CA certificate).
+    ///
     /// # Arguments
     /// * `config` - The ConnectorConfig (connector_config with typed auth, options with environment).
     /// * `options` - Optional RequestConfig for default http/vault settings.
-    pub fn new(
-        config: ConnectorConfig,
-        options: Option<RequestConfig>,
-    ) -> Result<Self, NetworkError> {
+    pub fn new(config: ConnectorConfig, options: Option<RequestConfig>) -> Result<Self, SdkError> {
         let defaults = options.unwrap_or_default();
 
-        // Map the Protobuf options to native transport options
         let native_opts = match defaults.http.as_ref() {
             Some(http_proto) => NativeHttpOptions::from(http_proto),
             None => NativeHttpOptions::default(),
         };
 
-        let http_client = HttpClient::new(native_opts)?;
-
         Ok(Self {
-            http_client,
+            http_client: HttpClient::new(native_opts).map_err(SdkError::from)?,
             config,
         })
     }
