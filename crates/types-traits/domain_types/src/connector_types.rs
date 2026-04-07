@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Fiserv SDK initialization data — session_id for Payment.js SDK initialization
+    Fiserv(FiservClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3449,6 +3451,13 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Fiserv's session_id for Payment.js SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FiservClientAuthenticationResponse {
+    /// The session ID for client-side Payment.js SDK initialization
+    pub session_id: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

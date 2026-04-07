@@ -1536,8 +1536,15 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    FiservClientAuthenticationResponse fiserv = 13;
   }
 }
+
+// Fiserv SDK initialization data — session_id for Payment.js SDK initialization
+message FiservClientAuthenticationResponse {
+  SecretString session_id = 1;
+}
+
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations
 message GlobalpayClientAuthenticationResponse {
