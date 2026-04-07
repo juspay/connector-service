@@ -1542,7 +1542,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     BluesnapClientAuthenticationResponse bluesnap = 8;
     RapydClientAuthenticationResponse rapyd = 9;
     Shift4ClientAuthenticationResponse shift4 = 10;
+    BankOfAmericaClientAuthenticationResponse bank_of_america = 11;
   }
+}
+
+// BankOfAmerica SDK initialization data — capture_context JWT for Flex Microform SDK
+message BankOfAmericaClientAuthenticationResponse {
+  SecretString capture_context = 1;
 }
 
 // Mollie SDK initialization data — payment_id + checkout_url for client-side redirect

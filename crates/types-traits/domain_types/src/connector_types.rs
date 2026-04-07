@@ -3448,6 +3448,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Rapyd(RapydClientAuthenticationResponse),
     /// Shift4 SDK initialization data — signature token for Checkout Form initialization
     Shift4(Shift4ClientAuthenticationResponse),
+    /// BankOfAmerica SDK initialization data — capture_context JWT for Flex Microform SDK
+    BankOfAmerica(BankOfAmericaClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3531,6 +3533,13 @@ pub struct RapydClientAuthenticationResponse {
 pub struct Shift4ClientAuthenticationResponse {
     /// The client secret for Shift4 Checkout Session SDK initialization
     pub client_secret: Secret<String>,
+}
+
+/// BankOfAmerica's capture_context JWT for Flex Microform SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BankOfAmericaClientAuthenticationResponse {
+    /// The capture context JWT token for client-side Flex Microform SDK
+    pub capture_context: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
