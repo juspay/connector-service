@@ -11,12 +11,13 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, DefendDispute, PSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, Refund, RepeatPayment,
+        SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, CardDetailUpdate, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, EventType, MandateReference, MandateReferenceId, PaymentFlowData,
+        DisputeResponseData, EventType, MandateReference, MandateReferenceId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodUpdate, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
@@ -7258,4 +7259,156 @@ fn get_adyen_split_request(
             (store, Some(splits))
         })
         .unwrap_or_else(|| (adyen_store.clone(), None))
+}
+
+// ===== OrderCreate (Sessions) Flow =====
+
+/// Adyen CreateSession request (POST /v68/sessions)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenOrderCreateRequest {
+    pub merchant_account: Secret<String>,
+    pub amount: Amount,
+    pub reference: String,
+    pub return_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country_code: Option<common_enums::CountryAlpha2>,
+}
+
+/// Adyen CreateSession response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenOrderCreateResponse {
+    pub id: String,
+    pub session_data: Option<String>,
+    pub reference: Option<String>,
+    pub merchant_account: Option<String>,
+}
+
+// --- TryFrom: RouterDataV2 -> AdyenOrderCreateRequest (via macro wrapper) ---
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for AdyenOrderCreateRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = AdyenAuthType::try_from(&router_data.connector_config)?;
+
+        let amount = Amount {
+            currency: router_data.request.currency,
+            value: MinorUnit::new(router_data.request.amount.get_amount_as_i64()),
+        };
+
+        let reference = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let return_url = router_data
+            .resource_common_data
+            .return_url
+            .clone()
+            .unwrap_or_else(|| "https://example.com/redirect".to_string());
+
+        let country_code = router_data
+            .resource_common_data
+            .address
+            .get_payment_billing()
+            .and_then(|b| b.address.as_ref())
+            .and_then(|a| a.country);
+
+        Ok(Self {
+            merchant_account: auth.merchant_account,
+            amount,
+            reference,
+            return_url,
+            country_code,
+        })
+    }
+}
+
+// --- TryFrom: AdyenOrderCreateResponse -> PaymentCreateOrderResponse ---
+
+impl TryFrom<AdyenOrderCreateResponse> for PaymentCreateOrderResponse {
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+
+    fn try_from(response: AdyenOrderCreateResponse) -> Result<Self, Self::Error> {
+        Ok(Self {
+            order_id: response.id,
+            session_data: None,
+        })
+    }
+}
+
+// --- TryFrom: ResponseRouterData -> RouterDataV2 (CreateOrder response handler) ---
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            AdyenOrderCreateResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            AdyenOrderCreateResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let order_response = PaymentCreateOrderResponse::try_from(response.clone())?;
+        let order_id = order_response.order_id.clone();
+
+        Ok(Self {
+            response: Ok(order_response),
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::Pending,
+                reference_id: Some(order_id),
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
 }
