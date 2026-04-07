@@ -997,7 +997,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // CreateOrder Flow - Response Transformation
 
 impl TryFrom<BillwerkCreateOrderResponse> for PaymentCreateOrderResponse {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: BillwerkCreateOrderResponse) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -1026,7 +1026,7 @@ impl
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<
