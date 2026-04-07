@@ -1,5 +1,5 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package dist clean
+        generate-flows pack-archive install test-package test-grpc test-grpc-no-server dist publish clean
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -16,6 +16,7 @@ GENERATED_KOTLIN := $(SDK_ROOT)/src/main/kotlin/generated
 GENERATED_JAVA   := $(SDK_ROOT)/src/main/java/generated
 NATIVE_DIR       := $(SDK_ROOT)/src/main/resources/native
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-java
+PACKAGE_VERSION  := $(shell cd $(SDK_ROOT) && ./gradlew properties -q 2>/dev/null | grep "^version:" | awk '{print $$2}')
 
 # Note: BINDGEN is defined in common.mk
 
@@ -117,7 +118,7 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
-	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/payments-client-0.1.0.jar
+	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
@@ -128,7 +129,7 @@ pack-archive:
 # ---------------------------------------------------------------------------
 install: pack-archive
 	@$(SDK_ROOT)/gradlew publishToMavenLocal
-	@echo "Published to ~/.m2/repository/com/hyperswitch/payments-client/0.1.0/"
+	@echo "Published to ~/.m2/repository/com/hyperswitch/hyperswitch-prism/$(PACKAGE_VERSION)/"
 
 # ---------------------------------------------------------------------------
 # test-package
@@ -145,7 +146,42 @@ test-package: generate-all install
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
 	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors $(CONNECTORS)"
+	@echo "Running composite smoke test..."
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew runComposite
 	@echo "Package test passed."
+
+# ---------------------------------------------------------------------------
+# test-grpc
+# Builds the grpc-ffi library and runs the Kotlin gRPC smoke test.
+# Requires the grpc-server to be running (started by the top-level test-grpc).
+# ---------------------------------------------------------------------------
+GRPC_PROFILE    ?= release-fast
+GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(PLATFORM)/$(GRPC_PROFILE)/grpc-server
+
+# Run gRPC test assuming server is already running (used by top-level test-grpc)
+test-grpc-no-server: install
+	@echo "Running Kotlin gRPC smoke test..."
+	@mkdir -p $(SDK_ROOT)/smoke-test/src/main/resources/native
+	@cp -f $(GRPC_FFI_LIBRARY) $(SDK_ROOT)/smoke-test/src/main/resources/native/
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json $(SDK_ROOT)/smoke-test/; \
+	fi
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew runGrpc --args="--connectors $(CONNECTORS)" 2>&1
+
+test-grpc: install generate-all ## Build grpc-ffi lib + grpc-server → start server → run Kotlin gRPC smoke test → stop server
+	@echo "Building gRPC FFI library ($(GRPC_PROFILE))..."
+	@cd $(REPO_ROOT) && cargo build -p hyperswitch-grpc-ffi --profile $(GRPC_PROFILE) 2>&1
+	@echo "Building gRPC server ($(GRPC_PROFILE))..."
+	@cd $(REPO_ROOT) && cargo build -p grpc-server --profile $(GRPC_PROFILE) 2>&1
+	@echo "Starting gRPC server..."
+	@pkill -KILL -f grpc-server 2>/dev/null || true
+	@sleep 1
+	@cd $(REPO_ROOT) && $(GRPC_SERVER_BIN) > /tmp/grpc-server-kt.log 2>&1 &
+	@sleep 2
+	@$(MAKE) test-grpc-no-server; \
+	EXIT=$$?; \
+	pkill -f grpc-server 2>/dev/null || true; \
+	exit $$EXIT
 
 # ---------------------------------------------------------------------------
 # dist
@@ -164,6 +200,24 @@ dist:
 		$(NATIVE_DIR)/ 2>/dev/null || echo "  Note: macOS aarch64 binary not found (skipping)"
 	@$(MAKE) -C $(SDK_ROOT) pack-archive
 	@echo "Distribution JAR created in $(PACKAGE_DIR)/"
+
+# ---------------------------------------------------------------------------
+# publish
+# Publishes to Maven Central (requires proper credentials and signing).
+# For local testing, use 'install' which publishes to ~/.m2.
+# Requires OSSRH_USERNAME and OSSRH_PASSWORD to be set for authentication.
+# ---------------------------------------------------------------------------
+publish: pack-archive
+	@if [ -z "$(OSSRH_USERNAME)" ] || [ -z "$(OSSRH_PASSWORD)" ]; then \
+		echo "Error: OSSRH_USERNAME and/or OSSRH_PASSWORD not set"; \
+		echo "Set them with:"; \
+		echo "  export OSSRH_USERNAME=your_username"; \
+		echo "  export OSSRH_PASSWORD=your_token"; \
+		exit 1; \
+	fi
+	@echo "Publishing hyperswitch-prism to Maven Central..."
+	@$(SDK_ROOT)/gradlew publish
+	@echo "Published com.hyperswitch:hyperswitch-prism to Maven Central."
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)

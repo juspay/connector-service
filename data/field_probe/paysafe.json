@@ -40,6 +40,36 @@
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_ach_acct\"}"
         }
       },
+      "AchBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "ach_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
       "Affirm": {
         "status": "supported",
         "proto_request": {
@@ -86,6 +116,96 @@
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Alfamart": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "alfamart": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "AliPayRedirect": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "ali_pay_redirect": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "AmazonPayRedirect": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "amazon_pay_redirect": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
         },
         "sample": {
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
@@ -184,6 +304,38 @@
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
         }
       },
+      "ApplePayThirdPartySdk": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "apple_pay_third_party_sdk": {
+              "token": "probe_apple_pay_third_party_token"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
       "Bacs": {
         "status": "supported",
         "proto_request": {
@@ -215,6 +367,101 @@
             "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_ach_acct\"}"
+        }
+      },
+      "BacsBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bacs_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "BancontactCard": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bancontact_card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "BcaBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bca_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
         }
       },
       "Becs": {
@@ -250,6 +497,36 @@
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_ach_acct\"}"
         }
       },
+      "Bizum": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bizum": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
       "Blik": {
         "status": "supported",
         "proto_request": {
@@ -269,6 +546,126 @@
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Bluecode": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bluecode": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "BniVaBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bni_va_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Boleto": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "boleto": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "BriVaBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bri_va_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
         },
         "sample": {
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
@@ -315,6 +712,320 @@
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
         }
+      },
+      "CashappQr": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "cashapp_qr": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "CimbVaBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "cimb_va_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "ClassicReward": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "classic_reward": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Crypto": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
+      "DanamonVaBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "danamon_va_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "DuitNow": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
+      "EVoucher": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "e_voucher": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Efecty": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "efecty": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Eft": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "eft": {
+              "provider": "ozow"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Eps": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "eps": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "FamilyMart": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "family_mart": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Giropay": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "giropay": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Givex": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "GooglePay": {
         "status": "supported",
@@ -403,6 +1114,38 @@
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
         }
       },
+      "GooglePayThirdPartySdk": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "google_pay_third_party_sdk": {
+              "token": "probe_google_pay_third_party_token"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
       "Ideal": {
         "status": "supported",
         "proto_request": {
@@ -420,6 +1163,186 @@
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Indomaret": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "indomaret": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "IndonesianBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "indonesian_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "InstantBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "instant_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "InstantBankTransferFinland": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "instant_bank_transfer_finland": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "InstantBankTransferPoland": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "instant_bank_transfer_poland": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Interac": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "interac": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
         },
         "sample": {
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
@@ -461,6 +1384,599 @@
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
         }
       },
+      "Lawson": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "lawson": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "LocalBankRedirect": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "local_bank_redirect": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "LocalBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "local_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "MandiriVaBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "mandiri_va_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "MbWay": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "mb_way": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Mifinity": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "mifinity": {
+              "date_of_birth": "1990-01-01",
+              "language_preference": "en"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "MiniStop": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "mini_stop": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "MultibancoBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "multibanco_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "OnlineBankingCzechRepublic": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "online_banking_czech_republic": {
+              "issuer": "CeskaSporitelna"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "OnlineBankingFinland": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "online_banking_finland": {
+              "email": "test@example.com"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "OnlineBankingFpx": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "online_banking_fpx": {
+              "issuer": "Maybank"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "OnlineBankingPoland": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "online_banking_poland": {
+              "issuer": "BankPekaoSa"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "OnlineBankingSlovakia": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "online_banking_slovakia": {
+              "issuer": "TatraPay"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "OnlineBankingThailand": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "online_banking_thailand": {
+              "issuer": "BangkokBank"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "OpenBanking": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "open_banking": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "OpenBankingPis": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
+      "OpenBankingUk": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "open_banking_uk": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Oxxo": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "oxxo": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "PagoEfectivo": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "pago_efectivo": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "PayEasy": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "pay_easy": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "PaySafeCard": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
       "PaypalRedirect": {
         "status": "supported",
         "proto_request": {
@@ -492,6 +2008,252 @@
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
         }
       },
+      "PaypalSdk": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "paypal_sdk": {
+              "token": "probe_paypal_sdk_token"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Paze": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
+      "PermataBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "permata_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Pix": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "pix": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Przelewy24": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "przelewy24": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Pse": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "pse": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "RedCompra": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "red_compra": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "RedPagos": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "red_pagos": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "RevolutPay": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "revolut_pay": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
       "SamsungPay": {
         "status": "supported",
         "proto_request": {
@@ -510,7 +2272,7 @@
                 "token_data": {
                   "type": "S",
                   "version": "100",
-                  "data": "probe_samsung_token_data"
+                  "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
                 }
               }
             }
@@ -521,6 +2283,66 @@
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Satispay": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "satispay": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Seicomart": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "seicomart": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
         },
         "sample": {
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
@@ -565,6 +2387,159 @@
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_ach_acct\"}"
         }
       },
+      "SepaBankTransfer": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "sepa_bank_transfer": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "SepaGuaranteedDebit": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "sepa_guaranteed_debit": {
+              "iban": "DE89370400440532013000",
+              "bank_account_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_ach_acct\"}"
+        }
+      },
+      "SevenEleven": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "seven_eleven": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Sofort": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "sofort": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Trustly": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "trustly": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
       "UpiCollect": {
         "status": "supported",
         "proto_request": {
@@ -584,6 +2559,126 @@
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "UpiIntent": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "upi_intent": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "UpiQr": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "upi_qr": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "WeChatPayQr": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "we_chat_pay_qr": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_pm_token\",\"currencyCode\":\"USD\",\"accountId\":\"probe_acct_no3ds\"}"
+        }
+      },
+      "Wero": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "wero": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "payment_method_token": "probe_pm_token"
         },
         "sample": {
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
@@ -620,7 +2715,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -635,7 +2730,12 @@
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_authentication_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -650,7 +2750,17 @@
         "status": "not_implemented"
       }
     },
+    "dispute_get": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "eligibility": {
       "default": {
         "status": "not_implemented"
       }
@@ -678,6 +2788,16 @@
         }
       }
     },
+    "handle_event": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "incremental_authorization": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "post_authenticate": {
       "default": {
         "status": "not_implemented"
@@ -688,10 +2808,26 @@
         "status": "not_implemented"
       }
     },
+    "proxy_authorize": {
+      "default": {
+        "status": "error",
+        "error": "Stuck on field: payment_method_token — Missing required field: payment_method_token"
+      }
+    },
+    "proxy_setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "recurring_charge": {
       "default": {
         "status": "error",
         "error": "Stuck on field: mandate_metadata \u2014 Missing required field: mandate_metadata"
+      }
+    },
+    "recurring_revoke": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -719,12 +2855,43 @@
         }
       }
     },
+    "refund_get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "refund_id": "probe_refund_id_001"
+        },
+        "sample": {
+          "url": "https://api.test.paysafe.com/paymenthub/v1/refunds/probe_refund_id_001",
+          "method": "Get",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": null
+        }
+      }
+    },
     "reverse": {
       "default": {
         "status": "not_implemented"
       }
     },
     "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "token_authorize": {
+      "default": {
+        "status": "error",
+        "error": "Stuck on field: payment_method_token — Missing required field: payment_method_token"
+      }
+    },
+    "token_setup_recurring": {
       "default": {
         "status": "not_implemented"
       }
@@ -761,6 +2928,11 @@
           },
           "body": "{\"merchantRefNum\":\"\",\"amount\":1000,\"settleWithAuth\":true,\"card\":{\"cardNum\":\"4111111111111111\",\"cardExpiry\":{\"month\":\"03\",\"year\":\"2030\"},\"cvv\":\"737\",\"holderName\":\"John Doe\"},\"currencyCode\":\"USD\",\"paymentType\":\"CARD\",\"transactionType\":\"PAYMENT\",\"returnLinks\":[{\"rel\":\"default\",\"href\":\"https://example.com/return\",\"method\":\"GET\"},{\"rel\":\"on_completed\",\"href\":\"https://example.com/return\",\"method\":\"GET\"},{\"rel\":\"on_failed\",\"href\":\"https://example.com/return\",\"method\":\"GET\"},{\"rel\":\"on_cancelled\",\"href\":\"https://example.com/return\",\"method\":\"GET\"}],\"accountId\":\"probe_acct_no3ds\"}"
         }
+      }
+    },
+    "verify_redirect": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {

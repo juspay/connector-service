@@ -35,10 +35,10 @@ pub struct SubmitEvidence;
 pub struct DefendDispute;
 
 #[derive(Debug, Clone)]
-pub struct CreateSessionToken;
+pub struct ServerSessionAuthenticationToken;
 
 #[derive(Debug, Clone)]
-pub struct CreateAccessToken;
+pub struct ServerAuthenticationToken;
 
 #[derive(Debug, Clone)]
 pub struct CreateConnectorCustomer;
@@ -59,7 +59,7 @@ pub struct PostAuthenticate;
 pub struct VoidPC;
 
 #[derive(Debug, Clone)]
-pub struct SdkSessionToken;
+pub struct ClientAuthenticationToken;
 
 #[derive(Debug, Clone)]
 pub struct IncrementalAuthorization;
@@ -72,6 +72,27 @@ pub struct VerifyWebhookSource;
 
 #[derive(Debug, Clone)]
 pub struct PayoutCreate;
+
+#[derive(Debug, Clone)]
+pub struct PayoutTransfer;
+
+#[derive(Debug, Clone)]
+pub struct PayoutGet;
+
+#[derive(Debug, Clone)]
+pub struct PayoutVoid;
+
+#[derive(Debug, Clone)]
+pub struct PayoutStage;
+
+#[derive(Debug, Clone)]
+pub struct PayoutCreateLink;
+
+#[derive(Debug, Clone)]
+pub struct PayoutCreateRecipient;
+
+#[derive(Debug, Clone)]
+pub struct PayoutEnrollDisburseAccount;
 
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
@@ -91,15 +112,22 @@ pub enum FlowName {
     CreateOrder,
     IncomingWebhook,
     Dsync,
-    CreateSessionToken,
-    CreateAccessToken,
+    ServerSessionAuthenticationToken,
+    ServerAuthenticationToken,
     CreateConnectorCustomer,
     PaymentMethodToken,
     PreAuthenticate,
     Authenticate,
     PostAuthenticate,
-    SdkSessionToken,
+    ClientAuthenticationToken,
     IncrementalAuthorization,
     MandateRevoke,
     PayoutCreate,
+    PayoutTransfer,
+    PayoutGet,
+    PayoutVoid,
+    PayoutStage,
+    PayoutCreateLink,
+    PayoutCreateRecipient,
+    PayoutEnrollDisburseAccount,
 }

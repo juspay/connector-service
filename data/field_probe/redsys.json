@@ -3,12 +3,64 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Stuck on field: authentication_data.threeds_server_transaction_id \u2014 Missing required field: authentication_data.threeds_server_transaction_id"
+        "status": "supported",
+        "proto_request": {
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "authentication_data": {
+            "eci": "05",
+            "cavv": "AAAAAAAAAA==",
+            "threeds_server_transaction_id": "probe-3ds-txn-001",
+            "message_version": "2.1.0",
+            "ds_transaction_id": "probe-ds-txn-001"
+          },
+          "return_url": "https://example.com/3ds-return",
+          "continue_redirection_url": "https://example.com/3ds-continue",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://sis-t.redsys.es:25443/sis/rest/trataPeticionREST",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"Ds_SignatureVersion\":\"HMAC_SHA256_V1\",\"Ds_MerchantParameters\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"Ds_Signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"}"
+        }
       }
     },
     "authorize": {
       "Ach": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "AchBankTransfer": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
@@ -20,6 +72,18 @@
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
+      "Alfamart": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "AliPayRedirect": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "AmazonPayRedirect": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
       "ApplePay": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
@@ -28,7 +92,23 @@
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
+      "ApplePayThirdPartySdk": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
       "Bacs": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "BacsBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "BancontactCard": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "BcaBankTransfer": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
@@ -36,13 +116,85 @@
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
+      "Bizum": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
       "Blik": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Bluecode": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "BniVaBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Boleto": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "BriVaBankTransfer": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
       "Card": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
+      },
+      "CashappQr": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "CimbVaBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "ClassicReward": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Crypto": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
+      "DanamonVaBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "DuitNow": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
+      "EVoucher": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Efecty": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Eft": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Eps": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "FamilyMart": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Giropay": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Givex": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -52,7 +204,35 @@
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
+      "GooglePayThirdPartySdk": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
       "Ideal": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Indomaret": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "IndonesianBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "InstantBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "InstantBankTransferFinland": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "InstantBankTransferPoland": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Interac": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
@@ -60,7 +240,127 @@
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
+      "Lawson": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "LocalBankRedirect": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "LocalBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "MandiriVaBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "MbWay": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Mifinity": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "MiniStop": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "MultibancoBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "OnlineBankingCzechRepublic": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "OnlineBankingFinland": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "OnlineBankingFpx": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "OnlineBankingPoland": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "OnlineBankingSlovakia": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "OnlineBankingThailand": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "OpenBanking": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "OpenBankingPis": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
+      "OpenBankingUk": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Oxxo": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "PagoEfectivo": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "PayEasy": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "PaySafeCard": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
       "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "PaypalSdk": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Paze": {
+        "status": "not_supported",
+        "error": "Invalid data format: unknown. Unsupported payment method"
+      },
+      "PermataBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Pix": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Przelewy24": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Pse": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "RedCompra": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "RedPagos": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "RevolutPay": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
@@ -68,11 +368,55 @@
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
+      "Satispay": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Seicomart": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
       "Sepa": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       },
+      "SepaBankTransfer": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "SepaGuaranteedDebit": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "SevenEleven": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Sofort": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Trustly": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
       "UpiCollect": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "UpiIntent": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "UpiQr": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "WeChatPayQr": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      },
+      "Wero": {
         "status": "not_supported",
         "error": "Cards No3DS is not supported by Redsys"
       }
@@ -99,7 +443,7 @@
         }
       }
     },
-    "create_access_token": {
+    "create_client_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -114,7 +458,12 @@
         "status": "not_implemented"
       }
     },
-    "create_session_token": {
+    "create_server_authentication_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_server_session_authentication_token": {
       "default": {
         "status": "not_implemented"
       }
@@ -129,7 +478,17 @@
         "status": "not_implemented"
       }
     },
+    "dispute_get": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "eligibility": {
       "default": {
         "status": "not_implemented"
       }
@@ -155,6 +514,16 @@
           },
           "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:web=\"http://webservices.apl02.redsys.es\"><soapenv:Header/><soapenv:Body><web:consultaOperaciones><cadenaXML><![CDATA[<Messages><Version Ds_Version=\"0.0\"><Message><Monitor><Ds_MerchantCode>probe_merchant</Ds_MerchantCode><Ds_Terminal>probe_id</Ds_Terminal><Ds_Order>probe_merchant_txn_001</Ds_Order></Monitor></Message></Version><Signature>cHJvYmVfa2V5OnByb2JlX3NlY3JldA==</Signature><SignatureVersion>HMAC_SHA256_V1</SignatureVersion></Messages>]]></cadenaXML></web:consultaOperaciones></soapenv:Body></soapenv:Envelope>"
         }
+      }
+    },
+    "handle_event": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "incremental_authorization": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "post_authenticate": {
@@ -196,7 +565,23 @@
         }
       }
     },
+    "proxy_authorize": {
+      "default": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      }
+    },
+    "proxy_setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_revoke": {
       "default": {
         "status": "not_implemented"
       }
@@ -225,6 +610,26 @@
         }
       }
     },
+    "refund_get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "refund_id": "probe_refund_id_001"
+        },
+        "sample": {
+          "url": "https://sis-t.redsys.es:25443/apl02/services/SerClsWSConsulta",
+          "method": "Post",
+          "headers": {
+            "content-type": "text/xml; charset=utf-8",
+            "soapaction": "consultaOperaciones",
+            "via": "HyperSwitch"
+          },
+          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:web=\"http://webservices.apl02.redsys.es\"><soapenv:Header/><soapenv:Body><web:consultaOperaciones><cadenaXML><![CDATA[<Messages><Version Ds_Version=\"0.0\"><Message><Transaction><Ds_MerchantCode>probe_merchant</Ds_MerchantCode><Ds_Terminal>probe_id</Ds_Terminal><Ds_Order>probe_connector_txn_001</Ds_Order><Ds_TransactionType>3</Ds_TransactionType></Transaction></Message></Version><Signature>cHJvYmVfa2V5OnByb2JlX3NlY3JldA==</Signature><SignatureVersion>HMAC_SHA256_V1</SignatureVersion></Messages>]]></cadenaXML></web:consultaOperaciones></soapenv:Body></soapenv:Envelope>"
+        }
+      }
+    },
     "reverse": {
       "default": {
         "status": "not_implemented"
@@ -235,7 +640,23 @@
         "status": "not_implemented"
       }
     },
+    "token_authorize": {
+      "default": {
+        "status": "not_supported",
+        "error": "Cards No3DS is not supported by Redsys"
+      }
+    },
+    "token_setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "verify_redirect": {
       "default": {
         "status": "not_implemented"
       }
