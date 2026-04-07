@@ -7364,18 +7364,7 @@ impl TryFrom<AdyenOrderCreateResponse> for PaymentCreateOrderResponse {
 
 // --- TryFrom: ResponseRouterData -> RouterDataV2 (CreateOrder response handler) ---
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            AdyenOrderCreateResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<AdyenOrderCreateResponse, Self>>
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
@@ -7386,15 +7375,7 @@ impl
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            AdyenOrderCreateResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
+        item: ResponseRouterData<AdyenOrderCreateResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
