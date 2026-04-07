@@ -294,7 +294,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>,
     ) -> Result<Self, Self::Error> {
@@ -369,7 +369,7 @@ pub struct ImerchantsolutionsPSyncResponseData {
 #[serde(rename_all = "camelCase")]
 struct Captures {
     amount: MinorUnit,
-    currency: MinorUnit,
+    currency: Currency,
     psp_reference: String,
     captured_at: Option<String>,
 }
@@ -377,7 +377,7 @@ struct Captures {
 impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>,
     ) -> Result<Self, Self::Error> {
@@ -481,7 +481,7 @@ enum ImerchantsolutionsVoidStatus {
 impl TryFrom<ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>,
@@ -598,7 +598,7 @@ enum ImerchantsolutionsCaptureStatus {
 impl TryFrom<ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>,
@@ -711,7 +711,7 @@ enum ImerchantsolutionsRefundStatus {
 impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>,
@@ -778,7 +778,7 @@ struct Refunds {
 impl TryFrom<ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
