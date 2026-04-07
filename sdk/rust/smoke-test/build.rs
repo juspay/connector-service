@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -8,9 +9,15 @@ type GrpcModule<'a> = (
     Vec<(&'a str, &'a str, &'a str, &'a str, bool, bool)>,
 );
 
-/// Load flows.json manifest and return the list of valid flow names.
-/// Returns empty vec if file doesn't exist (allows CI builds without generated files).
-fn load_flow_manifest(repo_root: &Path) -> Vec<String> {
+/// Flow manifest data containing flows list and flow-to-example-fn mapping
+struct FlowManifest {
+    flows: Vec<String>,
+    flow_to_example_fn: HashMap<String, Option<String>>,
+}
+
+/// Load flows.json manifest and return both flows list and flow-to-example-fn mapping.
+/// Returns empty data if file doesn't exist (allows CI builds without generated files).
+fn load_flow_manifest(repo_root: &Path) -> FlowManifest {
     let manifest_path = repo_root.join("sdk").join("generated").join("flows.json");
     println!("cargo:rerun-if-changed={}", manifest_path.display());
 
@@ -21,11 +28,14 @@ fn load_flow_manifest(repo_root: &Path) -> Vec<String> {
                 "cargo:warning=flows.json not found at {}. Skipping smoke test generation.",
                 manifest_path.display()
             );
-            return Vec::new();
+            return FlowManifest {
+                flows: Vec::new(),
+                flow_to_example_fn: HashMap::new(),
+            };
         }
     };
 
-    // Simple JSON extraction for flows array
+    // Parse flows array
     let flows_start = text
         .find("\"flows\"")
         .expect("flows key not found in flows.json");
@@ -39,11 +49,44 @@ fn load_flow_manifest(repo_root: &Path) -> Vec<String> {
         + bracket_start;
     let array_content = &text[bracket_start + 1..bracket_end];
 
-    array_content
+    let flows: Vec<String> = array_content
         .split(',')
         .map(|s| s.trim().trim_matches('"').to_string())
         .filter(|s| !s.is_empty())
-        .collect()
+        .collect();
+
+    // Parse flow_to_example_fn mapping if present
+    let mut flow_to_example_fn: HashMap<String, Option<String>> = HashMap::new();
+    if let Some(mapping_start) = text.find("\"flow_to_example_fn\"") {
+        if let Some(brace_start) = text[mapping_start..].find('{') {
+            let brace_start = brace_start + mapping_start;
+            if let Some((block, _)) = extract_brace_block(&text[brace_start..]) {
+                // Parse "flow": "example_fn" or "flow": null pairs
+                for line in block.split(',') {
+                    let line = line.trim();
+                    if line.is_empty() {
+                        continue;
+                    }
+                    // Extract key and value
+                    if let Some(colon_pos) = line.find(':') {
+                        let key = line[..colon_pos].trim().trim_matches('"').to_string();
+                        let value = line[colon_pos + 1..].trim();
+                        if value == "null" {
+                            flow_to_example_fn.insert(key, None);
+                        } else {
+                            let val = value.trim_matches('"').to_string();
+                            flow_to_example_fn.insert(key, Some(val));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    FlowManifest {
+        flows,
+        flow_to_example_fn,
+    }
 }
 
 /// Read SUPPORTED_FLOWS from example .rs file content.
@@ -156,7 +199,9 @@ fn main() {
     let grpc_helpers_path = format!("{out_dir}/grpc_helpers.rs");
 
     // Load canonical flow manifest from flows.json
-    let manifest = load_flow_manifest(&repo_root);
+    let manifest_data = load_flow_manifest(&repo_root);
+    let manifest = &manifest_data.flows;
+    let flow_to_example_fn = &manifest_data.flow_to_example_fn;
     println!(
         "cargo:warning=Loaded {} flows from flows.json",
         manifest.len()
@@ -422,11 +467,27 @@ fn main() {
                 present.push((flow.clone(), format!("process_{}", flow)));
             }
         } else {
-            // Legacy mode: Scan process_* functions against manifest
-            for flow in &manifest {
-                let fn_name = format!("process_{}", flow);
-                if content.contains(&format!("pub async fn {}(", fn_name)) {
-                    present.push((flow.clone(), fn_name));
+            // Legacy mode: Scan process_* functions using flow_to_example_fn mapping
+            // Find all available example functions in the content
+            let available_example_fns: HashSet<String> = content
+                .lines()
+                .filter_map(|line| {
+                    if let Some(pos) = line.find("pub async fn process_") {
+                        let after_process = &line[pos + 19..];
+                        if let Some(paren_pos) = after_process.find('(') {
+                            return Some(after_process[..paren_pos].to_string());
+                        }
+                    }
+                    None
+                })
+                .collect();
+
+            // Map flows to their example functions if both exist
+            for flow in manifest {
+                if let Some(Some(example_fn)) = flow_to_example_fn.get(flow) {
+                    if available_example_fns.contains(example_fn) {
+                        present.push((flow.clone(), format!("process_{}", example_fn)));
+                    }
                 }
             }
         }
@@ -495,13 +556,28 @@ fn main() {
         code.push_str("// AUTO-GENERATED by build.rs — do not edit manually.\n\n");
         code.push_str("match connector_name {\n");
         for (name, scenarios) in &modules {
+            // Build a map of flow -> example_fn_name for this connector
+            let implemented: std::collections::HashMap<_, _> = scenarios
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect();
             code.push_str(&format!("    \"{name}\" => {{\n"));
             code.push_str("        let mut results = vec![];\n");
-            for (key, fn_name) in scenarios {
-                code.push_str(&format!(
-                    "        results.push((\"{}\".to_string(), connectors::{}::{}(client, &txn_id).await));\n",
-                    key, name, fn_name
-                ));
+            // Include ALL flows from manifest, using flow_to_example_fn mapping
+            for flow in manifest {
+                if let Some(example_fn) = implemented.get(flow.as_str()) {
+                    // Flow has an implementation - call the example function
+                    code.push_str(&format!(
+                        "        results.push((\"{}\".to_string(), connectors::{}::{}(client, &txn_id).await));\n",
+                        flow, name, example_fn
+                    ));
+                } else {
+                    // Flow not implemented
+                    code.push_str(&format!(
+                        "        results.push((\"{}\".to_string(), Err(format!(\"NOT IMPLEMENTED — No example function for flow '{}'\").into())));\n",
+                        flow, flow
+                    ));
+                }
             }
             code.push_str("        results\n    }\n");
         }

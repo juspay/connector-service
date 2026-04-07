@@ -92,7 +92,12 @@ function buildConnectorConfig(connectorKey: string, authConfig: AuthConfig): any
   });
 }
 
-function loadFlowManifest(sdkRoot: string): string[] {
+interface FlowManifest {
+  flows: string[];
+  flow_to_example_fn?: Record<string, string | null>;
+}
+
+function loadFlowManifest(sdkRoot: string): FlowManifest {
   // Try multiple locations for flows.json
   const locations = [
     path.join(sdkRoot, "generated", "flows.json"),
@@ -107,7 +112,10 @@ function loadFlowManifest(sdkRoot: string): string[] {
   for (const manifestPath of locations) {
     if (fs.existsSync(manifestPath)) {
       const data = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
-      return data.flows as string[];
+      return {
+        flows: data.flows as string[],
+        flow_to_example_fn: data.flow_to_example_fn as Record<string, string | null> | undefined,
+      };
     }
   }
   
@@ -139,16 +147,24 @@ function discoverAndValidate(
   mod: any,
   connectorName: string,
   manifest: string[],
+  flowToExampleFn: Record<string, string | null> | undefined,
 ): ScenarioList | string {
   const declared: string[] | undefined = mod["SUPPORTED_FLOWS"];
   const legacyMode = declared === undefined;
 
   let effectiveDeclared: string[];
   if (legacyMode) {
-    // Legacy mode: scan process* exports against manifest
+    // Legacy mode: scan process* exports using flow_to_example_fn mapping
+    // Find all available example functions
+    const availableExampleFns = new Set(
+      Object.keys(mod)
+        .filter(k => k.startsWith("process") && typeof mod[k] === "function")
+        .map(k => fromPascalCase(k))
+    );
+    // Map flows to their example functions if both exist
     effectiveDeclared = manifest.filter(name => {
-      const fn = mod[toPascalCase(name)];
-      return typeof fn === "function";
+      const exampleFn = flowToExampleFn?.[name];
+      return exampleFn && availableExampleFns.has(exampleFn);
     });
   } else {
     effectiveDeclared = [...new Set(declared)]; // Deduplicate
@@ -162,10 +178,16 @@ function discoverAndValidate(
   }
 
   // CHECK 1: declared without implementation
-  const implemented = new Set(
-    effectiveDeclared.filter(name => typeof mod[toPascalCase(name)] === "function")
-  );
-  const missing = effectiveDeclared.filter(n => !implemented.has(n));
+  const implemented = new Set<string>();
+  const missing: string[] = [];
+  for (const name of effectiveDeclared) {
+    const exampleFn = flowToExampleFn?.[name];
+    if (exampleFn && typeof mod[toPascalCase(exampleFn)] === "function") {
+      implemented.add(name);
+    } else {
+      missing.push(name);
+    }
+  }
   if (missing.length > 0) {
     return `COVERAGE ERROR: SUPPORTED_FLOWS declares ${JSON.stringify(missing)} but no process* function found for them.`;
   }
@@ -177,9 +199,10 @@ function discoverAndValidate(
         .filter(k => k.startsWith("process") && typeof mod[k] === "function")
         .map(k => fromPascalCase(k))
     );
-    const undeclared = [...allProcessFns].filter(n => !effectiveDeclared.includes(n));
+    const mappedExampleFns = new Set(Object.values(flowToExampleFn || {}).filter(Boolean));
+    const undeclared = [...allProcessFns].filter(n => !mappedExampleFns.has(n));
     if (undeclared.length > 0) {
-      return `COVERAGE ERROR: process* functions exist but not in SUPPORTED_FLOWS: ${JSON.stringify(undeclared)}`;
+      return `COVERAGE ERROR: process* functions exist but not mapped to any flow: ${JSON.stringify(undeclared)}`;
     }
 
     // CHECK 3
@@ -190,7 +213,11 @@ function discoverAndValidate(
     }
   }
 
-  return effectiveDeclared.map(name => ({ key: name, fn: mod[toPascalCase(name)] }));
+  // Return (example_fn_name, fn) pairs
+  return effectiveDeclared.map(name => {
+    const exampleFn = flowToExampleFn?.[name] || name;
+    return { key: exampleFn, fn: mod[toPascalCase(exampleFn)] };
+  });
 }
 
 async function testConnectorScenarios(
@@ -235,18 +262,13 @@ async function testConnectorScenarios(
     return result;
   }
 
-  // Load flow manifest and validate scenarios
-  let manifest: string[];
-  try {
-    manifest = loadFlowManifest(sdkRoot);
-  } catch (e: any) {
-    console.log(`    MANIFEST ERROR: ${e.message}`);
-    result.status = "failed";
-    (result as any).error = e.message;
-    return result;
-  }
+  // Load flow manifest with mapping
+  const manifestData = loadFlowManifest(sdkRoot);
+  const manifest = manifestData.flows;
+  const flowToExampleFn = manifestData.flow_to_example_fn;
 
-  const scenariosOrError = discoverAndValidate(mod, connectorName, manifest);
+  // Validate scenarios using the manifest
+  const scenariosOrError = discoverAndValidate(mod, connectorName, manifest, flowToExampleFn);
   if (typeof scenariosOrError === "string") {
     result.status = "failed";
     (result as any).error = scenariosOrError;
@@ -254,50 +276,63 @@ async function testConnectorScenarios(
     return result;
   }
 
-  const scenarioFns = scenariosOrError;
+  // Build a map of example function names to their functions
+  const exampleFnMap = new Map(scenariosOrError.map(s => [s.key, s.fn]));
 
-  if (scenarioFns.length === 0) {
-    result.status = "skipped";
-    (result.scenarios as any) = { skipped: true, reason: "no_scenario_files" };
-    return result;
-  }
-
+  // Iterate ALL flows from manifest, using flow_to_example_fn mapping
   let anyFailed = false;
 
-  for (const { key: scenarioKey, fn: processFn } of scenarioFns) {
-    const txnId = `smoke_${scenarioKey}_${Math.random().toString(16).slice(2, 10)}`;
-    process.stdout.write(`    [${scenarioKey}] running ... `);
+  for (const flowKey of manifest) {
+    const exampleFnName = flowToExampleFn?.[flowKey];
+    
+    if (exampleFnName === null || exampleFnName === undefined) {
+      // Flow has no example implementation
+      console.log(`    [${flowKey}] NOT IMPLEMENTED — No example function mapped for flow '${flowKey}'`);
+      result.scenarios[flowKey] = { status: "not_implemented", reason: "no_example_mapping" };
+      continue;
+    }
+    
+    const processFn = exampleFnMap.get(exampleFnName);
+    
+    if (processFn) {
+      const txnId = `smoke_${flowKey}_${Math.random().toString(16).slice(2, 10)}`;
+      process.stdout.write(`    [${flowKey}] running ... `);
 
-    try {
-      const response = await processFn(txnId, config);
+      try {
+        const response = await processFn(txnId, config);
 
-      if (response && response.error) {
-        const errorStr = JSON.stringify(response.error);
-        console.log(_yellow("SKIPPED (connector error)") + _grey(` — ${errorStr}`));
-        result.scenarios[scenarioKey] = { status: "skipped", reason: "connector_error", detail: errorStr };
-      } else {
-        const summary = JSON.stringify(response);
-        console.log(_green("PASSED") + _grey(` — ${summary}`));
-        result.scenarios[scenarioKey] = { status: "passed", result: response };
+        if (response && response.error) {
+          const errorStr = JSON.stringify(response.error);
+          console.log(_yellow("SKIPPED (connector error)") + _grey(` — ${errorStr}`));
+          result.scenarios[flowKey] = { status: "skipped", reason: "connector_error", detail: errorStr };
+        } else {
+          const summary = JSON.stringify(response);
+          console.log(_green("PASSED") + _grey(` — ${summary}`));
+          result.scenarios[flowKey] = { status: "passed", result: response };
+        }
+      } catch (e: any) {
+        if (e instanceof IntegrationError) {
+          const detail = `IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`;
+          console.log(_yellow("SKIPPED (connector error)") + _grey(` — ${detail}`));
+          result.scenarios[flowKey] = { status: "skipped", reason: "connector_error", detail };
+        } else if (e instanceof ConnectorError) {
+          const detail = `ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`;
+          console.log(_yellow("SKIPPED (connector error)") + _grey(` — ${detail}`));
+          result.scenarios[flowKey] = { status: "skipped", reason: "connector_error", detail };
+        } else if (e instanceof Error && e.message.startsWith("Rust panic:")) {
+          console.log(_red("FAILED") + ` — ${e.message}`);
+          result.scenarios[flowKey] = { status: "failed", error: e.message };
+          anyFailed = true;
+        } else {
+          console.log(_red("FAILED") + ` — ${e?.constructor?.name || "Error"}: ${e.message}`);
+          result.scenarios[flowKey] = { status: "failed", error: `${e?.constructor?.name || "Error"}: ${e.message}` };
+          anyFailed = true;
+        }
       }
-    } catch (e: any) {
-      if (e instanceof IntegrationError) {
-        const detail = `IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`;
-        console.log(_yellow("SKIPPED (connector error)") + _grey(` — ${detail}`));
-        result.scenarios[scenarioKey] = { status: "skipped", reason: "connector_error", detail };
-      } else if (e instanceof ConnectorError) {
-        const detail = `ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`;
-        console.log(_yellow("SKIPPED (connector error)") + _grey(` — ${detail}`));
-        result.scenarios[scenarioKey] = { status: "skipped", reason: "connector_error", detail };
-      } else if (e instanceof Error && e.message.startsWith("Rust panic:")) {
-        console.log(_red("FAILED") + ` — ${e.message}`);
-        result.scenarios[scenarioKey] = { status: "failed", error: e.message };
-        anyFailed = true;
-      } else {
-        console.log(_red("FAILED") + ` — ${e?.constructor?.name || "Error"}: ${e.message}`);
-        result.scenarios[scenarioKey] = { status: "failed", error: `${e?.constructor?.name || "Error"}: ${e.message}` };
-        anyFailed = true;
-      }
+    } else {
+      // Example function doesn't exist in this connector's module
+      console.log(`    [${flowKey}] NOT IMPLEMENTED — Example function '${exampleFnName}' not found for flow '${flowKey}'`);
+      result.scenarios[flowKey] = { status: "not_implemented", reason: "no_implementation" };
     }
   }
 
@@ -344,6 +379,17 @@ async function runTests(
   const credentials = loadCredentials(credsFile);
   const results: ConnectorResult[] = [];
   const testConnectors = connectors || Object.keys(credentials);
+
+  // Load flow manifest once for all connectors
+  let manifestData: FlowManifest;
+  try {
+    manifestData = loadFlowManifest(sdkRoot);
+  } catch (e: any) {
+    console.error(`FATAL: Could not load flow manifest: ${e.message}`);
+    throw e;
+  }
+  const manifest = manifestData.flows;
+  const flowToExampleFn = manifestData.flow_to_example_fn;
 
   console.log(`\n${"=".repeat(60)}`);
   console.log(`Running smoke tests for ${testConnectors.length} connector(s)`);

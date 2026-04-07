@@ -126,7 +126,12 @@ fun buildConnectorConfig(connectorName: String, authConfig: AuthConfig): Connect
         .build()
 }
 
-fun loadFlowManifest(sdkRoot: String): List<String> {
+data class FlowManifest(
+    val flows: List<String>,
+    val flowToExampleFn: Map<String, String?>
+)
+
+fun loadFlowManifest(sdkRoot: String): FlowManifest {
     val manifestPath = File(sdkRoot, "generated/flows.json")
     if (!manifestPath.exists()) {
         throw IllegalStateException(
@@ -137,7 +142,15 @@ fun loadFlowManifest(sdkRoot: String): List<String> {
     val type = object : TypeToken<Map<String, Any>>() {}.type
     val data: Map<String, Any> = gson.fromJson(manifestPath.readText(), type)
     @Suppress("UNCHECKED_CAST")
-    return data["flows"] as List<String>
+    val flows = data["flows"] as List<String>
+    @Suppress("UNCHECKED_CAST")
+    val flowToExampleFn = (data["flow_to_example_fn"] as? Map<String, Any>)?.mapValues { 
+        when (val v = it.value) {
+            is String -> v
+            else -> null
+        }
+    } ?: emptyMap()
+    return FlowManifest(flows, flowToExampleFn)
 }
 
 fun scenarioToMethodName(scenarioKey: String): String =
@@ -158,6 +171,7 @@ fun discoverAndValidate(
     exampleClass: Class<*>,
     connectorName: String,
     manifest: List<String>,
+    flowToExampleFn: Map<String, String?>,
 ): DiscoveryResult {
 
     val declared: List<String>? = try {
@@ -171,12 +185,16 @@ fun discoverAndValidate(
     val effectiveDeclared: List<String> = if (!legacyMode) {
         declared!!.distinct()  // Deduplicate
     } else {
-        // Legacy mode: scan process* methods against manifest
-        manifest.filter { name ->
-            try {
-                exampleClass.getMethod(scenarioToMethodName(name), String::class.java, ConnectorConfig::class.java)
-                true
-            } catch (_: NoSuchMethodException) { false }
+        // Legacy mode: scan process* methods using flow_to_example_fn mapping
+        // Find all available example functions
+        val availableExampleFns = exampleClass.methods
+            .filter { it.name.startsWith("process") }
+            .map { fromMethodName(it.name) }
+            .toSet()
+        // Map flows to their example functions if both exist
+        manifest.filter { flow ->
+            val exampleFn = flowToExampleFn[flow]
+            exampleFn != null && availableExampleFns.contains(exampleFn)
         }
     }
 
@@ -189,14 +207,22 @@ fun discoverAndValidate(
         }
     }
 
-    // CHECK 1
-    val implemented = effectiveDeclared.filter { name ->
+    // CHECK 1: Find declared flows without implementations
+    val implemented = mutableSetOf<String>()
+    val missing = mutableListOf<String>()
+    for (flow in effectiveDeclared) {
+        val exampleFn = flowToExampleFn[flow]
+        if (exampleFn == null) {
+            missing.add(flow)
+            continue
+        }
         try {
-            exampleClass.getMethod(scenarioToMethodName(name), String::class.java, ConnectorConfig::class.java)
-            true
-        } catch (_: NoSuchMethodException) { false }
-    }.toSet()
-    val missing = effectiveDeclared.filter { it !in implemented }
+            exampleClass.getMethod(scenarioToMethodName(exampleFn), String::class.java, ConnectorConfig::class.java)
+            implemented.add(flow)
+        } catch (_: NoSuchMethodException) {
+            missing.add(flow)
+        }
+    }
     if (missing.isNotEmpty()) {
         return ValidationError(
             "COVERAGE ERROR: SUPPORTED_FLOWS declares $missing but no process* method found."
@@ -210,10 +236,11 @@ fun discoverAndValidate(
             .filter { it.name.startsWith("process") }
             .map { fromMethodName(it.name) }
             .toSet()
-        val undeclared = allProcessMethods - effectiveDeclared.toSet()
+        val mappedExampleFns = flowToExampleFn.values.filterNotNull().toSet()
+        val undeclared = allProcessMethods - mappedExampleFns
         if (undeclared.isNotEmpty()) {
             return ValidationError(
-                "COVERAGE ERROR: process* methods exist but not in SUPPORTED_FLOWS: $undeclared"
+                "COVERAGE ERROR: process* methods exist but not mapped to any flow: $undeclared"
             )
         }
 
@@ -227,8 +254,10 @@ fun discoverAndValidate(
         }
     }
 
-    val methods = effectiveDeclared.map { name ->
-        name to exampleClass.getMethod(scenarioToMethodName(name), String::class.java, ConnectorConfig::class.java)
+    // Return (example_fn_name, method) pairs
+    val methods = effectiveDeclared.map { flow ->
+        val exampleFn = flowToExampleFn[flow] ?: flow
+        exampleFn to exampleClass.getMethod(scenarioToMethodName(exampleFn), String::class.java, ConnectorConfig::class.java)
     }
     return ValidScenarios(methods)
 }
@@ -257,15 +286,17 @@ fun testConnectorScenarios(
     }
 
     // Load flow manifest and validate scenarios
-    val manifest = try {
+    val manifestData = try {
         loadFlowManifest(sdkRoot)
     } catch (e: Exception) {
         result.status = "failed"
         result.error = e.message
         return result
     }
+    val manifest = manifestData.flows
+    val flowToExampleFn = manifestData.flowToExampleFn
 
-    val discoveryResult = discoverAndValidate(exampleClass, connectorName, manifest)
+    val discoveryResult = discoverAndValidate(exampleClass, connectorName, manifest, flowToExampleFn)
     when (discoveryResult) {
         is ValidationError -> {
             result.status = "failed"
@@ -282,61 +313,79 @@ fun testConnectorScenarios(
     }
 
     val scenarioMethods = (discoveryResult as ValidScenarios).scenarios
+    val exampleFnMap = scenarioMethods.toMap()
 
     var anyFailed = false
 
-    for ((scenarioKey, method) in scenarioMethods) {
-        val txnId = "smoke_${scenarioKey}_${Integer.toHexString((Math.random() * 0xFFFFFF).toInt())}"
-        print("    [$scenarioKey] running ... ")
-        System.out.flush()
+    // Iterate ALL flows from manifest, using flow_to_example_fn mapping
+    for (flowKey in manifest) {
+        val exampleFnName = flowToExampleFn[flowKey]
+        
+        if (exampleFnName == null) {
+            // Flow has no example implementation
+            println("    [$flowKey] NOT IMPLEMENTED — No example function mapped for flow '$flowKey'")
+            result.scenarios[flowKey] = ScenarioResult(status = "not_implemented", reason = "no_example_mapping")
+            continue
+        }
+        
+        val method = exampleFnMap[exampleFnName]
+        if (method != null) {
+            val txnId = "smoke_${flowKey}_${Integer.toHexString((Math.random() * 0xFFFFFF).toInt())}"
+            print("    [$flowKey] running ... ")
+            System.out.flush()
 
-        try {
-            @Suppress("UNCHECKED_CAST")
-            val response = method.invoke(null, txnId, config) as Map<String, Any?>
-            val error = response["error"]
-            val hasError = error != null && error.toString().let {
-                it.isNotBlank() && it != "{}" && !it.matches(Regex("""\w+\s*\{\s*\}"""))
-            }
-            if (hasError) {
-                val errorStr = error.toString()
-                println(yellow("SKIPPED (connector error)") + grey(" — $errorStr"))
-                result.scenarios[scenarioKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = errorStr)
-            } else {
-                println(green("PASSED") + grey(" — $response"))
-                result.scenarios[scenarioKey] = ScenarioResult(status = "passed", result = response)
-            }
-        } catch (e: IntegrationError) {
-            val detail = "IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})"
-            println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
-            result.scenarios[scenarioKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
-        } catch (e: ConnectorError) {
-            val detail = "ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})"
-            println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
-            result.scenarios[scenarioKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
-        } catch (e: InvocationTargetException) {
-            when (val cause = e.cause ?: e) {
-                is IntegrationError -> {
-                    val detail = "IntegrationError: ${cause.message} (code=${cause.errorCode}, action=${cause.suggestedAction}, doc=${cause.docUrl})"
-                    println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
-                    result.scenarios[scenarioKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
+            try {
+                @Suppress("UNCHECKED_CAST")
+                val response = method.invoke(null, txnId, config) as Map<String, Any?>
+                val error = response["error"]
+                val hasError = error != null && error.toString().let {
+                    it.isNotBlank() && it != "{}" && !it.matches(Regex("""\w+\s*\{\s*\}"""))
                 }
-                is ConnectorError -> {
-                    val detail = "ConnectorError: ${cause.message} (code=${cause.errorCode}, http=${cause.httpStatusCode})"
-                    println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
-                    result.scenarios[scenarioKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
+                if (hasError) {
+                    val errorStr = error.toString()
+                    println(yellow("SKIPPED (connector error)") + grey(" — $errorStr"))
+                    result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = errorStr)
+                } else {
+                    println(green("PASSED") + grey(" — $response"))
+                    result.scenarios[flowKey] = ScenarioResult(status = "passed", result = response)
                 }
-                else -> {
-                    val detail = "${cause.javaClass.simpleName}: ${cause.message}"
-                    println(red("FAILED") + " — $detail")
-                    result.scenarios[scenarioKey] = ScenarioResult(status = "failed", error = detail)
-                    anyFailed = true
+            } catch (e: IntegrationError) {
+                val detail = "IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})"
+                println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
+                result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
+            } catch (e: ConnectorError) {
+                val detail = "ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})"
+                println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
+                result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
+            } catch (e: InvocationTargetException) {
+                when (val cause = e.cause ?: e) {
+                    is IntegrationError -> {
+                        val detail = "IntegrationError: ${cause.message} (code=${cause.errorCode}, action=${cause.suggestedAction}, doc=${cause.docUrl})"
+                        println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
+                        result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
+                    }
+                    is ConnectorError -> {
+                        val detail = "ConnectorError: ${cause.message} (code=${cause.errorCode}, http=${cause.httpStatusCode})"
+                        println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
+                        result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
+                    }
+                    else -> {
+                        val detail = "${cause.javaClass.simpleName}: ${cause.message}"
+                        println(red("FAILED") + " — $detail")
+                        result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
+                        anyFailed = true
+                    }
                 }
+            } catch (e: Exception) {
+                val detail = "${e.javaClass.simpleName}: ${e.message}"
+                println(red("FAILED") + " — $detail")
+                result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
+                anyFailed = true
             }
-        } catch (e: Exception) {
-            val detail = "${e.javaClass.simpleName}: ${e.message}"
-            println(red("FAILED") + " — $detail")
-            result.scenarios[scenarioKey] = ScenarioResult(status = "failed", error = detail)
-            anyFailed = true
+        } else {
+            // Flow not implemented
+            println("    [$flowKey] NOT IMPLEMENTED — No ${scenarioToMethodName(flowKey)} function found")
+            result.scenarios[flowKey] = ScenarioResult(status = "not_implemented", reason = "no_implementation")
         }
     }
 

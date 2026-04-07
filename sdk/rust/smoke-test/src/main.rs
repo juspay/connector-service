@@ -179,8 +179,20 @@ async fn test_connector_scenarios(
             }
             Err(e) => {
                 let detail = e.to_string();
-                // Check if this is a Rust panic (real SDK crash) vs connector error
-                if detail.contains("Rust panic:") || detail.starts_with("thread '") {
+                if detail.contains("NOT IMPLEMENTED") {
+                    // Unimplemented flow - not a failure
+                    println!("{} {}", grey("NOT IMPLEMENTED"), grey(&format!("— {detail}")));
+                    scenarios.push((
+                        scenario_key,
+                        ScenarioResult {
+                            status: "not_implemented",
+                            message: None,
+                            reason: None,
+                            error: Some(detail),
+                        },
+                    ));
+                } else if detail.contains("Rust panic:") || detail.starts_with("thread '") {
+                    // Rust panic (real SDK crash)
                     println!("{} — {}", red("FAILED"), &detail);
                     scenarios.push((
                         scenario_key,

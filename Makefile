@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method review-pr test-grpc
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai gen-tech-spec new-connector add-flow add-payment-method review-pr test-grpc test-ffi
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -104,6 +104,10 @@ GRPC_PROFILE ?= release-fast
 ## Run gRPC smoke tests for all SDKs (Rust + JS + Python) with a combined pass/fail summary
 test-grpc:
 	@$(MAKE) -C sdk test-grpc CONNECTORS=$(CONNECTORS) GRPC_PROFILE=$(GRPC_PROFILE)
+
+## Run FFI smoke tests for all SDKs (Rust + JS + Python + Kotlin) with a combined pass/fail summary
+test-ffi:
+	@$(MAKE) -C sdk test CONNECTORS=$(CONNECTORS)
 
 ## Run field-probe to generate connector flow data
 field-probe:

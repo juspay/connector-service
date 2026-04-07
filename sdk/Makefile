@@ -177,9 +177,24 @@ generate: install-deps generate-rust generate-grpc-client generate-python genera
 # ---------------------------------------------------------------------------
 # Test targets - delegate to SDK-specific test-package
 # ---------------------------------------------------------------------------
-test: test-rust test-python test-javascript test-java ## Run all SDK smoke tests
 
-test-rust: ## Run Rust FFI smoke test
+# Optimized test target: build FFI once, then run all SDK tests sequentially.
+# The FFI library build is now idempotent (skips if already exists), and each
+# SDK's generate-bindings step also checks if outputs exist before regenerating.
+# Set QUIET=0 to show full compilation output (default: QUIET=1 shows only test results)
+test: build-ffi-lib ## Run all SDK smoke tests (builds FFI once, runs sequentially). Use QUIET=0 for verbose output.
+	@echo "Running FFI smoke tests for all SDKs..."
+	@echo; echo "═══ Rust FFI ═══"; echo
+	@$(MAKE) -C $(REPO_ROOT)/sdk/rust test-package CONNECTORS=$(CONNECTORS) 2>&1 | tail -50
+	@echo; echo "═══ Python FFI ═══"; echo
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python test-package CONNECTORS=$(CONNECTORS) 2>&1 | tail -50
+	@echo; echo "═══ JavaScript FFI ═══"; echo
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-package CONNECTORS=$(CONNECTORS) 2>&1 | tail -50
+	@echo; echo "═══ Kotlin FFI ═══"; echo
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java test-package CONNECTORS=$(CONNECTORS) 2>&1 | tail -50
+	@echo; echo "All SDK smoke tests passed."
+
+test-rust: build-ffi-lib ## Run Rust FFI smoke test
 	@$(MAKE) -C $(REPO_ROOT)/sdk/rust test-package CONNECTORS=$(CONNECTORS)
 
 GRPC_CONNECTOR ?= $(CONNECTORS)
@@ -187,6 +202,7 @@ GRPC_PROFILE   ?= release-fast
 QUIET          ?= 1
 
 # Filter output if QUIET=1 (suppress build logs, show only test results)
+# Use script to preserve exit codes while filtering (cross-platform compatible)
 ifeq ($(QUIET),1)
   OUTPUT_FILTER = 2>&1 | grep -v "^\[INFO\]\|^\[WARNING\]\|^Building\|^Running\|^Checking\|^Compiling\|^Finished\|^Build\|^Running\|cargo check\|Compiling\|^   Compiling\|^   Finished\|^     Running\|^     Finished\|^cargo\|^\s*-->\|^\s*::\|^Note:\|^warning:" || true
   BUILD_FLAGS = --quiet 2>/dev/null || true

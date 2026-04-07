@@ -130,8 +130,13 @@ def _build_connector_config(connector_key: str, auth_config: Dict[str, Any]) -> 
     )
 
 
-def load_flow_manifest(sdk_root: Path) -> list[str]:
-    """Load the canonical flow manifest from flows.json."""
+def load_flow_manifest(sdk_root: Path) -> tuple[list[str], dict[str, str | None]]:
+    """Load the canonical flow manifest from flows.json.
+    
+    Returns:
+        Tuple of (flows list, flow_to_example_fn mapping)
+        flow_to_example_fn maps flow names to example function names (or None if not implemented)
+    """
     # Try multiple locations for flows.json:
     # 1. SDK root (normal case when running from repo)
     # 2. Environment variable (CI/packaged test)
@@ -152,7 +157,11 @@ def load_flow_manifest(sdk_root: Path) -> list[str]:
         if manifest_path.exists():
             with open(manifest_path) as f:
                 data = json.load(f)
-            return data["flows"]
+            flows = data["flows"]
+            # flow_to_example_fn maps flow names to example function names
+            # Examples use scenario-based naming (e.g., "checkout_card") not flow-based (e.g., "authorize")
+            flow_to_example_fn = data.get("flow_to_example_fn", {})
+            return flows, flow_to_example_fn
     
     # If we get here, we couldn't find the file
     searched = "\n  - ".join(str(p) for p in manifest_locations)
@@ -166,9 +175,13 @@ def discover_and_validate_scenarios(
     module,
     connector_name: str,
     manifest: list[str],
+    flow_to_example_fn: dict[str, str | None],
 ) -> list[tuple[str, callable]] | str:
     """
     Discover and validate scenario functions for a connector.
+    
+    Uses flow_to_example_fn mapping to find which example functions implement each flow.
+    Example functions use scenario-based naming (e.g., "checkout_card") not flow-based (e.g., "authorize").
     
     Implements the 3-check algorithm when SUPPORTED_FLOWS is explicitly defined:
       CHECK 1: No declared flow can be missing its implementation
@@ -176,20 +189,28 @@ def discover_and_validate_scenarios(
       CHECK 3: No declared flow can be stale (removed from manifest)
     
     When SUPPORTED_FLOWS is not present, uses legacy mode which scans for
-    process_* functions without strict validation.
+    process_* functions using the flow_to_example_fn mapping.
     
-    Returns list of (flow_key, fn) or a string error message if checks fail.
+    Returns list of (example_fn_name, fn) or a string error message if checks fail.
     """
     # Get declared flows from SUPPORTED_FLOWS (legacy mode if not present)
     declared = getattr(module, "SUPPORTED_FLOWS", None)
     legacy_mode = declared is None
     
     if legacy_mode:
-        # Legacy mode: scan process_* functions against manifest
-        declared = [
-            name for name in manifest
-            if callable(getattr(module, f"process_{name}", None))
-        ]
+        # Legacy mode: scan process_* functions using flow_to_example_fn mapping
+        # Find all example function names that have implementations
+        available_example_fns = {
+            name[len("process_"):]
+            for name in dir(module)
+            if name.startswith("process_") and callable(getattr(module, name))
+        }
+        # Map flows to their example functions if both exist
+        declared = []
+        for flow in manifest:
+            example_fn = flow_to_example_fn.get(flow) if flow_to_example_fn else None
+            if example_fn and example_fn in available_example_fns:
+                declared.append(flow)
     else:
         # Normalize: ensure list, deduplicate, validate
         if not hasattr(declared, '__iter__'):
@@ -211,12 +232,16 @@ def discover_and_validate_scenarios(
     # CHECK 1: Find declared flows without implementations
     implemented = set()
     missing = []
-    for name in declared:
-        fn = getattr(module, f"process_{name}", None)
+    for flow in declared:
+        example_fn = flow_to_example_fn.get(flow) if flow_to_example_fn else None
+        if example_fn is None:
+            missing.append(flow)
+            continue
+        fn = getattr(module, f"process_{example_fn}", None)
         if fn is not None and callable(fn):
-            implemented.add(name)
+            implemented.add(flow)
         else:
-            missing.append(name)
+            missing.append(flow)
     
     if missing:
         return (
@@ -224,7 +249,7 @@ def discover_and_validate_scenarios(
             f"but no process_* function found for them."
         )
     
-    # CHECK 2: Find process_* functions not in SUPPORTED_FLOWS
+    # CHECK 2: Find process_* functions not mapped to any flow
     # Only run this check when SUPPORTED_FLOWS is explicitly defined (not legacy mode)
     if not legacy_mode:
         all_process_fns = {
@@ -232,11 +257,12 @@ def discover_and_validate_scenarios(
             for name in dir(module)
             if name.startswith("process_") and callable(getattr(module, name))
         }
-        undeclared = all_process_fns - set(declared)
+        mapped_example_fns = set(flow_to_example_fn.values()) if flow_to_example_fn else set()
+        undeclared = all_process_fns - mapped_example_fns
         if undeclared:
             return (
-                f"COVERAGE ERROR: process_* functions exist but not in "
-                f"SUPPORTED_FLOWS: {sorted(undeclared)}"
+                f"COVERAGE ERROR: process_* functions exist but not mapped to any flow: "
+                f"{sorted(undeclared)}"
             )
     
     # CHECK 3: Find stale flows (declared but not in manifest)
@@ -248,8 +274,13 @@ def discover_and_validate_scenarios(
             f"exist in flows.json: {sorted(stale)}. Regenerate or update."
         )
     
-    # All checks pass - return ordered (key, fn) pairs
-    return [(name, getattr(module, f"process_{name}")) for name in declared]
+    # All checks pass - return ordered (example_fn_name, fn) pairs
+    result = []
+    for flow in declared:
+        example_fn = flow_to_example_fn.get(flow, flow) if flow_to_example_fn else flow
+        fn = getattr(module, f"process_{example_fn}")
+        result.append((example_fn, fn))
+    return result
 
 
 async def test_connector_scenarios(
@@ -303,7 +334,7 @@ async def test_connector_scenarios(
     # Load flow manifest and discover/validate scenarios
     try:
         sdk_root = Path(__file__).parent.parent
-        manifest = load_flow_manifest(sdk_root)
+        manifest, flow_to_example_fn = load_flow_manifest(sdk_root)
     except FileNotFoundError as e:
         print(_red(f"    MANIFEST ERROR: {e}"), flush=True)
         result["status"] = "failed"
@@ -311,7 +342,7 @@ async def test_connector_scenarios(
         return result
     
     # Discover and validate scenarios using the 3-check algorithm
-    scenarios_or_error = discover_and_validate_scenarios(module, connector_name, manifest)
+    scenarios_or_error = discover_and_validate_scenarios(module, connector_name, manifest, flow_to_example_fn)
     if isinstance(scenarios_or_error, str):
         # Coverage validation failed
         result["status"] = "failed"
@@ -321,24 +352,35 @@ async def test_connector_scenarios(
     
     scenario_fns = scenarios_or_error
     
-    # Test ALL flows from manifest - mark unimplemented as "not_implemented"
+    # Build a map of example function names to their callable functions
+    example_fn_map = {key: fn for key, fn in scenario_fns}
+    
+    # Test ALL flows from manifest - use flow_to_example_fn mapping to find implementations
     any_failed = False
     for flow_name in manifest:
-        # Find if this flow has an implementation
-        process_fn = None
-        for key, fn in scenario_fns:
-            if key == flow_name:
-                process_fn = fn
-                break
-        
         scenario_key = flow_name
         
-        if process_fn is None:
-            # Flow exists in manifest but not implemented for this connector
-            print(_grey(f"    [{scenario_key}] NOT IMPLEMENTED — No process_{flow_name} function found"), flush=True)
+        # Look up which example function implements this flow
+        example_fn_name = flow_to_example_fn.get(flow_name) if flow_to_example_fn else None
+        
+        if example_fn_name is None:
+            # Flow has no example implementation
+            print(_grey(f"    [{scenario_key}] NOT IMPLEMENTED — No example function mapped for flow '{flow_name}'"), flush=True)
             result["scenarios"][scenario_key] = {
                 "status": "not_implemented",
-                "reason": f"Flow '{flow_name}' not implemented for connector '{connector_name}'",
+                "reason": f"Flow '{flow_name}' has no example implementation",
+            }
+            continue
+        
+        # Find the actual function to call
+        process_fn = example_fn_map.get(example_fn_name)
+        
+        if process_fn is None:
+            # Example function doesn't exist in this connector's module
+            print(_grey(f"    [{scenario_key}] NOT IMPLEMENTED — Example function '{example_fn_name}' not found for flow '{flow_name}'"), flush=True)
+            result["scenarios"][scenario_key] = {
+                "status": "not_implemented",
+                "reason": f"Example function '{example_fn_name}' not found for flow '{flow_name}'",
             }
             continue
         

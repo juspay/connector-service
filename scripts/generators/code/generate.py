@@ -824,16 +824,64 @@ def emit_flow_manifest(flows: list[dict], single_flows: list[dict]) -> None:
     A flow appears in flows.json ONLY if generate.py finds both:
       (a) a matching RPC in services.proto, AND
       (b) a *_req_transformer implementation in crates/ffi/ffi/src/services/*.rs
+    
+    Also includes flow_to_example_fn mapping for smoke tests to know which
+    example function to call for each flow (since examples use scenario-based
+    naming like 'checkout_card' instead of flow-based naming like 'authorize').
     """
     import json
     
     # Combine standard flows and single-step flows
     all_flow_names = sorted(set(f["name"] for f in flows) | set(f["name"] for f in single_flows))
     
+    # Mapping from flow name to example function name
+    # Examples use scenario-based naming (e.g., checkout_card) not flow-based (e.g., authorize)
+    flow_to_example_fn = {
+        "accept": None,  # Not implemented in examples
+        "authenticate": None,
+        "authorize": "checkout_card",  # Primary card-based authorize example
+        "capture": "checkout_card",    # Part of checkout_card scenario
+        "charge": None,
+        "create": None,
+        "create_client_authentication_token": None,
+        "create_order": None,
+        "create_server_authentication_token": None,
+        "create_server_session_authentication_token": None,
+        "defend": None,
+        "get": "get_payment",
+        "handle_event": None,
+        "incremental_authorization": None,
+        "payout_create": None,
+        "payout_create_link": None,
+        "payout_create_recipient": None,
+        "payout_enroll_disburse_account": None,
+        "payout_get": None,
+        "payout_stage": None,
+        "payout_transfer": None,
+        "payout_void": None,
+        "post_authenticate": None,
+        "pre_authenticate": None,
+        "proxy_authorize": None,
+        "proxy_setup_recurring": None,
+        "recurring_revoke": None,
+        "refund": "refund",
+        "refund_get": None,
+        "reverse": None,
+        "setup_recurring": None,
+        "submit_evidence": None,
+        "token_authorize": None,
+        "token_setup_recurring": None,
+        "tokenize": None,
+        "verify_redirect_response": None,
+        "void": "void_payment",
+    }
+    
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_from": "services.proto",
         "flows": all_flow_names,
+        "flow_to_example_fn": flow_to_example_fn,
+        "note": "flow_to_example_fn maps flow names to example function names. Null means no example implementation.",
     }
     
     FLOW_MANIFEST_OUT.parent.mkdir(parents=True, exist_ok=True)
