@@ -3456,6 +3456,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Fiserv(FiservClientAuthenticationResponse),
     /// Elavon SDK initialization data — ssl_txn_auth_token for Converge Hosted Payments
     Elavon(ElavonClientAuthenticationResponse),
+    /// Noon SDK initialization data — order_id and checkout_url for client-side checkout
+    Noon(NoonClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3567,6 +3569,15 @@ pub struct FiservClientAuthenticationResponse {
 pub struct ElavonClientAuthenticationResponse {
     /// The session token (ssl_txn_auth_token) for client-side Converge Hosted Payments
     pub session_token: Secret<String>,
+}
+
+/// Noon's order_id and checkout_url for client-side checkout SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoonClientAuthenticationResponse {
+    /// The order ID created on Noon's side
+    pub order_id: u64,
+    /// The checkout URL for client-side redirect to complete payment
+    pub checkout_url: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

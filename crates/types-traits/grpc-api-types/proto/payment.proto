@@ -1546,7 +1546,14 @@ message ConnectorSpecificClientAuthenticationResponse {
     WellsfargoClientAuthenticationResponse wellsfargo = 12;
     FiservClientAuthenticationResponse fiserv = 13;
     ElavonClientAuthenticationResponse elavon = 14;
+    NoonClientAuthenticationResponse noon = 15;
   }
+}
+
+// Noon SDK initialization data — order_id and checkout_url for client-side checkout
+message NoonClientAuthenticationResponse {
+  uint64 order_id = 1;
+  SecretString checkout_url = 2;
 }
 
 // Elavon SDK initialization data — ssl_txn_auth_token for Converge Hosted Payments
