@@ -3430,12 +3430,21 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Billwerk SDK initialization data — session_id for Billwerk Checkout session
+    Billwerk(BillwerkClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
+}
+
+/// Billwerk's session_id for client-side Billwerk Checkout session initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BillwerkClientAuthenticationResponse {
+    /// The checkout session ID for client-side Billwerk Checkout initialization
+    pub session_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

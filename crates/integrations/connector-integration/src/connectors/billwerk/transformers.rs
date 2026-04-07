@@ -9,12 +9,18 @@ use common_utils::{
 use crate::{connectors::billwerk::BillwerkRouterData, types::ResponseRouterData, utils};
 
 use domain_types::{
-    connector_flow::{Authorize, Capture, PaymentMethodToken, RSync, RepeatPayment, SetupMandate},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, PaymentMethodToken, RSync, RepeatPayment,
+        SetupMandate,
+    },
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        BillwerkClientAuthenticationResponse as BillwerkClientAuthenticationResponseDomain,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -24,7 +30,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 
 use serde::{Deserialize, Serialize};
 
@@ -671,6 +677,148 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .as_ref()
                 .map(|id| id.get_string_repr().to_owned()),
             settle: router_data.request.is_auto_capture(),
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates a Billwerk checkout session for client-side SDK initialization.
+/// The session id is returned to the frontend for Billwerk Checkout window initialization.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct BillwerkClientAuthRequest {
+    pub order: BillwerkSessionOrder,
+    pub accept_url: Option<String>,
+    pub cancel_url: Option<String>,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct BillwerkSessionOrder {
+    pub handle: String,
+    pub amount: MinorUnit,
+    pub currency: common_enums::Currency,
+    pub customer: BillwerkSessionCustomer,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct BillwerkSessionCustomer {
+    pub handle: String,
+    pub email: Option<String>,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BillwerkRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BillwerkClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: BillwerkRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        let handle = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let return_url = router_data
+            .resource_common_data
+            .return_url
+            .clone()
+            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+
+        let customer_handle = router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .map(|id| id.get_string_repr().to_owned())
+            .unwrap_or_else(|| handle.clone());
+
+        let customer = BillwerkSessionCustomer {
+            handle: customer_handle,
+            email: router_data
+                .request
+                .email
+                .as_ref()
+                .map(|e| e.peek().to_string()),
+            first_name: router_data
+                .request
+                .customer_name
+                .as_ref()
+                .map(|n| n.peek().to_string()),
+            last_name: None,
+        };
+
+        Ok(Self {
+            order: BillwerkSessionOrder {
+                handle,
+                amount: router_data.request.amount,
+                currency: router_data.request.currency,
+                customer,
+            },
+            accept_url: Some(return_url.clone()),
+            cancel_url: Some(return_url),
+        })
+    }
+}
+
+/// Billwerk checkout session response containing the session id for SDK initialization.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BillwerkClientAuthResponse {
+    pub id: String,
+    pub url: Option<String>,
+}
+
+impl TryFrom<ResponseRouterData<BillwerkClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BillwerkClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Billwerk(
+                BillwerkClientAuthenticationResponseDomain {
+                    session_id: response.id,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
         })
     }
 }
