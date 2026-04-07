@@ -2,10 +2,9 @@ use crate::connectors::revolut::RevolutRouterData;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, PSync, Refund},
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        WebhookDetailsResponse,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, WebhookDetailsResponse,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
@@ -760,7 +759,7 @@ impl TryFrom<ResponseRouterData<RevolutCreateOrderResponse, Self>>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<RevolutCreateOrderResponse, Self>,
