@@ -1536,7 +1536,15 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    NexinetsClientAuthenticationResponse nexinets = 8;
   }
+}
+
+
+// Nexinets SDK initialization data — order_id for client-side hosted payment page initialization
+message NexinetsClientAuthenticationResponse {
+  // The order ID that serves as the client authentication token for hosted checkout
+  string order_id = 1;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations

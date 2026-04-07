@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Nexinets SDK initialization data — order_id for client-side hosted payment page initialization
+    Nexinets(NexinetsClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3449,6 +3451,13 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Nexinets' order_id for client-side hosted payment page initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexinetsClientAuthenticationResponse {
+    /// The order ID that serves as the client authentication token for hosted checkout
+    pub order_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
