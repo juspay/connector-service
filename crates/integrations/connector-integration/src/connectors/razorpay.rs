@@ -1421,15 +1421,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<String, IntegrationError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
         let customer_id = req.request.mandate_id.peek();
-        let token_id = req
-            .request
-            .connector_mandate_id
-            .as_ref()
-            .map(|s| s.peek().to_string())
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "connector_mandate_id",
-                context: Default::default(),
-            })?;
+        let token_id =
+            crate::utils::get_connector_mandate_id_as_string(&req.request.connector_mandate_id)?;
         Ok(format!(
             "{base_url}v1/customers/{customer_id}/tokens/{token_id}"
         ))

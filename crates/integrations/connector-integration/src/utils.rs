@@ -580,3 +580,27 @@ fn collect_values_by_removing_signature(value: &Value, signature: &str) -> Vec<S
             .collect(),
     }
 }
+
+/// Extracts connector_mandate_id from an Optional Secret String, returning an error if missing.
+pub fn get_connector_mandate_id_as_string(
+    connector_mandate_id: &Option<Secret<String>>,
+) -> Result<String, Error> {
+    connector_mandate_id
+        .as_ref()
+        .map(|s| s.peek().to_string())
+        .ok_or_else(|| {
+            Report::new(IntegrationError::MissingRequiredField {
+                field_name: "connector_mandate_id",
+                context: Default::default(),
+            })
+        })
+}
+
+/// Extracts customer_id as an Optional String from PaymentFlowData.
+pub fn get_customer_id_as_optional_string(
+    customer_id: &Option<common_utils::id_type::CustomerId>,
+) -> Option<String> {
+    customer_id
+        .as_ref()
+        .map(|id| id.get_string_repr().to_string())
+}

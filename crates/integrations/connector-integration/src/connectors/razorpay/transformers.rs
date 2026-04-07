@@ -448,12 +448,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 _ => None,
             });
 
-        let customer_id = item
-            .router_data
-            .resource_common_data
-            .customer_id
-            .as_ref()
-            .map(|id| id.get_string_repr().to_string());
+        let customer_id = crate::utils::get_customer_id_as_optional_string(
+            &item.router_data.resource_common_data.customer_id,
+        );
 
         Ok(Self {
             amount,
@@ -1548,12 +1545,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     common_enums::FutureUsage::OffSession => Some(1),
                     _ => None,
                 }),
-            customer_id: item
-                .router_data
-                .resource_common_data
-                .customer_id
-                .as_ref()
-                .map(|id| id.get_string_repr().to_string()),
+            customer_id: crate::utils::get_customer_id_as_optional_string(
+                &item.router_data.resource_common_data.customer_id,
+            ),
             __upi_91_expiry_time_93_: metadata_map
                 .get("__upi_91_expiry_time_93_")
                 .and_then(|v| v.parse::<i64>().ok()),
