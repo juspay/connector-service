@@ -11577,7 +11577,6 @@ pub fn tokenized_authorize_to_base(
     // Clone connector_token so we can use it in both payment_method and payment_method_token.
     // Connectors that handle CardToken via payment_method_data[card][token] (e.g. Stripe) need
     // the raw token value in resource_common_data.payment_method_token.
-    let connector_token_clone = v.connector_token.clone();
     PaymentServiceAuthorizeRequest {
         merchant_transaction_id: v.merchant_transaction_id,
         amount: v.amount,
