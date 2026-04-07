@@ -6,6 +6,10 @@ use serde::Serialize;
 
 use crate::utils::MerchantDefinedInformation;
 
+/// Fluid data descriptor for Apple Pay in-app payments
+/// This is the base64 encoding of "FID=COMMON.APPLE.INAPP.PAYMENT"
+pub const FLUID_DATA_DESCRIPTOR: &str = "RklEPUNPTU1PTi5BUFBMRS5JTkFQUC5QQVlNRU5U";
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BarclaycardPaymentsRequest<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize>
@@ -35,10 +39,73 @@ pub struct CardPaymentInformation<T: PaymentMethodDataTypes + Sync + Send + 'sta
     pub card: Card<T>,
 }
 
+/// Fluid data container for tokenized wallet payment data (Apple Pay, Google Pay)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FluidData {
+    pub value: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub descriptor: Option<String>,
+}
+
+/// Transaction type for tokenized wallet payments
+#[derive(Debug, Serialize)]
+pub enum TransactionType {
+    #[serde(rename = "1")]
+    InApp,
+}
+
+/// Apple Pay tokenized card metadata
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayTokenizedCard {
+    pub transaction_type: TransactionType,
+}
+
+/// Apple Pay token payment information (encrypted blob path)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayTokenPaymentInformation {
+    pub fluid_data: FluidData,
+    pub tokenized_card: ApplePayTokenizedCard,
+}
+
+/// Google Pay tokenized card metadata
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayTokenizedCard {
+    pub transaction_type: TransactionType,
+}
+
+/// Google Pay token payment information (encrypted blob path)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayTokenPaymentInformation {
+    pub fluid_data: FluidData,
+    pub tokenized_card: GooglePayTokenizedCard,
+}
+
+/// Payment solution codes used in ProcessingInformation
+pub enum PaymentSolution {
+    ApplePay,
+    GooglePay,
+}
+
+impl From<PaymentSolution> for String {
+    fn from(solution: PaymentSolution) -> Self {
+        match solution {
+            PaymentSolution::ApplePay => "001".to_string(),
+            PaymentSolution::GooglePay => "012".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum PaymentInformation<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize> {
     Cards(Box<CardPaymentInformation<T>>),
+    ApplePayToken(Box<ApplePayTokenPaymentInformation>),
+    GooglePayToken(Box<GooglePayTokenPaymentInformation>),
 }
 
 #[derive(Debug, Serialize)]

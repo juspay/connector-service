@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use base64::Engine;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -8,10 +9,11 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
 use serde::Serialize;
 
@@ -420,29 +422,131 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data.request.currency,
         )?;
 
-        let ccard = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(IntegrationError::not_implemented(
-                "Only card payments are supported".to_string(),
-            )),
-        }?;
+        let (payment_information, payment_solution, cavv_algorithm) =
+            match &router_data.request.payment_method_data {
+                PaymentMethodData::Card(ccard) => {
+                    let card_network = ccard.card_network.clone();
+                    let card_type = card_network
+                        .and_then(get_barclaycard_card_type)
+                        .map(|s| s.to_string());
 
-        let card_network = ccard.card_network.clone();
-        let card_type = card_network
-            .and_then(get_barclaycard_card_type)
-            .map(|s| s.to_string());
-
-        let payment_information =
-            requests::PaymentInformation::Cards(Box::new(requests::CardPaymentInformation {
-                card: requests::Card {
-                    number: ccard.card_number.clone(),
-                    expiration_month: ccard.card_exp_month.clone(),
-                    expiration_year: ccard.get_expiry_year_4_digit(),
-                    security_code: ccard.card_cvc.clone(),
-                    card_type,
-                    type_selection_indicator: Some("1".to_owned()),
+                    let payment_info = requests::PaymentInformation::Cards(Box::new(
+                        requests::CardPaymentInformation {
+                            card: requests::Card {
+                                number: ccard.card_number.clone(),
+                                expiration_month: ccard.card_exp_month.clone(),
+                                expiration_year: ccard.get_expiry_year_4_digit(),
+                                security_code: ccard.card_cvc.clone(),
+                                card_type,
+                                type_selection_indicator: Some("1".to_owned()),
+                            },
+                        },
+                    ));
+                    (payment_info, None, Some(CAVV_ALGORITHM_ATN.to_string()))
+                }
+                PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                    WalletData::ApplePay(apple_pay_data) => {
+                        let apple_pay_encrypted_data = apple_pay_data
+                            .payment_data
+                            .get_encrypted_apple_pay_payment_data_mandatory()
+                            .change_context(IntegrationError::MissingRequiredField {
+                                field_name: "Apple Pay encrypted data",
+                                context: Default::default(),
+                            })?;
+                        let payment_info = requests::PaymentInformation::ApplePayToken(Box::new(
+                            requests::ApplePayTokenPaymentInformation {
+                                fluid_data: requests::FluidData {
+                                    value: Secret::from(apple_pay_encrypted_data.clone()),
+                                    descriptor: Some(
+                                        requests::FLUID_DATA_DESCRIPTOR.to_string(),
+                                    ),
+                                },
+                                tokenized_card: requests::ApplePayTokenizedCard {
+                                    transaction_type: requests::TransactionType::InApp,
+                                },
+                            },
+                        ));
+                        (
+                            payment_info,
+                            Some(String::from(requests::PaymentSolution::ApplePay)),
+                            None,
+                        )
+                    }
+                    WalletData::GooglePay(gpay_data) => {
+                        let gpay_token = gpay_data
+                            .tokenization_data
+                            .get_encrypted_google_pay_token()
+                            .change_context(IntegrationError::MissingRequiredField {
+                                field_name: "Google Pay wallet token",
+                                context: Default::default(),
+                            })?;
+                        let payment_info =
+                            requests::PaymentInformation::GooglePayToken(Box::new(
+                                requests::GooglePayTokenPaymentInformation {
+                                    fluid_data: requests::FluidData {
+                                        value: Secret::from(
+                                            super::BASE64_ENGINE.encode(gpay_token),
+                                        ),
+                                        descriptor: None,
+                                    },
+                                    tokenized_card: requests::GooglePayTokenizedCard {
+                                        transaction_type: requests::TransactionType::InApp,
+                                    },
+                                },
+                            ));
+                        (
+                            payment_info,
+                            Some(String::from(requests::PaymentSolution::GooglePay)),
+                            None,
+                        )
+                    }
+                    WalletData::AliPayQr(_)
+                    | WalletData::AliPayRedirect(_)
+                    | WalletData::AliPayHkRedirect(_)
+                    | WalletData::AmazonPayRedirect(_)
+                    | WalletData::BluecodeRedirect {}
+                    | WalletData::MomoRedirect(_)
+                    | WalletData::KakaoPayRedirect(_)
+                    | WalletData::GoPayRedirect(_)
+                    | WalletData::GcashRedirect(_)
+                    | WalletData::ApplePayRedirect(_)
+                    | WalletData::ApplePayThirdPartySdk(_)
+                    | WalletData::DanaRedirect {}
+                    | WalletData::GooglePayRedirect(_)
+                    | WalletData::GooglePayThirdPartySdk(_)
+                    | WalletData::MbWayRedirect(_)
+                    | WalletData::MobilePayRedirect(_)
+                    | WalletData::PaypalRedirect(_)
+                    | WalletData::PaypalSdk(_)
+                    | WalletData::Paze(_)
+                    | WalletData::SamsungPay(_)
+                    | WalletData::TwintRedirect {}
+                    | WalletData::VippsRedirect {}
+                    | WalletData::TouchNGoRedirect(_)
+                    | WalletData::WeChatPayRedirect(_)
+                    | WalletData::WeChatPayQr(_)
+                    | WalletData::CashappQr(_)
+                    | WalletData::SwishQr(_)
+                    | WalletData::Mifinity(_)
+                    | WalletData::RevolutPay(_)
+                    | WalletData::MbWay(_)
+                    | WalletData::Satispay(_)
+                    | WalletData::Wero(_) => {
+                        return Err(IntegrationError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("barclaycard"),
+                            Default::default(),
+                        )
+                        .into())
+                    }
                 },
-            }));
+                _ => {
+                    return Err(IntegrationError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("barclaycard"),
+                        Default::default(),
+                    )
+                    .into())
+                }
+            };
 
         let email = router_data
             .resource_common_data
@@ -474,8 +578,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.capture_method,
                 Some(common_enums::CaptureMethod::Automatic) | None
             )),
-            payment_solution: None, // Only set for wallet payments (GooglePay="012", ApplePay="001")
-            cavv_algorithm: Some(CAVV_ALGORITHM_ATN.to_string()),
+            payment_solution,
+            cavv_algorithm,
         };
 
         let client_reference_information = requests::ClientReferenceInformation {
