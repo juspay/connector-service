@@ -92,6 +92,13 @@ pub struct PaysafeSetupMandateRequest<T: PaymentMethodDataTypes> {
 pub enum PaysafePaymentMethod<T: PaymentMethodDataTypes> {
     Card { card: PaysafeCard<T> },
     Ach { ach: PaysafeAch },
+    ApplePay {
+        apple_pay_payment_token: PaysafeApplePayToken,
+    },
+    Skrill {
+        skrill: PaysafeSkrill,
+    },
+    PaySafeCard {},
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
@@ -125,6 +132,32 @@ pub struct PaysafeCardExpiry {
 pub enum PaysafePaymentType {
     Card,
     Ach,
+    ApplePay,
+    Skrill,
+    PaySafeCard,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaysafeApplePayToken {
+    pub payment_data: Secret<String>,
+    pub payment_method: PaysafeApplePayPaymentMethod,
+    pub transaction_identifier: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaysafeApplePayPaymentMethod {
+    pub display_name: String,
+    pub network: String,
+    #[serde(rename = "type")]
+    pub pm_type: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaysafeSkrill {
+    pub consumer_email: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

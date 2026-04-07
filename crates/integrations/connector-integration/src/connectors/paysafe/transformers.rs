@@ -8,7 +8,9 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId,
     },
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{
+        BankDebitData, GiftCardData, PaymentMethodData, PaymentMethodDataTypes, WalletData,
+    },
     router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
     router_data_v2::RouterDataV2,
 };
@@ -18,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::connectors::paysafe::PaysafeRouterData;
 use crate::types::ResponseRouterData;
+use crate::utils::get_unimplemented_payment_method_error_message;
 use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
@@ -277,14 +280,65 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         account_id,
                     )
                 }
-                _ => {
-                    return Err(IntegrationError::NotSupported {
-                        message:
-                            "Only card and ACH payment methods are supported for PaymentMethodToken"
-                                .to_string(),
-                        connector: "Paysafe",
-                        context: Default::default(),
+                PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                    WalletData::ApplePay(apple_pay_data) => {
+                        let encrypted_payment_data = apple_pay_data
+                            .payment_data
+                            .get_encrypted_apple_pay_payment_data_mandatory()
+                            .change_context(IntegrationError::MissingRequiredField {
+                                field_name: "apple_pay_payment_data",
+                                context: Default::default(),
+                            })?;
+                        let apple_pay_token = PaysafeApplePayToken {
+                            payment_data: Secret::new(encrypted_payment_data.clone()),
+                            payment_method: PaysafeApplePayPaymentMethod {
+                                display_name: apple_pay_data.payment_method.display_name.clone(),
+                                network: apple_pay_data.payment_method.network.clone(),
+                                pm_type: apple_pay_data.payment_method.pm_type.clone(),
+                            },
+                            transaction_identifier: apple_pay_data
+                                .transaction_identifier
+                                .clone(),
+                        };
+                        let account_id = account_id.get_no_three_ds_account_id(currency)?;
+                        (
+                            PaysafePaymentMethod::ApplePay {
+                                apple_pay_payment_token: apple_pay_token,
+                            },
+                            PaysafePaymentType::ApplePay,
+                            account_id,
+                        )
                     }
+                    _ => {
+                        return Err(IntegrationError::NotImplemented(
+                            get_unimplemented_payment_method_error_message("paysafe"),
+                            Default::default(),
+                        )
+                        .into())
+                    }
+                },
+                PaymentMethodData::GiftCard(gift_card_data) => match gift_card_data.as_ref() {
+                    GiftCardData::PaySafeCard {} => {
+                        let account_id = account_id.get_no_three_ds_account_id(currency)?;
+                        (
+                            PaysafePaymentMethod::PaySafeCard {},
+                            PaysafePaymentType::PaySafeCard,
+                            account_id,
+                        )
+                    }
+                    _ => {
+                        return Err(IntegrationError::NotImplemented(
+                            get_unimplemented_payment_method_error_message("paysafe"),
+                            Default::default(),
+                        )
+                        .into())
+                    }
+                },
+                _ => {
+                    return Err(IntegrationError::NotImplemented(
+                        get_unimplemented_payment_method_error_message("paysafe"),
+                        Default::default(),
+                    )
                     .into())
                 }
             };
@@ -292,7 +346,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // For ACH payments, Paysafe requires settleWithAuth to be true
         let settle_with_auth = match payment_type {
             PaysafePaymentType::Ach => true,
-            PaysafePaymentType::Card => matches!(
+            PaysafePaymentType::Card
+            | PaysafePaymentType::ApplePay
+            | PaysafePaymentType::Skrill
+            | PaysafePaymentType::PaySafeCard => matches!(
                 router_data.request.capture_method,
                 Some(enums::CaptureMethod::Automatic) | None
             ),
