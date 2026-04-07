@@ -1007,18 +1007,7 @@ impl TryFrom<BillwerkCreateOrderResponse> for PaymentCreateOrderResponse {
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BillwerkCreateOrderResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<BillwerkCreateOrderResponse, Self>>
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
@@ -1029,15 +1018,7 @@ impl
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BillwerkCreateOrderResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
+        item: ResponseRouterData<BillwerkCreateOrderResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
