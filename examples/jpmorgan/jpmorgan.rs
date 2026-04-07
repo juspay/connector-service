@@ -75,6 +75,20 @@ pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCa
     })).unwrap_or_default()
 }
 
+pub fn build_create_client_authentication_token_request() -> MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+    serde_json::from_value::<MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest>(serde_json::json!({
+    "merchant_client_session_id": "probe_sdk_session_001",  // Infrastructure.
+    "domain_context": {
+        "payment": {
+            "amount": {
+                "minor_amount": 1000,
+                "currency": "USD",
+            },
+        },
+    },
+    })).unwrap_or_default()
+}
+
 pub fn build_create_server_authentication_token_request() -> MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
     serde_json::from_value::<MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest>(serde_json::json!({
 
@@ -299,6 +313,13 @@ pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: MerchantAuthenticationService.CreateClientAuthenticationToken
+#[allow(dead_code)]
+pub async fn create_client_authentication_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.create_client_authentication_token(build_create_client_authentication_token_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status_code))
+}
+
 // Flow: MerchantAuthenticationService.CreateServerAuthenticationToken
 #[allow(dead_code)]
 pub async fn create_server_authentication_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -354,13 +375,14 @@ async fn main() {
         "process_get_payment" => process_get_payment(&client, "order_001").await,
         "authorize" => authorize(&client, "order_001").await,
         "capture" => capture(&client, "order_001").await,
+        "create_client_authentication_token" => create_client_authentication_token(&client, "order_001").await,
         "create_server_authentication_token" => create_server_authentication_token(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
         "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "refund_get" => refund_get(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, create_server_authentication_token, get, proxy_authorize, refund, refund_get, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, create_client_authentication_token, create_server_authentication_token, get, proxy_authorize, refund, refund_get, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),
