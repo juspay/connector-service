@@ -1535,7 +1535,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     StripeClientAuthenticationResponse stripe = 1;
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
+    ElavonClientAuthenticationResponse elavon = 14;
   }
+}
+
+// Elavon SDK initialization data — ssl_txn_auth_token for Converge Hosted Payments
+message ElavonClientAuthenticationResponse {
+  SecretString session_token = 1;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()

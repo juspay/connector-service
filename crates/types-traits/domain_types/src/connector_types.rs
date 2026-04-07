@@ -3430,12 +3430,21 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Elavon SDK initialization data — ssl_txn_auth_token for Converge Hosted Payments
+    Elavon(ElavonClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
+}
+
+/// Elavon's ssl_txn_auth_token for Converge Hosted Payments SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElavonClientAuthenticationResponse {
+    /// The session token (ssl_txn_auth_token) for client-side Converge Hosted Payments
+    pub session_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
