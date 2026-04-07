@@ -50,9 +50,9 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 use transformers::{
     self as noon, NoonAuthType, NoonClientAuthRequest, NoonClientAuthResponse, NoonErrorResponse,
-    NoonPaymentsActionRequest,
-    NoonPaymentsActionRequest as NoonPaymentsRefundActionRequest, NoonPaymentsCancelRequest,
-    NoonPaymentsRequest, NoonPaymentsResponse, NoonPaymentsResponse as NoonPaymentsSyncResponse,
+    NoonPaymentsActionRequest, NoonPaymentsActionRequest as NoonPaymentsRefundActionRequest,
+    NoonPaymentsCancelRequest, NoonPaymentsRequest, NoonPaymentsResponse,
+    NoonPaymentsResponse as NoonPaymentsSyncResponse,
     NoonPaymentsResponse as NoonPaymentsCaptureResponse,
     NoonPaymentsResponse as NoonPaymentsVoidResponse, NoonRepeatPaymentRequest,
     NoonRepeatPaymentResponse, NoonRevokeMandateRequest, NoonRevokeMandateResponse, RefundResponse,
