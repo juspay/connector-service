@@ -1536,6 +1536,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    Shift4ClientAuthenticationResponse shift4 = 8;
   }
 }
 
@@ -1544,6 +1545,11 @@ message GlobalpayClientAuthenticationResponse {
   SecretString access_token = 1;
   optional string token_type = 2;
   optional int64 expires_in = 3;
+}
+
+// Shift4 SDK initialization data — client_secret for client-side Checkout Session
+message Shift4ClientAuthenticationResponse {
+  SecretString client_secret = 1;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()

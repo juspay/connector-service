@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Shift4 SDK initialization data — signature token for Checkout Form initialization
+    Shift4(Shift4ClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3449,6 +3451,13 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Shift4's client_secret for client-side Checkout Session initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Shift4ClientAuthenticationResponse {
+    /// The client secret for Shift4 Checkout Session SDK initialization
+    pub client_secret: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
