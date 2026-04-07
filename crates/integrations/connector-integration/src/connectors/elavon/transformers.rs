@@ -19,7 +19,7 @@ use domain_types::{
         ResponseId as DomainResponseId,
     },
     payment_address::PaymentAddress,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
@@ -120,12 +120,35 @@ pub struct CardPaymentRequest<
     pub ssl_invoice_number: Option<String>,
 }
 
+// TODO: Consolidate TokenPaymentRequest fields with CardPaymentRequest to reduce duplication
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct TokenPaymentRequest {
+    pub ssl_transaction_type: TransactionType,
+    pub ssl_account_id: Secret<String>,
+    pub ssl_user_id: Secret<String>,
+    pub ssl_pin: Secret<String>,
+    pub ssl_amount: StringMajorUnit,
+    pub ssl_token: Secret<String>,
+    pub ssl_email: Option<common_utils::pii::Email>,
+    pub ssl_transaction_currency: Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssl_avs_address: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssl_avs_zip: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssl_customer_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssl_invoice_number: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum ElavonPaymentsRequest<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardPaymentRequest<T>),
+    Token(TokenPaymentRequest),
 }
 
 fn get_avs_details_from_payment_address(
@@ -264,8 +287,77 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 tracing::debug!(?card_req, "Elavon Card Payment Request");
                 Ok(Self::Card(card_req))
             }
+            // TODO: Refactor CardToken flow to share common logic with Card flow
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let router_data = item.router_data.clone();
+                let request_data = &router_data.request;
+                let auth_type = ElavonAuthType::try_from(&router_data.connector_config)?;
+
+                let token = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|t| match t {
+                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                let transaction_type = match request_data.capture_method {
+                    Some(HyperswitchCaptureMethod::Manual) => TransactionType::CcAuthOnly,
+                    Some(HyperswitchCaptureMethod::Automatic) => TransactionType::CcSale,
+                    None => TransactionType::CcSale,
+                    Some(other_capture_method) => {
+                        Err(report!(IntegrationError::FlowNotSupported {
+                            flow: format!("Capture method: {other_capture_method:?}"),
+                            connector: "Elavon".to_string(),
+                            context: Default::default()
+                        }))?
+                    }
+                };
+
+                let amount_converter = StringMajorUnitForConnector;
+                let amount = amount_converter
+                    .convert(request_data.minor_amount, request_data.currency)
+                    .map_err(|e| {
+                        report!(IntegrationError::AmountConversionFailed {
+                            context: Default::default()
+                        })
+                        .attach_printable(format!("Failed to convert amount: {e}"))
+                    })?;
+
+                let (avs_address, avs_zip) = get_avs_details_from_payment_address(Some(
+                    &router_data.resource_common_data.address,
+                ));
+
+                let customer_id_str = request_data
+                    .customer_id
+                    .as_ref()
+                    .map(|c| c.get_string_repr().to_string());
+
+                let token_req = TokenPaymentRequest {
+                    ssl_transaction_type: transaction_type,
+                    ssl_account_id: auth_type.ssl_merchant_id.clone(),
+                    ssl_user_id: auth_type.ssl_user_id.clone(),
+                    ssl_pin: auth_type.ssl_pin.clone(),
+                    ssl_amount: amount,
+                    ssl_token: token,
+                    ssl_email: request_data.email.clone(),
+                    ssl_transaction_currency: request_data.currency,
+                    ssl_avs_address: avs_address,
+                    ssl_avs_zip: avs_zip,
+                    ssl_customer_code: customer_id_str,
+                    ssl_invoice_number: Some(router_data.resource_common_data.payment_id.clone()),
+                };
+                tracing::debug!(?token_req, "Elavon Token Payment Request");
+                Ok(Self::Token(token_req))
+            }
             _ => Err(report!(IntegrationError::not_implemented(
-                "Only card payments are supported for Elavon".to_string()
+                "Only card and token payments are supported for Elavon".to_string()
             ))),
         }
     }
