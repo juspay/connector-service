@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hyperswitch-prism"
-version = "0.0.3"
+version = "0.0.1"
 description = "Hyperswitch Payments SDK — Python client for connector integrations via UniFFI FFI"
 readme = "README.md"
 requires-python = ">=3.8"

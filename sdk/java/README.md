@@ -25,13 +25,13 @@ A high-performance, type-safe Java/Kotlin SDK for payment processing through the
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("com.hyperswitch:hyperswitch-prism:0.1.0")
+implementation("com.hyperswitch:hyperswitch-prism:0.0.1")
 ```
 
 ### Gradle (Groovy DSL)
 
 ```groovy
-implementation 'com.hyperswitch:hyperswitch-prism:0.1.0'
+implementation 'com.hyperswitch:hyperswitch-prism:0.0.1'
 ```
 
 ### Maven
@@ -40,7 +40,7 @@ implementation 'com.hyperswitch:hyperswitch-prism:0.1.0'
 <dependency>
   <groupId>com.hyperswitch</groupId>
   <artifactId>hyperswitch-prism</artifactId>
-  <version>0.1.0</version>
+  <version>0.0.1</version>
 </dependency>
 ```
 
@@ -102,11 +102,10 @@ val authorizeRequest = PaymentServiceAuthorizeRequest(
             cardHolderName = "John Doe"
         )
     ),
-    customer = Customer(
-        email = SecretString(value = "customer@example.com"),
-        name = "John Doe"
-    ),
-    testMode = true
+    address = Address(billingAddress = AddressDetails()),
+    authType = AuthenticationType.NO_THREE_DS,
+    returnUrl = "https://example.com/return",
+    orderDetails = emptyList()
 )
 
 val response = client.authorize(authorizeRequest)
