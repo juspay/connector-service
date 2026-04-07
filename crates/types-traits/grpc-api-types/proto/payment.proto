@@ -1554,6 +1554,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     BamboraapacClientAuthenticationResponse bamboraapac = 20;
     PaytmClientAuthenticationResponse paytm = 21;
     MifinityClientAuthenticationResponse mifinity = 22;
+    RedsysClientAuthenticationResponse redsys = 23;
   }
 }
 
@@ -1568,6 +1569,16 @@ message MifinityClientAuthenticationResponse {
   SecretString initialization_token = 1;
   // The trace ID for tracking the payment transaction
   string trace_id = 2;
+}
+
+// Redsys SDK initialization data — merchant_parameters, signature, and signature_version for InSite SDK
+message RedsysClientAuthenticationResponse {
+  // Base64-encoded merchant parameters JSON for client-side SDK initialization
+  SecretString merchant_parameters = 1;
+  // HMAC-SHA256 signature of the merchant parameters
+  SecretString signature = 2;
+  // Signature version identifier (e.g., "HMAC_SHA256_V1")
+  string signature_version = 3;
 }
 
 // Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK

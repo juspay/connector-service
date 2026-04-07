@@ -3472,6 +3472,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Paytm(PaytmClientAuthenticationResponse),
     /// Mifinity SDK initialization data — initialization_token for iframe initialization
     Mifinity(MifinityClientAuthenticationResponse),
+    /// Redsys SDK initialization data — merchant_parameters, signature, and signature_version for InSite SDK
+    Redsys(RedsysClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3643,6 +3645,17 @@ pub struct MifinityClientAuthenticationResponse {
     pub initialization_token: Secret<String>,
     /// The trace ID for tracking the payment transaction
     pub trace_id: String,
+}
+
+/// Redsys's merchant_parameters, signature, and signature_version for client-side InSite SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedsysClientAuthenticationResponse {
+    /// Base64-encoded merchant parameters JSON for client-side SDK initialization
+    pub merchant_parameters: Secret<String>,
+    /// HMAC-SHA256 signature of the merchant parameters
+    pub signature: Secret<String>,
+    /// Signature version identifier (e.g., "HMAC_SHA256_V1")
+    pub signature_version: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
