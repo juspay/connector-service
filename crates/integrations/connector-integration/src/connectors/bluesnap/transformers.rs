@@ -10,8 +10,8 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificConfig,
+    payment_method_data::{BankDebitData, CardToken, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -490,6 +490,75 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "Only ACH and SEPA Bank Debit are supported".to_string(),
                 ))?,
             },
+            // TODO: Refactor CardToken to use a more descriptive name (e.g., PaymentMethodToken)
+            // and add the token field directly to the struct instead of relying on payment_method_token
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|t| match t {
+                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                let card_transaction_type = match router_data.request.capture_method {
+                    Some(common_enums::CaptureMethod::Manual) => BluesnapTxnType::AuthOnly,
+                    _ => BluesnapTxnType::AuthCapture,
+                };
+
+                let card_holder_info =
+                    billing_address
+                        .and_then(|addr| addr.address.as_ref())
+                        .and_then(|details| {
+                            router_data.request.email.clone().and_then(|email| {
+                                get_card_holder_info(details, email).ok().flatten()
+                            })
+                        });
+
+                let transaction_meta_data =
+                    router_data
+                        .request
+                        .metadata
+                        .as_ref()
+                        .map(|metadata| BluesnapMetadata {
+                            meta_data: convert_metadata_to_request_metadata(
+                                metadata.clone().expose(),
+                            ),
+                        });
+
+                let amount = super::BluesnapAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
+
+                Ok(Self::CardToken(BluesnapCompletePaymentsRequest {
+                    amount,
+                    currency: router_data.request.currency.to_string(),
+                    card_transaction_type,
+                    pf_token: token,
+                    three_d_secure: None,
+                    transaction_fraud_info: Some(TransactionFraudInfo {
+                        fraud_session_id: router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    }),
+                    card_holder_info,
+                    merchant_transaction_id: Some(
+                        router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    ),
+                    transaction_meta_data,
+                }))
+            }
             _ => Err(IntegrationError::not_implemented(
                 "Selected payment method is not supported".to_string(),
             ))?,
