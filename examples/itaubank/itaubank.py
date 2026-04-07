@@ -8,7 +8,7 @@
 import asyncio
 import sys
 from google.protobuf.json_format import ParseDict
-from payments import PaymentClient
+from payments import MerchantAuthenticationClient
 from payments.generated import sdk_config_pb2, payment_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
@@ -20,16 +20,19 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 # ))
 
 
-async def create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.create_server_authentication_token"""
-    payment_client = PaymentClient(config)
 
-    # Step 1: create_server_authentication_token
-    create_response = await payment_client.create_server_authentication_token(ParseDict(
+
+def _build_create_server_authentication_token_request():
+    return ParseDict(
         {
-            # No required fields
         },
-    ))
+        payment_pb2.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest(),
+    )
+async def create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: MerchantAuthenticationService.CreateServerAuthenticationToken"""
+    merchantauthentication_client = MerchantAuthenticationClient(config)
+
+    create_response = await merchantauthentication_client.create_server_authentication_token(_build_create_server_authentication_token_request())
 
     return {"status": create_response.status}
 

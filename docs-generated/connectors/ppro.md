@@ -96,18 +96,25 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [capture](#capture) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [handle_event](#handle_event) | Other | `—` |
-| [recurring_charge](#recurring_charge) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [EventService.HandleEvent](#eventservicehandleevent) | Events | `EventServiceHandleRequest` |
+| [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -211,6 +218,8 @@ let config = ConnectorConfig {
 
 ```python
 "payment_method": {
+    "ideal": {
+    }
 }
 ```
 
@@ -218,36 +227,80 @@ let config = ConnectorConfig {
 
 ```python
 "payment_method": {
-    "blik_code": "777124"
+    "blik": {
+        "blik_code": "777124"
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/ppro/ppro.py#L23) · [TypeScript](../../examples/ppro/ppro.ts#L24) · [Kotlin](../../examples/ppro/ppro.kt) · [Rust](../../examples/ppro/ppro.rs#L26)
+**Examples:** [Python](../../examples/ppro/ppro.py#L146) · [TypeScript](../../examples/ppro/ppro.ts#L128) · [Kotlin](../../examples/ppro/ppro.kt#L105) · [Rust](../../examples/ppro/ppro.rs#L138)
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/ppro/ppro.py#L54) · [TypeScript](../../examples/ppro/ppro.ts#L53) · [Kotlin](../../examples/ppro/ppro.kt) · [Rust](../../examples/ppro/ppro.rs#L55)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py#L76) · [TypeScript](../../examples/ppro/ppro.ts#L72) · [Kotlin](../../examples/ppro/ppro.kt) · [Rust](../../examples/ppro/ppro.rs#L69)
+**Examples:** [Python](../../examples/ppro/ppro.py#L155) · [TypeScript](../../examples/ppro/ppro.ts#L137) · [Kotlin](../../examples/ppro/ppro.kt#L117) · [Rust](../../examples/ppro/ppro.rs#L150)
 
-#### handle_event
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/ppro/ppro.py#L95) · [TypeScript](../../examples/ppro/ppro.ts#L87) · [Kotlin](../../examples/ppro/ppro.kt) · [Rust](../../examples/ppro/ppro.rs#L83)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### recurring_charge
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py#L109) · [TypeScript](../../examples/ppro/ppro.ts#L97) · [Kotlin](../../examples/ppro/ppro.kt) · [Rust](../../examples/ppro/ppro.rs#L92)
+**Examples:** [Python](../../examples/ppro/ppro.py#L164) · [TypeScript](../../examples/ppro/ppro.ts#L146) · [Kotlin](../../examples/ppro/ppro.kt#L127) · [Rust](../../examples/ppro/ppro.rs#L157)
 
-#### refund
+#### PaymentService.Refund
 
-**Examples:** [Python](../../examples/ppro/ppro.py#L139) · [TypeScript](../../examples/ppro/ppro.ts#L124) · [Kotlin](../../examples/ppro/ppro.kt) · [Rust](../../examples/ppro/ppro.rs#L120)
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 
-#### refund_get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/ppro/ppro.py#L163) · [TypeScript](../../examples/ppro/ppro.ts#L145) · [Kotlin](../../examples/ppro/ppro.kt) · [Rust](../../examples/ppro/ppro.rs#L136)
+**Examples:** [Python](../../examples/ppro/ppro.py#L191) · [TypeScript](../../examples/ppro/ppro.ts#L173) · [Kotlin](../../examples/ppro/ppro.kt#L176) · [Rust](../../examples/ppro/ppro.rs#L178)
 
-#### void
+#### PaymentService.Void
 
-**Examples:** [Python](../../examples/ppro/ppro.py#L179) · [TypeScript](../../examples/ppro/ppro.ts) · [Kotlin](../../examples/ppro/ppro.kt) · [Rust](../../examples/ppro/ppro.rs#L147)
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/ppro/ppro.py#L209) · [TypeScript](../../examples/ppro/ppro.ts) · [Kotlin](../../examples/ppro/ppro.kt#L198) · [Rust](../../examples/ppro/ppro.rs#L192)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/ppro/ppro.py#L200) · [TypeScript](../../examples/ppro/ppro.ts#L182) · [Kotlin](../../examples/ppro/ppro.kt#L186) · [Rust](../../examples/ppro/ppro.rs#L185)
+
+### Mandates
+
+#### RecurringPaymentService.Charge
+
+Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
+
+| | Message |
+|---|---------|
+| **Request** | `RecurringPaymentServiceChargeRequest` |
+| **Response** | `RecurringPaymentServiceChargeResponse` |
+
+**Examples:** [Python](../../examples/ppro/ppro.py#L182) · [TypeScript](../../examples/ppro/ppro.ts#L164) · [Kotlin](../../examples/ppro/ppro.kt#L145) · [Rust](../../examples/ppro/ppro.rs#L171)

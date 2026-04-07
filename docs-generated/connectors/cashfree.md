@@ -96,11 +96,18 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -204,8 +211,10 @@ let config = ConnectorConfig {
 
 ```python
 "payment_method": {
-    "vpa_id": "test@upi"
+    "upi_collect": {  # UPI Collect.
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address.
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/cashfree/cashfree.py#L23) · [TypeScript](../../examples/cashfree/cashfree.ts#L24) · [Kotlin](../../examples/cashfree/cashfree.kt) · [Rust](../../examples/cashfree/cashfree.rs#L26)
+**Examples:** [Python](../../examples/cashfree/cashfree.py#L49) · [TypeScript](../../examples/cashfree/cashfree.ts#L48) · [Kotlin](../../examples/cashfree/cashfree.kt#L50) · [Rust](../../examples/cashfree/cashfree.rs#L53)

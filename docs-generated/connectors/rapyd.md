@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L23) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L23) · [Rust](../../examples/rapyd/rapyd.rs#L27)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L139) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L103) · [Rust](../../examples/rapyd/rapyd.rs#L131)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,41 +122,48 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L62) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L51) · [Rust](../../examples/rapyd/rapyd.rs#L65)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L158) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L119) · [Rust](../../examples/rapyd/rapyd.rs#L147)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L116) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L90) · [Rust](../../examples/rapyd/rapyd.rs#L117)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L183) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L141) · [Rust](../../examples/rapyd/rapyd.rs#L170)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L172) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L131) · [Rust](../../examples/rapyd/rapyd.rs#L171)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L208) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L163) · [Rust](../../examples/rapyd/rapyd.rs#L193)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L219) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L165) · [Rust](../../examples/rapyd/rapyd.rs#L215)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L230) · [JavaScript](../../examples/rapyd/rapyd.js) · [Kotlin](../../examples/rapyd/rapyd.kt#L182) · [Rust](../../examples/rapyd/rapyd.rs#L212)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [capture](#capture) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [proxy_authorize](#proxy_authorize) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -260,11 +267,13 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "card_number": "4111111111111111",
-    "card_exp_month": "03",
-    "card_exp_year": "2030",
-    "card_cvc": "737",
-    "card_holder_name": "John Doe"
+    "card": {  # Generic card payment.
+        "card_number": {"value": "4111111111111111"},  # Card Identification.
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+    }
 }
 ```
 
@@ -272,12 +281,20 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "type": "CARD",
-    "description": "Visa 1111",
-    "card_network": "VISA",
-    "card_details": "1111"
-    "token_type": "PAYMENT_GATEWAY",
-    "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"
+    "google_pay": {  # Google Pay.
+        "type": "CARD",  # Type of payment method.
+        "description": "Visa 1111",  # User-facing description of the payment method.
+        "info": {
+            "card_network": "VISA",  # Card network name.
+            "card_details": "1111"  # Card details (usually last 4 digits).
+        },
+        "tokenization_data": {
+            "encrypted_data": {  # Encrypted Google Pay payment data.
+                "token_type": "PAYMENT_GATEWAY",  # The type of the token.
+                "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet.
+            }
+        }
+    }
 }
 ```
 
@@ -285,11 +302,17 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
-    "display_name": "Visa 1111",
-    "network": "Visa",
-    "type": "debit"
-    "transaction_identifier": "probe_txn_id"
+    "apple_pay": {  # Apple Pay.
+        "payment_data": {
+            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string.
+        },
+        "payment_method": {
+            "display_name": "Visa 1111",
+            "network": "Visa",
+            "type": "debit"
+        },
+        "transaction_identifier": "probe_txn_id"  # Transaction identifier.
+    }
 }
 ```
 
@@ -297,7 +320,9 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "email": "test@example.com"
+    "paypal_redirect": {  # PayPal.
+        "email": {"value": "test@example.com"}  # PayPal's email address.
+    }
 }
 ```
 
@@ -305,38 +330,88 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "method": "3DS",
-    "recurring_payment": False,
-    "card_brand": "VISA",
-    "card_last_four_digits": "1234",
-    "type": "S",
-    "version": "100",
-    "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
+    "samsung_pay": {  # Samsung.
+        "payment_credential": {
+            "method": "3DS",  # Method type.
+            "recurring_payment": False,  # Whether this is a recurring payment.
+            "card_brand": "VISA",
+            "card_last_four_digits": {"value": "1234"},  # Last four digits of card.
+            "token_data": {
+                "type": "S",  # 3DS type.
+                "version": "100",  # 3DS version.
+                "data": {"value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"}  # Token data.
+            }
+        }
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L270) · [TypeScript](../../examples/rapyd/rapyd.ts#L255) · [Kotlin](../../examples/rapyd/rapyd.kt) · [Rust](../../examples/rapyd/rapyd.rs#L262)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L252) · [TypeScript](../../examples/rapyd/rapyd.ts#L240) · [Kotlin](../../examples/rapyd/rapyd.kt#L200) · [Rust](../../examples/rapyd/rapyd.rs#L230)
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L306) · [TypeScript](../../examples/rapyd/rapyd.ts#L289) · [Kotlin](../../examples/rapyd/rapyd.kt) · [Rust](../../examples/rapyd/rapyd.rs#L296)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L328) · [TypeScript](../../examples/rapyd/rapyd.ts#L308) · [Kotlin](../../examples/rapyd/rapyd.kt) · [Rust](../../examples/rapyd/rapyd.rs#L310)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L261) · [TypeScript](../../examples/rapyd/rapyd.ts#L249) · [Kotlin](../../examples/rapyd/rapyd.kt#L212) · [Rust](../../examples/rapyd/rapyd.rs#L242)
 
-#### proxy_authorize
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L347) · [TypeScript](../../examples/rapyd/rapyd.ts#L323) · [Kotlin](../../examples/rapyd/rapyd.kt) · [Rust](../../examples/rapyd/rapyd.rs#L324)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### refund
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L377) · [TypeScript](../../examples/rapyd/rapyd.ts#L349) · [Kotlin](../../examples/rapyd/rapyd.kt) · [Rust](../../examples/rapyd/rapyd.rs#L351)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L270) · [TypeScript](../../examples/rapyd/rapyd.ts#L258) · [Kotlin](../../examples/rapyd/rapyd.kt#L222) · [Rust](../../examples/rapyd/rapyd.rs#L249)
 
-#### refund_get
+#### PaymentService.ProxyAuthorize
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L401) · [TypeScript](../../examples/rapyd/rapyd.ts#L370) · [Kotlin](../../examples/rapyd/rapyd.kt) · [Rust](../../examples/rapyd/rapyd.rs#L367)
+Authorize using vault-aliased card data. Proxy substitutes before connector.
 
-#### void
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceProxyAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/rapyd/rapyd.py#L417) · [TypeScript](../../examples/rapyd/rapyd.ts) · [Kotlin](../../examples/rapyd/rapyd.kt) · [Rust](../../examples/rapyd/rapyd.rs#L378)
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L279) · [TypeScript](../../examples/rapyd/rapyd.ts#L267) · [Kotlin](../../examples/rapyd/rapyd.kt#L230) · [Rust](../../examples/rapyd/rapyd.rs#L256)
+
+#### PaymentService.Refund
+
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L288) · [TypeScript](../../examples/rapyd/rapyd.ts#L276) · [Kotlin](../../examples/rapyd/rapyd.kt#L258) · [Rust](../../examples/rapyd/rapyd.rs#L263)
+
+#### PaymentService.Void
+
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L306) · [TypeScript](../../examples/rapyd/rapyd.ts) · [Kotlin](../../examples/rapyd/rapyd.kt#L280) · [Rust](../../examples/rapyd/rapyd.rs#L277)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/rapyd/rapyd.py#L297) · [TypeScript](../../examples/rapyd/rapyd.ts#L285) · [Kotlin](../../examples/rapyd/rapyd.kt#L268) · [Rust](../../examples/rapyd/rapyd.rs#L270)

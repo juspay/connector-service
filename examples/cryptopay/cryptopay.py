@@ -9,6 +9,7 @@ import asyncio
 import sys
 from google.protobuf.json_format import ParseDict
 from payments import PaymentClient
+from payments import EventClient
 from payments.generated import sdk_config_pb2, payment_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
@@ -20,35 +21,41 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 # ))
 
 
-async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.get"""
-    payment_client = PaymentClient(config)
 
-    # Step 1: Get — retrieve current payment status from the connector
-    get_response = await payment_client.get(ParseDict(
+
+def _build_get_request(connector_transaction_id: str):
+    return ParseDict(
         {
-            "merchant_transaction_id": "probe_merchant_txn_001",
-            "connector_transaction_id": "probe_connector_txn_001",
-            "amount": {
-                "minor_amount": 1000,
-                "currency": "USD"
+            "merchant_transaction_id": "probe_merchant_txn_001",  # Identification.
+            "connector_transaction_id": connector_transaction_id,
+            "amount": {  # Amount Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             }
         },
-    ))
+        payment_pb2.PaymentServiceGetRequest(),
+    )
+
+def _build_handle_event_request():
+    return ParseDict(
+        {
+        },
+        payment_pb2.EventServiceHandleRequest(),
+    )
+async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Get"""
+    payment_client = PaymentClient(config)
+
+    get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
 
     return {"status": get_response.status}
 
 
 async def handle_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.handle_event"""
-    payment_client = PaymentClient(config)
+    """Flow: EventService.HandleEvent"""
+    event_client = EventClient(config)
 
-    # Step 1: handle_event
-    handle_response = await payment_client.handle_event(ParseDict(
-        {
-            # No required fields
-        },
-    ))
+    handle_response = await event_client.handle_event(_build_handle_event_request())
 
     return {"status": handle_response.status}
 
