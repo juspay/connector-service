@@ -1556,6 +1556,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     MifinityClientAuthenticationResponse mifinity = 22;
     RedsysClientAuthenticationResponse redsys = 23;
     JpmorganClientAuthenticationResponse jpmorgan = 24;
+    PayloadClientAuthenticationResponse payload = 25;
   }
 }
 
@@ -1588,6 +1589,12 @@ message JpmorganClientAuthenticationResponse {
   string transaction_id = 1;
   // The request ID for tracking purposes
   string request_id = 2;
+}
+
+// Payload SDK initialization data — client_token for Payload.js Checkout/Secure Input SDK
+message PayloadClientAuthenticationResponse {
+  // The client token ID returned from POST /access_tokens for client-side SDK initialization
+  SecretString client_token = 1;
 }
 
 // Paysafe SDK initialization data — payment_handle_token for Paysafe.js SDK

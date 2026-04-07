@@ -3476,6 +3476,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Redsys(RedsysClientAuthenticationResponse),
     /// Jpmorgan SDK initialization data — transaction_id for client-side payment session
     Jpmorgan(JpmorganClientAuthenticationResponse),
+    /// Payload SDK initialization data — client_token for Payload.js Checkout/Secure Input SDK
+    Payload(PayloadClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3667,6 +3669,13 @@ pub struct JpmorganClientAuthenticationResponse {
     pub transaction_id: String,
     /// The request ID for tracking purposes
     pub request_id: String,
+}
+
+/// Payload's client_token for Payload.js Checkout/Secure Input SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PayloadClientAuthenticationResponse {
+    /// The client token ID returned from POST /access_tokens for client-side SDK initialization
+    pub client_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
