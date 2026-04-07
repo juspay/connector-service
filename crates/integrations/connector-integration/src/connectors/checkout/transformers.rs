@@ -7,11 +7,10 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
@@ -2528,7 +2527,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // --- TryFrom: CheckoutCreateOrderResponse -> PaymentCreateOrderResponse ---
 
 impl TryFrom<CheckoutCreateOrderResponse> for PaymentCreateOrderResponse {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: CheckoutCreateOrderResponse) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -2540,18 +2539,7 @@ impl TryFrom<CheckoutCreateOrderResponse> for PaymentCreateOrderResponse {
 
 // --- TryFrom: ResponseRouterData -> RouterDataV2 (CreateOrder response handler) ---
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            CheckoutCreateOrderResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<CheckoutCreateOrderResponse, Self>>
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
@@ -2559,18 +2547,10 @@ impl
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            CheckoutCreateOrderResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
+        item: ResponseRouterData<CheckoutCreateOrderResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
