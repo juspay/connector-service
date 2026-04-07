@@ -1536,7 +1536,14 @@ message ConnectorSpecificClientAuthenticationResponse {
     // AdyenClientAuthenticationResponse adyen = 2;    // future
     // CheckoutClientAuthenticationResponse checkout = 3; // future
     GlobalpayClientAuthenticationResponse globalpay = 7;
+    MultisafepayClientAuthenticationResponse multisafepay = 27;
   }
+}
+
+// Multisafepay SDK initialization data — api_token for Payment Components initialization
+message MultisafepayClientAuthenticationResponse {
+  // The API token for client-side Payment Components initialization (valid for 600 seconds)
+  SecretString api_token = 1;
 }
 
 // Globalpay SDK initialization data — access_token for client-side SDK operations
