@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::error::SdkError;
 use crate::http_client::{
-    HttpClient, HttpOptions as NativeHttpOptions, HttpRequest as ClientHttpRequest,
+    HttpClient, HttpOptions as NativeHttpOptions, HttpRequest as ClientHttpRequest, NetworkError,
 };
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
