@@ -1560,7 +1560,16 @@ message ConnectorSpecificClientAuthenticationResponse {
     BillwerkClientAuthenticationResponse billwerk = 26;
     MultisafepayClientAuthenticationResponse multisafepay = 27;
     NexinetsClientAuthenticationResponse nexinets = 28;
+    NexixpayClientAuthenticationResponse nexixpay = 29;
   }
+}
+
+// Nexixpay SDK initialization data — security_token and hosted_page URL for HPP initialization
+message NexixpayClientAuthenticationResponse {
+  // The security token for authenticating client-side hosted payment page requests
+  SecretString security_token = 1;
+  // The hosted payment page URL for client-side redirect
+  string hosted_page = 2;
 }
 
 // Paytm SDK initialization data — txn_token for Paytm JS Checkout SDK

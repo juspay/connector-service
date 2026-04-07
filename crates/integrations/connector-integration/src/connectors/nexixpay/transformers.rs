@@ -7,13 +7,17 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void,
+        Authorize, Capture, ClientAuthenticationToken, PSync, PostAuthenticate, PreAuthenticate,
+        RSync, Refund, Void,
     },
     connector_types::{
-        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, MandateReferenceId,
+        NexixpayClientAuthenticationResponse as NexixpayClientAuthenticationResponseDomain,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -1612,6 +1616,152 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthentic
                 // No need for connector_metadata - using authentication_data.ds_trans_id for PaRes
                 ..item.router_data.resource_common_data
             },
+            ..item.router_data
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates a Nexixpay HPP (Hosted Payment Page) order for client-side SDK initialization.
+/// The securityToken and hostedPage URL are returned to the frontend for
+/// client-side redirect / hosted payment page initialization.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayClientAuthRequest {
+    pub order: NexixpayClientAuthOrder,
+    pub payment_session: NexixpayPaymentSession,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayClientAuthOrder {
+    pub order_id: String,
+    pub amount: StringMinorUnit,
+    pub currency: common_enums::Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayPaymentSession {
+    pub action_type: String,
+    pub amount: StringMinorUnit,
+    pub recurrence: NexixpaySessionRecurrence,
+    pub result_url: String,
+    pub cancel_url: String,
+    pub notification_url: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpaySessionRecurrence {
+    pub action: NexixpayRecurringAction,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        NexixpayRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NexixpayClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: NexixpayRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        let order_id = get_nexi_order_id(
+            &router_data
+                .resource_common_data
+                .connector_request_reference_id,
+        )?;
+
+        let amount = StringMinorUnitForConnector
+            .convert(router_data.request.amount, router_data.request.currency)
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
+
+        let return_url = router_data
+            .resource_common_data
+            .return_url
+            .clone()
+            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+
+        Ok(Self {
+            order: NexixpayClientAuthOrder {
+                order_id,
+                amount: amount.clone(),
+                currency: router_data.request.currency,
+                description: None,
+            },
+            payment_session: NexixpayPaymentSession {
+                action_type: "PAY".to_string(),
+                amount,
+                recurrence: NexixpaySessionRecurrence {
+                    action: NexixpayRecurringAction::NoRecurring,
+                },
+                result_url: return_url.clone(),
+                cancel_url: return_url,
+                notification_url: None,
+            },
+        })
+    }
+}
+
+/// Nexixpay HPP order response containing securityToken and hostedPage URL for SDK initialization.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayClientAuthResponse {
+    pub security_token: Secret<String>,
+    pub hosted_page: String,
+}
+
+impl TryFrom<ResponseRouterData<NexixpayClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<NexixpayClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Nexixpay(
+                NexixpayClientAuthenticationResponseDomain {
+                    security_token: response.security_token,
+                    hosted_page: response.hosted_page,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
             ..item.router_data
         })
     }

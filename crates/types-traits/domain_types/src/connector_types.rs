@@ -3484,6 +3484,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Multisafepay(MultisafepayClientAuthenticationResponse),
     /// Nexinets SDK initialization data — order_id for client-side hosted payment page initialization
     Nexinets(NexinetsClientAuthenticationResponse),
+    /// Nexixpay SDK initialization data — security_token and hosted_page URL for HPP initialization
+    Nexixpay(NexixpayClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3703,6 +3705,15 @@ pub struct MultisafepayClientAuthenticationResponse {
 pub struct NexinetsClientAuthenticationResponse {
     /// The order ID that serves as the client authentication token for hosted checkout
     pub order_id: String,
+}
+
+/// Nexixpay's security_token and hosted_page URL for HPP (Hosted Payment Page) initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexixpayClientAuthenticationResponse {
+    /// The security token for authenticating client-side hosted payment page requests
+    pub security_token: Secret<String>,
+    /// The hosted payment page URL for client-side redirect
+    pub hosted_page: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

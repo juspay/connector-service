@@ -10040,6 +10040,18 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Nexixpay(nexixpay_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Nexixpay(
+                        grpc_api_types::payments::NexixpayClientAuthenticationResponse {
+                            security_token: Some(nexixpay_data.security_token),
+                            hosted_page: nexixpay_data.hosted_page,
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(
