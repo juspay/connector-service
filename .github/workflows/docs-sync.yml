@@ -85,16 +85,29 @@ jobs:
       - name: Generate SUMMARY.md files
         working-directory: hyperswitch-docs
         run: |
+          # Debug: Show current directory and file locations
+          echo "Current directory: $(pwd)"
+          echo "Parent directory contents:"
+          ls -la ../
+          echo ""
+          echo "Checking for docs/SUMMARY.md:"
+          ls -la ../docs/SUMMARY.md || echo "NOT FOUND at ../docs/SUMMARY.md"
+          
           # Use docs/SUMMARY.md as the source of truth
           if [ ! -f "../docs/SUMMARY.md" ]; then
-            echo "ERROR: docs/SUMMARY.md not found!"
+            echo "ERROR: ../docs/SUMMARY.md not found!"
+            echo "Looking for SUMMARY.md in other locations:"
+            find .. -name "SUMMARY.md" -type f 2>/dev/null | head -5
             exit 1
           fi
 
           # Create prism/SUMMARY.md from the source of truth
           # Just copy it as-is since it's already formatted for GitBook
           cp ../docs/SUMMARY.md prism/SUMMARY.md
-          echo "Created prism/SUMMARY.md from docs/SUMMARY.md"
+          echo "Created prism/SUMMARY.md from ../docs/SUMMARY.md"
+          echo ""
+          echo "prism/SUMMARY.md first 20 lines:"
+          head -20 prism/SUMMARY.md
 
           # Validate that all linked files exist
           echo ""
