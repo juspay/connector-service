@@ -2,9 +2,9 @@ use common_utils::{ext_traits::OptionExt, request::Method, FloatMajorUnit, Strin
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder},
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
-        RefundsData, RefundsResponseData, ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
@@ -646,10 +646,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                router_data.request.amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
