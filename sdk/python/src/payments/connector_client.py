@@ -101,7 +101,7 @@ def check_req(result_bytes: bytes) -> Any:
     elif result_type == FfiResult.INTEGRATION_ERROR:
         raise IntegrationError(result.integration_error)
     elif result_type == FfiResult.CONNECTOR_ERROR:
-        raise ConnectorError(result.connector_response_transformation_error)
+        raise ConnectorError(result.connector_error)
     else:
         raise ValueError(f"Unknown result type: {result_type}")
 
@@ -131,7 +131,7 @@ def check_res(result_bytes: bytes) -> Any:
         # Return the typed HTTP response directly
         return result.http_response
     elif result_type == FfiResult.CONNECTOR_ERROR:
-        raise ConnectorError(result.connector_response_transformation_error)
+        raise ConnectorError(result.connector_error)
     elif result_type == FfiResult.INTEGRATION_ERROR:
         raise IntegrationError(result.integration_error)
     else:

@@ -16,6 +16,7 @@ GENERATED_KOTLIN := $(SDK_ROOT)/src/main/kotlin/generated
 GENERATED_JAVA   := $(SDK_ROOT)/src/main/java/generated
 NATIVE_DIR       := $(SDK_ROOT)/src/main/resources/native
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-java
+PACKAGE_VERSION  := $(shell cd $(SDK_ROOT) && ./gradlew properties -q 2>/dev/null | grep "^version:" | awk '{print $$2}')
 
 # Note: BINDGEN is defined in common.mk
 
@@ -117,7 +118,7 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
-	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-0.1.0.jar
+	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
@@ -128,7 +129,7 @@ pack-archive:
 # ---------------------------------------------------------------------------
 install: pack-archive
 	@$(SDK_ROOT)/gradlew publishToMavenLocal
-	@echo "Published to ~/.m2/repository/com/hyperswitch/hyperswitch-prism/0.1.0/"
+	@echo "Published to ~/.m2/repository/com/hyperswitch/hyperswitch-prism/$(PACKAGE_VERSION)/"
 
 # ---------------------------------------------------------------------------
 # test-package
