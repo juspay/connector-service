@@ -20,45 +20,49 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 # ))
 
 
-async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.get"""
-    payment_client = PaymentClient(config)
 
-    # Step 1: Get — retrieve current payment status from the connector
-    get_response = await payment_client.get(ParseDict(
+
+def _build_get_request(connector_transaction_id: str):
+    return ParseDict(
         {
-            "merchant_transaction_id": "probe_merchant_txn_001",
-            "connector_transaction_id": "probe_connector_txn_001",
-            "amount": {
-                "minor_amount": 1000,
-                "currency": "USD"
+            "merchant_transaction_id": "probe_merchant_txn_001",  # Identification.
+            "connector_transaction_id": connector_transaction_id,
+            "amount": {  # Amount Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
             }
         },
-    ))
+        payment_pb2.PaymentServiceGetRequest(),
+    )
+
+def _build_refund_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification.
+            "connector_transaction_id": connector_transaction_id,
+            "payment_amount": 1000,  # Amount Information.
+            "refund_amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            },
+            "reason": "customer_request"  # Reason for the refund.
+        },
+        payment_pb2.PaymentServiceRefundRequest(),
+    )
+async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Get"""
+    payment_client = PaymentClient(config)
+
+    get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
 
     return {"status": get_response.status}
 
 
 async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.refund"""
+    """Flow: PaymentService.Refund"""
     payment_client = PaymentClient(config)
 
-    # Step 1: Refund — return funds to the customer
-    refund_response = await payment_client.refund(ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",
-            "connector_transaction_id": "probe_connector_txn_001",
-            "payment_amount": 1000,
-            "refund_amount": {
-                "minor_amount": 1000,
-                "currency": "USD"
-            },
-            "reason": "customer_request"
-        },
-    ))
-
-    if refund_response.status == "FAILED":
-        raise RuntimeError(f"Refund failed: {refund_response.error}")
+    refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
 
     return {"status": refund_response.status}
 

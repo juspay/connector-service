@@ -21,56 +21,69 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-// Flow: PaymentService.create_server_authentication_token
+pub fn build_create_server_authentication_token_request() -> MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
+    serde_json::from_value::<MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest>(serde_json::json!({
+
+    })).unwrap_or_default()
+}
+
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+    serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
+    "connector_transaction_id": connector_transaction_id,
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "state": {  // State Information.
+        "access_token": {  // Access token obtained from connector.
+            "token": "probe_access_token",  // The token string.
+            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
+            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
+        },
+    },
+    })).unwrap_or_default()
+}
+
+pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+    serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
+    "merchant_refund_id": "probe_refund_001",  // Identification.
+    "connector_transaction_id": connector_transaction_id,
+    "payment_amount": 1000,  // Amount Information.
+    "refund_amount": {
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "reason": "customer_request",  // Reason for the refund.
+    "state": {  // State data for access token storage and.
+        "access_token": {  // Access token obtained from connector.
+            "token": "probe_access_token",  // The token string.
+            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
+            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
+        },
+    },
+    })).unwrap_or_default()
+}
+
+
+// Flow: MerchantAuthenticationService.CreateServerAuthenticationToken
 #[allow(dead_code)]
 pub async fn create_server_authentication_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.create_server_authentication_token(serde_json::from_value::<>(serde_json::json!({
-
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.create_server_authentication_token(build_create_server_authentication_token_request(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentService.get
+// Flow: PaymentService.Get
 #[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.get(serde_json::from_value::<>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {
-        "minor_amount": 1000,
-        "currency": "USD",
-    },
-    "state": {
-        "access_token": {
-            "token": "probe_access_token",
-            "expires_in_seconds": 3600,
-            "token_type": "Bearer",
-        },
-    },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentService.refund
+// Flow: PaymentService.Refund
 #[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.refund(serde_json::from_value::<>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",
-    "connector_transaction_id": "probe_connector_txn_001",
-    "payment_amount": 1000,
-    "refund_amount": {
-        "minor_amount": 1000,
-        "currency": "USD",
-    },
-    "reason": "customer_request",
-    "state": {
-        "access_token": {
-            "token": "probe_access_token",
-            "expires_in_seconds": 3600,
-            "token_type": "Bearer",
-        },
-    },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 

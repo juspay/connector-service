@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stax/stax.py#L23) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L23) · [Rust](../../examples/stax/stax.rs#L27)
+**Examples:** [Python](../../examples/stax/stax.py#L154) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L107) · [Rust](../../examples/stax/stax.rs#L144)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,42 +122,49 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stax/stax.py#L63) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L52) · [Rust](../../examples/stax/stax.rs#L66)
+**Examples:** [Python](../../examples/stax/stax.py#L173) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L123) · [Rust](../../examples/stax/stax.rs#L160)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/stax/stax.py#L118) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L92) · [Rust](../../examples/stax/stax.rs#L119)
+**Examples:** [Python](../../examples/stax/stax.py#L198) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L145) · [Rust](../../examples/stax/stax.rs#L183)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/stax/stax.py#L175) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L134) · [Rust](../../examples/stax/stax.rs#L174)
+**Examples:** [Python](../../examples/stax/stax.py#L223) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L167) · [Rust](../../examples/stax/stax.rs#L206)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/stax/stax.py#L223) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L169) · [Rust](../../examples/stax/stax.rs#L219)
+**Examples:** [Python](../../examples/stax/stax.py#L245) · [JavaScript](../../examples/stax/stax.js) · [Kotlin](../../examples/stax/stax.kt#L186) · [Rust](../../examples/stax/stax.rs#L225)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [capture](#capture) | Other | `—` |
-| [create_customer](#create_customer) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [tokenize](#tokenize) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [CustomerService.Create](#customerservicecreate) | Customers | `CustomerServiceCreateRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentMethodService.Tokenize](#paymentmethodservicetokenize) | Payments | `PaymentMethodServiceTokenizeRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -261,11 +268,13 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "card_number": "4111111111111111",
-    "card_exp_month": "03",
-    "card_exp_year": "2030",
-    "card_cvc": "737",
-    "card_holder_name": "John Doe"
+    "card": {  # Generic card payment.
+        "card_number": {"value": "4111111111111111"},  # Card Identification.
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+    }
 }
 ```
 
@@ -273,8 +282,10 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "iban": "DE89370400440532013000",
-    "bank_account_holder_name": "John Doe"
+    "sepa": {  # Sepa - Single Euro Payments Area direct debit.
+        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA.
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit.
+    }
 }
 ```
 
@@ -282,9 +293,11 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "account_number": "55779911",
-    "sort_code": "200000",
-    "bank_account_holder_name": "John Doe"
+    "bacs": {  # Bacs - Bankers' Automated Clearing Services.
+        "account_number": {"value": "55779911"},  # Account number for Bacs payment method.
+        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method.
+        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit.
+    }
 }
 ```
 
@@ -292,9 +305,11 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "account_number": "000123456789",
-    "routing_number": "110000000",
-    "bank_account_holder_name": "John Doe"
+    "ach": {  # Ach - Automated Clearing House.
+        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment.
+        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment.
+        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name.
+    }
 }
 ```
 
@@ -302,38 +317,93 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "account_number": "000123456",
-    "bsb_number": "000000",
-    "bank_account_holder_name": "John Doe"
+    "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit.
+        "account_number": {"value": "000123456"},  # Account number for Becs payment method.
+        "bsb_number": {"value": "000000"},  # Bank-State-Branch (bsb) number.
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit.
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/stax/stax.py#L275) · [TypeScript](../../examples/stax/stax.ts#L260) · [Kotlin](../../examples/stax/stax.kt) · [Rust](../../examples/stax/stax.rs#L267)
+**Examples:** [Python](../../examples/stax/stax.py#L267) · [TypeScript](../../examples/stax/stax.ts#L251) · [Kotlin](../../examples/stax/stax.kt#L204) · [Rust](../../examples/stax/stax.rs#L243)
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/stax/stax.py#L312) · [TypeScript](../../examples/stax/stax.ts#L295) · [Kotlin](../../examples/stax/stax.kt) · [Rust](../../examples/stax/stax.rs#L302)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### create_customer
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L334) · [TypeScript](../../examples/stax/stax.ts#L314) · [Kotlin](../../examples/stax/stax.kt) · [Rust](../../examples/stax/stax.rs#L316)
+**Examples:** [Python](../../examples/stax/stax.py#L276) · [TypeScript](../../examples/stax/stax.ts#L260) · [Kotlin](../../examples/stax/stax.kt#L216) · [Rust](../../examples/stax/stax.rs#L255)
 
-#### get
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/stax/stax.py#L351) · [TypeScript](../../examples/stax/stax.ts#L327) · [Kotlin](../../examples/stax/stax.kt) · [Rust](../../examples/stax/stax.rs#L328)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### refund
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L370) · [TypeScript](../../examples/stax/stax.ts#L342) · [Kotlin](../../examples/stax/stax.kt) · [Rust](../../examples/stax/stax.rs#L342)
+**Examples:** [Python](../../examples/stax/stax.py#L294) · [TypeScript](../../examples/stax/stax.ts#L278) · [Kotlin](../../examples/stax/stax.kt#L239) · [Rust](../../examples/stax/stax.rs#L269)
 
-#### refund_get
+#### PaymentService.Refund
 
-**Examples:** [Python](../../examples/stax/stax.py#L394) · [TypeScript](../../examples/stax/stax.ts#L363) · [Kotlin](../../examples/stax/stax.kt) · [Rust](../../examples/stax/stax.rs#L358)
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 
-#### tokenize
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L410) · [TypeScript](../../examples/stax/stax.ts#L375) · [Kotlin](../../examples/stax/stax.kt) · [Rust](../../examples/stax/stax.rs#L369)
+**Examples:** [Python](../../examples/stax/stax.py#L303) · [TypeScript](../../examples/stax/stax.ts#L287) · [Kotlin](../../examples/stax/stax.kt#L247) · [Rust](../../examples/stax/stax.rs#L276)
 
-#### void
+#### PaymentMethodService.Tokenize
 
-**Examples:** [Python](../../examples/stax/stax.py#L439) · [TypeScript](../../examples/stax/stax.ts) · [Kotlin](../../examples/stax/stax.kt) · [Rust](../../examples/stax/stax.rs#L397)
+Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodServiceTokenizeRequest` |
+| **Response** | `PaymentMethodServiceTokenizeResponse` |
+
+**Examples:** [Python](../../examples/stax/stax.py#L321) · [TypeScript](../../examples/stax/stax.ts#L305) · [Kotlin](../../examples/stax/stax.kt#L269) · [Rust](../../examples/stax/stax.rs#L290)
+
+#### PaymentService.Void
+
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/stax/stax.py#L330) · [TypeScript](../../examples/stax/stax.ts) · [Kotlin](../../examples/stax/stax.kt#L298) · [Rust](../../examples/stax/stax.rs#L297)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/stax/stax.py#L312) · [TypeScript](../../examples/stax/stax.ts#L296) · [Kotlin](../../examples/stax/stax.kt#L257) · [Rust](../../examples/stax/stax.rs#L283)
+
+### Customers
+
+#### CustomerService.Create
+
+Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information.
+
+| | Message |
+|---|---------|
+| **Request** | `CustomerServiceCreateRequest` |
+| **Response** | `CustomerServiceCreateResponse` |
+
+**Examples:** [Python](../../examples/stax/stax.py#L285) · [TypeScript](../../examples/stax/stax.ts#L269) · [Kotlin](../../examples/stax/stax.kt#L226) · [Rust](../../examples/stax/stax.rs#L262)

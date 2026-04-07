@@ -96,35 +96,81 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [capture](#capture) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [pre_authenticate](#pre_authenticate) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L23) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L24) · [Kotlin](../../examples/nexixpay/nexixpay.kt) · [Rust](../../examples/nexixpay/nexixpay.rs#L26)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L45) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L43) · [Kotlin](../../examples/nexixpay/nexixpay.kt) · [Rust](../../examples/nexixpay/nexixpay.rs#L40)
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L116) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L103) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L78) · [Rust](../../examples/nexixpay/nexixpay.rs#L107)
 
-#### pre_authenticate
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L64) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L58) · [Kotlin](../../examples/nexixpay/nexixpay.kt) · [Rust](../../examples/nexixpay/nexixpay.rs#L54)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### refund
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L92) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L82) · [Kotlin](../../examples/nexixpay/nexixpay.kt) · [Rust](../../examples/nexixpay/nexixpay.rs#L81)
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L125) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L112) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L88) · [Rust](../../examples/nexixpay/nexixpay.rs#L114)
 
-#### refund_get
+#### PaymentService.Refund
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L116) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L103) · [Kotlin](../../examples/nexixpay/nexixpay.kt) · [Rust](../../examples/nexixpay/nexixpay.rs#L97)
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 
-#### void
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L132) · [TypeScript](../../examples/nexixpay/nexixpay.ts) · [Kotlin](../../examples/nexixpay/nexixpay.kt) · [Rust](../../examples/nexixpay/nexixpay.rs#L108)
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L143) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L130) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L124) · [Rust](../../examples/nexixpay/nexixpay.rs#L128)
+
+#### PaymentService.Void
+
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L161) · [TypeScript](../../examples/nexixpay/nexixpay.ts) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L146) · [Rust](../../examples/nexixpay/nexixpay.rs#L142)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L152) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L139) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L134) · [Rust](../../examples/nexixpay/nexixpay.rs#L135)
+
+### Authentication
+
+#### PaymentMethodAuthenticationService.PreAuthenticate
+
+Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+
+**Examples:** [Python](../../examples/nexixpay/nexixpay.py#L134) · [TypeScript](../../examples/nexixpay/nexixpay.ts#L121) · [Kotlin](../../examples/nexixpay/nexixpay.kt#L96) · [Rust](../../examples/nexixpay/nexixpay.rs#L121)

@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L23) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L23) · [Rust](../../examples/billwerk/billwerk.rs#L27)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L201) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L112) · [Rust](../../examples/billwerk/billwerk.rs#L195)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,43 +122,50 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L63) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L52) · [Rust](../../examples/billwerk/billwerk.rs#L66)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L220) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L128) · [Rust](../../examples/billwerk/billwerk.rs#L211)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L118) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L92) · [Rust](../../examples/billwerk/billwerk.rs#L119)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L245) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L150) · [Rust](../../examples/billwerk/billwerk.rs#L234)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L175) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L134) · [Rust](../../examples/billwerk/billwerk.rs#L174)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L270) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L172) · [Rust](../../examples/billwerk/billwerk.rs#L257)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L223) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L169) · [Rust](../../examples/billwerk/billwerk.rs#L219)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L292) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L191) · [Rust](../../examples/billwerk/billwerk.rs#L276)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [capture](#capture) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [recurring_charge](#recurring_charge) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [setup_recurring](#setup_recurring) | Other | `—` |
-| [tokenize](#tokenize) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
+| [PaymentMethodService.Tokenize](#paymentmethodservicetokenize) | Payments | `PaymentMethodServiceTokenizeRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -262,11 +269,13 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "card_number": "4111111111111111",
-    "card_exp_month": "03",
-    "card_exp_year": "2030",
-    "card_cvc": "737",
-    "card_holder_name": "John Doe"
+    "card": {  # Generic card payment.
+        "card_number": {"value": "4111111111111111"},  # Card Identification.
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+    }
 }
 ```
 
@@ -274,12 +283,20 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "type": "CARD",
-    "description": "Visa 1111",
-    "card_network": "VISA",
-    "card_details": "1111"
-    "token_type": "PAYMENT_GATEWAY",
-    "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"
+    "google_pay": {  # Google Pay.
+        "type": "CARD",  # Type of payment method.
+        "description": "Visa 1111",  # User-facing description of the payment method.
+        "info": {
+            "card_network": "VISA",  # Card network name.
+            "card_details": "1111"  # Card details (usually last 4 digits).
+        },
+        "tokenization_data": {
+            "encrypted_data": {  # Encrypted Google Pay payment data.
+                "token_type": "PAYMENT_GATEWAY",  # The type of the token.
+                "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet.
+            }
+        }
+    }
 }
 ```
 
@@ -287,11 +304,17 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
-    "display_name": "Visa 1111",
-    "network": "Visa",
-    "type": "debit"
-    "transaction_identifier": "probe_txn_id"
+    "apple_pay": {  # Apple Pay.
+        "payment_data": {
+            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string.
+        },
+        "payment_method": {
+            "display_name": "Visa 1111",
+            "network": "Visa",
+            "type": "debit"
+        },
+        "transaction_identifier": "probe_txn_id"  # Transaction identifier.
+    }
 }
 ```
 
@@ -299,8 +322,10 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "iban": "DE89370400440532013000",
-    "bank_account_holder_name": "John Doe"
+    "sepa": {  # Sepa - Single Euro Payments Area direct debit.
+        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA.
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit.
+    }
 }
 ```
 
@@ -308,9 +333,11 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "account_number": "55779911",
-    "sort_code": "200000",
-    "bank_account_holder_name": "John Doe"
+    "bacs": {  # Bacs - Bankers' Automated Clearing Services.
+        "account_number": {"value": "55779911"},  # Account number for Bacs payment method.
+        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method.
+        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit.
+    }
 }
 ```
 
@@ -318,9 +345,11 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "account_number": "000123456789",
-    "routing_number": "110000000",
-    "bank_account_holder_name": "John Doe"
+    "ach": {  # Ach - Automated Clearing House.
+        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment.
+        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment.
+        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name.
+    }
 }
 ```
 
@@ -328,9 +357,11 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "account_number": "000123456",
-    "bsb_number": "000000",
-    "bank_account_holder_name": "John Doe"
+    "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit.
+        "account_number": {"value": "000123456"},  # Account number for Becs payment method.
+        "bsb_number": {"value": "000000"},  # Bank-State-Branch (bsb) number.
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit.
+    }
 }
 ```
 
@@ -338,6 +369,8 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
+    "ideal": {
+    }
 }
 ```
 
@@ -345,7 +378,9 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "email": "test@example.com"
+    "paypal_redirect": {  # PayPal.
+        "email": {"value": "test@example.com"}  # PayPal's email address.
+    }
 }
 ```
 
@@ -353,7 +388,9 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "blik_code": "777124"
+    "blik": {
+        "blik_code": "777124"
+    }
 }
 ```
 
@@ -361,6 +398,8 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
+    "klarna": {  # Klarna - Swedish BNPL service.
+    }
 }
 ```
 
@@ -368,6 +407,8 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
+    "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service.
+    }
 }
 ```
 
@@ -375,7 +416,9 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "vpa_id": "test@upi"
+    "upi_collect": {  # UPI Collect.
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address.
+    }
 }
 ```
 
@@ -383,6 +426,8 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
+    "affirm": {  # Affirm - US BNPL service.
+    }
 }
 ```
 
@@ -390,46 +435,112 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "method": "3DS",
-    "recurring_payment": False,
-    "card_brand": "VISA",
-    "card_last_four_digits": "1234",
-    "type": "S",
-    "version": "100",
-    "data": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"
+    "samsung_pay": {  # Samsung.
+        "payment_credential": {
+            "method": "3DS",  # Method type.
+            "recurring_payment": False,  # Whether this is a recurring payment.
+            "card_brand": "VISA",
+            "card_last_four_digits": {"value": "1234"},  # Last four digits of card.
+            "token_data": {
+                "type": "S",  # 3DS type.
+                "version": "100",  # 3DS version.
+                "data": {"value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InNhbXN1bmdfcHJvYmVfa2V5XzEyMyJ9.eyJwYXltZW50TWV0aG9kVG9rZW4iOiJwcm9iZV9zYW1zdW5nX3Rva2VuIn0.ZHVtbXlfc2lnbmF0dXJl"}  # Token data.
+            }
+        }
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L276) · [TypeScript](../../examples/billwerk/billwerk.ts#L261) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L268)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L314) · [TypeScript](../../examples/billwerk/billwerk.ts#L296) · [Kotlin](../../examples/billwerk/billwerk.kt#L209) · [Rust](../../examples/billwerk/billwerk.rs#L294)
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L313) · [TypeScript](../../examples/billwerk/billwerk.ts#L296) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L303)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L335) · [TypeScript](../../examples/billwerk/billwerk.ts#L315) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L317)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L323) · [TypeScript](../../examples/billwerk/billwerk.ts#L305) · [Kotlin](../../examples/billwerk/billwerk.kt#L221) · [Rust](../../examples/billwerk/billwerk.rs#L306)
 
-#### recurring_charge
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L355) · [TypeScript](../../examples/billwerk/billwerk.ts#L331) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L332)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### refund
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L385) · [TypeScript](../../examples/billwerk/billwerk.ts#L358) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L360)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L332) · [TypeScript](../../examples/billwerk/billwerk.ts#L314) · [Kotlin](../../examples/billwerk/billwerk.kt#L231) · [Rust](../../examples/billwerk/billwerk.rs#L313)
 
-#### refund_get
+#### PaymentService.Refund
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L409) · [TypeScript](../../examples/billwerk/billwerk.ts#L379) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L376)
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 
-#### setup_recurring
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L425) · [TypeScript](../../examples/billwerk/billwerk.ts#L391) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L387)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L350) · [TypeScript](../../examples/billwerk/billwerk.ts#L332) · [Kotlin](../../examples/billwerk/billwerk.kt#L270) · [Rust](../../examples/billwerk/billwerk.rs#L327)
 
-#### tokenize
+#### PaymentService.SetupRecurring
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L468) · [TypeScript](../../examples/billwerk/billwerk.ts#L428) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L426)
+Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges.
 
-#### void
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceSetupRecurringRequest` |
+| **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L494) · [TypeScript](../../examples/billwerk/billwerk.ts) · [Kotlin](../../examples/billwerk/billwerk.kt) · [Rust](../../examples/billwerk/billwerk.rs#L451)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L368) · [TypeScript](../../examples/billwerk/billwerk.ts#L350) · [Kotlin](../../examples/billwerk/billwerk.kt#L292) · [Rust](../../examples/billwerk/billwerk.rs#L341)
+
+#### PaymentMethodService.Tokenize
+
+Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodServiceTokenizeRequest` |
+| **Response** | `PaymentMethodServiceTokenizeResponse` |
+
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L377) · [TypeScript](../../examples/billwerk/billwerk.ts#L359) · [Kotlin](../../examples/billwerk/billwerk.kt#L332) · [Rust](../../examples/billwerk/billwerk.rs#L351)
+
+#### PaymentService.Void
+
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L386) · [TypeScript](../../examples/billwerk/billwerk.ts) · [Kotlin](../../examples/billwerk/billwerk.kt#L358) · [Rust](../../examples/billwerk/billwerk.rs#L358)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L359) · [TypeScript](../../examples/billwerk/billwerk.ts#L341) · [Kotlin](../../examples/billwerk/billwerk.kt#L280) · [Rust](../../examples/billwerk/billwerk.rs#L334)
+
+### Mandates
+
+#### RecurringPaymentService.Charge
+
+Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
+
+| | Message |
+|---|---------|
+| **Request** | `RecurringPaymentServiceChargeRequest` |
+| **Response** | `RecurringPaymentServiceChargeResponse` |
+
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L341) · [TypeScript](../../examples/billwerk/billwerk.ts#L323) · [Kotlin](../../examples/billwerk/billwerk.kt#L239) · [Rust](../../examples/billwerk/billwerk.rs#L320)

@@ -7,7 +7,8 @@
 
 package examples.itaubank
 
-import payments.PaymentClient
+import payments.MerchantAuthenticationClient
+import payments.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest
 import payments.ConnectorConfig
 import payments.SdkOptions
 import payments.Environment
@@ -18,14 +19,22 @@ val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     .build()
 
 
+// Flow: MerchantAuthenticationService.CreateServerAuthenticationToken
+fun createServerAuthenticationToken(txnId: String) {
+    val client = MerchantAuthenticationClient(_defaultConfig)
+    val request = MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest.newBuilder().apply {
 
+    }.build()
+    val response = client.create_server_authentication_token(request)
+    println("Status: ${response.status.name}")
+}
 
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
-    val flow = args.firstOrNull() ?: "authorize"
+    val flow = args.firstOrNull() ?: "createServerAuthenticationToken"
     when (flow) {
-
-        else -> System.err.println("Unknown flow: $flow. Available: ")
+        "createServerAuthenticationToken" -> createServerAuthenticationToken(txnId)
+        else -> System.err.println("Unknown flow: $flow. Available: createServerAuthenticationToken")
     }
 }
