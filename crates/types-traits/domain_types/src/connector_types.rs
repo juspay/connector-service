@@ -3430,12 +3430,21 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
+    Bluesnap(BluesnapClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
+}
+
+/// Bluesnap's pfToken for client-side Hosted Payment Fields initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BluesnapClientAuthenticationResponse {
+    /// The Hosted Payment Fields token for client-side SDK initialization
+    pub pf_token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

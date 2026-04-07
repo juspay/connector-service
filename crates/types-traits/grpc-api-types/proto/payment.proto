@@ -1533,9 +1533,13 @@ message ClientAuthenticationTokenData {
 message ConnectorSpecificClientAuthenticationResponse {
   oneof connector {
     StripeClientAuthenticationResponse stripe = 1;
-    // AdyenClientAuthenticationResponse adyen = 2;    // future
-    // CheckoutClientAuthenticationResponse checkout = 3; // future
+    BluesnapClientAuthenticationResponse bluesnap = 2;
   }
+}
+
+// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
+message BluesnapClientAuthenticationResponse {
+  SecretString pf_token = 1;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
