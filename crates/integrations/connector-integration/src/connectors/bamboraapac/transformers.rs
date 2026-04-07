@@ -9,8 +9,8 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificConfig, ErrorResponse},
+    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -446,50 +446,91 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
-        // Extract card data
-        let card_data = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(IntegrationError::not_implemented(
-                "Payment method not supported".to_string(),
-            )),
-        }?;
-
         // Determine transaction type based on capture method
         let trn_type = match router_data.request.capture_method {
             Some(common_enums::CaptureMethod::Manual) => BamboraapacTrnType::PreAuth,
             _ => BamboraapacTrnType::Purchase,
         };
 
-        // Get card number using peek() method
-        let card_number_str = card_data.card_number.peek().to_string();
+        match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                // Get card number using peek() method
+                let card_number_str = card_data.card_number.peek().to_string();
 
-        Ok(Self {
-            account_number: auth.account_number,
-            cust_number: router_data
-                .request
-                .customer_id
-                .as_ref()
-                .map(|id| id.get_string_repr().to_string()),
-            cust_ref: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            amount: router_data.request.minor_amount,
-            trn_type,
-            card_number: Secret::new(card_number_str),
-            exp_month: card_data.card_exp_month.clone(),
-            exp_year: card_data.get_expiry_year_4_digit(),
-            cvn: card_data.card_cvc.clone(),
-            card_holder_name: card_data.card_holder_name.clone().ok_or(
-                IntegrationError::MissingRequiredField {
-                    field_name: "payment_method.card.card_holder_name",
-                    context: Default::default(),
-                },
-            )?,
-            username: auth.username,
-            password: auth.password,
-            _phantom: std::marker::PhantomData,
-        })
+                Ok(Self {
+                    account_number: auth.account_number,
+                    cust_number: router_data
+                        .request
+                        .customer_id
+                        .as_ref()
+                        .map(|id| id.get_string_repr().to_string()),
+                    cust_ref: router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                    amount: router_data.request.minor_amount,
+                    trn_type,
+                    card_number: Secret::new(card_number_str),
+                    exp_month: card_data.card_exp_month.clone(),
+                    exp_year: card_data.get_expiry_year_4_digit(),
+                    cvn: card_data.card_cvc.clone(),
+                    card_holder_name: card_data.card_holder_name.clone().ok_or(
+                        IntegrationError::MissingRequiredField {
+                            field_name: "payment_method.card.card_holder_name",
+                            context: Default::default(),
+                        },
+                    )?,
+                    username: auth.username,
+                    password: auth.password,
+                    _phantom: std::marker::PhantomData,
+                })
+            }
+            // TODO: Use the token from payment_method_token to populate the SOAP XML TokenNumber field
+            // instead of raw card data. The token returned by Bamboraapac's SOAP-based tokenization
+            // (ClientAuthenticationToken flow) should be sent as TokenNumber in the Transaction XML.
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .and_then(|t| match t {
+                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                Ok(Self {
+                    account_number: auth.account_number,
+                    cust_number: router_data
+                        .request
+                        .customer_id
+                        .as_ref()
+                        .map(|id| id.get_string_repr().to_string()),
+                    cust_ref: router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                    amount: router_data.request.minor_amount,
+                    trn_type,
+                    card_number: token,
+                    exp_month: Secret::new(String::new()),
+                    exp_year: Secret::new(String::new()),
+                    cvn: Secret::new(String::new()),
+                    card_holder_name: Secret::new(String::new()),
+                    username: auth.username,
+                    password: auth.password,
+                    _phantom: std::marker::PhantomData,
+                })
+            }
+            _ => Err(IntegrationError::not_implemented(
+                "Payment method not supported".to_string(),
+            )
+            .into()),
+        }
     }
 }
 
