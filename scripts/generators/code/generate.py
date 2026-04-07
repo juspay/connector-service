@@ -811,6 +811,36 @@ def gen_rust_grpc_client(desc_set=None) -> None:
         print(f"  warning: rustfmt failed: {result.stderr.strip()}")
 
 
+# ── Flow manifest generator ──────────────────────────────────────────────────
+
+FLOW_MANIFEST_OUT = SDK_ROOT / "generated" / "flows.json"
+
+
+def emit_flow_manifest(flows: list[dict], single_flows: list[dict]) -> None:
+    """
+    Writes sdk/generated/flows.json with the canonical list of implemented flows.
+    Called after all flow discovery is complete.
+    
+    A flow appears in flows.json ONLY if generate.py finds both:
+      (a) a matching RPC in services.proto, AND
+      (b) a *_req_transformer implementation in crates/ffi/ffi/src/services/*.rs
+    """
+    import json
+    
+    # Combine standard flows and single-step flows
+    all_flow_names = sorted(set(f["name"] for f in flows) | set(f["name"] for f in single_flows))
+    
+    manifest = {
+        "schema_version": 1,
+        "generated_from": "services.proto",
+        "flows": all_flow_names,
+    }
+    
+    FLOW_MANIFEST_OUT.parent.mkdir(parents=True, exist_ok=True)
+    FLOW_MANIFEST_OUT.write_text(json.dumps(manifest, indent=2) + "\n")
+    print(f"  Wrote {FLOW_MANIFEST_OUT.relative_to(REPO_ROOT)} ({len(all_flow_names)} flows)")
+
+
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -833,6 +863,11 @@ def main() -> None:
 
     desc_set = build_descriptor_set()
     flows, single_flows = discover_flows(desc_set)
+    
+    # Generate flow manifest for smoke test coverage
+    print("Generating flow manifest...")
+    emit_flow_manifest(flows, single_flows)
+    print()
 
     print(f"Discovered {len(flows)} flows: {[f['name'] for f in flows]}")
     if single_flows:

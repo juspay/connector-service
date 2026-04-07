@@ -115,16 +115,16 @@ async fn run_connector_scenarios(
 
 #[derive(Debug)]
 struct ScenarioResult {
-    passed: bool,
-    #[allow(dead_code)]
+    status: &'static str,  // "passed" | "skipped" | "failed"
     message: Option<String>,
+    reason: Option<String>,  // for skipped
     error: Option<String>,
 }
 
 #[derive(Debug)]
 struct ConnectorResult {
     connector: String,
-    status: &'static str,
+    status: &'static str,  // "passed" | "failed" | "skipped" | "dry_run"
     scenarios: Vec<(String, ScenarioResult)>,
     error: Option<String>,
 }
@@ -156,6 +156,7 @@ async fn test_connector_scenarios(
     }
 
     let mut scenarios = vec![];
+    let mut any_failed = false;
 
     for (scenario_key, result) in scenario_results {
         print!("    [{scenario_key}] running ... ");
@@ -164,39 +165,56 @@ async fn test_connector_scenarios(
 
         match result {
             Ok(msg) => {
-                println!("{} {}", green("✓ ok"), grey(&format!("— {msg}")));
+                println!("{} {}", green("PASSED"), grey(&format!("— {msg}")));
                 scenarios.push((
                     scenario_key,
                     ScenarioResult {
-                        passed: true,
+                        status: "passed",
                         message: Some(msg),
+                        reason: None,
                         error: None,
                     },
                 ));
             }
             Err(e) => {
-                // Treat connector-level errors as expected (not a test framework failure)
                 let detail = e.to_string();
-                println!(
-                    "{} {}",
-                    yellow("~ connector error"),
-                    grey(&format!("— {detail}"))
-                );
-                scenarios.push((
-                    scenario_key,
-                    ScenarioResult {
-                        passed: true,
-                        message: None,
-                        error: Some(detail),
-                    },
-                ));
+                // Check if this is a Rust panic (real SDK crash) vs connector error
+                if detail.contains("Rust panic:") || detail.starts_with("thread '") {
+                    println!("{} — {}", red("FAILED"), &detail);
+                    scenarios.push((
+                        scenario_key,
+                        ScenarioResult {
+                            status: "failed",
+                            message: None,
+                            reason: None,
+                            error: Some(detail),
+                        },
+                    ));
+                    any_failed = true;
+                } else {
+                    // Connector-level error (expected)
+                    println!(
+                        "{} {}",
+                        yellow("SKIPPED (connector error)"),
+                        grey(&format!("— {detail}"))
+                    );
+                    scenarios.push((
+                        scenario_key,
+                        ScenarioResult {
+                            status: "skipped",
+                            message: None,
+                            reason: Some("connector_error".to_string()),
+                            error: Some(detail),
+                        },
+                    ));
+                }
             }
         }
     }
 
     ConnectorResult {
         connector: instance_name.to_string(),
-        status: "passed",
+        status: if any_failed { "failed" } else { "passed" },
         scenarios,
         error: None,
     }
@@ -204,11 +222,23 @@ async fn test_connector_scenarios(
 
 fn print_result(result: &ConnectorResult) {
     match result.status {
-        "passed" => println!(
-            "{} ({} scenario(s))",
-            green("  PASSED"),
-            result.scenarios.len()
-        ),
+        "passed" => {
+            let passed_count = result.scenarios.iter().filter(|(_, s)| s.status == "passed").count();
+            let skipped_count = result.scenarios.iter().filter(|(_, s)| s.status == "skipped").count();
+            println!(
+                "{} ({} passed, {} skipped)",
+                green("  PASSED"),
+                passed_count,
+                skipped_count
+            );
+            for (key, detail) in &result.scenarios {
+                match detail.status {
+                    "passed" => println!("{}    {}: ✓", green(""), key),
+                    "skipped" => println!("{}    {}: ~ skipped ({})", yellow(""), key, detail.reason.as_deref().unwrap_or("unknown")),
+                    _ => {}
+                }
+            }
+        }
         "dry_run" => println!("{}", grey("  DRY RUN")),
         "skipped" => {
             let reason = result.error.as_deref().unwrap_or("unknown");
@@ -217,10 +247,10 @@ fn print_result(result: &ConnectorResult) {
         _ => {
             println!("{}", red("  FAILED"));
             for (key, detail) in &result.scenarios {
-                if !detail.passed {
+                if detail.status == "failed" {
                     println!(
                         "{} — {}",
-                        red(&format!("    {key}")),
+                        red(&format!("    {key}: ✗ FAILED")),
                         detail.error.as_deref().unwrap_or("unknown error")
                     );
                 }
@@ -359,7 +389,22 @@ fn print_summary(results: &[ConnectorResult]) -> i32 {
     let skipped = results.iter().filter(|r| r.status == "skipped").count();
     let failed = results.iter().filter(|r| r.status == "failed").count();
 
-    println!("Total:   {}", results.len());
+    // Count per-scenario statuses across all connectors
+    let mut total_flows_passed = 0;
+    let mut total_flows_skipped = 0;
+    let mut total_flows_failed = 0;
+    for r in results {
+        for (_, scenario) in &r.scenarios {
+            match scenario.status {
+                "passed" => total_flows_passed += 1,
+                "skipped" => total_flows_skipped += 1,
+                "failed" => total_flows_failed += 1,
+                _ => {}
+            }
+        }
+    }
+
+    println!("Total connectors:   {}", results.len());
     println!("{}", green(&format!("Passed:  {passed}")));
     println!(
         "{}",
@@ -376,6 +421,15 @@ fn print_summary(results: &[ConnectorResult]) -> i32 {
             green(&failed_str)
         }
     );
+    println!();
+    println!("Flow results:");
+    println!("{}", green(&format!("  {} flows PASSED", total_flows_passed)));
+    if total_flows_skipped > 0 {
+        println!("{}", yellow(&format!("  {} flows SKIPPED (connector errors)", total_flows_skipped)));
+    }
+    if total_flows_failed > 0 {
+        println!("{}", red(&format!("  {} flows FAILED", total_flows_failed)));
+    }
     println!();
 
     if failed > 0 {

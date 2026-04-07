@@ -155,6 +155,7 @@ test-package: generate-all pack-archive
 		--target /tmp/test-hyperswitch-py \
 		$(WHEEL_FILE) \
 		--force-reinstall
+	@cp $(REPO_ROOT)/sdk/generated/flows.json /tmp/test-hyperswitch-py/
 	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@echo "Running composite flow test..."
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.py /tmp/test-hyperswitch-py/
@@ -203,6 +204,7 @@ test-grpc-no-server: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
 		--force-reinstall
 	@cp -f $(GRPC_FFI_LIBRARY) /tmp/test-hyperswitch-py-grpc/payments/generated/
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.py /tmp/test-hyperswitch-py-grpc/
+	@cp $(REPO_ROOT)/sdk/generated/flows.json /tmp/test-hyperswitch-py-grpc/
 	@if [ -f $(REPO_ROOT)/creds.json ]; then \
 		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-py-grpc/; \
 	else \

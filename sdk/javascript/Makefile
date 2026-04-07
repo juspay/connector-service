@@ -153,6 +153,7 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 		npm install $(JS_TARBALL) typescript @types/node --silent
 	@cp $(SDK_ROOT)/smoke-test/test_smoke.ts /tmp/test-hyperswitch-js/
 	@cp $(SDK_ROOT)/smoke-test/tsconfig.json      /tmp/test-hyperswitch-js/
+	@cp $(REPO_ROOT)/sdk/generated/flows.json /tmp/test-hyperswitch-js/
 	@if [ -f $(REPO_ROOT)/creds.json ]; then \
 		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-js/; \
 	fi
@@ -215,13 +216,14 @@ test-grpc-no-server: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc
 		npm install $(JS_TARBALL) typescript @types/node --silent
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.ts /tmp/test-hyperswitch-js-grpc/
 	@cp $(SDK_ROOT)/smoke-test/tsconfig.json      /tmp/test-hyperswitch-js-grpc/
+	@cp $(REPO_ROOT)/sdk/generated/flows.json /tmp/test-hyperswitch-js-grpc/
 	@if [ -f $(REPO_ROOT)/creds.json ]; then \
 		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-js-grpc/; \
 	else \
 		echo "  Note: no creds.json found, test will use placeholder credentials"; \
 	fi
-	@cd /tmp/test-hyperswitch-js-grpc && npx tsc && \
-		NODE_PATH=/tmp/test-hyperswitch-js-grpc/node_modules FORCE_COLOR=1 node test_smoke_grpc.js \
+	@cd /tmp/test-hyperswitch-js-grpc && \
+		NODE_PATH=/tmp/test-hyperswitch-js-grpc/node_modules FORCE_COLOR=1 npx tsx test_smoke_grpc.ts \
 		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@rm -rf /tmp/test-hyperswitch-js-grpc
 
@@ -240,6 +242,7 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all generate-grpc-bindings 
 		npm install $(JS_TARBALL) typescript @types/node --silent
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_grpc.ts /tmp/test-hyperswitch-js-grpc/
 	@cp $(SDK_ROOT)/smoke-test/tsconfig.json      /tmp/test-hyperswitch-js-grpc/
+	@cp $(REPO_ROOT)/sdk/generated/flows.json /tmp/test-hyperswitch-js-grpc/
 	@if [ -f $(REPO_ROOT)/creds.json ]; then \
 		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-js-grpc/; \
 	else \

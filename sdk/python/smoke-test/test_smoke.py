@@ -130,20 +130,126 @@ def _build_connector_config(connector_key: str, auth_config: Dict[str, Any]) -> 
     )
 
 
-# Canonical scenario order for consolidated-file discovery
-_SCENARIO_NAMES = [
-    "checkout_autocapture",
-    "checkout_card",
-    "checkout_wallet",
-    "checkout_bank",
-    "refund",
-    "recurring",
-    "void_payment",
-    "get_payment",
-    "create_customer",
-    "tokenize",
-    "authentication",
-]
+def load_flow_manifest(sdk_root: Path) -> list[str]:
+    """Load the canonical flow manifest from flows.json."""
+    # Try multiple locations for flows.json:
+    # 1. SDK root (normal case when running from repo)
+    # 2. Environment variable (CI/packaged test)
+    # 3. Current working directory
+    
+    manifest_locations = [
+        sdk_root / "generated" / "flows.json",
+    ]
+    
+    # Check environment variable
+    if env_path := os.environ.get("FLOWS_JSON_PATH"):
+        manifest_locations.insert(0, Path(env_path))
+    
+    # Check cwd as fallback
+    manifest_locations.append(Path.cwd() / "flows.json")
+    
+    for manifest_path in manifest_locations:
+        if manifest_path.exists():
+            with open(manifest_path) as f:
+                data = json.load(f)
+            return data["flows"]
+    
+    # If we get here, we couldn't find the file
+    searched = "\n  - ".join(str(p) for p in manifest_locations)
+    raise FileNotFoundError(
+        f"flows.json not found. Searched:\n  - {searched}\n"
+        "Run: make generate"
+    )
+
+
+def discover_and_validate_scenarios(
+    module,
+    connector_name: str,
+    manifest: list[str],
+) -> list[tuple[str, callable]] | str:
+    """
+    Discover and validate scenario functions for a connector.
+    
+    Implements the 3-check algorithm when SUPPORTED_FLOWS is explicitly defined:
+      CHECK 1: No declared flow can be missing its implementation
+      CHECK 2: No implementation can exist outside the declaration
+      CHECK 3: No declared flow can be stale (removed from manifest)
+    
+    When SUPPORTED_FLOWS is not present, uses legacy mode which scans for
+    process_* functions without strict validation.
+    
+    Returns list of (flow_key, fn) or a string error message if checks fail.
+    """
+    # Get declared flows from SUPPORTED_FLOWS (legacy mode if not present)
+    declared = getattr(module, "SUPPORTED_FLOWS", None)
+    legacy_mode = declared is None
+    
+    if legacy_mode:
+        # Legacy mode: scan process_* functions against manifest
+        declared = [
+            name for name in manifest
+            if callable(getattr(module, f"process_{name}", None))
+        ]
+    else:
+        # Normalize: ensure list, deduplicate, validate
+        if not hasattr(declared, '__iter__'):
+            return f"COVERAGE ERROR: SUPPORTED_FLOWS must be iterable (list, tuple, etc.)"
+        declared = list(dict.fromkeys(declared))  # Deduplicate while preserving order
+    
+    if not declared:
+        # Empty SUPPORTED_FLOWS is valid - no flows to test
+        return []
+    
+    # Validate flow names are lowercase snake_case
+    for name in declared:
+        if name != name.lower() or ' ' in name or '-' in name:
+            return (
+                f"COVERAGE ERROR: Flow name '{name}' in SUPPORTED_FLOWS must be "
+                f"lowercase snake_case (e.g., 'authorize', 'payout_create')"
+            )
+    
+    # CHECK 1: Find declared flows without implementations
+    implemented = set()
+    missing = []
+    for name in declared:
+        fn = getattr(module, f"process_{name}", None)
+        if fn is not None and callable(fn):
+            implemented.add(name)
+        else:
+            missing.append(name)
+    
+    if missing:
+        return (
+            f"COVERAGE ERROR: SUPPORTED_FLOWS declares {sorted(missing)} "
+            f"but no process_* function found for them."
+        )
+    
+    # CHECK 2: Find process_* functions not in SUPPORTED_FLOWS
+    # Only run this check when SUPPORTED_FLOWS is explicitly defined (not legacy mode)
+    if not legacy_mode:
+        all_process_fns = {
+            name[len("process_"):]
+            for name in dir(module)
+            if name.startswith("process_") and callable(getattr(module, name))
+        }
+        undeclared = all_process_fns - set(declared)
+        if undeclared:
+            return (
+                f"COVERAGE ERROR: process_* functions exist but not in "
+                f"SUPPORTED_FLOWS: {sorted(undeclared)}"
+            )
+    
+    # CHECK 3: Find stale flows (declared but not in manifest)
+    manifest_set = set(manifest)
+    stale = set(declared) - manifest_set
+    if stale:
+        return (
+            f"COVERAGE ERROR: SUPPORTED_FLOWS contains flows that no longer "
+            f"exist in flows.json: {sorted(stale)}. Regenerate or update."
+        )
+    
+    # All checks pass - return ordered (key, fn) pairs
+    return [(name, getattr(module, f"process_{name}")) for name in declared]
 
 
 async def test_connector_scenarios(
@@ -194,13 +300,27 @@ async def test_connector_scenarios(
         result["error"] = f"import error: {e}"
         return result
 
-    # Discover process_* functions in canonical scenario order
-    scenario_fns: List[tuple] = []
-    for name in _SCENARIO_NAMES:
-        fn = getattr(module, f"process_{name}", None)
-        if fn is not None and callable(fn):
-            scenario_fns.append((name, fn))
-
+    # Load flow manifest and discover/validate scenarios
+    try:
+        sdk_root = Path(__file__).parent.parent
+        manifest = load_flow_manifest(sdk_root)
+    except FileNotFoundError as e:
+        print(_red(f"    MANIFEST ERROR: {e}"), flush=True)
+        result["status"] = "failed"
+        result["error"] = str(e)
+        return result
+    
+    # Discover and validate scenarios using the 3-check algorithm
+    scenarios_or_error = discover_and_validate_scenarios(module, connector_name, manifest)
+    if isinstance(scenarios_or_error, str):
+        # Coverage validation failed
+        result["status"] = "failed"
+        result["error"] = scenarios_or_error
+        print(_red(f"    COVERAGE VIOLATION: {scenarios_or_error}"), flush=True)
+        return result
+    
+    scenario_fns = scenarios_or_error
+    
     if not scenario_fns:
         result["status"] = "skipped"
         result["scenarios"] = {"skipped": True, "reason": "no_scenario_files"}
@@ -231,43 +351,65 @@ async def test_connector_scenarios(
             )
             
             if has_error:
-                print(_yellow(f"    [{scenario_key}] connector error") + f" — {error_str}", flush=True)
-                result["scenarios"][scenario_key] = {"passed": True, "connector_error": error_str}
+                print(_yellow(f"    [{scenario_key}] SKIPPED (connector error)") + f" — {error_str}", flush=True)
+                result["scenarios"][scenario_key] = {
+                    "status": "skipped",
+                    "reason": "connector_error",
+                    "detail": error_str,
+                }
             else:
                 # For display, show the actual response content
                 try:
                     response_display = str(response)
                 except Exception:
                     response_display = f"<{type(response).__name__}>"
-                print(_green(f"    [{scenario_key}] OK") + f" — {response_display}", flush=True)
-                result["scenarios"][scenario_key] = {"passed": True, "result": response}
+                print(_green(f"    [{scenario_key}] PASSED") + f" — {response_display}", flush=True)
+                result["scenarios"][scenario_key] = {
+                    "status": "passed",
+                    "result": response,
+                }
         except IntegrationError as e:
-            # Request-phase error — SDK round-trip succeeded.
+            # Request-phase error — SDK round-trip succeeded, connector rejected.
             detail = f"IntegrationError: {e.error_message} (code={e.error_code}, action={getattr(e, 'suggested_action', None)}, doc={getattr(e, 'doc_url', None)})"
-            print(_yellow(f"    [{scenario_key}] connector error (round-trip ok)") + f" — {detail}", flush=True)
+            print(_yellow(f"    [{scenario_key}] SKIPPED (connector error)") + f" — {detail}", flush=True)
             result["scenarios"][scenario_key] = {
-                "passed": True,
-                "connector_error": detail,
+                "status": "skipped",
+                "reason": "connector_error",
+                "detail": detail,
             }
         except ConnectorError as e:
-            # Response-phase error — SDK round-trip succeeded.
+            # Response-phase error — SDK round-trip succeeded, connector rejected.
             http_status = getattr(e, 'http_status_code', None)
             detail = f"ConnectorError: {e.error_message} (code={e.error_code}, http={http_status})"
-            print(_yellow(f"    [{scenario_key}] connector error (round-trip ok)") + f" — {detail}", flush=True)
+            print(_yellow(f"    [{scenario_key}] SKIPPED (connector error)") + f" — {detail}", flush=True)
             result["scenarios"][scenario_key] = {
-                "passed": True,
-                "connector_error": detail,
+                "status": "skipped",
+                "reason": "connector_error",
+                "detail": detail,
             }
         except InternalError as e:
             # FFI-level connector rejection before HTTP (e.g. InvalidWalletToken)
             msg = getattr(e, 'error_message', None) or str(e)
-            code = getattr(e, 'error_code', None)
-            detail = f"{code}: {msg}" if code else msg
-            print(_yellow(f"    [{scenario_key}] connector error (round-trip ok)") + f" — InternalError: {detail}", flush=True)
-            result["scenarios"][scenario_key] = {
-                "passed": True,
-                "connector_error": f"InternalError: {detail}",
-            }
+            # Check if this is a real Rust panic vs a connector-level error
+            if "Rust panic:" in msg:
+                # Real SDK crash — treat as failure
+                detail = f"FFI panic: {msg}"
+                print(_red(f"    [{scenario_key}] FAILED") + f" — {detail}", flush=True)
+                result["scenarios"][scenario_key] = {
+                    "status": "failed",
+                    "error": detail,
+                }
+                any_failed = True
+            else:
+                # Connector-level error via FFI
+                code = getattr(e, 'error_code', None)
+                detail = f"InternalError: {code}: {msg}" if code else f"InternalError: {msg}"
+                print(_yellow(f"    [{scenario_key}] SKIPPED (connector error)") + f" — {detail}", flush=True)
+                result["scenarios"][scenario_key] = {
+                    "status": "skipped",
+                    "reason": "connector_error",
+                    "detail": detail,
+                }
         except Exception as e:
             # Unexpected Python-level failure — import crash, serialization bug, etc.
             # This indicates a real SDK or example-file problem.
@@ -276,7 +418,7 @@ async def test_connector_scenarios(
             print(_red(f"    [{scenario_key}] FAILED") + f" — {type(e).__name__}: {e}", flush=True)
             print(f"    Traceback: {tb[:500]}", flush=True)  # Print first 500 chars of traceback
             result["scenarios"][scenario_key] = {
-                "passed": False,
+                "status": "failed",
                 "error": f"{type(e).__name__}: {e}",
             }
             any_failed = True
@@ -371,10 +513,16 @@ def _print_result(result: Dict[str, Any]) -> None:
     status = result["status"]
     if status == "passed":
         scenarios = result.get("scenarios", {})
-        print(_green(f"  PASSED") + f" ({len(scenarios)} scenario(s))")
+        passed_count = sum(1 for d in scenarios.values() if isinstance(d, dict) and d.get("status") == "passed")
+        skipped_count = sum(1 for d in scenarios.values() if isinstance(d, dict) and d.get("status") == "skipped")
+        print(_green(f"  PASSED") + f" ({passed_count} passed, {skipped_count} skipped)")
         for key, detail in scenarios.items():
-            if isinstance(detail, dict) and detail.get("connector_error"):
-                print(_yellow(f"    {key}: connector error (round-trip ok)") + f" — {detail['connector_error']}")
+            if isinstance(detail, dict):
+                if detail.get("status") == "passed":
+                    print(_green(f"    {key}: ✓"))
+                elif detail.get("status") == "skipped":
+                    reason = detail.get("reason", "unknown")
+                    print(_yellow(f"    {key}: ~ skipped ({reason})"))
     elif status == "dry_run":
         print(_grey(f"  DRY RUN"))
     elif status == "skipped":
@@ -382,10 +530,11 @@ def _print_result(result: Dict[str, Any]) -> None:
         print(_grey(f"  SKIPPED ({reason})"))
     else:
         print(_red(f"  FAILED"))
-        for key, detail in result.get("scenarios", {}).items():
-            if isinstance(detail, dict) and not detail.get("passed", True):
-                msg = detail.get("error_message") or detail.get("error") or "unknown error"
-                print(_red(f"    {key}: {detail.get('error_type', 'Error')} — {msg}"))
+        scenarios = result.get("scenarios", {})
+        for key, detail in scenarios.items():
+            if isinstance(detail, dict) and detail.get("status") == "failed":
+                msg = detail.get("error") or "unknown error"
+                print(_red(f"    {key}: ✗ FAILED — {msg}"))
         if result.get("error"):
             print(_red(f"  Error: {result['error']}"))
 
@@ -412,10 +561,32 @@ def print_summary(results: List[Dict[str, Any]]) -> int:
     failed = sum(1 for r in results if r["status"] == "failed")
     total = len(results)
 
-    print(f"Total:   {total}")
+    # Count per-scenario statuses across all connectors
+    total_flows_passed = 0
+    total_flows_skipped = 0
+    total_flows_failed = 0
+    for r in results:
+        for scenario in r.get("scenarios", {}).values():
+            if isinstance(scenario, dict):
+                status = scenario.get("status")
+                if status == "passed":
+                    total_flows_passed += 1
+                elif status == "skipped":
+                    total_flows_skipped += 1
+                elif status == "failed":
+                    total_flows_failed += 1
+
+    print(f"Total connectors:   {total}")
     print(_green(f"Passed:  {passed}"))
     print(_grey(f"Skipped: {skipped} (placeholder credentials or no examples)"))
     print((_red if failed > 0 else _green)(f"Failed:  {failed}"))
+    print()
+    print(f"Flow results:")
+    print(_green(f"  {total_flows_passed} flows PASSED"))
+    if total_flows_skipped > 0:
+        print(_yellow(f"  {total_flows_skipped} flows SKIPPED (connector errors)"))
+    if total_flows_failed > 0:
+        print(_red(f"  {total_flows_failed} flows FAILED"))
     print()
 
     if failed > 0:
