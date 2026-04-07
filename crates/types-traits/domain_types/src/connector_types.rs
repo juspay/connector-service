@@ -3462,6 +3462,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Paysafe(PaysafeClientAuthenticationResponse),
     /// Datatrans SDK initialization data — transaction_id for Secure Fields initialization
     Datatrans(DatatransClientAuthenticationResponse),
+    /// Barclaycard SDK initialization data — capture_context JWT for Flex Microform SDK
+    Barclaycard(BarclaycardClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3596,6 +3598,13 @@ pub struct PaysafeClientAuthenticationResponse {
 pub struct DatatransClientAuthenticationResponse {
     /// The transaction ID returned from Secure Fields init, used as a client auth token
     pub transaction_id: Secret<String>,
+}
+
+/// Barclaycard's capture_context JWT for Flex Microform SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BarclaycardClientAuthenticationResponse {
+    /// The capture context JWT token for client-side Flex Microform SDK
+    pub capture_context: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
