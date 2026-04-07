@@ -978,33 +978,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|details| details.get_no_three_ds_account_id(currency).ok());
 
         // Build return_links from return_url if available
-        let return_links = router_data
-            .resource_common_data
-            .get_return_url()
-            .map(|redirect_url: String| {
-                vec![
-                    ReturnLink {
-                        rel: LinkType::Default,
-                        href: redirect_url.clone(),
-                        method: Method::Get.to_string(),
-                    },
-                    ReturnLink {
-                        rel: LinkType::OnCompleted,
-                        href: redirect_url.clone(),
-                        method: Method::Get.to_string(),
-                    },
-                    ReturnLink {
-                        rel: LinkType::OnFailed,
-                        href: redirect_url.clone(),
-                        method: Method::Get.to_string(),
-                    },
-                    ReturnLink {
-                        rel: LinkType::OnCancelled,
-                        href: redirect_url,
-                        method: Method::Get.to_string(),
-                    },
-                ]
-            });
+        let return_links =
+            router_data
+                .resource_common_data
+                .get_return_url()
+                .map(|redirect_url: String| {
+                    vec![
+                        ReturnLink {
+                            rel: LinkType::Default,
+                            href: redirect_url.clone(),
+                            method: Method::Get.to_string(),
+                        },
+                        ReturnLink {
+                            rel: LinkType::OnCompleted,
+                            href: redirect_url.clone(),
+                            method: Method::Get.to_string(),
+                        },
+                        ReturnLink {
+                            rel: LinkType::OnFailed,
+                            href: redirect_url.clone(),
+                            method: Method::Get.to_string(),
+                        },
+                        ReturnLink {
+                            rel: LinkType::OnCancelled,
+                            href: redirect_url,
+                            method: Method::Get.to_string(),
+                        },
+                    ]
+                });
 
         Ok(Self {
             merchant_ref_num: router_data
@@ -1024,7 +1025,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // CreateOrder Flow - Response (connector response -> PaymentCreateOrderResponse)
 
 impl TryFrom<PaysafeCreateOrderResponse> for PaymentCreateOrderResponse {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: PaysafeCreateOrderResponse) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -1036,18 +1037,7 @@ impl TryFrom<PaysafeCreateOrderResponse> for PaymentCreateOrderResponse {
 
 // CreateOrder Flow - Response (ResponseRouterData -> RouterDataV2)
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            PaysafeCreateOrderResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
-    >
+impl TryFrom<ResponseRouterData<PaysafeCreateOrderResponse, Self>>
     for RouterDataV2<
         CreateOrder,
         PaymentFlowData,
@@ -1055,18 +1045,10 @@ impl
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            PaysafeCreateOrderResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        >,
+        item: ResponseRouterData<PaysafeCreateOrderResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 

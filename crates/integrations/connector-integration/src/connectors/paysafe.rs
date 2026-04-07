@@ -45,9 +45,8 @@ use transformers::{
     self as paysafe, PaysafeAuthorizeResponse, PaysafeCaptureRequest, PaysafeCaptureResponse,
     PaysafeCreateOrderRequest, PaysafeCreateOrderResponse, PaysafeErrorResponse,
     PaysafePaymentMethodTokenRequest, PaysafePaymentMethodTokenResponse, PaysafePaymentsRequest,
-    PaysafeRSyncResponse, PaysafeRefundRequest, PaysafeRefundResponse,
-    PaysafeRepeatPaymentRequest, PaysafeRepeatPaymentResponse, PaysafeSyncResponse,
-    PaysafeVoidRequest, PaysafeVoidResponse,
+    PaysafeRSyncResponse, PaysafeRefundRequest, PaysafeRefundResponse, PaysafeRepeatPaymentRequest,
+    PaysafeRepeatPaymentResponse, PaysafeSyncResponse, PaysafeVoidRequest, PaysafeVoidResponse,
 };
 
 use super::macros;
