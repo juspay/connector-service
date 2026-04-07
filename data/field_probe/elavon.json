@@ -426,7 +426,27 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_client_session_id": "probe_sdk_session_001",
+          "domain_context": {
+            "payment": {
+              "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+              }
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api.demo.convergepay.com/hosted-payments/transaction_token",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
+          },
+          "body": "ssl_merchant_id=probe_merchant&ssl_user_id=probe_user&ssl_pin=probe_pin&ssl_transaction_type=ccsale&ssl_amount=10.00&ssl_transaction_currency=USD&ssl_invoke_receipt=false"
+        }
       }
     },
     "create_customer": {

@@ -8,11 +8,13 @@
 package examples.elavon
 
 import payments.PaymentClient
+import payments.MerchantAuthenticationClient
 import payments.RefundClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceGetRequest
+import payments.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest
 import payments.PaymentServiceProxyAuthorizeRequest
 import payments.RefundServiceGetRequest
 import payments.AuthenticationType
@@ -191,6 +193,22 @@ fun capture(txnId: String) {
     println("Done: ${response.status.name}")
 }
 
+// Flow: MerchantAuthenticationService.CreateClientAuthenticationToken
+fun createClientAuthenticationToken(txnId: String) {
+    val client = MerchantAuthenticationClient(_defaultConfig)
+    val request = MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest.newBuilder().apply {
+        merchantClientSessionId = "probe_sdk_session_001"  // Infrastructure.
+        paymentBuilder.apply {  // FrmClientAuthenticationContext frm = 5; // future: device fingerprinting PayoutClientAuthenticationContext payout = 6; // future: payout verification widget.
+            amountBuilder.apply {
+                minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+                currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            }
+        }
+    }.build()
+    val response = client.create_client_authentication_token(request)
+    println("StatusCode: ${response.statusCode}")
+}
+
 // Flow: PaymentService.Get
 fun get(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -260,10 +278,11 @@ fun main(args: Array<String>) {
         "processGetPayment" -> processGetPayment(txnId)
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
+        "createClientAuthenticationToken" -> createClientAuthenticationToken(txnId)
         "get" -> get(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
         "refund" -> refund(txnId)
         "refundGet" -> refundGet(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processGetPayment, authorize, capture, get, proxyAuthorize, refund, refundGet")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processGetPayment, authorize, capture, createClientAuthenticationToken, get, proxyAuthorize, refund, refundGet")
     }
 }
