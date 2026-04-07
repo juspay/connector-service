@@ -3432,6 +3432,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Stripe(StripeClientAuthenticationResponse),
     /// Globalpay SDK initialization data — access_token for client-side SDK operations
     Globalpay(GlobalpayClientAuthenticationResponse),
+    /// Nexixpay SDK initialization data — security_token and hosted_page URL for HPP initialization
+    Nexixpay(NexixpayClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3449,6 +3451,15 @@ pub struct GlobalpayClientAuthenticationResponse {
     pub token_type: Option<String>,
     /// The number of seconds until the token expires
     pub expires_in: Option<i64>,
+}
+
+/// Nexixpay's security_token and hosted_page URL for HPP (Hosted Payment Page) initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexixpayClientAuthenticationResponse {
+    /// The security token for authenticating client-side hosted payment page requests
+    pub security_token: Secret<String>,
+    /// The hosted payment page URL for client-side redirect
+    pub hosted_page: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
