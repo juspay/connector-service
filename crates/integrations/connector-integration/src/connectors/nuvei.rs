@@ -43,9 +43,9 @@ pub mod transformers;
 use transformers::{
     NuveiCaptureRequest, NuveiCaptureResponse, NuveiClientAuthRequest, NuveiClientAuthResponse,
     NuveiErrorResponse, NuveiPaymentRequest, NuveiPaymentResponse, NuveiRefundRequest,
-    NuveiRefundResponse, NuveiRefundSyncRequest, NuveiRefundSyncResponse,
-    NuveiSessionTokenRequest, NuveiSessionTokenResponse, NuveiSyncRequest, NuveiSyncResponse,
-    NuveiVoidRequest, NuveiVoidResponse,
+    NuveiRefundResponse, NuveiRefundSyncRequest, NuveiRefundSyncResponse, NuveiSessionTokenRequest,
+    NuveiSessionTokenResponse, NuveiSyncRequest, NuveiSyncResponse, NuveiVoidRequest,
+    NuveiVoidResponse,
 };
 
 use super::macros;
