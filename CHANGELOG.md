@@ -19,6 +19,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.08.1
+
+### Features
+
+- **connector:**
+  - [redsys] add 3ds exemption flow (no3ds) ([#641](https://github.com/juspay/connector-service/pull/641)) ([`7c01eec`](https://github.com/juspay/connector-service/commit/7c01eecf0b27ad3b8e20ce89d3ad744bab00d2ad))
+  - [TrustPayments] implement GooglePay decrypted token flow ([#932](https://github.com/juspay/connector-service/pull/932)) ([`925da08`](https://github.com/juspay/connector-service/commit/925da08162a158718b511af139e9d78351350706))
+  - Implement CreateClientAuthenticationToken for Bluesnap ([#959](https://github.com/juspay/connector-service/pull/959)) ([`0b1e795`](https://github.com/juspay/connector-service/commit/0b1e7958a67163caad61ce729a913cb66792ef23))
+  - Implement CreateClientAuthenticationToken for Jpmorgan ([#966](https://github.com/juspay/connector-service/pull/966)) ([`c231dcd`](https://github.com/juspay/connector-service/commit/c231dcd7803e307b4fc5aefcc400acb080cae5f2))
+  - Implement CreateClientAuthenticationToken for Billwerk ([#967](https://github.com/juspay/connector-service/pull/967)) ([`5072a87`](https://github.com/juspay/connector-service/commit/5072a87fc66e1d228f9fc6f306885f5612b07868))
+  - Implement CreateClientAuthenticationToken for Rapyd ([#960](https://github.com/juspay/connector-service/pull/960)) ([`3c3c6e9`](https://github.com/juspay/connector-service/commit/3c3c6e9ad9c8cedd50c69a232467c4aef0ffbb94))
+  - Implement CreateClientAuthenticationToken for Cybersource ([#952](https://github.com/juspay/connector-service/pull/952)) ([`c5e804b`](https://github.com/juspay/connector-service/commit/c5e804be540ae759c8b23875b40a363a8e20c687))
+  - Implement CreateClientAuthenticationToken for Nuvei ([#954](https://github.com/juspay/connector-service/pull/954)) ([`a3ec7d8`](https://github.com/juspay/connector-service/commit/a3ec7d8a7398b3a2b9db3ff3ced501dd97ca234d))
+  - Implement CreateClientAuthenticationToken for Adyen ([#948](https://github.com/juspay/connector-service/pull/948)) ([`8c4bea3`](https://github.com/juspay/connector-service/commit/8c4bea319067f430d47561256d87905060458309))
+- **paysafe:** Add GooglePay payment method support ([#874](https://github.com/juspay/connector-service/pull/874)) ([`4d26e65`](https://github.com/juspay/connector-service/commit/4d26e6527a8464d5257cdc97ac91b5723b7e8a24))
+- **razorpay:** Add Netbanking payment method support ([#890](https://github.com/juspay/connector-service/pull/890)) ([`008d6ae`](https://github.com/juspay/connector-service/commit/008d6ae83cb6ab05150a37291449622150789ef4))
+- **shared:** Consolidate ClientAuthenticationToken shared types for all connectors ([#1002](https://github.com/juspay/connector-service/pull/1002)) ([`03e9fab`](https://github.com/juspay/connector-service/commit/03e9fab77a23076451fc29248a8858d6d24f94c3))
+- Add connector_order_id field to Authorize proto and migrate connectors ([#980](https://github.com/juspay/connector-service/pull/980)) ([`ea4e563`](https://github.com/juspay/connector-service/commit/ea4e563488ff9a3f4d4c148922ac61434606ea74))
+- Remove duplicate pmtoken at top level in proto ([#757](https://github.com/juspay/connector-service/pull/757)) ([`e3a0c5b`](https://github.com/juspay/connector-service/commit/e3a0c5b44b49cf7bd6c5276d1bcba532dd5e57e5))
+
+### Bug Fixes
+
+- **connector:**
+  - [PayPal] implement GooglePay decrypted token flow ([#930](https://github.com/juspay/connector-service/pull/930)) ([`ab145d4`](https://github.com/juspay/connector-service/commit/ab145d494243caef819ff364e332ae0a124228ed))
+  - [Truelayer] Change payment method type from OpenBankingUK to OpenBanking ([#964](https://github.com/juspay/connector-service/pull/964)) ([`fa41a45`](https://github.com/juspay/connector-service/commit/fa41a45111f0b52e2478d9611a3d77f1e6aa3ede))
+- **errors:** Unify error_code and preserve ConnectorError fields at FFI boundary ([#1009](https://github.com/juspay/connector-service/pull/1009)) ([`1bb97fb`](https://github.com/juspay/connector-service/commit/1bb97fbc8ad5a0a01cffaad332794a78c71e8842))
+
+### Documentation
+
+- Sync documentation to hyperswitch-docs integration-space ([#998](https://github.com/juspay/connector-service/pull/998)) ([`3d5a9c6`](https://github.com/juspay/connector-service/commit/3d5a9c6af316604c67bd7133f5d6985e2ead87cf))
+
+### Miscellaneous Tasks
+
+- **readme:**
+  - Update js SDK readme ([#1005](https://github.com/juspay/connector-service/pull/1005)) ([`0916c59`](https://github.com/juspay/connector-service/commit/0916c59a4eb543dc73345e6bb6c7daac4db183f0))
+  - Update Python SDK README.md ([#1006](https://github.com/juspay/connector-service/pull/1006)) ([`f156edd`](https://github.com/juspay/connector-service/commit/f156eddd0a49399cc0a37833a8ef299de4d34659))
+- Add publish command ci ([#997](https://github.com/juspay/connector-service/pull/997)) ([`9e4ca74`](https://github.com/juspay/connector-service/commit/9e4ca746cbc9e52cd7b1c0a1e061685c570a60a6))
+- Add publish command ci ([#1000](https://github.com/juspay/connector-service/pull/1000)) ([`322ba37`](https://github.com/juspay/connector-service/commit/322ba373efad8e60fd0370ba54fa9fb95c5885a9))
+- Fix release ([#1003](https://github.com/juspay/connector-service/pull/1003)) ([`159c50f`](https://github.com/juspay/connector-service/commit/159c50f589a7fb12d5f2da92535c194bad7c737e))
+- Add llm folder ([#1008](https://github.com/juspay/connector-service/pull/1008)) ([`25cfdc9`](https://github.com/juspay/connector-service/commit/25cfdc91cda0390be379d4117ed3c189cf189aca))
+- Add llm folder ([#1011](https://github.com/juspay/connector-service/pull/1011)) ([`c427264`](https://github.com/juspay/connector-service/commit/c4272640405129266378e05303a87d3467601fc6))
+
+**Full Changelog:** [`2026.04.08.0...2026.04.08.1`](https://github.com/juspay/connector-service/compare/2026.04.08.0...2026.04.08.1)
+
+- - -
+
 ## 2026.04.08.0
 
 ### Features
