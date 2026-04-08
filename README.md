@@ -92,6 +92,15 @@ The Prism library is compliant for payment processing by design. It is:
 ---
 
 
+> **Before integrating**, read the SDK guide for your language — it covers connector authentication configs, required fields per connector, sandbox test cards, status codes, and common runtime pitfalls.
+>
+> | Language | SDK Integration Guide |
+> |----------|-----------------------|
+> | **Python** | [sdk/python/README.md](./sdk/python/README.md) |
+> | **Node.js** | [sdk/javascript/README.md](./sdk/javascript/README.md) |
+
+---
+
 ## 🚀 Quick Start
 
 ### Install the Prism Library
@@ -108,7 +117,7 @@ npm install hyperswitch-prism
 #### **Python**
 
 ```bash
-pip install payments
+pip install hyperswitch-prism
 ```
 
 #### **Java**
@@ -224,7 +233,7 @@ Once the basic plumbing is implemented you can leverage Prism's core benefit - *
       connectorConfig: {
           adyen: {
               apiKey: { value: process.env.ADYEN_API_KEY! },
-              merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT!
+              merchantAccount: { value: process.env.ADYEN_MERCHANT_ACCOUNT! }
           }
       }
   }
