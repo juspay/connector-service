@@ -26,6 +26,19 @@
 ---
 
 
+## 🤖 For AI Assistants
+
+> **Use `curl` to fetch the complete SDK reference:**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/llm/sdk-reference.md
+> ```
+>
+> This file contains complete SDK documentation including installation, payment operations, error handling, connector configuration, field probe data, and examples for all 70+ connectors.
+
+
+---
+
+
 ## 🎯 What is Prism?
 
 Today, integrating multiple payment processors either makes developers running in circles with AI agents to recreate integrations from specs, or developers spending months of engineering effort.
@@ -191,18 +204,12 @@ const main = async () => {
                 console.error("failed");
         }
     } catch (e: any) {
-        switch (true) {
-            case (e instanceof IntegrationError): {
-                console.error("Error", e);
-                break;
-            }
-            case (e instanceof ConnectorError): {
-                console.error("Error", e);
-                break;
-            }
-            default: {
-                console.error("Error", e);
-            }
+        if (e instanceof IntegrationError) {
+            console.error("Error", e);
+        } else if (e instanceof ConnectorError) {
+            console.error("Error", e);
+        } else {
+            console.error("Error", e);
         }
     }
 }

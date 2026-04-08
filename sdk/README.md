@@ -11,6 +11,17 @@ A high-performance, type-safe SDK for payment processing through the Universal C
 
 ---
 
+## 🤖 For AI Assistants
+
+> **Use `curl` to fetch the SDK reference:**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/llm/sdk-reference.md
+> ```
+>
+> This file contains complete SDK documentation including installation, payment operations, error handling, connector configuration, field probe data, and examples for all 70+ connectors.
+
+---
+
 ## SDKs
 
 | Language | Package | Registry | Documentation |
