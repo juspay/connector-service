@@ -3652,7 +3652,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::MobilePayment(_)
-                | PaymentMethodData::CardToken(_) => {
+                | PaymentMethodData::PaymentMethodToken(_) => {
                     Err(IntegrationError::not_implemented("payment method").into())
                 }
             },
@@ -5987,7 +5987,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
                 | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
-                | PaymentMethodData::CardToken(_) => {
+                | PaymentMethodData::PaymentMethodToken(_) => {
                     Err(IntegrationError::not_implemented("payment method").into())
                 }
             },

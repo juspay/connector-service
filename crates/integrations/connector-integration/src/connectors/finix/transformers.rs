@@ -13,7 +13,7 @@ use domain_types::{
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{self, ConnectorAuthType, ConnectorSpecificConfig},
+    router_data::{ConnectorAuthType, ConnectorSpecificConfig},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -365,22 +365,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // For Finix, we need a payment instrument ID (source)
         // First try to get token from payment_method_token, otherwise create instrument inline
-        let source = match router_data
-            .resource_common_data
-            .payment_method_token
-            .clone()
-        {
-            Some(token) => match token {
-                router_data::PaymentMethodToken::Token(secret) => secret.expose(),
-            },
-            None => {
-                // No token available - need to create payment instrument inline
-                // This requires connector_customer_id to be present
-                return Err(IntegrationError::MissingRequiredField {
-                    field_name: "payment_method_token (source) - Call CreateConnectorCustomer and PaymentMethodToken first, or ensure connector_customer_id is set",
-                    context: Default::default(),
-                }.into());
-            }
+        let source = match &router_data.request.payment_method_data {
+            PaymentMethodData::PaymentMethodToken(t) => t.token.peek().to_string(),
+            _ => return Err(IntegrationError::MissingRequiredField {
+                field_name: "payment_method_token (source) - Call CreateConnectorCustomer and PaymentMethodToken first",
+                context: Default::default(),
+            }.into()),
         };
 
         Ok(Self {

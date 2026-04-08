@@ -154,7 +154,7 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::OpenBanking(_)
-        | PaymentMethodData::CardToken(_)
+        | PaymentMethodData::PaymentMethodToken(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
@@ -335,7 +335,7 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::OpenBanking(_)
-        | PaymentMethodData::CardToken(_)
+        | PaymentMethodData::PaymentMethodToken(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
