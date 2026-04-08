@@ -283,7 +283,11 @@ fn print_result(result: &ConnectorResult) {
                     }
                     "skipped" => {
                         let reason = detail.reason.as_deref().unwrap_or("unknown");
-                        let error_info = detail.error.as_deref().map(|e| format!(": {e}")).unwrap_or_default();
+                        let error_info = detail
+                            .error
+                            .as_deref()
+                            .map(|e| format!(": {e}"))
+                            .unwrap_or_default();
                         println!(
                             "{}    {}: ~ skipped ({}){}",
                             yellow(""),
