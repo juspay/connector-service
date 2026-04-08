@@ -1038,6 +1038,8 @@ impl ForeignTryFrom<(RazorpayOrderResponse, Self, u16, bool)>
     ) -> Result<Self, Self::Error> {
         let order_response = PaymentCreateOrderResponse {
             order_id: response.id.clone(),
+            merchant_order_id: None, // Default for backward compatibility
+            connector_order_id: Some(response.id.clone()), // Use Razorpay order ID
             session_data: None,
         };
 

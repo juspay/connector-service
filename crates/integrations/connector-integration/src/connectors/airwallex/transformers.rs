@@ -1338,6 +1338,8 @@ impl TryFrom<ResponseRouterData<AirwallexIntentResponse, Self>>
 
         router_data.response = Ok(domain_types::connector_types::PaymentCreateOrderResponse {
             order_id: item.response.id.clone(),
+            merchant_order_id: None, // Default for backward compatibility
+            connector_order_id: Some(item.response.id.clone()), // Use Airwallex payment intent ID
             session_data: None,
         });
 

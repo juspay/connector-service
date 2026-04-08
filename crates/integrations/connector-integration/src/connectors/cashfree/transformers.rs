@@ -516,7 +516,9 @@ impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
 
     fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
-            order_id: response.payment_session_id,
+            order_id: response.payment_session_id.clone(),
+            merchant_order_id: None, // Default for backward compatibility
+            connector_order_id: Some(response.payment_session_id), // Use Cashfree payment session ID
             session_data: None,
         })
     }

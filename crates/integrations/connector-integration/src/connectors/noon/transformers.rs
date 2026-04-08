@@ -1778,9 +1778,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             channel,
             category,
             reference: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+                .request
+                .merchant_order_id
+                .clone()
+                .unwrap_or_else(|| item
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone()),
             name: name.clone(),
             nvp: item
                 .request
@@ -1814,7 +1818,7 @@ impl TryFrom<ResponseRouterData<NoonCreateOrderResponse, Self>>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NoonCreateOrderResponse, Self>,
@@ -1829,6 +1833,8 @@ impl TryFrom<ResponseRouterData<NoonCreateOrderResponse, Self>>
             },
             response: Ok(PaymentCreateOrderResponse {
                 order_id: order.id.to_string(),
+                merchant_order_id: item.router_data.request.merchant_order_id.clone(),
+                connector_order_id: Some(order.id.to_string()),
                 session_data: None,
             }),
             ..item.router_data
