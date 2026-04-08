@@ -93,6 +93,35 @@ pub fn build_handle_event_request() -> EventServiceHandleRequest {
     })).unwrap_or_default()
 }
 
+pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
+    serde_json::from_value::<PaymentServiceProxyAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_proxy_txn_001",
+    "amount": {
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "card_proxy": {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+        "card_number": "4111111111111111",  // Card Identification.
+        "card_exp_month": "03",
+        "card_exp_year": "2030",
+        "card_cvc": "123",
+        "card_holder_name": "John Doe",  // Cardholder Information.
+    },
+    "customer": {
+        "email": "test@example.com",  // Customer's email address.
+    },
+    "address": {
+        "billing_address": {
+            "phone_number": "4155552671",
+        },
+    },
+    "capture_method": "AUTOMATIC",
+    "auth_type": "NO_THREE_DS",
+    "return_url": "https://example.com/return",
+    "connector_order_id": "connector_order_id",  // Send the connector order identifier here if an order was created before authorize.
+    })).unwrap_or_default()
+}
+
 pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification.
@@ -236,6 +265,13 @@ pub async fn handle_event(client: &ConnectorClient, _merchant_transaction_id: &s
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: PaymentService.ProxyAuthorize
+#[allow(dead_code)]
+pub async fn proxy_authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.proxy_authorize(build_proxy_authorize_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: PaymentService.Refund
 #[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -265,9 +301,10 @@ async fn main() {
         "create_order" => create_order(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
         "handle_event" => handle_event(&client, "order_001").await,
+        "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "refund_get" => refund_get(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_get_payment, authorize, capture, create_order, get, handle_event, refund, refund_get", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_get_payment, authorize, capture, create_order, get, handle_event, proxy_authorize, refund, refund_get", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

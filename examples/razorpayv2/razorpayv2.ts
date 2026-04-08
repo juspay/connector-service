@@ -67,6 +67,31 @@ function _buildGetRequest(connectorTransactionId: string): PaymentServiceGetRequ
     };
 }
 
+function _buildProxyAuthorizeRequest(): PaymentServiceProxyAuthorizeRequest {
+    return {
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "cardProxy": {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            "cardNumber": {"value": "4111111111111111"},  // Card Identification.
+            "cardExpMonth": {"value": "03"},
+            "cardExpYear": {"value": "2030"},
+            "cardCvc": {"value": "123"},
+            "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
+        },
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "captureMethod": CaptureMethod.AUTOMATIC,
+        "authType": AuthenticationType.NO_THREE_DS,
+        "returnUrl": "https://example.com/return",
+        "connectorOrderId": "connector_order_id"  // Send the connector order identifier here if an order was created before authorize.
+    };
+}
+
 function _buildRefundRequest(connectorTransactionId: string): PaymentServiceRefundRequest {
     return {
         "merchantRefundId": "probe_refund_001",  // Identification.
@@ -85,6 +110,24 @@ function _buildRefundGetRequest(): RefundServiceGetRequest {
         "merchantRefundId": "probe_refund_001",  // Identification.
         "connectorTransactionId": "probe_connector_txn_001",
         "refundId": "probe_refund_id_001"
+    };
+}
+
+function _buildTokenAuthorizeRequest(): PaymentServiceTokenAuthorizeRequest {
+    return {
+        "merchantTransactionId": "probe_tokenized_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "connectorToken": {"value": "pm_1AbcXyzStripeTestToken"},  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "captureMethod": CaptureMethod.AUTOMATIC,
+        "returnUrl": "https://example.com/return",
+        "connectorOrderId": "connector_order_id"  // Send the connector order identifier here if an order was created before authorize.
     };
 }
 
@@ -184,6 +227,15 @@ async function get(merchantTransactionId: string, config: ConnectorConfig = _def
     return { status: getResponse.status };
 }
 
+// Flow: PaymentService.ProxyAuthorize
+async function proxyAuthorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceAuthorizeResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const proxyResponse = await paymentClient.proxyAuthorize(_buildProxyAuthorizeRequest());
+
+    return { status: proxyResponse.status };
+}
+
 // Flow: PaymentService.Refund
 async function refund(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<RefundResponse> {
     const paymentClient = new PaymentClient(config);
@@ -202,10 +254,19 @@ async function refundGet(merchantTransactionId: string, config: ConnectorConfig 
     return { status: refundResponse.status };
 }
 
+// Flow: PaymentService.TokenAuthorize
+async function tokenAuthorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceAuthorizeResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const tokenResponse = await paymentClient.tokenAuthorize(_buildTokenAuthorizeRequest());
+
+    return { status: tokenResponse.status };
+}
+
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processRefund, processGetPayment, authorize, createOrder, get, refund, refundGet, _buildAuthorizeRequest, _buildCreateOrderRequest, _buildGetRequest, _buildRefundRequest, _buildRefundGetRequest
+    processCheckoutAutocapture, processRefund, processGetPayment, authorize, createOrder, get, proxyAuthorize, refund, refundGet, tokenAuthorize, _buildAuthorizeRequest, _buildCreateOrderRequest, _buildGetRequest, _buildProxyAuthorizeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenAuthorizeRequest
 };
 
 // CLI runner

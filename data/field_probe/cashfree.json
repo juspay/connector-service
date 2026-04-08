@@ -8,368 +8,454 @@
     },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "AchBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Affirm": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Afterpay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Alfamart": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "AliPayRedirect": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "AmazonPayRedirect": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "ApplePay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "ApplePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "ApplePayThirdPartySdk": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Bacs": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "BacsBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "BancontactCard": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "BcaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Becs": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Bizum": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Blik": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Bluecode": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "BniVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Boleto": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "BriVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Card": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "CashappQr": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "CimbVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "ClassicReward": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Crypto": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "DanamonVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "DuitNow": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "EVoucher": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Efecty": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Eft": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Eps": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "FamilyMart": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Giropay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "GooglePay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "GooglePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "GooglePayThirdPartySdk": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Ideal": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Indomaret": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "IndonesianBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "InstantBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "InstantBankTransferFinland": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "InstantBankTransferPoland": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Interac": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Klarna": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Lawson": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "LocalBankRedirect": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "LocalBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "MandiriVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "MbWay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Mifinity": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "MiniStop": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "MultibancoBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "OnlineBankingCzechRepublic": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "OnlineBankingFinland": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "OnlineBankingFpx": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "OnlineBankingPoland": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "OnlineBankingSlovakia": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "OnlineBankingThailand": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "OpenBanking": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "OpenBankingPis": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "OpenBankingUk": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Oxxo": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "PagoEfectivo": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "PayEasy": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "PaySafeCard": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "PaypalRedirect": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "PaypalSdk": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "PermataBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Pix": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Przelewy24": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Pse": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "RedCompra": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "RedPagos": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "RevolutPay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Satispay": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Seicomart": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Sepa": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "SepaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "SepaGuaranteedDebit": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "SevenEleven": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Sofort": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Trustly": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "UpiCollect": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "upi_collect": {
+              "vpa_id": "test@upi"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "connector_order_id": "connector_order_id"
+        },
+        "sample": {
+          "url": "https://sandbox.cashfree.com/pg/orders/sessions",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-version": "2022-09-01",
+            "x-client-id": "probe_id",
+            "x-client-secret": "probe_key"
+          },
+          "body": "{\"payment_session_id\":\"connector_order_id\",\"payment_method\":{\"upi\":{\"channel\":\"collect\",\"upi_id\":\"test@upi\"}},\"payment_surcharge\":null}"
+        }
       },
       "UpiIntent": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "upi_intent": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "connector_order_id": "connector_order_id"
+        },
+        "sample": {
+          "url": "https://sandbox.cashfree.com/pg/orders/sessions",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-version": "2022-09-01",
+            "x-client-id": "probe_id",
+            "x-client-secret": "probe_key"
+          },
+          "body": "{\"payment_session_id\":\"connector_order_id\",\"payment_method\":{\"upi\":{\"channel\":\"link\"}},\"payment_surcharge\":null}"
+        }
       },
       "UpiQr": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "upi_qr": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "connector_order_id": "connector_order_id"
+        },
+        "sample": {
+          "url": "https://sandbox.cashfree.com/pg/orders/sessions",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-version": "2022-09-01",
+            "x-client-id": "probe_id",
+            "x-client-secret": "probe_key"
+          },
+          "body": "{\"payment_session_id\":\"connector_order_id\",\"payment_method\":{\"upi\":{\"channel\":\"link\"}},\"payment_surcharge\":null}"
+        }
       },
       "WeChatPayQr": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       },
       "Wero": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       }
     },
     "capture": {
@@ -455,8 +541,8 @@
     },
     "proxy_authorize": {
       "default": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       }
     },
     "proxy_setup_recurring": {
@@ -496,8 +582,8 @@
     },
     "token_authorize": {
       "default": {
-        "status": "error",
-        "error": "Stuck on field: merchant_order_id — Missing required field: merchant_order_id"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
       }
     },
     "token_setup_recurring": {

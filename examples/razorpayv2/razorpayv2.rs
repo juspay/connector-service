@@ -72,6 +72,31 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
     })).unwrap_or_default()
 }
 
+pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
+    serde_json::from_value::<PaymentServiceProxyAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_proxy_txn_001",
+    "amount": {
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "card_proxy": {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+        "card_number": "4111111111111111",  // Card Identification.
+        "card_exp_month": "03",
+        "card_exp_year": "2030",
+        "card_cvc": "123",
+        "card_holder_name": "John Doe",  // Cardholder Information.
+    },
+    "address": {
+        "billing_address": {
+        },
+    },
+    "capture_method": "AUTOMATIC",
+    "auth_type": "NO_THREE_DS",
+    "return_url": "https://example.com/return",
+    "connector_order_id": "connector_order_id",  // Send the connector order identifier here if an order was created before authorize.
+    })).unwrap_or_default()
+}
+
 pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification.
@@ -90,6 +115,24 @@ pub fn build_refund_get_request() -> RefundServiceGetRequest {
     "merchant_refund_id": "probe_refund_001",  // Identification.
     "connector_transaction_id": "probe_connector_txn_001",
     "refund_id": "probe_refund_id_001",
+    })).unwrap_or_default()
+}
+
+pub fn build_token_authorize_request() -> PaymentServiceTokenAuthorizeRequest {
+    serde_json::from_value::<PaymentServiceTokenAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_tokenized_txn_001",
+    "amount": {
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "connector_token": "pm_1AbcXyzStripeTestToken",  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
+    "address": {
+        "billing_address": {
+        },
+    },
+    "capture_method": "AUTOMATIC",
+    "return_url": "https://example.com/return",
+    "connector_order_id": "connector_order_id",  // Send the connector order identifier here if an order was created before authorize.
     })).unwrap_or_default()
 }
 
@@ -178,6 +221,13 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: PaymentService.ProxyAuthorize
+#[allow(dead_code)]
+pub async fn proxy_authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.proxy_authorize(build_proxy_authorize_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: PaymentService.Refund
 #[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -189,6 +239,13 @@ pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) ->
 #[allow(dead_code)]
 pub async fn refund_get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund_get(build_refund_get_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: PaymentService.TokenAuthorize
+#[allow(dead_code)]
+pub async fn token_authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.token_authorize(build_token_authorize_request(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
@@ -204,9 +261,11 @@ async fn main() {
         "authorize" => authorize(&client, "order_001").await,
         "create_order" => create_order(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
+        "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "refund_get" => refund_get(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_refund, process_get_payment, authorize, create_order, get, refund, refund_get", flow); return; }
+        "token_authorize" => token_authorize(&client, "order_001").await,
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_refund, process_get_payment, authorize, create_order, get, proxy_authorize, refund, refund_get, token_authorize", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

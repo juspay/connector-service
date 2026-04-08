@@ -13,7 +13,9 @@ import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceGetRequest
 import payments.PaymentServiceCreateOrderRequest
+import payments.PaymentServiceProxyAuthorizeRequest
 import payments.RefundServiceGetRequest
+import payments.PaymentServiceTokenAuthorizeRequest
 import payments.AuthenticationType
 import payments.CaptureMethod
 import payments.Currency
@@ -170,6 +172,35 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentService.ProxyAuthorize
+fun proxyAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = PaymentServiceProxyAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        cardProxyBuilder.apply {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+            cardExpMonthBuilder.value = "03"
+            cardExpYearBuilder.value = "2030"
+            cardCvcBuilder.value = "123"
+            cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+        }
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        authType = AuthenticationType.NO_THREE_DS
+        returnUrl = "https://example.com/return"
+        connectorOrderId = "connector_order_id"  // Send the connector order identifier here if an order was created before authorize.
+    }.build()
+    val response = client.proxy_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -192,6 +223,28 @@ fun refundGet(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentService.TokenAuthorize
+fun tokenAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = PaymentServiceTokenAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_tokenized_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        connectorTokenBuilder.value = "pm_1AbcXyzStripeTestToken"  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        returnUrl = "https://example.com/return"
+        connectorOrderId = "connector_order_id"  // Send the connector order identifier here if an order was created before authorize.
+    }.build()
+    val response = client.token_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
@@ -203,8 +256,10 @@ fun main(args: Array<String>) {
         "authorize" -> authorize(txnId)
         "createOrder" -> createOrder(txnId)
         "get" -> get(txnId)
+        "proxyAuthorize" -> proxyAuthorize(txnId)
         "refund" -> refund(txnId)
         "refundGet" -> refundGet(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processRefund, processGetPayment, authorize, createOrder, get, refund, refundGet")
+        "tokenAuthorize" -> tokenAuthorize(txnId)
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processRefund, processGetPayment, authorize, createOrder, get, proxyAuthorize, refund, refundGet, tokenAuthorize")
     }
 }

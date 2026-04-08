@@ -87,6 +87,35 @@ function _buildHandleEventRequest(): EventServiceHandleRequest {
     };
 }
 
+function _buildProxyAuthorizeRequest(): PaymentServiceProxyAuthorizeRequest {
+    return {
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "cardProxy": {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            "cardNumber": {"value": "4111111111111111"},  // Card Identification.
+            "cardExpMonth": {"value": "03"},
+            "cardExpYear": {"value": "2030"},
+            "cardCvc": {"value": "123"},
+            "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
+        },
+        "customer": {
+            "email": {"value": "test@example.com"}  // Customer's email address.
+        },
+        "address": {
+            "billingAddress": {
+                "phoneNumber": {"value": "4155552671"}
+            }
+        },
+        "captureMethod": CaptureMethod.AUTOMATIC,
+        "authType": AuthenticationType.NO_THREE_DS,
+        "returnUrl": "https://example.com/return",
+        "connectorOrderId": "connector_order_id"  // Send the connector order identifier here if an order was created before authorize.
+    };
+}
+
 function _buildRefundRequest(connectorTransactionId: string): PaymentServiceRefundRequest {
     return {
         "merchantRefundId": "probe_refund_001",  // Identification.
@@ -248,6 +277,15 @@ async function handleEvent(merchantTransactionId: string, config: ConnectorConfi
     return { status: handleResponse.status };
 }
 
+// Flow: PaymentService.ProxyAuthorize
+async function proxyAuthorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceAuthorizeResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const proxyResponse = await paymentClient.proxyAuthorize(_buildProxyAuthorizeRequest());
+
+    return { status: proxyResponse.status };
+}
+
 // Flow: PaymentService.Refund
 async function refund(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<RefundResponse> {
     const paymentClient = new PaymentClient(config);
@@ -269,7 +307,7 @@ async function refundGet(merchantTransactionId: string, config: ConnectorConfig 
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processGetPayment, authorize, capture, createOrder, get, handleEvent, refund, refundGet, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateOrderRequest, _buildGetRequest, _buildHandleEventRequest, _buildRefundRequest, _buildRefundGetRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processGetPayment, authorize, capture, createOrder, get, handleEvent, proxyAuthorize, refund, refundGet, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateOrderRequest, _buildGetRequest, _buildHandleEventRequest, _buildProxyAuthorizeRequest, _buildRefundRequest, _buildRefundGetRequest
 };
 
 // CLI runner

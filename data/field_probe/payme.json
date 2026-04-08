@@ -539,8 +539,41 @@
     },
     "proxy_authorize": {
       "default": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_proxy_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "card_proxy": {
+            "card_number": "4111111111111111",
+            "card_exp_month": "03",
+            "card_exp_year": "2030",
+            "card_cvc": "123",
+            "card_holder_name": "John Doe"
+          },
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "connector_order_id": "connector_order_id"
+        },
+        "sample": {
+          "url": "https://sandbox.payme.io/api//pay-sale",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"buyer_name\":\"John Doe\",\"buyer_email\":\"test@example.com\",\"payme_sale_id\":\"connector_order_id\",\"credit_card_number\":\"4111111111111111\",\"credit_card_exp\":\"0330\",\"credit_card_cvv\":\"123\",\"language\":\"en\"}"
+        }
       }
     },
     "proxy_setup_recurring": {
@@ -613,8 +646,8 @@
     },
     "token_authorize": {
       "default": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       }
     },
     "token_setup_recurring": {

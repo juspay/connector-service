@@ -102,6 +102,37 @@ def _build_handle_event_request():
         payment_pb2.EventServiceHandleRequest(),
     )
 
+def _build_proxy_authorize_request():
+    return ParseDict(
+        {
+            "merchant_transaction_id": "probe_proxy_txn_001",
+            "amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            },
+            "card_proxy": {  # Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+                "card_number": {"value": "4111111111111111"},  # Card Identification.
+                "card_exp_month": {"value": "03"},
+                "card_exp_year": {"value": "2030"},
+                "card_cvc": {"value": "123"},
+                "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+            },
+            "customer": {
+                "email": {"value": "test@example.com"}  # Customer's email address.
+            },
+            "address": {
+                "billing_address": {
+                    "phone_number": {"value": "4155552671"}
+                }
+            },
+            "capture_method": "AUTOMATIC",
+            "auth_type": "NO_THREE_DS",
+            "return_url": "https://example.com/return",
+            "connector_order_id": "connector_order_id"  # Send the connector order identifier here if an order was created before authorize.
+        },
+        payment_pb2.PaymentServiceProxyAuthorizeRequest(),
+    )
+
 def _build_refund_request(connector_transaction_id: str):
     return ParseDict(
         {
@@ -260,6 +291,15 @@ async def handle_event(merchant_transaction_id: str, config: sdk_config_pb2.Conn
     handle_response = await event_client.handle_event(_build_handle_event_request())
 
     return {"status": handle_response.status}
+
+
+async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.ProxyAuthorize"""
+    payment_client = PaymentClient(config)
+
+    proxy_response = await payment_client.proxy_authorize(_build_proxy_authorize_request())
+
+    return {"status": proxy_response.status}
 
 
 async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
