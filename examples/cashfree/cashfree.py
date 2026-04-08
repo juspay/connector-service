@@ -42,7 +42,7 @@ def _build_authorize_request(capture_method: str):
             },
             "auth_type": "NO_THREE_DS",  # Authentication Details.
             "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks.
-            "merchant_order_id": "probe_order_001"
+            "connector_order_id": "connector_order_id"  # Send the connector order identifier here if an order was created before authorize.
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )
