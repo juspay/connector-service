@@ -9,6 +9,18 @@ A high-performance, type-safe Node.js SDK for payment processing through the Uni
 
 ---
 
+## 📚 Documentation
+
+| Resource | Link |
+|----------|------|
+| **Getting Started** | [Installation](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/installation.md) · [First Payment](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/first-payment.md) |
+| **Architecture** | [Overview](https://github.com/juspay/hyperswitch-prism/blob/main/docs/architecture/README.md) · [Core Concepts](https://github.com/juspay/hyperswitch-prism/tree/main/docs/architecture/concepts) |
+| **API Reference** | [Payment Service](https://github.com/juspay/hyperswitch-prism/tree/main/docs/api-reference/services/payment-service) |
+| **Examples** | [Connector Examples](https://github.com/juspay/hyperswitch-prism/tree/main/examples) · [Smoke Test](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/javascript/smoke-test) · [Tests](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/javascript/tests) |
+| **Main Project** | [Prism Docs](https://github.com/juspay/hyperswitch-prism/blob/main/docs/README.md) |
+
+---
+
 ## Features
 
 - 🚀 **High Performance** — Direct UniFFI FFI bindings to Rust core, zero NAPI overhead
@@ -17,6 +29,62 @@ A high-performance, type-safe Node.js SDK for payment processing through the Uni
 - ⚡ **Connection Pooling** — Built-in HTTP connection pooling for optimal throughput
 - 🛡️ **Type-Safe** — Protobuf-based request/response serialization
 - 🔧 **Configurable** — Per-request or global configuration for timeouts, proxies, and auth
+
+---
+
+## 🤖 AI Assistant Context
+
+This SDK is part of **Hyperswitch Prism** — a unified connector library for payment processors.
+
+### What This SDK Does
+
+1. **Request Transformation**: Converts unified payment requests to connector-specific formats (Stripe, Adyen, PayPal, etc.)
+2. **Response Normalization**: Transforms connector responses back to a unified schema
+3. **Error Handling**: Provides consistent error types (`IntegrationError`, `ConnectorError`, `NetworkError`) regardless of connector
+
+### Architecture
+
+```
+Your Node.js App
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Service Clients (PaymentClient, CustomerClient, etc.)       │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  ConnectorClient (undici connection pool + HTTP execution)   │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  koffi FFI Bindings (connector-service-ffi.node)             │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Rust Core (connector transformation logic)                  │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+              Payment Processor APIs (Stripe, Adyen, etc.)
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/index.ts` | Public API exports (clients, types, errors) |
+| `src/connector-client.ts` | HTTP execution layer with undici |
+| `src/ffi/connector-service-ffi.ts` | koffi FFI bindings |
+| `src/proto/payment_pb.ts` | Protobuf message definitions |
+
+### Package & Import
+
+- **Package Name**: `hyperswitch-prism`
+- **Installation**: `npm install hyperswitch-prism`
+- **Import**: `import { PaymentClient, types } from 'hyperswitch-prism'`
 
 ---
 
