@@ -3659,7 +3659,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ok_or_else(|| {
                             error_stack::report!(IntegrationError::MissingRequiredField {
                                 field_name: "payment_method_token",
-                                context: Default::default(),
+                                context: domain_types::errors::IntegrationErrorContext {
+                                    doc_url: Some("https://docs.adyen.com/api-explorer/Checkout/68/post/payments".to_string()),
+                                    additional_context: Some("Adyen requires a storedPaymentMethodId (payment_method_token) for token-based card payments. Ensure the token was obtained via a prior session or tokenization flow.".to_string()),
+                                    ..Default::default()
+                                },
                             })
                         })?;
 
