@@ -123,7 +123,8 @@ jobs:
           echo "" >> "$TARGET_SUMMARY"
 
           # Copy content from source (skip the # PRISM header line)
-          tail -n +2 "$SOURCE_SUMMARY" >> "$TARGET_SUMMARY"
+          # Add prism/ prefix to all links
+          tail -n +2 "$SOURCE_SUMMARY" | sed 's/](](/](prism\//g' >> "$TARGET_SUMMARY"
 
           echo "✓ Appended PRISM section to $TARGET_SUMMARY"
           echo ""
