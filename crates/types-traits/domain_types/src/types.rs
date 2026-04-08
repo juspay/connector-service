@@ -543,7 +543,7 @@ impl Connectors {
             _ => {
                 // Connector not supported for URL patching - return error
                 return Err(IntegrationError::InvalidDataFormat {
-                    field_name: "connector", 
+                    field_name: "connector",
                     context: IntegrationErrorContext {
                         additional_context: Some(format!(
                             "Connector '{}' is not supported for dynamic URL patching from superposition. \
@@ -1826,6 +1826,15 @@ impl<
                     ))))
                 }
 
+                grpc_api_types::payments::payment_method::PaymentMethod::Netbanking(nb) => {
+                    let grpc_bank = grpc_api_types::payments::BankNames::try_from(nb.issuer)
+                        .unwrap_or_default();
+                    let issuer = common_enums::BankNames::foreign_try_from(grpc_bank)?;
+                    Ok(Self::BankRedirect(
+                        crate::payment_method_data::BankRedirectData::Netbanking { issuer },
+                    ))
+                }
+
                 _ => Err(report!(IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("This payment method type is not yet supported".to_string()), ..Default::default() } })),
             },
             None => Err(IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Payment method data is required".to_string()), ..Default::default() } }
@@ -1978,6 +1987,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
                 Ok(Some(PaymentMethodType::Satispay))
             }
             grpc_api_types::payments::PaymentMethodType::Wero => Ok(Some(PaymentMethodType::Wero)),
+            grpc_api_types::payments::PaymentMethodType::Netbanking => {
+                Ok(Some(PaymentMethodType::Netbanking))
+            }
             _ => Err(IntegrationError::InvalidDataFormat {
                 field_name: "unknown",
                 context: IntegrationErrorContext {
@@ -2214,6 +2226,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CimbVaBankTransfer(_) => Ok(Some(PaymentMethodType::CimbVa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::DanamonVaBankTransfer(_) => Ok(Some(PaymentMethodType::DanamonVa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MandiriVaBankTransfer(_) => Ok(Some(PaymentMethodType::MandiriVa)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Netbanking(_) => Ok(Some(PaymentMethodType::Netbanking)),
             },
             None => Err(IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Payment method data is required".to_string()), ..Default::default() } }
             .into()),
@@ -2734,10 +2747,33 @@ impl<
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
-            // Below fields are set in AuthorizeOnly Flow
-            continue_redirection_url: None,
-            redirect_response: None,
-            threeds_method_comp_ind: None,
+            continue_redirection_url: value
+                .continue_redirection_url
+                .map(|url_str| {
+                    url::Url::parse(&url_str).change_context(IntegrationError::InvalidDataFormat {
+                        field_name: "continue_redirection_url",
+                        context: IntegrationErrorContext::default(),
+                    })
+                })
+                .transpose()?,
+            redirect_response: value
+                .redirection_response
+                .map(|rr| ContinueRedirectionResponse {
+                    params: rr.params.map(Secret::new),
+                    payload: Some(Secret::new(serde_json::Value::Object(
+                        rr.payload
+                            .into_iter()
+                            .map(|(k, v)| (k, serde_json::Value::String(v)))
+                            .collect(),
+                    ))),
+                }),
+            threeds_method_comp_ind: value.threeds_completion_indicator.and_then(|i| {
+                grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(i)
+                    .ok()
+                    .and_then(|e| {
+                        connector_types::ThreeDsCompletionIndicator::foreign_try_from(e).ok()
+                    })
+            }),
             tokenization,
         })
     }
@@ -3231,6 +3267,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -3359,6 +3396,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             access_token,
             session_token: value.session_token,
             reference_id: value.merchant_order_id.clone(),
+            connector_order_id: value.connector_order_id,
             payment_method_token: value
                 .payment_method_token
                 .map(router_data::PaymentMethodToken::Token),
@@ -3458,6 +3496,7 @@ impl
             access_token,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -3535,6 +3574,7 @@ impl
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -3606,6 +3646,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             access_token,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -4503,6 +4544,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(_)),
             } => Ok(Self::BankDebit),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Netbanking(_)),
+            } => Ok(Self::BankRedirect),
             _ => Err(report!(IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Unsupported payment method".to_string()), ..Default::default() } })),
         }
     }
@@ -5458,6 +5503,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
 
             grpc_api_types::payments::PaymentMethodType::NetworkToken => Ok(Self::Card),
 
+            grpc_api_types::payments::PaymentMethodType::Netbanking => Ok(Self::BankRedirect),
+
             _ => Err(IntegrationError::InvalidDataFormat {
                 field_name: "payment_method_type",
                 context: IntegrationErrorContext {
@@ -6140,6 +6187,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -6248,6 +6296,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -6855,6 +6904,7 @@ impl
             access_token,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -6926,6 +6976,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -7269,6 +7320,7 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: value
                 .payment_method_token
                 .map(router_data::PaymentMethodToken::Token),
@@ -7377,6 +7429,7 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: value
                 .payment_method_token
                 .map(router_data::PaymentMethodToken::Token),
@@ -8451,6 +8504,7 @@ impl
             access_token,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -8674,6 +8728,7 @@ pub enum PaymentMethodDataType {
     Wero,
     SepaGuaranteedBankDebit,
     IndonesianBankTransfer,
+    Netbanking,
 }
 
 impl ForeignTryFrom<String> for Secret<time::Date> {
@@ -8956,6 +9011,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -9135,6 +9191,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -9283,6 +9340,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -9881,6 +9939,18 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Noon(noon_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Noon(
+                        grpc_api_types::payments::NoonClientAuthenticationResponse {
+                            order_id: noon_data.order_id,
+                            checkout_url: Some(noon_data.checkout_url),
+                        },
+                    ),
+                ),
+            }
+        }
         ConnectorSpecificClientAuthenticationResponse::Paysafe(paysafe_data) => {
             grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
                 connector: Some(
@@ -9892,13 +9962,35 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
-        ConnectorSpecificClientAuthenticationResponse::Noon(noon_data) => {
+        ConnectorSpecificClientAuthenticationResponse::Bamboraapac(bamboraapac_data) => {
             grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
                 connector: Some(
-                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Noon(
-                        grpc_api_types::payments::NoonClientAuthenticationResponse {
-                            order_id: noon_data.order_id,
-                            checkout_url: Some(noon_data.checkout_url),
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Bamboraapac(
+                        grpc_api_types::payments::BamboraapacClientAuthenticationResponse {
+                            token: Some(bamboraapac_data.token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Jpmorgan(jpmorgan_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Jpmorgan(
+                        grpc_api_types::payments::JpmorganClientAuthenticationResponse {
+                            transaction_id: jpmorgan_data.transaction_id,
+                            request_id: jpmorgan_data.request_id,
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Billwerk(billwerk_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Billwerk(
+                        grpc_api_types::payments::BillwerkClientAuthenticationResponse {
+                            session_id: billwerk_data.session_id,
                         },
                     ),
                 ),
@@ -10514,6 +10606,22 @@ impl ForeignTryFrom<grpc_api_types::payments::BankNames> for common_enums::BankN
             grpc_api_types::payments::BankNames::NationaleNederlanden => {
                 Ok(Self::NationaleNederlanden)
             }
+            // Indian banks
+            grpc_api_types::payments::BankNames::StateBank => Ok(Self::StateBank),
+            grpc_api_types::payments::BankNames::HdfcBank => Ok(Self::HdfcBank),
+            grpc_api_types::payments::BankNames::IciciBank => Ok(Self::IciciBank),
+            grpc_api_types::payments::BankNames::AxisBank => Ok(Self::AxisBank),
+            grpc_api_types::payments::BankNames::KotakMahindraBank => Ok(Self::KotakMahindraBank),
+            grpc_api_types::payments::BankNames::PunjabNationalBank => Ok(Self::PunjabNationalBank),
+            grpc_api_types::payments::BankNames::BankOfBaroda => Ok(Self::BankOfBaroda),
+            grpc_api_types::payments::BankNames::UnionBankOfIndia => Ok(Self::UnionBankOfIndia),
+            grpc_api_types::payments::BankNames::CanaraBank => Ok(Self::CanaraBank),
+            grpc_api_types::payments::BankNames::IndusIndBank => Ok(Self::IndusIndBank),
+            grpc_api_types::payments::BankNames::YesBank => Ok(Self::YesBank),
+            grpc_api_types::payments::BankNames::IdbiBank => Ok(Self::IdbiBank),
+            grpc_api_types::payments::BankNames::FederalBank => Ok(Self::FederalBank),
+            grpc_api_types::payments::BankNames::IndianOverseasBank => Ok(Self::IndianOverseasBank),
+            grpc_api_types::payments::BankNames::CentralBankOfIndia => Ok(Self::CentralBankOfIndia),
         }
     }
 }
@@ -10905,6 +11013,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -10994,6 +11103,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -11092,6 +11202,7 @@ impl
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -11168,6 +11279,7 @@ impl
             access_token: None,
             session_token: None,
             reference_id: None,
+            connector_order_id: None,
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
@@ -11734,6 +11846,9 @@ fn card_proxy_pm(card: grpc_payment_types::CardDetails) -> grpc_payment_types::P
 pub fn tokenized_authorize_to_base(
     v: grpc_payment_types::PaymentServiceTokenAuthorizeRequest,
 ) -> PaymentServiceAuthorizeRequest {
+    // Clone connector_token so we can use it in both payment_method and payment_method_token.
+    // Connectors that handle CardToken via payment_method_data[card][token] (e.g. Stripe) need
+    // the raw token value in resource_common_data.payment_method_token.
     PaymentServiceAuthorizeRequest {
         merchant_transaction_id: v.merchant_transaction_id,
         amount: v.amount,
@@ -11754,6 +11869,7 @@ pub fn tokenized_authorize_to_base(
         setup_future_usage: v.setup_future_usage,
         browser_info: v.browser_info,
         state: v.state,
+        connector_order_id: v.connector_order_id,
         merchant_order_id: v.merchant_order_id,
         l2_l3_data: v.l2_l3_data,
         customer_acceptance: v.customer_acceptance,
@@ -11839,6 +11955,8 @@ impl<
 pub fn tokenized_setup_recurring_to_base(
     v: grpc_payment_types::PaymentServiceTokenSetupRecurringRequest,
 ) -> PaymentServiceSetupRecurringRequest {
+    // Clone connector_token so we can use it in both payment_method and payment_method_token.
+    let connector_token_clone = v.connector_token.clone();
     PaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: v.merchant_recurring_payment_id,
         amount: v.amount,
@@ -11877,7 +11995,9 @@ pub fn tokenized_setup_recurring_to_base(
         order_tax_amount: None,
         payment_channel: None,
         payment_experience: None,
-        payment_method_token: None,
+        // Pass connector_token as payment_method_token so connector transformers
+        // (e.g. Stripe) can use it via resource_common_data.payment_method_token.
+        payment_method_token: connector_token_clone,
         request_extended_authorization: None,
         request_incremental_authorization: false,
         session_token: None,
@@ -11960,6 +12080,7 @@ pub fn proxied_authorize_to_base(
         setup_future_usage: v.setup_future_usage,
         browser_info: v.browser_info,
         state: v.state,
+        connector_order_id: v.connector_order_id,
         merchant_order_id: v.merchant_order_id,
         l2_l3_data: v.l2_l3_data,
         customer_acceptance: v.customer_acceptance,
