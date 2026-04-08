@@ -125,7 +125,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":null},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"CARD\",\"data\":{\"nameOnCard\":null,\"numberPlain\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvv\":\"737\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
+          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"CARD\",\"data\":{\"nameOnCard\":null,\"numberPlain\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvv\":\"737\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
         }
       },
       "CashappQr": {
@@ -221,7 +221,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":null},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"GOOGLEPAY\",\"data\":{\"apiVersionMinor\":0,\"apiVersion\":2,\"paymentMethodData\":{\"type\":\"CARD\",\"description\":\"Visa 1111\",\"info\":{\"card_network\":\"VISA\",\"card_details\":\"1111\",\"assurance_details\":null},\"tokenization_data\":{\"type\":\"PAYMENT_GATEWAY\",\"token\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"}}}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
+          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"GOOGLEPAY\",\"data\":{\"apiVersionMinor\":0,\"apiVersion\":2,\"paymentMethodData\":{\"type\":\"CARD\",\"description\":\"Visa 1111\",\"info\":{\"card_network\":\"VISA\",\"card_details\":\"1111\",\"assurance_details\":null},\"tokenization_data\":{\"type\":\"PAYMENT_GATEWAY\",\"token\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"}}}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
         }
       },
       "GooglePayDecrypted": {
@@ -268,7 +268,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":null},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"GOOGLEPAY\",\"data\":{\"apiVersionMinor\":0,\"apiVersion\":2,\"paymentMethodData\":{\"type\":\"CARD\",\"description\":\"Visa 1111\",\"info\":{\"card_network\":\"VISA\",\"card_details\":\"1111\",\"assurance_details\":null},\"tokenization_data\":{\"cardExpMonth\":\"03\",\"cardExpYear\":\"2030\",\"applicationPrimaryAccountNumber\":\"4111111111111111\",\"cryptogram\":\"AAAAAA==\",\"eciIndicator\":\"05\"}}}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
+          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"GOOGLEPAY\",\"data\":{\"apiVersionMinor\":0,\"apiVersion\":2,\"paymentMethodData\":{\"type\":\"CARD\",\"description\":\"Visa 1111\",\"info\":{\"card_network\":\"VISA\",\"card_details\":\"1111\",\"assurance_details\":null},\"tokenization_data\":{\"cardExpMonth\":\"03\",\"cardExpYear\":\"2030\",\"applicationPrimaryAccountNumber\":\"4111111111111111\",\"cryptogram\":\"AAAAAA==\",\"eciIndicator\":\"05\"}}}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
         }
       },
       "GooglePayThirdPartySdk": {
@@ -421,7 +421,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":null},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"PAYPAL\",\"data\":{\"returnUrl\":\"https://example.com/return\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
+          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"PAYPAL\",\"data\":{\"returnUrl\":\"https://example.com/return\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
         }
       },
       "PaypalSdk": {
@@ -552,7 +552,24 @@
     },
     "create_order": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_order_id": "probe_order_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://api-test.noonpayments.com/payment/v1/order",
+          "method": "Post",
+          "headers": {
+            "authorization": "Key cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"reference\":\"probe_order_001\",\"name\":\"Order payment\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"AUTHORIZE\",\"returnUrl\":null}}"
+        }
       }
     },
     "create_server_authentication_token": {
@@ -666,7 +683,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_proxy_txn_001\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":null},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"CARD\",\"data\":{\"nameOnCard\":null,\"numberPlain\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvv\":\"123\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
+          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_proxy_txn_001\",\"name\":\"Probe payment\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"CARD\",\"data\":{\"nameOnCard\":null,\"numberPlain\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvv\":\"123\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
         }
       }
     },
@@ -705,7 +722,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"0.01\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_proxy_mandate_001\",\"name\":\"purchase desc\",\"nvp\":{\"1\":\"description=purchase desc\",\"2\":\"order_category=mobile\"},\"ipAddress\":null},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":null},\"paymentData\":{\"type\":\"CARD\",\"data\":{\"nameOnCard\":null,\"numberPlain\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvv\":\"123\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
+          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"0.01\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_proxy_mandate_001\",\"name\":\"purchase desc\",\"nvp\":{\"1\":\"description=purchase desc\",\"2\":\"order_category=mobile\"}},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":null},\"paymentData\":{\"type\":\"CARD\",\"data\":{\"nameOnCard\":null,\"numberPlain\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvv\":\"123\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":null,\"street2\":null,\"city\":null,\"stateProvince\":null,\"country\":null,\"postalCode\":null}}}"
         }
       }
     },
@@ -743,7 +760,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":null,\"channel\":\"WEB\",\"category\":null,\"reference\":\"\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":null},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/recurring-return\"},\"paymentData\":{\"type\":\"SUBSCRIPTION\",\"data\":{\"subscriptionIdentifier\":\"probe-mandate-123\"}},\"subscription\":null,\"billing\":null}"
+          "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"channel\":\"WEB\",\"reference\":\"\",\"name\":\"Probe payment\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/recurring-return\"},\"paymentData\":{\"type\":\"SUBSCRIPTION\",\"data\":{\"subscriptionIdentifier\":\"probe-mandate-123\"}},\"subscription\":null,\"billing\":null}"
         }
       }
     },
