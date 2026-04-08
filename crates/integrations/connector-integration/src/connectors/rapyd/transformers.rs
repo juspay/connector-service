@@ -678,9 +678,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     suggested_action: Some(
                         "Verify that the checkout amount and currency are valid.".to_owned(),
                     ),
-                    doc_url: Some(
-                        "https://docs.rapyd.net/en/create-checkout-page.html".to_owned(),
-                    ),
+                    doc_url: Some("https://docs.rapyd.net/en/create-checkout-page.html".to_owned()),
                     additional_context: Some(
                         "Rapyd checkout requires the amount in major-unit string format."
                             .to_owned(),
