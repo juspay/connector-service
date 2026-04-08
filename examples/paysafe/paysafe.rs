@@ -351,7 +351,6 @@ async fn main() {
         "tokenize" => tokenize(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
         _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, create_client_authentication_token, get, refund, refund_get, token_authorize, tokenize, void", flow); return; }
-
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),
