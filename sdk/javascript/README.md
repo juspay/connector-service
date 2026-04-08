@@ -734,7 +734,27 @@ const response = await paymentClient.authorize({
 
 ### PaymentStatus
 
-The `response.status` field is a numeric enum. **Important: a `FAILURE` status is returned in the response body — it does NOT throw an exception.** Always check `response.status` explicitly.
+The `response.status` field is always a **number**, not a string. String comparisons silently fail:
+
+```typescript
+// ❌ Always false — response.status is a number, never a string
+if (response.status === 'CHARGED') { ... }
+
+// ✅ Correct — compare against the numeric enum constant
+if (response.status === types.PaymentStatus.CHARGED) { ... }  // === 8
+if (response.status === 8) { ... }                            // equivalent
+```
+
+**Important: a `FAILURE` status is returned in the response body — it does NOT throw an exception.** Always check `response.status` explicitly.
+
+> **`PaymentStatus` and `RefundStatus` are two separate enums with overlapping integer values.** Use `types.PaymentStatus` for authorize/capture/void responses and `types.RefundStatus` for refund responses. Using the wrong enum gives actively misleading results:
+>
+> | Integer | `types.PaymentStatus` | `types.RefundStatus` |
+> |---------|----------------------|---------------------|
+> | 3 | `ROUTER_DECLINED` ❌ | `REFUND_PENDING` ✅ |
+> | 4 | `AUTHENTICATION_PENDING` ❌ | `REFUND_SUCCESS` ✅ |
+>
+> Example: a successful refund returns status `4`. Checking it against `types.PaymentStatus` gives `AUTHENTICATION_PENDING` — which looks like a failure. Always use `types.RefundStatus` for refund responses.
 
 | Name | Value | Meaning |
 |------|-------|---------|
@@ -825,6 +845,25 @@ try {
     console.error('Network error:', error.message);
   }
 }
+```
+
+### `response.error` is a Protobuf Object — Not JSON-Serializable
+
+`response.error` is a protobuf message, not a plain JS object. Passing it directly to `JSON.stringify`, a logger, or a web framework response will either throw or produce `{}`.
+
+```typescript
+// ❌ Throws or produces empty object
+res.json({ error: response.error });
+JSON.stringify(response.error);
+
+// ✅ Extract the primitive fields you need
+res.json({
+  error: {
+    message: response.error?.message,
+    code: response.error?.code,
+    reason: response.error?.reason,
+  }
+});
 ```
 
 ### Common Error Codes
