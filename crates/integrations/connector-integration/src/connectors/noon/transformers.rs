@@ -1777,14 +1777,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency,
             channel,
             category,
-            reference: item
-                .request
-                .merchant_order_id
-                .clone()
-                .unwrap_or_else(|| item
-                    .resource_common_data
+            reference: item.request.merchant_order_id.clone().unwrap_or_else(|| {
+                item.resource_common_data
                     .connector_request_reference_id
-                    .clone()),
+                    .clone()
+            }),
             name: name.clone(),
             nvp: item
                 .request
