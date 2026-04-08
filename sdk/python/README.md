@@ -101,7 +101,7 @@ from payments import PaymentClient
 ```
 
 **Requirements:**
-- Python 3.9 – 3.13 (3.14+ is not yet supported)
+- Python 3.9+
 - Rust toolchain (for building native bindings from source)
 
 **Platform Support:**
@@ -139,7 +139,10 @@ from google.protobuf.json_format import ParseDict
 req = ParseDict(
     {
         "merchant_transaction_id": "txn_order_001",
-        "amount": {"minor_amount": 1000, "currency": "USD"},  # $10.00
+        "amount": {
+        "minorAmount": 1000,  # $10.00
+        "currency": "USD"
+        },
         "capture_method": "AUTOMATIC",
         "payment_method": {
             "card": {
