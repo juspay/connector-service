@@ -25,10 +25,10 @@ use domain_types::{
         RepeatPaymentData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     payment_method_data::{
-        ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card, CardToken,
-        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, NetworkTokenData,
-        PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
-        VoucherNextStepData, WalletData,
+        ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
+        CardRedirectData, CardToken, DefaultPCIHolder, GiftCardData, GpayTokenizationData,
+        NetworkTokenData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        VoucherData, VoucherNextStepData, WalletData,
     },
     router_data::{
         ConnectorResponseData, ConnectorSpecificConfig, ErrorResponse,
@@ -3653,8 +3653,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .payment_method_token
                         .as_ref()
-                        .and_then(|t| match t {
-                            PaymentMethodToken::Token(s) => Some(s.clone()),
+                        .map(|t| match t {
+                            PaymentMethodToken::Token(s) => s.clone(),
                         })
                         .ok_or_else(|| {
                             error_stack::report!(IntegrationError::MissingRequiredField {
@@ -3664,8 +3664,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         })?;
 
                     let amount = get_amount_data(&item);
-                    let auth_type =
-                        AdyenAuthType::try_from(&item.router_data.connector_config)?;
+                    let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
                     let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
                     let (recurring_processing_model, store_payment_method, shopper_reference) =
                         get_recurring_processing_model(&item.router_data)?;
@@ -3693,7 +3692,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             holder_name: None,
                         }));
 
-                    Ok(AdyenPaymentRequest {
+                    Ok(Self {
                         amount,
                         merchant_account: auth_type.merchant_account,
                         payment_method,
@@ -3734,10 +3733,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         store_payment_method,
                         channel: None,
                         shopper_statement: get_shopper_statement(&item.router_data),
-                        shopper_ip: item
-                            .router_data
-                            .request
-                            .get_ip_address_as_optional(),
+                        shopper_ip: item.router_data.request.get_ip_address_as_optional(),
                         merchant_order_reference: item
                             .router_data
                             .request
