@@ -74,6 +74,12 @@ jobs:
           echo "LIBRARY_PATH=$(brew --prefix libpq)/lib:$LIBRARY_PATH" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=$(brew --prefix libpq)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
+      - name: Set up Python (for SDK codegen)
+        if: matrix.os == 'macos'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Build FFI binary (${{ matrix.target }})
         run: make -C sdk/javascript build-ffi-lib PROFILE=release
 

@@ -206,14 +206,14 @@ dist:
 # publish
 # Publishes to Maven Central (requires proper credentials and signing).
 # For local testing, use 'install' which publishes to ~/.m2.
-# Requires OSSRH_USERNAME and OSSRH_PASSWORD to be set for authentication.
+# Requires SONATYPE_MAVEN_USERNAME and SONATYPE_MAVEN_PASSWORD to be set for authentication.
 # ---------------------------------------------------------------------------
 publish: pack-archive
-	@if [ -z "$(OSSRH_USERNAME)" ] || [ -z "$(OSSRH_PASSWORD)" ]; then \
-		echo "Error: OSSRH_USERNAME and/or OSSRH_PASSWORD not set"; \
+	@if [ -z "$(SONATYPE_MAVEN_USERNAME)" ] || [ -z "$(SONATYPE_MAVEN_PASSWORD)" ]; then \
+		echo "Error: SONATYPE_MAVEN_USERNAME and/or SONATYPE_MAVEN_PASSWORD not set"; \
 		echo "Set them with:"; \
-		echo "  export OSSRH_USERNAME=your_username"; \
-		echo "  export OSSRH_PASSWORD=your_token"; \
+		echo "  export SONATYPE_MAVEN_USERNAME=your_username"; \
+		echo "  export SONATYPE_MAVEN_PASSWORD=your_token"; \
 		exit 1; \
 	fi
 	@echo "Publishing hyperswitch-prism to Maven Central..."
@@ -228,14 +228,14 @@ MAVEN_GROUP := io.hyperswitch
 MAVEN_ARTIFACT := prism
 
 # publish-check-auth
-# Verifies that OSSRH_USERNAME and OSSRH_PASSWORD environment variables are set.
+# Verifies that SONATYPE_MAVEN_USERNAME and SONATYPE_MAVEN_PASSWORD environment variables are set.
 publish-check-auth:
-	@if [ -z "$(OSSRH_USERNAME)" ]; then \
-		echo "Error: OSSRH_USERNAME is not set"; \
+	@if [ -z "$(SONATYPE_MAVEN_USERNAME)" ]; then \
+		echo "Error: SONATYPE_MAVEN_USERNAME is not set"; \
 		exit 1; \
 	fi
-	@if [ -z "$(OSSRH_PASSWORD)" ]; then \
-		echo "Error: OSSRH_PASSWORD is not set"; \
+	@if [ -z "$(SONATYPE_MAVEN_PASSWORD)" ]; then \
+		echo "Error: SONATYPE_MAVEN_PASSWORD is not set"; \
 		exit 1; \
 	fi
 	@echo "Maven Central (OSSRH) authentication credentials are configured."

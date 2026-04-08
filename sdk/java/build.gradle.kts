@@ -54,11 +54,14 @@ publishing {
             groupId = "io.hyperswitch"
             artifactId = "prism"
             from(components["java"])
-
-            // Only sign if GPG key is available
-            val gpgKey = System.getenv("GPG_SIGNING_KEY")
-            if (!gpgKey.isNullOrEmpty()) {
-                signPublications()
+        }
+    }
+    repositories {
+        maven {
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = System.getenv("SONATYPE_MAVEN_USERNAME")
+                password = System.getenv("SONATYPE_MAVEN_PASSWORD")
             }
         }
     }
@@ -66,9 +69,10 @@ publishing {
 
 // Configure signing from environment variables (for CI)
 signing {
-    val gpgKey = System.getenv("GPG_SIGNING_KEY")
-    val gpgPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD")
+    val gpgKey = System.getenv("SONATYPE_MAVEN_SIGNING_KEY")
+    val gpgPassword = System.getenv("SONATYPE_MAVEN_SIGNING_KEY_PASSWORD")
     if (!gpgKey.isNullOrEmpty() && !gpgPassword.isNullOrEmpty()) {
         useInMemoryPgpKeys(gpgKey, gpgPassword)
+        sign(publishing.publications["maven"])
     }
 }
