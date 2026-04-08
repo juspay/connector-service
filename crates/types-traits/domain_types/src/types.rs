@@ -11616,6 +11616,7 @@ pub fn tokenized_authorize_to_base(
         setup_future_usage: v.setup_future_usage,
         browser_info: v.browser_info,
         state: v.state,
+        connector_order_id: v.connector_order_id,
         merchant_order_id: v.merchant_order_id,
         l2_l3_data: v.l2_l3_data,
         customer_acceptance: v.customer_acceptance,
@@ -11648,7 +11649,6 @@ pub fn tokenized_authorize_to_base(
         statement_descriptor_suffix: None,
         threeds_completion_indicator: None,
         tokenization_strategy: None,
-        connector_order_id: None,
     }
 }
 
@@ -11827,6 +11827,7 @@ pub fn proxied_authorize_to_base(
         setup_future_usage: v.setup_future_usage,
         browser_info: v.browser_info,
         state: v.state,
+        connector_order_id: v.connector_order_id,
         merchant_order_id: v.merchant_order_id,
         l2_l3_data: v.l2_l3_data,
         customer_acceptance: v.customer_acceptance,
@@ -11858,7 +11859,6 @@ pub fn proxied_authorize_to_base(
         tokenization_strategy: None,
         setup_mandate_details: None,
         test_mode: None,
-        connector_order_id: None,
     })
 }
 

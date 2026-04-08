@@ -4177,6 +4177,10 @@ message PaymentServiceTokenAuthorizeRequest {
   optional bool test_mode = 21;
   // auth_type intentionally absent: PSP tokens cannot drive external 3DS.
   // Use connector_feature_data to pass connector-specific delegated-3DS flags.
+
+  // Send the connector order identifier here if an order was created before
+  // authorize
+  optional string connector_order_id = 22;
 }
 
 message PaymentServiceTokenSetupRecurringRequest {
@@ -4228,6 +4232,10 @@ message PaymentServiceProxyAuthorizeRequest {
   // Order Details
   optional string order_category = 24; // Category of the order/service
   optional string description = 25; // Description of the transaction
+
+  // Send the connector order identifier here if an order was created before
+  // authorize
+  optional string connector_order_id = 26;
 }
 
 message PaymentServiceProxySetupRecurringRequest {

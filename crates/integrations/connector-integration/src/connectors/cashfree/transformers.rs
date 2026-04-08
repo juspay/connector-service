@@ -491,7 +491,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract payment_session_id from connector_order_id (set by CreateOrder response)
         let payment_session_id = item.resource_common_data.connector_order_id.clone().ok_or(
             IntegrationError::MissingRequiredField {
-                field_name: "merchant_order_id",
+                field_name: "connector_order_id",
                 context: Default::default(),
             },
         )?;
