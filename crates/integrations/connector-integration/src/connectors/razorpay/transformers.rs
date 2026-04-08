@@ -376,10 +376,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let order_id = item
             .router_data
             .resource_common_data
-            .reference_id
+            .connector_order_id
             .clone()
             .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "order_id",
+                field_name: "connector_order_id",
                 context: Default::default(),
             })?;
 
@@ -1037,12 +1037,16 @@ impl ForeignTryFrom<(RazorpayOrderResponse, Self, u16, bool)>
         (response, data, _status_code, _): (RazorpayOrderResponse, Self, u16, bool),
     ) -> Result<Self, Self::Error> {
         let order_response = PaymentCreateOrderResponse {
-            order_id: response.id,
+            order_id: response.id.clone(),
             session_data: None,
         };
 
         Ok(Self {
             response: Ok(order_response),
+            resource_common_data: PaymentFlowData {
+                connector_order_id: Some(response.id),
+                ..data.resource_common_data
+            },
             ..data
         })
     }
@@ -1427,14 +1431,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => (None, None), // Default fallback
         };
 
-        // Get order_id from the CreateOrder response (stored in reference_id)
+        // Get order_id from the CreateOrder response (stored in connector_order_id)
         let order_id = item
             .router_data
             .resource_common_data
-            .reference_id
+            .connector_order_id
             .as_ref()
             .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "order_id (reference_id)",
+                field_name: "connector_order_id",
                 context: Default::default(),
             })?
             .clone();
