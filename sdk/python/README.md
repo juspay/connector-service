@@ -94,8 +94,14 @@ Your Python App
 pip install hyperswitch-prism
 ```
 
+Once installed, the package is imported as `payments`:
+
+```python
+from payments import PaymentClient
+```
+
 **Requirements:**
-- Python 3.9+
+- Python 3.9 – 3.13 (3.14+ is not yet supported)
 - Rust toolchain (for building native bindings from source)
 
 **Platform Support:**
@@ -111,58 +117,54 @@ pip install hyperswitch-prism
 
 ```python
 import os
-from payments import PaymentClient, types
+from payments import PaymentClient, SecretString
+from payments.generated import sdk_config_pb2, payment_pb2
 
-# Configure connector identity and authentication
-stripe_config: types.ConnectorConfig = {
-    "connectorConfig": {
-        "stripe": {
-            "apiKey": {"value": os.environ["STRIPE_API_KEY"]}
-        }
-    }
-}
-
-# Optional: Request defaults for timeouts
-request_config: types.RequestConfig = {
-    "http": {
-        "totalTimeoutMs": 30000,
-        "connectTimeoutMs": 10000
-    }
-}
+cfg = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX)
+)
+cfg.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+    stripe=payment_pb2.StripeConfig(
+        api_key=SecretString(value=os.environ["STRIPE_API_KEY"])
+    )
+))
 ```
 
 ### 2. Process a Payment
 
 ```python
-from payments import Currency, CaptureMethod, AuthenticationType
+import asyncio
+from google.protobuf.json_format import ParseDict
 
-client = PaymentClient(stripe_config, request_config)
-
-authorize_request = {
-    "merchantTransactionId": "txn_order_001",
-    "amount": {
-        "minorAmount": 1000,  # $10.00
-        "currency": Currency.USD
+req = ParseDict(
+    {
+        "merchant_transaction_id": "txn_order_001",
+        "amount": {"minor_amount": 1000, "currency": "USD"},  # $10.00
+        "capture_method": "AUTOMATIC",
+        "payment_method": {
+            "card": {
+                "card_number": {"value": "4111111111111111"},
+                "card_exp_month": {"value": "12"},
+                "card_exp_year": {"value": "2030"},
+                "card_cvc": {"value": "123"},
+                "card_holder_name": {"value": "John Doe"}
+            }
+        },
+        "address": {"billing_address": {}},
+        "auth_type": "NO_THREE_DS",
+        "return_url": "https://example.com/return",
+        "order_details": []
     },
-    "captureMethod": CaptureMethod.AUTOMATIC,
-    "paymentMethod": {
-        "card": {
-            "cardNumber": {"value": "4111111111111111"},
-            "cardExpMonth": {"value": "12"},
-            "cardExpYear": {"value": "2027"},
-            "cardCvc": {"value": "123"},
-            "cardHolderName": {"value": "John Doe"}
-        }
-    },
-    "address": {"billingAddress": {}},
-    "authType": AuthenticationType.NO_THREE_DS,
-    "returnUrl": "https://example.com/return",
-    "orderDetails": []
-}
+    payment_pb2.PaymentServiceAuthorizeRequest()
+)
 
-response = client.authorize(authorize_request)
-print(f"Status: {response.status}")
-print(f"Transaction ID: {response.connectorTransactionId}")
+async def run():
+    client = PaymentClient(cfg)
+    resp = await client.authorize(req)
+    print(payment_pb2.PaymentStatus.Name(resp.status))  # e.g. "CHARGED"
+    print(resp.connector_transaction_id)
+
+asyncio.run(run())
 ```
 
 ---
@@ -185,35 +187,60 @@ The SDK provides specialized clients for different service domains:
 
 ## Authentication Examples
 
-### Stripe (HeaderKey)
+`SecretString` is a protobuf message. All credential fields must be constructed as `SecretString(value="...")` — passing a plain string will raise a proto type error.
+
+### Stripe
 
 ```python
 import os
-from payments import types
+from payments import SecretString
+from payments.generated import sdk_config_pb2, payment_pb2
 
-stripe_config: types.ConnectorConfig = {
-    "connectorConfig": {
-        "stripe": {
-            "apiKey": {"value": os.environ["STRIPE_API_KEY"]}
-        }
-    }
-}
+cfg = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX)
+)
+cfg.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+    stripe=payment_pb2.StripeConfig(
+        api_key=SecretString(value=os.environ["STRIPE_API_KEY"])
+    )
+))
 ```
 
-### PayPal (SignatureKey)
+### PayPal
 
 ```python
 import os
-from payments import types
+from payments import SecretString
+from payments.generated import sdk_config_pb2, payment_pb2
 
-paypal_config: types.ConnectorConfig = {
-    "connectorConfig": {
-        "paypal": {
-            "clientId": {"value": os.environ["PAYPAL_CLIENT_ID"]},
-            "clientSecret": {"value": os.environ["PAYPAL_CLIENT_SECRET"]}
-        }
-    }
-}
+cfg = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX)
+)
+cfg.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+    pay_pal=payment_pb2.PayPalConfig(
+        client_id=SecretString(value=os.environ["PAYPAL_CLIENT_ID"]),
+        client_secret=SecretString(value=os.environ["PAYPAL_CLIENT_SECRET"])
+    )
+))
+```
+
+### Adyen
+
+```python
+import os
+from payments import SecretString
+from payments.generated import sdk_config_pb2, payment_pb2
+
+cfg = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX)
+)
+cfg.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+    adyen=payment_pb2.AdyenConfig(
+        api_key=SecretString(value=os.environ["ADYEN_API_KEY"]),
+        merchant_account=SecretString(value=os.environ["ADYEN_MERCHANT_ACCOUNT"])
+        # api_secret and review_key are not required for payment or refund operations
+    )
+))
 ```
 
 ---
@@ -288,6 +315,61 @@ except ConnectorError as e:
 | `NETWORK_FAILURE` | General network error |
 | `INVALID_CONFIGURATION` | Configuration error |
 | `CLIENT_INITIALIZATION` | SDK initialization failed |
+
+---
+
+## Response Handling
+
+Each response type uses a specific status enum. Using the wrong enum returns an incorrect name because `PaymentStatus` and `RefundStatus` share overlapping integer values:
+
+| Response type | Correct status enum |
+|---------------|---------------------|
+| `PaymentServiceAuthorizeResponse` | `payment_pb2.PaymentStatus` |
+| `PaymentServiceCaptureResponse` | `payment_pb2.PaymentStatus` |
+| `PaymentServiceVoidResponse` | `payment_pb2.PaymentStatus` |
+| `RefundResponse` | `payment_pb2.RefundStatus` |
+
+### Payment Status
+
+Response status fields are protobuf enum integers, not strings. Use the generated proto module to compare or display them:
+
+```python
+from payments.generated import payment_pb2
+
+response = client.authorize(authorize_request)
+
+# Compare against named integer constants
+if response.status == payment_pb2.CHARGED:
+    print("Payment succeeded")
+
+# Decode to a human-readable string for display
+status_name = payment_pb2.PaymentStatus.Name(response.status)
+print(f"Status: {status_name}")  # e.g. "CHARGED"
+```
+
+> Comparing `response.status == "CHARGED"` will always be `False`. Use the integer constants from `payment_pb2`.
+
+### Refund Status
+
+Authorize and refund responses use separate, independent enums. `PaymentStatus` and `RefundStatus` share overlapping integer values that map to different names:
+
+| Integer | `PaymentStatus.Name()` | `RefundStatus.Name()` |
+|---------|----------------------|----------------------|
+| `4` | `AUTHENTICATION_PENDING` | `REFUND_SUCCESS` |
+
+Always use `RefundStatus` when decoding a refund response:
+
+```python
+from payments.generated import payment_pb2
+
+refund_response = client.refund(refund_request)
+
+# Correct: use RefundStatus for refund responses
+status_name = payment_pb2.RefundStatus.Name(refund_response.status)
+print(f"Refund status: {status_name}")  # e.g. "REFUND_SUCCESS" or "REFUND_PENDING"
+```
+
+> Adyen refunds return `REFUND_PENDING` with HTTP 201. This indicates the refund has been accepted for asynchronous processing and is not an error.
 
 ---
 
