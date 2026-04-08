@@ -6,7 +6,7 @@
 // Run a scenario:  npx tsx billwerk.ts checkout_autocapture
 
 import { PaymentClient, RecurringPaymentClient, RefundClient, PaymentMethodClient, types } from 'hyperswitch-prism';
-const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, AcceptanceType, CaptureMethod, Currency, FutureUsage, PaymentMethodType } = types;
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, Currency, PaymentMethodType } = types;
 
 const _defaultConfig: ConnectorConfig = {
     options: {
@@ -86,55 +86,6 @@ function _buildRefundGetRequest(): RefundServiceGetRequest {
     };
 }
 
-function _buildTokenAuthorizeRequest(): PaymentServiceTokenAuthorizeRequest {
-    return {
-        "merchantTransactionId": "probe_tokenized_txn_001",
-        "amount": {
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        },
-        "connectorToken": {"value": "pm_1AbcXyzStripeTestToken"},  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
-        "address": {
-            "billingAddress": {
-            }
-        },
-        "captureMethod": CaptureMethod.AUTOMATIC,
-        "returnUrl": "https://example.com/return"
-    };
-}
-
-function _buildTokenSetupRecurringRequest(): PaymentServiceTokenSetupRecurringRequest {
-    return {
-        "merchantRecurringPaymentId": "probe_tokenized_mandate_001",
-        "amount": {
-            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        },
-        "connectorToken": {"value": "pm_1AbcXyzStripeTestToken"},
-        "address": {
-            "billingAddress": {
-            }
-        },
-        "customerAcceptance": {
-            "acceptanceType": AcceptanceType.ONLINE,  // Type of acceptance (e.g., online, offline).
-            "acceptedAt": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-            "onlineMandateDetails": {  // Details if the acceptance was an online mandate.
-                "ipAddress": "127.0.0.1",  // IP address from which the mandate was accepted.
-                "userAgent": "Mozilla/5.0"  // User agent string of the browser used for mandate acceptance.
-            }
-        },
-        "setupMandateDetails": {
-            "mandateType": {  // Type of mandate (single_use or multi_use) with amount details.
-                "multiUse": {  // Multi use mandate with amount details (for recurring payments).
-                    "amount": 0,  // Amount.
-                    "currency": Currency.USD  // Currency code (ISO 4217).
-                }
-            }
-        },
-        "setupFutureUsage": FutureUsage.OFF_SESSION
-    };
-}
-
 function _buildTokenizeRequest(): PaymentMethodServiceTokenizeRequest {
     return {
         "amount": {  // Payment Information.
@@ -211,24 +162,6 @@ async function refundGet(merchantTransactionId: string, config: ConnectorConfig 
     return { status: refundResponse.status };
 }
 
-// Flow: PaymentService.TokenAuthorize
-async function tokenAuthorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceAuthorizeResponse> {
-    const paymentClient = new PaymentClient(config);
-
-    const tokenResponse = await paymentClient.tokenAuthorize(_buildTokenAuthorizeRequest());
-
-    return { status: tokenResponse.status };
-}
-
-// Flow: PaymentService.TokenSetupRecurring
-async function tokenSetupRecurring(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceSetupRecurringResponse> {
-    const paymentClient = new PaymentClient(config);
-
-    const tokenResponse = await paymentClient.tokenSetupRecurring(_buildTokenSetupRecurringRequest());
-
-    return { status: tokenResponse.status };
-}
-
 // Flow: PaymentMethodService.Tokenize
 async function tokenize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentMethodServiceTokenizeResponse> {
     const paymentMethodClient = new PaymentMethodClient(config);
@@ -250,7 +183,7 @@ async function voidPayment(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    capture, get, recurringCharge, refund, refundGet, tokenAuthorize, tokenSetupRecurring, tokenize, voidPayment, _buildCaptureRequest, _buildGetRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenAuthorizeRequest, _buildTokenSetupRecurringRequest, _buildTokenizeRequest, _buildVoidRequest
+    capture, get, recurringCharge, refund, refundGet, tokenize, voidPayment, _buildCaptureRequest, _buildGetRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenizeRequest, _buildVoidRequest
 };
 
 // CLI runner
