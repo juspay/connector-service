@@ -578,7 +578,7 @@ mod tests {
     fn parses_named_flags() {
         let args = vec![
             "--suite",
-            "authorize",
+            "PaymentService/Authorize",
             "--scenario",
             "no3ds_auto_capture_credit_card",
             "--connector",
@@ -590,7 +590,7 @@ mod tests {
         .map(str::to_string);
 
         let parsed = parse_args(args).expect("args should parse");
-        assert_eq!(parsed.suite.as_deref(), Some("authorize"));
+        assert_eq!(parsed.suite.as_deref(), Some("PaymentService/Authorize"));
         assert_eq!(
             parsed.scenario.as_deref(),
             Some("no3ds_auto_capture_credit_card")
@@ -601,12 +601,16 @@ mod tests {
 
     #[test]
     fn parses_positionals() {
-        let args = vec!["authorize", "no3ds_manual_capture_credit_card", "adyen"]
-            .into_iter()
-            .map(str::to_string);
+        let args = vec![
+            "PaymentService/Authorize",
+            "no3ds_manual_capture_credit_card",
+            "adyen",
+        ]
+        .into_iter()
+        .map(str::to_string);
 
         let parsed = parse_args(args).expect("args should parse");
-        assert_eq!(parsed.suite.as_deref(), Some("authorize"));
+        assert_eq!(parsed.suite.as_deref(), Some("PaymentService/Authorize"));
         assert_eq!(
             parsed.scenario.as_deref(),
             Some("no3ds_manual_capture_credit_card")
@@ -618,7 +622,7 @@ mod tests {
     fn parses_tls_and_endpoint_flags() {
         let args = vec![
             "--suite",
-            "authorize",
+            "PaymentService/Authorize",
             "--scenario",
             "no3ds_auto_capture_credit_card",
             "--connector",
@@ -663,7 +667,7 @@ mod tests {
 
     #[test]
     fn parses_report_flag() {
-        let args = vec!["--suite", "authorize", "--report"]
+        let args = vec!["--suite", "PaymentService/Authorize", "--report"]
             .into_iter()
             .map(str::to_string);
 

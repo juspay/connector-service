@@ -1,0 +1,15 @@
+{
+  "suite": "PaymentService/Void",
+  "suite_type": "dependent",
+  "depends_on": [
+    "MerchantAuthenticationService/CreateServerAuthenticationToken",
+    "CustomerService/Create",
+    "PaymentMethodService/Tokenize",
+    {
+      "suite": "PaymentService/Authorize",
+      "scenario": "no3ds_manual_capture_credit_card"
+    }
+  ],
+  "dependency_scope": "scenario",
+  "strict_dependencies": false
+}
