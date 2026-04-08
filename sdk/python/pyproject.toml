@@ -7,8 +7,11 @@ name = "hyperswitch-prism"
 version = "0.0.1"
 description = "Hyperswitch Payments SDK — Python client for connector integrations via UniFFI FFI"
 readme = "README.md"
-requires-python = ">=3.8"
-dependencies = ["httpx[http2]>=0.27.0"]
+requires-python = ">=3.9,<3.14"
+dependencies = [
+    "httpx[http2]>=0.27.0",
+    "protobuf>=5.0.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
