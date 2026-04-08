@@ -2,10 +2,11 @@ plugins {
     kotlin("jvm") version "2.3.10"
     `java-library`
     `maven-publish`
+    signing
 }
 
-group = "com.hyperswitch"
-version = "0.1.0"
+group = "io.hyperswitch"
+version = "0.0.1"
 
 repositories {
     mavenCentral()
@@ -50,9 +51,28 @@ tasks.register<JavaExec>("runClientSanity") {
 publishing {
     publications {
         create<MavenPublication>("maven") {
-            groupId = "com.hyperswitch"
-            artifactId = "payments-client"
+            groupId = "io.hyperswitch"
+            artifactId = "prism"
             from(components["java"])
         }
+    }
+    repositories {
+        maven {
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = System.getenv("SONATYPE_MAVEN_USERNAME")
+                password = System.getenv("SONATYPE_MAVEN_PASSWORD")
+            }
+        }
+    }
+}
+
+// Configure signing from environment variables (for CI)
+signing {
+    val gpgKey = System.getenv("SONATYPE_MAVEN_SIGNING_KEY")
+    val gpgPassword = System.getenv("SONATYPE_MAVEN_SIGNING_KEY_PASSWORD")
+    if (!gpgKey.isNullOrEmpty() && !gpgPassword.isNullOrEmpty()) {
+        useInMemoryPgpKeys(gpgKey, gpgPassword)
+        sign(publishing.publications["maven"])
     }
 }

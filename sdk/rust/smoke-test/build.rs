@@ -313,7 +313,6 @@ fn main() {
     for connector_name in &allowed_connectors {
         let rs_file = examples_dir
             .join(connector_name)
-            .join("rust")
             .join(format!("{connector_name}.rs"));
         if !rs_file.exists() {
             continue;
@@ -402,10 +401,7 @@ fn main() {
         }
 
         for name in &all_names {
-            let path = examples_dir
-                .join(name.as_str())
-                .join("rust")
-                .join(format!("{name}.rs"));
+            let path = examples_dir.join(name.as_str()).join(format!("{name}.rs"));
             let canonical = path.canonicalize().unwrap_or(path.clone());
             code.push_str(&format!(
                 "pub mod {name} {{\n    include!(r\"{}\");\n}}\n",

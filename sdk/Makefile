@@ -3,9 +3,10 @@
 # This Makefile should be run from the repository root
 
 .PHONY: help build build-all build-macos build-linux clean check-cargo generate install-deps \
-        generate-descriptor generate-rust generate-flows-python generate-flows-javascript generate-flows-java \
+        generate-rust generate-flows-python generate-flows-javascript generate-flows-java \
         test test-rust test-grpc test-python test-javascript test-java \
-        dist dist-python dist-javascript dist-java
+        dist dist-python dist-javascript dist-java \
+        publish-check-python publish-check-javascript publish-check-java publish-check
 
 # Default target
 .DEFAULT_GOAL := help
@@ -131,52 +132,35 @@ generate-javascript: ## Regenerate JavaScript/TypeScript SDK client (flows)
 generate-kotlin: ## Regenerate Kotlin SDK client (flows + bindings)
 	@$(MAKE) -C $(MAKEFILE_DIR)java generate-bindings generate-flows
 
-# ---------------------------------------------------------------------------
-# generate-descriptor
-# Generates the proto descriptor file used by all SDK codegen scripts.
-# This is a prerequisite for generate-client-* targets.
-# ---------------------------------------------------------------------------
-generate-descriptor:
-	@echo "Generating proto descriptor..."
-	@mkdir -p $(REPO_ROOT)/scripts/generators/code
-	@protoc \
-		--proto_path=$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto \
-		--descriptor_set_out=$(REPO_ROOT)/scripts/generators/code/services.desc \
-		--include_source_info \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/services.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payouts.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/payment_methods.proto \
-		$(REPO_ROOT)/crates/types-traits/grpc-api-types/proto/sdk_config.proto
-	@echo "Descriptor written to scripts/generators/code/services.desc"
+
 
 # ---------------------------------------------------------------------------
 # generate-client-python
 # Delegates to python/Makefile to generate Python client flow methods.
 # ---------------------------------------------------------------------------
-generate-client-python: generate-descriptor
+generate-client-python:
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python generate-client
 
 # ---------------------------------------------------------------------------
 # generate-client-javascript
 # Delegates to javascript/Makefile to generate JavaScript client flow methods.
 # ---------------------------------------------------------------------------
-generate-client-javascript: generate-descriptor
+generate-client-javascript:
 	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript generate-client
 
 # ---------------------------------------------------------------------------
 # generate-client-java
 # Delegates to java/Makefile to generate Java/Kotlin client flow methods.
 # ---------------------------------------------------------------------------
-generate-client-java: generate-descriptor
+generate-client-java:
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java generate-client
 
 # ---------------------------------------------------------------------------
 # generate
 # Main entry point for regenerating all SDK clients.
-# Generates the descriptor, then delegates to each SDK's generate-client target.
+# Delegates to each SDK's generate-client target.
 # ---------------------------------------------------------------------------
-generate: install-deps generate-descriptor generate-rust generate-grpc-client generate-python generate-javascript generate-kotlin ## Auto-discover flows and regenerate all SDK clients
+generate: install-deps generate-rust generate-grpc-client generate-python generate-javascript generate-kotlin ## Auto-discover flows and regenerate all SDK clients
 	@echo
 	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
 	@mkdir -p $(REPO_ROOT)/sdk/python/src/payments/generated
@@ -212,7 +196,7 @@ else
   BUILD_FLAGS = 
 endif
 
-GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(GRPC_PROFILE)/grpc-server
+GRPC_SERVER_BIN := $(REPO_ROOT)/target/$(PLATFORM)/$(GRPC_PROFILE)/grpc-server
 
 # Internal target: wait for gRPC server to be ready (checks TCP port 8000)
 _wait-for-server:
@@ -312,12 +296,27 @@ dist-java: build-ffi-lib ## Build FFI → Build Java JAR
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java dist
 
 # ---------------------------------------------------------------------------
+# Pre-publish check targets - delegate to SDK-specific publish-check
+# ---------------------------------------------------------------------------
+
+publish-check-python: ## Run Python SDK pre-publish checks
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python publish-check
+
+publish-check-javascript: ## Run JavaScript SDK pre-publish checks
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript publish-check
+
+publish-check-java: ## Run Java SDK pre-publish checks
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java publish-check
+
+publish-check: publish-check-python publish-check-javascript publish-check-java ## Run all SDK pre-publish checks
+	@echo "All SDK pre-publish checks passed."
+
+# ---------------------------------------------------------------------------
 # Clean - comprehensive cleanup across all SDKs
 # ---------------------------------------------------------------------------
 clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."
 	@cd $(FFI_CRATE) && cargo clean
-	@rm -f $(REPO_ROOT)/scripts/generators/code/services.desc
 	@rm -f $(REPO_ROOT)/crates/ffi/ffi/src/handlers/_generated_flow_registrations.rs
 	@rm -f $(REPO_ROOT)/crates/ffi/ffi/src/bindings/_generated_ffi_flows.rs
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python clean

@@ -22,7 +22,7 @@ import payments.ConnectorSpecificConfig
 import payments.SdkOptions
 import payments.Environment
 import payments.IntegrationError
-import payments.ConnectorResponseTransformationError
+import payments.ConnectorError
 import java.io.File
 import java.lang.reflect.InvocationTargetException
 
@@ -218,20 +218,30 @@ fun testConnectorScenarios(
                 println(green("✓ ok") + grey(" — $response"))
                 result.scenarios[scenarioKey] = ScenarioResult(passed = true, result = response)
             }
+        } catch (e: IntegrationError) {
+            val detail = "IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})"
+            println(yellow("~ connector error") + grey(" — $detail"))
+            result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
+        } catch (e: ConnectorError) {
+            val detail = "ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})"
+            println(yellow("~ connector error") + grey(" — $detail"))
+            result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
         } catch (e: InvocationTargetException) {
-            // Unwrap: InvocationTargetException wraps the real exception from the called method
-            val cause = e.cause ?: e
-            when (cause) {
-                is IntegrationError, is ConnectorResponseTransformationError -> {
-                    val detail = "${cause.javaClass.simpleName}: ${cause.message}"
+            // Unwrap: reflection wraps all exceptions in InvocationTargetException.
+            // Re-dispatch by type so IntegrationError and ConnectorError are handled
+            // identically to the direct-call catch blocks above.
+            when (val cause = e.cause ?: e) {
+                is IntegrationError -> {
+                    val detail = "IntegrationError: ${cause.message} (code=${cause.errorCode}, action=${cause.suggestedAction}, doc=${cause.docUrl})"
                     println(yellow("~ connector error") + grey(" — $detail"))
                     result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
                 }
-                else -> {
-                    val detail = "${cause.javaClass.simpleName}: ${cause.message}"
+                is ConnectorError -> {
+                    val detail = "ConnectorError: ${cause.message} (code=${cause.errorCode}, http=${cause.httpStatusCode})"
                     println(yellow("~ connector error") + grey(" — $detail"))
                     result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
                 }
+                else -> throw cause
             }
         } catch (e: Exception) {
             val detail = "${e.javaClass.simpleName}: ${e.message}"

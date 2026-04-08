@@ -2,7 +2,7 @@
  * Multi-connector smoke test for the hyperswitch-payments Rust SDK.
  *
  * Loads connector credentials from external JSON file and runs all scenario
- * functions found in examples/{connector}/rust/{connector}.rs for each connector.
+ * functions found in examples/{connector}/{connector}.rs for each connector.
  *
  * Each example file exports pub async fn process_*(client, txn_id) -> Result<String, Box<dyn Error>>
  * functions that the smoke test discovers and invokes at compile time.

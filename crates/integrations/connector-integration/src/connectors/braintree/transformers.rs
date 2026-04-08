@@ -24,7 +24,7 @@ use domain_types::{
         RepeatPaymentData, ResponseId, SdkNextAction, SecretInfoToInitiateSdk,
         ThirdPartySdkSessionResponse,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenFlow},
     router_data_v2::RouterDataV2,
@@ -670,7 +670,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<BraintreeAuthResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BraintreeAuthResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -922,7 +922,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<BraintreePaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BraintreePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1277,7 +1277,7 @@ pub struct RefundResponse {
 impl<F> TryFrom<ResponseRouterData<BraintreeRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BraintreeRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1473,7 +1473,7 @@ pub enum BraintreeRSyncResponse {
 impl<F> TryFrom<ResponseRouterData<BraintreeRSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BraintreeRSyncResponse, Self>,
@@ -1492,12 +1492,10 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRSyncResponse, Self>>
                     .edges
                     .first()
                     .ok_or_else(|| {
-                        Report::new(
-                            ConnectorResponseTransformationError::response_handling_failed_with_context(
-                                item.http_code,
-                                Some("Braintree RSync: no refund in search results".to_string()),
-                            ),
-                        )
+                        Report::new(ConnectorError::response_handling_failed_with_context(
+                            item.http_code,
+                            Some("Braintree RSync: no refund in search results".to_string()),
+                        ))
                     })?;
                 let connector_refund_id = &edge_data.node.id;
                 let response = Ok(RefundsResponseData {
@@ -1684,7 +1682,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         PaymentMethodTokenResponse,
     >
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BraintreeTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1793,7 +1791,7 @@ pub struct CaptureResponse {
 impl<F, T> TryFrom<ResponseRouterData<BraintreeCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BraintreeCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1990,7 +1988,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BraintreeSessionResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2002,7 +2000,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                     Ok(a) => a,
                     Err(_) => {
                         return Err(Report::new(
-                            ConnectorResponseTransformationError::response_handling_failed_with_context(
+                            ConnectorError::response_handling_failed_with_context(
                                 item.http_code,
                                 Some("BraintreeAuthType: connector_config rejected".to_string()),
                             ),
@@ -2018,7 +2016,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 Some(l) => l,
                                 None => {
                                     return Err(Report::new(
-                                        ConnectorResponseTransformationError::response_handling_failed_with_context(
+                                        ConnectorError::response_handling_failed_with_context(
                                             item.http_code,
                                             Some("Braintree config: apple_pay_label missing".to_string()),
                                         ),
@@ -2040,7 +2038,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 session_response,
                                 payment_request_data: Some(ApplePayPaymentRequest {
                                     country_code: item.router_data.request.country.ok_or_else(|| Report::new(
-                                        ConnectorResponseTransformationError::response_handling_failed_with_context(
+                                        ConnectorError::response_handling_failed_with_context(
                                             item.http_code,
                                             Some("Apple Pay session: country missing".to_string()),
                                         ),
@@ -2109,7 +2107,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     }],
                                     transaction_info: GpayTransactionInfo {
                                         country_code: item.router_data.request.country.ok_or_else(|| Report::new(
-                                            ConnectorResponseTransformationError::response_handling_failed_with_context(
+                                            ConnectorError::response_handling_failed_with_context(
                                                 item.http_code,
                                                 Some("Google Pay session: country missing".to_string()),
                                             ),
@@ -2136,7 +2134,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             Some(id) => id,
                             None => {
                                 return Err(Report::new(
-                                    ConnectorResponseTransformationError::response_handling_failed_with_context(
+                                    ConnectorError::response_handling_failed_with_context(
                                         item.http_code,
                                         Some(
                                             "Braintree config: paypal_client_id missing"
@@ -2167,7 +2165,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                     }
                     _ => {
                         return Err(Report::new(
-                            ConnectorResponseTransformationError::unexpected_response_error_with_context(
+                            ConnectorError::unexpected_response_error_with_context(
                                 item.http_code,
                                 Some(format!(
                                     "Braintree SDK session: unsupported PM {:?}",
@@ -2230,7 +2228,7 @@ pub enum BraintreeCancelResponse {
 impl<F> TryFrom<ResponseRouterData<BraintreeCancelResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<BraintreeCancelResponse, Self>,
@@ -2343,7 +2341,7 @@ pub struct PSyncResponse {
 impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BraintreePSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2361,14 +2359,10 @@ impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
                     .edges
                     .first()
                     .ok_or_else(|| {
-                        Report::new(
-                            ConnectorResponseTransformationError::response_handling_failed_with_context(
-                                item.http_code,
-                                Some(
-                                    "Braintree PSync: no transaction in search results".to_string(),
-                                ),
-                            ),
-                        )
+                        Report::new(ConnectorError::response_handling_failed_with_context(
+                            item.http_code,
+                            Some("Braintree PSync: no transaction in search results".to_string()),
+                        ))
                     })?;
                 let status = enums::AttemptStatus::from(edge_data.node.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
@@ -2590,7 +2584,7 @@ fn get_braintree_redirect_form<
     payment_method_token: PaymentMethodTokenFlow,
     card_details: PaymentMethodData<T>,
     complete_authorize_url: String,
-) -> Result<RedirectForm, Report<ConnectorResponseTransformationError>> {
+) -> Result<RedirectForm, Report<ConnectorError>> {
     Ok(RedirectForm::Braintree {
         client_token: client_token_data
             .data
@@ -2606,8 +2600,7 @@ fn get_braintree_redirect_form<
                     Ok(bin) => bin,
                     Err(_) => {
                         return Err(
-                            ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown()
-                                .into(),
+                            ConnectorError::unexpected_response_error_http_status_unknown().into(),
                         );
                     }
                 }
@@ -2631,10 +2624,7 @@ fn get_braintree_redirect_form<
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                return Err(
-                    ConnectorResponseTransformationError::unexpected_response_error_http_status_unknown()
-                        .into(),
-                );
+                return Err(ConnectorError::unexpected_response_error_http_status_unknown().into());
             }
         },
         acs_url: complete_authorize_url,
@@ -2897,7 +2887,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<BraintreeRepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<BraintreeRepeatPaymentResponse, Self>,
     ) -> Result<Self, Self::Error> {
