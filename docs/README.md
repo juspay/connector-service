@@ -15,7 +15,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
 
 | ❌ Without Prism | ✅ With Prism |
 |------------------------------|----------------------------|
-| 🗂️ 100+ different API schemas | 📋 Single unified schema |
+| 🗂️ 60+ different API schemas | 📋 Single unified schema |
 | ⏳ Never ending agent loops/ months of integration work | ⚡ Hours to integrate, Agent driven |
 | 🔗 Brittle, provider-specific code | 🔓 Portable, provider-agnostic code |
 | 🚫 Hard to switch providers | 🔄 Change providers in 1 line |
@@ -27,7 +27,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
 ## ✨ Features
 
 
-- **🔌 100+ Connectors** — Stripe, Adyen, Braintree, PayPal, Worldpay, and more
+- **🔌 60+ Connectors** — Stripe, Adyen, Braintree, PayPal, Worldpay, and more
 - **🌍 Global Coverage** — Cards, wallets, bank transfers, BNPL, and regional methods
 - **🚀 Zero Overhead** — Rust core with native bindings, no overhead
 - **🔒 PCI-Compliant by Design** — Stateless, no data storage
@@ -59,7 +59,7 @@ The Prism library is compliant for payment processing by design. It is:
          ┌───────────────────────┼───────────────────────┬───────────────────────┐
          ▼                       ▼                       ▼                       ▼
    ┌──────────┐           ┌──────────┐           ┌──────────┐           ┌──────────┐
-   │  Stripe  │           │  Adyen   │           │ Braintree│           │ 50+ more │
+   │  Stripe  │           │  Adyen   │           │ Braintree│           │ 60+ more │
    └──────────┘           └──────────┘           └──────────┘           └──────────┘
 ```
 
