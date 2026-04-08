@@ -1,11 +1,23 @@
-# hyperswitch-prism
+# hs-paylib
 
-**Universal Connector Service — Python SDK**
+**Hyperswitch Payments SDK — Python SDK**
 
 A high-performance, type-safe Python SDK for payment processing through the Universal Connector Service. Connect to 50+ payment processors (Stripe, PayPal, Adyen, and more) through a single, unified API.
 
-[![PyPI version](https://badge.fury.io/py/hyperswitch-prism.svg)](https://pypi.org/project/hyperswitch-prism/)
+[![PyPI version](https://badge.fury.io/py/hs-paylib.svg)](https://pypi.org/project/hs-paylib/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 📚 Documentation
+
+| Resource | Link |
+|----------|------|
+| **Getting Started** | [Installation](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/installation.md) · [First Payment](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/first-payment.md) |
+| **Architecture** | [Overview](https://github.com/juspay/hyperswitch-prism/blob/main/docs/architecture/README.md) · [Core Concepts](https://github.com/juspay/hyperswitch-prism/tree/main/docs/architecture/concepts) |
+| **API Reference** | [Payment Service](https://github.com/juspay/hyperswitch-prism/tree/main/docs/api-reference/services/payment-service) |
+| **Examples** | [Connector Examples](https://github.com/juspay/hyperswitch-prism/tree/main/examples) · [Smoke Test](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/python/smoke-test) · [Tests](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/python/tests) |
+| **Main Project** | [Prism Docs](https://github.com/juspay/hyperswitch-prism/blob/main/docs/README.md) |
 
 ---
 
@@ -20,10 +32,68 @@ A high-performance, type-safe Python SDK for payment processing through the Univ
 
 ---
 
+---
+
+## 🤖 AI Assistant Context
+
+This SDK is part of **Hyperswitch Prism** — a unified connector library for payment processors.
+
+### What This SDK Does
+
+1. **Request Transformation**: Converts unified payment requests to connector-specific formats (Stripe, Adyen, PayPal, etc.)
+2. **Response Normalization**: Transforms connector responses back to a unified schema
+3. **Error Handling**: Provides consistent error types (`IntegrationError`, `ConnectorError`, `NetworkError`) regardless of connector
+
+### Architecture
+
+```
+Your Python App
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Service Clients (PaymentClient, CustomerClient, etc.)       │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  ConnectorClient (httpx connection pool + HTTP execution)    │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  UniFFI FFI Bindings (connector_service_ffi.py)              │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Rust Core (connector transformation logic)                  │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+              Payment Processor APIs (Stripe, Adyen, etc.)
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/payments/__init__.py` | Public API exports (clients, types, errors) |
+| `src/payments/connector_client.py` | HTTP execution layer with httpx |
+| `src/payments/generated/connector_service_ffi.py` | UniFFI-generated FFI bindings |
+| `src/payments/generated/payment_pb2.py` | Protobuf message definitions |
+
+### Package & Import
+
+- **Package Name**: `hs-paylib`
+- **Installation**: `pip install hs-paylib`
+- **Import**: `from payments import PaymentClient`
+
+---
+
 ## Installation
 
 ```bash
-pip install hyperswitch-prism
+pip install hs-paylib
 ```
 
 **Requirements:**

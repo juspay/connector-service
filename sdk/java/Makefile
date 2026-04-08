@@ -118,7 +118,11 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
+<<<<<<< HEAD
+	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hs-paylib-$(PACKAGE_VERSION).jar
+=======
 	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
@@ -129,7 +133,11 @@ pack-archive:
 # ---------------------------------------------------------------------------
 install: pack-archive
 	@$(SDK_ROOT)/gradlew publishToMavenLocal
+<<<<<<< HEAD
+	@echo "Published to ~/.m2/repository/com/hyperswitch/hs-paylib/$(PACKAGE_VERSION)/"
+=======
 	@echo "Published to ~/.m2/repository/com/hyperswitch/hyperswitch-prism/$(PACKAGE_VERSION)/"
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
 
 # ---------------------------------------------------------------------------
 # test-package
@@ -215,9 +223,9 @@ publish: pack-archive
 		echo "  export OSSRH_PASSWORD=your_token"; \
 		exit 1; \
 	fi
-	@echo "Publishing hyperswitch-prism to Maven Central..."
+	@echo "Publishing hs-paylib to Maven Central..."
 	@$(SDK_ROOT)/gradlew publish
-	@echo "Published com.hyperswitch:hyperswitch-prism to Maven Central."
+	@echo "Published com.hyperswitch:hs-paylib to Maven Central."
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)

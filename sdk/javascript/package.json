@@ -1,6 +1,6 @@
 {
-  "name": "hyperswitch-prism",
-  "version": "0.0.1",
+  "name": "hs-paylib",
+  "version": "0.0.5",
   "description": "Hyperswitch Payments SDK — Node.js client for connector integrations via UniFFI FFI",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",

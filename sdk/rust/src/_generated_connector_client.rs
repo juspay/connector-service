@@ -146,11 +146,17 @@ macro_rules! impl_flow_method {
                 headers,
                 body,
             };
+<<<<<<< HEAD
+            let http_response = self
+                .http_client
+                .execute(http_req, override_opts)
+=======
             let http_client = self
                 .get_or_create_client(&effective_http_config)
                 .map_err(SdkError::from)?;
             let http_response = http_client
                 .execute(http_req, Some(effective_http_config))
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
                 .await
                 .map_err(SdkError::from)?;
 
@@ -185,24 +191,32 @@ macro_rules! impl_flow_method {
 impl ConnectorClient {
     /// Initialize a new ConnectorClient.
     ///
+    /// Returns `Err(SdkError::NetworkError)` if the HTTP client cannot be constructed
+    /// (e.g. invalid proxy URL or CA certificate).
+    ///
     /// # Arguments
     /// * `config` - The ConnectorConfig (connector_config with typed auth, options with environment).
     /// * `options` - Optional RequestConfig for default http/vault settings.
-    pub fn new(
-        config: ConnectorConfig,
-        options: Option<RequestConfig>,
-    ) -> Result<Self, NetworkError> {
+    pub fn new(config: ConnectorConfig, options: Option<RequestConfig>) -> Result<Self, SdkError> {
         let defaults = options.unwrap_or_default();
 
+<<<<<<< HEAD
+        let native_opts = match defaults.http.as_ref() {
+=======
         // Map the Protobuf options to native transport options and store as base config
         let base_http_config = match defaults.http.as_ref() {
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
             Some(http_proto) => NativeHttpOptions::from(http_proto),
             None => NativeHttpOptions::default(),
         };
 
         Ok(Self {
+<<<<<<< HEAD
+            http_client: HttpClient::new(native_opts).map_err(SdkError::from)?,
+=======
             base_http_config,
             client_cache: Arc::new(RwLock::new(HashMap::new())),
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
             config,
         })
     }
