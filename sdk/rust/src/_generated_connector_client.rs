@@ -2,16 +2,19 @@
 // Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate
 
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 use crate::error::SdkError;
 use crate::http_client::{
-    HttpClient, HttpOptions as NativeHttpOptions, HttpRequest as ClientHttpRequest,
+    generate_proxy_cache_key, merge_http_options, HttpClient, HttpOptions as NativeHttpOptions,
+    HttpRequest as ClientHttpRequest, NetworkError,
 };
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
 use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
+use grpc_api_types::payments::NetworkErrorCode;
 use grpc_api_types::payments::{ConnectorConfig, FfiOptions, RequestConfig};
 use grpc_api_types::payments::{
     CustomerServiceCreateRequest, CustomerServiceCreateResponse, DisputeServiceAcceptRequest,
@@ -59,9 +62,11 @@ use grpc_api_types::payouts::{
 ///   2. Execute the HTTP request via our standardized HttpClient (reqwest)
 ///   3. Parse the connector response via Rust core handlers
 ///
-/// This client owns its primary connection pool (http_client).
+/// This client maintains a cache of HTTP clients keyed by proxy configuration,
+/// so repeated calls with the same proxy settings reuse the same connection pool.
 pub struct ConnectorClient {
-    http_client: HttpClient,
+    base_http_config: NativeHttpOptions,
+    client_cache: Arc<RwLock<HashMap<String, HttpClient>>>,
     config: ConnectorConfig,
 }
 
@@ -85,10 +90,7 @@ macro_rules! impl_flow_method {
             use connector_service_ffi::handlers::payments::{$req_handler, $res_handler};
 
             let ffi_options = self.resolve_ffi_options(&options);
-            let override_opts = options
-                .as_ref()
-                .and_then(|o| o.http.as_ref())
-                .map(NativeHttpOptions::from);
+            let effective_http_config = self.resolve_http_options(options.as_ref());
 
             let ffi_request =
                 build_ffi_request(request.clone(), metadata, &ffi_options).map_err(|e| {
@@ -144,9 +146,17 @@ macro_rules! impl_flow_method {
                 headers,
                 body,
             };
+<<<<<<< HEAD
             let http_response = self
                 .http_client
                 .execute(http_req, override_opts)
+=======
+            let http_client = self
+                .get_or_create_client(&effective_http_config)
+                .map_err(SdkError::from)?;
+            let http_response = http_client
+                .execute(http_req, Some(effective_http_config))
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
                 .await
                 .map_err(SdkError::from)?;
 
@@ -190,13 +200,23 @@ impl ConnectorClient {
     pub fn new(config: ConnectorConfig, options: Option<RequestConfig>) -> Result<Self, SdkError> {
         let defaults = options.unwrap_or_default();
 
+<<<<<<< HEAD
         let native_opts = match defaults.http.as_ref() {
+=======
+        // Map the Protobuf options to native transport options and store as base config
+        let base_http_config = match defaults.http.as_ref() {
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
             Some(http_proto) => NativeHttpOptions::from(http_proto),
             None => NativeHttpOptions::default(),
         };
 
         Ok(Self {
+<<<<<<< HEAD
             http_client: HttpClient::new(native_opts).map_err(SdkError::from)?,
+=======
+            base_http_config,
+            client_cache: Arc::new(RwLock::new(HashMap::new())),
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
             config,
         })
     }
@@ -213,6 +233,51 @@ impl ConnectorClient {
             environment,
             connector_config: self.config.connector_config.clone(),
         }
+    }
+
+    /// Merges client defaults with per-request HTTP overrides. Per-request wins per field.
+    fn resolve_http_options(&self, options: Option<&RequestConfig>) -> NativeHttpOptions {
+        let override_opts = options
+            .and_then(|o| o.http.as_ref())
+            .map(NativeHttpOptions::from)
+            .unwrap_or_default();
+        merge_http_options(&self.base_http_config, &override_opts)
+    }
+
+    /// Get or create a cached HTTP client based on the effective proxy configuration.
+    fn get_or_create_client(
+        &self,
+        effective_config: &NativeHttpOptions,
+    ) -> Result<HttpClient, NetworkError> {
+        let cache_key = generate_proxy_cache_key(&effective_config.proxy);
+
+        // Fast read path - check if client exists
+        {
+            let cache = self.client_cache.read().map_err(|e| NetworkError {
+                code: NetworkErrorCode::ClientInitializationFailure,
+                message: format!("HTTP client cache lock poisoned (read): {e}"),
+                status_code: None,
+            })?;
+            if let Some(client) = cache.get(&cache_key) {
+                return Ok(client.clone());
+            }
+        }
+
+        // Slow write path - create new client
+        let mut cache = self.client_cache.write().map_err(|e| NetworkError {
+            code: NetworkErrorCode::ClientInitializationFailure,
+            message: format!("HTTP client cache lock poisoned (write): {e}"),
+            status_code: None,
+        })?;
+
+        // Double-check in case another thread created it
+        if let Some(client) = cache.get(&cache_key) {
+            return Ok(client.clone());
+        }
+
+        let new_client = HttpClient::new(effective_config.clone())?;
+        cache.insert(cache_key, new_client.clone());
+        Ok(new_client)
     }
 
     // ── CustomerService flows ───────────────────────────────────────────────────

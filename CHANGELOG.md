@@ -19,6 +19,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.08.0
+
+### Features
+
+- **connector:** Implement CreateClientAuthenticationToken for Globalpay ([#957](https://github.com/juspay/connector-service/pull/957)) ([`dd456e9`](https://github.com/juspay/connector-service/commit/dd456e9ae4b69a2c566f3ebf9c17a7064d82b7b7))
+- Add proxy cache logic to all httpclient of sdk, previously each… ([#859](https://github.com/juspay/connector-service/pull/859)) ([`090d520`](https://github.com/juspay/connector-service/commit/090d520efd18a6f405e0885e0001005eeff626e1))
+
+### Miscellaneous Tasks
+
+- Add publish command ci ([#975](https://github.com/juspay/connector-service/pull/975)) ([`1c0d177`](https://github.com/juspay/connector-service/commit/1c0d1777d4343bffe123d0d26fc86e07d6384a2e))
+
+**Full Changelog:** [`2026.04.07.1...2026.04.08.0`](https://github.com/juspay/connector-service/compare/2026.04.07.1...2026.04.08.0)
+
+- - -
+
+## 2026.04.07.1
+
+### Features
+
+- **tests:** Comprehensive connector test harness with 57 connectors, 22 suites, and credential masking ([#771](https://github.com/juspay/connector-service/pull/771)) ([`74b8f0d`](https://github.com/juspay/connector-service/commit/74b8f0de7a8e612934d77901dce81b8a0e32de7b))
+
+### Bug Fixes
+
+- Unify errorcodes, errrohandling in same doc ([#933](https://github.com/juspay/connector-service/pull/933)) ([`5d737a5`](https://github.com/juspay/connector-service/commit/5d737a51593f8e3361d7231b6518cb549364fabc))
+- Remove rust release pipeline for package ([#971](https://github.com/juspay/connector-service/pull/971)) ([`850324d`](https://github.com/juspay/connector-service/commit/850324d9b33b34f9c565f9c52459a7e9736ec774))
+
+### Miscellaneous Tasks
+
+- Add publish command ci ([#974](https://github.com/juspay/connector-service/pull/974)) ([`c2af0f4`](https://github.com/juspay/connector-service/commit/c2af0f42a4e4ffd5e353d7fd89e105e3c900f9c9))
+
+**Full Changelog:** [`2026.04.07.0...2026.04.07.1`](https://github.com/juspay/connector-service/compare/2026.04.07.0...2026.04.07.1)
+
+- - -
+
+## 2026.04.07.0
+
+### Refactors
+
+- **docs:**
+  - Remove services.desc and manifest.json from docs generation ([#940](https://github.com/juspay/connector-service/pull/940)) ([`33dc492`](https://github.com/juspay/connector-service/commit/33dc492a44d6843c7cda24771d356a6549499f55))
+  - Auto update docs in CI check itself ([#942](https://github.com/juspay/connector-service/pull/942)) ([`b492c3f`](https://github.com/juspay/connector-service/commit/b492c3ff559d9f2b99ad69fa1f68b124498425bc))
+
+### Miscellaneous Tasks
+
+- Add publish command ([#945](https://github.com/juspay/connector-service/pull/945)) ([`8a77eaa`](https://github.com/juspay/connector-service/commit/8a77eaae9e0232aeacf1b8d2dc0a059619829927))
+- Resolve manual docs ([#935](https://github.com/juspay/connector-service/pull/935)) ([`9840d0f`](https://github.com/juspay/connector-service/commit/9840d0f819284015f3aa94e996c396add0dee31d))
+
+**Full Changelog:** [`2026.04.06.1...2026.04.07.0`](https://github.com/juspay/connector-service/compare/2026.04.06.1...2026.04.07.0)
+
+- - -
+
 ## 2026.04.06.1
 
 ### Features

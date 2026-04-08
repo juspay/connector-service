@@ -118,7 +118,11 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
+<<<<<<< HEAD
 	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hs-paylib-$(PACKAGE_VERSION).jar
+=======
+	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
@@ -129,7 +133,11 @@ pack-archive:
 # ---------------------------------------------------------------------------
 install: pack-archive
 	@$(SDK_ROOT)/gradlew publishToMavenLocal
+<<<<<<< HEAD
 	@echo "Published to ~/.m2/repository/com/hyperswitch/hs-paylib/$(PACKAGE_VERSION)/"
+=======
+	@echo "Published to ~/.m2/repository/com/hyperswitch/hyperswitch-prism/$(PACKAGE_VERSION)/"
+>>>>>>> 3173e84bbd9c89b3fa7de4fc8bed18d76c4f803b
 
 # ---------------------------------------------------------------------------
 # test-package
