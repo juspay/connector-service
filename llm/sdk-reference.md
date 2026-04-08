@@ -1,155 +1,486 @@
 # Hyperswitch Prism SDK
 
-**One integration. Any payment processor. Zero lock-in.**
-
 [![npm](https://badge.fury.io/js/hyperswitch-prism.svg)](https://www.npmjs.com/package/hyperswitch-prism)
 [![PyPI](https://badge.fury.io/py/hyperswitch-prism.svg)](https://pypi.org/project/hyperswitch-prism/)
 [![Maven](https://img.shields.io/maven-central/v/com.hyperswitch/hyperswitch-prism.svg)](https://central.sonatype.com/artifact/com.hyperswitch/hyperswitch-prism)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-A unified, type-safe SDK for payment processing. Connect to 70+ payment processors (Stripe, Adyen, PayPal, and more) through a single API.
+**One integration. Any payment processor. Zero lock-in.**  
+A unified, type-safe SDK for 70+ payment processors (Stripe, Adyen, PayPal, and more) through a single API.
 
 ---
 
-## For Humans
+## SECTION 0 — AI AGENT PROTOCOL (Read This First, Always)
 
-### Quick Start (5 minutes)
+> **If you are an AI assistant generating integration code, this section is your entry point. Do NOT skip to quick-start examples.**
 
-**Install:**
+### Mandatory Decision Tree
 
-```bash
-# Node.js
-npm install hyperswitch-prism
-
-# Python
-pip install hyperswitch-prism
-
-# Java/Kotlin (Maven)
-<dependency>
-    <groupId>com.hyperswitch</groupId>
-    <artifactId>hyperswitch-prism</artifactId>
-    <version>0.0.1</version>
-</dependency>
-
-# PHP
-composer require hyperswitch-prism
+```
+START HERE
+    │
+    ▼
+Are you writing ANY payment integration code?
+    │
+    YES
+    │
+    ▼
+STEP 1 ──► Run Field Probe (Section 1) for your connector × flow × payment-method
+    │         Command: npx hyperswitch-prism probe --connector <name> --flow <flow>
+    │         This reveals REQUIRED fields. TypeScript types alone are NOT sufficient.
+    │
+    ▼
+STEP 2 ──► Read the inline Connector Example (Section 2) for your connector
+    │         Use exact field names, structures, and patterns from the example.
+    │         Do NOT invent field names from TypeScript types.
+    │
+    ▼
+STEP 3 ──► Apply the Integration Rules (Section 3)
+    │         Status codes, error handling, enum usage.
+    │
+    ▼
+STEP 4 ──► Only now write code
 ```
 
-**Process a payment (Node.js):**
+### Why This Order Is Non-Negotiable
+
+| If you skip... | You will get... |
+|----------------|----------------|
+| Field Probe | `IntegrationError: MISSING_REQUIRED_FIELD` at runtime |
+| Connector Examples | Type mismatches, wrong config format, silent failures |
+| Integration Rules | Status comparisons that always return `false` |
+
+### System Prompt Snippet (for developers using AI assistants)
+
+Paste this into your AI assistant's system prompt when working with this SDK:
+
+```
+When integrating Hyperswitch Prism:
+1. Always run `npx hyperswitch-prism probe --connector <name> --flow <flow>` before writing code.
+2. Use the inline connector examples in Section 2 as the source of truth for request structure.
+3. Never compare response.status to a string. Always use numeric values (e.g., status === 8).
+4. Do not assume TypeScript types match runtime requirements. Field Probe output overrides types.
+```
+
+---
+
+## SECTION 1 — Field Probe (Run Before Writing Code)
+
+The field-probe tool discovers required fields, types, and sample payloads for every connector × flow × payment-method combination **without making any HTTP calls**.
+
+### How to Run Field Probe
+
+```bash
+# Discover fields for a specific connector + flow + payment method
+npx hyperswitch-prism probe --connector stripe --flow authorize --payment-method card
+
+# Discover all flows for a connector
+npx hyperswitch-prism probe --connector adyen --all-flows
+
+# Output as JSON (for programmatic use)
+npx hyperswitch-prism probe --connector stripe --flow authorize --payment-method card --json
+```
+
+### How to Read Field Probe Output
+
+```json
+{
+  "connector": "stripe",
+  "flow": "authorize",
+  "paymentMethod": "Card",
+  "status": "supported",
+  "fieldsprops": {
+    "merchant_transaction_id":  { "required": true,  "type": "string" },
+    "amount.minor_amount":      { "required": true,  "type": "int64" },
+    "amount.currency":          { "required": true,  "type": "Currency enum" },
+    "capture_method":           { "required": true,  "type": "CaptureMethod enum" },
+    "payment_method.card.card_number":   { "required": true,  "type": "SecretString" },
+    "payment_method.card.card_exp_month":{ "required": true,  "type": "SecretString" },
+    "payment_method.card.card_exp_year": { "required": true,  "type": "SecretString" },
+    "payment_method.card.card_cvc":      { "required": true,  "type": "SecretString" },
+    "browser_info":             { "required": false, "type": "BrowserInfo object" },
+    "auth_type":                { "required": false, "type": "AuthenticationType enum" }
+  },
+  "sample": {
+    "url": "https://api.stripe.com/v1/payment_intents",
+    "method": "POST",
+    "body": "amount=1000&currency=usd&..."
+  }
+}
+```
+
+### Field Probe: Connector × Flow × Required Fields (Quick Reference)
+
+This table summarizes the most commonly missed required fields. **Field Probe output is authoritative — use it to confirm.**
+
+```
+┌─────────────┬───────────┬─────────────────────────────────────────────────────┐
+│ Connector   │ Flow      │ Fields Required BEYOND the common base              │
+├─────────────┼───────────┼─────────────────────────────────────────────────────┤
+│ stripe      │ authorize │ (no extras for card)                                │
+│ stripe      │ capture   │ connectorTransactionId                              │
+│ stripe      │ refund    │ connectorTransactionId, refundAmount, reason        │
+│ stripe      │ void      │ connectorTransactionId                              │
+├─────────────┼───────────┼─────────────────────────────────────────────────────┤
+│ adyen       │ authorize │ browserInfo (ALWAYS required for card)              │
+│             │           │ merchantAccount (in config)                         │
+│ adyen       │ refund    │ reason must be one of: OTHER, RETURN, DUPLICATE,   │
+│             │           │   FRAUD, CUSTOMER_REQUEST (not free-text)           │
+├─────────────┼───────────┼─────────────────────────────────────────────────────┤
+│ paypal      │ authorize │ clientId + clientSecret (SignatureKey config)       │
+│ braintree   │ authorize │ (no extras for card)                                │
+│ cybersource │ authorize │ browserInfo required for 3DS flows                 │
+└─────────────┴───────────┴─────────────────────────────────────────────────────┘
+```
+
+---
+
+## SECTION 2 — Connector Examples (Use As Source of Truth)
+
+> **Copy these patterns exactly.** Do not invent field names from TypeScript types. These examples are tested and verified.
+
+### 2.1 — Stripe
+
+#### Node.js — Full Authorize + Capture + Refund + Void
 
 ```typescript
-const { PaymentClient, types } = require('hyperswitch-prism');
+import { PaymentClient, IntegrationError, ConnectorError, NetworkError, types } from 'hyperswitch-prism';
 
+// ── CONFIG ──────────────────────────────────────────────────────────────────
 const client = new PaymentClient({
   connectorConfig: {
-    stripe: { apiKey: { value: process.env.STRIPE_API_KEY } }
+    stripe: { apiKey: { value: process.env.STRIPE_API_KEY! } }
   }
 });
 
-const result = await client.authorize({
+// ── AUTHORIZE (hold funds, manual capture) ──────────────────────────────────
+const authResult = await client.authorize({
   merchantTransactionId: 'txn_001',
   amount: { minorAmount: 1000, currency: types.Currency.USD },
-  captureMethod: types.CaptureMethod.AUTOMATIC,
+  captureMethod: types.CaptureMethod.MANUAL,
   paymentMethod: {
     card: {
-      cardNumber: { value: '4111111111111111' },
+      cardNumber:    { value: '4111111111111111' },
+      cardExpMonth:  { value: '12' },
+      cardExpYear:   { value: '2027' },
+      cardCvc:       { value: '123' },
+      cardHolderName:{ value: 'Jane Doe' }
+    }
+  },
+  address: { billingAddress: {} },
+  authType: types.AuthenticationType.NO_THREE_DS,
+  testMode: true
+});
+
+// ⚠️ status is a NUMBER — never compare to a string
+if (authResult.status === 6) {
+  console.log('Authorized. connectorTransactionId:', authResult.connectorTransactionId);
+}
+
+// ── CAPTURE ─────────────────────────────────────────────────────────────────
+const captureResult = await client.capture({
+  merchantCaptureId: 'cap_001',
+  connectorTransactionId: authResult.connectorTransactionId ?? '',
+  amountToCapture: { minorAmount: 1000, currency: types.Currency.USD },
+  testMode: true
+});
+// captureResult.status === 8 → CHARGED
+
+// ── REFUND ──────────────────────────────────────────────────────────────────
+const refundResult = await client.refund({
+  merchantRefundId: 'ref_001',
+  connectorTransactionId: authResult.connectorTransactionId ?? '',
+  refundAmount: { minorAmount: 500, currency: types.Currency.USD },
+  reason: 'RETURN',        // Stripe: any free-text string is accepted
+  testMode: true
+});
+// refundResult.status === 4 → REFUND_SUCCESS  (RefundStatus enum, NOT PaymentStatus)
+
+// ── VOID ────────────────────────────────────────────────────────────────────
+const voidResult = await client.void({
+  merchantVoidId: 'void_001',
+  connectorTransactionId: authResult.connectorTransactionId ?? '',
+  cancellationReason: 'Customer cancelled',
+  testMode: true
+});
+// voidResult.status === 11 → VOIDED
+
+// ── ONE-STEP (auto-capture) ──────────────────────────────────────────────────
+const autoResult = await client.authorize({
+  merchantTransactionId: 'txn_002',
+  amount: { minorAmount: 2000, currency: types.Currency.USD },
+  captureMethod: types.CaptureMethod.AUTOMATIC,    // ← key difference
+  paymentMethod: {
+    card: {
+      cardNumber:   { value: '4111111111111111' },
       cardExpMonth: { value: '12' },
-      cardExpYear: { value: '2027' },
-      cardCvc: { value: '123' }
+      cardExpYear:  { value: '2027' },
+      cardCvc:      { value: '123' }
     }
   },
   testMode: true
 });
-
-console.log('Status:', result.status === 8 ? 'CHARGED' : 'FAILED');
+// autoResult.status === 8 → CHARGED immediately
 ```
 
-That's it! Switch to Adyen by changing one line:
+#### Python — Stripe Authorize
+
+```python
+from payments import PaymentClient, SecretString
+from payments.generated import sdk_config_pb2, payment_pb2
+import os
+
+cfg = sdk_config_pb2.ConnectorConfig()
+cfg.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+    stripe=payment_pb2.StripeConfig(
+        api_key=SecretString(value=os.environ["STRIPE_API_KEY"])
+    )
+))
+client = PaymentClient(cfg)
+
+request = payment_pb2.PaymentAuthorizeRequest(
+    merchant_transaction_id="txn_001",
+    amount=payment_pb2.MinorUnit(minor_amount=1000, currency=payment_pb2.Currency.USD),
+    capture_method=payment_pb2.CaptureMethod.AUTOMATIC,
+    payment_method=payment_pb2.PaymentMethodData(
+        card=payment_pb2.Card(
+            card_number=SecretString(value="4111111111111111"),
+            card_exp_month=SecretString(value="12"),
+            card_exp_year=SecretString(value="2027"),
+            card_cvc=SecretString(value="123"),
+        )
+    ),
+    test_mode=True,
+)
+
+result = client.authorize(request)
+# result.status == 8 → CHARGED
+```
+
+---
+
+### 2.2 — Adyen
+
+> ⚠️ **Adyen requires `browserInfo` for ALL card payments. Omitting it throws `IntegrationError: MISSING_REQUIRED_FIELD: browser_info`.**
+
+#### Node.js — Adyen Authorize (with required browserInfo)
 
 ```typescript
+import { PaymentClient, types } from 'hyperswitch-prism';
+
+// ── CONFIG — note: requires merchantAccount in addition to apiKey ────────────
 const client = new PaymentClient({
   connectorConfig: {
     adyen: {
-      apiKey: { value: process.env.ADYEN_API_KEY },
-      merchantAccount: { value: process.env.ADYEN_MERCHANT_ACCOUNT }
+      apiKey:          { value: process.env.ADYEN_API_KEY! },
+      merchantAccount: { value: process.env.ADYEN_MERCHANT_ACCOUNT! }
     }
   }
+});
+
+// ── AUTHORIZE ────────────────────────────────────────────────────────────────
+const authResult = await client.authorize({
+  merchantTransactionId: 'txn_adyen_001',
+  amount: { minorAmount: 1000, currency: types.Currency.USD },
+  captureMethod: types.CaptureMethod.MANUAL,
+  paymentMethod: {
+    card: {
+      cardNumber:    { value: '4111111111111111' },
+      cardExpMonth:  { value: '03' },
+      cardExpYear:   { value: '2030' },
+      cardCvc:       { value: '737' },         // ← Adyen sandbox CVC is 737
+      cardHolderName:{ value: 'Jane Doe' }
+    }
+  },
+  // ⚠️ REQUIRED for Adyen — do not omit
+  browserInfo: {
+    colorDepth:           24,
+    screenHeight:         900,
+    screenWidth:          1440,
+    javaEnabled:          false,
+    javaScriptEnabled:    true,
+    language:             'en-US',
+    timeZoneOffsetMinutes:0,
+    acceptHeader:         'text/html,*/*;q=0.8',
+    userAgent:            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
+  },
+  address: { billingAddress: {} },
+  authType: types.AuthenticationType.NO_THREE_DS,
+  testMode: true
+});
+
+// ── REFUND — reason must be an accepted enum value, NOT free-text ─────────────
+const refundResult = await client.refund({
+  merchantRefundId: 'ref_adyen_001',
+  connectorTransactionId: authResult.connectorTransactionId ?? '',
+  refundAmount: { minorAmount: 500, currency: types.Currency.USD },
+  reason: 'RETURN',   // ✅ Valid: OTHER | RETURN | DUPLICATE | FRAUD | CUSTOMER_REQUEST
+  // reason: 'my custom text'  ← ❌ Will throw ConnectorError for Adyen
+  testMode: true
 });
 ```
 
 ---
 
-## For AI Assistants
+### 2.3 — PayPal
 
-### What This SDK Does
+```typescript
+import { PaymentClient, types } from 'hyperswitch-prism';
 
-Hyperswitch Prism is a **unified connector library** that abstracts 70+ payment processors behind a single API.
+// ── CONFIG — SignatureKey (clientId + clientSecret, NOT apiKey) ───────────────
+const client = new PaymentClient({
+  connectorConfig: {
+    paypal: {
+      clientId:     { value: process.env.PAYPAL_CLIENT_ID! },
+      clientSecret: { value: process.env.PAYPAL_CLIENT_SECRET! }
+    }
+  }
+});
 
-1. **Request Transformation**: Converts unified payment requests to connector-specific formats
-   - Input: `{ amount: { minorAmount: 1000, currency: "USD" }, ... }`
-   - Output (Stripe): `{ amount: 1000, currency: "usd", ... }`
-   - Output (Adyen): `{ amount: { value: 1000, currency: "USD" }, ... }`
-
-2. **Response Normalization**: Transforms connector responses back to unified schema
-   - Stripe `succeeded` → Prism `CHARGED (8)`
-   - Adyen `authorised` → Prism `CHARGED (8)`
-
-3. **Error Handling**: Provides consistent error types regardless of connector
-   - `IntegrationError` - Request construction errors (bad config, missing fields)
-   - `ConnectorError` - Response transformation errors
-   - `NetworkError` - Network/timeout errors
-
-### Architecture
-
+const result = await client.authorize({
+  merchantTransactionId: 'txn_paypal_001',
+  amount: { minorAmount: 1000, currency: types.Currency.USD },
+  captureMethod: types.CaptureMethod.AUTOMATIC,
+  paymentMethod: {
+    card: {
+      cardNumber:   { value: '4111111111111111' },
+      cardExpMonth: { value: '12' },
+      cardExpYear:  { value: '2027' },
+      cardCvc:      { value: '123' }
+    }
+  },
+  testMode: true
+});
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Your App (Node.js / Python / Java / PHP)                  │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Service Clients (PaymentClient, CustomerClient, etc.)      │
-│  - PaymentClient.authorize(), capture(), refund(), void()  │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│  ConnectorClient (HTTP execution + connection pooling)      │
-│  - undici (Node), httpx (Python), OkHttp (Java)            │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│  FFI Bindings (koffi/UniFFI → Rust core)                   │
-│  - connector-service-ffi.{node,so,dll}                     │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Rust Core (transformation logic)                          │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Connector Adapters (Stripe, Adyen, PayPal, +68)   │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-         Payment Processor APIs (Stripe, Adyen, etc.)
-```
-
-### Key Files
-
-| Language | File | Purpose |
-|----------|------|---------|
-| Node.js | `src/index.ts` | Public API exports |
-| Node.js | `src/connector-client.ts` | HTTP execution |
-| Node.js | `src/ffi/connector-service-ffi.ts` | koffi FFI bindings |
-| Python | `src/payments/__init__.py` | Public API |
-| Python | `src/payments/connector_client.py` | httpx execution |
-| Java | `src/main/kotlin/.../payments/` | Public API |
 
 ---
 
-## Installation & Configuration
+### 2.4 — Error Handling Template (Use in All Integrations)
+
+```typescript
+import { IntegrationError, ConnectorError, NetworkError, types } from 'hyperswitch-prism';
+
+async function safeAuthorize(client: PaymentClient, request: types.PaymentAuthorizeRequest) {
+  try {
+    const response = await client.authorize(request);
+
+    // Soft declines are status values, NOT exceptions
+    if (response.status === 21) {   // 21 = FAILURE
+      console.error('Soft decline:', response.error?.message);
+      return null;
+    }
+
+    if (response.status === 7) {    // 7 = AUTHORIZATION_FAILED
+      console.error('Auth failed:', response.error?.message);
+      return null;
+    }
+
+    return response;
+
+  } catch (error) {
+    if (error instanceof IntegrationError) {
+      // Bad config, missing required field, serialization error
+      // → Fix your request structure. Do NOT retry.
+      console.error('[IntegrationError]', error.errorCode, error.message);
+    } else if (error instanceof ConnectorError) {
+      // Response transformation failed
+      // → Log and investigate. Do NOT retry automatically.
+      console.error('[ConnectorError]', error.errorCode, error.message);
+    } else if (error instanceof NetworkError) {
+      // Timeout, DNS failure, connection refused
+      // → Safe to retry with backoff.
+      console.error('[NetworkError]', error.message);
+    }
+    return null;
+  }
+}
+```
+
+---
+
+## SECTION 3 — Integration Rules (Non-Negotiable)
+
+### Rule 1: Status Codes Are Numbers, Never Strings
+
+```typescript
+// ❌ ALWAYS FALSE — response.status is a number at runtime
+if (response.status === 'CHARGED') { }
+if (response.status === 'AUTHORIZED') { }
+
+// ✅ CORRECT
+if (response.status === 8) { }                         // literal
+if (response.status === types.PaymentStatus.CHARGED) { } // enum (equals 8)
+```
+
+### Rule 2: PaymentStatus vs RefundStatus Are Different Enums (Overlapping Values!)
+
+```
+Value 4 means TWO DIFFERENT things depending on context:
+  PaymentStatus 4 = AUTHENTICATION_PENDING   ← for authorize/capture/void responses
+  RefundStatus  4 = REFUND_SUCCESS           ← for refund responses ONLY
+```
+
+```typescript
+// ✅ Always use the correct enum for the correct operation
+const auth   = await client.authorize(...);
+const refund = await client.refund(...);
+
+if (auth.status   === types.PaymentStatus.AUTHORIZED)     { } // === 6
+if (refund.status === types.RefundStatus.REFUND_SUCCESS)  { } // === 4
+```
+
+### Rule 3: Handle Optional Fields with Fallbacks
+
+```typescript
+// connectorTransactionId can be undefined on failure — always guard it
+const txId = authResult.connectorTransactionId ?? '';
+
+// error object may be undefined on success — guard before accessing
+const errMsg = response.error?.message ?? 'Unknown error';
+```
+
+### Rule 4: Connector Config Format Varies by Connector
+
+```typescript
+// Stripe  → HeaderKey  → apiKey only
+{ stripe: { apiKey: { value: '...' } } }
+
+// Adyen   → HeaderKey + MerchantAccount → apiKey + merchantAccount
+{ adyen: { apiKey: { value: '...' }, merchantAccount: { value: '...' } } }
+
+// PayPal  → SignatureKey → clientId + clientSecret (NOT apiKey)
+{ paypal: { clientId: { value: '...' }, clientSecret: { value: '...' } } }
+```
+
+### Rule 5: Enum Values Quick Reference
+
+**PaymentStatus (for authorize / capture / void)**
+
+| Number | Name | Meaning |
+|--------|------|---------|
+| 0 | UNSPECIFIED | Unknown |
+| 1 | STARTED | Payment initiated |
+| 4 | AUTHENTICATION_PENDING | Awaiting 3DS |
+| 5 | AUTHENTICATION_SUCCESSFUL | 3DS passed |
+| 6 | AUTHORIZED | Held, not captured |
+| 7 | AUTHORIZATION_FAILED | Declined |
+| 8 | CHARGED | Captured / auto-capture success |
+| 11 | VOIDED | Authorization cancelled |
+| 20 | PENDING | Processing (async connectors) |
+| 21 | FAILURE | Soft decline — check error field |
+
+**RefundStatus (for refund ONLY)**
+
+| Number | Name | Meaning |
+|--------|------|---------|
+| 1 | REFUND_FAILURE | Failed |
+| 2 | REFUND_MANUAL_REVIEW | Pending review |
+| 3 | REFUND_PENDING | Processing (normal for Adyen) |
+| 4 | REFUND_SUCCESS | Completed |
+
+---
+
+## SECTION 4 — Installation & Configuration
 
 ### Node.js (v18+)
 
@@ -157,38 +488,10 @@ Hyperswitch Prism is a **unified connector library** that abstracts 70+ payment 
 npm install hyperswitch-prism
 ```
 
-```typescript
-import { PaymentClient, types } from 'hyperswitch-prism';
-
-const config: types.ConnectorConfig = {
-  connectorConfig: {
-    stripe: { apiKey: { value: process.env.STRIPE_API_KEY! } }
-  }
-};
-const client = new PaymentClient(config);
-```
-
 ### Python (3.9+)
 
 ```bash
 pip install hyperswitch-prism
-```
-
-```python
-from payments import PaymentClient
-from payments.generated import sdk_config_pb2, payment_pb2
-from payments import SecretString
-import os
-
-cfg = sdk_config_pb2.ConnectorConfig(
-    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX)
-)
-cfg.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
-    stripe=payment_pb2.StripeConfig(
-        api_key=SecretString(value=os.environ["STRIPE_API_KEY"])
-    )
-))
-client = PaymentClient(cfg)
 ```
 
 ### Java/Kotlin (JDK 17+)
@@ -201,280 +504,23 @@ client = PaymentClient(cfg)
 </dependency>
 ```
 
-```kotlin
-import com.hyperswitch.payments.*
-
-val stripeConfig = ConnectorConfig(
-    connectorConfig = ConnectorConfig.ConnectorConfigOneOf.Stripe(
-        StripeConfig(apiKey = SecretString(value = System.getenv("STRIPE_API_KEY")))
-    )
-)
-val client = PaymentClient(stripeConfig)
-```
-
 ### PHP (8.0+)
 
 ```bash
 composer require hyperswitch-prism
 ```
 
-```php
-$config = [
-    'connectorConfig' => [
-        'stripe' => ['apiKey' => ['value' => $_ENV['STRIPE_API_KEY']]]
-    ]
-];
-$client = new PaymentClient($config);
-```
-
 ---
 
-## Connector Authentication
-
-### Stripe (HeaderKey)
-```typescript
-{ connectorConfig: { stripe: { apiKey: { value: 'sk_test_xxx' } } } }
-```
-
-### Adyen (HeaderKey + MerchantAccount)
-```typescript
-{
-  connectorConfig: {
-    adyen: {
-      apiKey: { value: 'xxx' },
-      merchantAccount: { value: 'MerchantAccount' }
-    }
-  }
-}
-```
-
-### PayPal (SignatureKey)
-```typescript
-{
-  connectorConfig: {
-    paypal: {
-      clientId: { value: 'xxx' },
-      clientSecret: { value: 'xxx' }
-    }
-  }
-}
-```
-
-### 70+ More Connectors
-- Bank of America, Braintree, Cashfree, Cybersource, Fiserv, Globalpay, Helcim, NMI, Nuvei, Rapyd, Revolut, Shift4, Stax, WorldPay, Xendit, and more...
-
----
-
-## Payment Operations
-
-### Authorize (Hold Funds)
-
-```typescript
-const auth = await client.authorize({
-  merchantTransactionId: 'txn_001',
-  amount: { minorAmount: 1000, currency: types.Currency.USD },
-  captureMethod: types.CaptureMethod.MANUAL,  // MANUAL or AUTOMATIC
-  paymentMethod: {
-    card: {
-      cardNumber: { value: '4111111111111111' },
-      cardExpMonth: { value: '12' },
-      cardExpYear: { value: '2027' },
-      cardCvc: { value: '123' },
-      cardHolderName: { value: 'John Doe' }
-    }
-  },
-  address: { billingAddress: {} },
-  authType: types.AuthenticationType.NO_THREE_DS,
-  testMode: true
-});
-
-// auth.status === 6 (AUTHORIZED) - funds held
-```
-
-### Capture (Capture Held Funds)
-
-```typescript
-const capture = await client.capture({
-  merchantCaptureId: 'cap_001',
-  connectorTransactionId: auth.connectorTransactionId!,
-  amountToCapture: { minorAmount: 1000, currency: types.Currency.USD },
-  testMode: true
-});
-
-// capture.status === 8 (CHARGED)
-```
-
-### Refund
-
-```typescript
-const refund = await client.refund({
-  merchantRefundId: 'ref_001',
-  connectorTransactionId: auth.connectorTransactionId!,
-  refundAmount: { minorAmount: 500, currency: types.Currency.USD },
-  reason: 'RETURN',  // Use: OTHER, RETURN, DUPLICATE, FRAUD
-  testMode: true
-});
-
-// refund.status === 4 (REFUND_SUCCESS) or 3 (REFUND_PENDING)
-```
-
-### Void (Cancel Authorization)
-
-```typescript
-const voidResult = await client.void({
-  merchantVoidId: 'void_001',
-  connectorTransactionId: auth.connectorTransactionId!,
-  cancellationReason: 'Customer cancelled',
-  testMode: true
-});
-
-// voidResult.status === 11 (VOIDED)
-```
-
----
-
-## Error Handling
-
-### Error Types
-
-| Error Type | When | Example |
-|------------|------|---------|
-| `IntegrationError` | Bad config, missing field, serialization | Missing `browserInfo` for Adyen |
-| `ConnectorError` | Response transform failed | Invalid refund reason for connector |
-| `NetworkError` | Timeout, DNS, connection refused | Connector timeout |
-
-### Handling
-
-```typescript
-import { IntegrationError, ConnectorError, NetworkError, types } from 'hyperswitch-prism';
-
-try {
-  const response = await client.authorize(request);
-
-  // Soft declines come as status, NOT exceptions
-  if (response.status === types.PaymentStatus.FAILURE) {
-    console.error('Declined:', response.error?.message);
-    return;
-  }
-
-} catch (error) {
-  if (error instanceof IntegrationError) {
-    console.error('Integration error:', error.errorCode, error.message);
-  } else if (error instanceof ConnectorError) {
-    console.error('Connector error:', error.errorCode, error.message);
-  } else if (error instanceof NetworkError) {
-    console.error('Network error:', error.message);
-  }
-}
-```
-
-### Common Error Codes
-
-| Code | Type | Fix |
-|------|------|-----|
-| `MISSING_REQUIRED_FIELD: browser_info` | IntegrationError | Add `browserInfo` for Adyen |
-| `INVALID_CONFIGURATION` | IntegrationError | Check connector config |
-| `CONNECT_TIMEOUT` | NetworkError | Check network/proxy |
-| `TOTAL_TIMEOUT` | NetworkError | Increase `totalTimeoutMs` |
-
----
-
-## Status Codes (CRITICAL)
-
-**Always use numeric enums, NOT strings:**
-
-```typescript
-// ❌ WRONG - response.status is a number
-if (response.status === 'CHARGED') { }  // Always false!
-
-// ✅ CORRECT - use numeric enum
-if (response.status === types.PaymentStatus.CHARGED) { }  // === 8
-if (response.status === 8) { }  // Equivalent
-```
-
-### PaymentStatus
-
-| Value | Name | Meaning |
-|-------|------|---------|
-| 0 | UNSPECIFIED | Unknown |
-| 1 | STARTED | Payment initiated |
-| 4 | AUTHENTICATION_PENDING | Awaiting 3DS |
-| 5 | AUTHENTICATION_SUCCESSFUL | 3DS passed |
-| 6 | AUTHORIZED | Auth succeeded, not captured |
-| 7 | AUTHORIZATION_FAILED | Declined |
-| 8 | CHARGED | Captured / auto-capture success |
-| 11 | VOIDED | Authorization cancelled |
-| 20 | PENDING | Processing (async connectors) |
-| 21 | FAILURE | Soft decline - check error |
-
-### RefundStatus (DIFFERENT enum!)
-
-| Value | Name | Meaning |
-|-------|------|---------|
-| 1 | REFUND_FAILURE | Refund failed |
-| 2 | REFUND_MANUAL_REVIEW | Pending review |
-| 3 | REFUND_PENDING | Processing (normal for Adyen) |
-| 4 | REFUND_SUCCESS | Completed |
-
-⚠️ **CRITICAL**: PaymentStatus and RefundStatus share overlapping values!
-- Value `4` = `AUTHENTICATION_PENDING` (PaymentStatus)
-- Value `4` = `REFUND_SUCCESS` (RefundStatus)
-
-Always use `types.PaymentStatus` for authorize/capture/void responses and `types.RefundStatus` for refund responses.
-
----
-
-## Connector-Specific Requirements
-
-### browserInfo (Required for Some Connectors)
-
-| Connector | When Required |
-|-----------|---------------|
-| Adyen | Always for card payments |
-| Cybersource | 3DS flows |
-| Any connector | When `authType: THREE_DS` |
-
-```typescript
-browserInfo: {
-  colorDepth: 24,
-  screenHeight: 900,
-  screenWidth: 1440,
-  javaEnabled: false,
-  javaScriptEnabled: true,
-  language: 'en-US',
-  timeZoneOffsetMinutes: 0,
-  acceptHeader: 'text/html,*/*;q=0.8',
-  userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
-}
-```
-
-### Test Cards (Sandbox)
-
-| Connector | Card Number | CVC | Expiry |
-|-----------|-------------|-----|--------|
-| Stripe | 4111111111111111 | 123 | Any |
-| Adyen | 4111111111111111 | 737 | 03/2030 |
-| PayPal | 4111111111111111 | 123 | Any |
-| Braintree | 4111111111111111 | 123 | Any |
-
-### Refund Reasons (Connector Constraints)
-
-| Connector | Accepted Values |
-|-----------|----------------|
-| Adyen | OTHER, RETURN, DUPLICATE, FRAUD, CUSTOMER REQUEST |
-| Stripe | Any free-text string |
-
----
-
-## Advanced Configuration
+## SECTION 5 — Advanced Configuration
 
 ### Timeouts
 
 ```typescript
 const client = new PaymentClient(config, {
   http: {
-    totalTimeoutMs: 30000,
-    connectTimeoutMs: 10000,
+    totalTimeoutMs:    30000,
+    connectTimeoutMs:  10000,
     responseTimeoutMs: 25000
   }
 });
@@ -486,7 +532,7 @@ const client = new PaymentClient(config, {
 const client = new PaymentClient(config, {
   http: {
     proxy: {
-      httpsUrl: 'https://proxy.company.com:8443',
+      httpsUrl:   'https://proxy.company.com:8443',
       bypassUrls: ['http://localhost']
     }
   }
@@ -503,177 +549,42 @@ const response = await client.authorize(request, {
 
 ---
 
-## Field Probe (Connector Discovery)
+## SECTION 6 — Architecture
 
-Prism includes a **field-probe** tool that discovers required fields and sample payloads for every connector × flow × payment-method combination WITHOUT making HTTP calls.
-
-### How Field Probe Works
-
-1. Builds a maximally-populated proto request with all standard fields
-2. Calls the FFI `req_transformer` directly (no HTTP)
-3. Records the transformed request (URL, method, headers, body)
-
-### Field Probe Output
-
-Each connector generates a JSON file showing supported flows and payment methods:
-
-```json
-{
-  "connector": "stripe",
-  "flows": {
-    "authorize": {
-      "Card": {
-        "status": "supported",
-        "proto_request": { "merchant_transaction_id": "probe_txn_001", ... },
-        "sample": {
-          "url": "https://api.stripe.com/v1/payment_intents",
-          "method": "POST",
-          "headers": { "authorization": "Bearer probe_key", ... },
-          "body": "amount=1000&currency=USD&..."
-        }
-      },
-      "PayPal": { "status": "supported", ... },
-      "Klarna": { "status": "supported", ... }
-    }
-  }
-}
 ```
-
-### Using Field Probe Data
-
-Field probe outputs are used to generate:
-- **Connector Documentation**: `docs-generated/connectors/{connector}.md`
-- **SDK Examples**: `examples/{connector}/{connector}.{ts,py,kt,rs}`
-
-### Available Connectors (70+)
-
-Field probe has generated data for: stripe, adyen, paypal, braintree, cybersource, checkout, worldpay, authorize.net, bluesnap, airwallex, cashfree, razorpay, mollie, nuvei, rapyd, globalpay, fiserv, bankofamerica, and 50+ more.
+┌─────────────────────────────────────────────────────────────┐
+│  Your App (Node.js / Python / Java / PHP)                   │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Service Clients (PaymentClient, CustomerClient, etc.)      │
+│  - PaymentClient.authorize(), capture(), refund(), void()   │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│  ConnectorClient (HTTP + connection pooling)                │
+│  - undici (Node), httpx (Python), OkHttp (Java)            │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FFI Bindings (koffi/UniFFI → Rust core)                   │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Rust Core → Connector Adapters (Stripe, Adyen, +68 more)  │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+         Payment Processor APIs (Stripe, Adyen, etc.)
+```
 
 ---
 
-## Connector Examples
-
-Complete, runnable examples for each connector in all 4 languages:
-
-### Stripe
-
-```
-examples/stripe/
-├── stripe.ts    # Node.js
-├── stripe.py    # Python
-├── stripe.kt    # Kotlin
-└── stripe.rs    # Rust
-```
-
-**Available scenarios:**
-- `processCheckoutAutocapture` - One-step payment
-- `processCheckoutCard` - Two-step (authorize + capture)
-- `processRefund` - Refund a payment
-- `processVoidPayment` - Cancel authorization
-- `processGetPayment` - Check payment status
-- `authorize`, `capture`, `refund`, `void` - Individual flows
-
-### Adyen
-
-```
-examples/adyen/
-├── adyen.ts
-├── adyen.py
-├── adyen.kt
-└── adyen.rs
-```
-
-### PayPal
-
-```
-examples/paypal/
-├── paypal.ts
-├── paypal.py
-├── paypal.kt
-└── paypal.rs
-```
-
-### More Connectors
-
-Full list in `examples/` directory:
-- aci, adyen, authorizedotnet, bambora, bankofamerica, braintree, checkout, cybersource, datatrans, dlocal, fiserv, globalpay, helcim, mollie, novalnet, nuvei, paypal, paytm, razorpay, stripe, trustly, worldpay, xendit, and many more...
-
----
-
-## API Reference (Per Connector)
-
-Each connector has auto-generated docs at `docs-generated/connectors/{connector}.md` showing:
-
-### SDK Configuration
-```typescript
-// Stripe
-const client = new PaymentClient({
-  connectorConfig: {
-    stripe: { apiKey: { value: 'YOUR_API_KEY' } }
-  }
-});
-
-// Adyen
-const client = new PaymentClient({
-  connectorConfig: {
-    adyen: {
-      apiKey: { value: 'YOUR_API_KEY' },
-      merchantAccount: { value: 'YOUR_MERCHANT_ACCOUNT' }
-    }
-  }
-});
-```
-
-### Supported Payment Methods
-
-| Payment Method | Stripe | Adyen | PayPal |
-|----------------|:------:|:-----:|:------:|
-| Card | ✓ | ✓ | - |
-| Apple Pay | ✓ | ✓ | - |
-| Google Pay | ✓ | ✓ | - |
-| PayPal | ✓ | ✓ | ✓ |
-| Klarna | ✓ | ✓ | - |
-| iDEAL | ✓ | ✓ | - |
-| ... | | | |
-
-### Integration Scenarios
-
-Each connector doc shows:
-- One-step payment (authorize + capture)
-- Two-step payment (authorize, then capture)
-- Refund flow
-- Void flow
-- Get payment status
-
----
-
-## Development
-
-### Build from Source
-
-```bash
-# Clone
-git clone https://github.com/juspay/hyperswitch-prism.git
-cd hyperswitch-prism/sdk/javascript
-
-# Build
-make pack
-
-# Test with live credentials
-STRIPE_API_KEY=sk_test_xxx make test-pack
-```
-
-### Platform Support
-
-| Platform | Architectures |
-|----------|---------------|
-| macOS | x86_64, arm64 |
-| Linux | x86_64, aarch64 |
-| Windows | x86_64 |
-
----
-
-## Service Clients
+## SECTION 7 — All Service Clients
 
 | Client | Methods |
 |--------|---------|
@@ -689,10 +600,34 @@ STRIPE_API_KEY=sk_test_xxx make test-pack
 
 ---
 
-## What's Next
+## SECTION 8 — Platform Support
+
+| Platform | Architectures |
+|----------|---------------|
+| macOS | x86_64, arm64 |
+| Linux | x86_64, aarch64 |
+| Windows | x86_64 |
+
+---
+
+## SECTION 9 — Pre-Deployment Checklist
+
+- [ ] Ran Field Probe (`npx hyperswitch-prism probe`) for every connector × flow × payment-method in use
+- [ ] Used inline connector examples (Section 2) as source of truth — not TypeScript types alone
+- [ ] All `response.status` comparisons use numeric values, not strings
+- [ ] Using `types.PaymentStatus` for auth/capture/void and `types.RefundStatus` for refund (not interchanged)
+- [ ] `connectorTransactionId` accessed with `?? ''` fallback
+- [ ] `response.error?.message` accessed with optional chaining
+- [ ] `IntegrationError` → not retried (fix the request)
+- [ ] `NetworkError` → retried with backoff
+- [ ] Tested with sandbox credentials before production
+
+---
+
+## Useful Links
 
 - [Full API Reference](./api-reference/)
 - [Architecture Documentation](./architecture/)
-- [Connector Examples](https://github.com/juspay/hyperswitch-prism/tree/main/examples)
+- [Connector Examples (full repo)](https://github.com/juspay/hyperswitch-prism/tree/main/examples)
 - [Field Probe Data](https://github.com/juspay/hyperswitch-prism/tree/main/data/field_probe)
 - [Report Issues](https://github.com/juspay/hyperswitch-prism/issues)
