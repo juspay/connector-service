@@ -51,11 +51,11 @@ jobs:
       - name: Sync documentation files
         run: |
           echo "=== Syncing documentation files ==="
-          TARGET_DIR="hyperswitch-docs/integration-space"
+          TARGET_DIR="hyperswitch-docs/integration-space/prism"
           mkdir -p "$TARGET_DIR"
 
-          # Remove old content in integration-space
-          echo "Removing old content in integration-space/..."
+          # Remove old content in integration-space/prism
+          echo "Removing old content in integration-space/prism/..."
           rm -rf "$TARGET_DIR"/*
 
           # Copy /docs content (excluding patterns from gitbook.yml)
@@ -79,7 +79,7 @@ jobs:
             docs-generated/ "$TARGET_DIR/"
 
           echo "=== Files synced ==="
-          echo "Total files in integration-space/:"
+          echo "Total files in integration-space/prism/:"
           find "$TARGET_DIR" -type f | wc -l
 
       - name: Update integration-space SUMMARY.md
