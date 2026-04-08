@@ -9,6 +9,18 @@ A high-performance, type-safe Java/Kotlin SDK for payment processing through the
 
 ---
 
+## 📚 Documentation
+
+| Resource | Link |
+|----------|------|
+| **Getting Started** | [Installation](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/installation.md) · [First Payment](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/first-payment.md) |
+| **Architecture** | [Overview](https://github.com/juspay/hyperswitch-prism/blob/main/docs/architecture/README.md) · [Core Concepts](https://github.com/juspay/hyperswitch-prism/tree/main/docs/architecture/concepts) |
+| **API Reference** | [Payment Service](https://github.com/juspay/hyperswitch-prism/tree/main/docs/api-reference/services/payment-service) |
+| **Examples** | [Connector Examples](https://github.com/juspay/hyperswitch-prism/tree/main/examples) · [Smoke Test](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/java/smoke-test) · [Tests](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/java/tests) |
+| **Main Project** | [Prism Docs](https://github.com/juspay/hyperswitch-prism/blob/main/docs/README.md) |
+
+---
+
 ## Features
 
 - 🚀 **High Performance** — Direct UniFFI FFI bindings to Rust core via JNA
@@ -17,6 +29,62 @@ A high-performance, type-safe Java/Kotlin SDK for payment processing through the
 - ⚡ **Connection Pooling** — Built-in HTTP connection pooling via OkHttp
 - 🛡️ **Type-Safe** — Protobuf-based request/response serialization
 - 🔧 **Configurable** — Per-request or global configuration for timeouts, proxies, and auth
+
+---
+
+## 🤖 AI Assistant Context
+
+This SDK is part of **Hyperswitch Prism** — a unified connector library for payment processors.
+
+### What This SDK Does
+
+1. **Request Transformation**: Converts unified payment requests to connector-specific formats (Stripe, Adyen, PayPal, etc.)
+2. **Response Normalization**: Transforms connector responses back to a unified schema
+3. **Error Handling**: Provides consistent error types (`IntegrationError`, `ConnectorError`, `NetworkError`) regardless of connector
+
+### Architecture
+
+```
+Your Java/Kotlin App
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Service Clients (PaymentClient, CustomerClient, etc.)       │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  ConnectorClient (OkHttp connection pool + HTTP execution)   │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  JNA/UniFFI Bindings (connector_service_ffi shared lib)      │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Rust Core (connector transformation logic)                  │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+              Payment Processor APIs (Stripe, Adyen, etc.)
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/main/kotlin/com/hyperswitch/payments/` | Public API (clients, types, errors) |
+| `src/main/kotlin/com/hyperswitch/payments/ConnectorClient.kt` | HTTP execution layer with OkHttp |
+| `src/main/kotlin/com/hyperswitch/generated/` | UniFFI-generated bindings |
+| `src/main/proto/` | Protobuf message definitions |
+
+### Package & Import
+
+- **Package Name**: `com.hyperswitch:hyperswitch-prism`
+- **Installation**: Gradle/Maven dependency (see below)
+- **Import**: `import com.hyperswitch.payments.*`
 
 ---
 
