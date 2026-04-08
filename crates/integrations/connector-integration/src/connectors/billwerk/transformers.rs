@@ -22,7 +22,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{
         ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
@@ -296,7 +296,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
                             field_name: "payment_method_token",
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "Ensure a payment method token is obtained via \
+                                     `PaymentMethodService.Tokenize` before calling Authorize \
+                                     with a CardToken payment method."
+                                        .to_owned(),
+                                ),
+                                doc_url: Some(
+                                    "https://optimize.billwerk.com/reference/create-session"
+                                        .to_owned(),
+                                ),
+                                additional_context: Some(
+                                    "Billwerk requires a tokenized payment source (from a \
+                                     checkout session or prior tokenization) to process card \
+                                     payments."
+                                        .to_owned(),
+                                ),
+                            },
                         })
                     })?;
                 token
@@ -777,7 +794,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .customer_id
             .as_ref()
             .map(|id| id.get_string_repr().to_owned())
-            .unwrap_or_else(|| handle.clone());
+            .ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name: "customer_id",
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Provide a `customer_id` when creating the client authentication \
+                             token. Billwerk uses it as the customer handle for the checkout \
+                             session."
+                                .to_owned(),
+                        ),
+                        doc_url: Some(
+                            "https://optimize.billwerk.com/reference/create-session".to_owned(),
+                        ),
+                        additional_context: Some(
+                            "Billwerk checkout sessions require a customer handle to associate \
+                             the session with a customer record."
+                                .to_owned(),
+                        ),
+                    },
+                })
+            })?;
 
         let customer = BillwerkSessionCustomer {
             handle: customer_handle,
