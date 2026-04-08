@@ -95,7 +95,7 @@ pip install hyperswitch-prism
 ```
 
 **Requirements:**
-- Python 3.9 – 3.13 (Python 3.14+ is not yet supported)
+- Python 3.9 – 3.13
 - Rust toolchain (for building native bindings from source)
 
 **Platform Support:**
