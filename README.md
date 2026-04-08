@@ -92,20 +92,16 @@ The Prism library is compliant for payment processing by design. It is:
 ---
 
 
-> **Before integrating:** Read the [Node.js SDK Integration Guide](./sdk/javascript/README.md) for connector authentication configs, required fields per connector, sandbox test cards, status codes, and common runtime pitfalls (e.g. `browserInfo`, soft declines, refund reason enums).
-
----
-
-## 🚀 Quick Start
-
 > **Before integrating**, read the SDK guide for your language — it covers connector authentication configs, required fields per connector, sandbox test cards, status codes, and common runtime pitfalls.
 >
 > | Language | SDK Integration Guide |
 > |----------|-----------------------|
 > | **Python** | [sdk/python/README.md](./sdk/python/README.md) |
 > | **Node.js** | [sdk/javascript/README.md](./sdk/javascript/README.md) |
-> | **Java** | [sdk/java/README.md](./sdk/java/README.md) |
-> | **PHP** | [sdk/php/README.md](./sdk/php/README.md) |
+
+---
+
+## 🚀 Quick Start
 
 ### Install the Prism Library
 
