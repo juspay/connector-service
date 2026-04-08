@@ -4,7 +4,7 @@
 
 A high-performance, type-safe Java/Kotlin SDK for payment processing through the Universal Connector Service. Connect to 50+ payment processors (Stripe, PayPal, Adyen, and more) through a single, unified API.
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.hyperswitch/hyperswitch-prism.svg)](https://central.sonatype.com/artifact/com.hyperswitch/hyperswitch-prism)
+[![Maven Central](https://img.shields.io/maven-central/v/io.hyperswitch/prism.svg)](https://central.sonatype.com/artifact/io.hyperswitch/prism)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -91,7 +91,7 @@ Your Java/Kotlin App
 
 ### Package & Import
 
-- **Package Name**: `com.hyperswitch:hyperswitch-prism`
+- **Package Name**: `io.hyperswitch:prism`
 - **Installation**: Gradle/Maven dependency (see below)
 - **Import**: `import com.hyperswitch.payments.*`
 
@@ -102,21 +102,21 @@ Your Java/Kotlin App
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("com.hyperswitch:hyperswitch-prism:0.0.1")
+implementation("io.hyperswitch:prism:0.0.1")
 ```
 
 ### Gradle (Groovy DSL)
 
 ```groovy
-implementation 'com.hyperswitch:hyperswitch-prism:0.0.1'
+implementation 'io.hyperswitch:prism:0.0.1'
 ```
 
 ### Maven
 
 ```xml
 <dependency>
-  <groupId>com.hyperswitch</groupId>
-  <artifactId>hyperswitch-prism</artifactId>
+  <groupId>io.hyperswitch</groupId>
+  <artifactId>prism</artifactId>
   <version>0.0.1</version>
 </dependency>
 ```
