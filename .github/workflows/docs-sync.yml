@@ -51,10 +51,11 @@ jobs:
       - name: Sync documentation files
         run: |
           echo "=== Syncing documentation files ==="
-          TARGET_DIR="hyperswitch-docs/prism"
+          TARGET_DIR="hyperswitch-docs/integration-space"
           mkdir -p "$TARGET_DIR"
 
-          # Remove old content
+          # Remove old content in integration-space
+          echo "Removing old content in integration-space/..."
           rm -rf "$TARGET_DIR"/*
 
           # Copy /docs content (excluding patterns from gitbook.yml)
@@ -78,109 +79,56 @@ jobs:
             docs-generated/ "$TARGET_DIR/"
 
           echo "=== Files synced ==="
-          echo "Total files in prism/:"
+          echo "Total files in integration-space/:"
           find "$TARGET_DIR" -type f | wc -l
 
-      - name: Generate SUMMARY.md
+      - name: Update integration-space SUMMARY.md
+        working-directory: hyperswitch-docs
         run: |
-          echo "=== Generating SUMMARY.md files ==="
+          echo "=== Updating integration-space SUMMARY.md ==="
 
-          # Path to source SUMMARY.md (in checked out prism repo)
-          SOURCE_SUMMARY="docs/SUMMARY.md"
-          TARGET_SUMMARY="hyperswitch-docs/prism/SUMMARY.md"
-
-          echo "Source: $SOURCE_SUMMARY"
-          echo "Target: $TARGET_SUMMARY"
+          SOURCE_SUMMARY="../docs/SUMMARY.md"
+          TARGET_SUMMARY="integration-space/SUMMARY.md"
 
           # Verify source exists
           if [ ! -f "$SOURCE_SUMMARY" ]; then
             echo "ERROR: Source SUMMARY.md not found at $SOURCE_SUMMARY"
-            echo "Current directory: $(pwd)"
-            echo "Listing docs/:"
-            ls -la docs/ 2>/dev/null || echo "docs/ directory not found"
             exit 1
           fi
 
-          echo "Source SUMMARY.md found. Content preview:"
-          head -10 "$SOURCE_SUMMARY"
-          echo ""
+          echo "Source SUMMARY.md found."
 
-          # Copy source to target
-          cp "$SOURCE_SUMMARY" "$TARGET_SUMMARY"
-          echo "Copied $SOURCE_SUMMARY to $TARGET_SUMMARY"
-
-          # Verify the copy worked
-          echo "Target file preview:"
-          head -10 "$TARGET_SUMMARY"
-          echo ""
-
-          # Check for Java SDK section
-          if grep -q "Java SDK" "$TARGET_SUMMARY"; then
-            echo "✓ Java SDK section found in SUMMARY.md"
-          else
-            echo "✗ Java SDK section NOT found in SUMMARY.md"
-          fi
-
-      - name: Update root SUMMARY.md
-        working-directory: hyperswitch-docs
-        run: |
-          echo "=== Updating root SUMMARY.md ==="
-
-          if [ ! -f "SUMMARY.md" ]; then
-            echo "WARNING: Root SUMMARY.md not found"
+          # Check if target SUMMARY.md exists
+          if [ ! -f "$TARGET_SUMMARY" ]; then
+            echo "WARNING: Target SUMMARY.md not found at $TARGET_SUMMARY"
+            echo "Creating new SUMMARY.md from source..."
+            cp "$SOURCE_SUMMARY" "$TARGET_SUMMARY"
+            echo "✓ Created new SUMMARY.md"
             exit 0
           fi
 
-          # Remove old PRISM sections
-          echo "Removing old PRISM sections..."
-          sed -i '/^### PRISM$/,/^\(##\|###\) /{ /^### PRISM$/d; /^\(##\|###\) /!d; }' SUMMARY.md 2>/dev/null || true
-          sed -i '/^## PRISM$/,$d' SUMMARY.md 2>/dev/null || true
+          echo "Target SUMMARY.md exists. Appending PRISM section..."
 
-          # Find Integrations section (try multiple variations)
-          if grep -q "^## Integration Guide" SUMMARY.md; then
-            echo "Found '## Integration Guide' section"
-
-            # Create temp file with PRISM content
-            TEMP_FILE=$(mktemp)
-            echo "" >> "$TEMP_FILE"
-            echo "### PRISM" >> "$TEMP_FILE"
-
-            # Copy and transform prism/SUMMARY.md
-            tail -n +2 prism/SUMMARY.md | \
-              sed 's/^#### /###### /g; s/^### /##### /g; s/^## /#### /g; s/^# /### /g; s/](/](prism\//g' >> "$TEMP_FILE"
-
-            # Insert after Integration Guide section
-            sed -i '/^## Integration Guide$/r '"$TEMP_FILE"'' SUMMARY.md
-            rm "$TEMP_FILE"
-
-            echo "✓ Added PRISM under '## Integration Guide'"
-          elif grep -q "^## Integrations" SUMMARY.md; then
-            echo "Found '## Integrations' section"
-
-            # Create temp file with PRISM content
-            TEMP_FILE=$(mktemp)
-            echo "" >> "$TEMP_FILE"
-            echo "### PRISM" >> "$TEMP_FILE"
-
-            # Copy and transform prism/SUMMARY.md
-            tail -n +2 prism/SUMMARY.md | \
-              sed 's/^#### /###### /g; s/^### /##### /g; s/^## /#### /g; s/^# /### /g; s/](/](prism\//g' >> "$TEMP_FILE"
-
-            # Insert after Integrations section
-            sed -i '/^## Integrations$/r '"$TEMP_FILE"'' SUMMARY.md
-            rm "$TEMP_FILE"
-
-            echo "✓ Added PRISM under '## Integrations'"
-          else
-            echo "WARNING: No Integration section found - adding as top-level"
-            echo "" >> SUMMARY.md
-            echo "## PRISM" >> SUMMARY.md
-            tail -n +2 prism/SUMMARY.md | \
-              sed 's/^#### /##### /g; s/^### /#### /g; s/^## /### /g; s/](/](prism\//g' >> SUMMARY.md
+          # Remove old PRISM section from target if it exists
+          # Look for "## PRISM" and remove until end of file or next "## "
+          if grep -q "^## PRISM" "$TARGET_SUMMARY"; then
+            echo "Found existing '## PRISM' section - removing it..."
+            # Remove from "## PRISM" to end of file (we'll re-add it)
+            sed -i '/^## PRISM$/,$d' "$TARGET_SUMMARY"
           fi
 
-          echo "Root SUMMARY.md updated. PRISM section preview:"
-          grep -A 20 "### PRISM\|## PRISM" SUMMARY.md | head -25 || echo "PRISM section not found in output"
+          # Append PRISM section to target SUMMARY.md
+          echo "" >> "$TARGET_SUMMARY"
+          echo "## PRISM" >> "$TARGET_SUMMARY"
+          echo "" >> "$TARGET_SUMMARY"
+
+          # Copy content from source (skip the # PRISM header line)
+          tail -n +2 "$SOURCE_SUMMARY" >> "$TARGET_SUMMARY"
+
+          echo "✓ Appended PRISM section to $TARGET_SUMMARY"
+          echo ""
+          echo "Updated SUMMARY.md tail:"
+          tail -30 "$TARGET_SUMMARY"
 
       - name: Commit and push changes
         if: ${{ !inputs.dry_run }}
@@ -191,8 +139,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add prism/
-          git add SUMMARY.md
+          git add integration-space/
 
           # Check for changes
           if git diff --cached --quiet; then
@@ -203,9 +150,9 @@ jobs:
           echo "Changes detected:"
           git diff --cached --stat
 
-          git commit -m "docs(prism): sync from hyperswitch-prism@${{ github.sha }}
+          git commit -m "docs(prism): sync integration-space from hyperswitch-prism@${{ github.sha }}
 
-          Sync documentation from juspay/hyperswitch-prism@${{ github.sha }}
+          Sync integration-space documentation from juspay/hyperswitch-prism@${{ github.sha }}
           Branch: ${{ github.ref_name }}
 
           Changes:
@@ -221,7 +168,7 @@ jobs:
           echo "## Dry Run Summary"
           echo ""
           echo "Files that would be synced:"
-          git add prism/ 2>/dev/null || true
+          git add integration-space/ 2>/dev/null || true
           git diff --staged --stat || echo "No changes detected"
           echo ""
           echo "This was a dry run. No changes were pushed."
