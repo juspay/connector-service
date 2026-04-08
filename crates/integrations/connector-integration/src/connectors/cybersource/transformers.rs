@@ -32,7 +32,7 @@ use domain_types::{
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorSpecificConfig, ErrorResponse,
-        PazeDecryptedData, PaymentMethodToken,
+        PaymentMethodToken, PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -2199,8 +2199,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .payment_method_token
                     .as_ref()
-                    .and_then(|t| match t {
-                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
                     })
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
@@ -2218,10 +2218,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.resource_common_data.get_optional_billing(),
                     email,
                 )?;
-                let order_information =
-                    OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
-                let processing_information =
-                    ProcessingInformation::try_from((&item, None, None))?;
+                let order_information = OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
+                let processing_information = ProcessingInformation::try_from((&item, None, None))?;
                 let client_reference_information = ClientReferenceInformation::from(&item);
                 let merchant_defined_information = convert_metadata_to_merchant_defined_info(
                     item.router_data
