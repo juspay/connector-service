@@ -834,6 +834,7 @@ pub async fn call_connector_api(
         })
     };
 
+    tracing::info!("About to send HTTP request to mock server");
     let response = send_request.await;
     tracing::info!(?response, "received raw response from connector");
 
