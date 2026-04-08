@@ -417,11 +417,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::MobilePayment(_) => Err(errors::IntegrationError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Trustly"),
-                Default::default(),
-            )
-            .into()),
+            | PaymentMethodData::MobilePayment(_) => {
+                Err(errors::IntegrationError::not_implemented(
+                    utils::get_unimplemented_payment_method_error_message("Trustly"),
+                )
+                .into())
+            }
         }
     }
 }

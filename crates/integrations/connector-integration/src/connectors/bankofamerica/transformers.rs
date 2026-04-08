@@ -615,11 +615,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(IntegrationError::NotImplemented(
+                Err(IntegrationError::not_implemented(
                     domain_types::utils::get_unimplemented_payment_method_error_message(
                         "Bank of America",
                     ),
-                    Default::default(),
                 )
                 .into())
             }
@@ -1780,9 +1779,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(IntegrationError::NotImplemented(
+                Err(IntegrationError::not_implemented(
                     utils::get_unimplemented_payment_method_error_message("BankOfAmerica"),
-                    Default::default(),
                 ))?
             }
         }

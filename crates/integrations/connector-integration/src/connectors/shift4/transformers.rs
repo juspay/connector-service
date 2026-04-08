@@ -894,15 +894,13 @@ impl<T: PaymentMethodDataTypes>
                             })?
                     }
                     MandateReferenceId::NetworkMandateId(_) => {
-                        return Err(error_stack::report!(IntegrationError::NotImplemented(
+                        return Err(error_stack::report!(IntegrationError::not_implemented(
                             "NetworkMandateId is not supported for Shift4 MIT".to_string(),
-                            Default::default(),
                         )));
                     }
                     MandateReferenceId::NetworkTokenWithNTI(_) => {
-                        return Err(error_stack::report!(IntegrationError::NotImplemented(
+                        return Err(error_stack::report!(IntegrationError::not_implemented(
                             "NetworkTokenWithNTI is not supported for Shift4 MIT".to_string(),
-                            Default::default(),
                         )));
                     }
                 };

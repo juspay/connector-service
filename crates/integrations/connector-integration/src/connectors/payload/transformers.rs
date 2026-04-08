@@ -243,9 +243,8 @@ fn build_payload_bank_account_request_data(
         BankDebitData::SepaBankDebit { .. }
         | BankDebitData::SepaGuaranteedBankDebit { .. }
         | BankDebitData::BecsBankDebit { .. }
-        | BankDebitData::BacsBankDebit { .. } => Err(IntegrationError::NotImplemented(
+        | BankDebitData::BacsBankDebit { .. } => Err(IntegrationError::not_implemented(
             domain_types::utils::get_unimplemented_payment_method_error_message("Payload"),
-            Default::default(),
         )
         .into()),
     }

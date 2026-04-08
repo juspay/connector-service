@@ -979,9 +979,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             account_type,
                         })
                     }
-                    _ => Err(IntegrationError::NotImplemented(
+                    _ => Err(IntegrationError::not_implemented(
                         "Only ACH Bank Debit is supported".to_string(),
-                        Default::default(),
                     )
                     .into()),
                 }
@@ -1019,16 +1018,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             account_type: None,
                         })
                     }
-                    _ => Err(IntegrationError::NotImplemented(
-                        "Only Google Pay wallet tokenization is supported".into(),
-                        Default::default(),
+                    _ => Err(IntegrationError::not_implemented(
+                        "Only Google Pay wallet tokenization is supported".to_string(),
                     )
                     .into()),
                 }
             }
-            _ => Err(IntegrationError::NotImplemented(
-                "Only card, bank debit, and Google Pay tokenization are supported".into(),
-                Default::default(),
+            _ => Err(IntegrationError::not_implemented(
+                "Only card, bank debit, and Google Pay tokenization are supported".to_string(),
             )
             .into()),
         }
