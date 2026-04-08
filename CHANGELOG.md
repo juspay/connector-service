@@ -19,6 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.08.0
+
+### Features
+
+- **connector:** Implement CreateClientAuthenticationToken for Globalpay ([#957](https://github.com/juspay/connector-service/pull/957)) ([`dd456e9`](https://github.com/juspay/connector-service/commit/dd456e9ae4b69a2c566f3ebf9c17a7064d82b7b7))
+- Add proxy cache logic to all httpclient of sdk, previously each… ([#859](https://github.com/juspay/connector-service/pull/859)) ([`090d520`](https://github.com/juspay/connector-service/commit/090d520efd18a6f405e0885e0001005eeff626e1))
+
+### Miscellaneous Tasks
+
+- Add publish command ci ([#975](https://github.com/juspay/connector-service/pull/975)) ([`1c0d177`](https://github.com/juspay/connector-service/commit/1c0d1777d4343bffe123d0d26fc86e07d6384a2e))
+
+**Full Changelog:** [`2026.04.07.1...2026.04.08.0`](https://github.com/juspay/connector-service/compare/2026.04.07.1...2026.04.08.0)
+
+- - -
+
 ## 2026.04.07.1
 
 ### Features
