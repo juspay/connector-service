@@ -5,13 +5,14 @@
  * Orchestrates the execution of client sanity tests across all SDK languages.
  * For each scenario in manifest.json, this script:
  * 1. Starts the echo server
- * 2. Runs language-specific runners (Node, Python, Rust, Kotlin)
+ * 2. Runs language-specific runners in PARALLEL (Node, Python, Rust, Kotlin)
  * 3. Collects actual outputs and echo server captures
  * 4. Stores results for the judge to verify
  */
 const fs = require('fs');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
+const net = require('net');
 
 const CLIENT_SANITY_DIR = __dirname;
 const PROJECT_ROOT = path.join(CLIENT_SANITY_DIR, '..', '..', '..');
@@ -39,11 +40,121 @@ async function runCommand(cmd, args, input = null, opts = {}) {
   });
 }
 
+function waitForPort(port, host = 'localhost', timeoutMs = 30000) {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const tryConnect = () => {
+      const socket = new net.Socket();
+      socket.setTimeout(100);
+      socket.on('connect', () => {
+        socket.destroy();
+        resolve();
+      });
+      socket.on('error', () => {
+        socket.destroy();
+        if (Date.now() - startTime > timeoutMs) {
+          reject(new Error(`Timeout waiting for port ${port}`));
+        } else {
+          setTimeout(tryConnect, 50);
+        }
+      });
+      socket.on('timeout', () => {
+        socket.destroy();
+        if (Date.now() - startTime > timeoutMs) {
+          reject(new Error(`Timeout waiting for port ${port}`));
+        } else {
+          setTimeout(tryConnect, 50);
+        }
+      });
+      socket.connect(port, host);
+    };
+    tryConnect();
+  });
+}
+
 async function startEchoServer() {
   console.log('📡 Starting Echo Server...');
   const server = spawn('node', [ECHO_SERVER_PATH], { stdio: 'inherit' });
-  await new Promise(r => setTimeout(r, 1000)); // Wait for server to bind
+  await waitForPort(8081, 'localhost', 10000);
+  console.log('✅ Echo Server ready on port 8081');
   return server;
+}
+
+async function precompileRustRunner() {
+  console.log('🔨 Pre-compiling Rust runner...');
+  const rustDir = path.join(PROJECT_ROOT, 'sdk/rust');
+  await runCommand('cargo', ['build', '--bin', 'client_sanity_runner', '--release', '--quiet'], null, { cwd: rustDir });
+  const runnerPath = path.join(rustDir, 'target/release/client_sanity_runner');
+  console.log('✅ Rust runner compiled');
+  return runnerPath;
+}
+
+async function runLanguageScenarios(lang, manifest, runnerPaths) {
+  console.log(`\n[ORCHESTRATOR]: Testing ${lang.toUpperCase()} SDK...`);
+
+  for (const scenario of manifest.scenarios) {
+    // Skip scenarios that are marked to skip this language
+    if (scenario.skip_langs && scenario.skip_langs.includes(lang)) {
+      console.log(`   Scenario: ${scenario.id} [SKIPPED - ${scenario[`skip_reason_${lang}`] || 'Not supported'}]`);
+      continue;
+    }
+
+    console.log(`   Scenario: ${scenario.id}`);
+
+    const sourceId = `${lang}_${scenario.id}`;
+    const actualStore = path.join(ARTIFACTS_DIR, `actual_${lang}_${scenario.id}.json`);
+    const captureFile = path.join(ARTIFACTS_DIR, `capture_${sourceId}.json`);
+
+    // Clean up old files
+    if (fs.existsSync(actualStore)) fs.unlinkSync(actualStore);
+    if (fs.existsSync(captureFile)) fs.unlinkSync(captureFile);
+
+    // Prepare input for Thin Runner
+    const runnerInput = JSON.stringify({
+      scenario_id: scenario.id,
+      source_id: sourceId,
+      request: scenario.request,
+      proxy: scenario.proxy,
+      client_timeout_ms: scenario.client_timeout_ms,
+      client_response_timeout_ms: scenario.client_response_timeout_ms
+    });
+
+    // Execute Thin Runner
+    let cmd, args, runOpts = {};
+    if (lang === 'rust') {
+      cmd = runnerPaths.rust;
+      args = [];
+      runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/rust') };
+    } else if (lang === 'python') {
+      cmd = 'python3';
+      args = ['tests/client_sanity_runner.py'];
+      runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/python') };
+    } else if (lang === 'node') {
+      cmd = 'npx';
+      args = ['ts-node', 'tests/client_sanity_runner.ts'];
+      runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/javascript') };
+    } else if (lang === 'kotlin') {
+      cmd = './gradlew';
+      args = ['runClientSanity', '--quiet'];
+      runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/java') };
+    }
+    const { stdout } = await runCommand(cmd, args, runnerInput, runOpts);
+
+    let sdkOutput;
+    try {
+      sdkOutput = JSON.parse(stdout.trim());
+    } catch (e) {
+      sdkOutput = { error: { code: 'RUNNER_CRASH', message: stdout || 'No output' } };
+    }
+
+    // Wait for Echo Server to write capture (for success/timeout scenarios where request reached server)
+    let waitMs = 50; // Reduced from 200ms - just enough for file I/O
+    if (scenario.server_delay_ms) waitMs = Math.max(waitMs, scenario.server_delay_ms + 100);
+    await new Promise(r => setTimeout(r, waitMs));
+
+    // actual contains ONLY SDK outcome (response or error). Judge reads capture directly for Speaker.
+    fs.writeFileSync(actualStore, JSON.stringify(sdkOutput, null, 2));
+  }
 }
 
 async function main() {
@@ -56,67 +167,15 @@ async function main() {
 
   const echoServer = await startEchoServer();
 
-  for (const lang of languages) {
-    console.log(`\n[ORCHESTRATOR]: Testing ${lang.toUpperCase()} SDK...`);
-
-    for (const scenario of manifest.scenarios) {
-      console.log(`   Scenario: ${scenario.id}`);
-
-      const sourceId = `${lang}_${scenario.id}`;
-      const actualStore = path.join(ARTIFACTS_DIR, `actual_${lang}_${scenario.id}.json`);
-      const captureFile = path.join(ARTIFACTS_DIR, `capture_${sourceId}.json`);
-
-      // Clean up old files
-      if (fs.existsSync(actualStore)) fs.unlinkSync(actualStore);
-      if (fs.existsSync(captureFile)) fs.unlinkSync(captureFile);
-
-      // Prepare input for Thin Runner
-      const runnerInput = JSON.stringify({
-        scenario_id: scenario.id,
-        source_id: sourceId,
-        request: scenario.request,
-        proxy: scenario.proxy,
-        client_timeout_ms: scenario.client_timeout_ms,
-        client_response_timeout_ms: scenario.client_response_timeout_ms
-      });
-
-      // Execute Thin Runner
-      let cmd, args, runOpts = {};
-      if (lang === 'rust') {
-        cmd = 'cargo';
-        args = ['run', '--bin', 'client_sanity_runner', '--quiet'];
-        runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/rust') };
-      } else if (lang === 'python') {
-        cmd = 'python3';
-        args = ['tests/client_sanity_runner.py'];
-        runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/python') };
-      } else if (lang === 'node') {
-        cmd = 'npx';
-        args = ['ts-node', 'tests/client_sanity_runner.ts'];
-        runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/javascript') };
-      } else if (lang === 'kotlin') {
-        cmd = './gradlew';
-        args = ['runClientSanity', '--quiet'];
-        runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/java') };
-      }
-      const { stdout } = await runCommand(cmd, args, runnerInput, runOpts);
-
-      let sdkOutput;
-      try {
-        sdkOutput = JSON.parse(stdout.trim());
-      } catch (e) {
-        sdkOutput = { error: { code: 'RUNNER_CRASH', message: stdout || 'No output' } };
-      }
-
-      // Wait for Echo Server to write capture (for success/timeout scenarios where request reached server)
-      let waitMs = 200;
-      if (scenario.server_delay_ms) waitMs = Math.max(waitMs, scenario.server_delay_ms + 100);
-      await new Promise(r => setTimeout(r, waitMs));
-
-      // actual contains ONLY SDK outcome (response or error). Judge reads capture directly for Speaker.
-      fs.writeFileSync(actualStore, JSON.stringify(sdkOutput, null, 2));
-    }
+  // Pre-compile Rust runner if needed
+  const runnerPaths = {};
+  if (languages.includes('rust')) {
+    runnerPaths.rust = await precompileRustRunner();
   }
+
+  // Run all languages in parallel
+  console.log(`\n🚀 Running ${languages.length} language(s) in parallel...`);
+  await Promise.all(languages.map(lang => runLanguageScenarios(lang, manifest, runnerPaths)));
 
   echoServer.kill();
   console.log('\n⚖️ Starting Judge...');
