@@ -256,7 +256,7 @@ jobs:
           name: generated-javascript
           path: sdk/javascript/src/payments/generated/
       - name: Package JavaScript SDK
-        run: make -C sdk/javascript dist
+        run: make -C sdk/javascript pack-archive
       - name: Upload JavaScript SDK artifact
         uses: actions/upload-artifact@v4
         with:
