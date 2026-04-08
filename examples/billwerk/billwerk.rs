@@ -157,6 +157,55 @@ pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
     })).unwrap_or_default()
 }
 
+pub fn build_token_authorize_request() -> PaymentServiceTokenAuthorizeRequest {
+    serde_json::from_value::<PaymentServiceTokenAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_tokenized_txn_001",
+    "amount": {
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "connector_token": "pm_1AbcXyzStripeTestToken",  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
+    "address": {
+        "billing_address": {
+        },
+    },
+    "capture_method": "AUTOMATIC",
+    "return_url": "https://example.com/return",
+    })).unwrap_or_default()
+}
+
+pub fn build_token_setup_recurring_request() -> PaymentServiceTokenSetupRecurringRequest {
+    serde_json::from_value::<PaymentServiceTokenSetupRecurringRequest>(serde_json::json!({
+    "merchant_recurring_payment_id": "probe_tokenized_mandate_001",
+    "amount": {
+        "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "connector_token": "pm_1AbcXyzStripeTestToken",
+    "address": {
+        "billing_address": {
+        },
+    },
+    "customer_acceptance": {
+        "acceptance_type": "ONLINE",  // Type of acceptance (e.g., online, offline).
+        "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        "online_mandate_details": {  // Details if the acceptance was an online mandate.
+            "ip_address": "127.0.0.1",  // IP address from which the mandate was accepted.
+            "user_agent": "Mozilla/5.0",  // User agent string of the browser used for mandate acceptance.
+        },
+    },
+    "setup_mandate_details": {
+        "mandate_type": {  // Type of mandate (single_use or multi_use) with amount details.
+            "multi_use": {  // Multi use mandate with amount details (for recurring payments).
+                "amount": 0,  // Amount.
+                "currency": "USD",  // Currency code (ISO 4217).
+            },
+        },
+    },
+    "setup_future_usage": "OFF_SESSION",
+    })).unwrap_or_default()
+}
+
 pub fn build_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
     serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
     "amount": {  // Payment Information.
@@ -346,6 +395,20 @@ pub async fn setup_recurring(client: &ConnectorClient, _merchant_transaction_id:
     Ok(format!("Mandate: {}", response.connector_recurring_payment_id.as_deref().unwrap_or("")))
 }
 
+// Flow: PaymentService.TokenAuthorize
+#[allow(dead_code)]
+pub async fn token_authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.token_authorize(build_token_authorize_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: PaymentService.TokenSetupRecurring
+#[allow(dead_code)]
+pub async fn token_setup_recurring(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.token_setup_recurring(build_token_setup_recurring_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: PaymentMethodService.Tokenize
 #[allow(dead_code)]
 pub async fn tokenize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -378,9 +441,11 @@ async fn main() {
         "refund" => refund(&client, "order_001").await,
         "refund_get" => refund_get(&client, "order_001").await,
         "setup_recurring" => setup_recurring(&client, "order_001").await,
+        "token_authorize" => token_authorize(&client, "order_001").await,
+        "token_setup_recurring" => token_setup_recurring(&client, "order_001").await,
         "tokenize" => tokenize(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, get, recurring_charge, refund, refund_get, setup_recurring, tokenize, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, get, recurring_charge, refund, refund_get, setup_recurring, token_authorize, token_setup_recurring, tokenize, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

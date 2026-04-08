@@ -1,5 +1,6 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-grpc-bindings \
-        generate-all build-ts pack-archive install test-package test-composite test-grpc test-grpc-no-server dist publish clean
+        generate-all build-ts pack-archive install test-package test-composite test-grpc test-grpc-no-server dist publish clean \
+        publish-check-auth publish-check-version publish-check-dry-run publish-check
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -269,6 +270,53 @@ publish: build-ts
 	@echo "Publishing hyperswitch-prism to npm..."
 	@npm publish --access public
 	@echo "Published hyperswitch-prism to npm registry."
+
+# ---------------------------------------------------------------------------
+# Pre-publish checks
+# ---------------------------------------------------------------------------
+
+# publish-check-auth
+# Verifies that NPM_TOKEN environment variable is set or npm whoami succeeds.
+publish-check-auth:
+	@if [ -n "$(NPM_TOKEN)" ]; then \
+		echo "NPM_TOKEN is set."; \
+	elif npm whoami >/dev/null 2>&1; then \
+		echo "npm authenticated as: $$(npm whoami)"; \
+	else \
+		echo "Error: Neither NPM_TOKEN nor npm authentication is configured"; \
+		echo "Set NPM_TOKEN or run 'npm login' first."; \
+		exit 1; \
+	fi
+
+# publish-check-version
+# Checks if $(PACKAGE_VERSION) already exists on npm registry.
+# Exits with error if version already exists (prevents accidental republish).
+publish-check-version:
+	@echo "Checking if hyperswitch-prism $(PACKAGE_VERSION) exists on npm..."
+	@if npm view hyperswitch-prism@$(PACKAGE_VERSION) version >/dev/null 2>&1; then \
+		echo "Error: Version $(PACKAGE_VERSION) already exists on npm"; \
+		echo "Increment the version in package.json before publishing."; \
+		exit 1; \
+	fi
+	@echo "Version $(PACKAGE_VERSION) does not exist on npm - OK to publish."
+
+# publish-check-dry-run
+# Simulates publish without actually publishing.
+# Uses npm publish --dry-run and npm pack to verify package contents.
+publish-check-dry-run: build-ts
+	@echo "Running npm publish dry-run..."
+	@npm publish --dry-run --access public
+	@echo "Creating local tarball..."
+	@npm pack --pack-destination /tmp
+	@echo "Tarball contents:"
+	@tar -tzf /tmp/hyperswitch-prism-$(PACKAGE_VERSION).tgz | head -20
+	@rm -f /tmp/hyperswitch-prism-$(PACKAGE_VERSION).tgz
+	@echo "Dry-run validation passed."
+
+# publish-check
+# Runs all pre-publish checks in sequence.
+publish-check: publish-check-auth publish-check-version publish-check-dry-run
+	@echo "All JavaScript pre-publish checks passed."
 
 clean:
 	@rm -rf $(GENERATED_OUT) node_modules
