@@ -488,10 +488,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        // Extract payment_session_id from reference_id (set by CreateOrder response)
-        let payment_session_id = item.resource_common_data.reference_id.clone().ok_or(
+        // Extract payment_session_id from connector_order_id (set by CreateOrder response)
+        let payment_session_id = item.resource_common_data.connector_order_id.clone().ok_or(
             IntegrationError::MissingRequiredField {
-                field_name: "merchant_order_id",
+                field_name: "connector_order_id",
                 context: Default::default(),
             },
         )?;
@@ -547,8 +547,9 @@ impl TryFrom<ResponseRouterData<CashfreeOrderCreateResponse, Self>>
             resource_common_data: PaymentFlowData {
                 // Update status to indicate successful order creation
                 status: common_enums::AttemptStatus::Pending,
-                // Set reference_id to the payment_session_id for use in authorize flow
-                reference_id: Some(order_id),
+                // Set connector_order_id to the payment_session_id for use in authorize flow
+                reference_id: Some(order_id.clone()),
+                connector_order_id: Some(order_id),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data

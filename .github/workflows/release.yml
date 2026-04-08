@@ -337,10 +337,160 @@ jobs:
           echo ""
           echo "═══════════════════════════════════════════════════════════════════"
 
+  pre-publish-check:
+    name: Pre-Publish Validation
+    runs-on: ubuntu-latest
+    needs: [collect-sdks]
+    if: ${{ inputs.preview_only == true || inputs.publish_java == true || inputs.publish_python == true || inputs.publish_javascript == true }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all generated artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: generated-*
+          path: generated-artifacts
+
+      - name: Organize generated artifacts
+        run: |
+          # Python
+          mkdir -p sdk/python/src/payments/generated
+          cp -r generated-artifacts/generated-python/* sdk/python/src/payments/generated/ 2>/dev/null || true
+          # JavaScript
+          mkdir -p sdk/javascript/src/payments/generated
+          cp -r generated-artifacts/generated-javascript/* sdk/javascript/src/payments/generated/ 2>/dev/null || true
+          # Java Kotlin bindings
+          mkdir -p sdk/java/src/main/kotlin/generated
+          cp -r generated-artifacts/generated-kotlin/* sdk/java/src/main/kotlin/generated/ 2>/dev/null || true
+          # Java proto stubs
+          mkdir -p sdk/java/src/main/java/generated
+          cp -r generated-artifacts/generated-java-proto/* sdk/java/src/main/java/generated/ 2>/dev/null || true
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+
+      - name: Organize binaries
+        run: |
+          for dir in target/binary-*; do
+            if [ -d "$dir" ]; then
+              target_name=$(basename "$dir" | sed 's/binary-//')
+              mkdir -p "target/$target_name/release"
+              cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+            fi
+          done
+
+      - name: Install Python tools
+        run: pip install twine build
+
+      - name: Install JavaScript dependencies
+        run: cd sdk/javascript && npm install --silent
+
+      # --- Auth checks ---
+      - name: Check Java auth
+        if: ${{ inputs.publish_java == true }}
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+        run: make -C sdk/java publish-check-auth
+
+      - name: Check Python auth
+        if: ${{ inputs.publish_python == true }}
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        run: make -C sdk/python publish-check-auth
+
+      - name: Check JavaScript auth
+        if: ${{ inputs.publish_javascript == true }}
+        working-directory: sdk/javascript
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if npm whoami >/dev/null 2>&1; then
+            echo "npm authenticated as: $(npm whoami)"
+          else
+            echo "Error: npm authentication failed"
+            exit 1
+          fi
+
+      # --- Version checks ---
+      - name: Check Java version
+        if: ${{ inputs.publish_java == true }}
+        run: make -C sdk/java publish-check-version
+
+      - name: Check Python version
+        if: ${{ inputs.publish_python == true }}
+        run: make -C sdk/python publish-check-version
+
+      - name: Check JavaScript version
+        if: ${{ inputs.publish_javascript == true }}
+        working-directory: sdk/javascript
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "Checking if hyperswitch-prism $PACKAGE_VERSION exists on npm..."
+          if npm view hyperswitch-prism@$PACKAGE_VERSION version >/dev/null 2>&1; then
+            echo "Error: Version $PACKAGE_VERSION already exists on npm"
+            exit 1
+          fi
+          echo "Version $PACKAGE_VERSION does not exist on npm - OK to publish"
+
+      # --- Dry-run checks ---
+      - name: Java dry-run (publishToMavenLocal)
+        if: ${{ inputs.publish_java == true }}
+        run: make -C sdk/java publish-check-dry-run
+
+      - name: Python dry-run (twine check)
+        if: ${{ inputs.publish_python == true }}
+        run: make -C sdk/python publish-check-dry-run
+
+      - name: JavaScript dry-run (npm publish --dry-run)
+        if: ${{ inputs.publish_javascript == true }}
+        working-directory: sdk/javascript
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm ci
+          npm publish --dry-run --access public
+
+      - name: Pre-Publish Check Summary
+        run: |
+          echo "=== Pre-Publish Check Summary ==="
+          echo ""
+          if [ "${{ inputs.publish_java }}" == "true" ]; then echo "  Java: PASSED"; else echo "  Java: SKIPPED"; fi
+          if [ "${{ inputs.publish_python }}" == "true" ]; then echo "  Python: PASSED"; else echo "  Python: SKIPPED"; fi
+          if [ "${{ inputs.publish_javascript }}" == "true" ]; then echo "  JavaScript: PASSED"; else echo "  JavaScript: SKIPPED"; fi
+          echo ""
+          if [ "${{ inputs.preview_only }}" == "true" ]; then
+            echo "PREVIEW ONLY MODE - No SDKs will be published"
+          else
+            echo "All pre-publish checks passed. Proceeding to publish."
+          fi
+
   publish-java:
     name: Publish Java SDK to Maven Central
     runs-on: ubuntu-latest
-    needs: [preview-publish]
+    needs: [preview-publish, pre-publish-check]
     if: ${{ inputs.publish_java == true && inputs.preview_only == false }}
     steps:
       - uses: actions/checkout@v4
@@ -400,7 +550,7 @@ jobs:
   publish-python:
     name: Publish Python SDK to PyPI
     runs-on: ubuntu-latest
-    needs: [preview-publish]
+    needs: [preview-publish, pre-publish-check]
     if: ${{ inputs.publish_python == true && inputs.preview_only == false }}
     steps:
       - uses: actions/checkout@v4
@@ -456,13 +606,17 @@ jobs:
   publish-javascript:
     name: Publish JavaScript SDK to npm
     runs-on: ubuntu-latest
-    needs: [preview-publish]
+    needs: [preview-publish, pre-publish-check]
     if: ${{ inputs.publish_javascript == true && inputs.preview_only == false }}
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
@@ -506,6 +660,9 @@ jobs:
           fi
       - name: Publish to npm
         if: ${{ inputs.preview_only == false }}
+        working-directory: sdk/javascript
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: make -C sdk/javascript publish
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm ci
+          npm publish --access public
