@@ -69,12 +69,14 @@ jobs:
             --exclude='docs-strategy.md' \
             --exclude='*.yml' \
             --exclude='*.yaml' \
+            --exclude='README.md' \
             --exclude='.git/' \
             docs/ "$TARGET_DIR/"
 
           # Copy /docs-generated content (merges with /docs)
           echo "Copying docs-generated/ content..."
           rsync -a \
+            --exclude='README.md' \
             --exclude='.git/' \
             docs-generated/ "$TARGET_DIR/"
 
