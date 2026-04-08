@@ -10,7 +10,7 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId, SetupMandateRequestData,
     },
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::CardIssuer,
@@ -19,6 +19,9 @@ use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+
+// Constant for Google Pay fluid data descriptor
+pub const GOOGLE_PAY_FLUID_DATA_DESCRIPTOR: &str = "RklEPUNPTU1PTi5HT09HTEUuSU5BUFAvUEFZTUVOVFM";
 
 // Re-export from common utils for use in this connector
 pub use crate::utils::{convert_metadata_to_merchant_defined_info, MerchantDefinedInformation};
@@ -65,6 +68,7 @@ pub struct ProcessingInformation {
 #[serde(untagged)]
 pub enum PaymentInformation<T: PaymentMethodDataTypes> {
     Cards(Box<CardPaymentInformation<T>>),
+    GooglePay(Box<GooglePayPaymentInformation>),
 }
 
 #[derive(Debug, Serialize)]
@@ -82,6 +86,21 @@ pub struct Card<T: PaymentMethodDataTypes> {
     security_code: Option<Secret<String>>,
     #[serde(rename = "type")]
     card_type: Option<String>,
+}
+
+// GOOGLE PAY STRUCTURES
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayPaymentInformation {
+    fluid_data: FluidData,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FluidData {
+    value: Secret<String>,
+    descriptor: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -551,7 +570,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let common_data = &router_data.resource_common_data;
 
         // Get payment method data
-        let payment_information = match &request.payment_method_data {
+        let (payment_information, payment_solution) = match &request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Use get_card_issuer for robust card type detection
                 let card_issuer =
@@ -570,11 +589,45 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     security_code: Some(card_data.card_cvc.clone()),
                     card_type: Some(card_type),
                 };
-                PaymentInformation::Cards(Box::new(CardPaymentInformation { card }))
+                (PaymentInformation::Cards(Box::new(CardPaymentInformation { card })), None)
             }
+            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                WalletData::GooglePay(google_pay_data) => {
+                    // Extract encrypted token from Google Pay data
+                    let encrypted_token = google_pay_data
+                        .tokenization_data
+                        .get_encrypted_google_pay_token()
+                        .change_context(IntegrationError::MissingRequiredField {
+                            field_name: "google_pay.tokenization_data.token",
+                            context: Default::default(),
+                        })
+                        .attach_printable("Unable to get encrypted Google Pay token")?;
+
+                    // Base64 encode the encrypted token
+                    use base64::Engine;
+                    let encoded_token = base64::engine::general_purpose::STANDARD
+                        .encode(encrypted_token);
+
+                    let fluid_data = FluidData {
+                        value: Secret::new(encoded_token),
+                        descriptor: Some(GOOGLE_PAY_FLUID_DATA_DESCRIPTOR.to_string()),
+                    };
+
+                    (
+                        PaymentInformation::GooglePay(Box::new(GooglePayPaymentInformation {
+                            fluid_data,
+                        })),
+                        Some("004".to_string()), // Google Pay payment solution code
+                    )
+                }
+                _ => Err(IntegrationError::NotSupported {
+                    message: "Wallet type not supported".to_string(),
+                    connector: "Wellsfargo",
+                    context: Default::default(),
+                })?,
+            },
             // Connector supports these but not yet implemented
-            PaymentMethodData::Wallet(_)
-            | PaymentMethodData::CardToken(_)
+            PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_) => Err(IntegrationError::not_implemented(
                 "Payment method supported by connector but not yet implemented".to_string(),
             ))?,
@@ -692,7 +745,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             action_token_types: None,
             authorization_options: None,
             capture_options: None,
-            payment_solution: None,
+            payment_solution,
         };
 
         // Client reference - use payment_id from common data
