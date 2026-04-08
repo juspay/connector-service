@@ -1654,11 +1654,6 @@ message BillwerkClientAuthenticationResponse {
   string session_id = 1;
 }
 
-// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
-message BluesnapClientAuthenticationResponse {
-  SecretString pf_token = 1;
-}
-
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
 message StripeClientAuthenticationResponse {
   SecretString client_secret = 1;

@@ -749,7 +749,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .and_then(|h| h.get("location"))
             .and_then(|v| v.to_str().ok())
             .ok_or(ConnectorError::ResponseDeserializationFailed {
-                context: Default::default(),
+                context: domain_types::errors::ResponseTransformationErrorContext {
+                    http_status_code: Some(res.status_code),
+                    additional_context: Some(
+                        "Bluesnap POST /services/2/payment-fields-tokens did not return a \
+                         Location header containing the pfToken URL."
+                            .to_owned(),
+                    ),
+                },
             })?;
 
         let pf_token =
@@ -757,7 +764,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .rsplit('/')
                 .next()
                 .ok_or(ConnectorError::ResponseDeserializationFailed {
-                    context: Default::default(),
+                    context: domain_types::errors::ResponseTransformationErrorContext {
+                        http_status_code: Some(res.status_code),
+                        additional_context: Some(format!(
+                            "Failed to extract pfToken from Bluesnap Location header: \
+                             expected URL ending with '/<pfToken>', got '{location}'."
+                        )),
+                    },
                 })?;
 
         let response = BluesnapClientAuthResponse {
@@ -777,7 +790,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >::try_from(response_router_data)
         .change_context(ConnectorError::ResponseHandlingFailed {
-            context: Default::default(),
+            context: domain_types::errors::ResponseTransformationErrorContext {
+                http_status_code: Some(res.status_code),
+                additional_context: Some(
+                    "Failed to convert Bluesnap ClientAuthenticationToken response \
+                     into RouterDataV2."
+                        .to_owned(),
+                ),
+            },
         })
     }
 

@@ -20,7 +20,10 @@ use serde::{Deserialize, Serialize};
 
 use super::{requests, responses};
 use crate::types::ResponseRouterData;
-use domain_types::errors::{ConnectorError, IntegrationError, WebhookError};
+use domain_types::errors::{
+    ConnectorError, IntegrationError, IntegrationErrorContext, ResponseTransformationErrorContext,
+    WebhookError,
+};
 
 // Wallet type constants
 const WALLET_TYPE_APPLE_PAY: &str = "APPLE_PAY";
@@ -497,13 +500,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .payment_method_token
                     .as_ref()
-                    .and_then(|t| match t {
-                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
                     })
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
                             field_name: "payment_method_token",
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "Ensure the ClientAuthenticationToken flow runs before \
+                                     Authorize so a pfToken is available as payment_method_token."
+                                        .to_owned(),
+                                ),
+                                doc_url: Some(
+                                    "https://developers.bluesnap.com/v8976-JSON/docs/hosted-payment-fields"
+                                        .to_owned(),
+                                ),
+                                additional_context: Some(
+                                    "Bluesnap CardToken payments require a pfToken obtained from \
+                                     the Hosted Payment Fields token endpoint."
+                                        .to_owned(),
+                                ),
+                            },
                         })
                     })?;
 
@@ -976,7 +994,15 @@ impl TryFrom<ResponseRouterData<BluesnapClientAuthResponse, Self>>
         let pf_token = response
             .pf_token
             .ok_or(ConnectorError::ResponseDeserializationFailed {
-                context: Default::default(),
+                context: ResponseTransformationErrorContext {
+                    http_status_code: Some(item.http_code),
+                    additional_context: Some(
+                        "Bluesnap ClientAuthenticationToken response did not contain a pfToken. \
+                         The token is expected in the HTTP Location header of the POST \
+                         /services/2/payment-fields-tokens response."
+                            .to_owned(),
+                    ),
+                },
             })?;
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
