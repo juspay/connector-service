@@ -2,9 +2,10 @@ plugins {
     kotlin("jvm") version "2.3.10"
     `java-library`
     `maven-publish`
+    signing
 }
 
-group = "com.hyperswitch"
+group = "io.hyperswitch"
 version = "0.0.1"
 
 repositories {
@@ -53,6 +54,21 @@ publishing {
             groupId = "io.hyperswitch"
             artifactId = "prism"
             from(components["java"])
+
+            // Only sign if GPG key is available
+            val gpgKey = System.getenv("GPG_SIGNING_KEY")
+            if (!gpgKey.isNullOrEmpty()) {
+                signPublications()
+            }
         }
+    }
+}
+
+// Configure signing from environment variables (for CI)
+signing {
+    val gpgKey = System.getenv("GPG_SIGNING_KEY")
+    val gpgPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD")
+    if (!gpgKey.isNullOrEmpty() && !gpgPassword.isNullOrEmpty()) {
+        useInMemoryPgpKeys(gpgKey, gpgPassword)
     }
 }

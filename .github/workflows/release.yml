@@ -412,8 +412,10 @@ jobs:
         if: ${{ inputs.publish_java == true }}
         continue-on-error: true
         env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          OSSRH_USERNAME: ${{ secrets.SONATYPE_MAVEN_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.SONATYPE_MAVEN_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSWORD: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY_PASSWORD }}
         run: make -C sdk/java publish-check-auth
 
       - name: Check Python auth
@@ -421,8 +423,8 @@ jobs:
         if: ${{ inputs.publish_python == true }}
         continue-on-error: true
         env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: make -C sdk/python publish-check-auth
 
       - name: Check JavaScript auth
@@ -472,6 +474,9 @@ jobs:
         id: check-java-dryrun
         if: ${{ inputs.publish_java == true }}
         continue-on-error: true
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSWORD: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY_PASSWORD }}
         run: make -C sdk/java publish-check-dry-run
 
       - name: Python dry-run (twine check)
@@ -602,8 +607,10 @@ jobs:
       - name: Publish to Maven Central
         if: ${{ inputs.preview_only == false }}
         env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          OSSRH_USERNAME: ${{ secrets.SONATYPE_MAVEN_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.SONATYPE_MAVEN_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSWORD: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY_PASSWORD }}
         run: make -C sdk/java publish
 
   publish-python:
@@ -658,8 +665,8 @@ jobs:
       - name: Publish to PyPI
         if: ${{ inputs.preview_only == false }}
         env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: make -C sdk/python publish
 
   publish-javascript:
