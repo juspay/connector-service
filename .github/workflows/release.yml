@@ -344,7 +344,6 @@ jobs:
     if: ${{ inputs.publish_java == true || inputs.publish_python == true || inputs.publish_javascript == true }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

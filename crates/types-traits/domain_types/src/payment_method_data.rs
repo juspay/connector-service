@@ -668,6 +668,9 @@ pub enum BankRedirectData {
         provider: String,
     },
     OpenBanking {},
+    Netbanking {
+        issuer: common_enums::BankNames,
+    },
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]
