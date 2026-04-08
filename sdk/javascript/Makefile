@@ -214,8 +214,8 @@ test-package-mock: build-ffi-lib generate-all build-ts pack-archive
 	@cp $(SDK_ROOT)/smoke-test/test_smoke.ts /tmp/test-hyperswitch-js-mock/
 	@cp $(SDK_ROOT)/smoke-test/tsconfig.json /tmp/test-hyperswitch-js-mock/
 	@cp $(REPO_ROOT)/sdk/generated/flows.json /tmp/test-hyperswitch-js-mock/
-	@if [ -f $(REPO_ROOT)/creds.mock.json ]; then \
-		cp $(REPO_ROOT)/creds.mock.json /tmp/test-hyperswitch-js-mock/creds.json; \
+	@if [ -f $(REPO_ROOT)/creds_dummy.json ]; then \
+		cp $(REPO_ROOT)/creds_dummy.json /tmp/test-hyperswitch-js-mock/creds.json; \
 	fi
 	@# Copy harness to the location test_smoke.ts expects in mock mode
 	@mkdir -p /tmp/test-hyperswitch-js-mock/smoke-test/generated/$(CONNECTORS)

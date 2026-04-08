@@ -190,17 +190,9 @@ fun discoverAndValidate(
     val effectiveDeclared: List<String> = if (!legacyMode) {
         declared!!.distinct()  // Deduplicate
     } else {
-        // Legacy mode: scan process* methods using flow_to_example_fn mapping
-        // Find all available example functions
-        val availableExampleFns = exampleClass.methods
-            .filter { it.name.startsWith("process") }
-            .map { fromMethodName(it.name) }
-            .toSet()
-        // Map flows to their example functions if both exist
-        manifest.filter { flow ->
-            val exampleFn = flowToExampleFn[flow]
-            exampleFn != null && availableExampleFns.contains(exampleFn)
-        }
+        // Legacy mode: include ALL flows from manifest
+        // We'll check for implementations during iteration
+        manifest
     }
 
     // Validate flow names are lowercase snake_case
@@ -240,11 +232,14 @@ fun discoverAndValidate(
         
         if (exampleBasedFound || flowBasedFound) {
             implemented.add(flow)
-        } else {
+        }
+        // In legacy mode, flows without implementations are allowed (will show as N/A)
+        // In explicit SUPPORTED_FLOWS mode, missing flows are an error
+        if (!legacyMode && !exampleBasedFound && !flowBasedFound) {
             missing.add(flow)
         }
     }
-    if (missing.isNotEmpty()) {
+    if (!legacyMode && missing.isNotEmpty()) {
         return ValidationError(
             "COVERAGE ERROR: SUPPORTED_FLOWS declares $missing but no process* method found."
         )
@@ -277,24 +272,31 @@ fun discoverAndValidate(
         }
     }
 
-    // Return (flow_name, method) pairs
+    // Return (flow_name, method) pairs for flows with implementations
     // In mock mode with harnesses, use flow-based naming (processAuthorize)
     // In normal mode with examples, use example-based naming (processCheckoutCard)
-    val methods = effectiveDeclared.map { flow ->
+    // Flows without implementations return null method (will show as N/A)
+    val methods = effectiveDeclared.mapNotNull { flow ->
         val exampleFn = flowToExampleFn[flow]
         // Try example-based naming first, then fall back to flow-based
-        val methodName = if (exampleFn != null) {
-            try {
-                exampleClass.getMethod(scenarioToMethodName(exampleFn), String::class.java, ConnectorConfig::class.java)
-                scenarioToMethodName(exampleFn)
-            } catch (_: NoSuchMethodException) {
-                // Fall back to flow-based naming for harnesses
-                scenarioToMethodName(flow)
+        val method = when {
+            exampleFn != null -> {
+                try {
+                    exampleClass.getMethod(scenarioToMethodName(exampleFn), String::class.java, ConnectorConfig::class.java)
+                } catch (_: NoSuchMethodException) {
+                    null
+                }
             }
-        } else {
-            scenarioToMethodName(flow)
+            else -> null
+        } ?: try {
+            // Try flow-based naming
+            exampleClass.getMethod(scenarioToMethodName(flow), String::class.java, ConnectorConfig::class.java)
+        } catch (_: NoSuchMethodException) {
+            null
         }
-        flow to exampleClass.getMethod(methodName, String::class.java, ConnectorConfig::class.java)
+        
+        // Return pair if method found, null otherwise (will be filtered out)
+        if (method != null) flow to method else null
     }
     return ValidScenarios(methods)
 }
@@ -368,124 +370,117 @@ fun testConnectorScenarios(
 
     // Iterate ALL flows from manifest
     for (flowKey in manifest) {
-        // In mock mode with harnesses, use flow-based lookup
-        // In normal mode, use example-based lookup from flow_to_example_fn
-        val method = if (mock) {
-            // Mock mode: look up by flow name directly (harness uses processAuthorize, etc.)
-            methodMap[flowKey]
-        } else {
-            // Normal mode: look up by example function name
+        // Find the method to call - same logic for both mock and normal mode
+        // Try flow name directly first, then fall back to example mapping
+        var method = methodMap[flowKey]
+        
+        if (method == null) {
+            // Try mapped example function name
             val exampleFnName = flowToExampleFn[flowKey]
-            if (exampleFnName == null) {
-                println("    [$flowKey] NOT IMPLEMENTED — No example function mapped for flow '$flowKey'")
-                result.scenarios[flowKey] = ScenarioResult(status = "not_implemented", reason = "no_example_mapping")
-                continue
+            if (exampleFnName != null) {
+                method = methodMap[exampleFnName]
             }
-            methodMap[exampleFnName]
         }
         
         if (method == null) {
-            println("    [$flowKey] NOT IMPLEMENTED — No ${scenarioToMethodName(flowKey)} function found")
-            result.scenarios[flowKey] = ScenarioResult(status = "not_implemented", reason = "no_implementation")
+            // No implementation found for this flow
+            println("    [$flowKey] NOT IMPLEMENTED — No example function for flow '$flowKey'")
+            result.scenarios[flowKey] = ScenarioResult(status = "not_implemented", reason = "no_example_function")
             continue
         }
-        if (method != null) {
-            val txnId = "smoke_${flowKey}_${Integer.toHexString((Math.random() * 0xFFFFFF).toInt())}"
-            print("    [$flowKey] running ... ")
-            System.out.flush()
+        
+        // Flow is implemented - run it
+        val txnId = "smoke_${flowKey}_${Integer.toHexString((Math.random() * 0xFFFFFF).toInt())}"
+        print("    [$flowKey] running ... ")
+        System.out.flush()
 
-            try {
-                @Suppress("UNCHECKED_CAST")
-                val response = method.invoke(null, txnId, config) as Map<String, Any?>
-                val error = response["error"]
-                val hasError = error != null && error.toString().let {
-                    it.isNotBlank() && it != "{}" && !it.matches(Regex("""\w+\s*\{\s*\}"""))
-                }
-                if (hasError) {
-                    val errorStr = error.toString()
-                    println(yellow("SKIPPED (connector error)") + grey(" — $errorStr"))
-                    result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = errorStr)
-                } else {
-                    println(green("PASSED") + grey(" — $response"))
-                    result.scenarios[flowKey] = ScenarioResult(status = "passed", result = response)
-                }
-            } catch (e: IntegrationError) {
-                val detail = "IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})"
-                // IntegrationError is always FAILED — req_transformer failed
-                println(red("FAILED") + " — $detail")
-                result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
-                anyFailed = true
-            } catch (e: ConnectorError) {
-                val detail = "ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})"
-                if (mock) {
-                    // In mock mode, ConnectorError means req_transformer successfully built the HTTP request.
-                    // The error is just from parsing the mock empty response, which is expected.
-                    val mockInfo = lastMockRequest ?: "mock response"
-                    lastMockRequest = null
-                    println(green("PASSED") + " — req_transformer OK ($mockInfo)")
-                    result.scenarios[flowKey] = ScenarioResult(status = "passed", reason = "mock_verified", detail = detail)
-                } else {
-                    println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
-                    result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
-                }
-            } catch (e: InvocationTargetException) {
-                when (val cause = e.cause ?: e) {
-                    is IntegrationError -> {
-                        val detail = "IntegrationError: ${cause.message} (code=${cause.errorCode}, action=${cause.suggestedAction}, doc=${cause.docUrl})"
-                        // IntegrationError is always FAILED — req_transformer failed
-                        println(red("FAILED") + " — $detail")
-                        result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
-                        anyFailed = true
-                    }
-                    is ConnectorError -> {
-                        val detail = "ConnectorError: ${cause.message} (code=${cause.errorCode}, http=${cause.httpStatusCode})"
-                        if (mock) {
-                            // In mock mode, ConnectorError means req_transformer successfully built the HTTP request.
-                            // The error is just from parsing the mock empty response, which is expected.
-                            val mockInfo = lastMockRequest ?: "mock response"
-                            lastMockRequest = null
-                            println(green("PASSED") + " — req_transformer OK ($mockInfo)")
-                            result.scenarios[flowKey] = ScenarioResult(status = "passed", reason = "mock_verified", detail = detail)
-                        } else {
-                            println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
-                            result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
-                        }
-                    }
-                    else -> {
-                        if (mock && cause !is Error) {
-                            // In mock mode, non-panic errors mean req_transformer successfully built the HTTP request.
-                            // The error is just from parsing the mock empty response, which is expected.
-                            val mockInfo = lastMockRequest ?: "mock response"
-                            lastMockRequest = null
-                            println(green("PASSED") + " — req_transformer OK ($mockInfo)")
-                            result.scenarios[flowKey] = ScenarioResult(status = "passed", reason = "mock_verified", detail = cause.message)
-                        } else {
-                            val detail = "${cause.javaClass.simpleName}: ${cause.message}"
-                            println(red("FAILED") + " — $detail")
-                            result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
-                            anyFailed = true
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                if (mock && e !is Error) {
-                    // In mock mode, non-panic errors mean req_transformer successfully built the HTTP request.
-                    // The error is just from parsing the mock empty response, which is expected.
-                    val mockInfo = lastMockRequest ?: "mock response"
-                    lastMockRequest = null
-                    println(green("PASSED") + " — req_transformer OK ($mockInfo)")
-                    result.scenarios[flowKey] = ScenarioResult(status = "passed", reason = "mock_verified", detail = e.message)
-                } else {
-                    val detail = "${e.javaClass.simpleName}: ${e.message}"
+        try {
+            @Suppress("UNCHECKED_CAST")
+            val response = method.invoke(null, txnId, config) as Map<String, Any?>
+            val error = response["error"]
+            val hasError = error != null && error.toString().let {
+                it.isNotBlank() && it != "{}" && !it.matches(Regex("""\w+\s*\{\s*\}"""))
+            }
+            if (hasError) {
+                val errorStr = error.toString()
+                println(yellow("SKIPPED (connector error)") + grey(" — $errorStr"))
+                result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = errorStr)
+            } else {
+                println(green("PASSED") + grey(" — $response"))
+                result.scenarios[flowKey] = ScenarioResult(status = "passed", result = response)
+            }
+        } catch (e: IntegrationError) {
+            val detail = "IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})"
+            // IntegrationError is always FAILED — req_transformer failed
+            println(red("FAILED") + " — $detail")
+            result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
+            anyFailed = true
+        } catch (e: ConnectorError) {
+            val detail = "ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})"
+            if (mock) {
+                // In mock mode, ConnectorError means req_transformer successfully built the HTTP request.
+                // The error is just from parsing the mock empty response, which is expected.
+                val mockInfo = lastMockRequest ?: "mock response"
+                lastMockRequest = null
+                println(green("PASSED") + " — req_transformer OK ($mockInfo)")
+                result.scenarios[flowKey] = ScenarioResult(status = "passed", reason = "mock_verified", detail = detail)
+            } else {
+                println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
+                result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
+            }
+        } catch (e: InvocationTargetException) {
+            when (val cause = e.cause ?: e) {
+                is IntegrationError -> {
+                    val detail = "IntegrationError: ${cause.message} (code=${cause.errorCode}, action=${cause.suggestedAction}, doc=${cause.docUrl})"
+                    // IntegrationError is always FAILED — req_transformer failed
                     println(red("FAILED") + " — $detail")
                     result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
                     anyFailed = true
                 }
+                is ConnectorError -> {
+                    val detail = "ConnectorError: ${cause.message} (code=${cause.errorCode}, http=${cause.httpStatusCode})"
+                    if (mock) {
+                        // In mock mode, ConnectorError means req_transformer successfully built the HTTP request.
+                        // The error is just from parsing the mock empty response, which is expected.
+                        val mockInfo = lastMockRequest ?: "mock response"
+                        lastMockRequest = null
+                        println(green("PASSED") + " — req_transformer OK ($mockInfo)")
+                        result.scenarios[flowKey] = ScenarioResult(status = "passed", reason = "mock_verified", detail = detail)
+                    } else {
+                        println(yellow("SKIPPED (connector error)") + grey(" — $detail"))
+                        result.scenarios[flowKey] = ScenarioResult(status = "skipped", reason = "connector_error", detail = detail)
+                    }
+                }
+                else -> {
+                    if (mock && cause !is Error) {
+                        // In mock mode, non-panic errors mean req_transformer successfully built the HTTP request.
+                        // The error is just from parsing the mock empty response, which is expected.
+                        val mockInfo = lastMockRequest ?: "mock response"
+                        lastMockRequest = null
+                        println(green("PASSED") + " — req_transformer OK ($mockInfo)")
+                        result.scenarios[flowKey] = ScenarioResult(status = "passed", reason = "mock_verified", detail = cause.message)
+                    } else {
+                        val detail = "${cause.javaClass.simpleName}: ${cause.message}"
+                        println(red("FAILED") + " — $detail")
+                        result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
+                        anyFailed = true
+                    }
+                }
             }
-        } else {
-            // Flow not implemented
-            println("    [$flowKey] NOT IMPLEMENTED — No ${scenarioToMethodName(flowKey)} function found")
-            result.scenarios[flowKey] = ScenarioResult(status = "not_implemented", reason = "no_implementation")
+        } catch (e: Exception) {
+            if (mock && e !is Error) {
+                // In mock mode, non-panic errors mean req_transformer successfully built the HTTP request.
+                // The error is just from parsing the mock empty response, which is expected.
+                val mockInfo = lastMockRequest ?: "mock response"
+                lastMockRequest = null
+                println(green("PASSED") + " — req_transformer OK ($mockInfo)")
+                result.scenarios[flowKey] = ScenarioResult(status = "passed", reason = "mock_verified", detail = e.message)
+            } else {
+                val detail = "${e.javaClass.simpleName}: ${e.message}"
+                println(red("FAILED") + " — $detail")
+                result.scenarios[flowKey] = ScenarioResult(status = "failed", error = detail)
+                anyFailed = true
+            }
         }
     }
 
@@ -502,8 +497,15 @@ fun printResult(result: ConnectorResult) {
             println(green("  PASSED") + " ($passedCount passed, $skippedCount skipped, $notImplCount not implemented)")
             for ((key, detail) in result.scenarios) {
                 when (detail.status) {
-                    "passed" -> println(green("    $key: ✓"))
-                    "skipped" -> println(yellow("    $key: ~ skipped (${detail.reason})"))
+                    "passed" -> {
+                        val resultData = detail.result
+                        val resultStr = resultData?.toString() ?: ""
+                        println(green("    $key: ✓") + grey(" — $resultStr"))
+                    }
+                    "skipped" -> {
+                        val detailStr = detail.detail?.let { " — $it" } ?: ""
+                        println(yellow("    $key: ~ skipped (${detail.reason})") + grey(detailStr))
+                    }
                     "not_implemented" -> println(grey("    $key: N/A"))
                 }
             }
@@ -623,7 +625,7 @@ fun runTests(
                     println("  Instance: $instanceName")
                     val authConfig = authConfigList[i] as AuthConfig
 
-                    if (!hasValidCredentials(authConfig)) {
+                    if (!mock && !hasValidCredentials(authConfig)) {
                         println(grey("  SKIPPED (placeholder credentials)"))
                         results.add(ConnectorResult(instanceName, "skipped", error = "placeholder_credentials"))
                         continue
@@ -645,7 +647,7 @@ fun runTests(
             authConfigValue is Map<*, *> -> {
                 val authConfig = authConfigValue as AuthConfig
 
-                if (!hasValidCredentials(authConfig)) {
+                if (!mock && !hasValidCredentials(authConfig)) {
                     println(grey("  SKIPPED (placeholder credentials)"))
                     results.add(ConnectorResult(connectorName, "skipped", error = "placeholder_credentials"))
                     continue

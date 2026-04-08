@@ -281,12 +281,17 @@ fn print_result(result: &ConnectorResult) {
                             .unwrap_or_default();
                         println!("{}    {}: ✓{extra}", green(""), key);
                     }
-                    "skipped" => println!(
-                        "{}    {}: ~ skipped ({})",
-                        yellow(""),
-                        key,
-                        detail.reason.as_deref().unwrap_or("unknown")
-                    ),
+                    "skipped" => {
+                        let reason = detail.reason.as_deref().unwrap_or("unknown");
+                        let error_info = detail.error.as_deref().map(|e| format!(": {e}")).unwrap_or_default();
+                        println!(
+                            "{}    {}: ~ skipped ({}){}",
+                            yellow(""),
+                            key,
+                            reason,
+                            error_info
+                        );
+                    }
                     "not_implemented" => println!("{}    {}: N/A", grey(""), key),
                     _ => {}
                 }
@@ -379,7 +384,7 @@ async fn run_tests(
         };
 
         for (instance_name, auth_map) in instances {
-            if !has_valid_credentials(auth_map) {
+            if !mock && !has_valid_credentials(auth_map) {
                 println!("{}", grey("  SKIPPED (placeholder credentials)"));
                 results.push(ConnectorResult {
                     connector: instance_name.clone(),

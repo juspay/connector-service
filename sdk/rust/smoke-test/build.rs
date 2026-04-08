@@ -561,16 +561,19 @@ fn main() {
                 // Include ALL flows from manifest, using flow_to_example_fn mapping
                 for flow in manifest {
                     if let Some(example_fn) = implemented.get(flow.as_str()) {
-                        // Flow has an implementation - call the example function and capture mock request
+                        // Flow has an implementation - call the example function
+                        // Use the actual result message for normal mode, mock request info for mock mode
                         code.push_str(&format!(
-                            "        let _result = connectors::{}::{}(client, &txn_id).await;\n",
+                            "        match connectors::{}::{}(client, &txn_id).await {{\n",
                             name, example_fn
                         ));
-                        code.push_str("        let mock_req = hyperswitch_payments_client::take_last_mock_request();\n");
-                        code.push_str(&format!(
-                            "        results.push((\"{}\".to_string(), Ok(mock_req.unwrap_or_else(|| \"mock response\".to_string()))));\n",
-                            flow
-                        ));
+                        code.push_str("            Ok(msg) => results.push((\"");
+                        code.push_str(flow);
+                        code.push_str("\".to_string(), Ok(msg))),\n");
+                        code.push_str("            Err(e) => results.push((\"");
+                        code.push_str(flow);
+                        code.push_str("\".to_string(), Err(e))),\n");
+                        code.push_str("        }\n");
                     } else {
                         // Flow not implemented
                         code.push_str(&format!(

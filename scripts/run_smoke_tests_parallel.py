@@ -311,7 +311,7 @@ def setup_shared_js_env(
         )
         shutil.copy(repo_root / "sdk" / "generated" / "flows.json", tmpdir)
 
-        creds_src = repo_root / "creds.mock.json"
+        creds_src = repo_root / "creds.json"
         if creds_src.exists():
             shutil.copy(creds_src, tmpdir / "creds.json")
 
@@ -487,7 +487,7 @@ def run_python_test_batch(
             smoke_test_dir
         )
         shutil.copy(
-            repo_root / "creds.mock.json",
+            repo_root / "creds.json",
             tmpdir_path / "creds.json"
         )
 
@@ -621,7 +621,7 @@ def run_kotlin_test_batch(
     """
     smoke_test_dir = repo_root / "sdk" / "java" / "smoke-test"
 
-    creds_src = repo_root / "creds.mock.json"
+    creds_src = repo_root / "creds.json"
     if creds_src.exists():
         shutil.copy(creds_src, smoke_test_dir / "creds.json")
 
@@ -691,7 +691,7 @@ def run_rust_test_batch(
         return error_results
 
     cmd = binary_cmd + [
-        "--creds-file", str(repo_root / "creds.mock.json"),
+        "--creds-file", str(repo_root / "creds.json"),
         "--connectors", ",".join(valid),
     ]
     if mock:

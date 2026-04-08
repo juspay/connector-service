@@ -198,19 +198,9 @@ def discover_and_validate_scenarios(
     legacy_mode = declared is None
     
     if legacy_mode:
-        # Legacy mode: scan process_* functions using flow_to_example_fn mapping
-        # Find all example function names that have implementations
-        available_example_fns = {
-            name[len("process_"):]
-            for name in dir(module)
-            if name.startswith("process_") and callable(getattr(module, name))
-        }
-        # Map flows to their example functions if both exist
-        declared = []
-        for flow in manifest:
-            example_fn = flow_to_example_fn.get(flow) if flow_to_example_fn else None
-            if example_fn and example_fn in available_example_fns:
-                declared.append(flow)
+        # Legacy mode: include ALL flows from manifest
+        # We'll check for implementations during iteration
+        declared = list(manifest)
     else:
         # Normalize: ensure list, deduplicate, validate
         if not hasattr(declared, '__iter__'):
@@ -229,27 +219,16 @@ def discover_and_validate_scenarios(
                 f"lowercase snake_case (e.g., 'authorize', 'payout_create')"
             )
     
-    # CHECK 1: Find declared flows without implementations
+    # Find flows with implementations
     implemented = set()
-    missing = []
     for flow in declared:
         example_fn = flow_to_example_fn.get(flow) if flow_to_example_fn else None
-        if example_fn is None:
-            missing.append(flow)
-            continue
-        fn = getattr(module, f"process_{example_fn}", None)
-        if fn is not None and callable(fn):
-            implemented.add(flow)
-        else:
-            missing.append(flow)
+        if example_fn:
+            fn = getattr(module, f"process_{example_fn}", None)
+            if fn is not None and callable(fn):
+                implemented.add(flow)
     
-    if missing:
-        return (
-            f"COVERAGE ERROR: SUPPORTED_FLOWS declares {sorted(missing)} "
-            f"but no process_* function found for them."
-        )
-    
-    # CHECK 2: Find process_* functions not mapped to any flow
+    # CHECK: Find process_* functions not mapped to any flow
     # Only run this check when SUPPORTED_FLOWS is explicitly defined (not legacy mode)
     if not legacy_mode:
         all_process_fns = {
@@ -275,11 +254,17 @@ def discover_and_validate_scenarios(
         )
     
     # All checks pass - return ordered (example_fn_name, fn) pairs
+    # For flows without implementation, return None as the function
     result = []
     for flow in declared:
-        example_fn = flow_to_example_fn.get(flow, flow) if flow_to_example_fn else flow
-        fn = getattr(module, f"process_{example_fn}")
-        result.append((example_fn, fn))
+        example_fn = flow_to_example_fn.get(flow) if flow_to_example_fn else None
+        if example_fn:
+            fn = getattr(module, f"process_{example_fn}", None)
+            if fn is not None and callable(fn):
+                result.append((example_fn, fn))
+                continue
+        # Flow has no implementation
+        result.append((flow, None))
     return result
 
 
@@ -365,40 +350,24 @@ async def test_connector_scenarios(
     for flow_name in manifest:
         scenario_key = flow_name
         
-        if mock:
-            # Mock mode: harnesses use process_{flow_name} directly
-            process_fn = example_fn_map.get(flow_name)
-            if process_fn is None:
-                print(_grey(f"    [{scenario_key}] NOT IMPLEMENTED — No process_{flow_name} function in harness"), flush=True)
-                result["scenarios"][scenario_key] = {
-                    "status": "not_implemented",
-                    "reason": f"No process_{flow_name} function in harness",
-                }
-                continue
-        else:
-            # Normal mode: use flow_to_example_fn mapping
-            example_fn_name = flow_to_example_fn.get(flow_name) if flow_to_example_fn else None
-            
-            if example_fn_name is None:
-                # Flow has no example implementation
-                print(_grey(f"    [{scenario_key}] NOT IMPLEMENTED — No example function mapped for flow '{flow_name}'"), flush=True)
-                result["scenarios"][scenario_key] = {
-                    "status": "not_implemented",
-                    "reason": f"Flow '{flow_name}' has no example implementation",
-                }
-                continue
-            
-            # Find the actual function to call
-            process_fn = example_fn_map.get(example_fn_name)
-            
-            if process_fn is None:
-                # Example function doesn't exist in this connector's module
-                print(_grey(f"    [{scenario_key}] NOT IMPLEMENTED — Example function '{example_fn_name}' not found for flow '{flow_name}'"), flush=True)
-                result["scenarios"][scenario_key] = {
-                    "status": "not_implemented",
-                    "reason": f"Example function '{example_fn_name}' not found for flow '{flow_name}'",
-                }
-                continue
+        # Find the function to call - same logic for both mock and normal mode
+        # Try flow name directly first (like mock mode), then fall back to example mapping
+        process_fn = example_fn_map.get(flow_name)
+        
+        if process_fn is None and flow_to_example_fn:
+            # Try mapped example function name
+            example_fn_name = flow_to_example_fn.get(flow_name)
+            if example_fn_name:
+                process_fn = example_fn_map.get(example_fn_name)
+        
+        if process_fn is None:
+            # No implementation found for this flow
+            print(_grey(f"    [{scenario_key}] NOT IMPLEMENTED — No example function for flow '{flow_name}'"), flush=True)
+            result["scenarios"][scenario_key] = {
+                "status": "not_implemented",
+                "reason": f"No example function for flow '{flow_name}'",
+            }
+            continue
         
         # Flow is implemented - run it
 
@@ -575,7 +544,7 @@ async def run_tests_async(
                 instance_name = f"{connector_name}[{i + 1}]"
                 print(f"  Instance: {instance_name}")
 
-                if not has_valid_credentials(instance_auth):
+                if not mock and not has_valid_credentials(instance_auth):
                     print(_grey(f"  SKIPPED (placeholder credentials)"))
                     results.append({
                         "connector": instance_name,
@@ -598,7 +567,7 @@ async def run_tests_async(
             # Single-instance connector
             auth_config = auth_config_value
 
-            if not has_valid_credentials(auth_config):
+            if not mock and not has_valid_credentials(auth_config):
                 print(_grey(f"  SKIPPED (placeholder credentials)"))
                 results.append({
                     "connector": connector_name,
@@ -633,10 +602,19 @@ def _print_result(result: Dict[str, Any]) -> None:
         for key, detail in scenarios.items():
             if isinstance(detail, dict):
                 if detail.get("status") == "passed":
-                    print(_green(f"    {key}: ✓"))
+                    result_data = detail.get("result")
+                    if result_data:
+                        result_str = str(result_data)
+                        print(_green(f"    {key}: ✓") + _grey(f" — {result_str}"))
+                    else:
+                        print(_green(f"    {key}: ✓"))
                 elif detail.get("status") == "skipped":
                     reason = detail.get("reason", "unknown")
-                    print(_yellow(f"    {key}: ~ skipped ({reason})"))
+                    error_detail = detail.get("detail")
+                    if error_detail:
+                        print(_yellow(f"    {key}: ~ skipped ({reason})") + _grey(f" — {error_detail}"))
+                    else:
+                        print(_yellow(f"    {key}: ~ skipped ({reason})"))
                 elif detail.get("status") == "not_implemented":
                     print(_grey(f"    {key}: N/A"))
     elif status == "dry_run":

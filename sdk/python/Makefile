@@ -122,6 +122,7 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@rm -f $(PACKAGE_DIR)/$(subst -,_,$(PACKAGE_NAME))-*.whl
+	@rm -rf $(SDK_ROOT)/build
 	@cd $(SDK_ROOT) && python3 -m pip wheel . --no-deps --wheel-dir $(PACKAGE_DIR)/
 	@echo "Wheel built: $(WHEEL_FILE)"
 
@@ -175,10 +176,10 @@ test-package-mock: generate-all pack-archive
 	@mkdir -p /tmp/test-hyperswitch-py-mock
 	@cp $(SDK_ROOT)/smoke-test/test_smoke.py /tmp/test-hyperswitch-py-mock/
 	@# Copy mock credentials file
-	@if [ -f $(REPO_ROOT)/creds.mock.json ]; then \
-		cp $(REPO_ROOT)/creds.mock.json /tmp/test-hyperswitch-py-mock/creds.json; \
+	@if [ -f $(REPO_ROOT)/creds_dummy.json ]; then \
+		cp $(REPO_ROOT)/creds_dummy.json /tmp/test-hyperswitch-py-mock/creds.json; \
 	else \
-		echo "  Note: creds.mock.json not found, test will use placeholder credentials"; \
+		echo "  Note: creds_dummy.json not found, test will use placeholder credentials"; \
 	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py-mock \

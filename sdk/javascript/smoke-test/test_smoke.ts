@@ -335,20 +335,24 @@ async function testConnectorScenarios(
   let anyFailed = false;
 
   for (const flowKey of manifest) {
-    const exampleFnName = flowToExampleFn?.[flowKey];
+    // Find the function to call - same logic for both mock and normal mode
+    // Try flow name directly first, then fall back to example mapping
+    let processFn = exampleFnMap.get(flowKey);
     
-    // In mock mode with harnesses, use flow-based naming directly
-    // Otherwise use example-based naming from flow_to_example_fn mapping
-    const lookupKey = mock ? flowKey : exampleFnName;
-    
-    if (!mock && (exampleFnName === null || exampleFnName === undefined)) {
-      // Flow has no example implementation (only relevant in non-mock mode)
-      console.log(`    [${flowKey}] NOT IMPLEMENTED — No example function mapped for flow '${flowKey}'`);
-      result.scenarios[flowKey] = { status: "not_implemented", reason: "no_example_mapping" };
-      continue;
+    if (!processFn && flowToExampleFn) {
+      // Try mapped example function name
+      const exampleFnName = flowToExampleFn[flowKey];
+      if (exampleFnName) {
+        processFn = exampleFnMap.get(exampleFnName);
+      }
     }
     
-    const processFn = exampleFnMap.get(lookupKey);
+    if (!processFn) {
+      // No implementation found for this flow
+      console.log(`    [${flowKey}] NOT IMPLEMENTED — No example function for flow '${flowKey}'`);
+      result.scenarios[flowKey] = { status: "not_implemented", reason: `No example function for flow '${flowKey}'` };
+      continue;
+    }
     
     if (processFn) {
       const txnId = `smoke_${flowKey}_${Math.random().toString(16).slice(2, 10)}`;
@@ -423,9 +427,12 @@ function printResult(result: ConnectorResult): void {
     console.log(_green(`  PASSED`) + ` (${passedCount} passed, ${skippedCount} skipped, ${notImplCount} not implemented)`);
     for (const [key, detail] of Object.entries(scenarios)) {
       if (detail.status === "passed") {
-        console.log(_green(`    ${key}: ✓`));
+        const resultData = detail.result;
+        const resultStr = resultData ? JSON.stringify(resultData) : "";
+        console.log(_green(`    ${key}: ✓`) + _grey(` — ${resultStr}`));
       } else if (detail.status === "skipped") {
-        console.log(_yellow(`    ${key}: ~ skipped (${detail.reason})`));
+        const detailStr = detail.detail ? ` — ${detail.detail}` : "";
+        console.log(_yellow(`    ${key}: ~ skipped (${detail.reason})`) + _grey(detailStr));
       } else if (detail.status === "not_implemented") {
         console.log(_grey(`    ${key}: N/A`));
       }
@@ -510,7 +517,7 @@ async function runTests(
     for (const { name, auth } of instances) {
       if (instances.length > 1) console.log(`  Instance: ${name}`);
 
-      if (!hasValidCredentials(auth)) {
+      if (!mock && !hasValidCredentials(auth)) {
         console.log(`  SKIPPED (placeholder credentials)`);
         results.push({ connector: name, status: "skipped", scenarios: {}, error: "placeholder_credentials" });
         continue;

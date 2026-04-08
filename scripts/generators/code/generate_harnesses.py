@@ -534,7 +534,6 @@ def generate_harnesses_for_connector(connector_name: str) -> None:
     python_connector_dir.mkdir(parents=True, exist_ok=True)
     python_out = python_connector_dir / f"{connector_name}.py"
     python_out.write_text(python_harness)
-    print(f"  Wrote {python_out.relative_to(REPO_ROOT)}")
 
     # Generate JavaScript harness
     js_harness = generate_javascript_harness(
@@ -544,7 +543,6 @@ def generate_harnesses_for_connector(connector_name: str) -> None:
     js_connector_dir.mkdir(parents=True, exist_ok=True)
     js_out = js_connector_dir / f"{connector_name}.ts"
     js_out.write_text(js_harness)
-    print(f"  Wrote {js_out.relative_to(REPO_ROOT)}")
 
     # Generate Kotlin harness
     kotlin_harness = generate_kotlin_harness(
@@ -555,7 +553,6 @@ def generate_harnesses_for_connector(connector_name: str) -> None:
     kotlin_out = kotlin_connector_dir / f"{connector_name}.kt"
     kotlin_out.parent.mkdir(parents=True, exist_ok=True)
     kotlin_out.write_text(kotlin_harness)
-    print(f"  Wrote {kotlin_out.relative_to(REPO_ROOT)}")
 
     # Generate Rust harness
     rust_harness = generate_rust_harness(
@@ -565,7 +562,6 @@ def generate_harnesses_for_connector(connector_name: str) -> None:
     rust_connector_dir.mkdir(parents=True, exist_ok=True)
     rust_out = rust_connector_dir / f"{connector_name}.rs"
     rust_out.write_text(rust_harness)
-    print(f"  Wrote {rust_out.relative_to(REPO_ROOT)}")
 
 
 def main():
@@ -575,7 +571,11 @@ def main():
     )
     parser.add_argument(
         "--connector",
-        help="Generate harness for specific connector only"
+        help="Generate harness for specific connector only (deprecated, use --connectors)"
+    )
+    parser.add_argument(
+        "--connectors",
+        help="Comma-separated list of connectors to generate harnesses for"
     )
     parser.add_argument(
         "--all",
@@ -585,7 +585,15 @@ def main():
     args = parser.parse_args()
 
     if args.connector:
+        # Backward compatibility
         generate_harnesses_for_connector(args.connector)
+    elif args.connectors:
+        connectors = [c.strip() for c in args.connectors.split(",")]
+        print(f"Generating harnesses for {len(connectors)} connectors...")
+        print()
+        for connector in connectors:
+            generate_harnesses_for_connector(connector)
+            print()
     elif args.all:
         if not FIELD_PROBE_DIR.exists():
             print(f"ERROR: Field probe directory not found: {FIELD_PROBE_DIR}")
