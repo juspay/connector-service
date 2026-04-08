@@ -173,14 +173,14 @@ pub enum RapydPaymentMethodData<
     T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     Token(Secret<String>),
-    PaymentMethod(PaymentMethod<T>),
+    PaymentMethod(Box<PaymentMethod<T>>),
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Default> Default
     for RapydPaymentMethodData<T>
 {
     fn default() -> Self {
-        Self::PaymentMethod(PaymentMethod::default())
+        Self::PaymentMethod(Box::default())
     }
 }
 
@@ -290,23 +290,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             };
         let payment_method = match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
-                Some(RapydPaymentMethodData::PaymentMethod(PaymentMethod {
-                    pm_type: "in_amex_card".to_owned(), //[#369] Map payment method type based on country
-                    fields: Some(PaymentFields {
-                        number: ccard.card_number.to_owned(),
-                        expiration_month: ccard.card_exp_month.to_owned(),
-                        expiration_year: ccard.card_exp_year.to_owned(),
-                        name: item
-                            .router_data
-                            .resource_common_data
-                            .get_optional_billing_full_name()
-                            .to_owned()
-                            .unwrap_or(Secret::new("".to_string())),
-                        cvv: ccard.card_cvc.to_owned(),
-                    }),
-                    address: None,
-                    digital_wallet: None,
-                }))
+                Some(RapydPaymentMethodData::PaymentMethod(Box::new(
+                    PaymentMethod {
+                        pm_type: "in_amex_card".to_owned(), //[#369] Map payment method type based on country
+                        fields: Some(PaymentFields {
+                            number: ccard.card_number.to_owned(),
+                            expiration_month: ccard.card_exp_month.to_owned(),
+                            expiration_year: ccard.card_exp_year.to_owned(),
+                            name: item
+                                .router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                                .to_owned()
+                                .unwrap_or(Secret::new("".to_string())),
+                            cvv: ccard.card_cvc.to_owned(),
+                        }),
+                        address: None,
+                        digital_wallet: None,
+                    },
+                )))
             }
             PaymentMethodData::Wallet(ref wallet_data) => {
                 let digital_wallet = match wallet_data {
@@ -337,12 +339,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     }
                     _ => None,
                 };
-                Some(RapydPaymentMethodData::PaymentMethod(PaymentMethod {
-                    pm_type: "by_visa_card".to_string(), //[#369]
-                    fields: None,
-                    address: None,
-                    digital_wallet,
-                }))
+                Some(RapydPaymentMethodData::PaymentMethod(Box::new(
+                    PaymentMethod {
+                        pm_type: "by_visa_card".to_string(), //[#369]
+                        fields: None,
+                        address: None,
+                        digital_wallet,
+                    },
+                )))
             }
             PaymentMethodData::CardToken(CardToken { .. }) => {
                 let token = item
