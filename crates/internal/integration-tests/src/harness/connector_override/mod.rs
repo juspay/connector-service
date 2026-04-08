@@ -10,7 +10,6 @@ mod default;
 mod helcim;
 mod json_merge;
 mod loader;
-mod token_pm;
 
 /// Connector-specific behavior extension points.
 ///
@@ -80,8 +79,15 @@ impl OverrideRegistry {
             return Box::new(helcim::HelcimConnectorOverride::new());
         }
 
+        // Stax and Braintree use a tokenized authorize flow where the token is
+        // injected at runtime via context_map into payment_method.token.token.value.
+        // Register that path as deferred so the schema validator treats an empty
+        // placeholder as valid during static checks.
         if connector.eq_ignore_ascii_case("stax") || connector.eq_ignore_ascii_case("braintree") {
-            return Box::new(token_pm::TokenPaymentMethodOverride::new(connector));
+            return Box::new(default::DefaultConnectorOverride::with_deferred_paths(
+                connector.to_string(),
+                vec!["payment_method.token.token.value".to_string()],
+            ));
         }
 
         Box::new(default::DefaultConnectorOverride::new(

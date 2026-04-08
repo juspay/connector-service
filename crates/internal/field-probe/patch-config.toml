@@ -333,7 +333,7 @@ aliases = ["order_category", "order_category in metadata"]
 type = "string"
 value = "mobile"
 
-["payment_method.payment_method.token.token"]
+[payment_method_token]
 aliases = [
   "or ensure connector_customer_id is set",
   "payment_handle_token",

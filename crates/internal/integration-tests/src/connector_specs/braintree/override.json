@@ -4,13 +4,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -18,13 +11,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -32,13 +18,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -46,13 +25,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -60,13 +32,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -74,13 +39,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -88,13 +46,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -102,13 +53,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -116,13 +60,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -130,13 +67,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -144,13 +74,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -158,13 +81,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -172,13 +88,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -186,13 +95,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -200,13 +102,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -214,13 +109,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -228,13 +116,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -242,13 +123,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     },
@@ -256,13 +130,6 @@
       "grpc_req": {
         "connector_feature_data": {
           "value": "{\"merchant_account_id\":\"juspay\",\"merchant_config_currency\":\"USD\"}"
-        },
-        "payment_method": {
-          "token": {
-            "token": {
-              "value": ""
-            }
-          }
         }
       }
     }
