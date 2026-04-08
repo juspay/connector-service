@@ -269,12 +269,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let merchant_id = auth.merchant_id.clone();
 
         // Extract payer info (only for UPI Collect)
-        let (country, payer_info) = match item
-            .router_data
-            .request
-            .payment_method_data
-            .clone()
-        {
+        let (country, payer_info) = match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Upi(upi_data) => (
                 CountryAlpha2::IN,
                 get_vpa_id_from_upi(&upi_data).map(|vpa_id| PayerInfo {
@@ -283,9 +278,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ),
             PaymentMethodData::BankRedirect(bank_redirect_data) => match bank_redirect_data {
                 BankRedirectData::Ideal { .. } => (CountryAlpha2::NL, None),
-                BankRedirectData::LocalBankRedirect {} => {
-                    (CountryAlpha2::AT, None)
-                }
+                BankRedirectData::LocalBankRedirect {} => (CountryAlpha2::AT, None),
                 BankRedirectData::BancontactCard { .. }
                 | BankRedirectData::Bizum {}
                 | BankRedirectData::Blik { .. }
@@ -303,12 +296,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | BankRedirectData::Trustly { .. }
                 | BankRedirectData::OnlineBankingFpx { .. }
                 | BankRedirectData::OnlineBankingThailand { .. }
-                | BankRedirectData::OpenBanking { .. } => {
-                    Err(IntegrationError::not_implemented(
-                        domain_types::utils::get_unimplemented_payment_method_error_message("iatapay"),
-                    ))?
-                }
-            }
+                | BankRedirectData::Netbanking { .. }
+                | BankRedirectData::OpenBanking { .. } => Err(IntegrationError::not_implemented(
+                    domain_types::utils::get_unimplemented_payment_method_error_message("iatapay"),
+                ))?,
+            },
             PaymentMethodData::Card(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
