@@ -1,28 +1,6 @@
-<div align="center">
-
-
-# Hyperswitch Prism
-
+## 🎯 What is Prism?
 
 **One integration. Any payment processor. Zero lock-in.**
-
-
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-
-*A high-performance payment abstraction library, and part of [Juspay Hyperswitch](https://hyperswitch.io/) — the open-source, composable payments platform with 40,000+ GitHub stars, trusted by leading brands worldwide.*
-
-
-[GitHub](https://github.com/juspay/hyperswitch) · [Website](https://hyperswitch.io/) · [Documentation](https://docs.hyperswitch.io/)
-
-
-</div>
-
-
----
-
-
-## 🎯 What is Prism?
 
 Today, integrating multiple payment processors either makes developers running in circles with AI agents to recreate integrations from specs, or developers spending months of engineering effort.
 
