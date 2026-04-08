@@ -1536,24 +1536,51 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // ============ Netbanking Request ============
 
-fn map_bank_name_to_razorpay_code(bank: &common_enums::BankNames) -> String {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum RazorpayBankCode {
+    Sbin,
+    Hdfc,
+    Icic,
+    Utib,
+    Kkbk,
+    Punb,
+    Barb,
+    Ubin,
+    Cnrb,
+    Indb,
+    Yesb,
+    Ibkl,
+    Fdrl,
+    Ioba,
+    Cbin,
+}
+
+fn map_bank_name_to_razorpay_code(
+    bank: &common_enums::BankNames,
+) -> Result<RazorpayBankCode, error_stack::Report<IntegrationError>> {
     match bank {
-        common_enums::BankNames::StateBank => "SBIN".to_string(),
-        common_enums::BankNames::HdfcBank => "HDFC".to_string(),
-        common_enums::BankNames::IciciBank => "ICIC".to_string(),
-        common_enums::BankNames::AxisBank => "UTIB".to_string(),
-        common_enums::BankNames::KotakMahindraBank => "KKBK".to_string(),
-        common_enums::BankNames::PunjabNationalBank => "PUNB".to_string(),
-        common_enums::BankNames::BankOfBaroda => "BARB".to_string(),
-        common_enums::BankNames::UnionBankOfIndia => "UBIN".to_string(),
-        common_enums::BankNames::CanaraBank => "CNRB".to_string(),
-        common_enums::BankNames::IndusIndBank => "INDB".to_string(),
-        common_enums::BankNames::YesBank => "YESB".to_string(),
-        common_enums::BankNames::IdbiBank => "IBKL".to_string(),
-        common_enums::BankNames::FederalBank => "FDRL".to_string(),
-        common_enums::BankNames::IndianOverseasBank => "IOBA".to_string(),
-        common_enums::BankNames::CentralBankOfIndia => "CBIN".to_string(),
-        _ => format!("{:?}", bank),
+        common_enums::BankNames::StateBank => Ok(RazorpayBankCode::Sbin),
+        common_enums::BankNames::HdfcBank => Ok(RazorpayBankCode::Hdfc),
+        common_enums::BankNames::IciciBank => Ok(RazorpayBankCode::Icic),
+        common_enums::BankNames::AxisBank => Ok(RazorpayBankCode::Utib),
+        common_enums::BankNames::KotakMahindraBank => Ok(RazorpayBankCode::Kkbk),
+        common_enums::BankNames::PunjabNationalBank => Ok(RazorpayBankCode::Punb),
+        common_enums::BankNames::BankOfBaroda => Ok(RazorpayBankCode::Barb),
+        common_enums::BankNames::UnionBankOfIndia => Ok(RazorpayBankCode::Ubin),
+        common_enums::BankNames::CanaraBank => Ok(RazorpayBankCode::Cnrb),
+        common_enums::BankNames::IndusIndBank => Ok(RazorpayBankCode::Indb),
+        common_enums::BankNames::YesBank => Ok(RazorpayBankCode::Yesb),
+        common_enums::BankNames::IdbiBank => Ok(RazorpayBankCode::Ibkl),
+        common_enums::BankNames::FederalBank => Ok(RazorpayBankCode::Fdrl),
+        common_enums::BankNames::IndianOverseasBank => Ok(RazorpayBankCode::Ioba),
+        common_enums::BankNames::CentralBankOfIndia => Ok(RazorpayBankCode::Cbin),
+        _ => Err(IntegrationError::NotSupported {
+            message: format!("Bank {:?} is not supported for Razorpay netbanking", bank),
+            connector: "razorpay",
+            context: Default::default(),
+        }
+        .into()),
     }
 }
 
@@ -1567,7 +1594,7 @@ pub struct RazorpayNetbankingRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contact: Option<Secret<String>>,
     pub method: PaymentMethodType,
-    pub bank: String,
+    pub bank: RazorpayBankCode,
     pub callback_url: String,
     pub ip: Secret<String>,
     pub referer: String,
@@ -1605,7 +1632,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let bank_code = match &item.router_data.request.payment_method_data {
             PaymentMethodData::BankRedirect(
                 payment_method_data::BankRedirectData::Netbanking { issuer },
-            ) => map_bank_name_to_razorpay_code(issuer),
+            ) => map_bank_name_to_razorpay_code(issuer)?,
             _ => {
                 return Err(IntegrationError::MissingRequiredField {
                     field_name: "netbanking payment_method_data",

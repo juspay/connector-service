@@ -162,8 +162,8 @@ message PaymentMethod {
     Seicomart seicomart = 152;                                // Seicomart - Japanese convenience store payment
     PayEasy pay_easy = 153;                                    // Pay-easy - Japanese bill payment service
 
-    // NETBANKING (160-169) - Indian net banking
-    NetbankingPayment netbanking = 160;                          // Netbanking - Indian online banking
+    // NETBANKING - Indian net banking (bank redirect)
+    NetbankingPayment netbanking = 160;                          // Netbanking - Indian online banking (bank redirect)
   }
 }
 
