@@ -109,12 +109,24 @@ def load_field_probe(connector_name: str) -> Optional[dict]:
 
 
 def get_supported_flows(probe_data: dict, manifest_flows: set) -> list[str]:
-    """Extract supported flows from field probe data, filtered by manifest."""
+    """Extract supported flows from field probe data, filtered by manifest.
+    
+    Excludes webhook-only flows (e.g., handle_event) which receive incoming webhooks
+    rather than making outgoing HTTP requests. These flows don't have proto_requests
+    since they don't use the standard req_transformer pattern.
+    """
+    # Webhook-only flows that should not be included in harness tests
+    WEBHOOK_ONLY_FLOWS = {"handle_event", "verify_redirect_response"}
+    
     flows = probe_data.get("flows", {})
     supported = []
 
     for flow_name, flow_data in flows.items():
         if flow_name not in manifest_flows:
+            continue
+        
+        # Skip webhook-only flows - they can't be tested via harnesses
+        if flow_name in WEBHOOK_ONLY_FLOWS:
             continue
 
         if isinstance(flow_data, dict):
@@ -142,20 +154,26 @@ def build_flow_data(connector_name: str, supported_flows: list[str], probe_data:
     for flow in supported_flows:
         flow_probe_data = probe_data.get("flows", {}).get(flow, {})
         
-        # Get first supported variant's proto_request
-        proto_req = None
+        # Check if this flow is supported (has status == "supported")
+        is_supported = False
+        proto_req = {}
+        
         if isinstance(flow_probe_data, dict):
             default = flow_probe_data.get("default", {})
             if default.get("status") == "supported":
-                proto_req = default.get("proto_request", {})
+                is_supported = True
+                proto_req = default.get("proto_request") or {}
             else:
                 for variant, variant_data in flow_probe_data.items():
                     if variant != "default" and isinstance(variant_data, dict):
                         if variant_data.get("status") == "supported":
-                            proto_req = variant_data.get("proto_request", {})
+                            is_supported = True
+                            proto_req = variant_data.get("proto_request") or {}
                             break
         
-        if proto_req:
+        # Include the flow if it's supported (even with empty proto_request).
+        # Empty proto_requests are fine - the builder will use default values.
+        if is_supported:
             flow_items.append((flow, proto_req, None))
     
     return flow_items, flow_metadata_dict, message_schemas

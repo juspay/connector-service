@@ -267,8 +267,9 @@ test-ffi:
 
 ## Run FFI smoke tests in MOCK mode for all SDKs (no real HTTP, verifies req_transformer only)
 ## Runs all SDKs in parallel and prints a combined pass/fail table.
+## Set VERBOSE=1 or V=1 to see detailed error messages
 test-ffi-mock: generate-harnesses
-	@python3 scripts/run_smoke_tests_parallel.py --connectors $(CONNECTORS) --mock
+	@python3 scripts/run_smoke_tests_parallel.py --connectors $(CONNECTORS) --mock $(if $(filter 1,$(VERBOSE) $(V)),--verbose)
 
 ## Generate harnesses for all connectors specified in CONNECTORS
 ## Used by test-ffi-mock to ensure harnesses are up to date

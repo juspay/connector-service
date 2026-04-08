@@ -601,9 +601,16 @@ def _annotate_inline_lines(
 
         if isinstance(val, dict):
             if not child_msg:
-                # Unknown field — likely a oneof group name (e.g. mandate_id_type).
-                # Flatten by processing inner fields at the current message level.
-                lines.extend(_annotate_inline_lines(val, msg_name, db, indent, cmt, camel_keys, ts_mode=ts_mode))
+                # Unknown field — check if it's a wrapper-style dict (single "value" key)
+                # If so, preserve the outer key; otherwise flatten as oneof group
+                if len(val) == 1 and "value" in val:
+                    # Wrapper-style field - preserve the key with inner value
+                    lines.append(f'{pad}"{out_key}": {{{cmt_part}')
+                    lines.append(f'{pad}    "value": {_json_scalar(val["value"], js=camel_keys)}{trailing}')
+                    lines.append(f"{pad}}}")
+                else:
+                    # Likely a oneof group name (e.g. mandate_id_type) - flatten
+                    lines.extend(_annotate_inline_lines(val, msg_name, db, indent, cmt, camel_keys, ts_mode=ts_mode))
             else:
                 lines.append(f'{pad}"{out_key}": {{{cmt_part}')
                 lines.extend(_annotate_inline_lines(val, child_msg, db, indent + 1, cmt, camel_keys, ts_mode=ts_mode))
@@ -2488,6 +2495,18 @@ def _kotlin_collect_enum_types(obj: dict, msg_name: str, db: "_SchemaDB") -> set
     return types
 
 
+def _to_snake(name: str) -> str:
+    """Convert camelCase to snake_case for proto field name lookups."""
+    result = []
+    for i, char in enumerate(name):
+        if char.isupper() and i > 0:
+            result.append('_')
+            result.append(char.lower())
+        else:
+            result.append(char.lower())
+    return ''.join(result)
+
+
 def _kotlin_payload_lines(
     obj: dict,
     msg_name: str,
@@ -2509,6 +2528,10 @@ def _kotlin_payload_lines(
         camel     = _to_camel(key)
         comment   = db.get_comment(msg_name, key)
         child_msg = db.get_type(msg_name, key)
+        # If lookup fails and key is camelCase, try snake_case fallback for proto schemas
+        if not child_msg:
+            snake_key = _to_snake(key)
+            child_msg = db.get_type(msg_name, snake_key)
         cmt_part  = f"  // {comment}" if comment else ""
 
         if key in variable_fields:

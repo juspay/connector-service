@@ -257,6 +257,11 @@ def copy_kotlin_harnesses(repo_root: Path, connectors: List[str]) -> None:
         repo_root / "sdk" / "java" / "smoke-test"
         / "src" / "main" / "kotlin" / "generated"
     )
+    # Clean destination directory to avoid compiling stale/broken connectors
+    if dest_base.exists():
+        shutil.rmtree(dest_base)
+    dest_base.mkdir(parents=True, exist_ok=True)
+    
     for connector in connectors:
         src = (
             repo_root / "sdk" / "java" / "smoke-test"
@@ -522,6 +527,13 @@ def run_python_test_batch(
                 capture_output=True, text=True, timeout=300, env=env
             )
 
+            # Verbose mode: show full stdout/stderr
+            if hasattr(__builtins__, '_VERBOSE') and __builtins__._VERBOSE:
+                if result.stdout:
+                    print(f"\n  [Python stdout]\n{result.stdout[-10000:]}")
+                if result.stderr:
+                    print(f"\n  [Python stderr]\n{result.stderr[-10000:]}")
+
             # Find where the JSON array starts (may be multi-line pretty-printed output).
             # Flow markers look like "[authorize] running..." — we only want the bare
             # JSON array starter: a line that is exactly "[" or starts with "[{".
@@ -568,11 +580,12 @@ def run_javascript_test_batch(
     env["NODE_PATH"] = str(js_env / "node_modules")
     env["NO_COLOR"] = "1"
 
+    examples_dir = js_env / "smoke-test" / "generated"
     cmd = [
         "npx", "tsx", "test_smoke.ts",
         "--connectors", ",".join(connectors),
         "--creds-file", "creds.json",
-        "--examples-dir", "./smoke-test/generated",
+        "--examples-dir", str(examples_dir),
     ]
     if mock:
         cmd.append("--mock")
@@ -582,6 +595,14 @@ def run_javascript_test_batch(
             cmd, cwd=js_env,
             capture_output=True, text=True, timeout=300, env=env
         )
+
+        # Verbose mode: show full stdout/stderr
+        if hasattr(__builtins__, '_VERBOSE') and __builtins__._VERBOSE:
+            if result.stdout:
+                print(f"\n  [JavaScript stdout]\n{result.stdout[-10000:]}")
+            if result.stderr:
+                print(f"\n  [JavaScript stderr]\n{result.stderr[-10000:]}")
+
         return parse_multi_connector_text_output(
             "javascript", connectors, result.stdout + result.stderr
         )
@@ -617,6 +638,14 @@ def run_kotlin_test_batch(
             cwd=smoke_test_dir,
             capture_output=True, text=True, timeout=300, env=env
         )
+
+        # Verbose mode: show full stdout/stderr
+        if hasattr(__builtins__, '_VERBOSE') and __builtins__._VERBOSE:
+            if result.stdout:
+                print(f"\n  [Kotlin stdout]\n{result.stdout[-10000:]}")
+            if result.stderr:
+                print(f"\n  [Kotlin stderr]\n{result.stderr[-10000:]}")
+
         return parse_multi_connector_text_output(
             "kotlin", connectors, result.stdout + result.stderr
         )
@@ -678,6 +707,14 @@ def run_rust_test_batch(
             cmd, cwd=repo_root,
             capture_output=True, text=True, timeout=300, env=env
         )
+
+        # Verbose mode: show full stdout/stderr
+        if hasattr(__builtins__, '_VERBOSE') and __builtins__._VERBOSE:
+            if result.stdout:
+                print(f"\n  [Rust stdout]\n{result.stdout[-10000:]}")
+            if result.stderr:
+                print(f"\n  [Rust stderr]\n{result.stderr[-10000:]}")
+
         valid_results = parse_multi_connector_text_output(
             "rust", valid, result.stdout + result.stderr
         )
@@ -796,6 +833,7 @@ def main() -> None:
     parser.add_argument("--connectors", help="Comma-separated list of connectors to test")
     parser.add_argument("--all", action="store_true", help="Test all available connectors")
     parser.add_argument("--mock", action="store_true", help="Run in mock mode")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed error output")
     parser.add_argument(
         "--sdks", default="python,javascript,kotlin,rust",
         help="Comma-separated list of SDKs to test"
@@ -804,6 +842,10 @@ def main() -> None:
     args = parser.parse_args()
     sdks = [s.strip() for s in args.sdks.split(",")]
     repo_root = Path(__file__).parent.parent
+    
+    # Store verbose flag globally for use in test functions
+    import builtins
+    builtins._VERBOSE = args.verbose
 
     if args.all:
         connectors = get_all_connectors(repo_root)
