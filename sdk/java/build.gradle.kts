@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.hyperswitch"
-version = "0.1.0"
+version = "0.0.1"
 
 repositories {
     mavenCentral()
@@ -17,6 +17,7 @@ dependencies {
     api("com.google.protobuf:protobuf-java:4.33.4")
     // JNA required by UniFFI-generated Kotlin bindings (exposed in public API)
     api("net.java.dev.jna:jna:5.14.0")
+    api("com.google.code.gson:gson:2.11.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.json:json:20240303")
 }
@@ -50,7 +51,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = "com.hyperswitch"
-            artifactId = "payments-client"
+            artifactId = "hyperswitch-prism"
             from(components["java"])
         }
     }

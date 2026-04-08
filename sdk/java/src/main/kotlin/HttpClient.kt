@@ -5,9 +5,15 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 data class HttpRequest(
     val url: String,
@@ -31,7 +37,7 @@ class NetworkError(
     val code: NetworkErrorCode = NetworkErrorCode.NETWORK_ERROR_CODE_UNSPECIFIED,
     val statusCode: Int? = null
 ) : Exception(message) {
-    /** String error code for parity with IntegrationError/ConnectorResponseTransformationError (e.g. "CONNECT_TIMEOUT"). */
+    /** String error code for parity with IntegrationError/ConnectorError (e.g. "CONNECT_TIMEOUT"). */
     val errorCode: String get() = code.name
 }
 
@@ -60,6 +66,32 @@ object HttpClient {
                 TimeUnit.MILLISECONDS
             )
 
+            // Configure custom CA cert (Client Level)
+            if (config?.hasCaCert() == true) {
+                val ca = config.caCert
+                val pemBytes: ByteArray? = when {
+                    ca.hasPem() -> ca.pem.toByteArray(Charsets.UTF_8)
+                    ca.hasDer() -> ca.der.toByteArray()
+                    else -> null
+                }
+                if (pemBytes != null) {
+                    val cf = CertificateFactory.getInstance("X.509")
+                    val cert = cf.generateCertificate(ByteArrayInputStream(pemBytes))
+                    val ks = KeyStore.getInstance(KeyStore.getDefaultType()).apply {
+                        load(null, null)
+                        setCertificateEntry("mitmproxy", cert)
+                    }
+                    val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply {
+                        init(ks)
+                    }
+                    val sslCtx = SSLContext.getInstance("TLS").apply {
+                        init(null, tmf.trustManagers, null)
+                    }
+                    val tm = tmf.trustManagers.first() as X509TrustManager
+                    builder.sslSocketFactory(sslCtx.socketFactory, tm)
+                }
+            }
+
             // Configure Proxy (Client Level)
             if (config?.hasProxy() == true) {
                 configureProxy(builder, config.proxy)
@@ -80,11 +112,11 @@ object HttpClient {
 
         val url = proxyUrl.toHttpUrlOrNull()
             ?: throw NetworkError("Unsupported or malformed proxy URL: $proxyUrl", NetworkErrorCode.INVALID_PROXY_CONFIGURATION)
-        
+
         // Standard Java Proxy
         val proxy = java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host, url.port))
         builder.proxy(proxy)
-        
+
         // Bypass logic (Selector)
         if (p.bypassUrlsCount > 0) {
             val bypassList = p.bypassUrlsList
@@ -99,6 +131,20 @@ object HttpClient {
                 override fun connectFailed(uri: java.net.URI, sa: java.net.SocketAddress, ioe: IOException) {}
             })
         }
+    }
+
+    /**
+     * Generate a cache key from proxy configuration for HTTP client caching.
+     * Returns empty string when no proxy is configured.
+     */
+    fun generateProxyCacheKey(proxy: ProxyOptions?): String {
+        if (proxy == null) return ""
+
+        val httpUrl = proxy.httpUrl ?: ""
+        val httpsUrl = proxy.httpsUrl ?: ""
+        val bypassUrls = proxy.bypassUrlsList.sorted().joinToString(",")
+
+        return "$httpUrl|$httpsUrl|$bypassUrls"
     }
 
     /**

@@ -405,6 +405,22 @@ pub enum BankNames {
     Yoursafe,
     N26,
     NationaleNederlanden,
+    // Indian banks (Netbanking)
+    StateBank,
+    HdfcBank,
+    IciciBank,
+    AxisBank,
+    KotakMahindraBank,
+    PunjabNationalBank,
+    BankOfBaroda,
+    UnionBankOfIndia,
+    CanaraBank,
+    IndusIndBank,
+    YesBank,
+    IdbiBank,
+    FederalBank,
+    IndianOverseasBank,
+    CentralBankOfIndia,
 }
 
 /// Specifies the regulated name for a card network, primarily used for US debit card routing regulations.
@@ -997,6 +1013,7 @@ pub enum PaymentMethodType {
     Momo,
     MomoAtm,
     Multibanco,
+    NetworkToken,
     OnlineBankingThailand,
     OnlineBankingCzechRepublic,
     OnlineBankingFinland,
@@ -1036,6 +1053,7 @@ pub enum PaymentMethodType {
     Walley,
     WeChatPay,
     Wero,
+    Netbanking,
     SevenEleven,
     Lawson,
     MiniStop,
@@ -1170,6 +1188,35 @@ pub enum PayoutPriority {
     Wire,
     CrossBorder,
     Internal,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    Hash,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum PayoutRecipientType {
+    /// Adyen
+    #[default]
+    Individual,
+    Company,
+    NonProfit,
+    PublicSector,
+    NaturalPerson,
+
+    /// Wise
+    Business,
+    Personal,
 }
 
 /// The status of the attempt

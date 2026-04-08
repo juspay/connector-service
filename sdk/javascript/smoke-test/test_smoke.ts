@@ -1,5 +1,5 @@
 /**
- * Multi-connector smoke test for hs-playlib SDK.
+ * Multi-connector smoke test for hyperswitch-prism SDK.
  * 
  * Loads connector credentials from external JSON file and runs authorize flow
  * for multiple connectors.
@@ -10,7 +10,7 @@
  *   node test_smoke.js --creds-file creds.json --all --dry-run
  */
 
-import { PaymentClient, types, NetworkError, IntegrationError, ConnectorResponseTransformationError } from "hs-playlib";
+import { types, NetworkError, IntegrationError, ConnectorError } from "hyperswitch-prism";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -123,14 +123,14 @@ async function testConnectorScenarios(
         return result;
     }
 
-    const connectorDir = path.join(examplesDir, connectorName, "javascript");
+    const connectorDir = path.join(examplesDir, connectorName);
     if (!fs.existsSync(connectorDir)) {
         result.status = "skipped";
         (result.scenarios as any) = { skipped: true, reason: "no_examples_dir" };
         return result;
     }
 
-    const consolidatedFile = path.join(connectorDir, `${connectorName}.js`);
+    const consolidatedFile = path.join(connectorDir, `${connectorName}.ts`);
     if (!fs.existsSync(consolidatedFile)) {
         result.status = "skipped";
         (result.scenarios as any) = { skipped: true, reason: "no_scenario_files" };
@@ -139,8 +139,8 @@ async function testConnectorScenarios(
 
     let mod: any;
     try {
-        delete require.cache[require.resolve(consolidatedFile)];
-        mod = require(consolidatedFile);
+        // Use dynamic import for TypeScript files (tsx handles transpilation)
+        mod = await import(consolidatedFile);
     } catch (e: any) {
         console.log(`    IMPORT ERROR: ${e.message}`);
         result.status = "failed";
@@ -185,30 +185,20 @@ async function testConnectorScenarios(
                 result.scenarios[scenarioKey] = { passed: true, result: response };
             }
         } catch (e: any) {
-            const errorName = e?.constructor?.name;
-            const errorMessage = e?.message;
-            
-            let isConnectorError = false;
-            switch (errorName) {
-                case "IntegrationError":
-                case "ConnectorResponseTransformationError":
-                    isConnectorError = true;
-                    break;
-                default:
-                    // FFI-level panics (e.g. HandlerError, InvalidWalletToken) surface as a plain
-                    // Error with a "Rust panic: ..." message — treat them as connector errors.
-                    if (typeof errorMessage === "string" && errorMessage.startsWith("Rust panic:")) {
-                        isConnectorError = true;
-                    }
-                    break;
-            }
-            
-            if (isConnectorError) {
-                const msg = e.errorMessage || e.message || String(e);
-                const code = e.errorCode;
-                const detail = code ? `${code}: ${msg}` : msg;
+            if (e instanceof IntegrationError) {
+                // Request-phase error - SDK round-trip succeeded.
+                const detail = `IntegrationError: ${e.message} (code=${e.errorCode}, action=${e.suggestedAction}, doc=${e.docUrl})`;
                 console.log(_yellow("~ connector error") + _grey(` — ${detail}`));
                 result.scenarios[scenarioKey] = { passed: true, connectorError: detail };
+            } else if (e instanceof ConnectorError) {
+                // Response-phase error - SDK round-trip succeeded.
+                const detail = `ConnectorError: ${e.message} (code=${e.errorCode}, http=${e.httpStatusCode})`;
+                console.log(_yellow("~ connector error") + _grey(` — ${detail}`));
+                result.scenarios[scenarioKey] = { passed: true, connectorError: detail };
+            } else if (e instanceof Error && e.message.startsWith("Rust panic:")) {
+                // FFI-level panics surface as a plain Error with "Rust panic: ..." message
+                console.log(_yellow("~ connector error") + _grey(` — ${e.message}`));
+                result.scenarios[scenarioKey] = { passed: true, connectorError: e.message };
             } else {
                 console.log(_red("✗ FAILED") + ` — ${e?.constructor?.name || "Error"}: ${e.message}`);
                 result.scenarios[scenarioKey] = { passed: false, error: `${e?.constructor?.name || "Error"}: ${e.message}` };
