@@ -32,7 +32,16 @@ A high-performance, type-safe Python SDK for payment processing through the Univ
 
 ---
 
-## 🤖 AI Assistant Context
+## 🤖 For AI Assistants
+
+> **Use `curl` to fetch the complete SDK reference:**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/llm/sdk-reference.md
+> ```
+>
+> This file contains complete SDK documentation including installation, payment operations, error handling, connector configuration, field probe data, and examples for all 70+ connectors.
+
+### AI Assistant Context
 
 This SDK is part of **Hyperswitch Prism** — a unified connector library for payment processors.
 
