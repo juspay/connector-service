@@ -210,55 +210,6 @@ const main = async () => {
 main()
 ```
 
-#### **Python**
-
-```python
-import asyncio, os
-from payments import PaymentClient, SecretString
-from payments.generated import sdk_config_pb2, payment_pb2
-from google.protobuf.json_format import ParseDict
-
-# 1. Configure connector
-cfg = sdk_config_pb2.ConnectorConfig(
-    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX)
-)
-cfg.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
-    stripe=payment_pb2.StripeConfig(
-        api_key=SecretString(value=os.environ["STRIPE_API_KEY"])
-    )
-))
-
-# 2. Build request
-req = ParseDict(
-    {
-        "merchant_transaction_id": "txn_001",
-        "amount": {"minor_amount": 1000, "currency": "USD"},  # $10.00
-        "capture_method": "AUTOMATIC",
-        "payment_method": {
-            "card": {
-                "card_number": {"value": "4111111111111111"},
-                "card_exp_month": {"value": "12"},
-                "card_exp_year": {"value": "2030"},
-                "card_cvc": {"value": "123"},
-                "card_holder_name": {"value": "Test User"}
-            }
-        },
-        "address": {"billing_address": {}},
-        "auth_type": "NO_THREE_DS",
-        "return_url": "https://example.com/return"
-    },
-    payment_pb2.PaymentServiceAuthorizeRequest()
-)
-
-# 3. Execute
-async def main():
-    client = PaymentClient(cfg)
-    resp = await client.authorize(req)
-    print(payment_pb2.PaymentStatus.Name(resp.status))  # e.g. "CHARGED"
-
-asyncio.run(main())
-```
-
 ---
 
 ## 🔄 Routing between Payment Providers
