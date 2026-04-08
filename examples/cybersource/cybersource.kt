@@ -9,7 +9,6 @@ package examples.cybersource
 
 import payments.PaymentClient
 import payments.PaymentMethodAuthenticationClient
-import payments.MerchantAuthenticationClient
 import payments.RecurringPaymentClient
 import payments.RefundClient
 import payments.PaymentServiceAuthorizeRequest
@@ -18,7 +17,6 @@ import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
 import payments.PaymentMethodAuthenticationServiceAuthenticateRequest
-import payments.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest
 import payments.PaymentMethodAuthenticationServicePostAuthenticateRequest
 import payments.PaymentMethodAuthenticationServicePreAuthenticateRequest
 import payments.PaymentServiceProxyAuthorizeRequest
@@ -274,22 +272,6 @@ fun capture(txnId: String) {
     println("Done: ${response.status.name}")
 }
 
-// Flow: MerchantAuthenticationService.CreateClientAuthenticationToken
-fun createClientAuthenticationToken(txnId: String) {
-    val client = MerchantAuthenticationClient(_defaultConfig)
-    val request = MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest.newBuilder().apply {
-        merchantClientSessionId = "probe_sdk_session_001"  // Infrastructure.
-        paymentBuilder.apply {  // FrmClientAuthenticationContext frm = 5; // future: device fingerprinting PayoutClientAuthenticationContext payout = 6; // future: payout verification widget.
-            amountBuilder.apply {
-                minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
-                currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-            }
-        }
-    }.build()
-    val response = client.create_client_authentication_token(request)
-    println("StatusCode: ${response.statusCode}")
-}
-
 // Flow: PaymentService.Get
 fun get(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -501,7 +483,6 @@ fun main(args: Array<String>) {
         "authenticate" -> authenticate(txnId)
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
-        "createClientAuthenticationToken" -> createClientAuthenticationToken(txnId)
         "get" -> get(txnId)
         "postAuthenticate" -> postAuthenticate(txnId)
         "preAuthenticate" -> preAuthenticate(txnId)
@@ -512,6 +493,6 @@ fun main(args: Array<String>) {
         "refundGet" -> refundGet(txnId)
         "tokenAuthorize" -> tokenAuthorize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authenticate, authorize, capture, createClientAuthenticationToken, get, postAuthenticate, preAuthenticate, proxyAuthorize, recurringCharge, recurringRevoke, refund, refundGet, tokenAuthorize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authenticate, authorize, capture, get, postAuthenticate, preAuthenticate, proxyAuthorize, recurringCharge, recurringRevoke, refund, refundGet, tokenAuthorize, void")
     }
 }
