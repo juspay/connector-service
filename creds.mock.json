@@ -1,0 +1,18 @@
+{
+  "stripe": {
+    "api_key": {
+      "value": "sk_test_mock_key_for_harness_testing"
+    }
+  },
+  "cybersource": {
+    "api_key": {
+      "value": "mock_cybersource_api_key"
+    },
+    "merchant_account": {
+      "value": "mock_merchant_account"
+    },
+    "api_secret": {
+      "value": "bW9ja19zZWNyZXRfa2V5X2Zvcl9jeWJlcnNvdXJjZV90ZXN0aW5nXzEyMzQ1"
+    }
+  }
+}

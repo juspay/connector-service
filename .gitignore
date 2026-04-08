@@ -418,7 +418,6 @@ creds.json
 **/*.drawio.bkp
 gen/**
 
-sdk/**/generated
 sdk/**/node_modules
 tests/node_modules
 sdk/tests/node_modules

@@ -199,6 +199,33 @@ test-composite: build-ffi-lib generate-all build-ts pack-archive
 	@rm -rf /tmp/test-hyperswitch-js-composite
 
 # ---------------------------------------------------------------------------
+# test-package-mock
+# Same as test-package but runs in MOCK mode (no real HTTP calls).
+# Uses generated harnesses instead of examples and verifies req_transformer only.
+# ---------------------------------------------------------------------------
+test-package-mock: build-ffi-lib generate-all build-ts pack-archive
+	@echo "Testing in MOCK mode (HTTP intercepted)..."
+	@rm -rf /tmp/test-hyperswitch-js-mock
+	@mkdir -p /tmp/test-hyperswitch-js-mock
+	@test -f $(JS_TARBALL) || (echo "Error: Tarball not found: $(JS_TARBALL)" && exit 1)
+	@cd /tmp/test-hyperswitch-js-mock && npm init -y --silent && \
+		npm install $(JS_TARBALL) typescript @types/node --silent
+	@cp $(SDK_ROOT)/smoke-test/test_smoke.ts /tmp/test-hyperswitch-js-mock/
+	@cp $(SDK_ROOT)/smoke-test/tsconfig.json /tmp/test-hyperswitch-js-mock/
+	@cp $(REPO_ROOT)/sdk/generated/flows.json /tmp/test-hyperswitch-js-mock/
+	@if [ -f $(REPO_ROOT)/creds.mock.json ]; then \
+		cp $(REPO_ROOT)/creds.mock.json /tmp/test-hyperswitch-js-mock/creds.json; \
+	fi
+	@# Copy harness to the location test_smoke.ts expects in mock mode
+	@mkdir -p /tmp/test-hyperswitch-js-mock/smoke-test/generated/$(CONNECTORS)
+	@cp $(SDK_ROOT)/smoke-test/generated/$(CONNECTORS)/$(CONNECTORS).ts /tmp/test-hyperswitch-js-mock/smoke-test/generated/$(CONNECTORS)/
+	@cd /tmp/test-hyperswitch-js-mock && \
+		NODE_PATH=/tmp/test-hyperswitch-js-mock/node_modules npx tsx test_smoke.ts \
+		--connectors $(CONNECTORS) --creds-file creds.json --mock --examples-dir ./smoke-test/generated
+	@rm -rf /tmp/test-hyperswitch-js-mock
+	@echo "Package mock test passed."
+
+# ---------------------------------------------------------------------------
 # test-grpc
 # End-to-end gRPC smoke test: builds both FFI libraries, packs the tarball,
 # installs it in an isolated temp project, then runs test_smoke_grpc.ts.

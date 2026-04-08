@@ -152,6 +152,22 @@ test-package: generate-all install
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------
+# test-package-mock
+# Same as test-package but runs in MOCK mode (no real HTTP calls).
+# Uses generated harnesses instead of examples and verifies req_transformer only.
+# ---------------------------------------------------------------------------
+test-package-mock: generate-all install
+	@echo "Running Kotlin smoke test in MOCK mode..."
+	@# Copy generated harness to smoke-test source
+	@mkdir -p $(SDK_ROOT)/smoke-test/src/main/kotlin/generated/$(CONNECTORS)
+	@cp $(SDK_ROOT)/smoke-test/generated/$(CONNECTORS)/$(CONNECTORS).kt $(SDK_ROOT)/smoke-test/src/main/kotlin/generated/$(CONNECTORS)/
+	@if [ -f $(REPO_ROOT)/creds.mock.json ]; then \
+		cp $(REPO_ROOT)/creds.mock.json $(SDK_ROOT)/smoke-test/creds.json; \
+	fi
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors $(CONNECTORS) --mock"
+	@echo "Package mock test passed."
+
+# ---------------------------------------------------------------------------
 # test-grpc
 # Builds the grpc-ffi library and runs the Kotlin gRPC smoke test.
 # Requires the grpc-server to be running (started by the top-level test-grpc).

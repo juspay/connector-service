@@ -297,6 +297,28 @@ test-java: build-ffi-lib ## Build FFI → Run Java smoke test
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java test-package CONNECTORS=$(CONNECTORS)
 
 # ---------------------------------------------------------------------------
+# Test Mock targets - run smoke tests in mock mode (no real HTTP)
+# ---------------------------------------------------------------------------
+test-mock: build-ffi-lib ## Run all SDK smoke tests in MOCK mode (verifies req_transformer only)
+	@echo "Running FFI smoke tests in MOCK mode for all SDKs..."
+	@echo; echo "═══ Rust FFI (MOCK) ═══"; echo
+	@$(MAKE) -C $(REPO_ROOT)/sdk/rust test-package-mock CONNECTORS=$(CONNECTORS) 2>&1
+	@echo; echo "═══ Python FFI (MOCK) ═══"; echo
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python test-package-mock CONNECTORS=$(CONNECTORS) 2>&1
+	@echo; echo "═══ JavaScript FFI (MOCK) ═══"; echo
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-package-mock CONNECTORS=$(CONNECTORS) 2>&1
+	@echo; echo "═══ Kotlin FFI (MOCK) ═══"; echo
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java test-package-mock CONNECTORS=$(CONNECTORS) 2>&1
+	@echo; echo "All SDK mock smoke tests completed."
+
+# ---------------------------------------------------------------------------
+# Generate harnesses for mock mode testing
+# ---------------------------------------------------------------------------
+generate-harnesses: ## Generate flow harnesses for mock mode testing
+	@echo "Generating flow harnesses from field probe data..."
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate_harnesses.py --all
+
+# ---------------------------------------------------------------------------
 # Distribution targets - delegate to SDK-specific dist
 # ---------------------------------------------------------------------------
 dist: dist-python dist-javascript dist-java ## Build all SDK distribution packages

@@ -58,7 +58,7 @@ _PROTO_REPEATED_FIELDS: dict[str, set[str]] = {}
 # Set of message type names that are "scalar wrappers" (single `value` field).
 # These are stored as plain scalars in probe data but must be sent as
 # {"value": ...} dicts in ParseDict calls.
-_PROTO_WRAPPER_TYPES: frozenset[str] = frozenset()
+_PROTO_WRAPPER_TYPES: set[str] = set()
 
 # Proto messages that wrap a single oneof field.  In prost + serde, the outer
 # struct has one field with the same name as the oneof (snake_case), so when
@@ -76,7 +76,7 @@ def load_proto_type_map(proto_dir: Path) -> None:
     type_map: dict[str, dict[str, str]] = {}
     repeated_map: dict[str, set[str]] = {}
     _FIELD_RE = re.compile(
-        r"^\s*(repeated\s+)?(?:optional\s+)?(\w+)\s+(\w+)\s*=\s*\d+"
+        r"^\s*(repeated\s+)?(?:optional\s+)?([\w<>,\s]+?)\s+(\w+)\s*=\s*\d+"
     )
     _SKIP_KEYWORDS = frozenset(
         ["message", "enum", "oneof", "reserved", "option", "extensions",
@@ -130,12 +130,16 @@ def load_proto_type_map(proto_dir: Path) -> None:
 
             type_map[msg_name] = fields
             repeated_map[msg_name] = repeated_fields
-            pos = pos + m.start() + 1  # advance past this message keyword
+            pos = i  # advance past the entire message body
 
-    _PROTO_FIELD_TYPES = type_map
-    _PROTO_REPEATED_FIELDS = repeated_map
+    # Clear and update the global dicts in-place so existing references see the changes
+    _PROTO_FIELD_TYPES.clear()
+    _PROTO_FIELD_TYPES.update(type_map)
+    _PROTO_REPEATED_FIELDS.clear()
+    _PROTO_REPEATED_FIELDS.update(repeated_map)
     # Wrapper types: messages whose only field is named "value"
-    _PROTO_WRAPPER_TYPES = frozenset(
+    _PROTO_WRAPPER_TYPES.clear()
+    _PROTO_WRAPPER_TYPES.update(
         name for name, fields in type_map.items()
         if set(fields.keys()) == {"value"}
     )
@@ -721,7 +725,7 @@ def _conn_display(connector_name: str) -> str:
 
 def _config_python(connector_name: str) -> str:
     return f"""\
-from payments.generated import sdk_config_pb2, payment_pb2
+from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -964,7 +968,7 @@ def render_scenario_python(
 import asyncio
 from google.protobuf.json_format import ParseDict
 {client_imports}
-from payments.generated import sdk_config_pb2, payment_pb2
+from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -1754,7 +1758,7 @@ def render_consolidated_python(
     builders_text  = "\n\n".join(builder_fns)
     builders_section = f"\n\n{builders_text}\n" if builder_fns else ""
     functions_text = "\n\n".join(func_blocks)
-    first_scenario = func_names[0][8:] if func_names[0].startswith("process_") else func_names[0] if func_names else "checkout_autocapture"
+    first_scenario = func_names[0][8:] if func_names and func_names[0].startswith("process_") else func_names[0] if func_names else "checkout_autocapture"
 
     return f"""\
 # This file is auto-generated. Do not edit manually.
@@ -1768,7 +1772,7 @@ import asyncio
 import sys
 from google.protobuf.json_format import ParseDict
 {client_imports}
-from payments.generated import sdk_config_pb2, payment_pb2
+from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -2520,10 +2524,25 @@ def _kotlin_payload_lines(
             continue
 
         if isinstance(val, dict):
-            if not child_msg:
+            # Check if this is a map type
+            is_map = child_msg and child_msg.startswith("map<")
+            
+            # Also check from _PROTO_FIELD_TYPES (handles cases where message_schemas 
+            # returns synthetic entry type name instead of map<>)
+            proto_type = _PROTO_FIELD_TYPES.get(msg_name, {}).get(key, "")
+            if proto_type.startswith("map<"):
+                is_map = True
+            
+            if not child_msg and not is_map:
                 # Unknown field — likely a oneof group name (e.g. mandate_id_type).
                 # Flatten by processing inner fields at the current message level.
                 lines.extend(_kotlin_payload_lines(val, msg_name, message_schemas, indent, variable_fields, variable_field_values))
+            elif is_map:
+                # Map type — use putAll() with mapOf() for Kotlin protobuf builders
+                map_entries = []
+                for k, v in val.items():
+                    map_entries.append(f'{json.dumps(k)} to {json.dumps(v)}')
+                lines.append(f"{pad}putAll{camel.capitalize()}(mapOf({', '.join(map_entries)})){cmt_part}")
             else:
                 lines.append(f"{pad}{camel}Builder.apply {{{cmt_part}")
                 lines.extend(_kotlin_payload_lines(val, child_msg, message_schemas, indent + 1, variable_fields, variable_field_values))

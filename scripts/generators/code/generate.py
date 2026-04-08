@@ -377,6 +377,7 @@ def grpc_method_path(service: str, rpc_name: str) -> str:
 _FLOW_NAME_OVERRIDES: dict[tuple[str, str], str] = {
     ("CustomerService", "Create"): "create_customer",
     ("RecurringPaymentService", "Charge"): "recurring_charge",
+    ("RecurringPaymentService", "Revoke"): "recurring_revoke",
     ("RefundService", "Get"): "refund_get",
     ("PayoutService", "Get"): "payout_get",
     ("PayoutService", "Create"): "payout_create",

@@ -164,6 +164,34 @@ test-package: generate-all pack-archive
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------
+# test-package-mock
+# Same as test-package but runs in MOCK mode (no real HTTP calls).
+# Uses generated harnesses instead of examples and verifies req_transformer only.
+# ---------------------------------------------------------------------------
+test-package-mock: generate-all pack-archive
+	@echo "Testing packed wheel in MOCK mode (no real HTTP)..."
+	@rm -rf /tmp/test-hyperswitch-py-mock
+	@mkdir -p /tmp/test-hyperswitch-py-mock
+	@cp $(SDK_ROOT)/smoke-test/test_smoke.py /tmp/test-hyperswitch-py-mock/
+	@# Copy mock credentials file
+	@if [ -f $(REPO_ROOT)/creds.mock.json ]; then \
+		cp $(REPO_ROOT)/creds.mock.json /tmp/test-hyperswitch-py-mock/creds.json; \
+	else \
+		echo "  Note: creds.mock.json not found, test will use placeholder credentials"; \
+	fi
+	@python3 -m pip install \
+		--target /tmp/test-hyperswitch-py-mock \
+		$(WHEEL_FILE) \
+		--force-reinstall
+	@cp $(REPO_ROOT)/sdk/generated/flows.json /tmp/test-hyperswitch-py-mock/
+	@# Copy generated harnesses to examples directory structure expected by smoke test
+	@mkdir -p /tmp/test-hyperswitch-py-mock/examples/$(CONNECTORS)
+	@cp $(SDK_ROOT)/smoke-test/generated/$(CONNECTORS)/$(CONNECTORS).py /tmp/test-hyperswitch-py-mock/examples/$(CONNECTORS)/
+	@cd /tmp/test-hyperswitch-py-mock && python3 test_smoke.py --connectors $(CONNECTORS) --creds-file creds.json --mock
+	@rm -rf /tmp/test-hyperswitch-py-mock
+	@echo "Package mock test passed."
+
+# ---------------------------------------------------------------------------
 # test-composite
 # Runs the composite flow smoke test (access token + authorize flow).
 # Tests the PayPal access token composite flow in an isolated environment.

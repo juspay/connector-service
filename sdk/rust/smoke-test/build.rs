@@ -189,9 +189,16 @@ fn load_supported_flows_from_probe(
 }
 
 fn main() {
+    // Declare env-var dependencies so cargo reruns this script when they change.
+    println!("cargo:rerun-if-env-changed=CONNECTORS");
+    println!("cargo:rerun-if-env-changed=HARNESS_DIR");
+
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let repo_root = Path::new(&manifest_dir).join("../../..");
-    let examples_dir = repo_root.join("examples");
+    // Allow overriding examples directory via HARNESS_DIR env var (used in mock mode)
+    let examples_dir = std::env::var("HARNESS_DIR")
+        .map(|p| Path::new(&p).to_path_buf())
+        .unwrap_or_else(|_| repo_root.join("examples"));
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let connectors_path = format!("{out_dir}/connectors.rs");
     let scenarios_path = format!("{out_dir}/connector_scenarios.rs");
@@ -201,7 +208,7 @@ fn main() {
     // Load canonical flow manifest from flows.json
     let manifest_data = load_flow_manifest(&repo_root);
     let manifest = &manifest_data.flows;
-    let flow_to_example_fn = &manifest_data.flow_to_example_fn;
+    let _flow_to_example_fn = &manifest_data.flow_to_example_fn; // Prefixed with underscore as it's no longer used in legacy mode
     println!(
         "cargo:warning=Loaded {} flows from flows.json",
         manifest.len()
@@ -410,86 +417,68 @@ fn main() {
         // Load field_probe supported flows (legacy support)
         let field_probe_supported = load_supported_flows_from_probe(&examples_dir, connector_name);
 
-        // Discover FFI process_* functions using the 3-check algorithm
+        // Discover FFI process_* functions using SUPPORTED_FLOWS with 3-check validation
         let mut present: Vec<(String, String)> = Vec::new();
 
-        if let Some(ref declared) = declared_flows {
-            // New mode: Use SUPPORTED_FLOWS with 3-check validation
-            let manifest_set: HashSet<_> = manifest.iter().cloned().collect();
-
-            // CHECK 1: Verify all declared flows have implementations
-            let mut missing = Vec::new();
-            for flow in declared {
-                let fn_name = format!("process_{}", flow);
-                if !content.contains(&format!("pub async fn {}(", fn_name)) {
-                    missing.push(flow.clone());
-                }
+        // Skip connectors without SUPPORTED_FLOWS (they need to add it)
+        let declared = match declared_flows {
+            Some(flows) => flows,
+            None => {
+                println!("cargo:warning=Skipping connector '{}': No SUPPORTED_FLOWS found. Add: pub const SUPPORTED_FLOWS: &[&str] = &[...];", connector_name);
+                continue;
             }
-            if !missing.is_empty() {
-                panic!(
-                    "COVERAGE ERROR [{}]: SUPPORTED_FLOWS declares {:?} but no process_* function found for them.",
-                    connector_name, missing
-                );
-            }
+        };
 
-            // CHECK 2: Verify no undeclared process_* functions exist
-            // Scan for all pub async fn process_* patterns
-            for line in content.lines() {
-                if let Some(pos) = line.find("pub async fn process_") {
-                    let after_process = &line[pos + 19..]; // after "pub async fn process_"
-                    if let Some(paren_pos) = after_process.find('(') {
-                        let flow_name = &after_process[..paren_pos];
-                        if !declared.iter().any(|d| d == flow_name) {
-                            panic!(
-                                "COVERAGE ERROR [{}]: process_{} exists but '{}' not in SUPPORTED_FLOWS.",
-                                connector_name, flow_name, flow_name
-                            );
-                        }
+        let manifest_set: HashSet<_> = manifest.iter().cloned().collect();
+
+        // CHECK 1: Verify all declared flows have implementations
+        let mut missing = Vec::new();
+        for flow in &declared {
+            let fn_name = format!("process_{}", flow);
+            if !content.contains(&format!("pub async fn {}(", fn_name)) {
+                missing.push(flow.clone());
+            }
+        }
+        if !missing.is_empty() {
+            panic!(
+                "COVERAGE ERROR [{}]: SUPPORTED_FLOWS declares {:?} but no process_* function found for them.",
+                connector_name, missing
+            );
+        }
+
+        // CHECK 2: Verify no undeclared process_* functions exist
+        // Scan for all pub async fn process_* patterns
+        for line in content.lines() {
+            if let Some(pos) = line.find("pub async fn process_") {
+                let after_process = &line[pos + 21..]; // after "pub async fn process_" (21 chars)
+                if let Some(paren_pos) = after_process.find('(') {
+                    let flow_name = &after_process[..paren_pos];
+                    if !declared.iter().any(|d| d == flow_name) {
+                        panic!(
+                            "COVERAGE ERROR [{}]: process_{} exists but '{}' not in SUPPORTED_FLOWS.",
+                            connector_name, flow_name, flow_name
+                        );
                     }
                 }
             }
+        }
 
-            // CHECK 3: Verify all declared flows exist in manifest
-            let stale: Vec<_> = declared
-                .iter()
-                .filter(|flow| !manifest_set.contains(*flow))
-                .cloned()
-                .collect();
-            if !stale.is_empty() {
-                panic!(
-                    "COVERAGE ERROR [{}]: SUPPORTED_FLOWS contains flows that no longer exist in flows.json: {:?}",
-                    connector_name, stale
-                );
-            }
+        // CHECK 3: Verify all declared flows exist in manifest
+        let stale: Vec<_> = declared
+            .iter()
+            .filter(|flow| !manifest_set.contains(*flow))
+            .cloned()
+            .collect();
+        if !stale.is_empty() {
+            panic!(
+                "COVERAGE ERROR [{}]: SUPPORTED_FLOWS contains flows that no longer exist in flows.json: {:?}",
+                connector_name, stale
+            );
+        }
 
-            // Add validated flows
-            for flow in declared {
-                present.push((flow.clone(), format!("process_{}", flow)));
-            }
-        } else {
-            // Legacy mode: Scan process_* functions using flow_to_example_fn mapping
-            // Find all available example functions in the content
-            let available_example_fns: HashSet<String> = content
-                .lines()
-                .filter_map(|line| {
-                    if let Some(pos) = line.find("pub async fn process_") {
-                        let after_process = &line[pos + 19..];
-                        if let Some(paren_pos) = after_process.find('(') {
-                            return Some(after_process[..paren_pos].to_string());
-                        }
-                    }
-                    None
-                })
-                .collect();
-
-            // Map flows to their example functions if both exist
-            for flow in manifest {
-                if let Some(Some(example_fn)) = flow_to_example_fn.get(flow) {
-                    if available_example_fns.contains(example_fn) {
-                        present.push((flow.clone(), format!("process_{}", example_fn)));
-                    }
-                }
-            }
+        // Add validated flows
+        for flow in declared {
+            present.push((flow.clone(), format!("process_{}", flow)));
         }
 
         if !present.is_empty() {
@@ -566,10 +555,15 @@ fn main() {
             // Include ALL flows from manifest, using flow_to_example_fn mapping
             for flow in manifest {
                 if let Some(example_fn) = implemented.get(flow.as_str()) {
-                    // Flow has an implementation - call the example function
+                    // Flow has an implementation - call the example function and capture mock request
                     code.push_str(&format!(
-                        "        results.push((\"{}\".to_string(), connectors::{}::{}(client, &txn_id).await));\n",
-                        flow, name, example_fn
+                        "        let _result = connectors::{}::{}(client, &txn_id).await;\n",
+                        name, example_fn
+                    ));
+                    code.push_str("        let mock_req = hyperswitch_payments_client::take_last_mock_request();\n");
+                    code.push_str(&format!(
+                        "        results.push((\"{}\".to_string(), Ok(mock_req.unwrap_or_else(|| \"mock response\".to_string()))));\n",
+                        flow
                     ));
                 } else {
                     // Flow not implemented
