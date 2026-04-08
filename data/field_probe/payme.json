@@ -8,368 +8,403 @@
     },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "AchBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Affirm": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Afterpay": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Alfamart": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "AliPayRedirect": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "AmazonPayRedirect": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "ApplePay": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "ApplePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "ApplePayThirdPartySdk": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Bacs": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "BacsBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "BancontactCard": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "BcaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Becs": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Bizum": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Blik": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Bluecode": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "BniVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Boleto": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "BriVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Card": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "connector_order_id": "connector_order_id"
+        },
+        "sample": {
+          "url": "https://sandbox.payme.io/api//pay-sale",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"buyer_name\":\"John Doe\",\"buyer_email\":\"test@example.com\",\"payme_sale_id\":\"connector_order_id\",\"credit_card_number\":\"4111111111111111\",\"credit_card_exp\":\"0330\",\"credit_card_cvv\":\"737\",\"language\":\"en\"}"
+        }
       },
       "CashappQr": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "CimbVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "ClassicReward": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Crypto": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "DanamonVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "DuitNow": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "EVoucher": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Efecty": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Eft": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Eps": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "FamilyMart": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Giropay": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "GooglePay": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "GooglePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "GooglePayThirdPartySdk": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Ideal": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Indomaret": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "IndonesianBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "InstantBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "InstantBankTransferFinland": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "InstantBankTransferPoland": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Interac": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Klarna": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Lawson": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "LocalBankRedirect": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "LocalBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "MandiriVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "MbWay": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Mifinity": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "MiniStop": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "MultibancoBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "OnlineBankingCzechRepublic": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "OnlineBankingFinland": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "OnlineBankingFpx": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "OnlineBankingPoland": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "OnlineBankingSlovakia": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "OnlineBankingThailand": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "OpenBanking": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "OpenBankingPis": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "OpenBankingUk": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Oxxo": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "PagoEfectivo": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "PayEasy": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "PaySafeCard": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "PaypalRedirect": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "PaypalSdk": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "PermataBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Pix": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Przelewy24": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Pse": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "RedCompra": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "RedPagos": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "RevolutPay": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Satispay": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Seicomart": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Sepa": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "SepaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "SepaGuaranteedDebit": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "SevenEleven": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Sofort": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Trustly": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "UpiCollect": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "UpiIntent": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "UpiQr": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "WeChatPayQr": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       },
       "Wero": {
-        "status": "error",
-        "error": "Stuck on field: connector_order_id — Missing required field: connector_order_id (payme_sale_id from CreateOrder)"
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       }
     },
     "capture": {
