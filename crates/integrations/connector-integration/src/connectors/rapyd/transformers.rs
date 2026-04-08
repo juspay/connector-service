@@ -9,7 +9,9 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
-    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
+    payment_method_data::{
+        CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
     router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -318,8 +320,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .resource_common_data
                     .payment_method_token
                     .as_ref()
-                    .and_then(|t| match t {
-                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
                     })
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
