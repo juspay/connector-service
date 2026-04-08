@@ -409,7 +409,6 @@ jobs:
       # --- Auth checks ---
       - name: Check Java auth
         id: check-java-auth
-        if: ${{ inputs.publish_java == true }}
         continue-on-error: true
         env:
           SONATYPE_MAVEN_USERNAME: ${{ secrets.SONATYPE_MAVEN_USERNAME }}
@@ -420,7 +419,6 @@ jobs:
 
       - name: Check Python auth
         id: check-python-auth
-        if: ${{ inputs.publish_python == true }}
         continue-on-error: true
         env:
           TWINE_USERNAME: __token__
@@ -429,7 +427,6 @@ jobs:
 
       - name: Check JavaScript auth
         id: check-js-auth
-        if: ${{ inputs.publish_javascript == true }}
         continue-on-error: true
         working-directory: sdk/javascript
         env:
@@ -445,19 +442,16 @@ jobs:
       # --- Version checks ---
       - name: Check Java version
         id: check-java-version
-        if: ${{ inputs.publish_java == true }}
         continue-on-error: true
         run: make -C sdk/java publish-check-version
 
       - name: Check Python version
         id: check-python-version
-        if: ${{ inputs.publish_python == true }}
         continue-on-error: true
         run: make -C sdk/python publish-check-version
 
       - name: Check JavaScript version
         id: check-js-version
-        if: ${{ inputs.publish_javascript == true }}
         continue-on-error: true
         working-directory: sdk/javascript
         run: |
@@ -472,7 +466,6 @@ jobs:
       # --- Dry-run checks ---
       - name: Java dry-run (publishToMavenLocal)
         id: check-java-dryrun
-        if: ${{ inputs.publish_java == true }}
         continue-on-error: true
         env:
           SONATYPE_MAVEN_SIGNING_KEY: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY }}
@@ -481,13 +474,11 @@ jobs:
 
       - name: Python dry-run (twine check)
         id: check-python-dryrun
-        if: ${{ inputs.publish_python == true }}
         continue-on-error: true
         run: make -C sdk/python publish-check-dry-run
 
       - name: JavaScript dry-run (npm publish --dry-run)
         id: check-js-dryrun
-        if: ${{ inputs.publish_javascript == true }}
         continue-on-error: true
         working-directory: sdk/javascript
         env:
@@ -501,48 +492,43 @@ jobs:
           echo "=== Pre-Publish Check Summary ==="
           echo ""
           FAILED=0
-          if [ "${{ inputs.publish_java }}" == "true" ]; then
-            java_auth="${{ steps.check-java-auth.outcome }}"
-            java_ver="${{ steps.check-java-version.outcome }}"
-            java_dry="${{ steps.check-java-dryrun.outcome }}"
-            if [ "$java_auth" == "failure" ] || [ "$java_ver" == "failure" ] || [ "$java_dry" == "failure" ]; then
-              echo "  Java: FAILED (auth=$java_auth, version=$java_ver, dry-run=$java_dry)"
-              FAILED=1
-            else
-              echo "  Java: PASSED"
-            fi
+
+          # Java checks
+          java_auth="${{ steps.check-java-auth.outcome }}"
+          java_ver="${{ steps.check-java-version.outcome }}"
+          java_dry="${{ steps.check-java-dryrun.outcome }}"
+          if [ "$java_auth" == "failure" ] || [ "$java_ver" == "failure" ] || [ "$java_dry" == "failure" ]; then
+            echo "  Java: FAILED (auth=$java_auth, version=$java_ver, dry-run=$java_dry)"
+            [ "${{ inputs.publish_java }}" == "true" ] && FAILED=1
           else
-            echo "  Java: SKIPPED"
+            echo "  Java: PASSED"
           fi
-          if [ "${{ inputs.publish_python }}" == "true" ]; then
-            py_auth="${{ steps.check-python-auth.outcome }}"
-            py_ver="${{ steps.check-python-version.outcome }}"
-            py_dry="${{ steps.check-python-dryrun.outcome }}"
-            if [ "$py_auth" == "failure" ] || [ "$py_ver" == "failure" ] || [ "$py_dry" == "failure" ]; then
-              echo "  Python: FAILED (auth=$py_auth, version=$py_ver, dry-run=$py_dry)"
-              FAILED=1
-            else
-              echo "  Python: PASSED"
-            fi
+
+          # Python checks
+          py_auth="${{ steps.check-python-auth.outcome }}"
+          py_ver="${{ steps.check-python-version.outcome }}"
+          py_dry="${{ steps.check-python-dryrun.outcome }}"
+          if [ "$py_auth" == "failure" ] || [ "$py_ver" == "failure" ] || [ "$py_dry" == "failure" ]; then
+            echo "  Python: FAILED (auth=$py_auth, version=$py_ver, dry-run=$py_dry)"
+            [ "${{ inputs.publish_python }}" == "true" ] && FAILED=1
           else
-            echo "  Python: SKIPPED"
+            echo "  Python: PASSED"
           fi
-          if [ "${{ inputs.publish_javascript }}" == "true" ]; then
-            js_auth="${{ steps.check-js-auth.outcome }}"
-            js_ver="${{ steps.check-js-version.outcome }}"
-            js_dry="${{ steps.check-js-dryrun.outcome }}"
-            if [ "$js_auth" == "failure" ] || [ "$js_ver" == "failure" ] || [ "$js_dry" == "failure" ]; then
-              echo "  JavaScript: FAILED (auth=$js_auth, version=$js_ver, dry-run=$js_dry)"
-              FAILED=1
-            else
-              echo "  JavaScript: PASSED"
-            fi
+
+          # JavaScript checks
+          js_auth="${{ steps.check-js-auth.outcome }}"
+          js_ver="${{ steps.check-js-version.outcome }}"
+          js_dry="${{ steps.check-js-dryrun.outcome }}"
+          if [ "$js_auth" == "failure" ] || [ "$js_ver" == "failure" ] || [ "$js_dry" == "failure" ]; then
+            echo "  JavaScript: FAILED (auth=$js_auth, version=$js_ver, dry-run=$js_dry)"
+            [ "${{ inputs.publish_javascript }}" == "true" ] && FAILED=1
           else
-            echo "  JavaScript: SKIPPED"
+            echo "  JavaScript: PASSED"
           fi
+
           echo ""
           if [ "$FAILED" -eq 1 ]; then
-            echo "One or more pre-publish checks FAILED."
+            echo "One or more pre-publish checks FAILED. Publishing will be blocked."
             exit 1
           fi
           if [ "${{ inputs.preview_only }}" == "true" ]; then

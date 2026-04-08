@@ -211,19 +211,16 @@ jobs:
         run: cd sdk/javascript && npm install --silent
       - name: Check npm auth
         id: check-js-auth
-        if: ${{ inputs.publish_npm == true }}
         continue-on-error: true
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: make -C sdk/javascript publish-check-auth
       - name: Check version
         id: check-js-version
-        if: ${{ inputs.publish_npm == true }}
         continue-on-error: true
         run: make -C sdk/javascript publish-check-version
       - name: Dry-run check
         id: check-js-dryrun
-        if: ${{ inputs.publish_npm == true }}
         continue-on-error: true
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -233,22 +230,18 @@ jobs:
           echo "=== Pre-Publish Check Summary ==="
           echo ""
           FAILED=0
-          if [ "${{ inputs.publish_npm }}" == "true" ]; then
-            js_auth="${{ steps.check-js-auth.outcome }}"
-            js_ver="${{ steps.check-js-version.outcome }}"
-            js_dry="${{ steps.check-js-dryrun.outcome }}"
-            if [ "$js_auth" == "failure" ] || [ "$js_ver" == "failure" ] || [ "$js_dry" == "failure" ]; then
-              echo "  JavaScript: FAILED (auth=$js_auth, version=$js_ver, dry-run=$js_dry)"
-              FAILED=1
-            else
-              echo "  JavaScript: PASSED"
-            fi
+          js_auth="${{ steps.check-js-auth.outcome }}"
+          js_ver="${{ steps.check-js-version.outcome }}"
+          js_dry="${{ steps.check-js-dryrun.outcome }}"
+          if [ "$js_auth" == "failure" ] || [ "$js_ver" == "failure" ] || [ "$js_dry" == "failure" ]; then
+            echo "  JavaScript: FAILED (auth=$js_auth, version=$js_ver, dry-run=$js_dry)"
+            FAILED=1
           else
-            echo "  JavaScript: SKIPPED (preview mode)"
+            echo "  JavaScript: PASSED"
           fi
           echo ""
-          if [ "$FAILED" -eq 1 ]; then
-            echo "One or more pre-publish checks FAILED."
+          if [ "${{ inputs.publish_npm }}" == "true" ] && [ "$FAILED" -eq 1 ]; then
+            echo "One or more pre-publish checks FAILED. Publishing will be blocked."
             exit 1
           fi
 
