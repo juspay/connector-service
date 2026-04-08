@@ -24,7 +24,16 @@ A high-performance, type-safe Node.js SDK for payment processing through the Uni
 
 ---
 
-## 🤖 AI Assistant Context
+## 🤖 For AI Assistants
+
+> **Use `curl` to fetch the complete SDK reference:**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/llm/sdk-reference.md
+> ```
+>
+> This file contains complete SDK documentation including installation, payment operations, error handling, connector configuration, field probe data, and examples for all 70+ connectors.
+
+### AI Assistant Context
 
 This SDK is part of **Hyperswitch Prism** — a unified connector library for payment processors.
 
@@ -86,7 +95,7 @@ Your Node.js App
 npm install hs-paylib
 ```
 
-> **Important:** The package name on npm is `hs-paylib`. All imports must use `hs-paylib`, not `hyperswitch-prism`.
+> **Important:** The package name on npm is `hyperswitch-prism`. All imports must use `hyperswitch-prism`, not `hyperswitch-prism`.
 
 **Requirements:**
 - Node.js 18+ (LTS recommended)
@@ -518,7 +527,7 @@ import {
   IntegrationError,
   ConnectorError,
   NetworkError,
-} from 'hs-paylib';
+} from 'hyperswitch-prism';
 ```
 
 | Client | Methods |
@@ -614,7 +623,7 @@ const voidResponse = await client.void({
 ### Currency-Based Connector Routing
 
 ```typescript
-import { PaymentClient, types } from 'hs-paylib';
+import { PaymentClient, types } from 'hyperswitch-prism';
 
 const stripeClient = new PaymentClient({
   connectorConfig: { stripe: { apiKey: { value: process.env.STRIPE_API_KEY! } } }
@@ -680,7 +689,7 @@ async function pay(currency: string, amountMinor: number) {
 ### PayPal (Access Token Flow)
 
 ```typescript
-import { PaymentClient, MerchantAuthenticationClient, types } from 'hs-paylib';
+import { PaymentClient, MerchantAuthenticationClient, types } from 'hyperswitch-prism';
 
 const paypalConfig: types.ConnectorConfig = {
   connectorConfig: {
@@ -782,7 +791,7 @@ if (response.status === 8) { ... }                            // equivalent
 **Checking status safely:**
 
 ```typescript
-import { types } from 'hs-paylib';
+import { types } from 'hyperswitch-prism';
 
 const response = await client.authorize(request);
 
@@ -818,7 +827,7 @@ if (response.status === types.PaymentStatus.FAILURE) {
 The SDK raises exceptions **only for hard failures** (network errors, invalid configuration, serialization errors). Soft payment declines come back as an in-band `status: FAILURE` in the response body.
 
 ```typescript
-import { IntegrationError, ConnectorError, NetworkError, types } from 'hs-paylib';
+import { IntegrationError, ConnectorError, NetworkError, types } from 'hyperswitch-prism';
 
 try {
   const response = await client.authorize(request);
