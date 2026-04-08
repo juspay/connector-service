@@ -1301,7 +1301,7 @@ mod tests {
                     assertion_result: "FAIL".to_string(),
                     response_status: None,
                     error: Some("forced failure".to_string()),
-                    dependency: vec!["create_customer(create_customer)".to_string()],
+                    dependency: vec!["CustomerService/Create(CustomerService/Create)".to_string()],
                     req_body: Some(serde_json::json!({"field": "value"})),
                     res_body: Some(serde_json::json!({"error": "forced failure"})),
                     grpc_request: None,

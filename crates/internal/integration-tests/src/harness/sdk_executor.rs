@@ -2,9 +2,8 @@ use std::collections::HashMap;
 
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use grpc_api_types::payments::{
-    self, connector_specific_config, ffi_result, ConnectorError, ConnectorSpecificConfig,
-    Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, FfiResult,
-    IntegrationError,
+    self, ffi_result, ConnectorError, ConnectorSpecificConfig, Environment,
+    FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, FfiResult, IntegrationError,
 };
 use prost::Message;
 use reqwest::{blocking::Client, Method};
@@ -469,104 +468,18 @@ fn environment_discriminant(environment: Environment) -> i32 {
 /// ```json
 /// {"config":{"Stripe":{"api_key":"sk_test_..."}}}
 /// ```
-/// The `{"value":"..."}` wrappers are already unwrapped by
-/// `credentials::load_connector_config`, so we must NOT try to read `.value`.
-#[allow(clippy::indexing_slicing)] // serde_json::Value indexing returns Null, never panics
+/// This matches the serde representation of `ConnectorSpecificConfig` exactly,
+/// so we can deserialize directly — no per-connector match arms needed.
 fn build_proto_connector_config(
     connector: &str,
     connector_config: &ConnectorConfig,
 ) -> Result<ConnectorSpecificConfig, ScenarioError> {
-    // header_value() is {"config":{"<PascalConnector>":{...flat auth fields...}}}
-    let header_json: Value =
-        serde_json::from_str(connector_config.header_value()).map_err(|e| {
-            ScenarioError::SdkExecution {
-                message: format!("Failed to parse connector config JSON: {}", e),
-            }
-        })?;
-
-    // Navigate to the connector-specific auth object.
-    // pascal_name mirrors credentials::pascal_connector_name.
-    let pascal_name: String = {
-        let mut chars = connector.chars();
-        match chars.next() {
-            None => String::new(),
-            Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-        }
-    };
-    let auth = &header_json["config"][&pascal_name];
-
-    match connector {
-        "stripe" => {
-            let api_key = auth["api_key"]
-                .as_str()
-                .ok_or_else(|| ScenarioError::SdkExecution {
-                    message: "Missing api_key in stripe config".to_string(),
-                })?;
-            Ok(ConnectorSpecificConfig {
-                config: Some(connector_specific_config::Config::Stripe(
-                    payments::StripeConfig {
-                        api_key: Some(api_key.to_string().into()),
-                        base_url: None,
-                    },
-                )),
-            })
-        }
-        "authorizedotnet" => {
-            let name = auth["api_key"]
-                .as_str()
-                .ok_or_else(|| ScenarioError::SdkExecution {
-                    message: "Missing api_key in authorizedotnet config".to_string(),
-                })?;
-            let transaction_key =
-                auth["key1"]
-                    .as_str()
-                    .ok_or_else(|| ScenarioError::SdkExecution {
-                        message: "Missing key1 in authorizedotnet config".to_string(),
-                    })?;
-            Ok(ConnectorSpecificConfig {
-                config: Some(connector_specific_config::Config::Authorizedotnet(
-                    payments::AuthorizedotnetConfig {
-                        name: Some(name.to_string().into()),
-                        transaction_key: Some(transaction_key.to_string().into()),
-                        base_url: None,
-                    },
-                )),
-            })
-        }
-        "paypal" => {
-            // Support both field-name conventions (key1/client_id, api_key/client_secret, etc.)
-            let client_id = auth["key1"]
-                .as_str()
-                .or_else(|| auth["client_id"].as_str())
-                .ok_or_else(|| ScenarioError::SdkExecution {
-                    message: "Missing key1/client_id in paypal config".to_string(),
-                })?;
-            let client_secret = auth["api_key"]
-                .as_str()
-                .or_else(|| auth["client_secret"].as_str())
-                .ok_or_else(|| ScenarioError::SdkExecution {
-                    message: "Missing api_key/client_secret in paypal config".to_string(),
-                })?;
-            let payer_id = auth["api_secret"]
-                .as_str()
-                .or_else(|| auth["payer_id"].as_str())
-                .map(|s| s.to_string().into());
-            Ok(ConnectorSpecificConfig {
-                config: Some(connector_specific_config::Config::Paypal(
-                    payments::PaypalConfig {
-                        client_id: Some(client_id.to_string().into()),
-                        client_secret: Some(client_secret.to_string().into()),
-                        payer_id,
-                        base_url: None,
-                    },
-                )),
-            })
-        }
-        _ => Err(ScenarioError::CredentialLoad {
+    serde_json::from_str(connector_config.header_value()).map_err(|e| {
+        ScenarioError::CredentialLoad {
             connector: connector.to_string(),
-            message: "unsupported connector auth shape for SDK harness".to_string(),
-        }),
-    }
+            message: format!("failed to deserialize connector config: {e}"),
+        }
+    })
 }
 
 /// SDK environment selector (defaults to sandbox for safety).
