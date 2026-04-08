@@ -290,8 +290,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .payment_method_token
                     .as_ref()
-                    .and_then(|t| match t {
-                        PaymentMethodTokenFlow::Token(s) => Some(s.clone()),
+                    .map(|t| match t {
+                        PaymentMethodTokenFlow::Token(s) => s.clone(),
                     })
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
