@@ -740,8 +740,29 @@
     },
     "token_authorize": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Payment method not supported"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_tokenized_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "connector_token": "pm_1AbcXyzStripeTestToken",
+          "address": {
+            "billing_address": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://demo.ippayments.com.au/interface/api/dts.asmx",
+          "method": "Post",
+          "headers": {
+            "content-type": "text/xml",
+            "via": "HyperSwitch"
+          },
+          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:dts=\"http://www.ippayments.com.au/interface/api/dts\">\n<soapenv:Body>\n<dts:SubmitSinglePayment>\n<dts:trnXML><![CDATA[<Transaction><CustRef>probe_tokenized_txn_001</CustRef><Amount>1000</Amount><TrnType>1</TrnType><AccountNumber>probe_acct_num</AccountNumber><CreditCard Registered=\"False\"><CardNumber>pm_1AbcXyzStripeTestToken</CardNumber><ExpM/><ExpY/><CVN/><CardHolderName/></CreditCard><Security><UserName>probe_user</UserName><Password>probe_pass</Password></Security></Transaction>]]></dts:trnXML>\n</dts:SubmitSinglePayment>\n</soapenv:Body>\n</soapenv:Envelope>"
+        }
       }
     },
     "token_setup_recurring": {
