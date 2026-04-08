@@ -3,10 +3,11 @@
   "supported_suites": [
     "authorize",
     "capture",
-    "server_session_authentication_token",
+    "create_order",
     "get",
     "refund",
     "refund_sync",
+    "server_session_authentication_token",
     "void"
   ]
 }
