@@ -5,7 +5,8 @@
 .PHONY: help build build-all build-macos build-linux clean check-cargo generate install-deps \
         generate-rust generate-flows-python generate-flows-javascript generate-flows-java \
         test test-rust test-grpc test-python test-javascript test-java \
-        dist dist-python dist-javascript dist-java
+        dist dist-python dist-javascript dist-java \
+        publish-check-python publish-check-javascript publish-check-java publish-check
 
 # Default target
 .DEFAULT_GOAL := help
@@ -331,6 +332,22 @@ dist-javascript: build-ffi-lib ## Build FFI → Build JS npm package
 
 dist-java: build-ffi-lib ## Build FFI → Build Java JAR
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java dist
+
+# ---------------------------------------------------------------------------
+# Pre-publish check targets - delegate to SDK-specific publish-check
+# ---------------------------------------------------------------------------
+
+publish-check-python: ## Run Python SDK pre-publish checks
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python publish-check
+
+publish-check-javascript: ## Run JavaScript SDK pre-publish checks
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript publish-check
+
+publish-check-java: ## Run Java SDK pre-publish checks
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java publish-check
+
+publish-check: publish-check-python publish-check-javascript publish-check-java ## Run all SDK pre-publish checks
+	@echo "All SDK pre-publish checks passed."
 
 # ---------------------------------------------------------------------------
 # Clean - comprehensive cleanup across all SDKs

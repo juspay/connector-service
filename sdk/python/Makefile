@@ -1,5 +1,6 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package test-composite test-grpc test-grpc-no-server dist publish clean
+        generate-flows pack-archive install test-package test-composite test-grpc test-grpc-no-server dist publish clean \
+        publish-check-auth publish-check-version publish-check-dry-run publish-check
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -309,6 +310,52 @@ publish: pack-archive
 	@python3 -m pip install twine --quiet
 	@python3 -m twine upload $(WHEEL_FILE)
 	@echo "Published hyperswitch-prism to PyPI."
+
+# ---------------------------------------------------------------------------
+# Pre-publish checks
+# ---------------------------------------------------------------------------
+
+# publish-check-auth
+# Verifies that TWINE_USERNAME and TWINE_PASSWORD environment variables are set.
+publish-check-auth:
+	@if [ -z "$(TWINE_USERNAME)" ]; then \
+		echo "Error: TWINE_USERNAME is not set"; \
+		exit 1; \
+	fi
+	@if [ -z "$(TWINE_PASSWORD)" ]; then \
+		echo "Error: TWINE_PASSWORD is not set"; \
+		exit 1; \
+	fi
+	@echo "PyPI authentication credentials are configured."
+
+# publish-check-version
+# Checks if $(PACKAGE_VERSION) already exists on PyPI.
+# Exits with error if version already exists (prevents accidental republish).
+publish-check-version:
+	@echo "Checking if hyperswitch-prism $(PACKAGE_VERSION) exists on PyPI..."
+	@if curl -s https://pypi.org/pypi/hyperswitch-prism/json | \
+		python3 -c "import sys, json; data=json.load(sys.stdin); versions=list(data.get('releases', {}).keys()); exit(0 if '$(PACKAGE_VERSION)' in versions else 1)" 2>/dev/null; then \
+		echo "Error: Version $(PACKAGE_VERSION) already exists on PyPI"; \
+		echo "Increment the version in pyproject.toml before publishing."; \
+		exit 1; \
+	fi
+	@echo "Version $(PACKAGE_VERSION) does not exist on PyPI - OK to publish."
+
+# publish-check-dry-run
+# Validates the distribution package without publishing.
+# Uses twine check to verify wheel metadata and lists wheel contents.
+publish-check-dry-run: pack-archive
+	@echo "Validating wheel package..."
+	@python3 -m pip install twine --quiet 2>/dev/null || true
+	@python3 -m twine check $(WHEEL_FILE)
+	@echo "Wheel contents:"
+	@python3 -m zipfile -l $(WHEEL_FILE) | head -20
+	@echo "Dry-run validation passed."
+
+# publish-check
+# Runs all pre-publish checks in sequence.
+publish-check: publish-check-auth publish-check-version publish-check-dry-run
+	@echo "All Python pre-publish checks passed."
 
 clean:
 	@rm -rf $(GENERATED_OUT)

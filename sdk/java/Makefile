@@ -1,5 +1,6 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package test-grpc test-grpc-no-server dist publish clean
+        generate-flows pack-archive install test-package test-grpc test-grpc-no-server dist publish clean \
+        publish-check-auth publish-check-version publish-check-dry-run publish-check
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -235,6 +236,53 @@ publish: pack-archive
 	@echo "Publishing hyperswitch-prism to Maven Central..."
 	@$(SDK_ROOT)/gradlew publish
 	@echo "Published com.hyperswitch:hyperswitch-prism to Maven Central."
+
+# ---------------------------------------------------------------------------
+# Pre-publish checks
+# ---------------------------------------------------------------------------
+
+MAVEN_GROUP := com.hyperswitch
+MAVEN_ARTIFACT := hyperswitch-prism
+
+# publish-check-auth
+# Verifies that OSSRH_USERNAME and OSSRH_PASSWORD environment variables are set.
+publish-check-auth:
+	@if [ -z "$(OSSRH_USERNAME)" ]; then \
+		echo "Error: OSSRH_USERNAME is not set"; \
+		exit 1; \
+	fi
+	@if [ -z "$(OSSRH_PASSWORD)" ]; then \
+		echo "Error: OSSRH_PASSWORD is not set"; \
+		exit 1; \
+	fi
+	@echo "Maven Central (OSSRH) authentication credentials are configured."
+
+# publish-check-version
+# Checks if $(PACKAGE_VERSION) already exists on Maven Central.
+# Uses Maven Central REST API to check for existing artifact POM.
+publish-check-version:
+	@echo "Checking if $(MAVEN_GROUP):$(MAVEN_ARTIFACT):$(PACKAGE_VERSION) exists on Maven Central..."
+	@POM_URL="https://repo1.maven.org/maven2/$(subst .,/,$(MAVEN_GROUP))/$(MAVEN_ARTIFACT)/$(PACKAGE_VERSION)/$(MAVEN_ARTIFACT)-$(PACKAGE_VERSION).pom"; \
+	if curl -s -f -I "$$POM_URL" >/dev/null 2>&1; then \
+		echo "Error: Version $(PACKAGE_VERSION) already exists on Maven Central"; \
+		echo "Increment the version in build.gradle.kts before publishing."; \
+		exit 1; \
+	fi
+	@echo "Version $(PACKAGE_VERSION) does not exist on Maven Central - OK to publish."
+
+# publish-check-dry-run
+# Simulates publish by publishing to local Maven repository (~/.m2).
+publish-check-dry-run: pack-archive
+	@echo "Publishing to local Maven repository (~/.m2)..."
+	@$(SDK_ROOT)/gradlew publishToMavenLocal
+	@echo "Local Maven contents:"
+	@ls -la ~/.m2/repository/$(subst .,/,$(MAVEN_GROUP))/$(MAVEN_ARTIFACT)/$(PACKAGE_VERSION)/ 2>/dev/null || echo "  (not found)"
+	@echo "Dry-run validation passed."
+
+# publish-check
+# Runs all pre-publish checks in sequence.
+publish-check: publish-check-auth publish-check-version publish-check-dry-run
+	@echo "All Java pre-publish checks passed."
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)

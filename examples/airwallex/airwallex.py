@@ -48,14 +48,14 @@ def _build_authorize_request(capture_method: str):
             },
             "auth_type": "NO_THREE_DS",  # Authentication Details.
             "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks.
-            "merchant_order_id": "probe_order_001",
             "state": {  # State Information.
                 "access_token": {  # Access token obtained from connector.
                     "token": {"value": "probe_access_token"},  # The token string.
                     "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch).
                     "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
                 }
-            }
+            },
+            "connector_order_id": "connector_order_id"  # Send the connector order identifier here if an order was created before authorize.
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )
@@ -155,7 +155,7 @@ def _build_proxy_authorize_request():
                     "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
                 }
             },
-            "merchant_order_id": "probe_order_001"
+            "connector_order_id": "connector_order_id"  # Send the connector order identifier here if an order was created before authorize.
         },
         payment_pb2.PaymentServiceProxyAuthorizeRequest(),
     )
