@@ -15,7 +15,10 @@ use domain_types::{
         ResponseId,
     },
     payment_method_data::{BankDebitData, CardToken, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenEnum, PaysafePaymentMethodDetails},
+    router_data::{
+        ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenEnum,
+        PaysafePaymentMethodDetails,
+    },
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -292,8 +295,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .payment_method_token
                         .as_ref()
-                        .and_then(|t| match t {
-                            PaymentMethodTokenEnum::Token(s) => Some(s.clone()),
+                        .map(|t| match t {
+                            PaymentMethodTokenEnum::Token(s) => s.clone(),
                         })
                         .ok_or_else(|| {
                             error_stack::report!(IntegrationError::MissingRequiredField {
