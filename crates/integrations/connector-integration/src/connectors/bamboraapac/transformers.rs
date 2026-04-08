@@ -493,8 +493,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .payment_method_token
                     .as_ref()
-                    .and_then(|t| match t {
-                        PaymentMethodToken::Token(s) => Some(s.clone()),
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
                     })
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
@@ -526,10 +526,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     _phantom: std::marker::PhantomData,
                 })
             }
-            _ => Err(IntegrationError::not_implemented(
-                "Payment method not supported".to_string(),
-            )
-            .into()),
+            _ => Err(
+                IntegrationError::not_implemented("Payment method not supported".to_string())
+                    .into(),
+            ),
         }
     }
 }
