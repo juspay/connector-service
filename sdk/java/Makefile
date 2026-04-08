@@ -120,7 +120,7 @@ pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
 	@rm -f $(PACKAGE_DIR)/hyperswitch-prism-*.jar
-	@cp $(SDK_ROOT)/build/libs/hyperswitch-payments-$(PACKAGE_VERSION).jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
+	@cp $(SDK_ROOT)/build/libs/hyperswitch-prism-$(PACKAGE_VERSION).jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
