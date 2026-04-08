@@ -50,8 +50,8 @@ tasks.register<JavaExec>("runClientSanity") {
 publishing {
     publications {
         create<MavenPublication>("maven") {
-            groupId = "com.hyperswitch"
-            artifactId = "hyperswitch-prism"
+            groupId = "io.hyperswitch"
+            artifactId = "prism"
             from(components["java"])
         }
     }

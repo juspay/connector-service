@@ -126,7 +126,7 @@ pack-archive:
 # install
 # Builds the SDK JAR and publishes it to the local Maven repository (~/.m2)
 # so that other projects on this machine can depend on it via Maven coordinates
-# (com.hyperswitch:payments-client:0.1.0).
+# (io.hyperswitch:prism:0.1.0).
 # ---------------------------------------------------------------------------
 install: pack-archive
 	@$(SDK_ROOT)/gradlew publishToMavenLocal
@@ -218,14 +218,14 @@ publish: pack-archive
 	fi
 	@echo "Publishing hyperswitch-prism to Maven Central..."
 	@$(SDK_ROOT)/gradlew publish
-	@echo "Published com.hyperswitch:hyperswitch-prism to Maven Central."
+	@echo "Published io.hyperswitch:prism to Maven Central."
 
 # ---------------------------------------------------------------------------
 # Pre-publish checks
 # ---------------------------------------------------------------------------
 
-MAVEN_GROUP := com.hyperswitch
-MAVEN_ARTIFACT := hyperswitch-prism
+MAVEN_GROUP := io.hyperswitch
+MAVEN_ARTIFACT := prism
 
 # publish-check-auth
 # Verifies that OSSRH_USERNAME and OSSRH_PASSWORD environment variables are set.
