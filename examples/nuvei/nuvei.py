@@ -83,16 +83,16 @@ def _build_capture_request(connector_transaction_id: str):
         payment_pb2.PaymentServiceCaptureRequest(),
     )
 
-def _build_create_order_request():
+def _build_create_client_authentication_token_request():
     return ParseDict(
         {
-            "merchant_order_id": "probe_order_001",  # Identification.
-            "amount": {  # Amount Information.
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            "merchant_client_session_id": "probe_sdk_session_001",  # Infrastructure.
+            "domain_context": {
+                "minor_amount": 1000,
+                "currency": "USD"
             }
         },
-        payment_pb2.PaymentServiceCreateOrderRequest(),
+        payment_pb2.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest(),
     )
 
 def _build_create_server_session_authentication_token_request():
@@ -287,11 +287,11 @@ async def capture(merchant_transaction_id: str, config: sdk_config_pb2.Connector
     return {"status": capture_response.status}
 
 
-async def create_order(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.CreateOrder"""
-    payment_client = PaymentClient(config)
+async def create_client_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: MerchantAuthenticationService.CreateClientAuthenticationToken"""
+    merchantauthentication_client = MerchantAuthenticationClient(config)
 
-    create_response = await payment_client.create_order(_build_create_order_request())
+    create_response = await merchantauthentication_client.create_client_authentication_token(_build_create_client_authentication_token_request())
 
     return {"status": create_response.status}
 
