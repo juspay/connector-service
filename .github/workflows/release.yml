@@ -236,6 +236,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download binaries
         uses: actions/download-artifact@v4
         with:
@@ -459,6 +463,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download SDK artifacts
         uses: actions/download-artifact@v4
         with:
