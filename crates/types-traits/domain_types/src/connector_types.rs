@@ -1488,7 +1488,6 @@ pub struct PaymentCreateOrderData {
 
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
-    pub order_id: String,
     /// Merchant's order ID from the original request
     pub merchant_order_id: Option<String>,
     /// Connector-generated order ID  

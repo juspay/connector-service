@@ -267,7 +267,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         }
 
         let order_response = PaymentCreateOrderResponse {
-            order_id: response.id.clone(),
             merchant_order_id: None,
             connector_order_id: Some(response.id.clone()),
             session_data: None,

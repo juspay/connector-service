@@ -31,6 +31,7 @@ use super::NoonRouterData;
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
 const GOOGLEPAY_API_VERSION_MINOR: u8 = 0;
 const GOOGLEPAY_API_VERSION: u8 = 2;
+const DEFAULT_ORDER_DESCRIPTION: &str = "Order payment";
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -1765,7 +1766,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .description
             .as_deref()
-            .unwrap_or("Order payment")
+            .unwrap_or(DEFAULT_ORDER_DESCRIPTION)
             .trim()
             .replace("  ", " ")
             .chars()
@@ -1829,7 +1830,6 @@ impl TryFrom<ResponseRouterData<NoonCreateOrderResponse, Self>>
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentCreateOrderResponse {
-                order_id: order.id.to_string(),
                 merchant_order_id: item.router_data.request.merchant_order_id.clone(),
                 connector_order_id: Some(order.id.to_string()),
                 session_data: None,

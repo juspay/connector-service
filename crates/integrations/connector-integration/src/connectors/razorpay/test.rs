@@ -1820,8 +1820,8 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            result.response.unwrap().order_id,
-            "order_QMrTOdLWvEHsXz".to_string()
+            result.response.unwrap().connector_order_id,
+            Some("order_QMrTOdLWvEHsXz".to_string())
         );
     }
 

@@ -1195,7 +1195,6 @@ impl TryFrom<ResponseRouterData<PaymeGenerateSaleResponse, Self>>
         } else {
             // Success response
             let order_response = PaymentCreateOrderResponse {
-                order_id: response.payme_sale_id.clone(),
                 merchant_order_id: None,
                 connector_order_id: Some(response.payme_sale_id.clone()),
                 session_data: None,

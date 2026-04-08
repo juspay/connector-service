@@ -516,7 +516,6 @@ impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
 
     fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
-            order_id: response.payment_session_id.clone(),
             merchant_order_id: None,
             connector_order_id: Some(response.payment_session_id),
             session_data: None,
@@ -541,8 +540,8 @@ impl TryFrom<ResponseRouterData<CashfreeOrderCreateResponse, Self>>
         let response = item.response;
         let order_response = PaymentCreateOrderResponse::try_from(response)?;
 
-        // Extract order_id before moving order_response
-        let order_id = order_response.order_id.clone();
+        // Extract connector_order_id before moving order_response
+        let connector_order_id = order_response.connector_order_id.clone();
 
         Ok(Self {
             response: Ok(order_response),
@@ -550,8 +549,8 @@ impl TryFrom<ResponseRouterData<CashfreeOrderCreateResponse, Self>>
                 // Update status to indicate successful order creation
                 status: common_enums::AttemptStatus::Pending,
                 // Set connector_order_id to the payment_session_id for use in authorize flow
-                reference_id: Some(order_id.clone()),
-                connector_order_id: Some(order_id),
+                reference_id: connector_order_id.clone(),
+                connector_order_id,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data

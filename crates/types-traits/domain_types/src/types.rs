@@ -3958,7 +3958,6 @@ pub fn generate_create_order_response(
 
     let response = match transaction_response {
         Ok(PaymentCreateOrderResponse {
-            order_id: _,
             merchant_order_id,
             connector_order_id,
             session_data,
