@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L214) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L114) · [Rust](../../examples/billwerk/billwerk.rs#L209)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L254) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L114) · [Rust](../../examples/billwerk/billwerk.rs#L244)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,25 +122,25 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L233) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L130) · [Rust](../../examples/billwerk/billwerk.rs#L225)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L273) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L130) · [Rust](../../examples/billwerk/billwerk.rs#L260)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L258) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L152) · [Rust](../../examples/billwerk/billwerk.rs#L248)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L298) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L152) · [Rust](../../examples/billwerk/billwerk.rs#L283)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L283) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L174) · [Rust](../../examples/billwerk/billwerk.rs#L271)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L323) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L174) · [Rust](../../examples/billwerk/billwerk.rs#L306)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L305) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L193) · [Rust](../../examples/billwerk/billwerk.rs#L290)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L345) · [JavaScript](../../examples/billwerk/billwerk.js) · [Kotlin](../../examples/billwerk/billwerk.kt#L193) · [Rust](../../examples/billwerk/billwerk.rs#L325)
 
 ## API Reference
 
@@ -154,6 +154,8 @@ Retrieve current payment status from the connector.
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
 | [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
+| [PaymentService.TokenAuthorize](#paymentservicetokenauthorize) | Payments | `PaymentServiceTokenAuthorizeRequest` |
+| [PaymentService.TokenSetupRecurring](#paymentservicetokensetuprecurring) | Payments | `PaymentServiceTokenSetupRecurringRequest` |
 | [PaymentMethodService.Tokenize](#paymentmethodservicetokenize) | Payments | `PaymentMethodServiceTokenizeRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
@@ -452,7 +454,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L327) · [TypeScript](../../examples/billwerk/billwerk.ts#L306) · [Kotlin](../../examples/billwerk/billwerk.kt#L211) · [Rust](../../examples/billwerk/billwerk.rs#L308)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L367) · [TypeScript](../../examples/billwerk/billwerk.ts#L345) · [Kotlin](../../examples/billwerk/billwerk.kt#L211) · [Rust](../../examples/billwerk/billwerk.rs#L343)
 
 #### PaymentService.Capture
 
@@ -463,7 +465,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L336) · [TypeScript](../../examples/billwerk/billwerk.ts#L315) · [Kotlin](../../examples/billwerk/billwerk.kt#L223) · [Rust](../../examples/billwerk/billwerk.rs#L320)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L376) · [TypeScript](../../examples/billwerk/billwerk.ts#L354) · [Kotlin](../../examples/billwerk/billwerk.kt#L223) · [Rust](../../examples/billwerk/billwerk.rs#L355)
 
 #### PaymentService.Get
 
@@ -474,7 +476,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L354) · [TypeScript](../../examples/billwerk/billwerk.ts#L333) · [Kotlin](../../examples/billwerk/billwerk.kt#L249) · [Rust](../../examples/billwerk/billwerk.rs#L334)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L385) · [TypeScript](../../examples/billwerk/billwerk.ts#L363) · [Kotlin](../../examples/billwerk/billwerk.kt#L233) · [Rust](../../examples/billwerk/billwerk.rs#L362)
 
 #### PaymentService.Refund
 
@@ -485,7 +487,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L372) · [TypeScript](../../examples/billwerk/billwerk.ts#L351) · [Kotlin](../../examples/billwerk/billwerk.kt#L288) · [Rust](../../examples/billwerk/billwerk.rs#L348)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L403) · [TypeScript](../../examples/billwerk/billwerk.ts#L381) · [Kotlin](../../examples/billwerk/billwerk.kt#L272) · [Rust](../../examples/billwerk/billwerk.rs#L376)
 
 #### PaymentService.SetupRecurring
 
@@ -496,7 +498,29 @@ Configure a payment method for recurring billing. Sets up the mandate and paymen
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L390) · [TypeScript](../../examples/billwerk/billwerk.ts#L369) · [Kotlin](../../examples/billwerk/billwerk.kt#L310) · [Rust](../../examples/billwerk/billwerk.rs#L362)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L421) · [TypeScript](../../examples/billwerk/billwerk.ts#L399) · [Kotlin](../../examples/billwerk/billwerk.kt#L294) · [Rust](../../examples/billwerk/billwerk.rs#L390)
+
+#### PaymentService.TokenAuthorize
+
+Authorize using a connector-issued payment method token.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceTokenAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
+
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L430) · [TypeScript](../../examples/billwerk/billwerk.ts#L408) · [Kotlin](../../examples/billwerk/billwerk.kt#L334) · [Rust](../../examples/billwerk/billwerk.rs#L400)
+
+#### PaymentService.TokenSetupRecurring
+
+Setup a recurring mandate using a connector token.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceTokenSetupRecurringRequest` |
+| **Response** | `PaymentServiceSetupRecurringResponse` |
+
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L439) · [TypeScript](../../examples/billwerk/billwerk.ts#L417) · [Kotlin](../../examples/billwerk/billwerk.kt#L355) · [Rust](../../examples/billwerk/billwerk.rs#L407)
 
 #### PaymentMethodService.Tokenize
 
@@ -507,7 +531,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L399) · [TypeScript](../../examples/billwerk/billwerk.ts#L378) · [Kotlin](../../examples/billwerk/billwerk.kt#L350) · [Rust](../../examples/billwerk/billwerk.rs#L372)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L448) · [TypeScript](../../examples/billwerk/billwerk.ts#L426) · [Kotlin](../../examples/billwerk/billwerk.kt#L391) · [Rust](../../examples/billwerk/billwerk.rs#L414)
 
 #### PaymentService.Void
 
@@ -518,7 +542,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L408) · [TypeScript](../../examples/billwerk/billwerk.ts) · [Kotlin](../../examples/billwerk/billwerk.kt#L376) · [Rust](../../examples/billwerk/billwerk.rs#L379)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L457) · [TypeScript](../../examples/billwerk/billwerk.ts) · [Kotlin](../../examples/billwerk/billwerk.kt#L417) · [Rust](../../examples/billwerk/billwerk.rs#L421)
 
 ### Refunds
 
@@ -531,7 +555,7 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L381) · [TypeScript](../../examples/billwerk/billwerk.ts#L360) · [Kotlin](../../examples/billwerk/billwerk.kt#L298) · [Rust](../../examples/billwerk/billwerk.rs#L355)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L412) · [TypeScript](../../examples/billwerk/billwerk.ts#L390) · [Kotlin](../../examples/billwerk/billwerk.kt#L282) · [Rust](../../examples/billwerk/billwerk.rs#L383)
 
 ### Mandates
 
@@ -544,7 +568,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/billwerk/billwerk.py#L363) · [TypeScript](../../examples/billwerk/billwerk.ts#L342) · [Kotlin](../../examples/billwerk/billwerk.kt#L257) · [Rust](../../examples/billwerk/billwerk.rs#L341)
+**Examples:** [Python](../../examples/billwerk/billwerk.py#L394) · [TypeScript](../../examples/billwerk/billwerk.ts#L372) · [Kotlin](../../examples/billwerk/billwerk.kt#L241) · [Rust](../../examples/billwerk/billwerk.rs#L369)
 
 ### Authentication
 
