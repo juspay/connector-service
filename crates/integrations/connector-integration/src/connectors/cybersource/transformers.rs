@@ -13,17 +13,20 @@ use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRoute
 use cards;
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, PostAuthenticate, PreAuthenticate, RepeatPayment,
-        SetupMandate, Void,
+        Authenticate, Authorize, Capture, ClientAuthenticationToken, PostAuthenticate,
+        PreAuthenticate, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
+        CybersourceClientAuthenticationResponse as CybersourceClientAuthenticationResponseDomain,
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RecurringMandateData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_address::Address,
     payment_method_data::{
         self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
@@ -2205,7 +2208,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
                             field_name: "payment_method_token",
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                additional_context: Some(
+                                    "Cybersource CardToken flow requires a transient token JWT obtained from the Flex Microform session (capture_context)"
+                                        .to_string(),
+                                ),
+                                doc_url: Some(
+                                    "https://developer.cybersource.com/docs/cybs/en-us/digital-accept-flex/developer/all/rest/digital-accept-flex/microform-integ-v2.html"
+                                        .to_string(),
+                                ),
+                                ..Default::default()
+                            },
                         })
                     })?;
 
@@ -5074,14 +5087,17 @@ fn convert_metadata_to_merchant_defined_info(
 
 // ---- ClientAuthenticationToken flow types ----
 
-use domain_types::{
-    connector_flow::ClientAuthenticationToken,
-    connector_types::{
-        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
-        CybersourceClientAuthenticationResponse as CybersourceClientAuthenticationResponseDomain,
-    },
-};
+#[derive(Debug, Serialize)]
+pub enum CybersourceFlexCardNetwork {
+    #[serde(rename = "VISA")]
+    Visa,
+    #[serde(rename = "MASTERCARD")]
+    Mastercard,
+    #[serde(rename = "AMEX")]
+    AmericanExpress,
+    #[serde(rename = "DISCOVER")]
+    Discover,
+}
 
 /// Creates a Cybersource Flex Microform session for client-side tokenization.
 /// The capture_context JWT is returned to the frontend for Flex Microform SDK initialization.
@@ -5091,7 +5107,7 @@ use domain_types::{
 pub struct CybersourceClientAuthRequest {
     pub target_origins: Vec<String>,
     pub client_version: String,
-    pub allowed_card_networks: Option<Vec<String>>,
+    pub allowed_card_networks: Option<Vec<CybersourceFlexCardNetwork>>,
     pub fields: serde_json::Value,
 }
 
@@ -5126,27 +5142,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .return_url
             .clone()
-            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "Cybersource Flex Microform requires a return_url to set target_origins for the session"
+                            .to_string(),
+                    ),
+                    doc_url: Some(
+                        "https://developer.cybersource.com/docs/cybs/en-us/digital-accept-flex/developer/all/rest/digital-accept-flex/microform-integ-v2.html"
+                            .to_string(),
+                    ),
+                    ..Default::default()
+                },
+            })?;
 
         // Extract the origin from the return_url for target_origins
         let target_origin = url::Url::parse(&return_url)
-            .map(|u| {
-                format!(
-                    "{}://{}",
-                    u.scheme(),
-                    u.host_str().unwrap_or("hyperswitch.io")
-                )
-            })
-            .unwrap_or_else(|_| "https://hyperswitch.io".to_string());
+            .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or_default()))
+            .unwrap_or(return_url);
 
         Ok(Self {
             target_origins: vec![target_origin],
             client_version: "0.11".to_string(),
             allowed_card_networks: Some(vec![
-                "VISA".to_string(),
-                "MASTERCARD".to_string(),
-                "AMEX".to_string(),
-                "DISCOVER".to_string(),
+                CybersourceFlexCardNetwork::Visa,
+                CybersourceFlexCardNetwork::Mastercard,
+                CybersourceFlexCardNetwork::AmericanExpress,
+                CybersourceFlexCardNetwork::Discover,
             ]),
             fields: serde_json::json!({
                 "paymentInformation": {
@@ -5200,15 +5223,16 @@ impl<'de> Deserialize<'de> for CybersourceClientAuthResponse {
             ) -> Result<Self::Value, A::Error> {
                 let mut key_id = None;
                 while let Some(key) = map.next_key::<String>()? {
-                    if key == "keyId" {
-                        key_id = Some(map.next_value::<String>()?);
-                    } else {
-                        let _ = map.next_value::<serde_json::Value>()?;
+                    match key.as_str() {
+                        "keyId" => key_id = Some(map.next_value()?),
+                        _ => {
+                            let _: serde_json::Value = map.next_value()?;
+                        }
                     }
                 }
-                Ok(CybersourceClientAuthResponse {
-                    capture_context: key_id.unwrap_or_default(),
-                })
+                let capture_context =
+                    key_id.ok_or_else(|| serde::de::Error::missing_field("keyId"))?;
+                Ok(CybersourceClientAuthResponse { capture_context })
             }
         }
 
