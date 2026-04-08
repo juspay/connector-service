@@ -3958,7 +3958,7 @@ pub fn generate_create_order_response(
 
     let response = match transaction_response {
         Ok(PaymentCreateOrderResponse {
-            order_id,
+            order_id: _,
             merchant_order_id,
             connector_order_id,
             session_data,
@@ -3968,7 +3968,7 @@ pub fn generate_create_order_response(
                 .transpose()?;
 
             PaymentServiceCreateOrderResponse {
-                connector_order_id: connector_order_id.or(Some(order_id.clone())),
+                connector_order_id,
                 status: grpc_status.into(),
                 error: None,
                 status_code: 200,

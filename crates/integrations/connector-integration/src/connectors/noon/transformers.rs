@@ -1764,8 +1764,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let name: String = item
             .resource_common_data
             .description
-            .clone()
-            .unwrap_or_else(|| "Order payment".to_string())
+            .as_deref()
+            .unwrap_or("Order payment")
             .trim()
             .replace("  ", " ")
             .chars()
