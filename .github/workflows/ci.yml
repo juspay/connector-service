@@ -274,6 +274,10 @@ jobs:
             echo "Using cached FFI library: $LIB_PATH"
           fi
 
+      - name: Generate SDK code (flows.json and harnesses)
+        shell: bash
+        run: make -C sdk generate FFI_SKIP_BUILD=1
+
       - name: Run SDK Tests
         shell: bash
         run: |
@@ -283,11 +287,12 @@ jobs:
             echo "Running SDK tests without connector credentials (dry-run mode)"
           fi
           # Skip FFI rebuild during test - already built above
+          # Note: flows.json must be generated before running tests
           make -C sdk test FFI_SKIP_BUILD=1
 
-      - name: Regenerate SDK code
+      - name: Verify SDK code regeneration produces no changes
         shell: bash
-        run: make -C sdk generate
+        run: make -C sdk generate FFI_SKIP_BUILD=1
 
       - name: Check for uncommitted changes
         shell: bash
