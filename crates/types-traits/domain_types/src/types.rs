@@ -543,7 +543,7 @@ impl Connectors {
             _ => {
                 // Connector not supported for URL patching - return error
                 return Err(IntegrationError::InvalidDataFormat {
-                    field_name: "connector", 
+                    field_name: "connector",
                     context: IntegrationErrorContext {
                         additional_context: Some(format!(
                             "Connector '{}' is not supported for dynamic URL patching from superposition. \
@@ -9770,6 +9770,19 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Globalpay(globalpay_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Globalpay(
+                        grpc_api_types::payments::GlobalpayClientAuthenticationResponse {
+                            access_token: Some(globalpay_data.access_token),
+                            token_type: globalpay_data.token_type,
+                            expires_in: globalpay_data.expires_in,
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(
@@ -11606,7 +11619,7 @@ pub fn tokenized_authorize_to_base(
         payment_method: Some(grpc_payment_types::PaymentMethod {
             payment_method: Some(grpc_payment_types::payment_method::PaymentMethod::Token(
                 grpc_payment_types::TokenPaymentMethodType {
-                    token: v.connector_token,
+                    token: v.connector_token.clone(),
                 },
             )),
         }),
