@@ -54,8 +54,21 @@ impl ConnectorOverride for TokenPaymentMethodOverride {
             return;
         }
 
+        // Keep only the token variant.
         let token_value = pm.remove("token").expect("key confirmed present above");
         pm.retain(|_, _| false);
         pm.insert("token".to_string(), token_value);
+
+        // normalize_proto_oneof_shapes already ran (it skipped wrapping because
+        // there were multiple variants). Now that we have exactly one variant,
+        // re-apply the oneof wrapping so the proto shape is correct:
+        // {"token": {...}} → {"payment_method": {"token": {...}}}
+        let original = std::mem::take(pm);
+        let Some((variant, payload)) = original.into_iter().next() else {
+            return;
+        };
+        let mut oneof_obj = serde_json::Map::new();
+        oneof_obj.insert(variant, payload);
+        pm.insert("payment_method".to_string(), Value::Object(oneof_obj));
     }
 }
