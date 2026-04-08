@@ -13,10 +13,10 @@ The library works end-to-end and successfully routes payments to Stripe and Adye
 
 | # | Friction Pattern | Criticality |
 |---|-----------------|-------------|
-| 1 | **No PyPI page** — JavaScript wall blocks content discovery | HIGH |
+| 1 | **README documents a dict-based API that does not exist** — actual API is proto-based | HIGH |
 | 2 | **Proto enum integers** returned from SDK instead of human-readable strings | HIGH |
 | 3 | **Adyen refund reason** silently breaks with `snake_case` values | HIGH |
-| 4 | **No SDK-level docs** — credential structure guessable only from example files | MEDIUM |
+| 4 | **Credential structure not documented** — guessable only via proto introspection or example files | MEDIUM |
 | 5 | **Mixed enum namespaces** for status decoding (PaymentStatus vs RefundStatus) | MEDIUM |
 
 ---
@@ -25,7 +25,7 @@ The library works end-to-end and successfully routes payments to Stripe and Adye
 
 | Priority | Recommendation |
 |----------|---------------|
-| **CRITICAL** | Fix PyPI page to serve content without requiring JavaScript. Currently completely opaque to scrapers, AI agents, and users with JS disabled. |
+| **CRITICAL** | Fix the README / PyPI `METADATA` to show the actual proto-based API. The current Quick Start shows a dict-based `{"connectorConfig": {"stripe": ...}}` API and a `types` module that do not exist in the installed package. Any integrator starting from the docs will immediately hit `TypeError` or `ImportError`. |
 | **HIGH** | SDK clients should return human-readable status strings (or named enum objects), not raw protobuf integers. The integer `8` is meaningless without cross-referencing the proto descriptor. |
 | **HIGH** | Document connector-specific field requirements (e.g. Adyen `reason` valid values) in one place — not buried in connector API docs. Include in the SDK's own docstrings or type annotations. |
 | **MEDIUM** | Provide a `ConnectorConfig` factory / builder per connector: `StripeConfig.from_api_key(key)`, `AdyenConfig.from_creds(key, merchant)`. Current API requires deep knowledge of proto nesting. |
@@ -38,11 +38,42 @@ The library works end-to-end and successfully routes payments to Stripe and Adye
 
 ### Step 1 — Discover the library (friction: HIGH)
 
-**Action:** Navigate to `https://pypi.org/project/hs-paylib/0.0.4/` to understand the library.  
-**Outcome:** PyPI page returns a JavaScript challenge / blank page. Zero information was returned.  
-**Time wasted:** ~5 minutes attempting multiple fetch strategies.  
-**Resolution:** Fell back to GitHub examples at `https://github.com/juspay/hyperswitch-prism/tree/main/examples`. Discovered Python examples for Stripe (`stripe.py`) and Adyen (`adyen.py`) by browsing the directory tree.  
-**Assumption:** Library is the Python SDK for the Hyperswitch UCS connector-service, using gRPC/protobuf under the hood, exported over HTTP via an internal FFI layer.
+**Action:** Navigate to `https://pypi.org/project/hs-paylib/0.0.4/` and read the README to understand the API.  
+**Outcome:** The PyPI README documents a **dict-based API and a `types` module that do not exist** in the installed package. Specifically:
+
+```python
+# README says this works — it does not:
+from payments import PaymentClient, types
+
+stripe_config: types.ConnectorConfig = {      # types module doesn't exist
+    "connectorConfig": {                       # dict config doesn't work
+        "stripe": {
+            "apiKey": {"value": "sk_test_..."}
+        }
+    }
+}
+client = PaymentClient(stripe_config)
+response = client.authorize(request_dict)
+print(response.status)  # README implies string — actually returns int
+```
+
+The actual API is proto-based and requires:
+```python
+from payments import PaymentClient, SecretString
+from payments.generated import sdk_config_pb2, payment_pb2
+
+cfg = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX)
+)
+cfg.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+    stripe=payment_pb2.StripeConfig(api_key=SecretString(value="sk_test_..."))
+))
+client = PaymentClient(cfg)
+```
+
+**Time wasted:** ~5 minutes attempting to use the documented dict-based API before hitting `TypeError`, then switching to proto introspection.  
+**Resolution:** Used `python3 -c "import payments; print(dir(payments))"` and `DESCRIPTOR.fields` introspection to discover the real proto structure. Also consulted GitHub examples at `https://github.com/juspay/hyperswitch-prism/tree/main/examples`.  
+**Assumption:** Library is the Python SDK for the Hyperswitch UCS connector-service, using protobuf for serialization and httpx for HTTP transport.
 
 ---
 
@@ -160,7 +191,7 @@ All 4 test cases: **PASS**
 
 | Activity | Time |
 |---------|------|
-| PyPI page discovery failure | 5 min |
+| README API mismatch (dict vs proto) | 5 min |
 | Credential structure reverse-engineering | 10 min |
 | Status integer comparison debugging | 15 min |
 | Adyen refund reason validation error | 10 min |
