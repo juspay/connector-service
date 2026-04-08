@@ -438,6 +438,7 @@ pub struct PaymentFlowData {
     pub access_token: Option<ServerAuthenticationTokenResponseData>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
+    pub connector_order_id: Option<String>,
     pub payment_method_token: Option<PaymentMethodToken>,
     pub preprocessing_id: Option<String>,
     ///for switching between two different versions of the same connector
@@ -2943,6 +2944,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 }
                 payment_method_data::BankRedirectData::Eft { .. } => Self::Eft,
                 payment_method_data::BankRedirectData::OpenBanking {} => Self::OpenBanking,
+                payment_method_data::BankRedirectData::Netbanking { .. } => Self::Netbanking,
             },
             PaymentMethodData::BankDebit(bank_debit_data) => match bank_debit_data {
                 payment_method_data::BankDebitData::AchBankDebit { .. } => Self::AchBankDebit,
@@ -3430,8 +3432,42 @@ pub enum ClientAuthenticationTokenData {
 pub enum ConnectorSpecificClientAuthenticationResponse {
     /// Stripe SDK initialization data
     Stripe(StripeClientAuthenticationResponse),
+    /// Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
+    Adyen(AdyenClientAuthenticationResponse),
+    /// Checkout.com SDK initialization data — payment_session_token + payment_session_secret for Frames/Flow
+    Checkout(CheckoutClientAuthenticationResponse),
+    /// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
+    Cybersource(CybersourceClientAuthenticationResponse),
+    /// Nuvei SDK initialization data — session_token for client-side SDK operations
+    Nuvei(NuveiClientAuthenticationResponse),
+    /// Mollie SDK initialization data — checkout_url for client-side redirect/components
+    Mollie(MollieClientAuthenticationResponse),
+    /// Globalpay SDK initialization data — access_token for client-side SDK operations
+    Globalpay(GlobalpayClientAuthenticationResponse),
     /// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
     Bluesnap(BluesnapClientAuthenticationResponse),
+    /// Rapyd SDK initialization data — checkout_id and redirect_url for client-side checkout
+    Rapyd(RapydClientAuthenticationResponse),
+    /// Shift4 SDK initialization data — client_secret for client-side SDK
+    Shift4(Shift4ClientAuthenticationResponse),
+    /// Bank of America SDK initialization data — capture_context JWT for Flex Microform
+    BankOfAmerica(BankOfAmericaClientAuthenticationResponse),
+    /// Wellsfargo SDK initialization data — capture_context JWT for Flex Microform
+    Wellsfargo(WellsfargoClientAuthenticationResponse),
+    /// Fiserv SDK initialization data — session_id for client-side SDK
+    Fiserv(FiservClientAuthenticationResponse),
+    /// Elavon SDK initialization data — session_token for Converge Hosted Payments Lightbox
+    Elavon(ElavonClientAuthenticationResponse),
+    /// Noon SDK initialization data — order_id + checkout_url
+    Noon(NoonClientAuthenticationResponse),
+    /// Paysafe SDK initialization data — payment_handle_token for client-side SDK
+    Paysafe(PaysafeClientAuthenticationResponse),
+    /// Bamboraapac SDK initialization data — token for client-side SDK
+    Bamboraapac(BamboraapacClientAuthenticationResponse),
+    /// Jpmorgan SDK initialization data — transaction_id + request_id
+    Jpmorgan(JpmorganClientAuthenticationResponse),
+    /// Billwerk SDK initialization data — session_id for checkout session
+    Billwerk(BillwerkClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3440,11 +3476,148 @@ pub struct StripeClientAuthenticationResponse {
     pub client_secret: Secret<String>,
 }
 
+/// Adyen's session_id and session_data for browser-side Adyen Drop-in/Components
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdyenClientAuthenticationResponse {
+    /// The unique identifier of the session
+    pub session_id: String,
+    /// The session data required to initialize the Adyen SDK
+    pub session_data: Secret<String>,
+}
+
+/// Checkout.com's payment_session_token and payment_session_secret for Frames/Flow SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckoutClientAuthenticationResponse {
+    /// The payment session identifier
+    pub payment_session_id: String,
+    /// The base64-encoded token for client-side SDK initialization
+    pub payment_session_token: Secret<String>,
+    /// The secret for secure client-side operations
+    pub payment_session_secret: Secret<String>,
+}
+
+/// Cybersource's capture_context JWT for Flex Microform SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CybersourceClientAuthenticationResponse {
+    /// The capture context JWT token for client-side Flex Microform SDK
+    pub capture_context: Secret<String>,
+}
+
+/// Nuvei's session_token for client-side SDK operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NuveiClientAuthenticationResponse {
+    /// The session token for Nuvei client-side SDK
+    pub session_token: Secret<String>,
+}
+
+/// Mollie's checkout_url for client-side redirect or Mollie Components initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MollieClientAuthenticationResponse {
+    /// The payment ID created on Mollie's side
+    pub payment_id: String,
+    /// The checkout URL for client-side redirect to complete payment
+    pub checkout_url: Secret<String>,
+}
+
+/// Globalpay's access_token for client-side SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GlobalpayClientAuthenticationResponse {
+    /// The OAuth access token for client-side operations
+    pub access_token: Secret<String>,
+    /// The token type (e.g., "Bearer")
+    pub token_type: Option<String>,
+    /// The number of seconds until the token expires
+    pub expires_in: Option<i64>,
+}
+
 /// Bluesnap's pfToken for client-side Hosted Payment Fields initialization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BluesnapClientAuthenticationResponse {
     /// The Hosted Payment Fields token for client-side SDK initialization
     pub pf_token: Secret<String>,
+}
+
+/// Rapyd's checkout_id and redirect_url for client-side checkout page initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RapydClientAuthenticationResponse {
+    /// The checkout page identifier
+    pub checkout_id: String,
+    /// The redirect URL for the client-side checkout experience
+    pub redirect_url: String,
+}
+
+/// Shift4's client_secret for client-side SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Shift4ClientAuthenticationResponse {
+    /// The client secret for Shift4 SDK
+    pub client_secret: Secret<String>,
+}
+
+/// Bank of America's capture_context JWT for Flex Microform SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BankOfAmericaClientAuthenticationResponse {
+    /// The capture context JWT token
+    pub capture_context: Secret<String>,
+}
+
+/// Wellsfargo's capture_context JWT for Flex Microform SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WellsfargoClientAuthenticationResponse {
+    /// The capture context JWT token
+    pub capture_context: Secret<String>,
+}
+
+/// Fiserv's session_id for client-side SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FiservClientAuthenticationResponse {
+    /// The session ID for Fiserv client-side SDK
+    pub session_id: Secret<String>,
+}
+
+/// Elavon's session_token for Converge Hosted Payments Lightbox initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElavonClientAuthenticationResponse {
+    /// The transaction auth token for Converge Lightbox
+    pub session_token: Secret<String>,
+}
+
+/// Noon's order_id and checkout_url for client-side checkout
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoonClientAuthenticationResponse {
+    /// The Noon order identifier
+    pub order_id: u64,
+    /// The checkout URL for client-side redirect
+    pub checkout_url: Secret<String>,
+}
+
+/// Paysafe's payment_handle_token for client-side SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaysafeClientAuthenticationResponse {
+    /// The payment handle token for Paysafe client-side SDK
+    pub payment_handle_token: Secret<String>,
+}
+
+/// Bamboraapac's token for client-side SDK
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BamboraapacClientAuthenticationResponse {
+    /// The tokenization token for client-side SDK
+    pub token: Secret<String>,
+}
+
+/// Jpmorgan's transaction_id and request_id for client-side SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JpmorganClientAuthenticationResponse {
+    /// The transaction identifier
+    pub transaction_id: String,
+    /// The request identifier
+    pub request_id: String,
+}
+
+/// Billwerk's session_id for checkout session initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BillwerkClientAuthenticationResponse {
+    /// The checkout session identifier
+    pub session_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
