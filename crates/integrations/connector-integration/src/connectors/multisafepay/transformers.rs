@@ -1,7 +1,7 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::MinorUnit;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
@@ -137,7 +137,8 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Bank redirect payment method not supported")?,
@@ -261,7 +262,8 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Bank redirect payment method not supported")?,
@@ -875,7 +877,7 @@ where
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepayPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MultisafepayPaymentsResponse, Self>,
@@ -918,7 +920,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepayPaymentsR
 impl TryFrom<ResponseRouterData<MultisafepayPaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MultisafepayPaymentsResponse, Self>,
@@ -1034,7 +1036,7 @@ pub struct MultisafepayRefundData {
 impl<F> TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MultisafepayRefundResponse, Self>,
@@ -1060,7 +1062,7 @@ impl<F> TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MultisafepayRefundResponse, Self>,

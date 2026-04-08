@@ -9,6 +9,18 @@ A high-performance, type-safe Node.js SDK for payment processing through the Uni
 
 ---
 
+## 📚 Documentation
+
+| Resource | Link |
+|----------|------|
+| **Getting Started** | [Installation](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/installation.md) · [First Payment](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/first-payment.md) |
+| **Architecture** | [Overview](https://github.com/juspay/hyperswitch-prism/blob/main/docs/architecture/README.md) · [Core Concepts](https://github.com/juspay/hyperswitch-prism/tree/main/docs/architecture/concepts) |
+| **API Reference** | [Payment Service](https://github.com/juspay/hyperswitch-prism/tree/main/docs/api-reference/services/payment-service) |
+| **Examples** | [Connector Examples](https://github.com/juspay/hyperswitch-prism/tree/main/examples) · [Smoke Test](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/javascript/smoke-test) · [Tests](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/javascript/tests) |
+| **Main Project** | [Prism Docs](https://github.com/juspay/hyperswitch-prism/blob/main/docs/README.md) |
+
+---
+
 ## Features
 
 - 🚀 **High Performance** — Direct UniFFI FFI bindings to Rust core, zero NAPI overhead
@@ -17,6 +29,62 @@ A high-performance, type-safe Node.js SDK for payment processing through the Uni
 - ⚡ **Connection Pooling** — Built-in HTTP connection pooling for optimal throughput
 - 🛡️ **Type-Safe** — Protobuf-based request/response serialization
 - 🔧 **Configurable** — Per-request or global configuration for timeouts, proxies, and auth
+
+---
+
+## 🤖 AI Assistant Context
+
+This SDK is part of **Hyperswitch Prism** — a unified connector library for payment processors.
+
+### What This SDK Does
+
+1. **Request Transformation**: Converts unified payment requests to connector-specific formats (Stripe, Adyen, PayPal, etc.)
+2. **Response Normalization**: Transforms connector responses back to a unified schema
+3. **Error Handling**: Provides consistent error types (`IntegrationError`, `ConnectorError`, `NetworkError`) regardless of connector
+
+### Architecture
+
+```
+Your Node.js App
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Service Clients (PaymentClient, CustomerClient, etc.)       │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  ConnectorClient (undici connection pool + HTTP execution)   │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  koffi FFI Bindings (connector-service-ffi.node)             │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Rust Core (connector transformation logic)                  │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+              Payment Processor APIs (Stripe, Adyen, etc.)
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/index.ts` | Public API exports (clients, types, errors) |
+| `src/connector-client.ts` | HTTP execution layer with undici |
+| `src/ffi/connector-service-ffi.ts` | koffi FFI bindings |
+| `src/proto/payment_pb.ts` | Protobuf message definitions |
+
+### Package & Import
+
+- **Package Name**: `hyperswitch-prism`
+- **Installation**: `npm install hyperswitch-prism`
+- **Import**: `import { PaymentClient, types } from 'hyperswitch-prism'`
 
 ---
 
@@ -44,42 +112,36 @@ npm install hyperswitch-prism
 ```typescript
 import { PaymentClient, types } from 'hyperswitch-prism';
 
-const { ConnectorConfig, RequestConfig, Environment, Connector } = types;
-
 // Configure connector identity and authentication
-const config = ConnectorConfig.create({
-  connector: Connector.STRIPE,
-  auth: {
+let stripeConfig: types.ConnectorConfig = {
+  connectorConfig: {
     stripe: {
-      apiKey: { value: 'sk_test_your_stripe_key' }
+      apiKey: { value: process.env.STRIPE_API_KEY! }
     }
-  },
-  environment: Environment.SANDBOX,
-});
+  }
+};
 
 // Optional: Request defaults for timeouts
-const defaults = RequestConfig.create({
+let requestConfig: types.RequestConfig = {
   http: {
     totalTimeoutMs: 30000,
     connectTimeoutMs: 10000,
   }
-});
+};
 ```
 
 ### 2. Process a Payment
 
 ```typescript
-const client = new PaymentClient(config, defaults);
+const client = new PaymentClient(stripeConfig, requestConfig);
 
-const { PaymentServiceAuthorizeRequest, Currency, CaptureMethod } = types;
-
-const request = PaymentServiceAuthorizeRequest.create({
+let authorizeRequest: types.PaymentServiceAuthorizeRequest = {
   merchantTransactionId: 'txn_order_001',
   amount: {
     minorAmount: 1000,  // $10.00
-    currency: Currency.USD,
+    currency: types.Currency.USD,
   },
-  captureMethod: CaptureMethod.AUTOMATIC,
+  captureMethod: types.CaptureMethod.AUTOMATIC,
   paymentMethod: {
     card: {
       cardNumber: { value: '4111111111111111' },
@@ -89,14 +151,13 @@ const request = PaymentServiceAuthorizeRequest.create({
       cardHolderName: { value: 'John Doe' },
     }
   },
-  customer: {
-    email: { value: 'customer@example.com' },
-    name: 'John Doe',
-  },
-  testMode: true,
-});
+  address: { billingAddress: {} },
+  authType: types.AuthenticationType.NO_THREE_DS,
+  returnUrl: "https://example.com/return",
+  orderDetails: [],
+};
 
-const response = await client.authorize(request);
+const response = await client.authorize(authorizeRequest);
 console.log('Status:', response.status);
 console.log('Transaction ID:', response.connectorTransactionId);
 ```
@@ -124,30 +185,26 @@ The SDK provides specialized clients for different service domains:
 ### Stripe (HeaderKey)
 
 ```typescript
-const config = ConnectorConfig.create({
-  connector: Connector.STRIPE,
-  auth: {
+let stripeConfig: types.ConnectorConfig = {
+  connectorConfig: {
     stripe: {
-      apiKey: { value: 'sk_test_xxx' }
+      apiKey: { value: process.env.STRIPE_API_KEY! }
     }
-  },
-  environment: Environment.SANDBOX,
-});
+  }
+};
 ```
 
 ### PayPal (SignatureKey)
 
 ```typescript
-const config = ConnectorConfig.create({
-  connector: Connector.PAYPAL,
-  auth: {
+let paypalConfig: types.ConnectorConfig = {
+  connectorConfig: {
     paypal: {
-      clientId: { value: 'client_id' },
-      clientSecret: { value: 'client_secret' }
+      clientId: { value: process.env.PAYPAL_CLIENT_ID! },
+      clientSecret: { value: process.env.PAYPAL_CLIENT_SECRET! }
     }
-  },
-  environment: Environment.SANDBOX,
-});
+  }
+};
 ```
 
 ---
@@ -157,14 +214,14 @@ const config = ConnectorConfig.create({
 ### Proxy Settings
 
 ```typescript
-const defaults = RequestConfig.create({
+let proxyConfig: types.RequestConfig = {
   http: {
     proxy: {
       httpsUrl: 'https://proxy.company.com:8443',
       bypassUrls: ['http://localhost']
     }
   }
-});
+};
 ```
 
 ### Per-Request Overrides
@@ -195,7 +252,7 @@ for (const payment of payments) {
 ## Error Handling
 
 ```typescript
-import { IntegrationError, ConnectorResponseTransformationError } from 'hyperswitch-prism';
+import { IntegrationError, ConnectorError } from 'hyperswitch-prism';
 
 try {
   const response = await client.authorize(request);
@@ -205,7 +262,7 @@ try {
     console.error('Code:', error.errorCode);
     console.error('Status:', error.statusCode);
     console.error('Message:', error.message);
-  } else if (error instanceof ConnectorResponseTransformationError) {
+  } else if (error instanceof ConnectorError) {
     // Response-phase error (deserialization, transformation, etc.)
     console.error('Code:', error.errorCode);
     console.error('Status:', error.statusCode);
@@ -236,37 +293,33 @@ import {
   types
 } from 'hyperswitch-prism';
 
-const { ConnectorConfig, Environment, Connector, Currency,
-        CaptureMethod, SecretString, AccessToken, ConnectorState } = types;
-
-const config = ConnectorConfig.create({
-  connector: Connector.PAYPAL,
-  auth: {
+// Configure PayPal
+let paypalConfig: types.ConnectorConfig = {
+  connectorConfig: {
     paypal: {
-      clientId: { value: 'YOUR_CLIENT_ID' },
-      clientSecret: { value: 'YOUR_CLIENT_SECRET' }
+      clientId: { value: process.env.PAYPAL_CLIENT_ID! },
+      clientSecret: { value: process.env.PAYPAL_CLIENT_SECRET! }
     }
-  },
-  environment: Environment.SANDBOX,
-});
+  }
+};
 
 // Step 1: Get access token
-const authClient = new MerchantAuthenticationClient(config);
+const authClient = new MerchantAuthenticationClient(paypalConfig);
 const tokenResponse = await authClient.createServerAuthenticationToken({
   merchantAccessTokenId: 'token_001',
-  connector: Connector.PAYPAL,
+  connector: types.Connector.PAYPAL,
   testMode: true,
 });
 
 // Step 2: Authorize with access token
-const paymentClient = new PaymentClient(config);
+const paymentClient = new PaymentClient(paypalConfig);
 const paymentResponse = await paymentClient.authorize({
   merchantTransactionId: 'txn_001',
   amount: {
     minorAmount: 1000,
-    currency: Currency.USD,
+    currency: types.Currency.USD,
   },
-  captureMethod: CaptureMethod.AUTOMATIC,
+  captureMethod: types.CaptureMethod.AUTOMATIC,
   paymentMethod: {
     card: {
       cardNumber: { value: '4111111111111111' },
@@ -275,13 +328,13 @@ const paymentResponse = await paymentClient.authorize({
       cardCvc: { value: '123' },
     }
   },
-  state: ConnectorState.create({
-    accessToken: AccessToken.create({
-      token: SecretString.create({ value: tokenResponse.accessToken.value }),
+  state: {
+    accessToken: {
+      token: { value: tokenResponse.accessToken.value },
       tokenType: 'Bearer',
       expiresInSeconds: tokenResponse.expiresInSeconds,
-    }),
-  }),
+    },
+  },
   testMode: true,
 });
 

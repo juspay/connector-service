@@ -32,7 +32,7 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -224,6 +224,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Stripe<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Stripe<T>
 {
 }
@@ -376,7 +386,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: stripe::ErrorResponse =
             res.response.parse_struct("ErrorResponse").change_context(
                 crate::utils::response_handling_fail_for_connector(res.status_code, "stripe"),
@@ -1096,13 +1106,4 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Stripe<T>
-{
-}
 // SourceVerification implementations for all flows

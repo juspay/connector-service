@@ -11,7 +11,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     mandates::MandateDataType,
     payment_method_data::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -614,7 +614,7 @@ pub struct NoonPaymentsResponse {
 impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<NoonPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let order = item.response.result.order;
         let status = get_payment_status(order.status);
@@ -871,7 +871,7 @@ impl TryFrom<ResponseRouterData<NoonRevokeMandateResponse, Self>>
         MandateRevokeResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NoonRevokeMandateResponse, Self>,
@@ -932,7 +932,7 @@ pub struct RefundResponse {
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -990,7 +990,7 @@ pub struct RefundSyncResponse {
 impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<RefundSyncResponse, Self>) -> Result<Self, Self::Error> {
         let noon_transaction: &NoonRefundResponseTransactions = item
@@ -1407,7 +1407,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<SetupMandateResponse, Self>) -> Result<Self, Self::Error> {
         let order = item.response.result.order;
         let status = get_payment_status(order.status);
@@ -1611,7 +1611,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<NoonRepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NoonRepeatPaymentResponse, Self>,
