@@ -532,10 +532,28 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
+            use domain_types::errors::IntegrationErrorContext;
             Ok(format!(
                 "{}/am/oauth2/alpha/access_token",
                 req.resource_common_data.connectors.jpmorgan.secondary_base_url.as_ref()
-                    .ok_or(IntegrationError::FailedToObtainIntegrationUrl { context: Default::default() })?
+                    .ok_or(IntegrationError::FailedToObtainIntegrationUrl {
+                        context: IntegrationErrorContext {
+                            suggested_action: Some(
+                                "Set the 'secondary_base_url' in the JPMorgan connector \
+                                 configuration. This URL points to the OAuth2 token endpoint."
+                                    .to_owned(),
+                            ),
+                            doc_url: Some(
+                                "https://developer.payments.jpmorgan.com/docs/commerce-solutions/online-payments/capabilities/authentication/oauth"
+                                    .to_owned(),
+                            ),
+                            additional_context: Some(
+                                "JPMorgan uses a separate base URL for the OAuth2 token \
+                                 endpoint (secondary_base_url) distinct from the payments API."
+                                    .to_owned(),
+                            ),
+                        },
+                    })?
             ))
         }
     }

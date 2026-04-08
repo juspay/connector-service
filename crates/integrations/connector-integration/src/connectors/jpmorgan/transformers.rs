@@ -23,10 +23,32 @@ use serde::{Deserialize, Serialize};
 
 use super::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
-use domain_types::errors::{ConnectorError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError, IntegrationErrorContext};
 
 type Error = error_stack::Report<IntegrationError>;
 type ResponseError = error_stack::Report<ConnectorError>;
+
+const JPMORGAN_GETTING_STARTED_DOC: &str =
+    "https://developer.payments.jpmorgan.com/docs/commerce-solutions/online-payments/guides/getting-started";
+const JPMORGAN_PAYMENTS_API_DOC: &str =
+    "https://developer.payments.jpmorgan.com/api/commerce-solutions/online-payments/payment-requests/create-a-payment";
+
+/// Build an `IntegrationErrorContext` for a missing JPMorgan connector config field.
+fn jpmorgan_missing_field_context(field_name: &str) -> IntegrationErrorContext {
+    IntegrationErrorContext {
+        suggested_action: Some(format!(
+            "Set the '{}' field in the JPMorgan connector configuration. This is required \
+             by JPMorgan's Online Payments API for every payment request.",
+            field_name
+        )),
+        doc_url: Some(JPMORGAN_GETTING_STARTED_DOC.to_owned()),
+        additional_context: Some(format!(
+            "JPMorgan requires '{}' as a mandatory field in the merchant software or \
+             connector configuration.",
+            field_name
+        )),
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -400,7 +422,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             PaymentMethodData::CardToken(CardToken { .. }) => {
-                // TODO: CardToken flow uses the payment_method_token obtained from
+                // CardToken flow uses the payment_method_token obtained from
                 // CreateClientAuthenticationToken to make the payment without raw card details.
                 let token = item
                     .router_data
@@ -413,7 +435,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
                             field_name: "payment_method_token",
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "The CardToken flow requires a payment_method_token obtained \
+                                     from the ClientAuthenticationToken step. Ensure the client-side \
+                                     SDK tokenisation completed before submitting the payment."
+                                        .to_owned(),
+                                ),
+                                doc_url: Some(JPMORGAN_PAYMENTS_API_DOC.to_owned()),
+                                additional_context: Some(
+                                    "JPMorgan CardToken payments use a tokenised card reference \
+                                     instead of raw card details; the token is missing from the \
+                                     payment method data."
+                                        .to_owned(),
+                                ),
+                            },
                         })
                     })?;
 
@@ -427,13 +463,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             company_name: auth.company_name.clone().ok_or(
                                 IntegrationError::MissingRequiredField {
                                     field_name: "company_name",
-                                    context: Default::default(),
+                                    context: jpmorgan_missing_field_context("company_name"),
                                 },
                             )?,
                             product_name: auth.product_name.clone().ok_or(
                                 IntegrationError::MissingRequiredField {
                                     field_name: "product_name",
-                                    context: Default::default(),
+                                    context: jpmorgan_missing_field_context("product_name"),
                                 },
                             )?,
                         },
@@ -443,7 +479,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .clone()
                                 .ok_or(IntegrationError::MissingRequiredField {
                                     field_name: "merchant_purchase_description",
-                                    context: Default::default(),
+                                    context: jpmorgan_missing_field_context(
+                                        "merchant_purchase_description",
+                                    ),
                                 })?,
                         },
                     };
@@ -802,7 +840,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(
-        _item: JpmorganRouterData<
+        item: JpmorganRouterData<
             RouterDataV2<
                 ClientAuthenticationToken,
                 PaymentFlowData,
@@ -812,9 +850,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        let scope = if item
+            .router_data
+            .resource_common_data
+            .test_mode
+            .unwrap_or(true)
+        {
+            String::from("jpm:payments:sandbox")
+        } else {
+            String::from("jpm:payments")
+        };
         Ok(Self {
             grant_type: String::from("client_credentials"),
-            scope: String::from("jpm:payments:sandbox"),
+            scope,
         })
     }
 }
