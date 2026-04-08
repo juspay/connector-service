@@ -850,6 +850,7 @@ enum PaymentMethodType {
   SATISPAY = 102;
   WERO = 103;
   NETWORK_TOKEN = 104;
+  NETBANKING = 105;
 }
 
 // Product type enumeration
@@ -1534,19 +1535,128 @@ message ConnectorSpecificClientAuthenticationResponse {
   oneof connector {
     StripeClientAuthenticationResponse stripe = 1;
     AdyenClientAuthenticationResponse adyen = 2;
-    // CheckoutClientAuthenticationResponse checkout = 3; // future
+    CheckoutClientAuthenticationResponse checkout = 3;
+    CybersourceClientAuthenticationResponse cybersource = 4;
+    NuveiClientAuthenticationResponse nuvei = 5;
+    MollieClientAuthenticationResponse mollie = 6;
+    GlobalpayClientAuthenticationResponse globalpay = 7;
+    BluesnapClientAuthenticationResponse bluesnap = 8;
+    RapydClientAuthenticationResponse rapyd = 9;
+    Shift4ClientAuthenticationResponse shift4 = 10;
+    BankOfAmericaClientAuthenticationResponse bank_of_america = 11;
+    WellsfargoClientAuthenticationResponse wellsfargo = 12;
+    FiservClientAuthenticationResponse fiserv = 13;
+    ElavonClientAuthenticationResponse elavon = 14;
+    NoonClientAuthenticationResponse noon = 15;
+    PaysafeClientAuthenticationResponse paysafe = 16;
+    BamboraapacClientAuthenticationResponse bamboraapac = 17;
+    JpmorganClientAuthenticationResponse jpmorgan = 18;
+    BillwerkClientAuthenticationResponse billwerk = 19;
   }
-}
-
-// Stripe SDK initialization data — client_secret for stripe.confirmPayment()
-message StripeClientAuthenticationResponse {
-  SecretString client_secret = 1;
 }
 
 // Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
 message AdyenClientAuthenticationResponse {
   string session_id = 1;
   SecretString session_data = 2;
+}
+
+// Checkout.com SDK initialization data — payment_session_token + payment_session_secret for Frames/Flow
+message CheckoutClientAuthenticationResponse {
+  string payment_session_id = 1;
+  SecretString payment_session_token = 2;
+  SecretString payment_session_secret = 3;
+}
+
+// Cybersource SDK initialization data — capture_context JWT for Flex Microform SDK
+message CybersourceClientAuthenticationResponse {
+  SecretString capture_context = 1;
+}
+
+// Nuvei SDK initialization data — session_token for client-side SDK operations
+message NuveiClientAuthenticationResponse {
+  SecretString session_token = 1;
+}
+
+// Mollie SDK initialization data — payment_id + checkout_url for client-side redirect
+message MollieClientAuthenticationResponse {
+  string payment_id = 1;
+  SecretString checkout_url = 2;
+}
+
+// Globalpay SDK initialization data — access_token for client-side SDK operations
+message GlobalpayClientAuthenticationResponse {
+  SecretString access_token = 1;
+  optional string token_type = 2;
+  optional int64 expires_in = 3;
+}
+
+// Bluesnap SDK initialization data — pfToken for Hosted Payment Fields initialization
+message BluesnapClientAuthenticationResponse {
+  SecretString pf_token = 1;
+}
+
+// Rapyd SDK initialization data — checkout_id + redirect_url for client-side checkout
+message RapydClientAuthenticationResponse {
+  string checkout_id = 1;
+  string redirect_url = 2;
+}
+
+// Shift4 SDK initialization data — client_secret for client-side SDK
+message Shift4ClientAuthenticationResponse {
+  SecretString client_secret = 1;
+}
+
+// Bank of America SDK initialization data — capture_context JWT for Flex Microform
+message BankOfAmericaClientAuthenticationResponse {
+  SecretString capture_context = 1;
+}
+
+// Wellsfargo SDK initialization data — capture_context JWT for Flex Microform
+message WellsfargoClientAuthenticationResponse {
+  SecretString capture_context = 1;
+}
+
+// Fiserv SDK initialization data — session_id for client-side SDK
+message FiservClientAuthenticationResponse {
+  SecretString session_id = 1;
+}
+
+// Elavon SDK initialization data — session_token for Converge Hosted Payments Lightbox
+message ElavonClientAuthenticationResponse {
+  SecretString session_token = 1;
+}
+
+// Noon SDK initialization data — order_id + checkout_url
+message NoonClientAuthenticationResponse {
+  uint64 order_id = 1;
+  SecretString checkout_url = 2;
+}
+
+// Paysafe SDK initialization data — payment_handle_token for client-side SDK
+message PaysafeClientAuthenticationResponse {
+  SecretString payment_handle_token = 1;
+}
+
+// Bamboraapac SDK initialization data — token for client-side SDK
+message BamboraapacClientAuthenticationResponse {
+  SecretString token = 1;
+}
+
+// Jpmorgan SDK initialization data — transaction_id + request_id
+message JpmorganClientAuthenticationResponse {
+  string transaction_id = 1;
+  string request_id = 2;
+}
+
+// Billwerk SDK initialization data — session_id for checkout session
+message BillwerkClientAuthenticationResponse {
+  string session_id = 1;
+}
+
+// Stripe SDK initialization data — client_secret for stripe.confirmPayment()
+message StripeClientAuthenticationResponse {
+  SecretString client_secret = 1;
 }
 
 // Google Pay Session Data
@@ -1851,6 +1961,10 @@ message PaymentServiceAuthorizeRequest {
 
   // Level 2 / Level 3 data for enhanced payment processing
   optional L2L3Data l2_l3_data = 43;
+
+  // Send the connector order identifier here if an order was created before
+  // authorize
+  optional string connector_order_id = 44;
 }
 
 // Response message for a payment authorization
@@ -4171,6 +4285,10 @@ message PaymentServiceTokenAuthorizeRequest {
   optional bool test_mode = 21;
   // auth_type intentionally absent: PSP tokens cannot drive external 3DS.
   // Use connector_feature_data to pass connector-specific delegated-3DS flags.
+
+  // Send the connector order identifier here if an order was created before
+  // authorize
+  optional string connector_order_id = 22;
 }
 
 message PaymentServiceTokenSetupRecurringRequest {
@@ -4222,6 +4340,10 @@ message PaymentServiceProxyAuthorizeRequest {
   // Order Details
   optional string order_category = 24; // Category of the order/service
   optional string description = 25; // Description of the transaction
+
+  // Send the connector order identifier here if an order was created before
+  // authorize
+  optional string connector_order_id = 26;
 }
 
 message PaymentServiceProxySetupRecurringRequest {
