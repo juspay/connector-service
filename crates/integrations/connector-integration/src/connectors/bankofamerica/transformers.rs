@@ -2158,8 +2158,8 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     | common_enums::PaymentMethod::Voucher
                     | common_enums::PaymentMethod::OpenBanking
                     | common_enums::PaymentMethod::NetworkToken
-                    | common_enums::PaymentMethod::GiftCard => None,
-                };
+                    | common_enums::PaymentMethod::GiftCard => None
+};
 
                 Ok(Self {
                     response,
