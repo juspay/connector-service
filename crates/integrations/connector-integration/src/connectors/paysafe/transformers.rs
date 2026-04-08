@@ -8,7 +8,6 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId,
     },
-    errors,
     payment_method_data::{
         BankDebitData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes, WalletData,
     },
@@ -284,8 +283,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let decrypted_data = match &google_pay_data.tokenization_data {
                         GpayTokenizationData::Decrypted(d) => d,
                         GpayTokenizationData::Encrypted(_) => {
-                            return Err(errors::ConnectorError::MissingRequiredField {
+                            return Err(IntegrationError::MissingRequiredField {
                                 field_name: "google_pay.tokenization_data (decrypted)",
+                                context: Default::default(),
                             }
                             .into())
                         }
@@ -293,27 +293,31 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                     let expiration_month = decrypted_data
                         .get_expiry_month()
-                        .change_context(errors::ConnectorError::MissingRequiredField {
+                        .change_context(IntegrationError::MissingRequiredField {
                             field_name: "google_pay_decrypted_data.card_exp_month",
+                            context: Default::default(),
                         })?
                         .peek()
                         .parse::<u8>()
                         .map_err(|_| {
-                            errors::ConnectorError::InvalidDataFormat {
+                            IntegrationError::InvalidDataFormat {
                                 field_name: "google_pay_decrypted_data.card_exp_month",
+                                context: Default::default(),
                             }
                         })?;
 
                     let expiration_year = decrypted_data
                         .get_four_digit_expiry_year()
-                        .change_context(errors::ConnectorError::MissingRequiredField {
+                        .change_context(IntegrationError::MissingRequiredField {
                             field_name: "google_pay_decrypted_data.card_exp_year",
+                            context: Default::default(),
                         })?
                         .peek()
                         .parse::<u16>()
                         .map_err(|_| {
-                            errors::ConnectorError::InvalidDataFormat {
+                            IntegrationError::InvalidDataFormat {
                                 field_name: "google_pay_decrypted_data.card_exp_year",
+                                context: Default::default(),
                             }
                         })?;
 
