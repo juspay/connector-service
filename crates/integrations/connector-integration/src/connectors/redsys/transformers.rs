@@ -38,7 +38,6 @@ pub const SIGNATURE_VERSION: &str = "HMAC_SHA256_V1";
 pub const DS_VERSION: &str = "0.0";
 pub const XMLNS_WEB_URL: &str = "http://webservices.apl02.redsys.es";
 pub const REDSYS_SOAP_ACTION: &str = "consultaOperaciones";
-pub const REDSYS_ORDER_ID_METADATA_KEY: &str = "order_id";
 pub const REDSYS_ORDER_ID_MAX_LENGTH: usize = 12;
 
 static LWV_THRESHOLD: LazyLock<common_utils::types::MinorUnit> =
@@ -47,41 +46,19 @@ static LWV_THRESHOLD: LazyLock<common_utils::types::MinorUnit> =
 type Error = Report<IntegrationError>;
 type ResponseError = Report<ConnectorError>;
 
-/// Extracts Redsys order ID from metadata if available.
-/// This is used as a fallback when connector_request_reference_id exceeds the 12 character limit.
-fn get_redsys_order_id_from_metadata(
-    metadata: Option<&Secret<serde_json::Value>>,
-) -> Option<String> {
-    metadata
-        .and_then(|meta| meta.peek().as_object())
-        .and_then(|obj| obj.get(REDSYS_ORDER_ID_METADATA_KEY))
-        .and_then(|value| value.as_str())
-        .map(|s| s.to_string())
-        .filter(|s| s.len() <= REDSYS_ORDER_ID_MAX_LENGTH)
-}
-
-/// Gets the Redsys order ID, using metadata as fallback when connector_request_reference_id exceeds 12 characters.
-/// Returns an error if neither source provides a valid order ID.
-fn get_ds_merchant_order(
-    connector_request_reference_id: String,
-    metadata: Option<&Secret<serde_json::Value>>,
-) -> Result<String, Error> {
+fn get_ds_merchant_order(connector_request_reference_id: &str) -> Result<String, Error> {
     // If connector_request_reference_id is within limit, use it
     if connector_request_reference_id.len() <= REDSYS_ORDER_ID_MAX_LENGTH {
-        return Ok(connector_request_reference_id);
-    }
-
-    // Otherwise, try to get from metadata
-    get_redsys_order_id_from_metadata(metadata).ok_or_else(|| {
-        IntegrationError::MaxFieldLengthViolated {
+        Ok(connector_request_reference_id.to_string())
+    } else {
+        Err(IntegrationError::MaxFieldLengthViolated {
             connector: "Redsys".to_string(),
             field_name: "ds_merchant_order".to_string(),
             max_length: REDSYS_ORDER_ID_MAX_LENGTH,
             received_length: connector_request_reference_id.len(),
             context: Default::default(),
-        }
-        .into()
-    })
+        })?
+    }
 }
 
 // Specifies the type of transaction for XML requests
@@ -866,18 +843,7 @@ where
             .connector_request_reference_id
             .clone();
 
-        let ds_merchant_order =
-            if connector_request_reference_id.len() <= REDSYS_ORDER_ID_MAX_LENGTH {
-                Ok(connector_request_reference_id)
-            } else {
-                Err(IntegrationError::MaxFieldLengthViolated {
-                    connector: "Redsys".to_string(),
-                    field_name: "ds_merchant_order".to_string(),
-                    max_length: REDSYS_ORDER_ID_MAX_LENGTH,
-                    received_length: connector_request_reference_id.len(),
-                    context: Default::default(),
-                })
-            }?;
+        let ds_merchant_order = get_ds_merchant_order(&connector_request_reference_id)?;
 
         let payment_request = requests::RedsysPaymentRequest {
             ds_merchant_amount: amount,
@@ -1286,104 +1252,104 @@ where
                     // In this case, the merchant can decide to start the operation again with EMV3DS data (3DS transaction),
                     // but a new request must be sent.
                     if !item.router_data.resource_common_data.is_three_ds() {
-                                    let exemption = determine_exemption(router_data)?;
+                        let exemption = determine_exemption(router_data)?;
 
-                                    (Some(exemption), Some(true), None)
-                                } else {
-                                    // Get authentication data from the request
-                                    let auth_data = router_data.request.authentication_data.as_ref().ok_or(
-                                        IntegrationError::MissingRequiredField {
-                                            field_name: "authentication_data",
-                                            context: Default::default(),
-                                        },
-                                    )?;
+                        (Some(exemption), Some(true), None)
+                    } else {
+                        // Get authentication data from the request
+                        let auth_data = router_data.request.authentication_data.as_ref().ok_or(
+                            IntegrationError::MissingRequiredField {
+                                field_name: "authentication_data",
+                                context: Default::default(),
+                            },
+                        )?;
 
-                                    let three_d_s_server_trans_i_d = auth_data
-                                        .threeds_server_transaction_id
-                                        .clone()
-                                        .ok_or(IntegrationError::MissingRequiredField {
-                                            field_name: "authentication_data.threeds_server_transaction_id",
-                                            context: Default::default(),
-                                        })?;
-                                    let message_version = auth_data
-                                                        .message_version
-                                                        .as_ref()
-                                                        .map(|v| v.to_string())
-                                                        .ok_or(IntegrationError::MissingRequiredField {
-                                                            field_name: "authentication_data.message_version",
-                                                            context: Default::default(),
-                                                        })?;
+                        let three_d_s_server_trans_i_d = auth_data
+                            .threeds_server_transaction_id
+                            .clone()
+                            .ok_or(IntegrationError::MissingRequiredField {
+                                field_name: "authentication_data.threeds_server_transaction_id",
+                                context: Default::default(),
+                            })?;
+                        let message_version = auth_data
+                                            .message_version
+                                            .as_ref()
+                                            .map(|v| v.to_string())
+                                            .ok_or(IntegrationError::MissingRequiredField {
+                                                field_name: "authentication_data.message_version",
+                                                context: Default::default(),
+                                            })?;
 
-                                                    // Determine if this is invoke case based on threeds_completion_indicator:
-                                                    // - Success/Failure means 3DS method was invoked (invoke case)
-                                                    // - NotAvailable means no 3DS method URL was present (exempt case)
-                                                    let threeds_completion_indicator =
-                                                        router_data.request.threeds_method_comp_ind.clone();
+                                        // Determine if this is invoke case based on threeds_completion_indicator:
+                                        // - Success/Failure means 3DS method was invoked (invoke case)
+                                        // - NotAvailable means no 3DS method URL was present (exempt case)
+                                        let threeds_completion_indicator =
+                                            router_data.request.threeds_method_comp_ind.clone();
 
-                                                    let redirect_response = router_data.request.redirect_response.as_ref().ok_or(
-                                                        IntegrationError::MissingRequiredField {
-                                                            field_name: "redirect_response",
-                                                            context: Default::default(),
-                                                        },
-                                                    )?;
+                                        let redirect_response = router_data.request.redirect_response.as_ref().ok_or(
+                                            IntegrationError::MissingRequiredField {
+                                                field_name: "redirect_response",
+                                                context: Default::default(),
+                                            },
+                                        )?;
 
-                                                    let redirect_payload_value: Option<responses::RedsysThreedsChallengeResponse> =
-                                                        redirect_response.payload.as_ref().and_then(|secret| {
-                                                            let payload_data = secret.peek();
-                                                            serde_json::from_value::<responses::RedsysThreedsChallengeResponse>(
-                                                                                        payload_data.clone(),
-                                                                                    )
-                                                                                    .ok()
-                                                                                });
+                                        let redirect_payload_value: Option<responses::RedsysThreedsChallengeResponse> =
+                                            redirect_response.payload.as_ref().and_then(|secret| {
+                                                let payload_data = secret.peek();
+                                                serde_json::from_value::<responses::RedsysThreedsChallengeResponse>(
+                                                                            payload_data.clone(),
+                                                                        )
+                                                                        .ok()
+                                                                    });
 
-                                                                            let emv3ds_data = match redirect_payload_value {
-                                                                                Some(payload) => requests::RedsysEmvThreeDsRequestData::new(
-                                                                                    requests::RedsysThreeDsInfo::ChallengeResponse,
-                                                                                )
-                                                                                .set_protocol_version(message_version)
-                                                                                .set_three_d_s_cres(payload.cres)
-                                                                                .set_billing_data(billing_data)?
-                                                                                .set_shipping_data(shipping_data)?,
-                                                                                None => match threeds_completion_indicator {
-                                                                                    Some(comp_ind) => {
-                                                                                                                let three_d_s_comp_ind = requests::RedsysThreeDSCompInd::from(comp_ind);
-                                                                                                                let browser_info = router_data.request.browser_info.clone().ok_or(
-                                                                                                                    IntegrationError::MissingRequiredField {
-                                                                                                                        field_name: "browser_info",
-                                                                                                                        context: Default::default(),
-                                                                                                                    },
-                                                                                                                )?;
-                                                                                                                let continue_redirection_url = router_data
-                                                                                                                    .request
-                                                                                                                    .continue_redirection_url
-                                                                                                                    .as_ref()
-                                                                                                                    .ok_or(IntegrationError::MissingRequiredField {
-                                                                                                                        field_name: "continue_redirection_url",
-                                                                                                                        context: Default::default(),
-                                                                                                                    })?;
-
-                                                                                                                requests::RedsysEmvThreeDsRequestData::new(
-                                                                                                                    requests::RedsysThreeDsInfo::AuthenticationData,
-                                                                                                                )
-                                                                                                                .set_three_d_s_server_trans_i_d(three_d_s_server_trans_i_d)
-                                                                                                                .set_protocol_version(message_version)
-                                                                                                                .set_three_d_s_comp_ind(three_d_s_comp_ind)
-                                                                                                                .add_browser_data(browser_info)?
-                                                                                                                .set_notification_u_r_l(continue_redirection_url.clone())
-                                                                                                                .set_billing_data(billing_data)?
-                                                                                                                .set_shipping_data(shipping_data)?
-                                                                                                            }
-                                                                                                            None => {
-                                                                                                                return Err(IntegrationError::MissingRequiredField {
-                                                                                                                    field_name: "threeds_completion_indicator",
-                                                                                                                    context: Default::default(),
-                                                                                                                })?;
-                                                                                                            }
+                                                                let emv3ds_data = match redirect_payload_value {
+                                                                    Some(payload) => requests::RedsysEmvThreeDsRequestData::new(
+                                                                        requests::RedsysThreeDsInfo::ChallengeResponse,
+                                                                    )
+                                                                    .set_protocol_version(message_version)
+                                                                    .set_three_d_s_cres(payload.cres)
+                                                                    .set_billing_data(billing_data)?
+                                                                    .set_shipping_data(shipping_data)?,
+                                                                    None => match threeds_completion_indicator {
+                                                                        Some(comp_ind) => {
+                                                                                                    let three_d_s_comp_ind = requests::RedsysThreeDSCompInd::from(comp_ind);
+                                                                                                    let browser_info = router_data.request.browser_info.clone().ok_or(
+                                                                                                        IntegrationError::MissingRequiredField {
+                                                                                                            field_name: "browser_info",
+                                                                                                            context: Default::default(),
                                                                                                         },
-                                                                                                    };
+                                                                                                    )?;
+                                                                                                    let continue_redirection_url = router_data
+                                                                                                        .request
+                                                                                                        .continue_redirection_url
+                                                                                                        .as_ref()
+                                                                                                        .ok_or(IntegrationError::MissingRequiredField {
+                                                                                                            field_name: "continue_redirection_url",
+                                                                                                            context: Default::default(),
+                                                                                                        })?;
 
-                                                                                                    (None, None, Some(emv3ds_data))
-                                                                                                };
+                                                                                                    requests::RedsysEmvThreeDsRequestData::new(
+                                                                                                        requests::RedsysThreeDsInfo::AuthenticationData,
+                                                                                                    )
+                                                                                                    .set_three_d_s_server_trans_i_d(three_d_s_server_trans_i_d)
+                                                                                                    .set_protocol_version(message_version)
+                                                                                                    .set_three_d_s_comp_ind(three_d_s_comp_ind)
+                                                                                                    .add_browser_data(browser_info)?
+                                                                                                    .set_notification_u_r_l(continue_redirection_url.clone())
+                                                                                                    .set_billing_data(billing_data)?
+                                                                                                    .set_shipping_data(shipping_data)?
+                                                                                                }
+                                                                                                None => {
+                                                                                                    return Err(IntegrationError::MissingRequiredField {
+                                                                                                        field_name: "threeds_completion_indicator",
+                                                                                                        context: Default::default(),
+                                                                                                    })?;
+                                                                                                }
+                                                                                            },
+                                                                                        };
+
+                                                                                        (None, None, Some(emv3ds_data))
+                                                                                    };
 
         let is_auto_capture = router_data.request.is_auto_capture();
         let ds_merchant_transactiontype = if is_auto_capture {
@@ -1393,11 +1359,9 @@ where
         };
 
         let ds_merchant_order = get_ds_merchant_order(
-            router_data
+            &router_data
                 .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            router_data.request.metadata.as_ref(),
+                .connector_request_reference_id,
         )?;
 
         let payment_request = requests::RedsysPaymentRequest {
