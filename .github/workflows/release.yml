@@ -340,8 +340,8 @@ jobs:
   pre-publish-check:
     name: Pre-Publish Validation
     runs-on: ubuntu-latest
-    needs: [preview-publish]
-    if: ${{ inputs.publish_java == true || inputs.publish_python == true || inputs.publish_javascript == true }}
+    needs: [collect-sdks]
+    if: ${{ inputs.preview_only == true || inputs.publish_java == true || inputs.publish_python == true || inputs.publish_javascript == true }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -351,6 +351,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
 
       - uses: actions/setup-java@v4
         with:
@@ -422,9 +423,16 @@ jobs:
 
       - name: Check JavaScript auth
         if: ${{ inputs.publish_javascript == true }}
+        working-directory: sdk/javascript
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: make -C sdk/javascript publish-check-auth
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if npm whoami >/dev/null 2>&1; then
+            echo "npm authenticated as: $(npm whoami)"
+          else
+            echo "Error: npm authentication failed"
+            exit 1
+          fi
 
       # --- Version checks ---
       - name: Check Java version
@@ -437,7 +445,15 @@ jobs:
 
       - name: Check JavaScript version
         if: ${{ inputs.publish_javascript == true }}
-        run: make -C sdk/javascript publish-check-version
+        working-directory: sdk/javascript
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "Checking if hyperswitch-prism $PACKAGE_VERSION exists on npm..."
+          if npm view hyperswitch-prism@$PACKAGE_VERSION version >/dev/null 2>&1; then
+            echo "Error: Version $PACKAGE_VERSION already exists on npm"
+            exit 1
+          fi
+          echo "Version $PACKAGE_VERSION does not exist on npm - OK to publish"
 
       # --- Dry-run checks ---
       - name: Java dry-run (publishToMavenLocal)
@@ -450,9 +466,12 @@ jobs:
 
       - name: JavaScript dry-run (npm publish --dry-run)
         if: ${{ inputs.publish_javascript == true }}
+        working-directory: sdk/javascript
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: make -C sdk/javascript publish-check-dry-run
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm ci
+          npm publish --dry-run --access public
 
       - name: Pre-Publish Check Summary
         run: |
@@ -589,11 +608,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [preview-publish, pre-publish-check]
     if: ${{ inputs.publish_javascript == true && inputs.preview_only == false }}
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
@@ -637,6 +660,9 @@ jobs:
           fi
       - name: Publish to npm
         if: ${{ inputs.preview_only == false }}
+        working-directory: sdk/javascript
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: make -C sdk/javascript publish
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm ci
+          npm publish --access public
