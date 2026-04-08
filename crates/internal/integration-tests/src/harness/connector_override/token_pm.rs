@@ -42,10 +42,7 @@ impl ConnectorOverride for TokenPaymentMethodOverride {
             return;
         }
 
-        let Some(pm) = req
-            .get_mut("payment_method")
-            .and_then(Value::as_object_mut)
-        else {
+        let Some(pm) = req.get_mut("payment_method").and_then(Value::as_object_mut) else {
             return;
         };
 

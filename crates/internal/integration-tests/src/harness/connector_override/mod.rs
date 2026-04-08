@@ -80,9 +80,7 @@ impl OverrideRegistry {
             return Box::new(helcim::HelcimConnectorOverride::new());
         }
 
-        if connector.eq_ignore_ascii_case("stax")
-            || connector.eq_ignore_ascii_case("braintree")
-        {
+        if connector.eq_ignore_ascii_case("stax") || connector.eq_ignore_ascii_case("braintree") {
             return Box::new(token_pm::TokenPaymentMethodOverride::new(connector));
         }
 
