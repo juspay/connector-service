@@ -2734,28 +2734,8 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_client_session_id": "probe_sdk_session_001",
-          "domain_context": {
-            "payment": {
-              "amount": {
-                "minor_amount": 1000,
-                "currency": "USD"
-              }
-            }
-          }
-        },
-        "sample": {
-          "url": "https://checkout-api.reepay.com/v1/session/charge",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfa2V5Og==",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"order\":{\"handle\":\"probe_sdk_session_001\",\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"handle\":\"probe_sdk_session_001\"}},\"accept_url\":\"https://hyperswitch.io\",\"cancel_url\":\"https://hyperswitch.io\"}"
-        }
+        "status": "error",
+        "error": "Stuck on field: customer_id. Billwerk checkout sessions require a customer handle to associate the session with a customer record. — Missing required field: customer_id. Billwerk checkout sessions require a customer handle to associate the session with a customer record."
       }
     },
     "create_customer": {
