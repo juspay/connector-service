@@ -1479,22 +1479,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .get_ip_address_as_optional()
                 .map(|ip| Secret::new(ip.expose()))
-                .unwrap_or_else(|| Secret::new("127.0.0.1".to_string())),
+                .unwrap_or_else(|| Secret::new("".to_string())),
             referer: item
                 .router_data
                 .request
                 .browser_info
                 .as_ref()
                 .and_then(|info| info.get_referer().ok())
-                .unwrap_or_else(|| "https://example.com".to_string()),
+                .unwrap_or_else(|| "".to_string()),
             user_agent: item
                 .router_data
                 .request
                 .browser_info
                 .as_ref()
                 .and_then(|info| info.get_user_agent().ok())
-                .unwrap_or_else(|| "Mozilla/5.0".to_string()),
-            description: Some("".to_string()),
+                .unwrap_or_else(|| "".to_string()),
+            description: item.router_data.resource_common_data.description.clone(),
             flow: flow_type.map(|s| s.to_string()),
             __notes_91_cust_id_93_: metadata_map.get("__notes_91_cust_id_93_").cloned(),
             __notes_91_cust_name_93_: metadata_map.get("__notes_91_cust_name_93_").cloned(),

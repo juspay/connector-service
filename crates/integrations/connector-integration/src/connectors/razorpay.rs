@@ -48,7 +48,7 @@ use domain_types::{
     },
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{Mask, Maskable};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -346,6 +346,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ];
         let mut api_key = self.get_auth_header(&req.connector_config)?;
         header.append(&mut api_key);
+        // Propagate x-request-id from metadata to outgoing gateway header
+        if let Some(x_request_id) = req
+            .request
+            .metadata
+            .as_ref()
+            .and_then(|m| m.peek().as_object())
+            .and_then(|obj| obj.get("x-request-id"))
+            .and_then(|v| v.as_str())
+        {
+            header.push(("x-request-id".to_string(), x_request_id.to_string().into()));
+        }
         Ok(header)
     }
 
@@ -623,6 +634,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ];
         let mut api_key = self.get_auth_header(&req.connector_config)?;
         header.append(&mut api_key);
+        // Propagate x-request-id from metadata to outgoing gateway header
+        if let Some(x_request_id) = req
+            .request
+            .metadata
+            .as_ref()
+            .and_then(|m| m.peek().as_object())
+            .and_then(|obj| obj.get("x-request-id"))
+            .and_then(|v| v.as_str())
+        {
+            header.push(("x-request-id".to_string(), x_request_id.to_string().into()));
+        }
         Ok(header)
     }
 
