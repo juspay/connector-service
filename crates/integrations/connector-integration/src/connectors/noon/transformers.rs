@@ -285,12 +285,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
-                    additional_context: Some(
-                        format!(
-                            "Failed to convert amount {} to Noon format for authorize request",
-                            data.router_data.request.minor_amount
-                        ),
-                    ),
+                    additional_context: Some(format!(
+                        "Failed to convert amount {} to Noon format for authorize request",
+                        data.router_data.request.minor_amount
+                    )),
                     ..Default::default()
                 },
             })?;
@@ -490,7 +488,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
                     additional_context: Some(
-                        "Failed to encode subscription data to Noon format for authorize request".to_string(),
+                        "Failed to encode subscription data to Noon format for authorize request"
+                            .to_string(),
                     ),
                     ..Default::default()
                 },
@@ -742,13 +741,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction = NoonActionTransaction {
             amount: amount.change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
-                    additional_context: Some(
-                        format!(
-                            "Failed to convert amount {} {} to Noon format for capture request",
-                            data.router_data.request.minor_amount_to_capture,
-                            item.request.currency
-                        ),
-                    ),
+                    additional_context: Some(format!(
+                        "Failed to convert amount {} {} to Noon format for capture request",
+                        data.router_data.request.minor_amount_to_capture, item.request.currency
+                    )),
                     ..Default::default()
                 },
             })?,
@@ -859,13 +855,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction = NoonActionTransaction {
             amount: refund_amount.change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
-                    additional_context: Some(
-                        format!(
-                            "Failed to convert refund amount {} {} to Noon format for refund request",
-                            data.router_data.request.refund_amount,
-                            item.request.currency
-                        ),
-                    ),
+                    additional_context: Some(format!(
+                        "Failed to convert refund amount {} {} to Noon format for refund request",
+                        data.router_data.request.refund_amount, item.request.currency
+                    )),
                     ..Default::default()
                 },
             })?,
@@ -1399,13 +1392,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let order = NoonOrder {
             amount: amount.change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
-                    additional_context: Some(
-                        format!(
-                            "Failed to convert amount {:?} {} to Noon format for setup mandate request",
-                            item.request.amount,
-                            currency.unwrap_or(item.request.currency)
-                        ),
-                    ),
+                    additional_context: Some(format!(
+                        "Failed to convert amount {:?} {} to Noon format for setup mandate request",
+                        item.request.amount,
+                        currency.unwrap_or(item.request.currency)
+                    )),
                     ..Default::default()
                 },
             })?,
@@ -1800,13 +1791,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .convert(item.request.amount, item.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
-                    additional_context: Some(
-                        format!(
-                            "Failed to convert amount {} {} to Noon format for create order request",
-                            item.request.amount,
-                            item.request.currency
-                        ),
-                    ),
+                    additional_context: Some(format!(
+                        "Failed to convert amount {} {} to Noon format for create order request",
+                        item.request.amount, item.request.currency
+                    )),
                     ..Default::default()
                 },
             })?;
