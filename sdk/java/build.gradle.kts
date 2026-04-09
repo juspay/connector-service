@@ -3,10 +3,11 @@ plugins {
     `java-library`
     `maven-publish`
     signing
+    id("com.tddworks.central-publisher") version "0.2.0-alpha.1"
 }
 
 group = "io.hyperswitch"
-version = "0.0.1"
+version = "0.0.3"
 
 repositories {
     mavenCentral()
@@ -28,7 +29,7 @@ sourceSets {
     create("sanity") {
         kotlin.srcDir("tests")
         compileClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath
-        runtimeClasspath += sourceSets["main"].output + sourceSets["main"].runtimeClasspath
+        runtimeClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath
     }
 }
 
@@ -48,31 +49,72 @@ tasks.register<JavaExec>("runClientSanity") {
     dependsOn("compileSanityKotlin")
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = "io.hyperswitch"
-            artifactId = "prism"
-            from(components["java"])
+// Signing configuration
+signing {
+    val signingKey = System.getenv("GPG_SIGNING_KEY")
+    val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD")
+
+    if (signingKey.isNullOrBlank() || signingPassword.isNullOrBlank()) {
+        // Only fail if we're trying to publish to Central
+        if (System.getenv("CENTRAL_TOKEN_USERNAME") != null) {
+            throw GradleException("""
+                Missing GPG signing credentials for Maven Central publishing.
+                Set environment variables:
+                  - GPG_SIGNING_KEY: PGP private key in ASCII armor format
+                  - GPG_SIGNING_KEY_PASSWORD: Password for the PGP key
+            """.trimIndent())
         }
+    } else {
+        useInMemoryPgpKeys(signingKey, signingPassword)
     }
-    repositories {
-        maven {
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = System.getenv("SONATYPE_MAVEN_USERNAME")
-                password = System.getenv("SONATYPE_MAVEN_PASSWORD")
+}
+
+// The central-publisher plugin creates publications in afterEvaluate,
+// so we must defer signing until publications are available.
+afterEvaluate {
+    signing {
+        sign(publishing.publications)
+    }
+}
+
+// Configure Central Portal Publisher plugin
+// Only configure if credentials are present (avoids validation errors during regular builds)
+if (System.getenv("CENTRAL_TOKEN_USERNAME") != null) {
+    centralPublisher {
+        credentials {
+            username = System.getenv("CENTRAL_TOKEN_USERNAME") ?: ""
+            password = System.getenv("CENTRAL_TOKEN_PASSWORD") ?: ""
+        }
+
+        projectInfo {
+            name = "Hyperswitch Prism"
+            description = "Hyperswitch Payments SDK - Kotlin client for connector integrations"
+            url = "https://github.com/juspay/hyperswitch-prism"
+
+            license {
+                name = "Apache License 2.0"
+                url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
             }
+
+            developer {
+                id = "juspay"
+                name = "Juspay"
+                email = "hyperswitch@juspay.in"
+            }
+
+            scm {
+                url = "https://github.com/juspay/hyperswitch-prism"
+                connection = "scm:git:git://github.com/juspay/hyperswitch-prism.git"
+                developerConnection = "scm:git:ssh://github.com/juspay/hyperswitch-prism.git"
+            }
+        }
+
+        publishing {
+            autoPublish = true
+            aggregation = true
+            dryRun = false
         }
     }
 }
 
-// Configure signing from environment variables (for CI)
-signing {
-    val gpgKey = System.getenv("SONATYPE_MAVEN_SIGNING_KEY")
-    val gpgPassword = System.getenv("SONATYPE_MAVEN_SIGNING_KEY_PASSWORD")
-    if (!gpgKey.isNullOrEmpty() && !gpgPassword.isNullOrEmpty()) {
-        useInMemoryPgpKeys(gpgKey, gpgPassword)
-        sign(publishing.publications["maven"])
-    }
-}
+// Note: The Central Publisher plugin automatically generates sources and javadoc jars
