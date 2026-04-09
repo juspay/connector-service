@@ -477,14 +477,27 @@ jobs:
           echo "Version $PACKAGE_VERSION does not exist on npm - OK to publish"
 
       # --- Dry-run checks ---
-      - name: Java dry-run (publishToMavenLocal)
+      - name: Download Java SDK artifact for dry-run
+        if: ${{ inputs.preview_only == true || inputs.publish_java == true }}
+        uses: actions/download-artifact@v4
+        with:
+          name: sdk-java
+          path: artifacts/sdk-java
+
+      - name: Java dry-run (verify bundle)
         id: check-java-dryrun
         if: ${{ inputs.preview_only == true || inputs.publish_java == true }}
         continue-on-error: true
         env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_KEY_PASSWORD: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
-        run: make -C sdk/java publish-check-dry-run
+        run: |
+          # Copy the JAR to build/libs where Gradle expects it
+          mkdir -p sdk/java/build/libs
+          cp artifacts/sdk-java/*.jar sdk/java/build/libs/
+          make -C sdk/java publish-check-dry-run
 
       - name: Python dry-run (twine check)
         id: check-python-dryrun
