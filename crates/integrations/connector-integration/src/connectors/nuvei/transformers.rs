@@ -1962,7 +1962,6 @@ pub struct NuveiOpenOrderResponse {
     pub client_request_id: Option<String>,
 }
 
-
 /// Nuvei's `openOrder.do` returns `orderId` as a bare JSON integer despite docs
 /// declaring it as String(20). Mirrors the Bambora `str_or_i32` pattern.
 fn str_or_i64<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
@@ -1976,10 +1975,12 @@ where
         I64(i64),
     }
 
-    Ok(Option::<StrOrI64>::deserialize(deserializer)?.map(|v| match v {
-        StrOrI64::Str(s) => s,
-        StrOrI64::I64(n) => n.to_string(),
-    }))
+    Ok(
+        Option::<StrOrI64>::deserialize(deserializer)?.map(|v| match v {
+            StrOrI64::Str(s) => s,
+            StrOrI64::I64(n) => n.to_string(),
+        }),
+    )
 }
 
 // --- TryFrom: RouterDataV2 -> NuveiOpenOrderRequest (via macro wrapper) ---
