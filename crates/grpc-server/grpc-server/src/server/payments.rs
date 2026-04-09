@@ -292,246 +292,6 @@ pub struct Payments {
 #[derive(Clone)]
 pub struct Customer;
 
-impl Customer {
-    #[allow(clippy::too_many_arguments, dead_code)]
-    async fn handle_connector_customer<
-        T: PaymentMethodDataTypes
-            + Default
-            + Eq
-            + Debug
-            + Send
-            + serde::Serialize
-            + serde::de::DeserializeOwned
-            + Clone
-            + Sync
-            + 'static,
-    >(
-        &self,
-        config: &Arc<Config>,
-        connector_data: ConnectorData<T>,
-        payment_flow_data: &PaymentFlowData,
-        connector_config: &ConnectorSpecificConfig,
-        payload: &PaymentServiceAuthorizeRequest,
-        connector_name: &str,
-        service_name: &str,
-        event_params: EventParams<'_>,
-    ) -> Result<ConnectorCustomerResponse, PaymentAuthorizationError> {
-        // Get connector integration for CreateConnectorCustomer flow
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            CreateConnectorCustomer,
-            PaymentFlowData,
-            ConnectorCustomerData,
-            ConnectorCustomerResponse,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        // Create connector customer request data using ForeignTryFrom
-        let connector_customer_request_data =
-            ConnectorCustomerData::foreign_try_from(payload.clone()).map_err(|err| {
-                tracing::error!("Failed to process connector customer data: {:?}", err);
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some("Failed to process connector customer data".to_string()),
-                    Some("CONNECTOR_CUSTOMER_DATA_ERROR".to_string()),
-                    None,
-                )
-            })?;
-
-        // Create router data for connector customer flow
-        let connector_customer_router_data = RouterDataV2::<
-            CreateConnectorCustomer,
-            PaymentFlowData,
-            ConnectorCustomerData,
-            ConnectorCustomerResponse,
-        > {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data.clone(),
-            connector_config: connector_config.clone(),
-            request: connector_customer_request_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        // Get API tag for CreateConnectorCustomer flow
-        let api_tag = config
-            .api_tags
-            .get_tag(FlowName::CreateConnectorCustomer, None);
-
-        // Create test context if test mode is enabled
-        let test_context = config
-            .test
-            .create_test_context(event_params.request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
-
-        // Execute connector processing
-        let external_event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            service_type: event_params.service_type,
-            flow_name: FlowName::CreateConnectorCustomer,
-            event_config: &config.events,
-            request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
-            resource_id: event_params.resource_id,
-            shadow_mode: event_params.shadow_mode,
-        };
-
-        let response = Box::pin(
-            external_services::service::execute_connector_processing_step(
-                &config.proxy,
-                connector_integration,
-                connector_customer_router_data,
-                None,
-                external_event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-                test_context,
-                api_tag,
-            ),
-        )
-        .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Connector customer creation failed: {e}")),
-                Some("CONNECTOR_CUSTOMER_CREATION_ERROR".to_string()),
-                Some(500),
-            )
-        })?;
-
-        match response.response {
-            Ok(connector_customer_data) => Ok(connector_customer_data),
-            Err(ErrorResponse {
-                message,
-                status_code,
-                ..
-            }) => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Connector customer creation failed: {message}")),
-                Some("CONNECTOR_CUSTOMER_CREATION_ERROR".to_string()),
-                Some(status_code.into()),
-            )),
-        }
-    }
-
-    #[allow(clippy::too_many_arguments, dead_code)]
-    async fn handle_connector_customer_for_setup_mandate<
-        T: PaymentMethodDataTypes
-            + Default
-            + Eq
-            + Debug
-            + Send
-            + serde::Serialize
-            + serde::de::DeserializeOwned
-            + Clone
-            + Sync
-            + 'static,
-    >(
-        &self,
-        config: &Arc<Config>,
-        connector_data: ConnectorData<T>,
-        payment_flow_data: &PaymentFlowData,
-        connector_config: ConnectorSpecificConfig,
-        payload: &PaymentServiceSetupRecurringRequest,
-        connector_name: &str,
-        service_name: &str,
-        event_params: EventParams<'_>,
-    ) -> Result<ConnectorCustomerResponse, tonic::Status> {
-        // Get connector integration for CreateConnectorCustomer flow
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            CreateConnectorCustomer,
-            PaymentFlowData,
-            ConnectorCustomerData,
-            ConnectorCustomerResponse,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        // Create connector customer request data using ForeignTryFrom
-        let connector_customer_request_data =
-            ConnectorCustomerData::foreign_try_from(payload.clone()).map_err(|err| {
-                tracing::error!("Failed to process connector customer data: {:?}", err);
-                tonic::Status::internal(format!("Failed to process connector customer data: {err}"))
-            })?;
-
-        // Create router data for connector customer flow
-        let connector_customer_router_data = RouterDataV2::<
-            CreateConnectorCustomer,
-            PaymentFlowData,
-            ConnectorCustomerData,
-            ConnectorCustomerResponse,
-        > {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data.clone(),
-            connector_config,
-            request: connector_customer_request_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        // Get API tag for CreateConnectorCustomer flow
-        let api_tag = config
-            .api_tags
-            .get_tag(FlowName::CreateConnectorCustomer, None);
-
-        // Create test context if test mode is enabled
-        let test_context = config
-            .test
-            .create_test_context(event_params.request_id)
-            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
-
-        // Execute connector processing
-        let external_event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            service_type: event_params.service_type,
-            flow_name: FlowName::CreateConnectorCustomer,
-            event_config: &config.events,
-            request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
-            resource_id: event_params.resource_id,
-            shadow_mode: event_params.shadow_mode,
-        };
-
-        let response = Box::pin(
-            external_services::service::execute_connector_processing_step(
-                &config.proxy,
-                connector_integration,
-                connector_customer_router_data,
-                None,
-                external_event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-                test_context,
-                api_tag,
-            ),
-        )
-        .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            tonic::Status::internal(format!("Connector customer creation failed: {e}"))
-        })?;
-
-        match response.response {
-            Ok(connector_customer_data) => Ok(connector_customer_data),
-            Err(ErrorResponse {
-                message,
-                status_code,
-                ..
-            }) => Err(tonic::Status::internal(format!(
-                "Connector customer creation failed: {message} (status: {status_code})"
-            ))),
-        }
-    }
-}
-
 #[tonic::async_trait]
 impl CustomerService for Customer {
     #[tracing::instrument(
@@ -808,410 +568,6 @@ impl Payments {
         Ok(authorize_response)
     }
 
-    #[allow(clippy::too_many_arguments, dead_code)]
-    async fn handle_order_creation<
-        T: PaymentMethodDataTypes
-            + Default
-            + Eq
-            + Debug
-            + Send
-            + serde::Serialize
-            + serde::de::DeserializeOwned
-            + Clone
-            + Sync,
-    >(
-        &self,
-        config: &Arc<Config>,
-        connector_data: ConnectorData<T>,
-        payment_flow_data: &PaymentFlowData,
-        connector_config: ConnectorSpecificConfig,
-        payload: &PaymentServiceAuthorizeRequest,
-        connector_name: &str,
-        service_name: &str,
-        event_params: EventParams<'_>,
-    ) -> Result<PaymentCreateOrderResponse, PaymentAuthorizationError> {
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        > = connector_data.connector.get_connector_integration_v2();
-        let amount = match payload.amount {
-            Some(a) => Ok(a),
-            None => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Unresolved,
-                Some("Amount is required for order creation".to_string()),
-                Some("AMOUNT_MISSING".to_string()),
-                None,
-            )),
-        }?;
-
-        let currency =
-            common_enums::Currency::foreign_try_from(amount.currency()).map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Currency conversion failed: {e}")),
-                    Some("CURRENCY_ERROR".to_string()),
-                    None,
-                )
-            })?;
-
-        let payment_method: grpc_api_types::payments::PaymentMethod =
-            payload.payment_method.clone().ok_or_else(|| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some("Payment method is required".to_string()),
-                    Some("PAYMENT_METHOD_REQUIRED".to_string()),
-                    None,
-                )
-            })?;
-
-        let payment_method_type: Option<common_enums::PaymentMethodType> =
-            <Option<common_enums::PaymentMethodType>>::foreign_try_from(payment_method).map_err(
-                |e| {
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(format!("Payment method type conversion failed: {e}")),
-                        Some("PAYMENT_METHOD_TYPE_ERROR".to_string()),
-                        None,
-                    )
-                },
-            )?;
-
-        let order_create_data = PaymentCreateOrderData {
-            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
-            currency,
-            integrity_object: None,
-            metadata: payload.metadata.clone().map(|m| {
-                let metadata = m.expose();
-                let value =
-                    serde_json::from_str::<serde_json::Value>(&metadata).unwrap_or_default();
-                Secret::new(value)
-            }),
-            webhook_url: payload.webhook_url.clone(),
-            payment_method_type,
-        };
-
-        let order_router_data = RouterDataV2::<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        > {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data.clone(),
-            connector_config,
-            request: order_create_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        // Get API tag for CreateOrder flow
-        let api_tag = config.api_tags.get_tag(FlowName::CreateOrder, None);
-
-        // Create test context if test mode is enabled
-        let test_context = config
-            .test
-            .create_test_context(event_params.request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
-
-        // Create event processing parameters
-        let external_event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            service_type: event_params.service_type,
-            flow_name: FlowName::CreateOrder,
-            event_config: &config.events,
-            request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
-            resource_id: event_params.resource_id,
-            shadow_mode: event_params.shadow_mode,
-        };
-
-        // Execute connector processing
-        let response = Box::pin(
-            external_services::service::execute_connector_processing_step(
-                &config.proxy,
-                connector_integration,
-                order_router_data,
-                None,
-                external_event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-                test_context,
-                api_tag,
-            ),
-        )
-        .await
-        .map_err(
-            |e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Order creation failed: {e}")),
-                    Some("ORDER_CREATION_ERROR".to_string()),
-                    None,
-                )
-            },
-        )?;
-
-        match response.response {
-            Ok(PaymentCreateOrderResponse {
-                order_id,
-                session_token,
-            }) => Ok(PaymentCreateOrderResponse {
-                order_id,
-                session_token,
-            }),
-            Err(e) => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(e.message.clone()),
-                Some(e.code.clone()),
-                Some(e.status_code.into()),
-            )),
-        }
-    }
-    #[allow(clippy::too_many_arguments, dead_code)]
-    async fn handle_order_creation_for_setup_mandate<
-        T: PaymentMethodDataTypes
-            + Default
-            + Eq
-            + Debug
-            + Send
-            + serde::Serialize
-            + serde::de::DeserializeOwned
-            + Clone
-            + Sync,
-    >(
-        &self,
-        config: &Arc<Config>,
-        connector_data: ConnectorData<T>,
-        payment_flow_data: &PaymentFlowData,
-        connector_config: ConnectorSpecificConfig,
-        event_params: EventParams<'_>,
-        payload: &PaymentServiceSetupRecurringRequest,
-        connector_name: &str,
-        service_name: &str,
-    ) -> Result<String, tonic::Status> {
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        let amount = match payload.amount {
-            Some(a) => Ok(a),
-            None => Err(tonic::Status::invalid_argument(
-                "Currency is required for order creation in setup mandate flow",
-            )),
-        }?;
-
-        let currency = common_enums::Currency::foreign_try_from(amount.currency())
-            .map_err(|e| e.into_grpc_status())?;
-
-        let order_create_data = PaymentCreateOrderData {
-            amount: common_utils::types::MinorUnit::new(0),
-            currency,
-            integrity_object: None,
-            metadata: payload.metadata.clone().map(|m| {
-                let metadata = m.expose();
-                let value =
-                    serde_json::from_str::<serde_json::Value>(&metadata).unwrap_or_default();
-                Secret::new(value)
-            }),
-            webhook_url: payload.webhook_url.clone(),
-            // Setup mandate flow doesn't use wallets, so payment_method_type is not applicable
-            payment_method_type: None,
-        };
-
-        let order_router_data = RouterDataV2::<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        > {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data.clone(),
-            connector_config,
-            request: order_create_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        // Get API tag for CreateOrder flow
-        let api_tag = config.api_tags.get_tag(FlowName::CreateOrder, None);
-
-        // Create test context if test mode is enabled
-        let test_context = config
-            .test
-            .create_test_context(event_params.request_id)
-            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
-
-        // Execute connector processing
-        let external_event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            service_type: event_params.service_type,
-            flow_name: FlowName::CreateOrder,
-            event_config: &config.events,
-            request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
-            resource_id: event_params.resource_id,
-            shadow_mode: event_params.shadow_mode,
-        };
-
-        // Execute connector processing
-        let response = Box::pin(
-            external_services::service::execute_connector_processing_step(
-                &config.proxy,
-                connector_integration,
-                order_router_data,
-                None,
-                external_event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-                test_context,
-                api_tag,
-            ),
-        )
-        .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
-
-        match response.response {
-            Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
-            Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
-                "Order creation error: {message}"
-            ))),
-        }
-    }
-
-    #[allow(clippy::too_many_arguments, dead_code)]
-    async fn handle_payment_method_token<
-        T: PaymentMethodDataTypes
-            + Default
-            + Eq
-            + Debug
-            + Send
-            + serde::Serialize
-            + serde::de::DeserializeOwned
-            + Clone
-            + Sync,
-    >(
-        &self,
-        config: &Arc<Config>,
-        connector_data: ConnectorData<T>,
-        payment_flow_data: &PaymentFlowData,
-        connector_config: ConnectorSpecificConfig,
-        event_params: EventParams<'_>,
-        payment_authorize_data: &PaymentsAuthorizeData<T>,
-        connector_name: &str,
-        service_name: &str,
-    ) -> Result<PaymentMethodTokenResponse, PaymentAuthorizationError> {
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        let payment_method_tokenization_data =
-            PaymentMethodTokenizationData::from(payment_authorize_data);
-
-        let payment_method_token_router_data = RouterDataV2::<
-            PaymentMethodToken,
-            PaymentFlowData,
-            PaymentMethodTokenizationData<T>,
-            PaymentMethodTokenResponse,
-        > {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data.clone(),
-            connector_config,
-            request: payment_method_tokenization_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        // Get API tag for PaymentMethodToken flow
-        let api_tag = config.api_tags.get_tag(FlowName::PaymentMethodToken, None);
-
-        // Create test context if test mode is enabled
-        let test_context = config
-            .test
-            .create_test_context(event_params.request_id)
-            .map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Test mode configuration error: {e}")),
-                    Some("TEST_CONFIG_ERROR".to_string()),
-                    None,
-                )
-            })?;
-
-        // Execute connector processing
-        let external_event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            service_type: event_params.service_type,
-            flow_name: FlowName::PaymentMethodToken,
-            event_config: &config.events,
-            request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
-            resource_id: event_params.resource_id,
-            shadow_mode: event_params.shadow_mode,
-        };
-        let response = external_services::service::execute_connector_processing_step(
-            &config.proxy,
-            connector_integration,
-            payment_method_token_router_data,
-            None,
-            external_event_params,
-            None,
-            common_enums::CallConnectorAction::Trigger,
-            test_context,
-            api_tag,
-        )
-        .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Payment Method Token creation failed: {e}")),
-                Some("PAYMENT_METHOD_TOKEN_CREATION_ERROR".to_string()),
-                Some(500),
-            )
-        })?;
-
-        match response.response {
-            Ok(payment_method_token_data) => {
-                tracing::info!("Payment method token created successfully");
-                Ok(payment_method_token_data)
-            }
-            Err(ErrorResponse {
-                message,
-                status_code,
-                ..
-            }) => Err(PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Payment Method Token creation failed: {message}")),
-                Some("PAYMENT_METHOD_TOKEN_CREATION_ERROR".to_string()),
-                Some(status_code.into()),
-            )),
-        }
-    }
 
     #[allow(clippy::too_many_arguments)]
     async fn handle_setup_recurring_internal<
@@ -1237,7 +593,7 @@ impl Payments {
         request_id: &str,
         token_data: Option<TokenData>,
         payment_method_data: payment_method_data::PaymentMethodData<T>,
-    ) -> Result<PaymentServiceSetupRecurringResponse, PaymentAuthorizationError> {
+    ) -> Result<PaymentServiceSetupRecurringResponse, tonic::Status> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
@@ -1254,16 +610,7 @@ impl Payments {
             &metadata_payload.connector_config,
             config,
         )
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            tracing::error!("Failed to resolve connector overrides: {:?}", e);
-            let api_error = e.current_context().get_api_error();
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(api_error.error_message.clone()),
-                Some(api_error.sub_code.clone()),
-                Some(api_error.error_identifier.into()),
-            )
-        })?;
+        .into_grpc_status()?;
 
         // Create common request data
         let payment_flow_data = PaymentFlowData::foreign_try_from((
@@ -1271,28 +618,12 @@ impl Payments {
             connectors,
             metadata,
         ))
-        .map_err(|err| {
-            tracing::error!("Failed to process payment flow data: {:?}", err);
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some("Failed to process payment flow data".to_string()),
-                Some("PAYMENT_FLOW_ERROR".to_string()),
-                None,
-            )
-        })?;
+        .map_err(|e| e.into_grpc_status())?;
 
         // Create connector request data
         let setup_mandate_request_data =
             SetupMandateRequestData::foreign_try_from((payload.clone(), payment_method_data.clone()))
-                .map_err(|err| {
-                    tracing::error!("Failed to process payment setup recurring data: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to process payment setup recurring data".to_string()),
-                        Some("PAYMENT_SETUP_RECURRING_DATA_ERROR".to_string()),
-                        None,
-                    )
-                })?;
+                 .map_err(|e| e.into_grpc_status())?;
 
         // Construct router data
         let router_data: RouterDataV2<
@@ -1315,14 +646,7 @@ impl Payments {
         );
 
         // Create test context if test mode is enabled
-        let test_context = config.test.create_test_context(request_id).map_err(|e| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Test mode configuration error: {e}")),
-                Some("TEST_CONFIG_ERROR".to_string()),
-                None,
-            )
-        })?;
+        let test_context = config.test.create_test_context(request_id).map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
@@ -1355,20 +679,25 @@ impl Payments {
         // Generate response - handle both success and error cases like process_authorization_internal
         let setup_mandate_response = match response {
             Ok(success_response) => generate_setup_mandate_response(success_response)
-                .map_err(|err| {
-                    tracing::error!("Failed to generate setup mandate response: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to generate setup mandate response".to_string()),
-                        Some("SETUP_MANDATE_RESPONSE_ERROR".to_string()),
-                        None,
-                    )
-                })?,
+                .map_err(|e| e.into_grpc_status())?,
             Err(error_report) => {
                 tracing::error!("{:?}", error_report);
-                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
-                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
-                let api_error = app_err.get_api_error();
+                // Extract error details from ConnectorFlowError
+                let (status_code, code, message) = match error_report.current_context() {
+                    domain_types::errors::ConnectorFlowError::Request(integration_err) => {
+                        let api_error = integration_err.get_api_error();
+                        (api_error.error_identifier, api_error.sub_code.clone(), api_error.error_message.clone())
+                    }
+                    domain_types::errors::ConnectorFlowError::Response(connector_err) => {
+                        let status = connector_err.http_status_code().unwrap_or(500);
+                        let code = connector_err.error_code().to_string();
+                        let msg = connector_err.to_string();
+                        (status, code, msg)
+                    }
+                    domain_types::errors::ConnectorFlowError::Client(client_err) => {
+                        (500u16, "CLIENT_ERROR".to_string(), client_err.to_string())
+                    }
+                };
 
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
@@ -1377,9 +706,9 @@ impl Payments {
                     connector_config,
                     request: setup_mandate_request_data,
                     response: Err(ErrorResponse {
-                        status_code: api_error.error_identifier,
-                        code: api_error.sub_code.clone(),
-                        message: api_error.error_message.clone(),
+                        status_code,
+                        code,
+                        message,
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,
@@ -1389,18 +718,7 @@ impl Payments {
                     }),
                 };
                 generate_setup_mandate_response::<T>(error_router_data)
-                    .map_err(|err| {
-                        tracing::error!(
-                            "Failed to generate setup mandate response for connector error: {:?}",
-                            err
-                        );
-                        PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
-                            Some(format!("Connector error: {error_report}")),
-                            Some("CONNECTOR_ERROR".to_string()),
-                            None,
-                        )
-                    })?
+                    .map_err(|e| e.into_grpc_status())?
             }
         };
 
@@ -1557,7 +875,8 @@ impl PaymentService for Payments {
                             tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
-                        match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                        tracing::info!("INJECTOR: Authorization completed successfully with injector");
+                        Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
                             &config,
                             payload,
                             metadata_payload.connector,
@@ -1569,18 +888,7 @@ impl PaymentService for Payments {
                             Some(token_data),
                             payment_method_data
                         ))
-                        .await
-                        {
-                            Ok(response) => {
-                                tracing::info!("INJECTOR: Authorization completed successfully with injector");
-                                response
-                            },
-                            Err(error_response) => {
-                                tracing::error!("INJECTOR: Authorization failed with injector - error: {:?}", error_response);
-                                PaymentServiceAuthorizeResponse::from(error_response)
-                            },
-                        }
-
+                        .await?
                     }
                     PaymentMethodDataAction::Card(card_details) => {
                         tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
@@ -1588,7 +896,8 @@ impl PaymentService for Payments {
                             tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
-                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                        tracing::info!("REGULAR: Authorization completed successfully without injector");
+                        Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                             &config,
                             payload,
                             metadata_payload.connector,
@@ -1600,17 +909,7 @@ impl PaymentService for Payments {
                             None,
                             payment_method_data,
                         ))
-                        .await
-                        {
-                            Ok(response) => {
-                                tracing::info!("REGULAR: Authorization completed successfully without injector");
-                                response
-                            },
-                            Err(error_response) => {
-                                tracing::error!("REGULAR: Authorization failed without injector - error: {:?}", error_response);
-                                PaymentServiceAuthorizeResponse::from(error_response)
-                            },
-                        }
+                        .await?
                     }
                     PaymentMethodDataAction::Default => {
                         let payment_method_data = payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(proto_payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
@@ -1618,7 +917,8 @@ impl PaymentService for Payments {
                                 tracing::error!("Failed to convert payment method data: {:?}", err);
                                 tonic::Status::invalid_argument("Invalid payment method data")
                             })?;
-                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                        tracing::info!("REGULAR: Authorization completed successfully without injector");
+                        Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                             &config,
                             payload,
                             metadata_payload.connector,
@@ -2306,7 +1606,7 @@ impl PaymentService for Payments {
                         Some(token_data),
                         payment_method_data,
                         ))
-                        .await
+                        .await?
 
                     },
                     PaymentMethodDataAction::Card(card_details) => {
@@ -2326,7 +1626,7 @@ impl PaymentService for Payments {
                         request_id,
                         None,
                         payment_method_data,
-                        )).await
+                        )).await?
                     },
                     PaymentMethodDataAction::Default => {
                         let payment_method_data = payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(proto_payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
@@ -2345,14 +1645,11 @@ impl PaymentService for Payments {
                         request_id,
                         None,
                         payment_method_data,
-                        )).await
+                        )).await?
                     }
                 };
                 
-                match setup_mandate_response {
-                    Ok(resp) => Ok(tonic::Response::new(resp)),
-                    Err(e) => Ok(tonic::Response::new(e.into())),
-                }
+                Ok(tonic::Response::new(setup_mandate_response))
                     
                 })
             },
@@ -2607,7 +1904,7 @@ impl PaymentService for Payments {
                         },
                         Err(error_response) => {
                             tracing::error!("PROXY_AUTHORIZE_FLOW: Authorization failed - error: {:?}", error_response);
-                            Ok(tonic::Response::new(PaymentServiceAuthorizeResponse::from(error_response)))
+                            Err(error_response)
                         },
                     }
                 })
@@ -2696,12 +1993,9 @@ impl PaymentService for Payments {
                         Some(token_data),
                         payment_method_data,
                     ))
-                    .await;
+                    .await?;
                     
-                    match setup_mandate_response {
-                        Ok(resp) => Ok(tonic::Response::new(resp)),
-                        Err(e) => Ok(tonic::Response::new(e.into())),
-                    }
+                    Ok(tonic::Response::new(setup_mandate_response))
                 })
             },
         )
@@ -2787,7 +2081,7 @@ impl PaymentMethodService for PaymentMethod {
                         Some(token_data),
                         payment_method_data,
                         )
-                        .await
+                        .await?
 
                     },
                     PaymentMethodDataAction::Card(card_details) => {
@@ -2807,7 +2101,7 @@ impl PaymentMethodService for PaymentMethod {
                         request_id,
                         None,
                         payment_method_data,
-                        ).await
+                        ).await?
                     },
                     PaymentMethodDataAction::Default => {
                         let payment_method_data = payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
@@ -2826,13 +2120,10 @@ impl PaymentMethodService for PaymentMethod {
                         request_id,
                         None,
                         payment_method_data,
-                        ).await
+                        ).await?
                     }
                 };
-                match payment_method_tokenize_response {
-                    Ok(resp) => Ok(tonic::Response::new(resp)),
-                    Err(e) => Ok(tonic::Response::new(e.into())),
-                }
+                Ok(tonic::Response::new(payment_method_tokenize_response))
                     
                 })
             },
@@ -2874,7 +2165,7 @@ impl PaymentMethod {
         request_id: &str,
         token_data: Option<TokenData>,
         payment_method_data: payment_method_data::PaymentMethodData<T>,
-    ) -> Result<PaymentMethodServiceTokenizeResponse, PaymentAuthorizationError> {
+    ) -> Result<PaymentMethodServiceTokenizeResponse, tonic::Status> {
         // Get connector data
         let connector_data: ConnectorData<T> = ConnectorData::get_connector_by_name(&connector);
 
@@ -2888,36 +2179,17 @@ impl PaymentMethod {
         > = connector_data.connector.get_connector_integration_v2();
 
         let connectors =
-            utils::connectors_with_connector_config_overrides(&connector_config, config).map_err(
-                |e: error_stack::Report<ApplicationErrorResponse>| {
-                    tracing::error!("Failed to resolve connector overrides: {:?}", e);
-                    let api_error = e.current_context().get_api_error();
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(api_error.error_message.clone()),
-                        Some(api_error.sub_code.clone()),
-                        Some(api_error.error_identifier.into()),
-                    )
-                },
-            )?;
+            utils::connectors_with_connector_config_overrides(&connector_config, config).into_grpc_status()?;
 
         // Create payment flow data
         let payment_flow_data =
-            PaymentFlowData::foreign_try_from((request.clone(), connectors, metadata)).map_err(
-                |err| {
-                    tracing::error!("Failed to process payment flow data: {:?}", err);
-                    err.into_grpc_status()
-                },
-            )?;
+            PaymentFlowData::foreign_try_from((request.clone(), connectors, metadata)).map_err(|e| e.into_grpc_status())?;
 
         // Get payment method token request data
 
         let payment_method_token_request_data =
             PaymentMethodTokenizationData::foreign_try_from((request.clone(), payment_method_data))
-                .map_err(|err| {
-                    tracing::error!("Failed to process payment method token data: {:?}", err);
-                    err.into_grpc_status()
-                })?;
+                .map_err(|e| e.into_grpc_status())?;
 
         // Create router data for payment method token flow
         let payment_method_token_router_data = RouterDataV2::<
@@ -2937,14 +2209,7 @@ impl PaymentMethod {
         let api_tag = config.api_tags.get_tag(FlowName::PaymentMethodToken, None);
 
         // Create test context if test mode is enabled
-        let test_context = config.test.create_test_context(request_id).map_err(|e| {
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(format!("Test mode configuration error: {e}")),
-                Some("TEST_CONFIG_ERROR".to_string()),
-                None,
-            )
-        })?;
+        let test_context = config.test.create_test_context(request_id).map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Execute connector processing
         let event_params = EventProcessingParams {
@@ -2978,20 +2243,25 @@ impl PaymentMethod {
         // Generate response - handle both success and error cases like process_authorization_internal
         let payment_method_token_response = match response {
             Ok(success_response) => domain_types::types::generate_create_payment_method_token_response(success_response)
-                .map_err(|err| {
-                    tracing::error!("Failed to generate payment method token response: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to generate payment method token response".to_string()),
-                        Some("PAYMENT_METHOD_TOKENIZE_RESPONSE_ERROR".to_string()),
-                        None,
-                    )
-                })?,
+                 .map_err(|e| e.into_grpc_status())?,
             Err(error_report) => {
                 tracing::error!("{:?}", error_report);
-                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
-                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
-                let api_error = app_err.get_api_error();
+                // Extract error details from ConnectorFlowError
+                let (status_code, code, message) = match error_report.current_context() {
+                    domain_types::errors::ConnectorFlowError::Request(integration_err) => {
+                        let api_error = integration_err.get_api_error();
+                        (api_error.error_identifier, api_error.sub_code.clone(), api_error.error_message.clone())
+                    }
+                    domain_types::errors::ConnectorFlowError::Response(connector_err) => {
+                        let status = connector_err.http_status_code().unwrap_or(500);
+                        let code = connector_err.error_code().to_string();
+                        let msg = connector_err.to_string();
+                        (status, code, msg)
+                    }
+                    domain_types::errors::ConnectorFlowError::Client(client_err) => {
+                        (500u16, "CLIENT_ERROR".to_string(), client_err.to_string())
+                    }
+                };
 
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
@@ -3000,9 +2270,9 @@ impl PaymentMethod {
                     connector_config,
                     request: payment_method_token_request_data,
                     response: Err(ErrorResponse {
-                        status_code: api_error.error_identifier,
-                        code: api_error.sub_code.clone(),
-                        message: api_error.error_message.clone(),
+                        status_code,
+                        code,
+                        message,
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,
@@ -3012,18 +2282,7 @@ impl PaymentMethod {
                     }),
                 };
                 domain_types::types::generate_create_payment_method_token_response(error_router_data)
-                    .map_err(|err| {
-                        tracing::error!(
-                            "Failed to generate payment method token response for connector error: {:?}",
-                            err
-                        );
-                        PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
-                            Some(format!("Connector error: {error_report}")),
-                            Some("CONNECTOR_ERROR".to_string()),
-                            None,
-                        )
-                    })?
+                     .map_err(|e| e.into_grpc_status())?
             }
         };
 
@@ -4015,22 +3274,22 @@ pub fn generate_mandate_revoke_response(
     }
 }
 
-// /// Convert a PaymentAuthorizationError into a PaymentServiceSetupRecurringResponse (for error cases)
+// /// Convert a IntegrationError into a PaymentServiceSetupRecurringResponse (for error cases)
 // pub fn payment_authorization_error_to_setup_recurring_response(
-//     error: PaymentAuthorizationError,
+//     error: IntegrationError,
 // ) -> PaymentServiceSetupRecurringResponse {
 //     PaymentServiceSetupRecurringResponse {
 //         status: error.status as i32,
 //         error: Some(grpc_api_types::payments::ErrorInfo {
 //             unified_details: None,
 //             connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
-//                 code: error.error_code.clone(),
-//                 message: error.error_message.clone(),
+//                 code: error.get_api_error().sub_code.clone(),
+//                 message: error.get_api_error().error_message.clone(),
 //                 reason: None,
 //             }),
 //             issuer_details: None,
 //         }),
-//         status_code: error.status_code.unwrap_or(500),
+//         status_code: 500,
 //         response_headers: std::collections::HashMap::new(), //check this
 //         mandate_reference: None,
 //         connector_recurring_payment_id: None,
@@ -4046,22 +3305,22 @@ pub fn generate_mandate_revoke_response(
 //     }
 // }
 
-/// Convert a PaymentAuthorizationError into a PaymentServiceSetupRecurringResponse (for error cases)
+/// Convert a IntegrationError into a PaymentServiceSetupRecurringResponse (for error cases)
 pub fn payment_authorization_error_to_payment_method_tokenize_response(
-    error: PaymentAuthorizationError,
+    error: IntegrationError,
 ) -> PaymentMethodServiceTokenizeResponse {
     PaymentMethodServiceTokenizeResponse {
         payment_method_token: String::new(),
         error: Some(grpc_api_types::payments::ErrorInfo {
             unified_details: None,
             connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
-                message: error.error_message.clone(),
-                code: error.error_code.clone(),
+                message: Some(error.get_api_error().error_message.clone()),
+                code: Some(error.get_api_error().sub_code.clone()),
                 reason: None, //check this
             }),
             issuer_details: None,
         }),
-        status_code: error.status_code.unwrap_or(500),
+        status_code: 500,
         response_headers: std::collections::HashMap::new(), //check this
         merchant_payment_method_id:  None,
         state: None,

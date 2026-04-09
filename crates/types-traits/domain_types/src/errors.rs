@@ -256,6 +256,21 @@ impl IntegrationError {
         Self::NotImplemented(message.into(), context)
     }
 
+    // /// Generic constructor for errors (compatible with legacy PaymentAuthorizationError).
+    // /// Creates a `ConfigurationError` variant.
+    // pub fn new(
+    //     _status: impl Into<String>,
+    //     message: impl Into<String>,
+    //     code: impl Into<String>,
+    //     _status_code: Option<u16>,
+    // ) -> Self {
+    //     Self::ConfigurationError {
+    //         code: code.into(),
+    //         message: message.into(),
+    //         context: IntegrationErrorContext::default(),
+    //     }
+    // }
+
     /// Optional connector-specific guidance for gRPC [`IntegrationError`] (overrides merged in `ucs_env`).
     pub fn integration_context(&self) -> &IntegrationErrorContext {
         match self {
@@ -291,6 +306,16 @@ impl IntegrationError {
             | Self::MaxFieldLengthViolated { context, .. }
             | Self::SourceVerificationFailed { context }
             | Self::ConfigurationError { context, .. } => context,
+        }
+    }
+
+    /// Get API error representation (compatibility with PaymentAuthorizationError)
+    pub fn get_api_error(&self) -> ApiError {
+        ApiError {
+            sub_code: self.error_code().to_string(),
+            error_identifier: 500,
+            error_message: self.to_string(),
+            error_object: None,
         }
     }
 
