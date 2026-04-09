@@ -8,6 +8,7 @@
 use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
+use grpc_api_types::payments::payment_method;
 
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {
@@ -22,154 +23,178 @@ fn build_client() -> ConnectorClient {
 }
 
 pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
-    serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
-    "merchant_capture_id": "probe_capture_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "amount_to_capture": {  // Capture Details.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    })).unwrap_or_default()
+    PaymentServiceCaptureRequest {
+        merchant_capture_id: Some("probe_capture_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        amount_to_capture: Some(Money {  // Capture Details.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
-    serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "connector_order_reference_id": "probe_order_ref_001",  // Connector Reference Id.
-    })).unwrap_or_default()
+    PaymentServiceGetRequest {
+        merchant_transaction_id: Some("probe_merchant_txn_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        connector_order_reference_id: Some("probe_order_ref_001".to_string()),  // Connector Reference Id.
+        ..Default::default()
+    }
 }
 
 pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
-    serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
-    "connector_recurring_payment_id": {  // Reference to existing mandate.
-        "mandate_id_type": {
-            "connector_mandate_id": {
-                "connector_mandate_id": "probe-mandate-123",
-            },
-        },
-    },
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Optional payment Method Information (for network transaction flows).
-        "payment_method": {
-            "token": {  // Payment tokens.
-                "token": "probe_pm_token",  // The token string representing a payment method.
-            },
-        }
-    },
-    "return_url": "https://example.com/recurring-return",
-    "connector_customer_id": "cust_probe_123",
-    "payment_method_type": "PAY_PAL",
-    "off_session": true,  // Behavioral Flags and Preferences.
-    })).unwrap_or_default()
+    RecurringPaymentServiceChargeRequest {
+        connector_recurring_payment_id: Some(MandateReference {  // Reference to existing mandate.
+            // mandate_id_type: {"connector_mandate_id": {"connector_mandate_id": "probe-mandate-123"}}
+            ..Default::default()
+        }),
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {  // Optional payment Method Information (for network transaction flows).
+            payment_method: Some(payment_method::PaymentMethod::Token(TokenPaymentMethodType {
+                token: Some("probe_pm_token".to_string()),  // The token string representing a payment method.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        return_url: Some("https://example.com/recurring-return".to_string()),
+        connector_customer_id: Some("cust_probe_123".to_string()),
+        payment_method_type: Some(PaymentMethodType::from_str_name("PAY_PAL").unwrap_or_default().into()),
+        off_session: Some(true),  // Behavioral Flags and Preferences.
+        ..Default::default()
+    }
 }
 
 pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
-    serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "payment_amount": 1000,  // Amount Information.
-    "refund_amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "reason": "customer_request",  // Reason for the refund.
-    })).unwrap_or_default()
+    PaymentServiceRefundRequest {
+        merchant_refund_id: Some("probe_refund_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        payment_amount: 1000,  // Amount Information.
+        refund_amount: Some(Money {
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        reason: Some("customer_request".to_string()),  // Reason for the refund.
+        ..Default::default()
+    }
 }
 
 pub fn build_refund_get_request() -> RefundServiceGetRequest {
-    serde_json::from_value::<RefundServiceGetRequest>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",  // Identification.
-    "connector_transaction_id": "probe_connector_txn_001",
-    "refund_id": "probe_refund_id_001",
-    })).unwrap_or_default()
+    RefundServiceGetRequest {
+        merchant_refund_id: Some("probe_refund_001".to_string()),  // Identification.
+        connector_transaction_id: "probe_connector_txn_001".to_string(),
+        refund_id: "probe_refund_id_001".to_string(),
+        ..Default::default()
+    }
 }
 
 pub fn build_token_authorize_request() -> PaymentServiceTokenAuthorizeRequest {
-    serde_json::from_value::<PaymentServiceTokenAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_tokenized_txn_001",
-    "amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "connector_token": "pm_1AbcXyzStripeTestToken",  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
-    "address": {
-        "billing_address": {
-        },
-    },
-    "capture_method": "AUTOMATIC",
-    "return_url": "https://example.com/return",
-    })).unwrap_or_default()
+    PaymentServiceTokenAuthorizeRequest {
+        merchant_transaction_id: Some("probe_tokenized_txn_001".to_string()),
+        amount: Some(Money {
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        connector_token: Some("pm_1AbcXyzStripeTestToken".to_string()),  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
+        address: Some(PaymentAddress {
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        capture_method: Some(CaptureMethod::from_str_name("AUTOMATIC").unwrap_or_default().into()),
+        return_url: Some("https://example.com/return".to_string()),
+        ..Default::default()
+    }
 }
 
 pub fn build_token_setup_recurring_request() -> PaymentServiceTokenSetupRecurringRequest {
-    serde_json::from_value::<PaymentServiceTokenSetupRecurringRequest>(serde_json::json!({
-    "merchant_recurring_payment_id": "probe_tokenized_mandate_001",
-    "amount": {
-        "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "connector_token": "pm_1AbcXyzStripeTestToken",
-    "address": {
-        "billing_address": {
-        },
-    },
-    "customer_acceptance": {
-        "acceptance_type": "ONLINE",  // Type of acceptance (e.g., online, offline).
-        "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        "online_mandate_details": {  // Details if the acceptance was an online mandate.
-            "ip_address": "127.0.0.1",  // IP address from which the mandate was accepted.
-            "user_agent": "Mozilla/5.0",  // User agent string of the browser used for mandate acceptance.
-        },
-    },
-    "setup_mandate_details": {
-        "mandate_type": {  // Type of mandate (single_use or multi_use) with amount details.
-            "multi_use": {  // Multi use mandate with amount details (for recurring payments).
-                "amount": 0,  // Amount.
-                "currency": "USD",  // Currency code (ISO 4217).
-            },
-        },
-    },
-    "setup_future_usage": "OFF_SESSION",
-    })).unwrap_or_default()
+    PaymentServiceTokenSetupRecurringRequest {
+        merchant_recurring_payment_id: "probe_tokenized_mandate_001".to_string(),
+        amount: Some(Money {
+            minor_amount: 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        connector_token: Some("pm_1AbcXyzStripeTestToken".to_string()),
+        address: Some(PaymentAddress {
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        customer_acceptance: Some(CustomerAcceptance {
+            acceptance_type: AcceptanceType::from_str_name("ONLINE").unwrap_or_default().into(),  // Type of acceptance (e.g., online, offline).
+            accepted_at: 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            online_mandate_details: Some(OnlineMandate {  // Details if the acceptance was an online mandate.
+                ip_address: Some("127.0.0.1".to_string()),  // IP address from which the mandate was accepted.
+                user_agent: "Mozilla/5.0".to_string(),  // User agent string of the browser used for mandate acceptance.
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        setup_mandate_details: Some(SetupMandateDetails {
+            mandate_type: Some(MandateType {  // Type of mandate (single_use or multi_use) with amount details.
+                multi_use: Some(MandateAmountData {  // Multi use mandate with amount details (for recurring payments).
+                    amount: 0,  // Amount.
+                    currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // Currency code (ISO 4217).
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        setup_future_usage: Some(FutureUsage::from_str_name("OFF_SESSION").unwrap_or_default().into()),
+        ..Default::default()
+    }
 }
 
 pub fn build_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
-    serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
-    "amount": {  // Payment Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {
-        "payment_method": {
-            "card": {  // Generic card payment.
-                "card_number": "4111111111111111",  // Card Identification.
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information.
-            },
-        }
-    },
-    "address": {  // Address Information.
-        "billing_address": {
-        },
-    },
-    })).unwrap_or_default()
+    PaymentMethodServiceTokenizeRequest {
+        amount: Some(Money {  // Payment Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {
+            payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                card_number: Some("4111111111111111".to_string()),  // Card Identification.
+                card_exp_month: Some("03".to_string()),
+                card_exp_year: Some("2030".to_string()),
+                card_cvc: Some("737".to_string()),
+                card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {  // Address Information.
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
-    serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
-    "merchant_void_id": "probe_void_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    })).unwrap_or_default()
+    PaymentServiceVoidRequest {
+        merchant_void_id: Some("probe_void_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        ..Default::default()
+    }
 }
 
 

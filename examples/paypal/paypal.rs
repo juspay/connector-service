@@ -8,6 +8,7 @@
 use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
+use grpc_api_types::payments::payment_method;
 
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {
@@ -22,57 +23,66 @@ fn build_client() -> ConnectorClient {
 }
 
 pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
-    serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_txn_001",  // Identification.
-    "amount": {  // The amount for the payment.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Payment method to be used.
-        "payment_method": {
-            "card": {  // Generic card payment.
-                "card_number": "4111111111111111",  // Card Identification.
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information.
-            },
-        }
-    },
-    "capture_method": capture_method,  // Method for capturing the payment.
-    "address": {  // Address Information.
-        "billing_address": {
-        },
-    },
-    "auth_type": "NO_THREE_DS",  // Authentication Details.
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks.
-    "state": {  // State Information.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    "order_details": []  // Order Details.
-    })).unwrap_or_default()
+    PaymentServiceAuthorizeRequest {
+        merchant_transaction_id: Some("probe_txn_001".to_string()),  // Identification.
+        amount: Some(Money {  // The amount for the payment.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {  // Payment method to be used.
+            payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                card_number: Some("4111111111111111".to_string()),  // Card Identification.
+                card_exp_month: Some("03".to_string()),
+                card_exp_year: Some("2030".to_string()),
+                card_cvc: Some("737".to_string()),
+                card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        capture_method: Some(CaptureMethod::from_str_name(capture_method).unwrap_or_default().into()),  // Method for capturing the payment.
+        address: Some(PaymentAddress {  // Address Information.
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),  // Authentication Details.
+        return_url: Some("https://example.com/return".to_string()),  // URLs for Redirection and Webhooks.
+        state: Some(ConnectorState {  // State Information.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
-    serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
-    "merchant_capture_id": "probe_capture_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "amount_to_capture": {  // Capture Details.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "state": {  // State Information.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    PaymentServiceCaptureRequest {
+        merchant_capture_id: Some("probe_capture_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        amount_to_capture: Some(Money {  // Capture Details.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        state: Some(ConnectorState {  // State Information.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_create_order_request() -> PaymentServiceCreateOrderRequest {
@@ -93,222 +103,261 @@ pub fn build_create_order_request() -> PaymentServiceCreateOrderRequest {
 }
 
 pub fn build_create_server_authentication_token_request() -> MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
-    serde_json::from_value::<MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest>(serde_json::json!({
+    MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
 
-    })).unwrap_or_default()
+        ..Default::default()
+    }
 }
 
 pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
-    serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "state": {  // State Information.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    PaymentServiceGetRequest {
+        merchant_transaction_id: Some("probe_merchant_txn_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        state: Some(ConnectorState {  // State Information.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_handle_event_request() -> EventServiceHandleRequest {
-    serde_json::from_value::<EventServiceHandleRequest>(serde_json::json!({
+    EventServiceHandleRequest {
 
-    })).unwrap_or_default()
+        ..Default::default()
+    }
 }
 
 pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
-    serde_json::from_value::<PaymentServiceProxyAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_proxy_txn_001",
-    "amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "card_proxy": {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
-        "card_number": "4111111111111111",  // Card Identification.
-        "card_exp_month": "03",
-        "card_exp_year": "2030",
-        "card_cvc": "123",
-        "card_holder_name": "John Doe",  // Cardholder Information.
-    },
-    "address": {
-        "billing_address": {
-        },
-    },
-    "capture_method": "AUTOMATIC",
-    "auth_type": "NO_THREE_DS",
-    "return_url": "https://example.com/return",
-    "state": {
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    PaymentServiceProxyAuthorizeRequest {
+        merchant_transaction_id: Some("probe_proxy_txn_001".to_string()),
+        amount: Some(Money {
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        card_proxy: Some(CardDetails {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            card_number: Some("4111111111111111".to_string()),  // Card Identification.
+            card_exp_month: Some("03".to_string()),
+            card_exp_year: Some("2030".to_string()),
+            card_cvc: Some("123".to_string()),
+            card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        capture_method: Some(CaptureMethod::from_str_name("AUTOMATIC").unwrap_or_default().into()),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),
+        return_url: Some("https://example.com/return".to_string()),
+        state: Some(ConnectorState {
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_proxy_setup_recurring_request() -> PaymentServiceProxySetupRecurringRequest {
-    serde_json::from_value::<PaymentServiceProxySetupRecurringRequest>(serde_json::json!({
-    "merchant_recurring_payment_id": "probe_proxy_mandate_001",
-    "amount": {
-        "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "card_proxy": {  // Card proxy for vault-aliased payments.
-        "card_number": "4111111111111111",  // Card Identification.
-        "card_exp_month": "03",
-        "card_exp_year": "2030",
-        "card_cvc": "123",
-        "card_holder_name": "John Doe",  // Cardholder Information.
-    },
-    "address": {
-        "billing_address": {
-        },
-    },
-    "state": {
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    "customer_acceptance": {
-        "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
-        "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "auth_type": "NO_THREE_DS",
-    "setup_future_usage": "OFF_SESSION",
-    })).unwrap_or_default()
+    PaymentServiceProxySetupRecurringRequest {
+        merchant_recurring_payment_id: "probe_proxy_mandate_001".to_string(),
+        amount: Some(Money {
+            minor_amount: 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        card_proxy: Some(CardDetails {  // Card proxy for vault-aliased payments.
+            card_number: Some("4111111111111111".to_string()),  // Card Identification.
+            card_exp_month: Some("03".to_string()),
+            card_exp_year: Some("2030".to_string()),
+            card_cvc: Some("123".to_string()),
+            card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        state: Some(ConnectorState {
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        customer_acceptance: Some(CustomerAcceptance {
+            acceptance_type: AcceptanceType::from_str_name("OFFLINE").unwrap_or_default().into(),  // Type of acceptance (e.g., online, offline).
+            accepted_at: 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            ..Default::default()
+        }),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),
+        setup_future_usage: Some(FutureUsage::from_str_name("OFF_SESSION").unwrap_or_default().into()),
+        ..Default::default()
+    }
 }
 
 pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
-    serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
-    "connector_recurring_payment_id": {  // Reference to existing mandate.
-        "mandate_id_type": {
-            "connector_mandate_id": {
-                "connector_mandate_id": "probe-mandate-123",
-            },
-        },
-    },
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Optional payment Method Information (for network transaction flows).
-        "payment_method": {
-            "token": {  // Payment tokens.
-                "token": "probe_pm_token",  // The token string representing a payment method.
-            },
-        }
-    },
-    "return_url": "https://example.com/recurring-return",
-    "connector_customer_id": "cust_probe_123",
-    "payment_method_type": "PAY_PAL",
-    "off_session": true,  // Behavioral Flags and Preferences.
-    "state": {  // State Information.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    RecurringPaymentServiceChargeRequest {
+        connector_recurring_payment_id: Some(MandateReference {  // Reference to existing mandate.
+            // mandate_id_type: {"connector_mandate_id": {"connector_mandate_id": "probe-mandate-123"}}
+            ..Default::default()
+        }),
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {  // Optional payment Method Information (for network transaction flows).
+            payment_method: Some(payment_method::PaymentMethod::Token(TokenPaymentMethodType {
+                token: Some("probe_pm_token".to_string()),  // The token string representing a payment method.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        return_url: Some("https://example.com/recurring-return".to_string()),
+        connector_customer_id: Some("cust_probe_123".to_string()),
+        payment_method_type: Some(PaymentMethodType::from_str_name("PAY_PAL").unwrap_or_default().into()),
+        off_session: Some(true),  // Behavioral Flags and Preferences.
+        state: Some(ConnectorState {  // State Information.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
-    serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "payment_amount": 1000,  // Amount Information.
-    "refund_amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "reason": "customer_request",  // Reason for the refund.
-    "state": {  // State data for access token storage and.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    PaymentServiceRefundRequest {
+        merchant_refund_id: Some("probe_refund_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        payment_amount: 1000,  // Amount Information.
+        refund_amount: Some(Money {
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        reason: Some("customer_request".to_string()),  // Reason for the refund.
+        state: Some(ConnectorState {  // State data for access token storage and.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_refund_get_request() -> RefundServiceGetRequest {
-    serde_json::from_value::<RefundServiceGetRequest>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",  // Identification.
-    "connector_transaction_id": "probe_connector_txn_001",
-    "refund_id": "probe_refund_id_001",
-    "state": {  // State Information.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    RefundServiceGetRequest {
+        merchant_refund_id: Some("probe_refund_001".to_string()),  // Identification.
+        connector_transaction_id: "probe_connector_txn_001".to_string(),
+        refund_id: "probe_refund_id_001".to_string(),
+        state: Some(ConnectorState {  // State Information.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
-    serde_json::from_value::<PaymentServiceSetupRecurringRequest>(serde_json::json!({
-    "merchant_recurring_payment_id": "probe_mandate_001",  // Identification.
-    "amount": {  // Mandate Details.
-        "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {
-        "payment_method": {
-            "card": {  // Generic card payment.
-                "card_number": "4111111111111111",  // Card Identification.
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information.
-            },
-        }
-    },
-    "address": {  // Address Information.
-        "billing_address": {
-        },
-    },
-    "auth_type": "NO_THREE_DS",  // Type of authentication to be used.
-    "enrolled_for_3ds": false,  // Indicates if the customer is enrolled for 3D Secure.
-    "return_url": "https://example.com/mandate-return",  // URL to redirect after setup.
-    "setup_future_usage": "OFF_SESSION",  // Indicates future usage intention.
-    "request_incremental_authorization": false,  // Indicates if incremental authorization is requested.
-    "customer_acceptance": {  // Details of customer acceptance.
-        "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
-        "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "state": {  // State data for access token storage and.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    PaymentServiceSetupRecurringRequest {
+        merchant_recurring_payment_id: "probe_mandate_001".to_string(),  // Identification.
+        amount: Some(Money {  // Mandate Details.
+            minor_amount: 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {
+            payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                card_number: Some("4111111111111111".to_string()),  // Card Identification.
+                card_exp_month: Some("03".to_string()),
+                card_exp_year: Some("2030".to_string()),
+                card_cvc: Some("737".to_string()),
+                card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {  // Address Information.
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),  // Type of authentication to be used.
+        enrolled_for_3ds: false,  // Indicates if the customer is enrolled for 3D Secure.
+        return_url: Some("https://example.com/mandate-return".to_string()),  // URL to redirect after setup.
+        setup_future_usage: Some(FutureUsage::from_str_name("OFF_SESSION").unwrap_or_default().into()),  // Indicates future usage intention.
+        request_incremental_authorization: false,  // Indicates if incremental authorization is requested.
+        customer_acceptance: Some(CustomerAcceptance {  // Details of customer acceptance.
+            acceptance_type: AcceptanceType::from_str_name("OFFLINE").unwrap_or_default().into(),  // Type of acceptance (e.g., online, offline).
+            accepted_at: 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            ..Default::default()
+        }),
+        state: Some(ConnectorState {  // State data for access token storage and.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
-    serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
-    "merchant_void_id": "probe_void_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "state": {  // State Information.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    PaymentServiceVoidRequest {
+        merchant_void_id: Some("probe_void_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        state: Some(ConnectorState {  // State Information.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 

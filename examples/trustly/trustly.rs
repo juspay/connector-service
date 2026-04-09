@@ -22,9 +22,10 @@ fn build_client() -> ConnectorClient {
 }
 
 pub fn build_handle_event_request() -> EventServiceHandleRequest {
-    serde_json::from_value::<EventServiceHandleRequest>(serde_json::json!({
+    EventServiceHandleRequest {
 
-    })).unwrap_or_default()
+        ..Default::default()
+    }
 }
 
 

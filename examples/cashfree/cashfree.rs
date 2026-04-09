@@ -8,6 +8,7 @@
 use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
+use grpc_api_types::payments::payment_method;
 
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {
@@ -22,29 +23,32 @@ fn build_client() -> ConnectorClient {
 }
 
 pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
-    serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_txn_001",  // Identification.
-    "amount": {  // The amount for the payment.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Payment method to be used.
-        "payment_method": {
-            "upi_collect": {  // UPI Collect.
-                "vpa_id": "test@upi",  // Virtual Payment Address.
-            },
-        }
-    },
-    "capture_method": capture_method,  // Method for capturing the payment.
-    "address": {  // Address Information.
-        "billing_address": {
-        },
-    },
-    "auth_type": "NO_THREE_DS",  // Authentication Details.
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks.
-    "connector_order_id": "connector_order_id",  // Send the connector order identifier here if an order was created before authorize.
-    "order_details": []  // Order Details.
-    })).unwrap_or_default()
+    PaymentServiceAuthorizeRequest {
+        merchant_transaction_id: Some("probe_txn_001".to_string()),  // Identification.
+        amount: Some(Money {  // The amount for the payment.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {  // Payment method to be used.
+            payment_method: Some(payment_method::PaymentMethod::UpiCollect(UpiCollect {
+                vpa_id: Some("test@upi".to_string()),  // Virtual Payment Address.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        capture_method: Some(CaptureMethod::from_str_name(capture_method).unwrap_or_default().into()),  // Method for capturing the payment.
+        address: Some(PaymentAddress {  // Address Information.
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),  // Authentication Details.
+        return_url: Some("https://example.com/return".to_string()),  // URLs for Redirection and Webhooks.
+        connector_order_id: Some("connector_order_id".to_string()),  // Send the connector order identifier here if an order was created before authorize.
+        ..Default::default()
+    }
 }
 
 

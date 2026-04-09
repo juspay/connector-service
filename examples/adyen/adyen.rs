@@ -8,6 +8,7 @@
 use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
+use grpc_api_types::payments::payment_method;
 
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {
@@ -22,297 +23,328 @@ fn build_client() -> ConnectorClient {
 }
 
 pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
-    serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_txn_001",  // Identification.
-    "amount": {  // The amount for the payment.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Payment method to be used.
-        "payment_method": {
-            "card": {  // Generic card payment.
-                "card_number": "4111111111111111",  // Card Identification.
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information.
-            },
-        }
-    },
-    "capture_method": capture_method,  // Method for capturing the payment.
-    "address": {  // Address Information.
-        "billing_address": {
-        },
-    },
-    "auth_type": "NO_THREE_DS",  // Authentication Details.
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks.
-    "browser_info": {
-        "color_depth": 24,  // Display Information.
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings.
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers.
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information.
-    },
-    "order_details": []  // Order Details.
-    })).unwrap_or_default()
+    PaymentServiceAuthorizeRequest {
+        merchant_transaction_id: Some("probe_txn_001".to_string()),  // Identification.
+        amount: Some(Money {  // The amount for the payment.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {  // Payment method to be used.
+            payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                card_number: Some("4111111111111111".to_string()),  // Card Identification.
+                card_exp_month: Some("03".to_string()),
+                card_exp_year: Some("2030".to_string()),
+                card_cvc: Some("737".to_string()),
+                card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        capture_method: Some(CaptureMethod::from_str_name(capture_method).unwrap_or_default().into()),  // Method for capturing the payment.
+        address: Some(PaymentAddress {  // Address Information.
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),  // Authentication Details.
+        return_url: Some("https://example.com/return".to_string()),  // URLs for Redirection and Webhooks.
+        browser_info: Some(BrowserInformation {
+            color_depth: Some(24),  // Display Information.
+            screen_height: Some(900),
+            screen_width: Some(1440),
+            java_enabled: Some(false),  // Browser Settings.
+            java_script_enabled: Some(true),
+            language: Some("en-US".to_string()),
+            time_zone_offset_minutes: Some(-480),
+            accept_header: Some("application/json".to_string()),  // Browser Headers.
+            user_agent: Some("Mozilla/5.0 (probe-bot)".to_string()),
+            accept_language: Some("en-US,en;q=0.9".to_string()),
+            ip_address: Some("1.2.3.4".to_string()),  // Device Information.
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
-    serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
-    "merchant_capture_id": "probe_capture_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "amount_to_capture": {  // Capture Details.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    })).unwrap_or_default()
+    PaymentServiceCaptureRequest {
+        merchant_capture_id: Some("probe_capture_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        amount_to_capture: Some(Money {  // Capture Details.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_create_client_authentication_token_request() -> MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
-    serde_json::from_value::<MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest>(serde_json::json!({
-    "merchant_client_session_id": "probe_sdk_session_001",  // Infrastructure.
-    "domain_context": {
-        "payment": {
-            "amount": {
-                "minor_amount": 1000,
-                "currency": "USD",
-            },
-        },
-    },
-    })).unwrap_or_default()
+    MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+        merchant_client_session_id: "probe_sdk_session_001".to_string(),  // Infrastructure.
+        // domain_context: {"payment": {"amount": {"minor_amount": 1000, "currency": "USD"}}}
+        ..Default::default()
+    }
 }
 
 pub fn build_dispute_accept_request() -> DisputeServiceAcceptRequest {
-    serde_json::from_value::<DisputeServiceAcceptRequest>(serde_json::json!({
-    "merchant_dispute_id": "probe_dispute_001",  // Identification.
-    "connector_transaction_id": "probe_txn_001",
-    "dispute_id": "probe_dispute_id_001",
-    })).unwrap_or_default()
+    DisputeServiceAcceptRequest {
+        merchant_dispute_id: Some("probe_dispute_001".to_string()),  // Identification.
+        connector_transaction_id: "probe_txn_001".to_string(),
+        dispute_id: "probe_dispute_id_001".to_string(),
+        ..Default::default()
+    }
 }
 
 pub fn build_dispute_defend_request() -> DisputeServiceDefendRequest {
-    serde_json::from_value::<DisputeServiceDefendRequest>(serde_json::json!({
-    "merchant_dispute_id": "probe_dispute_001",  // Identification.
-    "connector_transaction_id": "probe_txn_001",
-    "dispute_id": "probe_dispute_id_001",
-    "reason_code": "probe_reason",  // Defend Details.
-    })).unwrap_or_default()
+    DisputeServiceDefendRequest {
+        merchant_dispute_id: Some("probe_dispute_001".to_string()),  // Identification.
+        connector_transaction_id: "probe_txn_001".to_string(),
+        dispute_id: "probe_dispute_id_001".to_string(),
+        reason_code: Some("probe_reason".to_string()),  // Defend Details.
+        ..Default::default()
+    }
 }
 
 pub fn build_dispute_submit_evidence_request() -> DisputeServiceSubmitEvidenceRequest {
-    serde_json::from_value::<DisputeServiceSubmitEvidenceRequest>(serde_json::json!({
-    "merchant_dispute_id": "probe_dispute_001",  // Identification.
-    "connector_transaction_id": "probe_txn_001",
-    "dispute_id": "probe_dispute_id_001",
-    // "evidence_documents": [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": [112, 114, 111, 98, 101, 32, 101, 118, 105, 100, 101, 110, 99, 101, 32, 99, 111, 110, 116, 101, 110, 116], "file_mime_type": "application/pdf"}]  // Collection of evidence documents.
-    })).unwrap_or_default()
+    DisputeServiceSubmitEvidenceRequest {
+        merchant_dispute_id: Some("probe_dispute_001".to_string()),  // Identification.
+        connector_transaction_id: Some("probe_txn_001".to_string()),
+        dispute_id: "probe_dispute_id_001".to_string(),
+        // evidence_documents: [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": [112, 114, 111, 98, 101, 32, 101, 118, 105, 100, 101, 110, 99, 101, 32, 99, 111, 110, 116, 101, 110, 116], "file_mime_type": "application/pdf"}]  // Collection of evidence documents.
+        ..Default::default()
+    }
 }
 
 pub fn build_handle_event_request() -> EventServiceHandleRequest {
-    serde_json::from_value::<EventServiceHandleRequest>(serde_json::json!({
+    EventServiceHandleRequest {
 
-    })).unwrap_or_default()
+        ..Default::default()
+    }
 }
 
 pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
-    serde_json::from_value::<PaymentServiceProxyAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_proxy_txn_001",
-    "amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "card_proxy": {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
-        "card_number": "4111111111111111",  // Card Identification.
-        "card_exp_month": "03",
-        "card_exp_year": "2030",
-        "card_cvc": "123",
-        "card_holder_name": "John Doe",  // Cardholder Information.
-    },
-    "address": {
-        "billing_address": {
-        },
-    },
-    "capture_method": "AUTOMATIC",
-    "auth_type": "NO_THREE_DS",
-    "return_url": "https://example.com/return",
-    "browser_info": {
-        "color_depth": 24,  // Display Information.
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings.
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers.
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information.
-    },
-    })).unwrap_or_default()
+    PaymentServiceProxyAuthorizeRequest {
+        merchant_transaction_id: Some("probe_proxy_txn_001".to_string()),
+        amount: Some(Money {
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        card_proxy: Some(CardDetails {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            card_number: Some("4111111111111111".to_string()),  // Card Identification.
+            card_exp_month: Some("03".to_string()),
+            card_exp_year: Some("2030".to_string()),
+            card_cvc: Some("123".to_string()),
+            card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        capture_method: Some(CaptureMethod::from_str_name("AUTOMATIC").unwrap_or_default().into()),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),
+        return_url: Some("https://example.com/return".to_string()),
+        browser_info: Some(BrowserInformation {
+            color_depth: Some(24),  // Display Information.
+            screen_height: Some(900),
+            screen_width: Some(1440),
+            java_enabled: Some(false),  // Browser Settings.
+            java_script_enabled: Some(true),
+            language: Some("en-US".to_string()),
+            time_zone_offset_minutes: Some(-480),
+            accept_header: Some("application/json".to_string()),  // Browser Headers.
+            user_agent: Some("Mozilla/5.0 (probe-bot)".to_string()),
+            accept_language: Some("en-US,en;q=0.9".to_string()),
+            ip_address: Some("1.2.3.4".to_string()),  // Device Information.
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_proxy_setup_recurring_request() -> PaymentServiceProxySetupRecurringRequest {
-    serde_json::from_value::<PaymentServiceProxySetupRecurringRequest>(serde_json::json!({
-    "merchant_recurring_payment_id": "probe_proxy_mandate_001",
-    "amount": {
-        "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "card_proxy": {  // Card proxy for vault-aliased payments.
-        "card_number": "4111111111111111",  // Card Identification.
-        "card_exp_month": "03",
-        "card_exp_year": "2030",
-        "card_cvc": "123",
-        "card_holder_name": "John Doe",  // Cardholder Information.
-    },
-    "customer": {
-        "id": "probe_customer_001",  // Internal customer ID.
-    },
-    "address": {
-        "billing_address": {
-        },
-    },
-    "return_url": "https://example.com/return",
-    "customer_acceptance": {
-        "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
-        "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "auth_type": "NO_THREE_DS",
-    "setup_future_usage": "OFF_SESSION",
-    "browser_info": {
-        "color_depth": 24,  // Display Information.
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings.
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers.
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information.
-    },
-    })).unwrap_or_default()
+    PaymentServiceProxySetupRecurringRequest {
+        merchant_recurring_payment_id: "probe_proxy_mandate_001".to_string(),
+        amount: Some(Money {
+            minor_amount: 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        card_proxy: Some(CardDetails {  // Card proxy for vault-aliased payments.
+            card_number: Some("4111111111111111".to_string()),  // Card Identification.
+            card_exp_month: Some("03".to_string()),
+            card_exp_year: Some("2030".to_string()),
+            card_cvc: Some("123".to_string()),
+            card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+            ..Default::default()
+        }),
+        customer: Some(Customer {
+            id: Some("probe_customer_001".to_string()),  // Internal customer ID.
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        return_url: Some("https://example.com/return".to_string()),
+        customer_acceptance: Some(CustomerAcceptance {
+            acceptance_type: AcceptanceType::from_str_name("OFFLINE").unwrap_or_default().into(),  // Type of acceptance (e.g., online, offline).
+            accepted_at: 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            ..Default::default()
+        }),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),
+        setup_future_usage: Some(FutureUsage::from_str_name("OFF_SESSION").unwrap_or_default().into()),
+        browser_info: Some(BrowserInformation {
+            color_depth: Some(24),  // Display Information.
+            screen_height: Some(900),
+            screen_width: Some(1440),
+            java_enabled: Some(false),  // Browser Settings.
+            java_script_enabled: Some(true),
+            language: Some("en-US".to_string()),
+            time_zone_offset_minutes: Some(-480),
+            accept_header: Some("application/json".to_string()),  // Browser Headers.
+            user_agent: Some("Mozilla/5.0 (probe-bot)".to_string()),
+            accept_language: Some("en-US,en;q=0.9".to_string()),
+            ip_address: Some("1.2.3.4".to_string()),  // Device Information.
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
-    serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
-    "connector_recurring_payment_id": {  // Reference to existing mandate.
-        "mandate_id_type": {
-            "connector_mandate_id": {
-                "connector_mandate_id": "probe-mandate-123",
-            },
-        },
-    },
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Optional payment Method Information (for network transaction flows).
-        "payment_method": {
-            "token": {  // Payment tokens.
-                "token": "probe_pm_token",  // The token string representing a payment method.
-            },
-        }
-    },
-    "return_url": "https://example.com/recurring-return",
-    "connector_customer_id": "cust_probe_123",
-    "payment_method_type": "PAY_PAL",
-    "off_session": true,  // Behavioral Flags and Preferences.
-    })).unwrap_or_default()
+    RecurringPaymentServiceChargeRequest {
+        connector_recurring_payment_id: Some(MandateReference {  // Reference to existing mandate.
+            // mandate_id_type: {"connector_mandate_id": {"connector_mandate_id": "probe-mandate-123"}}
+            ..Default::default()
+        }),
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {  // Optional payment Method Information (for network transaction flows).
+            payment_method: Some(payment_method::PaymentMethod::Token(TokenPaymentMethodType {
+                token: Some("probe_pm_token".to_string()),  // The token string representing a payment method.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        return_url: Some("https://example.com/recurring-return".to_string()),
+        connector_customer_id: Some("cust_probe_123".to_string()),
+        payment_method_type: Some(PaymentMethodType::from_str_name("PAY_PAL").unwrap_or_default().into()),
+        off_session: Some(true),  // Behavioral Flags and Preferences.
+        ..Default::default()
+    }
 }
 
 pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
-    serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "payment_amount": 1000,  // Amount Information.
-    "refund_amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "reason": "customer_request",  // Reason for the refund.
-    })).unwrap_or_default()
+    PaymentServiceRefundRequest {
+        merchant_refund_id: Some("probe_refund_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        payment_amount: 1000,  // Amount Information.
+        refund_amount: Some(Money {
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        reason: Some("customer_request".to_string()),  // Reason for the refund.
+        ..Default::default()
+    }
 }
 
 pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
-    serde_json::from_value::<PaymentServiceSetupRecurringRequest>(serde_json::json!({
-    "merchant_recurring_payment_id": "probe_mandate_001",  // Identification.
-    "amount": {  // Mandate Details.
-        "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {
-        "payment_method": {
-            "card": {  // Generic card payment.
-                "card_number": "4111111111111111",  // Card Identification.
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information.
-            },
-        }
-    },
-    "customer": {
-        "id": "cust_probe_123",  // Internal customer ID.
-    },
-    "address": {  // Address Information.
-        "billing_address": {
-        },
-    },
-    "auth_type": "NO_THREE_DS",  // Type of authentication to be used.
-    "enrolled_for_3ds": false,  // Indicates if the customer is enrolled for 3D Secure.
-    "return_url": "https://example.com/mandate-return",  // URL to redirect after setup.
-    "setup_future_usage": "OFF_SESSION",  // Indicates future usage intention.
-    "request_incremental_authorization": false,  // Indicates if incremental authorization is requested.
-    "customer_acceptance": {  // Details of customer acceptance.
-        "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
-        "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "browser_info": {  // Information about the customer's browser.
-        "color_depth": 24,  // Display Information.
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings.
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers.
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information.
-    },
-    })).unwrap_or_default()
+    PaymentServiceSetupRecurringRequest {
+        merchant_recurring_payment_id: "probe_mandate_001".to_string(),  // Identification.
+        amount: Some(Money {  // Mandate Details.
+            minor_amount: 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {
+            payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                card_number: Some("4111111111111111".to_string()),  // Card Identification.
+                card_exp_month: Some("03".to_string()),
+                card_exp_year: Some("2030".to_string()),
+                card_cvc: Some("737".to_string()),
+                card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        customer: Some(Customer {
+            id: Some("cust_probe_123".to_string()),  // Internal customer ID.
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {  // Address Information.
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        auth_type: AuthenticationType::from_str_name("NO_THREE_DS").unwrap_or_default().into(),  // Type of authentication to be used.
+        enrolled_for_3ds: false,  // Indicates if the customer is enrolled for 3D Secure.
+        return_url: Some("https://example.com/mandate-return".to_string()),  // URL to redirect after setup.
+        setup_future_usage: Some(FutureUsage::from_str_name("OFF_SESSION").unwrap_or_default().into()),  // Indicates future usage intention.
+        request_incremental_authorization: false,  // Indicates if incremental authorization is requested.
+        customer_acceptance: Some(CustomerAcceptance {  // Details of customer acceptance.
+            acceptance_type: AcceptanceType::from_str_name("OFFLINE").unwrap_or_default().into(),  // Type of acceptance (e.g., online, offline).
+            accepted_at: 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            ..Default::default()
+        }),
+        browser_info: Some(BrowserInformation {  // Information about the customer's browser.
+            color_depth: Some(24),  // Display Information.
+            screen_height: Some(900),
+            screen_width: Some(1440),
+            java_enabled: Some(false),  // Browser Settings.
+            java_script_enabled: Some(true),
+            language: Some("en-US".to_string()),
+            time_zone_offset_minutes: Some(-480),
+            accept_header: Some("application/json".to_string()),  // Browser Headers.
+            user_agent: Some("Mozilla/5.0 (probe-bot)".to_string()),
+            accept_language: Some("en-US,en;q=0.9".to_string()),
+            ip_address: Some("1.2.3.4".to_string()),  // Device Information.
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_token_authorize_request() -> PaymentServiceTokenAuthorizeRequest {
-    serde_json::from_value::<PaymentServiceTokenAuthorizeRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_tokenized_txn_001",
-    "amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "connector_token": "pm_1AbcXyzStripeTestToken",  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
-    "address": {
-        "billing_address": {
-        },
-    },
-    "capture_method": "AUTOMATIC",
-    "return_url": "https://example.com/return",
-    })).unwrap_or_default()
+    PaymentServiceTokenAuthorizeRequest {
+        merchant_transaction_id: Some("probe_tokenized_txn_001".to_string()),
+        amount: Some(Money {
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        connector_token: Some("pm_1AbcXyzStripeTestToken".to_string()),  // Connector-issued token. Replaces PaymentMethod entirely. Examples: Stripe pm_xxx, Adyen recurringDetailReference, Braintree nonce.
+        address: Some(PaymentAddress {
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        capture_method: Some(CaptureMethod::from_str_name("AUTOMATIC").unwrap_or_default().into()),
+        return_url: Some("https://example.com/return".to_string()),
+        ..Default::default()
+    }
 }
 
 pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
-    serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
-    "merchant_void_id": "probe_void_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    })).unwrap_or_default()
+    PaymentServiceVoidRequest {
+        merchant_void_id: Some("probe_void_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        ..Default::default()
+    }
 }
 
 

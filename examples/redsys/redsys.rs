@@ -8,6 +8,7 @@
 use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
+use grpc_api_types::payments::payment_method;
 
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {
@@ -22,129 +23,148 @@ fn build_client() -> ConnectorClient {
 }
 
 pub fn build_authenticate_request() -> PaymentMethodAuthenticationServiceAuthenticateRequest {
-    serde_json::from_value::<PaymentMethodAuthenticationServiceAuthenticateRequest>(serde_json::json!({
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Payment Method.
-        "payment_method": {
-            "card": {  // Generic card payment.
-                "card_number": "4111111111111111",  // Card Identification.
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information.
-            },
-        }
-    },
-    "address": {  // Address Information.
-        "billing_address": {
-        },
-    },
-    "authentication_data": {  // Authentication Details.
-        "eci": "05",  // Electronic Commerce Indicator (ECI) from 3DS.
-        "cavv": "AAAAAAAAAA==",  // Cardholder Authentication Verification Value (CAVV).
-        "threeds_server_transaction_id": "probe-3ds-txn-001",  // 3DS Server Transaction ID.
-        "message_version": "2.1.0",  // 3DS Message Version (e.g., "2.1.0", "2.2.0").
-        "ds_transaction_id": "probe-ds-txn-001",  // Directory Server Transaction ID (DS Trans ID).
-    },
-    "return_url": "https://example.com/3ds-return",  // URLs for Redirection.
-    "continue_redirection_url": "https://example.com/3ds-continue",
-    "browser_info": {  // Contextual Information.
-        "color_depth": 24,  // Display Information.
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings.
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers.
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information.
-    },
-    })).unwrap_or_default()
+    PaymentMethodAuthenticationServiceAuthenticateRequest {
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {  // Payment Method.
+            payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                card_number: Some("4111111111111111".to_string()),  // Card Identification.
+                card_exp_month: Some("03".to_string()),
+                card_exp_year: Some("2030".to_string()),
+                card_cvc: Some("737".to_string()),
+                card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {  // Address Information.
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        authentication_data: Some(AuthenticationData {  // Authentication Details.
+            eci: Some("05".to_string()),  // Electronic Commerce Indicator (ECI) from 3DS.
+            cavv: Some("AAAAAAAAAA==".to_string()),  // Cardholder Authentication Verification Value (CAVV).
+            threeds_server_transaction_id: Some("probe-3ds-txn-001".to_string()),  // 3DS Server Transaction ID.
+            message_version: Some("2.1.0".to_string()),  // 3DS Message Version (e.g., "2.1.0", "2.2.0").
+            ds_transaction_id: Some("probe-ds-txn-001".to_string()),  // Directory Server Transaction ID (DS Trans ID).
+            ..Default::default()
+        }),
+        return_url: Some("https://example.com/3ds-return".to_string()),  // URLs for Redirection.
+        continue_redirection_url: Some("https://example.com/3ds-continue".to_string()),
+        browser_info: Some(BrowserInformation {  // Contextual Information.
+            color_depth: Some(24),  // Display Information.
+            screen_height: Some(900),
+            screen_width: Some(1440),
+            java_enabled: Some(false),  // Browser Settings.
+            java_script_enabled: Some(true),
+            language: Some("en-US".to_string()),
+            time_zone_offset_minutes: Some(-480),
+            accept_header: Some("application/json".to_string()),  // Browser Headers.
+            user_agent: Some("Mozilla/5.0 (probe-bot)".to_string()),
+            accept_language: Some("en-US,en;q=0.9".to_string()),
+            ip_address: Some("1.2.3.4".to_string()),  // Device Information.
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
-    serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
-    "merchant_capture_id": "probe_capture_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "amount_to_capture": {  // Capture Details.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    })).unwrap_or_default()
+    PaymentServiceCaptureRequest {
+        merchant_capture_id: Some("probe_capture_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        amount_to_capture: Some(Money {  // Capture Details.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
-    serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    })).unwrap_or_default()
+    PaymentServiceGetRequest {
+        merchant_transaction_id: Some("probe_merchant_txn_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_pre_authenticate_request() -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
-    serde_json::from_value::<PaymentMethodAuthenticationServicePreAuthenticateRequest>(serde_json::json!({
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Payment Method.
-        "payment_method": {
-            "card": {  // Generic card payment.
-                "card_number": "4111111111111111",  // Card Identification.
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information.
-            },
-        }
-    },
-    "address": {  // Address Information.
-        "billing_address": {
-        },
-    },
-    "enrolled_for_3ds": false,  // Authentication Details.
-    "return_url": "https://example.com/3ds-return",  // URLs for Redirection.
-    })).unwrap_or_default()
+    PaymentMethodAuthenticationServicePreAuthenticateRequest {
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        payment_method: Some(PaymentMethod {  // Payment Method.
+            payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                card_number: Some("4111111111111111".to_string()),  // Card Identification.
+                card_exp_month: Some("03".to_string()),
+                card_exp_year: Some("2030".to_string()),
+                card_cvc: Some("737".to_string()),
+                card_holder_name: Some("John Doe".to_string()),  // Cardholder Information.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {  // Address Information.
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        enrolled_for_3ds: false,  // Authentication Details.
+        return_url: Some("https://example.com/3ds-return".to_string()),  // URLs for Redirection.
+        ..Default::default()
+    }
 }
 
 pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
-    serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "payment_amount": 1000,  // Amount Information.
-    "refund_amount": {
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "reason": "customer_request",  // Reason for the refund.
-    })).unwrap_or_default()
+    PaymentServiceRefundRequest {
+        merchant_refund_id: Some("probe_refund_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        payment_amount: 1000,  // Amount Information.
+        refund_amount: Some(Money {
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        reason: Some("customer_request".to_string()),  // Reason for the refund.
+        ..Default::default()
+    }
 }
 
 pub fn build_refund_get_request() -> RefundServiceGetRequest {
-    serde_json::from_value::<RefundServiceGetRequest>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",  // Identification.
-    "connector_transaction_id": "probe_connector_txn_001",
-    "refund_id": "probe_refund_id_001",
-    })).unwrap_or_default()
+    RefundServiceGetRequest {
+        merchant_refund_id: Some("probe_refund_001".to_string()),  // Identification.
+        connector_transaction_id: "probe_connector_txn_001".to_string(),
+        refund_id: "probe_refund_id_001".to_string(),
+        ..Default::default()
+    }
 }
 
 pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
-    serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
-    "merchant_void_id": "probe_void_001",  // Identification.
-    "connector_transaction_id": connector_transaction_id,
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    })).unwrap_or_default()
+    PaymentServiceVoidRequest {
+        merchant_void_id: Some("probe_void_001".to_string()),  // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 

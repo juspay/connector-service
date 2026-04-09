@@ -115,7 +115,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L125) · [TypeScript](../../examples/stax/stax.ts#L109) · [Kotlin](../../examples/stax/stax.kt#L76) · [Rust](../../examples/stax/stax.rs#L113)
+**Examples:** [Python](../../examples/stax/stax.py#L102) · [TypeScript](../../examples/stax/stax.ts#L109) · [Kotlin](../../examples/stax/stax.kt#L76) · [Rust](../../examples/stax/stax.rs#L128)
 
 #### PaymentService.Get
 
@@ -126,7 +126,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L143) · [TypeScript](../../examples/stax/stax.ts#L127) · [Kotlin](../../examples/stax/stax.kt#L99) · [Rust](../../examples/stax/stax.rs#L127)
+**Examples:** [Python](../../examples/stax/stax.py#L120) · [TypeScript](../../examples/stax/stax.ts#L127) · [Kotlin](../../examples/stax/stax.kt#L99) · [Rust](../../examples/stax/stax.rs#L142)
 
 #### PaymentService.Refund
 
@@ -137,7 +137,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L152) · [TypeScript](../../examples/stax/stax.ts#L136) · [Kotlin](../../examples/stax/stax.kt#L107) · [Rust](../../examples/stax/stax.rs#L134)
+**Examples:** [Python](../../examples/stax/stax.py#L129) · [TypeScript](../../examples/stax/stax.ts#L136) · [Kotlin](../../examples/stax/stax.kt#L107) · [Rust](../../examples/stax/stax.rs#L149)
 
 #### PaymentMethodService.Tokenize
 
@@ -148,7 +148,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L170) · [TypeScript](../../examples/stax/stax.ts#L154) · [Kotlin](../../examples/stax/stax.kt#L129) · [Rust](../../examples/stax/stax.rs#L148)
+**Examples:** [Python](../../examples/stax/stax.py#L147) · [TypeScript](../../examples/stax/stax.ts#L154) · [Kotlin](../../examples/stax/stax.kt#L129) · [Rust](../../examples/stax/stax.rs#L163)
 
 #### PaymentService.Void
 
@@ -159,7 +159,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L179) · [TypeScript](../../examples/stax/stax.ts) · [Kotlin](../../examples/stax/stax.kt#L158) · [Rust](../../examples/stax/stax.rs#L155)
+**Examples:** [Python](../../examples/stax/stax.py#L156) · [TypeScript](../../examples/stax/stax.ts) · [Kotlin](../../examples/stax/stax.kt#L158) · [Rust](../../examples/stax/stax.rs#L170)
 
 ### Refunds
 
@@ -172,7 +172,7 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L161) · [TypeScript](../../examples/stax/stax.ts#L145) · [Kotlin](../../examples/stax/stax.kt#L117) · [Rust](../../examples/stax/stax.rs#L141)
+**Examples:** [Python](../../examples/stax/stax.py#L138) · [TypeScript](../../examples/stax/stax.ts#L145) · [Kotlin](../../examples/stax/stax.kt#L117) · [Rust](../../examples/stax/stax.rs#L156)
 
 ### Customers
 
@@ -185,4 +185,4 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L134) · [TypeScript](../../examples/stax/stax.ts#L118) · [Kotlin](../../examples/stax/stax.kt#L86) · [Rust](../../examples/stax/stax.rs#L120)
+**Examples:** [Python](../../examples/stax/stax.py#L111) · [TypeScript](../../examples/stax/stax.ts#L118) · [Kotlin](../../examples/stax/stax.kt#L86) · [Rust](../../examples/stax/stax.rs#L135)

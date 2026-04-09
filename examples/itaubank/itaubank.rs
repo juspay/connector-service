@@ -22,9 +22,10 @@ fn build_client() -> ConnectorClient {
 }
 
 pub fn build_create_server_authentication_token_request() -> MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
-    serde_json::from_value::<MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest>(serde_json::json!({
+    MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
 
-    })).unwrap_or_default()
+        ..Default::default()
+    }
 }
 
 

@@ -68,15 +68,27 @@ _ONEOF_WRAPPER_FIELD: dict[str, str] = {
     "MandateId":     "mandate_id_type",
 }
 
+# Fields that use the `optional` keyword in proto3 (tracked per message).
+# Non-optional message fields are still Option<T> in prost; these are the
+# non-message fields that become Option<T> only via the explicit `optional` keyword.
+_PROTO_OPTIONAL_FIELDS: dict[str, set[str]] = {}
+
+# Maps each proto type name (message or enum) to its defining proto file stem.
+# Used to determine which pb2 module to use in generated Python code.
+_PROTO_FILE_MAP: dict[str, str] = {}
+
 
 def load_proto_type_map(proto_dir: Path) -> None:
     """Parse all *.proto files in proto_dir to build _PROTO_FIELD_TYPES and _PROTO_WRAPPER_TYPES."""
     global _PROTO_FIELD_TYPES, _PROTO_WRAPPER_TYPES, _PROTO_REPEATED_FIELDS
+    global _PROTO_OPTIONAL_FIELDS, _PROTO_FILE_MAP
 
     type_map: dict[str, dict[str, str]] = {}
     repeated_map: dict[str, set[str]] = {}
+    optional_map: dict[str, set[str]] = {}
+    file_map: dict[str, str] = {}
     _FIELD_RE = re.compile(
-        r"^\s*(repeated\s+)?(?:optional\s+)?([\w<>,\s]+?)\s+(\w+)\s*=\s*\d+"
+        r"^\s*(repeated\s+)?(optional\s+)?([\w<>,\s]+?)\s+(\w+)\s*=\s*\d+"
     )
     _SKIP_KEYWORDS = frozenset(
         ["message", "enum", "oneof", "reserved", "option", "extensions",
@@ -88,6 +100,10 @@ def load_proto_type_map(proto_dir: Path) -> None:
         # Strip // comments and /* */ blocks
         text = re.sub(r"//[^\n]*", "", text)
         text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+
+        # Track enum types → proto file stem for Python pb2 module lookup
+        for em in re.finditer(r"\benum\s+(\w+)\s*\{", text):
+            file_map[em.group(1)] = proto_file.stem
 
         pos = 0
         while pos < len(text):
@@ -113,23 +129,38 @@ def load_proto_type_map(proto_dir: Path) -> None:
             body = re.sub(r"=\s*\n\s*(\d+)", r"= \1", body)
 
             # Extract only top-level lines (not inside nested { })
+            # Also parse fields inside oneof blocks (inner_depth == 1 after entering oneof).
             fields: dict[str, str] = {}
             repeated_fields: set[str] = set()
+            optional_fields: set[str] = set()
             inner_depth = 0
+            in_oneof = False
             for line in body.splitlines():
+                stripped = line.strip()
+                if re.match(r"oneof\s+\w+\s*\{", stripped):
+                    in_oneof = True
                 inner_depth += line.count("{") - line.count("}")
-                if inner_depth > 0:
+                if inner_depth == 0:
+                    in_oneof = False
+                # Parse at depth 0 (regular fields) or inside oneof blocks at depth 1
+                if inner_depth > 0 and not in_oneof:
+                    continue
+                if inner_depth > 1:
                     continue
                 fm = _FIELD_RE.match(line)
                 if fm:
-                    is_repeated, ftype, fname = fm.group(1), fm.group(2), fm.group(3)
+                    is_repeated, is_optional, ftype, fname = fm.group(1), fm.group(2), fm.group(3), fm.group(4)
                     if ftype not in _SKIP_KEYWORDS and fname not in _SKIP_KEYWORDS:
                         fields[fname] = ftype
                         if is_repeated:
                             repeated_fields.add(fname)
+                        if is_optional:
+                            optional_fields.add(fname)
 
             type_map[msg_name] = fields
             repeated_map[msg_name] = repeated_fields
+            optional_map[msg_name] = optional_fields
+            file_map[msg_name] = proto_file.stem
             pos = i  # advance past the entire message body
 
     # Clear and update the global dicts in-place so existing references see the changes
@@ -137,12 +168,22 @@ def load_proto_type_map(proto_dir: Path) -> None:
     _PROTO_FIELD_TYPES.update(type_map)
     _PROTO_REPEATED_FIELDS.clear()
     _PROTO_REPEATED_FIELDS.update(repeated_map)
+    _PROTO_OPTIONAL_FIELDS.clear()
+    _PROTO_OPTIONAL_FIELDS.update(optional_map)
+    _PROTO_FILE_MAP.clear()
+    _PROTO_FILE_MAP.update(file_map)
     # Wrapper types: messages whose only field is named "value"
     _PROTO_WRAPPER_TYPES.clear()
     _PROTO_WRAPPER_TYPES.update(
         name for name, fields in type_map.items()
         if set(fields.keys()) == {"value"}
     )
+
+
+def _py_module_for_type(type_name: str) -> str:
+    """Return the pb2 module name for the given proto type (e.g. 'payment_pb2')."""
+    stem = _PROTO_FILE_MAP.get(type_name, "payment")
+    return f"{stem}_pb2"
 
 
 # ── Scenario groups (populated by docs/generate.py via set_scenario_groups()) ──
@@ -811,54 +852,40 @@ def _scenario_step_python(
     db: _SchemaDB,
 ) -> list[str]:
     """
-    Return lines for one step inside a scenario function body.
-    Indentation: function body = 4 spaces, ParseDict args = 8 spaces, payload fields = 12 spaces.
+    Return lines for one step inside a scenario function body (direct type construction).
+    Indentation: function body = 4 spaces, constructor args = 8 spaces.
     """
-    method   = _FLOW_KEY_TO_METHOD.get(flow_key, flow_key)  # Python SDK uses snake_case method names
+    method   = _FLOW_KEY_TO_METHOD.get(flow_key, flow_key)
     var_name = _FLOW_VAR_NAME.get(flow_key, f"{flow_key.split('_')[0]}_response")
     desc     = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
+    mod      = _py_module_for_type(grpc_req) if grpc_req else "payment_pb2"
     lines: list[str] = []
 
     lines.append(f"    # Step {step_num}: {desc}")
-    lines.append(f"    {var_name} = await {client_var}.{method}(ParseDict(")
-    lines.append("        {")
+    lines.append(f"    {var_name} = await {client_var}.{method}({mod}.{grpc_req}(")
 
     drop_fields = _SCENARIO_DROP_FIELDS.get((scenario_key, flow_key), frozenset())
-    if payload:
-        items = [(k, v) for k, v in payload.items() if k not in drop_fields]
-        for idx, (key, val) in enumerate(items):
-            trailing  = "," if idx < len(items) - 1 else ""
+    # Build a filtered payload, substituting dynamic fields as raw expressions
+    static_payload = {k: v for k, v in payload.items() if k not in drop_fields}
+
+    if static_payload:
+        for key, val in static_payload.items():
             comment   = db.get_comment(grpc_req, key)
             child_msg = db.get_type(grpc_req, key)
             cmt_part  = f"  # {comment}" if comment else ""
 
-            # Check if this field should reference a previous response
+            # Dynamic field: emit raw expression for cross-step references
             dyn = _DYNAMIC_FIELDS.get((scenario_key, flow_key, key))
             if dyn:
-                extra = f"  # from Authorize response" if "connector_transaction_id" in key else f"  # from SetupRecurring response"
-                lines.append(f'            "{key}": {dyn},{extra}')
-            elif isinstance(val, dict):
-                lines.append(f'            "{key}": {{{cmt_part}')
-                lines.extend(_annotate_inline_lines(val, child_msg, db, indent=4, cmt="#"))
-                lines.append(f'            }}{trailing}')
-            elif child_msg and db.is_wrapper(child_msg):
-                # Scalar stored in probe data, but proto type is a wrapper message
-                lines.append(f'            "{key}": {{"value": {_json_scalar(val)}}}{trailing}{cmt_part}')
-            elif child_msg and not isinstance(val, (dict, list)):
-                # Scalar for a non-wrapper message — check if msg has one field that is itself a wrapper
-                inner_key = db.single_field_wrapper_key(child_msg)
-                if inner_key:
-                    lines.append(f'            "{key}": {{"{inner_key}": {{"value": {_json_scalar(val)}}}}}{trailing}{cmt_part}')
-                else:
-                    lines.append(f'            "{key}": {_json_scalar(val)}{trailing}{cmt_part}')
+                extra = "  # from Authorize response" if "connector_transaction_id" in key else "  # from SetupRecurring response"
+                lines.append(f"        {key}={dyn},{extra}")
             else:
-                lines.append(f'            "{key}": {_json_scalar(val)}{trailing}{cmt_part}')
+                # Use _py_direct_lines for a single field (flatten into inline kwargs)
+                sub = _py_direct_lines({key: val}, grpc_req, db, indent=2)
+                lines.extend(sub)
     else:
-        lines.append('            # No required fields')
+        lines.append("        # No required fields")
 
-    lines.append("        },")
-    if grpc_req:
-        lines.append(f"        payment_pb2.{grpc_req}(),")
     lines.append("    ))")
     lines.append("")
 
@@ -973,7 +1000,6 @@ def render_scenario_python(
 # {scenario.description}
 
 import asyncio
-from google.protobuf.json_format import ParseDict
 {client_imports}
 from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
@@ -1226,15 +1252,20 @@ def _scenario_step_rust(
     grpc_req: str,
     message_schemas: dict,
 ) -> list[str]:
-    """Return Rust lines for one step inside a scenario function body (indent=1)."""
+    """Return Rust lines for one step inside a scenario function body (indent=1).
+
+    Uses direct struct literal construction instead of serde_json::from_value.
+    Dynamic cross-step fields (e.g. connector_transaction_id from previous response)
+    are injected from _DYNAMIC_FIELDS_RS as pre-written struct field lines.
+    """
     pad  = "    "
     pad2 = "        "
     var_name = _FLOW_VAR_NAME.get(flow_key, f"{flow_key.split('_')[0]}_response")
     desc     = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
 
-    # Collect dynamic JSON-format overrides for this (scenario, flow)
+    # Collect struct-literal dynamic field lines for this (scenario, flow)
     dyn_by_field: dict[str, list[str]] = {}
-    for (sk, fk, field_name), raw_lines in _DYNAMIC_FIELDS_RS_JSON.items():
+    for (sk, fk, field_name), raw_lines in _DYNAMIC_FIELDS_RS.items():
         if sk == scenario_key and fk == flow_key:
             dyn_by_field[field_name] = raw_lines
 
@@ -1243,13 +1274,14 @@ def _scenario_step_rust(
 
     lines: list[str] = []
     lines.append(f"{pad}// Step {step_num}: {desc}")
-    lines.append(f"{pad}let {var_name} = client.{flow_key}(serde_json::from_value::<{grpc_req}>(serde_json::json!({{")
-    for json_line in _rust_json_lines(static_payload, grpc_req, message_schemas, indent=2):
-        lines.append(json_line)
+    lines.append(f"{pad}let {var_name} = client.{flow_key}({grpc_req} {{")
+    for struct_line in _rust_struct_lines(static_payload, grpc_req, message_schemas, indent=2):
+        lines.append(struct_line)
     for raw_lines in dyn_by_field.values():
         for raw_line in raw_lines:
             lines.append(f"{pad2}{raw_line}")
-    lines.append(f"{pad}}})).unwrap_or_default(), &HashMap::new(), None).await?;")
+    lines.append(f"{pad}    ..Default::default()")
+    lines.append(f"{pad}}}, &HashMap::new(), None).await?;")
     lines.append("")
 
     lines.extend(_rust_status_check_lines(flow_key, var_name, pad))
@@ -1377,37 +1409,107 @@ if (require.main === module) {{
 
 # ── Per-language builder function generators ──────────────────────────────────
 
-def _py_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB") -> str:
-    """Return a Python private builder function for the given flow."""
-    param_name = _FLOW_BUILDER_EXTRA_PARAM[flow_key][0]  # snake_case
-    items = list(proto_req.items())
-    lines: list[str] = [f"def _build_{flow_key}_request({param_name}: str):"]
-    lines.append("    return ParseDict(")
-    lines.append("        {")
-    for idx, (key, val) in enumerate(items):
-        trailing  = "," if idx < len(items) - 1 else ""
-        comment   = db.get_comment(grpc_req, key)
-        child_msg = db.get_type(grpc_req, key)
+
+def _py_direct_lines(
+    obj: dict,
+    msg_name: str,
+    db: "_SchemaDB",
+    indent: int,
+    variable_fields: frozenset = frozenset(),
+) -> list[str]:
+    """Generate Python direct constructor keyword-argument lines for a proto message.
+
+    Returns a list of lines like ``field=value,`` suitable for embedding
+    directly inside a ``payment_pb2.TypeName(`` call.
+    """
+    pad = "    " * indent
+    lines: list[str] = []
+
+    for key, val in obj.items():
+        comment   = db.get_comment(msg_name, key)
+        child_msg = db.get_type(msg_name, key)
         cmt_part  = f"  # {comment}" if comment else ""
-        if key == param_name:
-            lines.append(f'            "{key}": {param_name}{trailing}{cmt_part}')
-        elif isinstance(val, dict):
-            lines.append(f'            "{key}": {{{cmt_part}')
-            lines.extend(_annotate_inline_lines(val, child_msg, db, indent=4, cmt="#"))
-            lines.append(f'            }}{trailing}')
-        elif child_msg and db.is_wrapper(child_msg):
-            lines.append(f'            "{key}": {{"value": {_json_scalar(val)}}}{trailing}{cmt_part}')
-        elif child_msg and not isinstance(val, (dict, list)):
-            inner_key = db.single_field_wrapper_key(child_msg)
-            if inner_key:
-                lines.append(f'            "{key}": {{"{inner_key}": {{"value": {_json_scalar(val)}}}}}{trailing}{cmt_part}')
+
+        if key in variable_fields:
+            if child_msg and _is_proto_enum(child_msg):
+                em = _py_module_for_type(child_msg)
+                lines.append(f"{pad}{key}={em}.{child_msg}.Value({key}),{cmt_part}")
+            elif child_msg and db.is_wrapper(child_msg):
+                wm = _py_module_for_type(child_msg)
+                lines.append(f"{pad}{key}={wm}.{child_msg}(value={key}),{cmt_part}")
             else:
-                lines.append(f'            "{key}": {_json_scalar(val)}{trailing}{cmt_part}')
+                lines.append(f"{pad}{key}={key},{cmt_part}")
+            continue
+
+        if isinstance(val, dict):
+            if child_msg and db.is_wrapper(child_msg):
+                # SecretString-style wrapper: extract .value from probe dict
+                inner_val = val.get("value", "")
+                wm = _py_module_for_type(child_msg)
+                lines.append(f"{pad}{key}={wm}.{child_msg}(value={json.dumps(inner_val)}),{cmt_part}")
+            elif child_msg and child_msg in _ONEOF_WRAPPER_FIELD:
+                # Oneof wrapper (PaymentMethod, MandateId): val = {"case": {...}}
+                # In Python proto, oneof cases are set directly on the message.
+                msg_mod = _py_module_for_type(child_msg)
+                lines.append(f"{pad}{key}={msg_mod}.{child_msg}({cmt_part}")
+                for case_key, case_val in val.items():
+                    case_type = db.get_type(child_msg, case_key)
+                    if isinstance(case_val, dict) and case_type:
+                        cm = _py_module_for_type(case_type)
+                        inner = _py_direct_lines(case_val, case_type, db, indent + 2)
+                        if inner:
+                            lines.append(f"{pad}    {case_key}={cm}.{case_type}(")
+                            lines.extend(inner)
+                            lines.append(f"{pad}    ),")
+                        else:
+                            lines.append(f"{pad}    {case_key}={cm}.{case_type}(),")
+                    elif case_val is None or case_val == {}:
+                        if case_type:
+                            cm = _py_module_for_type(case_type)
+                            lines.append(f"{pad}    {case_key}={cm}.{case_type}(),")
+                        else:
+                            lines.append(f"{pad}    {case_key}=None,")
+                    else:
+                        lines.append(f"{pad}    {case_key}={json.dumps(case_val)},")
+                lines.append(f"{pad}),")
+            elif child_msg:
+                # Regular nested message — recurse
+                cm = _py_module_for_type(child_msg)
+                inner = _py_direct_lines(val, child_msg, db, indent + 1)
+                if inner:
+                    lines.append(f"{pad}{key}={cm}.{child_msg}({cmt_part}")
+                    lines.extend(inner)
+                    lines.append(f"{pad}),")
+                else:
+                    lines.append(f"{pad}{key}={cm}.{child_msg}(),{cmt_part}")
+            else:
+                lines.append(f"{pad}{key}={json.dumps(val)},{cmt_part}")
+        elif isinstance(val, bool):
+            lines.append(f"{pad}{key}={str(val)},{cmt_part}")
+        elif isinstance(val, (int, float)):
+            lines.append(f"{pad}{key}={val},{cmt_part}")
+        elif isinstance(val, str):
+            if child_msg and _is_proto_enum(child_msg):
+                em = _py_module_for_type(child_msg)
+                lines.append(f"{pad}{key}={em}.{child_msg}.Value({json.dumps(val)}),{cmt_part}")
+            else:
+                lines.append(f"{pad}{key}={json.dumps(val)},{cmt_part}")
         else:
-            lines.append(f'            "{key}": {_json_scalar(val)}{trailing}{cmt_part}')
-    lines.append("        },")
-    if grpc_req:
-        lines.append(f"        payment_pb2.{grpc_req}(),")
+            lines.append(f"{pad}# {key}: {json.dumps(val)}{cmt_part}")
+
+    return lines
+
+
+def _py_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB") -> str:
+    """Return a Python private builder function for the given flow (direct type construction)."""
+    param_name = _FLOW_BUILDER_EXTRA_PARAM[flow_key][0]  # snake_case
+    mod        = _py_module_for_type(grpc_req)
+    lines: list[str] = [f"def _build_{flow_key}_request({param_name}: str):"]
+    lines.append(f"    return {mod}.{grpc_req}(")
+    lines.extend(_py_direct_lines(
+        proto_req, grpc_req, db, indent=2,
+        variable_fields=frozenset({param_name}),
+    ))
     lines.append("    )")
     return "\n".join(lines)
 
@@ -1475,33 +1577,11 @@ def _js_builder_fn(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB
 
 
 def _py_builder_fn_no_param(flow_key: str, proto_req: dict, grpc_req: str, db: "_SchemaDB") -> str:
-    """Return a Python private builder function with no dynamic parameter (arg: none flows)."""
-    items = list(proto_req.items())
+    """Return a Python private builder function with no dynamic parameter (direct type construction)."""
+    mod   = _py_module_for_type(grpc_req)
     lines: list[str] = [f"def _build_{flow_key}_request():"]
-    lines.append("    return ParseDict(")
-    lines.append("        {")
-    for idx, (key, val) in enumerate(items):
-        trailing  = "," if idx < len(items) - 1 else ""
-        comment   = db.get_comment(grpc_req, key)
-        child_msg = db.get_type(grpc_req, key)
-        cmt_part  = f"  # {comment}" if comment else ""
-        if isinstance(val, dict):
-            lines.append(f'            "{key}": {{{cmt_part}')
-            lines.extend(_annotate_inline_lines(val, child_msg, db, indent=4, cmt="#"))
-            lines.append(f'            }}{trailing}')
-        elif child_msg and db.is_wrapper(child_msg):
-            lines.append(f'            "{key}": {{"value": {_json_scalar(val)}}}{trailing}{cmt_part}')
-        elif child_msg and not isinstance(val, (dict, list)):
-            inner_key = db.single_field_wrapper_key(child_msg)
-            if inner_key:
-                lines.append(f'            "{key}": {{"{inner_key}": {{"value": {_json_scalar(val)}}}}}{trailing}{cmt_part}')
-            else:
-                lines.append(f'            "{key}": {_json_scalar(val)}{trailing}{cmt_part}')
-        else:
-            lines.append(f'            "{key}": {_json_scalar(val)}{trailing}{cmt_part}')
-    lines.append("        },")
-    if grpc_req:
-        lines.append(f"        payment_pb2.{grpc_req}(),")
+    lines.append(f"    return {mod}.{grpc_req}(")
+    lines.extend(_py_direct_lines(proto_req, grpc_req, db, indent=2))
     lines.append("    )")
     return "\n".join(lines)
 
@@ -1777,7 +1857,6 @@ def render_consolidated_python(
 
 import asyncio
 import sys
-from google.protobuf.json_format import ParseDict
 {client_imports}
 from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
@@ -2267,7 +2346,6 @@ def render_flow_python(
 # Flow: {svc_label}{pm_part}
 
 import asyncio
-from google.protobuf.json_format import ParseDict
 from payments import {client_cls}
 from payments.generated import sdk_config_pb2, payment_pb2
 
@@ -2705,6 +2783,131 @@ _RUST_KEYWORDS = frozenset({
 def _rust_field(key: str) -> str:
     """Return the Rust field name, prefixing reserved keywords with r#."""
     return f"r#{key}" if key in _RUST_KEYWORDS else key
+
+
+def _rust_struct_lines(
+    obj: dict,
+    msg_name: str,
+    message_schemas: dict,
+    indent: int,
+    variable_fields: frozenset = frozenset(),
+) -> list[str]:
+    """Recursively build Rust struct literal field-assignment lines.
+
+    Generates correct prost-style struct literals with:
+    - ``Some(T)`` wrapping for optional-in-prost fields
+      (all message types are Option<T>; non-message fields follow the
+      ``optional`` keyword tracked in ``_PROTO_OPTIONAL_FIELDS``)
+    - ``EnumType::from_str_name("VAL").unwrap_or_default().into()`` for enums
+    - ``Secret::new("val".to_string())`` for SecretString / wrapper types
+    - Sub-module qualified enum variants for oneof wrappers
+      e.g. ``payment_method::PaymentMethod::Card(CardDetails { ... })``
+    - Variable fields (e.g. ``capture_method: &str``) as type-aware references
+    """
+    pad = "    " * indent
+    db  = _SchemaDB(message_schemas)
+    lines: list[str] = []
+    msg_optional = _PROTO_OPTIONAL_FIELDS.get(msg_name, set())
+
+    for key, val in obj.items():
+        comment   = db.get_comment(msg_name, key)
+        child_msg = db.get_type(msg_name, key)
+        cmt_part  = f"  // {comment}" if comment else ""
+        field     = _rust_field(key)
+
+        # Determine whether this field is Option<T> in prost:
+        # - All message types (including wrapper types) are always Option<T>
+        # - Non-message fields are Option<T> only when marked `optional` in proto3
+        is_msg = bool(child_msg and (
+            child_msg in _PROTO_FIELD_TYPES or child_msg in _PROTO_WRAPPER_TYPES
+        ))
+        is_opt = is_msg or (key in msg_optional)
+
+        def wrap(expr: str) -> str:
+            return f"Some({expr})" if is_opt else expr
+
+        # Variable field (function parameter) — emit type-aware expression
+        if key in variable_fields:
+            if child_msg and _is_proto_enum(child_msg):
+                expr = f"{child_msg}::from_str_name({key}).unwrap_or_default().into()"
+            elif child_msg and child_msg in _PROTO_WRAPPER_TYPES:
+                expr = f"Secret::new({key}.to_string())"
+            else:
+                expr = f"{key}.to_string()"
+            lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
+            continue
+
+        if isinstance(val, dict):
+            if child_msg and child_msg in _PROTO_WRAPPER_TYPES:
+                # SecretString: extract the inner value from probe's {"value": "..."} dict
+                inner_val = val.get("value", "")
+                expr = f"Secret::new({json.dumps(inner_val)}.to_string())"
+                lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
+
+            elif child_msg and child_msg in _ONEOF_WRAPPER_FIELD:
+                # Oneof-wrapper message (e.g. PaymentMethod, MandateId).
+                # The probe dict has {case_key: inner_dict}; prost generates a
+                # sub-module named after the oneof field holding the variant enum.
+                wrapper_field = _ONEOF_WRAPPER_FIELD[child_msg]
+                # Enum type name = PascalCase of wrapper_field
+                enum_type = "".join(w.title() for w in wrapper_field.split("_"))
+                module    = wrapper_field  # prost sub-module
+
+                case_items = list(val.items())
+                if case_items:
+                    case_key, case_val = case_items[0]
+                    case_type = db.get_type(child_msg, case_key)
+                    variant   = "".join(w.title() for w in case_key.split("_"))
+                    lines.append(f"{pad}{field}: Some({child_msg} {{{cmt_part}")
+                    if isinstance(case_val, dict) and case_type:
+                        inner = _rust_struct_lines(
+                            case_val, case_type, message_schemas, indent + 2
+                        )
+                        lines.append(
+                            f"{pad}    {wrapper_field}: Some({module}::{enum_type}::{variant}({case_type} {{"
+                        )
+                        lines.extend(inner)
+                        lines.append(f"{pad}        ..Default::default()")
+                        lines.append(f"{pad}    }})),")
+                    elif case_val is None or case_val == {}:
+                        lines.append(
+                            f"{pad}    {wrapper_field}: Some({module}::{enum_type}::{variant}(Default::default())),"
+                        )
+                    else:
+                        lines.append(f"{pad}    // {wrapper_field}: {case_key} = {json.dumps(case_val)}")
+                    lines.append(f"{pad}    ..Default::default()")
+                    lines.append(f"{pad}}}),")
+                else:
+                    lines.append(
+                        f"{pad}{field}: Some({child_msg} {{ ..Default::default() }}),{cmt_part}"
+                    )
+
+            elif child_msg:
+                # Regular nested message — recurse
+                inner = _rust_struct_lines(val, child_msg, message_schemas, indent + 1)
+                lines.append(f"{pad}{field}: Some({child_msg} {{{cmt_part}")
+                if inner:
+                    lines.extend(inner)
+                lines.append(f"{pad}    ..Default::default()")
+                lines.append(f"{pad}}}),")
+            else:
+                # Unknown type (no proto metadata) — emit comment
+                lines.append(f"{pad}// {field}: {json.dumps(val)}{cmt_part}")
+
+        elif isinstance(val, bool):
+            lines.append(f"{pad}{field}: {wrap('true' if val else 'false')},{cmt_part}")
+        elif isinstance(val, (int, float)):
+            lines.append(f"{pad}{field}: {wrap(str(val))},{cmt_part}")
+        elif isinstance(val, str):
+            if child_msg and _is_proto_enum(child_msg):
+                expr = f"{child_msg}::from_str_name({json.dumps(val)}).unwrap_or_default().into()"
+            else:
+                expr = f"{json.dumps(val)}.to_string()"
+            lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
+        else:
+            lines.append(f"{pad}// {field}: {json.dumps(val)}{cmt_part}")
+
+    return lines
 
 
 def _rust_payload_lines(
@@ -3223,6 +3426,34 @@ def render_consolidated_rust(
     has_builder: set[str] = set()        # flows with a dynamic param builder
     has_no_param_builder: set[str] = set()  # flows with a no-param builder
 
+    def _make_builder_with_param(flow_key: str, proto_req: dict, grpc_req_b: str,
+                                  param_name: str, param_type: str) -> str:
+        struct_lines = _rust_struct_lines(
+            proto_req, grpc_req_b, message_schemas, indent=2,
+            variable_fields=frozenset({param_name}),
+        )
+        struct_body = "\n".join(struct_lines)
+        return (
+            f"pub fn build_{flow_key}_request({param_name}: {param_type}) -> {grpc_req_b} {{\n"
+            f"    {grpc_req_b} {{\n"
+            f"{struct_body}\n"
+            f"        ..Default::default()\n"
+            f"    }}\n"
+            f"}}"
+        )
+
+    def _make_builder_no_param(flow_key: str, proto_req: dict, grpc_req_b: str) -> str:
+        struct_lines = _rust_struct_lines(proto_req, grpc_req_b, message_schemas, indent=2)
+        struct_body = "\n".join(struct_lines)
+        return (
+            f"pub fn build_{flow_key}_request() -> {grpc_req_b} {{\n"
+            f"    {grpc_req_b} {{\n"
+            f"{struct_body}\n"
+            f"        ..Default::default()\n"
+            f"    }}\n"
+            f"}}"
+        )
+
     # Pass 1: flows from flow_items
     for flow_key, proto_req, pm_label in flow_items:
         grpc_req_b = flow_metadata.get(flow_key, {}).get("grpc_request", "")
@@ -3230,29 +3461,10 @@ def render_consolidated_rust(
             continue
         if flow_key in _FLOW_BUILDER_EXTRA_PARAM:
             param_name, param_type = _FLOW_BUILDER_EXTRA_PARAM[flow_key]
-            json_lines_b = _rust_json_lines(
-                proto_req, grpc_req_b, message_schemas, indent=1,
-                variable_fields=frozenset({param_name}),
-            )
-            json_body_b = "\n".join(json_lines_b)
-            builder_fns.append(
-                f"pub fn build_{flow_key}_request({param_name}: {param_type}) -> {grpc_req_b} {{\n"
-                f"    serde_json::from_value::<{grpc_req_b}>(serde_json::json!({{\n"
-                f"{json_body_b}\n"
-                f"    }})).unwrap_or_default()\n"
-                f"}}"
-            )
+            builder_fns.append(_make_builder_with_param(flow_key, proto_req, grpc_req_b, param_name, param_type))
             has_builder.add(flow_key)
         else:
-            json_lines_b = _rust_json_lines(proto_req, grpc_req_b, message_schemas, indent=1)
-            json_body_b = "\n".join(json_lines_b)
-            builder_fns.append(
-                f"pub fn build_{flow_key}_request() -> {grpc_req_b} {{\n"
-                f"    serde_json::from_value::<{grpc_req_b}>(serde_json::json!({{\n"
-                f"{json_body_b}\n"
-                f"    }})).unwrap_or_default()\n"
-                f"}}"
-            )
+            builder_fns.append(_make_builder_no_param(flow_key, proto_req, grpc_req_b))
             has_no_param_builder.add(flow_key)
 
     # Pass 2: flows from scenarios not already covered by Pass 1
@@ -3268,29 +3480,10 @@ def render_consolidated_rust(
                 continue
             if fk in _FLOW_BUILDER_EXTRA_PARAM:
                 param_name, param_type = _FLOW_BUILDER_EXTRA_PARAM[fk]
-                json_lines_b = _rust_json_lines(
-                    proto_req, grpc_req_b, message_schemas, indent=1,
-                    variable_fields=frozenset({param_name}),
-                )
-                json_body_b = "\n".join(json_lines_b)
-                builder_fns.append(
-                    f"pub fn build_{fk}_request({param_name}: {param_type}) -> {grpc_req_b} {{\n"
-                    f"    serde_json::from_value::<{grpc_req_b}>(serde_json::json!({{\n"
-                    f"{json_body_b}\n"
-                    f"    }})).unwrap_or_default()\n"
-                    f"}}"
-                )
+                builder_fns.append(_make_builder_with_param(fk, proto_req, grpc_req_b, param_name, param_type))
                 has_builder.add(fk)
             else:
-                json_lines_b = _rust_json_lines(proto_req, grpc_req_b, message_schemas, indent=1)
-                json_body_b = "\n".join(json_lines_b)
-                builder_fns.append(
-                    f"pub fn build_{fk}_request() -> {grpc_req_b} {{\n"
-                    f"    serde_json::from_value::<{grpc_req_b}>(serde_json::json!({{\n"
-                    f"{json_body_b}\n"
-                    f"    }})).unwrap_or_default()\n"
-                    f"}}"
-                )
+                builder_fns.append(_make_builder_no_param(fk, proto_req, grpc_req_b))
                 has_no_param_builder.add(fk)
 
     func_blocks: list[str] = []
@@ -3432,15 +3625,16 @@ def render_consolidated_rust(
                 f"}}"
             )
         else:
-            json_lines = _rust_json_lines(proto_req, grpc_req, message_schemas, indent=1)
-            json_body  = "\n".join(json_lines)
+            struct_lines = _rust_struct_lines(proto_req, grpc_req, message_schemas, indent=2)
+            struct_body  = "\n".join(struct_lines)
             func_blocks.append(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
                 f"#[allow(dead_code)]\n"
                 f"pub async fn {flow_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
-                f"    let response = client.{flow_key}(serde_json::from_value::<{grpc_req}>(serde_json::json!({{\n"
-                f"{json_body}\n"
-                f"    }})).unwrap_or_default(), &HashMap::new(), None).await?;\n"
+                f"    let response = client.{flow_key}({grpc_req} {{\n"
+                f"{struct_body}\n"
+                f"        ..Default::default()\n"
+                f"    }}, &HashMap::new(), None).await?;\n"
                 f"{status_block}\n"
                 f"}}"
             )
@@ -3450,6 +3644,20 @@ def render_consolidated_rust(
     builders_section = f"\n\n{builders_text}\n" if builder_fns else ""
     match_arms_str = "\n".join(match_arms)
     first          = func_names[0] if func_names else "authorize"
+
+    # Determine which additional imports the generated code needs
+    all_generated = builders_text + "\n\n".join(func_blocks)
+    need_secret         = "Secret::new" in all_generated
+    need_payment_method = "payment_method::" in all_generated
+    need_mandate_id     = "mandate_id_type::" in all_generated
+
+    extra_imports = ""
+    if need_secret:
+        extra_imports += "\nuse hyperswitch_masking::Secret;"
+    if need_payment_method:
+        extra_imports += "\nuse grpc_api_types::payments::payment_method;"
+    if need_mandate_id:
+        extra_imports += "\nuse grpc_api_types::payments::mandate_id_type;"
 
     return f"""\
 // This file is auto-generated. Do not edit manually.
@@ -3461,7 +3669,7 @@ def render_consolidated_rust(
 
 use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
-use std::collections::HashMap;
+use std::collections::HashMap;{extra_imports}
 
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {{
