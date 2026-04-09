@@ -1821,7 +1821,7 @@ mod tests {
 
         assert_eq!(
             result.response.unwrap().connector_order_id,
-            Some("order_QMrTOdLWvEHsXz".to_string())
+            "order_QMrTOdLWvEHsXz".to_string()
         );
     }
 

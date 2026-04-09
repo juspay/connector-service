@@ -526,7 +526,7 @@ impl TryFrom<ResponseRouterData<CashfreeOrderCreateResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let order_response = PaymentCreateOrderResponse {
             merchant_order_id: item.router_data.request.merchant_order_id.clone(),
-            connector_order_id: Some(item.response.payment_session_id.clone()),
+            connector_order_id: item.response.payment_session_id.clone(),
             session_data: None,
         };
 
