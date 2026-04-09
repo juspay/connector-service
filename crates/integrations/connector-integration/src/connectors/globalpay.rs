@@ -46,7 +46,8 @@ use transformers::{
     GlobalpayAuthorizeResponse, GlobalpayCaptureRequest, GlobalpayCaptureResponse,
     GlobalpayClientAuthRequest, GlobalpayClientAuthResponse, GlobalpayPSyncResponse,
     GlobalpayPaymentsRequest, GlobalpayRSyncResponse, GlobalpayRefundRequest,
-    GlobalpayRefundResponse, GlobalpayVoidRequest, GlobalpayVoidResponse,
+    GlobalpayRefundResponse, GlobalpayRepeatPaymentRequest, GlobalpayRepeatPaymentResponse,
+    GlobalpayVoidRequest, GlobalpayVoidResponse,
 };
 
 use crate::connectors::macros;
@@ -108,6 +109,12 @@ macros::create_all_prerequisites!(
             request_body: GlobalpayClientAuthRequest,
             response_body: GlobalpayClientAuthResponse,
             router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: GlobalpayRepeatPaymentRequest<T>,
+            response_body: GlobalpayRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
