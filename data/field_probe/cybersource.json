@@ -985,7 +985,7 @@
         "status": "supported",
         "proto_request": {
           "merchant_revoke_id": "probe_revoke_001",
-          "mandate_id": "probe_mandate_001",
+          "merchant_mandate_id": "probe_mandate_001",
           "mandate_reference_id": {
             "mandate_id_type": {
               "connector_mandate_id": {

@@ -11330,7 +11330,7 @@ impl ForeignTryFrom<RecurringPaymentServiceRevokeRequest> for MandateRevokeReque
         };
 
         Ok(Self {
-            mandate_id: Secret::new(value.mandate_id),
+            merchant_mandate_id: Secret::new(value.merchant_mandate_id),
             mandate_reference_id,
             payment_method_type: None,
         })

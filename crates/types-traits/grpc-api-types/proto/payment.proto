@@ -2817,7 +2817,8 @@ message RecurringPaymentServiceRevokeRequest {
   optional string merchant_revoke_id = 1;
 
   // Mandate Details
-  string mandate_id = 2;
+  // Merchant-side identifier for the mandate being revoked.
+  string merchant_mandate_id = 2;
   // DEPRECATED: use `mandate_reference_id` instead. Retained for backward
   // compatibility with clients that still send a raw connector mandate id.
   optional string connector_mandate_id = 3 [deprecated = true];
