@@ -28,7 +28,7 @@ use url::Url;
 
 // Import the connector's RouterData wrapper type created by the macro
 use super::Shift4RouterData;
-use domain_types::errors::{ConnectorError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError, IntegrationErrorContext};
 
 #[derive(Debug, Clone)]
 pub struct Shift4AuthType {
@@ -341,7 +341,8 @@ impl<T: PaymentMethodDataTypes>
                     },
                 })
             }
-            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
+            // CardToken flow uses the payment_method_token obtained from
+            // ClientAuthenticationToken to make the payment without raw card details.
             PaymentMethodData::CardToken(CardToken { .. }) => {
                 let token = item
                     .resource_common_data
@@ -353,7 +354,21 @@ impl<T: PaymentMethodDataTypes>
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
                             field_name: "payment_method_token",
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "The CardToken flow requires a payment_method_token obtained \
+                                     from the ClientAuthenticationToken step. Ensure the client-side \
+                                     SDK tokenisation completed before submitting the payment."
+                                        .to_owned(),
+                                ),
+                                additional_context: Some(
+                                    "Shift4 CardToken payments use a tokenised card reference \
+                                     instead of raw card details; the token is missing from the \
+                                     payment method data."
+                                        .to_owned(),
+                                ),
+                                ..Default::default()
+                            },
                         })
                     })?;
 
