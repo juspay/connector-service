@@ -483,6 +483,6 @@ fun main(args: Array<String>) {
         "setupRecurring" -> setupRecurring(txnId)
         "tokenAuthorize" -> tokenAuthorize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, createClientAuthenticationToken, createOrder, disputeAccept, disputeDefend, disputeSubmitEvidence, handleEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, setupRecurring, tokenAuthorize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, createClientAuthenticationToken, createOrder, disputeAccept, disputeDefend, disputeSubmitEvidence, handleEvent, proxyAuthorize, recurringCharge, refund, setupRecurring, tokenAuthorize, void")
     }
 }

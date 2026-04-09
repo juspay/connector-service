@@ -493,7 +493,7 @@ async fn main() {
         "setup_recurring" => setup_recurring(&client, "order_001").await,
         "token_authorize" => token_authorize(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, authorize, capture, create_client_authentication_token, create_order, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, setup_recurring, token_authorize, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, authorize, capture, create_client_authentication_token, create_order, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, recurring_charge, refund, setup_recurring, token_authorize, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

@@ -489,7 +489,7 @@ async function voidPayment(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, createClientAuthenticationToken, createOrder, disputeAccept, disputeDefend, disputeSubmitEvidence, handleEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, setupRecurring, tokenAuthorize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateOrderRequest, _buildDisputeAcceptRequest, _buildDisputeDefendRequest, _buildDisputeSubmitEvidenceRequest, _buildHandleEventRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenAuthorizeRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, createClientAuthenticationToken, createOrder, disputeAccept, disputeDefend, disputeSubmitEvidence, handleEvent, proxyAuthorize, recurringCharge, refund, setupRecurring, tokenAuthorize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateOrderRequest, _buildDisputeAcceptRequest, _buildDisputeDefendRequest, _buildDisputeSubmitEvidenceRequest, _buildHandleEventRequest, _buildProxyAuthorizeRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenAuthorizeRequest, _buildVoidRequest
 };
 
 // CLI runner
