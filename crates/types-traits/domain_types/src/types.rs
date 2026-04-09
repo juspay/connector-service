@@ -2895,7 +2895,6 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
     }
 }
 
-//authorize flow
 impl<
         T: PaymentMethodDataTypes
             + Default
@@ -10147,15 +10146,15 @@ impl<
                     },
                 })?,
             },
-            None => Err(report!(IntegrationError::MissingRequiredField {
-                field_name: "mandate_reference",
+            None => Err(IntegrationError::InvalidDataFormat {
+                field_name: "unknown",
                 context: IntegrationErrorContext {
                     additional_context: Some(
-                        "Mandate reference is required for repeat payments".to_string()
+                        "Mandate reference is required for repeat payments".to_string(),
                     ),
                     ..Default::default()
                 },
-            }))?,
+            })?,
         };
 
         let billing_descriptor =

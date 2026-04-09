@@ -419,96 +419,6 @@ res_transformer!(
     },
 );
 
-// incremental authorization request transformer
-req_transformer!(
-    fn_name: incremental_authorization_req_transformer,
-    request_type: PaymentServiceIncrementalAuthorizationRequest,
-    flow_marker: IncrementalAuthorization,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: PaymentsIncrementalAuthorizationData,
-    response_data_type: PaymentsResponseData,
-    connector_data_type: T,
-    request_data_fn: |p: &PaymentServiceIncrementalAuthorizationRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
-    },
-);
-
-// incremental authorization response transformer
-res_transformer!(
-    fn_name: incremental_authorization_res_transformer,
-    request_type: PaymentServiceIncrementalAuthorizationRequest,
-    response_type: PaymentServiceIncrementalAuthorizationResponse,
-    flow_marker: IncrementalAuthorization,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: PaymentsIncrementalAuthorizationData,
-    response_data_type: PaymentsResponseData,
-    generate_response_fn: generate_payment_incremental_authorization_response,
-    connector_data_type: T,
-    request_data_fn: |p: &PaymentServiceIncrementalAuthorizationRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
-    },
-);
-
-// recurring revoke (mandate revoke) request transformer
-req_transformer!(
-    fn_name: recurring_revoke_req_transformer,
-    request_type: RecurringPaymentServiceRevokeRequest,
-    flow_marker: MandateRevoke,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: MandateRevokeRequestData,
-    response_data_type: MandateRevokeResponseData,
-    connector_data_type: T,
-    request_data_fn: |p: &RecurringPaymentServiceRevokeRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
-    },
-);
-
-// recurring revoke (mandate revoke) response transformer
-res_transformer!(
-    fn_name: recurring_revoke_res_transformer,
-    request_type: RecurringPaymentServiceRevokeRequest,
-    response_type: RecurringPaymentServiceRevokeResponse,
-    flow_marker: MandateRevoke,
-    resource_common_data_type: PaymentFlowData,
-    request_data_type: MandateRevokeRequestData,
-    response_data_type: MandateRevokeResponseData,
-    generate_response_fn: generate_mandate_revoke_response,
-    connector_data_type: T,
-    request_data_fn: |p: &RecurringPaymentServiceRevokeRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
-    },
-);
-
-// refund get (refund sync) request transformer
-req_transformer!(
-    fn_name: refund_get_req_transformer,
-    request_type: RefundServiceGetRequest,
-    flow_marker: RSync,
-    resource_common_data_type: RefundFlowData,
-    request_data_type: RefundSyncData,
-    response_data_type: RefundsResponseData,
-    connector_data_type: T,
-    request_data_fn: |p: &RefundServiceGetRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
-    },
-);
-
-// refund get (refund sync) response transformer
-res_transformer!(
-    fn_name: refund_get_res_transformer,
-    request_type: RefundServiceGetRequest,
-    response_type: RefundResponse,
-    flow_marker: RSync,
-    resource_common_data_type: RefundFlowData,
-    request_data_type: RefundSyncData,
-    response_data_type: RefundsResponseData,
-    generate_response_fn: generate_refund_sync_response,
-    connector_data_type: T,
-    request_data_fn: |p: &RefundServiceGetRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
-    },
-);
-
 // setup recurring (setup mandate) request transformer
 req_transformer!(
     fn_name: setup_recurring_req_transformer,
@@ -821,6 +731,127 @@ pub fn handle_event_transformer(
         },
     )
 }
+
+// incremental authorization request transformer
+req_transformer!(
+    fn_name: incremental_authorization_req_transformer,
+    request_type: PaymentServiceIncrementalAuthorizationRequest,
+    flow_marker: IncrementalAuthorization,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsIncrementalAuthorizationData,
+    response_data_type: PaymentsResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceIncrementalAuthorizationRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
+
+// incremental authorization response transformer
+res_transformer!(
+    fn_name: incremental_authorization_res_transformer,
+    request_type: PaymentServiceIncrementalAuthorizationRequest,
+    response_type: PaymentServiceIncrementalAuthorizationResponse,
+    flow_marker: IncrementalAuthorization,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsIncrementalAuthorizationData,
+    response_data_type: PaymentsResponseData,
+    generate_response_fn: generate_payment_incremental_authorization_response,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceIncrementalAuthorizationRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
+
+// refund get (refund sync) request transformer
+req_transformer!(
+    fn_name: refund_get_req_transformer,
+    request_type: RefundServiceGetRequest,
+    flow_marker: RSync,
+    resource_common_data_type: RefundFlowData,
+    request_data_type: RefundSyncData,
+    response_data_type: RefundsResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &RefundServiceGetRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
+
+// refund get (refund sync) response transformer
+res_transformer!(
+    fn_name: refund_get_res_transformer,
+    request_type: RefundServiceGetRequest,
+    response_type: RefundResponse,
+    flow_marker: RSync,
+    resource_common_data_type: RefundFlowData,
+    request_data_type: RefundSyncData,
+    response_data_type: RefundsResponseData,
+    generate_response_fn: generate_refund_sync_response,
+    connector_data_type: T,
+    request_data_fn: |p: &RefundServiceGetRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
+
+// create_sdk_session_token (MerchantAuthenticationService.CreateSdkSessionToken)
+req_transformer!(
+    fn_name: create_client_authentication_token_req_handler,
+    request_type: MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
+    flow_marker: ClientAuthenticationToken,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: ClientAuthenticationTokenRequestData,
+    response_data_type: PaymentsResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
+
+// create_sdk_session_token response transformer
+res_transformer!(
+    fn_name: create_client_authentication_token_res_handler,
+    request_type: MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
+    response_type: MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
+    flow_marker: ClientAuthenticationToken,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: ClientAuthenticationTokenRequestData,
+    response_data_type: PaymentsResponseData,
+    generate_response_fn: generate_payment_sdk_session_token_response,
+    connector_data_type: T,
+    request_data_fn: |p: &MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+
+);
+
+// recurring revoke (mandate revoke) request transformer
+req_transformer!(
+    fn_name: recurring_revoke_req_transformer,
+    request_type: RecurringPaymentServiceRevokeRequest,
+    flow_marker: MandateRevoke,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: MandateRevokeRequestData,
+    response_data_type: MandateRevokeResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &RecurringPaymentServiceRevokeRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
+
+// recurring revoke (mandate revoke) response transformer
+res_transformer!(
+    fn_name: recurring_revoke_res_transformer,
+    request_type: RecurringPaymentServiceRevokeRequest,
+    response_type: RecurringPaymentServiceRevokeResponse,
+    flow_marker: MandateRevoke,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: MandateRevokeRequestData,
+    response_data_type: MandateRevokeResponseData,
+    generate_response_fn: generate_mandate_revoke_response,
+    connector_data_type: T,
+    request_data_fn: |p: &RecurringPaymentServiceRevokeRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
 
 /// verify_redirect_response — synchronous verification of redirect response (no outgoing HTTP call).
 ///

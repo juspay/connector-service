@@ -242,6 +242,17 @@ macro_rules! res_transformer {
 }
 
 /// Macro to generate payout request transformer functions
+///
+/// # Example
+/// payout_req_transformer!(
+///     fn_name: payout_create_payout_req_transformer,
+///     request_type: PayoutServiceCreateRequest,
+///     flow_marker: PayoutCreate,
+///     resource_common_data_type: PayoutFlowData,
+///     request_data_type: PayoutCreateRequest,
+///     response_data_type: PayoutCreateResponse,
+/// );
+/// ```
 macro_rules! payout_req_transformer {
     (
         fn_name: $fn_name:ident,
@@ -325,6 +336,19 @@ macro_rules! payout_req_transformer {
 }
 
 /// Macro to generate payout response transformer functions
+///
+/// # Example
+/// payout_res_transformer!(
+///     fn_name: payout_create_payout_res_transformer,
+///     request_type: PayoutServiceCreateRequest,
+///     response_type: PayoutServiceCreateResponse,
+///     flow_marker: PayoutCreate,
+///     resource_common_data_type: PayoutFlowData,
+///     request_data_type: PayoutCreateRequest,
+///     response_data_type: PayoutCreateResponse,
+///     generate_response_fn: generate_payout_create_response,
+/// );
+/// ```
 macro_rules! payout_res_transformer {
     (
         fn_name: $fn_name:ident,
