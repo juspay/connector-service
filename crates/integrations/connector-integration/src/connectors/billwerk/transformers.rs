@@ -889,9 +889,9 @@ impl TryFrom<ResponseRouterData<BillwerkClientAuthResponse, Self>>
 pub struct BillwerkCreateOrderRequest {
     pub order: BillwerkOrderObject,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub settle: Option<bool>,
+    pub settle: Option<Secret<bool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub locale: Option<String>,
+    pub locale: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accept_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -955,12 +955,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
+        // Use customer_id from PaymentFlowData for the customer handle
+        // Falls back to reference_id if customer_id is not available
+        let customer_handle = router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .map(|id| id.get_string_repr().to_owned())
+            .unwrap_or_else(|| reference_id.clone());
+
         // Build inline customer for the session (Billwerk requires a customer)
         let customer = BillwerkSessionCustomer {
-            handle: reference_id.clone(),
-            email: None,
-            first_name: None,
-            last_name: None,
+            handle: customer_handle.clone(),
+            email: router_data
+                .resource_common_data
+                .get_optional_billing_email()
+                .map(|e| e.peek().to_string()),
+            first_name: router_data
+                .resource_common_data
+                .get_optional_billing_first_name()
+                .map(|s| s.peek().to_string()),
+            last_name: router_data
+                .resource_common_data
+                .get_optional_billing_last_name()
+                .map(|s| s.peek().to_string()),
         };
 
         Ok(Self {
@@ -969,7 +987,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 amount: router_data.request.amount,
                 currency: router_data.request.currency,
                 order_text: None,
-                customer_handle: None,
+                customer_handle: Some(customer_handle),
                 customer: Some(customer),
             },
             settle: None,
