@@ -1,5 +1,6 @@
 .PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package test-grpc test-grpc-no-server dist publish clean
+        generate-flows pack-archive install test-package test-grpc test-grpc-no-server dist publish clean \
+        publish-check-auth publish-check-version publish-check-dry-run publish-check
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -125,7 +126,7 @@ pack-archive:
 # install
 # Builds the SDK JAR and publishes it to the local Maven repository (~/.m2)
 # so that other projects on this machine can depend on it via Maven coordinates
-# (com.hyperswitch:payments-client:0.1.0).
+# (io.hyperswitch:prism:0.1.0).
 # ---------------------------------------------------------------------------
 install: pack-archive
 	@$(SDK_ROOT)/gradlew publishToMavenLocal
@@ -205,19 +206,66 @@ dist:
 # publish
 # Publishes to Maven Central (requires proper credentials and signing).
 # For local testing, use 'install' which publishes to ~/.m2.
-# Requires OSSRH_USERNAME and OSSRH_PASSWORD to be set for authentication.
+# Requires SONATYPE_MAVEN_USERNAME and SONATYPE_MAVEN_PASSWORD to be set for authentication.
 # ---------------------------------------------------------------------------
 publish: pack-archive
-	@if [ -z "$(OSSRH_USERNAME)" ] || [ -z "$(OSSRH_PASSWORD)" ]; then \
-		echo "Error: OSSRH_USERNAME and/or OSSRH_PASSWORD not set"; \
+	@if [ -z "$(SONATYPE_MAVEN_USERNAME)" ] || [ -z "$(SONATYPE_MAVEN_PASSWORD)" ]; then \
+		echo "Error: SONATYPE_MAVEN_USERNAME and/or SONATYPE_MAVEN_PASSWORD not set"; \
 		echo "Set them with:"; \
-		echo "  export OSSRH_USERNAME=your_username"; \
-		echo "  export OSSRH_PASSWORD=your_token"; \
+		echo "  export SONATYPE_MAVEN_USERNAME=your_username"; \
+		echo "  export SONATYPE_MAVEN_PASSWORD=your_token"; \
 		exit 1; \
 	fi
 	@echo "Publishing hyperswitch-prism to Maven Central..."
 	@$(SDK_ROOT)/gradlew publish
-	@echo "Published com.hyperswitch:hyperswitch-prism to Maven Central."
+	@echo "Published io.hyperswitch:prism to Maven Central."
+
+# ---------------------------------------------------------------------------
+# Pre-publish checks
+# ---------------------------------------------------------------------------
+
+MAVEN_GROUP := io.hyperswitch
+MAVEN_ARTIFACT := prism
+
+# publish-check-auth
+# Verifies that SONATYPE_MAVEN_USERNAME and SONATYPE_MAVEN_PASSWORD environment variables are set.
+publish-check-auth:
+	@if [ -z "$(SONATYPE_MAVEN_USERNAME)" ]; then \
+		echo "Error: SONATYPE_MAVEN_USERNAME is not set"; \
+		exit 1; \
+	fi
+	@if [ -z "$(SONATYPE_MAVEN_PASSWORD)" ]; then \
+		echo "Error: SONATYPE_MAVEN_PASSWORD is not set"; \
+		exit 1; \
+	fi
+	@echo "Maven Central (OSSRH) authentication credentials are configured."
+
+# publish-check-version
+# Checks if $(PACKAGE_VERSION) already exists on Maven Central.
+# Uses Maven Central REST API to check for existing artifact POM.
+publish-check-version:
+	@echo "Checking if $(MAVEN_GROUP):$(MAVEN_ARTIFACT):$(PACKAGE_VERSION) exists on Maven Central..."
+	@POM_URL="https://repo1.maven.org/maven2/$(subst .,/,$(MAVEN_GROUP))/$(MAVEN_ARTIFACT)/$(PACKAGE_VERSION)/$(MAVEN_ARTIFACT)-$(PACKAGE_VERSION).pom"; \
+	if curl -s -f -I "$$POM_URL" >/dev/null 2>&1; then \
+		echo "Error: Version $(PACKAGE_VERSION) already exists on Maven Central"; \
+		echo "Increment the version in build.gradle.kts before publishing."; \
+		exit 1; \
+	fi
+	@echo "Version $(PACKAGE_VERSION) does not exist on Maven Central - OK to publish."
+
+# publish-check-dry-run
+# Simulates publish by publishing to local Maven repository (~/.m2).
+publish-check-dry-run: pack-archive
+	@echo "Publishing to local Maven repository (~/.m2)..."
+	@$(SDK_ROOT)/gradlew publishToMavenLocal
+	@echo "Local Maven contents:"
+	@ls -la ~/.m2/repository/$(subst .,/,$(MAVEN_GROUP))/$(MAVEN_ARTIFACT)/$(PACKAGE_VERSION)/ 2>/dev/null || echo "  (not found)"
+	@echo "Dry-run validation passed."
+
+# publish-check
+# Runs all pre-publish checks in sequence.
+publish-check: publish-check-auth publish-check-version publish-check-dry-run
+	@echo "All Java pre-publish checks passed."
 
 clean:
 	@rm -rf $(GENERATED_KOTLIN) $(GENERATED_JAVA) $(NATIVE_DIR)
