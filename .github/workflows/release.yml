@@ -411,10 +411,10 @@ jobs:
         id: check-java-auth
         continue-on-error: true
         env:
-          SONATYPE_MAVEN_USERNAME: ${{ secrets.SONATYPE_MAVEN_USERNAME }}
-          SONATYPE_MAVEN_PASSWORD: ${{ secrets.SONATYPE_MAVEN_PASSWORD }}
-          SONATYPE_MAVEN_SIGNING_KEY: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY }}
-          SONATYPE_MAVEN_SIGNING_KEY_PASSWORD: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY_PASSWORD }}
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSWORD: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
         run: make -C sdk/java publish-check-auth
 
       - name: Check Python auth
@@ -468,8 +468,8 @@ jobs:
         id: check-java-dryrun
         continue-on-error: true
         env:
-          SONATYPE_MAVEN_SIGNING_KEY: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY }}
-          SONATYPE_MAVEN_SIGNING_KEY_PASSWORD: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSWORD: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
         run: make -C sdk/java publish-check-dry-run
 
       - name: Python dry-run (twine check)
@@ -593,10 +593,10 @@ jobs:
       - name: Publish to Maven Central
         if: ${{ inputs.preview_only == false }}
         env:
-          SONATYPE_MAVEN_USERNAME: ${{ secrets.SONATYPE_MAVEN_USERNAME }}
-          SONATYPE_MAVEN_PASSWORD: ${{ secrets.SONATYPE_MAVEN_PASSWORD }}
-          SONATYPE_MAVEN_SIGNING_KEY: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY }}
-          SONATYPE_MAVEN_SIGNING_KEY_PASSWORD: ${{ secrets.SONATYPE_MAVEN_SIGNING_KEY_PASSWORD }}
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSWORD: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
         run: make -C sdk/java publish
 
   publish-python:

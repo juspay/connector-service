@@ -3,6 +3,7 @@ plugins {
     `java-library`
     `maven-publish`
     signing
+    id("com.tddworks.central-publisher") version "0.2.0-alpha.1"
 }
 
 group = "io.hyperswitch"
@@ -28,7 +29,7 @@ sourceSets {
     create("sanity") {
         kotlin.srcDir("tests")
         compileClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath
-        runtimeClasspath += sourceSets["main"].output + sourceSets["main"].runtimeClasspath
+        runtimeClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath
     }
 }
 
@@ -48,32 +49,50 @@ tasks.register<JavaExec>("runClientSanity") {
     dependsOn("compileSanityKotlin")
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = "io.hyperswitch"
-            artifactId = "prism"
-            from(components["java"])
+// Configure Central Portal Publisher plugin
+centralPublisher {
+    credentials {
+        username = System.getenv("CENTRAL_TOKEN_USERNAME") ?: ""
+        password = System.getenv("CENTRAL_TOKEN_PASSWORD") ?: ""
+    }
+
+    projectInfo {
+        name = "Hyperswitch Prism"
+        description = "Hyperswitch Payments SDK - Kotlin client for connector integrations"
+        url = "https://github.com/juspay/hyperswitch-prism"
+
+        license {
+            name = "Apache License 2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+
+        developer {
+            id = "juspay"
+            name = "Juspay"
+            email = "hyperswitch@juspay.in"
+        }
+
+        scm {
+            url = "https://github.com/juspay/hyperswitch-prism"
+            connection = "scm:git:git://github.com/juspay/hyperswitch-prism.git"
+            developerConnection = "scm:git:ssh://github.com/juspay/hyperswitch-prism.git"
         }
     }
-    repositories {
-        maven {
-            name = "CentralPortal"
-            url = uri("https://central.sonatype.com/api/v1/publisher")
-            credentials {
-                username = System.getenv("SONATYPE_MAVEN_USERNAME")
-                password = System.getenv("SONATYPE_MAVEN_PASSWORD")
-            }
-        }
+
+    publishing {
+        autoPublish = false
+        aggregation = true
+        dryRun = false
     }
 }
 
-// Configure signing from environment variables (for CI)
+// Signing configuration - uses GPG_SIGNING_KEY and GPG_SIGNING_KEY_PASSWORD
 signing {
-    val gpgKey = System.getenv("SONATYPE_MAVEN_SIGNING_KEY")
-    val gpgPassword = System.getenv("SONATYPE_MAVEN_SIGNING_KEY_PASSWORD")
-    if (!gpgKey.isNullOrEmpty() && !gpgPassword.isNullOrEmpty()) {
-        useInMemoryPgpKeys(gpgKey, gpgPassword)
-        sign(publishing.publications["maven"])
+    val signingKey = System.getenv("GPG_SIGNING_KEY") ?: ""
+    val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD") ?: ""
+    if (signingKey.isNotEmpty()) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
     }
 }
+
+// Note: The Central Publisher plugin automatically generates sources and javadoc jars
