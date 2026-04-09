@@ -9,87 +9,87 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Card": {
         "status": "supported",
@@ -127,23 +127,23 @@
           "headers": {
             "accept": "application/json",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "content-type": "application/x-www-form-urlencoded",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"connector_order_id\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"737\"},\"authentication\":{\"authentication_channel\":\"app\"},\"browser\":null,\"ip\":\"127.0.0.1\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0\"}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"connector_order_id\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"737\"},\"authentication\":{\"authentication_channel\":\"app\"},\"ip\":\"127.0.0.1\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0\"}"
         }
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Crypto": {
         "status": "not_supported",
@@ -151,7 +151,7 @@
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "DuitNow": {
         "status": "not_supported",
@@ -159,27 +159,27 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Givex": {
         "status": "not_supported",
@@ -187,107 +187,107 @@
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "OpenBankingPis": {
         "status": "not_supported",
@@ -295,19 +295,19 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -315,11 +315,11 @@
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "Paze": {
         "status": "not_supported",
@@ -327,67 +327,67 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       },
       "UpiCollect": {
         "status": "supported",
@@ -486,11 +486,11 @@
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       },
       "Wero": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: This wallet type is not supported for Razorpay"
       }
     },
     "capture": {
@@ -662,10 +662,10 @@
           "headers": {
             "accept": "application/json",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "content-type": "application/x-www-form-urlencoded",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"connector_order_id\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"123\"},\"authentication\":{\"authentication_channel\":\"app\"},\"browser\":null,\"ip\":\"127.0.0.1\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0\"}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"connector_order_id\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"123\"},\"authentication\":{\"authentication_channel\":\"app\"},\"ip\":\"127.0.0.1\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0\"}"
         }
       }
     },
@@ -742,7 +742,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only card payments are supported"
+        "error": "This feature is not implemented: Only Card and Wallet payment methods are supported for Razorpay"
       }
     },
     "token_setup_recurring": {
