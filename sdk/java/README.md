@@ -4,8 +4,20 @@
 
 A high-performance, type-safe Java/Kotlin SDK for payment processing through the Universal Connector Service. Connect to 50+ payment processors (Stripe, PayPal, Adyen, and more) through a single, unified API.
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.hyperswitch/hyperswitch-prism.svg)](https://central.sonatype.com/artifact/com.hyperswitch/hyperswitch-prism)
+[![Maven Central](https://img.shields.io/maven-central/v/io.hyperswitch/prism.svg)](https://central.sonatype.com/artifact/io.hyperswitch/prism)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 📚 Documentation
+
+| Resource | Link |
+|----------|------|
+| **Getting Started** | [Installation](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/installation.md) · [First Payment](https://github.com/juspay/hyperswitch-prism/blob/main/docs/getting-started/first-payment.md) |
+| **Architecture** | [Overview](https://github.com/juspay/hyperswitch-prism/blob/main/docs/architecture/README.md) · [Core Concepts](https://github.com/juspay/hyperswitch-prism/tree/main/docs/architecture/concepts) |
+| **API Reference** | [Payment Service](https://github.com/juspay/hyperswitch-prism/tree/main/docs/api-reference/services/payment-service) |
+| **Examples** | [Connector Examples](https://github.com/juspay/hyperswitch-prism/tree/main/examples) · [Smoke Test](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/java/smoke-test) · [Tests](https://github.com/juspay/hyperswitch-prism/tree/main/sdk/java/tests) |
+| **Main Project** | [Prism Docs](https://github.com/juspay/hyperswitch-prism/blob/main/docs/README.md) |
 
 ---
 
@@ -20,26 +32,91 @@ A high-performance, type-safe Java/Kotlin SDK for payment processing through the
 
 ---
 
+## 🤖 For AI Assistants
+
+> **Use `curl` to fetch the complete SDK reference:**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/llm/sdk-reference.md
+> ```
+>
+> This file contains complete SDK documentation including installation, payment operations, error handling, connector configuration, field probe data, and examples for all 70+ connectors.
+
+### AI Assistant Context
+
+This SDK is part of **Hyperswitch Prism** — a unified connector library for payment processors.
+
+### What This SDK Does
+
+1. **Request Transformation**: Converts unified payment requests to connector-specific formats (Stripe, Adyen, PayPal, etc.)
+2. **Response Normalization**: Transforms connector responses back to a unified schema
+3. **Error Handling**: Provides consistent error types (`IntegrationError`, `ConnectorError`, `NetworkError`) regardless of connector
+
+### Architecture
+
+```
+Your Java/Kotlin App
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Service Clients (PaymentClient, CustomerClient, etc.)       │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  ConnectorClient (OkHttp connection pool + HTTP execution)   │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  JNA/UniFFI Bindings (connector_service_ffi shared lib)      │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Rust Core (connector transformation logic)                  │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+              Payment Processor APIs (Stripe, Adyen, etc.)
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/main/kotlin/com/hyperswitch/payments/` | Public API (clients, types, errors) |
+| `src/main/kotlin/com/hyperswitch/payments/ConnectorClient.kt` | HTTP execution layer with OkHttp |
+| `src/main/kotlin/com/hyperswitch/generated/` | UniFFI-generated bindings |
+| `src/main/proto/` | Protobuf message definitions |
+
+### Package & Import
+
+- **Package Name**: `io.hyperswitch:prism`
+- **Installation**: Gradle/Maven dependency (see below)
+- **Import**: `import com.hyperswitch.payments.*`
+
+---
+
 ## Installation
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("com.hyperswitch:hyperswitch-prism:0.0.1")
+implementation("io.hyperswitch:prism:0.0.1")
 ```
 
 ### Gradle (Groovy DSL)
 
 ```groovy
-implementation 'com.hyperswitch:hyperswitch-prism:0.0.1'
+implementation 'io.hyperswitch:prism:0.0.1'
 ```
 
 ### Maven
 
 ```xml
 <dependency>
-  <groupId>com.hyperswitch</groupId>
-  <artifactId>hyperswitch-prism</artifactId>
+  <groupId>io.hyperswitch</groupId>
+  <artifactId>prism</artifactId>
   <version>0.0.1</version>
 </dependency>
 ```
