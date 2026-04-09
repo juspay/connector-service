@@ -11284,10 +11284,9 @@ impl ForeignTryFrom<RecurringPaymentServiceRevokeRequest> for MandateRevokeReque
     fn foreign_try_from(
         value: RecurringPaymentServiceRevokeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // Prefer the typed `mandate_reference_id` field; fall back to the
-        // deprecated `connector_mandate_id` string field for backward
-        // compatibility with older clients.
-        #[allow(deprecated)]
+        // Prefer the typed `mandate_reference_id` field. Fall back to the
+        // deprecated `connector_mandate_id` string field so older clients
+        // that have not yet migrated keep working during the transition.
         let mandate_reference_id = match value.mandate_reference_id {
             Some(mandate_reference_id) => match mandate_reference_id.mandate_id_type {
                 Some(grpc_payment_types::mandate_reference::MandateIdType::ConnectorMandateId(
@@ -11315,15 +11314,19 @@ impl ForeignTryFrom<RecurringPaymentServiceRevokeRequest> for MandateRevokeReque
                 )),
                 None => None,
             },
-            None => value.connector_mandate_id.map(|id| {
-                MandateReferenceId::ConnectorMandateId(ConnectorMandateReferenceId::new(
-                    Some(id),
-                    None,
-                    None,
-                    None,
-                    None,
-                ))
-            }),
+            None => {
+                #[allow(deprecated)]
+                let legacy = value.connector_mandate_id;
+                legacy.map(|id| {
+                    MandateReferenceId::ConnectorMandateId(ConnectorMandateReferenceId::new(
+                        Some(id),
+                        None,
+                        None,
+                        None,
+                        None,
+                    ))
+                })
+            }
         };
 
         Ok(Self {

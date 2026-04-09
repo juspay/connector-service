@@ -1435,12 +1435,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                  `DELETE /v1/customers/{customer_id}/tokens/{token_id}`."
                                     .to_owned(),
                             ),
+                            doc_url: Some(
+                                "https://razorpay.com/docs/api/payments/recurring-payments/customer/delete-token/"
+                                    .to_owned(),
+                            ),
                             additional_context: Some(
                                 "Razorpay MandateRevoke requires a connector_mandate_id \
                                  (token id) to build the delete-token URL."
                                     .to_owned(),
                             ),
-                            ..Default::default()
                         },
                     },
                 )?
@@ -1455,12 +1458,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                              not support `NetworkMandateId` or `NetworkTokenWithNTI`."
                                 .to_owned(),
                         ),
+                        doc_url: Some(
+                            "https://razorpay.com/docs/api/payments/recurring-payments/customer/delete-token/"
+                                .to_owned(),
+                        ),
                         additional_context: Some(
                             "Razorpay only accepts a ConnectorMandateId variant for the \
                              MandateRevoke flow."
                                 .to_owned(),
                         ),
-                        ..Default::default()
                     },
                 }
                 .into())

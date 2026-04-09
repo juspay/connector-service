@@ -209,7 +209,11 @@ function _buildRecurringRevokeRequest(): RecurringPaymentServiceRevokeRequest {
     return {
         "merchantRevokeId": "probe_revoke_001",  // Identification.
         "mandateId": "probe_mandate_001",  // Mandate Details.
-        "connectorMandateId": "probe_connector_mandate_001"  // DEPRECATED: use `mandate_reference_id` instead. Retained for backward compatibility with clients that still send a raw connector mandate id.
+        "mandateReferenceId": {  // Typed mandate reference supporting connector mandate ids, network transaction ids, and network-token-with-NTI references. Preferred over the legacy `connector_mandate_id` field above.
+            "connectorMandateId": {  // mandate_id sent by the connector.
+                "connectorMandateId": "probe_connector_mandate_001"
+            }
+        }
     };
 }
 

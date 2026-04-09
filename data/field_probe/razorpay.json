@@ -685,7 +685,13 @@
         "proto_request": {
           "merchant_revoke_id": "probe_revoke_001",
           "mandate_id": "probe_mandate_001",
-          "connector_mandate_id": "probe_connector_mandate_001"
+          "mandate_reference_id": {
+            "mandate_id_type": {
+              "connector_mandate_id": {
+                "connector_mandate_id": "probe_connector_mandate_001"
+              }
+            }
+          }
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/customers/probe_mandate_001/tokens/probe_connector_mandate_001",
