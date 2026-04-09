@@ -1365,7 +1365,6 @@ mod tests {
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(1000),
                     currency: Currency::USD,
-                    merchant_order_id: None,
                     integrity_object: None,
                     metadata: None,
                     webhook_url: None,
@@ -1486,7 +1485,6 @@ mod tests {
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(0),
                     currency: Currency::default(),
-                    merchant_order_id: None,
                     integrity_object: None,
                     metadata: None,
                     webhook_url: None,
@@ -1775,7 +1773,6 @@ mod tests {
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
-                merchant_order_id: None,
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
@@ -1912,7 +1909,6 @@ mod tests {
                 metadata: None,
                 webhook_url: None,
                 payment_method_type: None,
-                merchant_order_id: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -2034,7 +2030,6 @@ mod tests {
                 metadata: None,
                 webhook_url: None,
                 payment_method_type: None,
-                merchant_order_id: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),

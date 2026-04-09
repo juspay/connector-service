@@ -1949,7 +1949,7 @@ pub struct NuveiOpenOrderRequest {
 #[serde(rename_all = "camelCase")]
 pub struct NuveiOpenOrderResponse {
     pub session_token: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_string_or_number")]
+    #[serde(default, deserialize_with = "str_or_i64")]
     pub order_id: Option<String>,
     pub client_unique_id: Option<String>,
     pub internal_request_id: Option<i64>,
@@ -1962,48 +1962,24 @@ pub struct NuveiOpenOrderResponse {
     pub client_request_id: Option<String>,
 }
 
-/// Deserialize a field that may be either a string or a number, returning it as Option<String>.
-fn deserialize_string_or_number<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+
+/// Nuvei's `openOrder.do` returns `orderId` as a bare JSON integer despite docs
+/// declaring it as String(20). Mirrors the Bambora `str_or_i32` pattern.
+fn str_or_i64<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    use serde::de;
-
-    struct StringOrNumber;
-
-    impl<'de> de::Visitor<'de> for StringOrNumber {
-        type Value = Option<String>;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            formatter.write_str("a string or a number")
-        }
-
-        fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-            Ok(Some(v.to_string()))
-        }
-
-        fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
-            Ok(Some(v))
-        }
-
-        fn visit_i64<E: de::Error>(self, v: i64) -> Result<Self::Value, E> {
-            Ok(Some(v.to_string()))
-        }
-
-        fn visit_u64<E: de::Error>(self, v: u64) -> Result<Self::Value, E> {
-            Ok(Some(v.to_string()))
-        }
-
-        fn visit_none<E: de::Error>(self) -> Result<Self::Value, E> {
-            Ok(None)
-        }
-
-        fn visit_unit<E: de::Error>(self) -> Result<Self::Value, E> {
-            Ok(None)
-        }
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StrOrI64 {
+        Str(String),
+        I64(i64),
     }
 
-    deserializer.deserialize_any(StringOrNumber)
+    Ok(Option::<StrOrI64>::deserialize(deserializer)?.map(|v| match v {
+        StrOrI64::Str(s) => s,
+        StrOrI64::I64(n) => n.to_string(),
+    }))
 }
 
 // --- TryFrom: RouterDataV2 -> NuveiOpenOrderRequest (via macro wrapper) ---
@@ -2044,12 +2020,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id
             .clone();
-        // Use merchant_order_id if available, otherwise fallback to connector_request_reference_id
         let client_unique_id = router_data
-            .request
-            .merchant_order_id
-            .clone()
-            .unwrap_or_else(|| client_request_id.clone());
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
 
         // Convert amount using the connector's amount converter
         let amount = item
@@ -2094,9 +2068,7 @@ impl TryFrom<NuveiOpenOrderResponse> for PaymentCreateOrderResponse {
     fn try_from(response: NuveiOpenOrderResponse) -> Result<Self, Self::Error> {
         let order_id = response.order_id.unwrap_or_default();
         Ok(Self {
-            order_id: order_id.clone(),
-            merchant_order_id: None, // Will be populated by RouterDataV2 transformation
-            connector_order_id: Some(order_id),
+            order_id,
             session_data: None,
         })
     }
@@ -2152,24 +2124,18 @@ impl TryFrom<ResponseRouterData<NuveiOpenOrderResponse, Self>>
 
         let order_response = PaymentCreateOrderResponse::try_from(response.clone())?;
 
-        // Update merchant_order_id from original request
-        let updated_order_response = PaymentCreateOrderResponse {
-            merchant_order_id: item.router_data.request.merchant_order_id.clone(),
-            ..order_response
-        };
-
-        // Extract order_id to store in reference_id for Authorize flow
-        let order_id = updated_order_response.order_id.clone();
+        // Extract order_id to store for Authorize flow
+        let order_id = order_response.order_id.clone();
 
         // Store session_token in session_token field for use by Authorize flow
         let session_token = response.session_token.clone();
 
         Ok(Self {
-            response: Ok(updated_order_response),
+            response: Ok(order_response),
             resource_common_data: PaymentFlowData {
                 status: common_enums::AttemptStatus::Pending,
-                // Store order_id as reference_id for Authorize flow
-                reference_id: Some(order_id),
+                reference_id: Some(order_id.clone()),
+                connector_order_id: Some(order_id),
                 // Store session_token for use by subsequent payment flows
                 session_token,
                 ..item.router_data.resource_common_data

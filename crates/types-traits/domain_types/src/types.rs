@@ -3972,8 +3972,6 @@ pub fn generate_create_order_response(
     let response = match transaction_response {
         Ok(PaymentCreateOrderResponse {
             order_id,
-            merchant_order_id,
-            connector_order_id,
             session_data,
         }) => {
             let grpc_session_data = session_data
@@ -3981,12 +3979,12 @@ pub fn generate_create_order_response(
                 .transpose()?;
 
             PaymentServiceCreateOrderResponse {
-                connector_order_id: connector_order_id.or(Some(order_id.clone())),
+                connector_order_id: Some(order_id),
                 status: grpc_status.into(),
                 error: None,
                 status_code: 200,
                 response_headers,
-                merchant_order_id,
+                merchant_order_id: None,
                 raw_connector_request,
                 raw_connector_response,
                 session_data: grpc_session_data,
@@ -8471,7 +8469,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
         Ok(Self {
             amount: amount.amount,
             currency: amount.currency,
-            merchant_order_id: value.merchant_order_id.clone(),
             integrity_object: None,
             metadata: value
                 .metadata

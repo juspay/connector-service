@@ -2337,9 +2337,7 @@ pub(crate) fn get_apple_pay_session(
             ..item.router_data.resource_common_data.clone()
         },
         response: Ok(PaymentCreateOrderResponse {
-            order_id: instance_id.clone(),
-            merchant_order_id: None,
-            connector_order_id: Some(instance_id),
+            order_id: instance_id,
             session_data: Some(session_token),
         }),
         ..item.router_data.clone()
@@ -2394,9 +2392,7 @@ pub(crate) fn get_google_pay_session(
             ..item.router_data.resource_common_data.clone()
         },
         response: Ok(PaymentCreateOrderResponse {
-            order_id: instance_id.clone(),
-            merchant_order_id: None,
-            connector_order_id: Some(instance_id),
+            order_id: instance_id,
             session_data: Some(session_token),
         }),
         ..item.router_data.clone()
