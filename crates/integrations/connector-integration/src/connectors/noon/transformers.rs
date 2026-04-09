@@ -11,7 +11,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     mandates::MandateDataType,
     payment_method_data::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -31,7 +31,6 @@ use super::NoonRouterData;
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
 const GOOGLEPAY_API_VERSION_MINOR: u8 = 0;
 const GOOGLEPAY_API_VERSION: u8 = 2;
-const DEFAULT_ORDER_DESCRIPTION: &str = "Order payment";
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -285,7 +284,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 data.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        format!(
+                            "Failed to convert amount {} to Noon format for authorize request",
+                            data.router_data.request.minor_amount
+                        ),
+                    ),
+                    ..Default::default()
+                },
             })?;
 
         let payment_data = match item.request.payment_method_data.clone() {
@@ -322,7 +329,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let payment_token = payment_token_data
                         .encode_to_string_of_json()
                         .change_context(IntegrationError::RequestEncodingFailed {
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                additional_context: Some(
+                                    "Failed to encode Apple Pay payment token to JSON for authorize request".to_string(),
+                                ),
+                                ..Default::default()
+                            },
                         })?;
 
                     Ok(NoonPaymentData::ApplePay(NoonApplePay {
@@ -476,7 +488,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
             .transpose()
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "Failed to encode subscription data to Noon format for authorize request".to_string(),
+                    ),
+                    ..Default::default()
+                },
             })?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
@@ -724,7 +741,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let transaction = NoonActionTransaction {
             amount: amount.change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        format!(
+                            "Failed to convert amount {} {} to Noon format for capture request",
+                            data.router_data.request.minor_amount_to_capture,
+                            item.request.currency
+                        ),
+                    ),
+                    ..Default::default()
+                },
             })?,
             currency: item.request.currency,
             transaction_reference: None,
@@ -832,7 +858,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let transaction = NoonActionTransaction {
             amount: refund_amount.change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        format!(
+                            "Failed to convert refund amount {} {} to Noon format for refund request",
+                            data.router_data.request.refund_amount,
+                            item.request.currency
+                        ),
+                    ),
+                    ..Default::default()
+                },
             })?,
             currency: item.request.currency,
             transaction_reference: Some(item.request.refund_id.clone()),
@@ -1207,7 +1242,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             let payment_token = payment_token_data
                                 .encode_to_string_of_json()
                                 .change_context(IntegrationError::RequestEncodingFailed {
-                                    context: Default::default(),
+                                    context: IntegrationErrorContext {
+                                        additional_context: Some(
+                                            "Failed to encode Apple Pay payment token to JSON for repeat payment request".to_string(),
+                                        ),
+                                        ..Default::default()
+                                    },
                                 })?;
 
                             Ok(NoonPaymentData::ApplePay(NoonApplePay {
@@ -1346,14 +1386,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
             .transpose()
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "Failed to encode subscription data to Noon format for repeat payment request".to_string(),
+                    ),
+                    ..Default::default()
+                },
             })?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
         let order = NoonOrder {
             amount: amount.change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        format!(
+                            "Failed to convert amount {:?} {} to Noon format for setup mandate request",
+                            item.request.amount,
+                            currency.unwrap_or(item.request.currency)
+                        ),
+                    ),
+                    ..Default::default()
+                },
             })?,
             currency,
             channel,
@@ -1745,7 +1799,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .amount_converter
             .convert(item.request.amount, item.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        format!(
+                            "Failed to convert amount {} {} to Noon format for create order request",
+                            item.request.amount,
+                            item.request.currency
+                        ),
+                    ),
+                    ..Default::default()
+                },
             })?;
 
         let currency = Some(item.request.currency);
@@ -1761,12 +1824,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .map(|s| s.to_string());
 
         // The description should not have leading or trailing whitespaces, also it should not have double whitespaces and a max 50 chars according to Noon's Docs
-        // For CreateOrder, use a default description if not provided
         let name: String = item
             .resource_common_data
-            .description
-            .as_deref()
-            .unwrap_or(DEFAULT_ORDER_DESCRIPTION)
+            .get_description()?
             .trim()
             .replace("  ", " ")
             .chars()
