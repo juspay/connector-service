@@ -2394,7 +2394,7 @@ pub(crate) fn get_google_pay_session(
         },
         response: Ok(PaymentCreateOrderResponse {
             merchant_order_id: item.router_data.request.merchant_order_id.clone(),
-            connector_order_id: Some(instance_id), // Use TrustPay instance ID
+            connector_order_id: instance_id,
             session_data: Some(session_token),
         }),
         ..item.router_data.clone()

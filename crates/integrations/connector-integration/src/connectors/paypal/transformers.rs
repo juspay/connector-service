@@ -961,7 +961,7 @@ impl TryFrom<ResponseRouterData<PaypalOrderCreateResponse, Self>>
             resource_common_data: PaymentFlowData {
                 status: common_enums::AttemptStatus::Pending,
                 // KEY: Store order ID so Authorize flow can use it via connector_order_id
-                connector_order_id,
+                connector_order_id: Some(connector_order_id),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
