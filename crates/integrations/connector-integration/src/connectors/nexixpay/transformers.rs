@@ -1699,11 +1699,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 context: Default::default(),
             })?;
 
-        let return_url = router_data
-            .resource_common_data
-            .return_url
-            .clone()
-            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+        let return_url = router_data.resource_common_data.return_url.clone().ok_or(
+            IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: Default::default(),
+            },
+        )?;
 
         Ok(Self {
             order: NexixpayClientAuthOrder {
