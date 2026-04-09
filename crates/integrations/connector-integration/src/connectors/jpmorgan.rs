@@ -2,8 +2,8 @@ mod requests;
 mod responses;
 pub mod transformers;
 
-use requests::*;
-use responses::*;
+use requests::{JpmorganClientAuthRequest, *};
+use responses::{JpmorganClientAuthResponse, *};
 
 use std::fmt::Debug;
 
@@ -44,7 +44,7 @@ use transformers as jpmorgan;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
@@ -265,16 +265,10 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
         (
-            flow: SetupMandate,
-            request_body: JpmorganSetupMandateRequest<T>,
-            response_body: JpmorganSetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: RepeatPayment,
-            request_body: JpmorganRepeatPaymentRequest<T>,
-            response_body: JpmorganRepeatPaymentResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            flow: ClientAuthenticationToken,
+            request_body: JpmorganClientAuthRequest,
+            response_body: JpmorganClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -357,7 +351,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: JpmorganErrorResponse = res
             .response
             .parse_struct("JpmorganErrorResponse")
@@ -486,15 +480,74 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    > for Jpmorgan<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_error_response_v2],
+    connector: Jpmorgan,
+    curl_request: FormUrlEncoded(JpmorganClientAuthRequest),
+    curl_response: JpmorganClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_content_type(&self) -> &'static str {
+            "application/x-www-form-urlencoded"
+        }
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            // ClientAuthenticationToken flow uses Basic auth with client_id:client_secret
+            // to obtain an OAuth2 access token for client-side SDK initialization
+            let auth = jpmorgan::JpmorganAuthType::try_from(&req.connector_config)?;
+            let creds = format!("{}:{}", auth.client_id.peek(), auth.client_secret.peek());
+            let encoded_creds = BASE64_ENGINE.encode(creds);
+            let auth_string = format!("Basic {}", encoded_creds);
+
+            Ok(vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/x-www-form-urlencoded".to_string().into(),
+                ),
+                (
+                    headers::AUTHORIZATION.to_string(),
+                    auth_string.into_masked(),
+                ),
+            ])
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            use domain_types::errors::IntegrationErrorContext;
+            Ok(format!(
+                "{}/am/oauth2/alpha/access_token",
+                req.resource_common_data.connectors.jpmorgan.secondary_base_url.as_ref()
+                    .ok_or(IntegrationError::FailedToObtainIntegrationUrl {
+                        context: IntegrationErrorContext {
+                            suggested_action: Some(
+                                "Set the 'secondary_base_url' in the JPMorgan connector \
+                                 configuration. This URL points to the OAuth2 token endpoint."
+                                    .to_owned(),
+                            ),
+                            doc_url: Some(
+                                "https://developer.payments.jpmorgan.com/docs/commerce-solutions/online-payments/capabilities/authentication/oauth"
+                                    .to_owned(),
+                            ),
+                            additional_context: Some(
+                                "JPMorgan uses a separate base URL for the OAuth2 token \
+                                 endpoint (secondary_base_url) distinct from the payments API."
+                                    .to_owned(),
+                            ),
+                        },
+                    })?
+            ))
+        }
+    }
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<

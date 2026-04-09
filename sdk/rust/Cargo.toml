@@ -5,7 +5,7 @@ edition = "2021"
 
 [[example]]
 name = "stripe"
-path = "../../examples/stripe/rust/stripe.rs"
+path = "../../examples/stripe/stripe.rs"
 
 [dependencies]
 # Internal crates (path deps)
