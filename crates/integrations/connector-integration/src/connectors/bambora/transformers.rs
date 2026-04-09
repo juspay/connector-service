@@ -950,106 +950,61 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // ---- ClientAuthenticationToken flow types ----
 
-/// Request to Bambora's tokenization API for Custom Checkout SDK initialization.
-/// POST /scripts/tokenization/tokens
-/// This endpoint creates a single-use token from card data.
-/// For session initialization, we send a minimal request to verify connectivity
-/// and obtain a token for client-side SDK use.
-#[derive(Debug, Serialize)]
-pub struct BamboraClientAuthRequest {
-    /// Card number (using test card for session initialization)
-    pub number: String,
-    /// Card expiry month
-    pub expiry_month: String,
-    /// Card expiry year
-    pub expiry_year: String,
-    /// Card CVD
-    pub cvd: String,
-}
-
-/// Bambora tokenization response containing the token for client-side use.
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BamboraClientAuthResponse {
-    /// The tokenization token (nonce) - expires on-use or after 5 minutes
-    pub token: String,
-    /// Response code (1 = success)
-    pub code: i32,
-    /// API version
-    pub version: Option<i32>,
-    /// Response message
-    pub message: Option<String>,
-}
-
-// ClientAuthenticationToken Request Transformation
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BamboraRouterData<
-            RouterDataV2<
-                ClientAuthenticationToken,
-                PaymentFlowData,
-                ClientAuthenticationTokenRequestData,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for BamboraClientAuthRequest
-{
-    type Error = error_stack::Report<IntegrationError>;
-
-    fn try_from(
-        _item: BamboraRouterData<
-            RouterDataV2<
-                ClientAuthenticationToken,
-                PaymentFlowData,
-                ClientAuthenticationTokenRequestData,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // The tokenization endpoint creates a single-use token from card data.
-        // For client authentication token initialization, we use test card data
-        // to verify connectivity and obtain a valid token format.
-        // The actual card tokenization happens on the client side via Custom Checkout SDK.
-        Ok(Self {
-            number: "4030000010001234".to_string(),
-            expiry_month: "12".to_string(),
-            expiry_year: "30".to_string(),
-            cvd: "123".to_string(),
-        })
+/// Extracts the merchant_id from Bambora connector config.
+/// Bambora's Custom Checkout SDK is initialized client-side using the merchant_id.
+/// There is no server-side session initialization API, so the merchant_id
+/// is returned directly as the client authentication token.
+pub fn extract_merchant_id(
+    connector_config: &ConnectorSpecificConfig,
+) -> Result<Secret<String>, error_stack::Report<IntegrationError>> {
+    match connector_config {
+        ConnectorSpecificConfig::Bambora { merchant_id, .. } => Ok(merchant_id.clone()),
+        _ => Err(error_stack::report!(
+            IntegrationError::FailedToObtainAuthType {
+                context: Default::default()
+            }
+        )),
     }
 }
 
-// ClientAuthenticationToken Response Transformation
-impl TryFrom<ResponseRouterData<BamboraClientAuthResponse, Self>>
-    for RouterDataV2<
+/// Builds the ClientAuthenticationToken response for Bambora.
+/// Returns the merchant_id as the client auth token for Custom Checkout SDK initialization.
+pub fn build_client_auth_token_response(
+    router_data: &RouterDataV2<
         ClientAuthenticationToken,
         PaymentFlowData,
         ClientAuthenticationTokenRequestData,
         PaymentsResponseData,
-    >
-{
-    type Error = error_stack::Report<ConnectorError>;
+    >,
+) -> Result<
+    RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >,
+    error_stack::Report<ConnectorError>,
+> {
+    let merchant_id = extract_merchant_id(&router_data.connector_config).change_context(
+        ConnectorError::ResponseHandlingFailed {
+            context: Default::default(),
+        },
+    )?;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraClientAuthResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let response = item.response;
+    let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+        ConnectorSpecificClientAuthenticationResponse::Bambora(
+            BamboraClientAuthenticationResponseDomain { token: merchant_id },
+        ),
+    ));
 
-        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
-            ConnectorSpecificClientAuthenticationResponse::Bambora(
-                BamboraClientAuthenticationResponseDomain {
-                    token: Secret::new(response.token),
-                },
-            ),
-        ));
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
-                session_data,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
-    }
+    Ok(RouterDataV2 {
+        response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+            session_data,
+            status_code: 200,
+        }),
+        flow: router_data.flow,
+        resource_common_data: router_data.resource_common_data.clone(),
+        connector_config: router_data.connector_config.clone(),
+        request: router_data.request.clone(),
+    })
 }
