@@ -2374,6 +2374,80 @@ impl PaymentMethodDataAction {
             .into()),
         }
     }
+
+    /// Extract `PaymentMethodData<DefaultPCIHolder>` from a `PaymentMethodDataAction`.
+    ///
+    /// This is the shared extraction logic used by all FFI macros and gRPC server handlers.
+    /// It converts `Card`, `Default`, and rejects `CardProxy` (which must go through the
+    /// VaultTokenHolder path instead).
+    pub fn into_default_pci_payment_method_data(
+        self,
+        payment_method: Option<grpc_api_types::payments::PaymentMethod>,
+    ) -> Result<
+        payment_method_data::PaymentMethodData<payment_method_data::DefaultPCIHolder>,
+        error_stack::Report<ApplicationErrorResponse>,
+    > {
+        match self {
+            PaymentMethodDataAction::Card(card_details) => {
+                let card = payment_method_data::Card::<
+                    payment_method_data::DefaultPCIHolder,
+                >::foreign_try_from(card_details)?;
+                Ok(payment_method_data::PaymentMethodData::Card(card))
+            }
+            PaymentMethodDataAction::Default => {
+                let pm = payment_method.ok_or_else(|| {
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "MISSING_PAYMENT_METHOD".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Missing payment_method in the payload".to_owned(),
+                        error_object: None,
+                    })
+                })?;
+                payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(pm)
+            }
+            PaymentMethodDataAction::CardProxy(_) => {
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                    error_identifier: 400,
+                    error_message: "CardProxy not supported in this flow; use the proxy endpoint".to_owned(),
+                    error_object: None,
+                })))
+            }
+        }
+    }
+}
+
+/// Build request data by extracting required `PaymentMethodData<DefaultPCIHolder>` from the
+/// payload's `payment_method` field, then calling `ForeignTryFrom::foreign_try_from((ftf_input, pmd))`.
+///
+/// This is the shared "required PMD" pipeline used by authorize, setup_recurring, tokenize,
+/// charge, and token flows (after optional pre-conversion to a base type).
+///
+/// # Arguments
+/// * `payment_method` - The optional gRPC PaymentMethod from the payload
+/// * `ftf_input` - The first element of the tuple passed to ForeignTryFrom (e.g. an
+///   `AuthorizationRequest`, a `SetupRecurringRequest`, or the raw proto request)
+pub fn build_request_data_with_required_pmd<Input, Output>(
+    payment_method: Option<grpc_api_types::payments::PaymentMethod>,
+    ftf_input: Input,
+) -> Result<Output, error_stack::Report<ApplicationErrorResponse>>
+where
+    Output: ForeignTryFrom<
+        (Input, payment_method_data::PaymentMethodData<payment_method_data::DefaultPCIHolder>),
+        Error = ApplicationErrorResponse,
+    >,
+{
+    let pm = payment_method.clone().ok_or_else(|| {
+        report!(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "MISSING_PAYMENT_METHOD".to_owned(),
+            error_identifier: 400,
+            error_message: "Missing payment_method in the payload".to_owned(),
+            error_object: None,
+        }))
+    })?;
+    let pm_action = PaymentMethodDataAction::get_payment_method_data_action(pm)?;
+    let pmd = pm_action.into_default_pci_payment_method_data(payment_method)?;
+    Output::foreign_try_from((ftf_input, pmd))
 }
 
 /// ============================================================================

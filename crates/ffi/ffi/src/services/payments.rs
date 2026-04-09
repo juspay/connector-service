@@ -1,8 +1,5 @@
 use crate::macros::{
-    req_transformer, req_transformer_token_to_base,
-    req_transformer_with_optional_payment_method_data,
-    req_transformer_with_payment_method_data, res_transformer, res_transformer_token_to_base,
-    res_transformer_with_optional_payment_method_data, res_transformer_with_payment_method_data,
+    req_transformer, res_transformer,
 };
 use external_services;
 use grpc_api_types::payments::ConnectorResponseTransformationError;
@@ -54,18 +51,22 @@ use domain_types::{
 };
 
 // authorize request transformer
-req_transformer_with_payment_method_data!(
+req_transformer!(
     fn_name: authorize_req_transformer,
     request_type: PaymentServiceAuthorizeRequest,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
-    request_for_ftf: (|p: &PaymentServiceAuthorizeRequest| { let r: domain_types::types::AuthorizationRequest = p.clone().into(); r }),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentServiceAuthorizeRequest| {
+        let auth_req: domain_types::types::AuthorizationRequest = p.clone().into();
+        domain_types::types::build_request_data_with_required_pmd(p.payment_method.clone(), auth_req)
+    },
 );
 
 // authorize response transformer
-res_transformer_with_payment_method_data!(
+res_transformer!(
     fn_name: authorize_res_transformer,
     request_type: PaymentServiceAuthorizeRequest,
     response_type: PaymentServiceAuthorizeResponse,
@@ -74,7 +75,11 @@ res_transformer_with_payment_method_data!(
     request_data_type: PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_authorize_response,
-    request_for_ftf: (|p: &PaymentServiceAuthorizeRequest| { let r: domain_types::types::AuthorizationRequest = p.clone().into(); r }),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentServiceAuthorizeRequest| {
+        let auth_req: domain_types::types::AuthorizationRequest = p.clone().into();
+        domain_types::types::build_request_data_with_required_pmd(p.payment_method.clone(), auth_req)
+    },
 );
 
 // capture request transformer
@@ -85,6 +90,10 @@ req_transformer!(
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsCaptureData,
     response_data_type: PaymentsResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceCaptureRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // capture response transformer
@@ -97,6 +106,10 @@ res_transformer!(
     request_data_type: PaymentsCaptureData,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_capture_response,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceCaptureRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // void request transformer
@@ -107,6 +120,10 @@ req_transformer!(
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentVoidData,
     response_data_type: PaymentsResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceVoidRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // void response transformer
@@ -119,6 +136,10 @@ res_transformer!(
     request_data_type: PaymentVoidData,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_void_response,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceVoidRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // psync request transformer
@@ -129,6 +150,10 @@ req_transformer!(
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsSyncData,
     response_data_type: PaymentsResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceGetRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // psync response transformer
@@ -141,6 +166,10 @@ res_transformer!(
     request_data_type: PaymentsSyncData,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_sync_response,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceGetRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // create order request transformer
@@ -151,6 +180,10 @@ req_transformer!(
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentCreateOrderData,
     response_data_type: PaymentCreateOrderResponse,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceCreateOrderRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // create order response transformer
@@ -163,6 +196,10 @@ res_transformer!(
     request_data_type: PaymentCreateOrderData,
     response_data_type: PaymentCreateOrderResponse,
     generate_response_fn: generate_create_order_response,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceCreateOrderRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // create access token request transformer
@@ -173,6 +210,10 @@ req_transformer!(
     resource_common_data_type: PaymentFlowData,
     request_data_type: AccessTokenRequestData,
     response_data_type: AccessTokenResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &MerchantAuthenticationServiceCreateAccessTokenRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // create access token response transformer
@@ -185,6 +226,10 @@ res_transformer!(
     request_data_type: AccessTokenRequestData,
     response_data_type: AccessTokenResponseData,
     generate_response_fn: generate_access_token_response,
+    connector_data_type: T,
+    request_data_fn: |p: &MerchantAuthenticationServiceCreateAccessTokenRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // refund request transformer
@@ -195,6 +240,10 @@ req_transformer!(
     resource_common_data_type: RefundFlowData,
     request_data_type: RefundsData,
     response_data_type: RefundsResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceRefundRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // refund response transformer
@@ -207,6 +256,10 @@ res_transformer!(
     request_data_type: RefundsData,
     response_data_type: RefundsResponseData,
     generate_response_fn: generate_refund_response,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceRefundRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // reverse (void post-capture) request transformer
@@ -217,6 +270,10 @@ req_transformer!(
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsCancelPostCaptureData,
     response_data_type: PaymentsResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceReverseRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // reverse (void post-capture) response transformer
@@ -229,6 +286,10 @@ res_transformer!(
     request_data_type: PaymentsCancelPostCaptureData,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_void_post_capture_response,
+    connector_data_type: T,
+    request_data_fn: |p: &PaymentServiceReverseRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // create connector customer request transformer
@@ -239,6 +300,10 @@ req_transformer!(
     resource_common_data_type: PaymentFlowData,
     request_data_type: ConnectorCustomerData,
     response_data_type: ConnectorCustomerResponse,
+    connector_data_type: T,
+    request_data_fn: |p: &CustomerServiceCreateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // create connector customer response transformer
@@ -251,21 +316,28 @@ res_transformer!(
     request_data_type: ConnectorCustomerData,
     response_data_type: ConnectorCustomerResponse,
     generate_response_fn: generate_create_connector_customer_response,
+    connector_data_type: T,
+    request_data_fn: |p: &CustomerServiceCreateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // repeat payment (charge) request transformer
-req_transformer_with_payment_method_data!(
+req_transformer!(
     fn_name: charge_req_transformer,
     request_type: RecurringPaymentServiceChargeRequest,
     flow_marker: RepeatPayment,
     resource_common_data_type: PaymentFlowData,
     request_data_type: RepeatPaymentData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
-    request_for_ftf: |p: &RecurringPaymentServiceChargeRequest| p.clone(),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &RecurringPaymentServiceChargeRequest| {
+        domain_types::types::build_request_data_with_required_pmd(p.payment_method.clone(), p.clone())
+    },
 );
 
 // repeat payment (charge) response transformer
-res_transformer_with_payment_method_data!(
+res_transformer!(
     fn_name: charge_res_transformer,
     request_type: RecurringPaymentServiceChargeRequest,
     response_type: RecurringPaymentServiceChargeResponse,
@@ -274,7 +346,10 @@ res_transformer_with_payment_method_data!(
     request_data_type: RepeatPaymentData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_repeat_payment_response,
-    request_for_ftf: |p: &RecurringPaymentServiceChargeRequest| p.clone(),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &RecurringPaymentServiceChargeRequest| {
+        domain_types::types::build_request_data_with_required_pmd(p.payment_method.clone(), p.clone())
+    },
 );
 
 // create session token request transformer
@@ -285,6 +360,10 @@ req_transformer!(
     resource_common_data_type: PaymentFlowData,
     request_data_type: SessionTokenRequestData,
     response_data_type: SessionTokenResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &MerchantAuthenticationServiceCreateSessionTokenRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // create session token response transformer
@@ -297,21 +376,28 @@ res_transformer!(
     request_data_type: SessionTokenRequestData,
     response_data_type: SessionTokenResponseData,
     generate_response_fn: generate_session_token_response,
+    connector_data_type: T,
+    request_data_fn: |p: &MerchantAuthenticationServiceCreateSessionTokenRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // setup recurring (setup mandate) request transformer
-req_transformer_with_payment_method_data!(
+req_transformer!(
     fn_name: setup_recurring_req_transformer,
     request_type: PaymentServiceSetupRecurringRequest,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: SetupMandateRequestData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
-    request_for_ftf: |p: &PaymentServiceSetupRecurringRequest| p.clone(),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentServiceSetupRecurringRequest| {
+        domain_types::types::build_request_data_with_required_pmd(p.payment_method.clone(), p.clone())
+    },
 );
 
 // setup recurring (setup mandate) response transformer
-res_transformer_with_payment_method_data!(
+res_transformer!(
     fn_name: setup_recurring_res_transformer,
     request_type: PaymentServiceSetupRecurringRequest,
     response_type: PaymentServiceSetupRecurringResponse,
@@ -320,22 +406,28 @@ res_transformer_with_payment_method_data!(
     request_data_type: SetupMandateRequestData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_setup_mandate_response,
-    request_for_ftf: |p: &PaymentServiceSetupRecurringRequest| p.clone(),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentServiceSetupRecurringRequest| {
+        domain_types::types::build_request_data_with_required_pmd(p.payment_method.clone(), p.clone())
+    },
 );
 
 // tokenize (payment method token) request transformer
-req_transformer_with_payment_method_data!(
+req_transformer!(
     fn_name: tokenize_req_transformer,
     request_type: PaymentMethodServiceTokenizeRequest,
     flow_marker: PaymentMethodToken,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentMethodTokenizationData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentMethodTokenResponse,
-    request_for_ftf: |p: &PaymentMethodServiceTokenizeRequest| p.clone(),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentMethodServiceTokenizeRequest| {
+        domain_types::types::build_request_data_with_required_pmd(p.payment_method.clone(), p.clone())
+    },
 );
 
 // tokenize (payment method token) response transformer
-res_transformer_with_payment_method_data!(
+res_transformer!(
     fn_name: tokenize_res_transformer,
     request_type: PaymentMethodServiceTokenizeRequest,
     response_type: PaymentMethodServiceTokenizeResponse,
@@ -344,21 +436,28 @@ res_transformer_with_payment_method_data!(
     request_data_type: PaymentMethodTokenizationData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentMethodTokenResponse,
     generate_response_fn: generate_create_payment_method_token_response,
-    request_for_ftf: |p: &PaymentMethodServiceTokenizeRequest| p.clone(),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentMethodServiceTokenizeRequest| {
+        domain_types::types::build_request_data_with_required_pmd(p.payment_method.clone(), p.clone())
+    },
 );
 
 // pre_authenticate request transformer
-req_transformer_with_optional_payment_method_data!(
+req_transformer!(
     fn_name: pre_authenticate_req_transformer,
     request_type: PaymentMethodAuthenticationServicePreAuthenticateRequest,
     flow_marker: PreAuthenticate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsPreAuthenticateData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentMethodAuthenticationServicePreAuthenticateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+    },
 );
 
 // pre_authenticate response transformer
-res_transformer_with_optional_payment_method_data!(
+res_transformer!(
     fn_name: pre_authenticate_res_transformer,
     request_type: PaymentMethodAuthenticationServicePreAuthenticateRequest,
     response_type: PaymentMethodAuthenticationServicePreAuthenticateResponse,
@@ -367,20 +466,28 @@ res_transformer_with_optional_payment_method_data!(
     request_data_type: PaymentsPreAuthenticateData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_pre_authenticate_response,
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentMethodAuthenticationServicePreAuthenticateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+    },
 );
 
 // authenticate request transformer
-req_transformer_with_optional_payment_method_data!(
+req_transformer!(
     fn_name: authenticate_req_transformer,
     request_type: PaymentMethodAuthenticationServiceAuthenticateRequest,
     flow_marker: Authenticate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsAuthenticateData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentMethodAuthenticationServiceAuthenticateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+    },
 );
 
 // authenticate response transformer
-res_transformer_with_optional_payment_method_data!(
+res_transformer!(
     fn_name: authenticate_res_transformer,
     request_type: PaymentMethodAuthenticationServiceAuthenticateRequest,
     response_type: PaymentMethodAuthenticationServiceAuthenticateResponse,
@@ -389,20 +496,28 @@ res_transformer_with_optional_payment_method_data!(
     request_data_type: PaymentsAuthenticateData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_authenticate_response,
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentMethodAuthenticationServiceAuthenticateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+    },
 );
 
 // post_authenticate request transformer
-req_transformer_with_optional_payment_method_data!(
+req_transformer!(
     fn_name: post_authenticate_req_transformer,
     request_type: PaymentMethodAuthenticationServicePostAuthenticateRequest,
     flow_marker: PostAuthenticate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsPostAuthenticateData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentMethodAuthenticationServicePostAuthenticateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+    },
 );
 
 // post_authenticate response transformer
-res_transformer_with_optional_payment_method_data!(
+res_transformer!(
     fn_name: post_authenticate_res_transformer,
     request_type: PaymentMethodAuthenticationServicePostAuthenticateRequest,
     response_type: PaymentMethodAuthenticationServicePostAuthenticateResponse,
@@ -411,6 +526,10 @@ res_transformer_with_optional_payment_method_data!(
     request_data_type: PaymentsPostAuthenticateData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_post_authenticate_response,
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentMethodAuthenticationServicePostAuthenticateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+    },
 );
 
 // accept request transformer
@@ -421,6 +540,10 @@ req_transformer!(
     resource_common_data_type: DisputeFlowData,
     request_data_type: AcceptDisputeData,
     response_data_type: DisputeResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &DisputeServiceAcceptRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // submit_evidence request transformer
@@ -431,6 +554,10 @@ req_transformer!(
     resource_common_data_type: DisputeFlowData,
     request_data_type: SubmitEvidenceData,
     response_data_type: DisputeResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &DisputeServiceSubmitEvidenceRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // defend request transformer
@@ -441,6 +568,10 @@ req_transformer!(
     resource_common_data_type: DisputeFlowData,
     request_data_type: DisputeDefendData,
     response_data_type: DisputeResponseData,
+    connector_data_type: T,
+    request_data_fn: |p: &DisputeServiceDefendRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // accept response transformer
@@ -453,6 +584,10 @@ res_transformer!(
     request_data_type: AcceptDisputeData,
     response_data_type: DisputeResponseData,
     generate_response_fn: generate_accept_dispute_response,
+    connector_data_type: T,
+    request_data_fn: |p: &DisputeServiceAcceptRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // submit_evidence response transformer
@@ -465,6 +600,10 @@ res_transformer!(
     request_data_type: SubmitEvidenceData,
     response_data_type: DisputeResponseData,
     generate_response_fn: generate_submit_evidence_response,
+    connector_data_type: T,
+    request_data_fn: |p: &DisputeServiceSubmitEvidenceRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // defend response transformer
@@ -477,6 +616,10 @@ res_transformer!(
     request_data_type: DisputeDefendData,
     response_data_type: DisputeResponseData,
     generate_response_fn: generate_defend_dispute_response,
+    connector_data_type: T,
+    request_data_fn: |p: &DisputeServiceDefendRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
@@ -558,383 +701,123 @@ pub fn handle_event_transformer(
 }
 
 // token_authorize — converts token request to base authorize, then processes like regular authorize
-req_transformer_token_to_base!(
+req_transformer!(
     fn_name: token_authorize_req_transformer,
     request_type: PaymentServiceTokenAuthorizeRequest,
-    base_request_type: PaymentServiceAuthorizeRequest,
-    converter_fn: domain_types::types::tokenized_authorize_to_base,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
-    request_for_ftf: (|p: &PaymentServiceAuthorizeRequest| { let r: domain_types::types::AuthorizationRequest = p.clone().into(); r }),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentServiceTokenAuthorizeRequest| {
+        let base: PaymentServiceAuthorizeRequest = domain_types::types::tokenized_authorize_to_base(p.clone());
+        let auth_req: domain_types::types::AuthorizationRequest = base.clone().into();
+        domain_types::types::build_request_data_with_required_pmd(base.payment_method.clone(), auth_req)
+    },
 );
 
-res_transformer_token_to_base!(
+res_transformer!(
     fn_name: token_authorize_res_transformer,
     request_type: PaymentServiceTokenAuthorizeRequest,
-    base_request_type: PaymentServiceAuthorizeRequest,
-    converter_fn: domain_types::types::tokenized_authorize_to_base,
     response_type: PaymentServiceAuthorizeResponse,
     flow_marker: Authorize,
     resource_common_data_type: PaymentFlowData,
     request_data_type: PaymentsAuthorizeData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_authorize_response,
-    request_for_ftf: (|p: &PaymentServiceAuthorizeRequest| { let r: domain_types::types::AuthorizationRequest = p.clone().into(); r }),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentServiceTokenAuthorizeRequest| {
+        let base: PaymentServiceAuthorizeRequest = domain_types::types::tokenized_authorize_to_base(p.clone());
+        let auth_req: domain_types::types::AuthorizationRequest = base.clone().into();
+        domain_types::types::build_request_data_with_required_pmd(base.payment_method.clone(), auth_req)
+    },
 );
 
 // token_setup_recurring — converts token request to base setup_recurring, then processes like regular setup_recurring
-req_transformer_token_to_base!(
+req_transformer!(
     fn_name: token_setup_recurring_req_transformer,
     request_type: PaymentServiceTokenSetupRecurringRequest,
-    base_request_type: PaymentServiceSetupRecurringRequest,
-    converter_fn: domain_types::types::tokenized_setup_recurring_to_base,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: SetupMandateRequestData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
-    request_for_ftf: |p: &PaymentServiceSetupRecurringRequest| p.clone(),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentServiceTokenSetupRecurringRequest| {
+        let base: PaymentServiceSetupRecurringRequest = domain_types::types::tokenized_setup_recurring_to_base(p.clone());
+        domain_types::types::build_request_data_with_required_pmd(base.payment_method.clone(), base)
+    },
 );
 
-res_transformer_token_to_base!(
+res_transformer!(
     fn_name: token_setup_recurring_res_transformer,
     request_type: PaymentServiceTokenSetupRecurringRequest,
-    base_request_type: PaymentServiceSetupRecurringRequest,
-    converter_fn: domain_types::types::tokenized_setup_recurring_to_base,
     response_type: PaymentServiceSetupRecurringResponse,
     flow_marker: SetupMandate,
     resource_common_data_type: PaymentFlowData,
     request_data_type: SetupMandateRequestData<domain_types::payment_method_data::DefaultPCIHolder>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_setup_mandate_response,
-    request_for_ftf: |p: &PaymentServiceSetupRecurringRequest| p.clone(),
+    connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
+    request_data_fn: |p: &PaymentServiceTokenSetupRecurringRequest| {
+        let base: PaymentServiceSetupRecurringRequest = domain_types::types::tokenized_setup_recurring_to_base(p.clone());
+        domain_types::types::build_request_data_with_required_pmd(base.payment_method.clone(), base)
+    },
 );
 
-// proxy_authorize — uses VaultTokenHolder internally for ForeignTryFrom<ProxyAuthorizeRequest>
-// The generic T parameter is accepted (required by impl_flow_handlers! macro which calls ::<DefaultPCIHolder>)
-// but is unused; all connector data and type conversions use VaultTokenHolder.
-pub fn proxy_authorize_req_transformer<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + Default
-        + Eq
-        + std::fmt::Debug
-        + Send
-        + Sync
-        + Clone
-        + serde::Serialize
-        + serde::de::DeserializeOwned
-        + 'static,
->(
-    payload: PaymentServiceProxyAuthorizeRequest,
-    config: &std::sync::Arc<ucs_env::configs::Config>,
-    connector: domain_types::connector_types::ConnectorEnum,
-    connector_config: domain_types::router_data::ConnectorSpecificConfig,
-    metadata: &common_utils::metadata::MaskedMetadata,
-) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::IntegrationError> {
-    use domain_types::payment_method_data::VaultTokenHolder;
+// proxy_authorize — VaultTokenHolder: the request type carries a vault token, not raw card data
+req_transformer!(
+    fn_name: proxy_authorize_req_transformer,
+    request_type: PaymentServiceProxyAuthorizeRequest,
+    flow_marker: Authorize,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsAuthorizeData<domain_types::payment_method_data::VaultTokenHolder>,
+    response_data_type: PaymentsResponseData,
+    connector_data_type: domain_types::payment_method_data::VaultTokenHolder,
+    request_data_fn: |p: &PaymentServiceProxyAuthorizeRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
 
-    let connector_data: connector_integration::types::ConnectorData<VaultTokenHolder> =
-        connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+res_transformer!(
+    fn_name: proxy_authorize_res_transformer,
+    request_type: PaymentServiceProxyAuthorizeRequest,
+    response_type: PaymentServiceAuthorizeResponse,
+    flow_marker: Authorize,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: PaymentsAuthorizeData<domain_types::payment_method_data::VaultTokenHolder>,
+    response_data_type: PaymentsResponseData,
+    generate_response_fn: generate_payment_authorize_response,
+    connector_data_type: domain_types::payment_method_data::VaultTokenHolder,
+    request_data_fn: |p: &PaymentServiceProxyAuthorizeRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
 
-    let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-        '_,
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<VaultTokenHolder>,
-        PaymentsResponseData,
-    > = connector_data.connector.get_connector_integration_v2();
+// proxy_setup_recurring — VaultTokenHolder: the request type carries a vault token, not raw card data
+req_transformer!(
+    fn_name: proxy_setup_recurring_req_transformer,
+    request_type: PaymentServiceProxySetupRecurringRequest,
+    flow_marker: SetupMandate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: SetupMandateRequestData<domain_types::payment_method_data::VaultTokenHolder>,
+    response_data_type: PaymentsResponseData,
+    connector_data_type: domain_types::payment_method_data::VaultTokenHolder,
+    request_data_fn: |p: &PaymentServiceProxySetupRecurringRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
 
-    let connectors = ucs_interface_common::config::connectors_with_connector_config_overrides(
-        &connector_config,
-        config,
-    )
-    .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        ucs_env::error::ErrorSwitch::switch(e.current_context())
-    })?;
-
-    let flow_data: PaymentFlowData =
-        domain_types::utils::ForeignTryFrom::foreign_try_from((
-            payload.clone(),
-            connectors,
-            metadata,
-        ))
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })?;
-
-    let payment_request_data: PaymentsAuthorizeData<VaultTokenHolder> =
-        domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })?;
-
-    let router_data = domain_types::router_data_v2::RouterDataV2 {
-        flow: std::marker::PhantomData,
-        resource_common_data: flow_data,
-        connector_config,
-        request: payment_request_data,
-        response: Err(domain_types::router_data::ErrorResponse::default()),
-    };
-
-    let connector_request = connector_integration
-        .build_request_v2(&router_data)
-        .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-            let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
-            ucs_env::error::ErrorSwitch::switch(&app_error)
-        })?;
-
-    Ok(connector_request)
-}
-
-pub fn proxy_authorize_res_transformer<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + Default
-        + Eq
-        + std::fmt::Debug
-        + Send
-        + serde::Serialize
-        + serde::de::DeserializeOwned
-        + Clone
-        + Sync
-        + 'static,
->(
-    payload: PaymentServiceProxyAuthorizeRequest,
-    config: &std::sync::Arc<ucs_env::configs::Config>,
-    connector: domain_types::connector_types::ConnectorEnum,
-    connector_config: domain_types::router_data::ConnectorSpecificConfig,
-    metadata: &common_utils::metadata::MaskedMetadata,
-    response: domain_types::router_response_types::Response,
-) -> Result<PaymentServiceAuthorizeResponse, ConnectorResponseTransformationError> {
-    use domain_types::payment_method_data::VaultTokenHolder;
-
-    let connector_data: connector_integration::types::ConnectorData<VaultTokenHolder> =
-        connector_integration::types::ConnectorData::get_connector_by_name(&connector);
-
-    let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-        '_,
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<VaultTokenHolder>,
-        PaymentsResponseData,
-    > = connector_data.connector.get_connector_integration_v2();
-
-    let connectors = ucs_interface_common::config::connectors_with_connector_config_overrides(
-        &connector_config,
-        config,
-    )
-    .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        ucs_env::error::ErrorSwitch::switch(e.current_context())
-    })?;
-
-    let flow_data: PaymentFlowData =
-        domain_types::utils::ForeignTryFrom::foreign_try_from((
-            payload.clone(),
-            connectors,
-            metadata,
-        ))
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })?;
-
-    let payment_request_data: PaymentsAuthorizeData<VaultTokenHolder> =
-        domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })?;
-
-    let router_data = domain_types::router_data_v2::RouterDataV2 {
-        flow: std::marker::PhantomData,
-        resource_common_data: flow_data,
-        connector_config,
-        request: payment_request_data,
-        response: Err(domain_types::router_data::ErrorResponse::default()),
-    };
-
-    let classified_response = match response.status_code {
-        200..=399 => Ok(response),
-        _ => Err(response),
-    };
-    let response = external_services::service::handle_connector_response(
-        Ok(classified_response),
-        router_data,
-        &connector_integration,
-        None,
-        None,
-        common_utils::Method::Post,
-        "".to_string(),
-        None,
-    )
-    .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-        let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
-        ucs_env::error::ErrorSwitch::switch(&app_error)
-    })?;
-
-    domain_types::types::generate_payment_authorize_response(response)
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })
-}
-
-// proxy_setup_recurring — uses VaultTokenHolder internally for ForeignTryFrom<ProxySetupRecurringRequest>
-pub fn proxy_setup_recurring_req_transformer<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + Default
-        + Eq
-        + std::fmt::Debug
-        + Send
-        + Sync
-        + Clone
-        + serde::Serialize
-        + serde::de::DeserializeOwned
-        + 'static,
->(
-    payload: PaymentServiceProxySetupRecurringRequest,
-    config: &std::sync::Arc<ucs_env::configs::Config>,
-    connector: domain_types::connector_types::ConnectorEnum,
-    connector_config: domain_types::router_data::ConnectorSpecificConfig,
-    metadata: &common_utils::metadata::MaskedMetadata,
-) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::IntegrationError> {
-    use domain_types::payment_method_data::VaultTokenHolder;
-
-    let connector_data: connector_integration::types::ConnectorData<VaultTokenHolder> =
-        connector_integration::types::ConnectorData::get_connector_by_name(&connector);
-
-    let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-        '_,
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<VaultTokenHolder>,
-        PaymentsResponseData,
-    > = connector_data.connector.get_connector_integration_v2();
-
-    let connectors = ucs_interface_common::config::connectors_with_connector_config_overrides(
-        &connector_config,
-        config,
-    )
-    .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        ucs_env::error::ErrorSwitch::switch(e.current_context())
-    })?;
-
-    let flow_data: PaymentFlowData =
-        domain_types::utils::ForeignTryFrom::foreign_try_from((
-            payload.clone(),
-            connectors,
-            metadata,
-        ))
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })?;
-
-    let payment_request_data: SetupMandateRequestData<VaultTokenHolder> =
-        domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })?;
-
-    let router_data = domain_types::router_data_v2::RouterDataV2 {
-        flow: std::marker::PhantomData,
-        resource_common_data: flow_data,
-        connector_config,
-        request: payment_request_data,
-        response: Err(domain_types::router_data::ErrorResponse::default()),
-    };
-
-    let connector_request = connector_integration
-        .build_request_v2(&router_data)
-        .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-            let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
-            ucs_env::error::ErrorSwitch::switch(&app_error)
-        })?;
-
-    Ok(connector_request)
-}
-
-pub fn proxy_setup_recurring_res_transformer<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + Default
-        + Eq
-        + std::fmt::Debug
-        + Send
-        + serde::Serialize
-        + serde::de::DeserializeOwned
-        + Clone
-        + Sync
-        + 'static,
->(
-    payload: PaymentServiceProxySetupRecurringRequest,
-    config: &std::sync::Arc<ucs_env::configs::Config>,
-    connector: domain_types::connector_types::ConnectorEnum,
-    connector_config: domain_types::router_data::ConnectorSpecificConfig,
-    metadata: &common_utils::metadata::MaskedMetadata,
-    response: domain_types::router_response_types::Response,
-) -> Result<PaymentServiceSetupRecurringResponse, ConnectorResponseTransformationError> {
-    use domain_types::payment_method_data::VaultTokenHolder;
-
-    let connector_data: connector_integration::types::ConnectorData<VaultTokenHolder> =
-        connector_integration::types::ConnectorData::get_connector_by_name(&connector);
-
-    let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-        '_,
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<VaultTokenHolder>,
-        PaymentsResponseData,
-    > = connector_data.connector.get_connector_integration_v2();
-
-    let connectors = ucs_interface_common::config::connectors_with_connector_config_overrides(
-        &connector_config,
-        config,
-    )
-    .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        ucs_env::error::ErrorSwitch::switch(e.current_context())
-    })?;
-
-    let flow_data: PaymentFlowData =
-        domain_types::utils::ForeignTryFrom::foreign_try_from((
-            payload.clone(),
-            connectors,
-            metadata,
-        ))
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })?;
-
-    let payment_request_data: SetupMandateRequestData<VaultTokenHolder> =
-        domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })?;
-
-    let router_data = domain_types::router_data_v2::RouterDataV2 {
-        flow: std::marker::PhantomData,
-        resource_common_data: flow_data,
-        connector_config,
-        request: payment_request_data,
-        response: Err(domain_types::router_data::ErrorResponse::default()),
-    };
-
-    let classified_response = match response.status_code {
-        200..=399 => Ok(response),
-        _ => Err(response),
-    };
-    let response = external_services::service::handle_connector_response(
-        Ok(classified_response),
-        router_data,
-        &connector_integration,
-        None,
-        None,
-        common_utils::Method::Post,
-        "".to_string(),
-        None,
-    )
-    .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-        let app_error: domain_types::errors::ApplicationErrorResponse = ucs_env::error::ErrorSwitch::switch(e.current_context());
-        ucs_env::error::ErrorSwitch::switch(&app_error)
-    })?;
-
-    domain_types::types::generate_setup_mandate_response(response)
-        .map_err(|e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ucs_env::error::ErrorSwitch::switch(e.current_context())
-        })
-}
+res_transformer!(
+    fn_name: proxy_setup_recurring_res_transformer,
+    request_type: PaymentServiceProxySetupRecurringRequest,
+    response_type: PaymentServiceSetupRecurringResponse,
+    flow_marker: SetupMandate,
+    resource_common_data_type: PaymentFlowData,
+    request_data_type: SetupMandateRequestData<domain_types::payment_method_data::VaultTokenHolder>,
+    response_data_type: PaymentsResponseData,
+    generate_response_fn: generate_setup_mandate_response,
+    connector_data_type: domain_types::payment_method_data::VaultTokenHolder,
+    request_data_fn: |p: &PaymentServiceProxySetupRecurringRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
+);
