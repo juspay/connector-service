@@ -10,18 +10,17 @@ use crate::{connectors::billwerk::BillwerkRouterData, types::ResponseRouterData,
 
 use domain_types::{
     connector_flow::{
-        
-        Authorize, Capture, ClientAuthenticationToken, CreateOrder, PaymentMethodToken, RSync, RepeatPayment,
-        SetupMandate,
+        Authorize, Capture, ClientAuthenticationToken, CreateOrder, PaymentMethodToken, RSync,
+        RepeatPayment, SetupMandate,
     },
     connector_types::{
         BillwerkClientAuthenticationResponse as BillwerkClientAuthenticationResponseDomain,
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData,
+        ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -913,7 +912,6 @@ pub struct BillwerkOrderObject {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub customer: Option<BillwerkSessionCustomer>,
 }
-
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BillwerkCreateOrderResponse {
