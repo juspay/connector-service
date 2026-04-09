@@ -119,7 +119,8 @@ generate-flows: install-codegen-deps
 pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@cd $(SDK_ROOT) && $(SDK_ROOT)/gradlew jar
-	@cp $(SDK_ROOT)/build/libs/*.jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
+	@rm -f $(PACKAGE_DIR)/hyperswitch-prism-*.jar
+	@cp $(SDK_ROOT)/build/libs/hyperswitch-prism-$(PACKAGE_VERSION).jar $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).jar
 	@echo "JAR built in $(PACKAGE_DIR)/"
 
 # ---------------------------------------------------------------------------
@@ -150,6 +151,22 @@ test-package: generate-all install
 	@echo "Running composite smoke test..."
 	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew runComposite
 	@echo "Package test passed."
+
+# ---------------------------------------------------------------------------
+# test-package-mock
+# Same as test-package but runs in MOCK mode (no real HTTP calls).
+# Uses generated harnesses instead of examples and verifies req_transformer only.
+# ---------------------------------------------------------------------------
+test-package-mock: generate-all install
+	@echo "Running Kotlin smoke test in MOCK mode..."
+	@# Copy generated harness to smoke-test source
+	@mkdir -p $(SDK_ROOT)/smoke-test/src/main/kotlin/generated/$(CONNECTORS)
+	@cp $(SDK_ROOT)/smoke-test/generated/$(CONNECTORS)/$(CONNECTORS).kt $(SDK_ROOT)/smoke-test/src/main/kotlin/generated/$(CONNECTORS)/
+	@if [ -f $(REPO_ROOT)/creds_dummy.json ]; then \
+		cp $(REPO_ROOT)/creds_dummy.json $(SDK_ROOT)/smoke-test/creds.json; \
+	fi
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors $(CONNECTORS) --mock"
+	@echo "Package mock test passed."
 
 # ---------------------------------------------------------------------------
 # test-grpc

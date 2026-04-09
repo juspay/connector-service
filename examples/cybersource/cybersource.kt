@@ -241,9 +241,7 @@ fun authenticate(txnId: String) {
         continueRedirectionUrl = "https://example.com/3ds-continue"
         redirectionResponseBuilder.apply {  // Redirection Information after DDC step.
             params = "probe_redirect_params"
-            payloadBuilder.apply {
-                transactionId = "probe_txn_123"
-            }
+            putAllPayload(mapOf("transaction_id" to "probe_txn_123"))
         }
     }.build()
     val response = client.authenticate(request)
@@ -303,9 +301,7 @@ fun postAuthenticate(txnId: String) {
         }
         redirectionResponseBuilder.apply {  // Redirection Information after DDC step.
             params = "probe_redirect_params"
-            payloadBuilder.apply {
-                transactionId = "probe_txn_123"
-            }
+            putAllPayload(mapOf("transaction_id" to "probe_txn_123"))
         }
     }.build()
     val response = client.post_authenticate(request)
