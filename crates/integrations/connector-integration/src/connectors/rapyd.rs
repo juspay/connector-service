@@ -45,7 +45,8 @@ use transformers::{
     RapydPaymentsRequest, RapydPaymentsResponse as RapydCaptureResponse,
     RapydPaymentsResponse as RapydPSyncResponse, RapydPaymentsResponse,
     RapydPaymentsResponse as RapydVoidResponse, RapydPaymentsResponse as RapydAuthorizeResponse,
-    RapydRefundRequest, RefundResponse, RefundResponse as RapydRSyncResponse,
+    RapydPaymentsResponse as RapydRepeatPaymentResponse, RapydRefundRequest,
+    RapydRepeatPaymentRequest, RefundResponse, RefundResponse as RapydRSyncResponse,
 };
 
 use super::macros;
@@ -339,6 +340,12 @@ macros::create_all_prerequisites!(
             request_body: RapydClientAuthRequest,
             response_body: RapydClientAuthResponse,
             router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: RapydRepeatPaymentRequest,
+            response_body: RapydRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
