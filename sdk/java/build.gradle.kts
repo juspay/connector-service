@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "io.hyperswitch"
-version = "0.0.1"
+version = "0.0.2"
 
 repositories {
     mavenCentral()
@@ -49,6 +49,27 @@ tasks.register<JavaExec>("runClientSanity") {
     dependsOn("compileSanityKotlin")
 }
 
+// Signing configuration - must be configured BEFORE centralPublisher
+// Fail fast if signing credentials are missing when publishing
+signing {
+    val signingKey = System.getenv("GPG_SIGNING_KEY")
+    val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD")
+
+    if (signingKey.isNullOrBlank() || signingPassword.isNullOrBlank()) {
+        // Only fail if we're trying to publish to Central
+        if (System.getenv("CENTRAL_TOKEN_USERNAME") != null) {
+            throw GradleException("""
+                Missing GPG signing credentials for Maven Central publishing.
+                Set environment variables:
+                  - GPG_SIGNING_KEY: PGP private key in ASCII armor format
+                  - GPG_SIGNING_KEY_PASSWORD: Password for the PGP key
+            """.trimIndent())
+        }
+    } else {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    }
+}
+
 // Configure Central Portal Publisher plugin
 // Only configure if credentials are present (avoids validation errors during regular builds)
 if (System.getenv("CENTRAL_TOKEN_USERNAME") != null) {
@@ -85,18 +106,6 @@ if (System.getenv("CENTRAL_TOKEN_USERNAME") != null) {
             autoPublish = false
             aggregation = true
             dryRun = false
-        }
-    }
-}
-
-// Signing configuration - uses GPG_SIGNING_KEY and GPG_SIGNING_KEY_PASSWORD
-// Only configure signing when key is present
-if (System.getenv("GPG_SIGNING_KEY") != null) {
-    signing {
-        val signingKey = System.getenv("GPG_SIGNING_KEY") ?: ""
-        val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD") ?: ""
-        if (signingKey.isNotEmpty()) {
-            useInMemoryPgpKeys(signingKey, signingPassword)
         }
     }
 }
