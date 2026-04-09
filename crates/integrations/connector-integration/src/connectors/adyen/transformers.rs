@@ -7576,7 +7576,7 @@ impl TryFrom<AdyenOrderCreateResponse> for PaymentCreateOrderResponse {
     fn try_from(response: AdyenOrderCreateResponse) -> Result<Self, Self::Error> {
         // Use psp_reference as the order_id (this is Adyen's unique reference for the order)
         Ok(Self {
-            order_id: response.psp_reference,
+            connector_order_id: response.psp_reference,
             session_data: None,
         })
     }
@@ -7600,7 +7600,7 @@ impl TryFrom<ResponseRouterData<AdyenOrderCreateResponse, Self>>
         let response = item.response;
 
         let order_response = PaymentCreateOrderResponse::try_from(response.clone())?;
-        let order_id = order_response.order_id.clone();
+        let connector_order_id = order_response.connector_order_id.clone();
 
         let status = if item.http_code == 200 {
             // Update status to indicate successful order creation
@@ -7613,7 +7613,7 @@ impl TryFrom<ResponseRouterData<AdyenOrderCreateResponse, Self>>
             response: Ok(order_response),
             resource_common_data: PaymentFlowData {
                 status,
-                reference_id: Some(order_id),
+                connector_order_id: Some(connector_order_id),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data

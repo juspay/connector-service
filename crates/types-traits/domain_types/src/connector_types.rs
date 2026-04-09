@@ -1487,7 +1487,7 @@ pub struct PaymentCreateOrderData {
 
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
-    pub order_id: String,
+    pub connector_order_id: String,
     /// Optional SDK session data for wallet flows (Apple Pay, Google Pay) and other SDK types
     pub session_data: Option<ClientAuthenticationTokenData>,
 }
