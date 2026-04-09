@@ -261,7 +261,7 @@ publish-check-auth:
 		echo "Error: CENTRAL_TOKEN_PASSWORD is not set"; \
 		exit 1; \
 	fi
-	@if [ -z "$(GPG_SIGNING_KEY)" ]; then \
+	@if [ -z "$${GPG_SIGNING_KEY}" ]; then \
 		echo "Error: GPG_SIGNING_KEY is not set"; \
 		exit 1; \
 	fi
