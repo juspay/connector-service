@@ -7494,7 +7494,6 @@ pub struct AdyenOrderCreateRequest {
     pub merchant_account: Secret<String>,
     pub amount: Amount,
     pub reference: String,
-    pub return_url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country_code: Option<common_enums::CountryAlpha2>,
 }
@@ -7503,10 +7502,13 @@ pub struct AdyenOrderCreateRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdyenOrderCreateResponse {
-    pub id: String,
-    pub session_data: Option<String>,
-    pub reference: Option<String>,
-    pub merchant_account: Option<String>,
+    pub psp_reference: String,
+    pub result_code: String,
+    pub amount: Amount,
+    pub expires_at: String,
+    pub order_data: String,
+    pub reference: String,
+    pub remaining_amount: Amount,
 }
 
 // --- TryFrom: RouterDataV2 -> AdyenOrderCreateRequest (via macro wrapper) ---
@@ -7542,19 +7544,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let amount = Amount {
             currency: router_data.request.currency,
-            value: MinorUnit::new(router_data.request.amount.get_amount_as_i64()),
+            value: router_data.request.amount,
         };
 
         let reference = router_data
             .resource_common_data
             .connector_request_reference_id
             .clone();
-
-        let return_url = router_data
-            .resource_common_data
-            .return_url
-            .clone()
-            .unwrap_or_else(|| "https://example.com/redirect".to_string());
 
         let country_code = router_data
             .resource_common_data
@@ -7567,7 +7563,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             merchant_account: auth.merchant_account,
             amount,
             reference,
-            return_url,
             country_code,
         })
     }
@@ -7579,8 +7574,9 @@ impl TryFrom<AdyenOrderCreateResponse> for PaymentCreateOrderResponse {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: AdyenOrderCreateResponse) -> Result<Self, Self::Error> {
+        // Use psp_reference as the order_id (this is Adyen's unique reference for the order)
         Ok(Self {
-            order_id: response.id,
+            order_id: response.psp_reference,
             session_data: None,
         })
     }
@@ -7606,10 +7602,17 @@ impl TryFrom<ResponseRouterData<AdyenOrderCreateResponse, Self>>
         let order_response = PaymentCreateOrderResponse::try_from(response.clone())?;
         let order_id = order_response.order_id.clone();
 
+        let status = if item.http_code == 200 {
+            // Update status to indicate successful order creation
+            AttemptStatus::Pending
+        } else {
+            AttemptStatus::Failure
+        };
+
         Ok(Self {
             response: Ok(order_response),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::Pending,
+                status,
                 reference_id: Some(order_id),
                 ..item.router_data.resource_common_data
             },

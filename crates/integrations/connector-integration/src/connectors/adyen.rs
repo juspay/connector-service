@@ -551,9 +551,6 @@ macros::macro_connector_implementation!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Adyen<T>
 {
-    fn should_do_order_create(&self) -> bool {
-        true
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -589,7 +586,7 @@ macros::macro_connector_implementation!(
                 req.resource_common_data.test_mode,
                 &req.connector_config,
             )?;
-            Ok(format!("{endpoint}{ADYEN_API_VERSION}/sessions"))
+            Ok(format!("{endpoint}{ADYEN_API_VERSION}/orders"))
         }
     }
 );
