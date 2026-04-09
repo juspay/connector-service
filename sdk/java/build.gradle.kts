@@ -50,48 +50,54 @@ tasks.register<JavaExec>("runClientSanity") {
 }
 
 // Configure Central Portal Publisher plugin
-centralPublisher {
-    credentials {
-        username = System.getenv("CENTRAL_TOKEN_USERNAME") ?: ""
-        password = System.getenv("CENTRAL_TOKEN_PASSWORD") ?: ""
-    }
-
-    projectInfo {
-        name = "Hyperswitch Prism"
-        description = "Hyperswitch Payments SDK - Kotlin client for connector integrations"
-        url = "https://github.com/juspay/hyperswitch-prism"
-
-        license {
-            name = "Apache License 2.0"
-            url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+// Only configure if credentials are present (avoids validation errors during regular builds)
+if (System.getenv("CENTRAL_TOKEN_USERNAME") != null) {
+    centralPublisher {
+        credentials {
+            username = System.getenv("CENTRAL_TOKEN_USERNAME") ?: ""
+            password = System.getenv("CENTRAL_TOKEN_PASSWORD") ?: ""
         }
 
-        developer {
-            id = "juspay"
-            name = "Juspay"
-            email = "hyperswitch@juspay.in"
-        }
-
-        scm {
+        projectInfo {
+            name = "Hyperswitch Prism"
+            description = "Hyperswitch Payments SDK - Kotlin client for connector integrations"
             url = "https://github.com/juspay/hyperswitch-prism"
-            connection = "scm:git:git://github.com/juspay/hyperswitch-prism.git"
-            developerConnection = "scm:git:ssh://github.com/juspay/hyperswitch-prism.git"
-        }
-    }
 
-    publishing {
-        autoPublish = false
-        aggregation = true
-        dryRun = false
+            license {
+                name = "Apache License 2.0"
+                url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+            }
+
+            developer {
+                id = "juspay"
+                name = "Juspay"
+                email = "hyperswitch@juspay.in"
+            }
+
+            scm {
+                url = "https://github.com/juspay/hyperswitch-prism"
+                connection = "scm:git:git://github.com/juspay/hyperswitch-prism.git"
+                developerConnection = "scm:git:ssh://github.com/juspay/hyperswitch-prism.git"
+            }
+        }
+
+        publishing {
+            autoPublish = false
+            aggregation = true
+            dryRun = false
+        }
     }
 }
 
 // Signing configuration - uses GPG_SIGNING_KEY and GPG_SIGNING_KEY_PASSWORD
-signing {
-    val signingKey = System.getenv("GPG_SIGNING_KEY") ?: ""
-    val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD") ?: ""
-    if (signingKey.isNotEmpty()) {
-        useInMemoryPgpKeys(signingKey, signingPassword)
+// Only configure signing when key is present
+if (System.getenv("GPG_SIGNING_KEY") != null) {
+    signing {
+        val signingKey = System.getenv("GPG_SIGNING_KEY") ?: ""
+        val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD") ?: ""
+        if (signingKey.isNotEmpty()) {
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        }
     }
 }
 
