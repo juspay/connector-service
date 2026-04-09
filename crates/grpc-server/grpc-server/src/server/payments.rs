@@ -39,8 +39,9 @@ use domain_types::{
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
         generate_payment_void_post_capture_response, generate_payment_void_response,
         generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response, AuthorizationRequest, PaymentMethodDataAction, SetupRecurringRequest,
-        tokenized_authorize_to_base, tokenized_setup_recurring_to_base,
+        generate_setup_mandate_response, tokenized_authorize_to_base,
+        tokenized_setup_recurring_to_base, AuthorizationRequest, PaymentMethodDataAction,
+        SetupRecurringRequest,
     },
     utils::ForeignTryFrom,
 };
@@ -568,7 +569,6 @@ impl Payments {
         Ok(authorize_response)
     }
 
-
     #[allow(clippy::too_many_arguments)]
     async fn handle_setup_recurring_internal<
         T: PaymentMethodDataTypes
@@ -613,17 +613,16 @@ impl Payments {
         .into_grpc_status()?;
 
         // Create common request data
-        let payment_flow_data = PaymentFlowData::foreign_try_from((
-            payload.clone(),
-            connectors,
-            metadata,
-        ))
-        .map_err(|e| e.into_grpc_status())?;
+        let payment_flow_data =
+            PaymentFlowData::foreign_try_from((payload.clone(), connectors, metadata))
+                .map_err(|e| e.into_grpc_status())?;
 
         // Create connector request data
-        let setup_mandate_request_data =
-            SetupMandateRequestData::foreign_try_from((payload.clone(), payment_method_data.clone()))
-                 .map_err(|e| e.into_grpc_status())?;
+        let setup_mandate_request_data = SetupMandateRequestData::foreign_try_from((
+            payload.clone(),
+            payment_method_data.clone(),
+        ))
+        .map_err(|e| e.into_grpc_status())?;
 
         // Construct router data
         let router_data: RouterDataV2<
@@ -646,7 +645,10 @@ impl Payments {
         );
 
         // Create test context if test mode is enabled
-        let test_context = config.test.create_test_context(request_id).map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
+        let test_context = config
+            .test
+            .create_test_context(request_id)
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
@@ -686,7 +688,11 @@ impl Payments {
                 let (status_code, code, message) = match error_report.current_context() {
                     domain_types::errors::ConnectorFlowError::Request(integration_err) => {
                         let api_error = integration_err.get_api_error();
-                        (api_error.error_identifier, api_error.sub_code.clone(), api_error.error_message.clone())
+                        (
+                            api_error.error_identifier,
+                            api_error.sub_code.clone(),
+                            api_error.error_message.clone(),
+                        )
                     }
                     domain_types::errors::ConnectorFlowError::Response(connector_err) => {
                         let status = connector_err.http_status_code().unwrap_or(500);
@@ -858,7 +864,6 @@ impl PaymentService for Payments {
                 let metadata_payload = request_data.extracted_metadata;
                 let metadata = &request_data.masked_metadata;
                 let proto_payload = request_data.payload;
-                
                 // Convert proto request to intermediate type
                 let payload: AuthorizationRequest = proto_payload.clone().into();
 
@@ -1571,10 +1576,8 @@ impl PaymentService for Payments {
                 Box::pin(async move {
                     let proto_payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
-                    
                     // Convert proto request to intermediate type
                     let payload: SetupRecurringRequest = proto_payload.clone().into();
-                    
                     let (connector, request_id, _lineage_ids) = (
                         &metadata_payload.connector,
                         &metadata_payload.request_id,
@@ -1648,9 +1651,7 @@ impl PaymentService for Payments {
                         )).await?
                     }
                 };
-                
                 Ok(tonic::Response::new(setup_mandate_response))
-                    
                 })
             },
         )
@@ -1865,14 +1866,11 @@ impl PaymentService for Payments {
                     let proto_payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
                     let metadata = request_data.masked_metadata;
-                    
                     // Convert proto request to intermediate type
                     let payload: AuthorizationRequest = proto_payload.clone().into();
-                    
                     // Extract ProxyCardDetails from the payment_method
                     let proxy_card_details = proto_payload.card_proxy
                         .ok_or_else(|| tonic::Status::invalid_argument("Missing proxy_card_details in payment_method"))?;
-                    
                     // Convert ProxyCardDetails to PaymentMethodData
                     let token_data = proxy_card_details.to_token_data();
                     let payment_method_data = payment_method_data::PaymentMethodData::Card(
@@ -1882,7 +1880,6 @@ impl PaymentService for Payments {
                                 tonic::Status::invalid_argument("Invalid proxy card data")
                             })?
                     );
-                    
                     // Call process_authorization_internal directly with intermediate type
                     match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
                         &config,
@@ -1957,20 +1954,16 @@ impl PaymentService for Payments {
                 Box::pin(async move {
                     let proto_payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
-                    
                     // Convert proto request to intermediate type
                     let payload: SetupRecurringRequest = proto_payload.clone().into();
-                    
                     let (connector, request_id, _lineage_ids) = (
                         &metadata_payload.connector,
                         &metadata_payload.request_id,
                         &metadata_payload.lineage_ids,
                     );
-                    
                     // Extract proxy card details from the payment_method
                     let proxy_card_details = proto_payload.card_proxy
                         .ok_or_else(|| tonic::Status::invalid_argument("Missing card_proxy in request"))?;
-                    
                     let token_data = proxy_card_details.to_token_data();
                     let payment_method_data = payment_method_data::PaymentMethodData::Card(
                         payment_method_data::Card::<VaultTokenHolder>::foreign_try_from(proxy_card_details)
@@ -1979,7 +1972,6 @@ impl PaymentService for Payments {
                                 tonic::Status::invalid_argument("Invalid proxy card data")
                             })?
                     );
-                    
                     // Call handle_setup_recurring_internal directly with intermediate type
                     let setup_mandate_response = Box::pin(self.handle_setup_recurring_internal::<VaultTokenHolder>(
                         &config,
@@ -1994,7 +1986,6 @@ impl PaymentService for Payments {
                         payment_method_data,
                     ))
                     .await?;
-                    
                     Ok(tonic::Response::new(setup_mandate_response))
                 })
             },
@@ -2124,7 +2115,6 @@ impl PaymentMethodService for PaymentMethod {
                     }
                 };
                 Ok(tonic::Response::new(payment_method_tokenize_response))
-                    
                 })
             },
         )
@@ -2179,11 +2169,13 @@ impl PaymentMethod {
         > = connector_data.connector.get_connector_integration_v2();
 
         let connectors =
-            utils::connectors_with_connector_config_overrides(&connector_config, config).into_grpc_status()?;
+            utils::connectors_with_connector_config_overrides(&connector_config, config)
+                .into_grpc_status()?;
 
         // Create payment flow data
         let payment_flow_data =
-            PaymentFlowData::foreign_try_from((request.clone(), connectors, metadata)).map_err(|e| e.into_grpc_status())?;
+            PaymentFlowData::foreign_try_from((request.clone(), connectors, metadata))
+                .map_err(|e| e.into_grpc_status())?;
 
         // Get payment method token request data
 
@@ -2209,7 +2201,10 @@ impl PaymentMethod {
         let api_tag = config.api_tags.get_tag(FlowName::PaymentMethodToken, None);
 
         // Create test context if test mode is enabled
-        let test_context = config.test.create_test_context(request_id).map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
+        let test_context = config
+            .test
+            .create_test_context(request_id)
+            .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
 
         // Execute connector processing
         let event_params = EventProcessingParams {
@@ -2242,15 +2237,21 @@ impl PaymentMethod {
 
         // Generate response - handle both success and error cases like process_authorization_internal
         let payment_method_token_response = match response {
-            Ok(success_response) => domain_types::types::generate_create_payment_method_token_response(success_response)
-                 .map_err(|e| e.into_grpc_status())?,
+            Ok(success_response) => {
+                domain_types::types::generate_create_payment_method_token_response(success_response)
+                    .map_err(|e| e.into_grpc_status())?
+            }
             Err(error_report) => {
                 tracing::error!("{:?}", error_report);
                 // Extract error details from ConnectorFlowError
                 let (status_code, code, message) = match error_report.current_context() {
                     domain_types::errors::ConnectorFlowError::Request(integration_err) => {
                         let api_error = integration_err.get_api_error();
-                        (api_error.error_identifier, api_error.sub_code.clone(), api_error.error_message.clone())
+                        (
+                            api_error.error_identifier,
+                            api_error.sub_code.clone(),
+                            api_error.error_message.clone(),
+                        )
                     }
                     domain_types::errors::ConnectorFlowError::Response(connector_err) => {
                         let status = connector_err.http_status_code().unwrap_or(500);
@@ -2281,8 +2282,10 @@ impl PaymentMethod {
                         network_error_message: None,
                     }),
                 };
-                domain_types::types::generate_create_payment_method_token_response(error_router_data)
-                     .map_err(|e| e.into_grpc_status())?
+                domain_types::types::generate_create_payment_method_token_response(
+                    error_router_data,
+                )
+                .map_err(|e| e.into_grpc_status())?
             }
         };
 
@@ -3208,8 +3211,6 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
     }
 }
 
-
-
 pub fn generate_mandate_revoke_response(
     router_data_v2: RouterDataV2<
         MandateRevoke,
@@ -3322,7 +3323,7 @@ pub fn payment_authorization_error_to_payment_method_tokenize_response(
         }),
         status_code: 500,
         response_headers: std::collections::HashMap::new(), //check this
-        merchant_payment_method_id:  None,
+        merchant_payment_method_id: None,
         state: None,
     }
 }
