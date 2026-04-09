@@ -1,13 +1,18 @@
 use common_utils::{ext_traits::OptionExt, request::Method, FloatMajorUnit, StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, RepeatPayment},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData,
+        RapydClientAuthenticationResponse as RapydClientAuthenticationResponseDomain,
+        RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
-    router_data::{ConnectorSpecificConfig, ErrorResponse},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
+    payment_method_data::{
+        CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
+    router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -26,7 +31,7 @@ use super::RapydRouterData;
 impl<F, T> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<RapydPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -151,13 +156,32 @@ pub struct RapydPaymentsRequest<
 > {
     pub amount: StringMajorUnit,
     pub currency: common_enums::Currency,
-    pub payment_method: PaymentMethod<T>,
+    pub payment_method: RapydPaymentMethodData<T>,
     pub payment_method_options: Option<PaymentMethodOptions>,
     pub merchant_reference_id: Option<String>,
     pub capture: Option<bool>,
     pub description: Option<String>,
     pub complete_payment_url: Option<String>,
     pub error_payment_url: Option<String>,
+}
+
+/// Rapyd payment_method field can be either a token string (for saved/tokenized
+/// payment methods) or a full payment method object (for new card / wallet).
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum RapydPaymentMethodData<
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
+> {
+    Token(Secret<String>),
+    PaymentMethod(Box<PaymentMethod<T>>),
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Default> Default
+    for RapydPaymentMethodData<T>
+{
+    fn default() -> Self {
+        Self::PaymentMethod(Box::default())
+    }
 }
 
 #[derive(Default, Debug, Serialize)]
@@ -230,6 +254,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        let return_url = item.router_data.request.get_router_return_url()?;
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
+
         let (capture, payment_method_options) =
             match item.router_data.resource_common_data.payment_method {
                 common_enums::PaymentMethod::Card => {
@@ -254,23 +290,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             };
         let payment_method = match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
-                Some(PaymentMethod {
-                    pm_type: "in_amex_card".to_owned(), //[#369] Map payment method type based on country
-                    fields: Some(PaymentFields {
-                        number: ccard.card_number.to_owned(),
-                        expiration_month: ccard.card_exp_month.to_owned(),
-                        expiration_year: ccard.card_exp_year.to_owned(),
-                        name: item
-                            .router_data
-                            .resource_common_data
-                            .get_optional_billing_full_name()
-                            .to_owned()
-                            .unwrap_or(Secret::new("".to_string())),
-                        cvv: ccard.card_cvc.to_owned(),
-                    }),
-                    address: None,
-                    digital_wallet: None,
-                })
+                Some(RapydPaymentMethodData::PaymentMethod(Box::new(
+                    PaymentMethod {
+                        pm_type: "in_amex_card".to_owned(), //[#369] Map payment method type based on country
+                        fields: Some(PaymentFields {
+                            number: ccard.card_number.to_owned(),
+                            expiration_month: ccard.card_exp_month.to_owned(),
+                            expiration_year: ccard.card_exp_year.to_owned(),
+                            name: item
+                                .router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                                .to_owned()
+                                .unwrap_or(Secret::new("".to_string())),
+                            cvv: ccard.card_cvc.to_owned(),
+                        }),
+                        address: None,
+                        digital_wallet: None,
+                    },
+                )))
             }
             PaymentMethodData::Wallet(ref wallet_data) => {
                 let digital_wallet = match wallet_data {
@@ -301,12 +339,45 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     }
                     _ => None,
                 };
-                Some(PaymentMethod {
-                    pm_type: "by_visa_card".to_string(), //[#369]
-                    fields: None,
-                    address: None,
-                    digital_wallet,
-                })
+                Some(RapydPaymentMethodData::PaymentMethod(Box::new(
+                    PaymentMethod {
+                        pm_type: "by_visa_card".to_string(), //[#369]
+                        fields: None,
+                        address: None,
+                        digital_wallet,
+                    },
+                )))
+            }
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = item
+                    .router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "Ensure a valid Rapyd customer payment method token is \
+                                     provided via payment_method_token."
+                                        .to_owned(),
+                                ),
+                                doc_url: Some(
+                                    "https://docs.rapyd.net/en/create-payment.html".to_owned(),
+                                ),
+                                additional_context: Some(
+                                    "Rapyd requires a customer payment method token (e.g., \
+                                     'card_xxxxxxxx') to process saved card payments."
+                                        .to_owned(),
+                                ),
+                            },
+                        })
+                    })?;
+                Some(RapydPaymentMethodData::Token(token))
             }
             _ => None,
         }
@@ -314,17 +385,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         .change_context(IntegrationError::not_implemented(
             "payment_method".to_owned(),
         ))?;
-        let return_url = item.router_data.request.get_router_return_url()?;
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
-            })?;
         Ok(Self {
             amount,
             currency: item.router_data.request.currency,
@@ -551,7 +611,7 @@ pub struct RefundResponseData {
 impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, T, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let (connector_refund_id, refund_status) = match item.response.data {
             Some(data) => (data.id, common_enums::RefundStatus::from(data.status)),
@@ -571,131 +631,137 @@ impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
     }
 }
 
-// RepeatPayment (MIT) Request
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates a Rapyd checkout page/session. The checkout id and redirect_url
+/// are returned to the frontend for client-side payment completion.
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
-pub struct RapydRepeatPaymentRequest {
+pub struct RapydClientAuthRequest {
     pub amount: StringMajorUnit,
     pub currency: common_enums::Currency,
-    pub initiation_type: RapydInitiationType,
-    pub original_payment: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub customer: Option<String>,
-    pub capture: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
     pub merchant_reference_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub complete_payment_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error_payment_url: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RapydInitiationType {
-    Recurring,
-    Unscheduled,
-    DelayedCharges,
-    NoShow,
-    Reauthorization,
-    Installment,
-}
-
-impl From<Option<common_enums::MitCategory>> for RapydInitiationType {
-    fn from(mit_category: Option<common_enums::MitCategory>) -> Self {
-        match mit_category {
-            Some(common_enums::MitCategory::Recurring) => Self::Recurring,
-            Some(common_enums::MitCategory::Installment) => Self::Installment,
-            Some(common_enums::MitCategory::Unscheduled)
-            | Some(common_enums::MitCategory::Resubmission) => Self::Unscheduled,
-            // Default to recurring for MIT when no category specified
-            None => Self::Recurring,
-        }
-    }
+    pub complete_checkout_url: Option<String>,
+    pub cancel_checkout_url: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         RapydRouterData<
             RouterDataV2<
-                RepeatPayment,
+                ClientAuthenticationToken,
                 PaymentFlowData,
-                RepeatPaymentData<T>,
+                ClientAuthenticationTokenRequestData,
                 PaymentsResponseData,
             >,
             T,
         >,
-    > for RapydRepeatPaymentRequest
+    > for RapydClientAuthRequest
 {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: RapydRouterData<
             RouterDataV2<
-                RepeatPayment,
+                ClientAuthenticationToken,
                 PaymentFlowData,
-                RepeatPaymentData<T>,
+                ClientAuthenticationTokenRequestData,
                 PaymentsResponseData,
             >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Extract original_payment (payment ID) from mandate reference
-        let original_payment = item
-            .router_data
-            .request
-            .connector_mandate_id()
-            .or_else(|| item.router_data.request.get_network_mandate_id())
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "connector_mandate_id or network_mandate_id",
-                context: Default::default(),
-            })?;
-
-        let initiation_type =
-            RapydInitiationType::from(item.router_data.request.mit_category.clone());
-
-        let capture = Some(item.router_data.request.is_auto_capture());
+        let router_data = item.router_data;
 
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
+            .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Verify that the checkout amount and currency are valid.".to_owned(),
+                    ),
+                    doc_url: Some("https://docs.rapyd.net/en/create-checkout-page.html".to_owned()),
+                    additional_context: Some(
+                        "Rapyd checkout requires the amount in major-unit string format."
+                            .to_owned(),
+                    ),
+                },
             })?;
 
-        let return_url = item.router_data.request.router_return_url.clone();
-
-        // Use connector_customer from PaymentFlowData (set during setup mandate)
-        let connector_customer = item
-            .router_data
-            .resource_common_data
-            .connector_customer
-            .clone();
+        let country = router_data.request.country.map(|c| c.to_string());
+        let return_url = router_data.resource_common_data.return_url.clone();
 
         Ok(Self {
             amount,
-            currency: item.router_data.request.currency,
-            initiation_type,
-            original_payment,
-            customer: connector_customer,
-            capture,
+            currency: router_data.request.currency,
+            country,
             merchant_reference_id: Some(
-                item.router_data
+                router_data
                     .resource_common_data
                     .connector_request_reference_id
                     .clone(),
             ),
-            description: None,
-            complete_payment_url: return_url.clone(),
-            error_payment_url: return_url,
+            complete_checkout_url: return_url.clone(),
+            cancel_checkout_url: return_url,
         })
     }
 }
 
-// RepeatPayment response reuses RapydPaymentsResponse (same as Authorize)
-// The generic TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>> for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
-// already handles RepeatPayment since it's generic over F and T.
+/// Rapyd checkout response containing checkout id and redirect_url for SDK initialization.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RapydClientAuthResponse {
+    pub status: Status,
+    pub data: Option<RapydCheckoutResponseData>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RapydCheckoutResponseData {
+    pub id: String,
+    pub redirect_url: String,
+}
+
+impl TryFrom<ResponseRouterData<RapydClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<RapydClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let data = response.data.ok_or(
+            ConnectorError::response_deserialization_failed_with_context(
+                item.http_code,
+                Some(
+                    "Rapyd checkout response is missing the 'data' field containing \
+                     checkout_id and redirect_url."
+                        .to_owned(),
+                ),
+            ),
+        )?;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Rapyd(
+                RapydClientAuthenticationResponseDomain {
+                    checkout_id: data.id,
+                    redirect_url: data.redirect_url,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
