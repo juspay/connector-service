@@ -221,10 +221,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> bool {
         true
     }
-
-    fn should_do_order_create(&self) -> bool {
-        true
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
