@@ -157,50 +157,6 @@ pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
     })).unwrap_or_default()
 }
 
-pub fn build_proxy_setup_recurring_request() -> PaymentServiceProxySetupRecurringRequest {
-    serde_json::from_value::<PaymentServiceProxySetupRecurringRequest>(serde_json::json!({
-    "merchant_recurring_payment_id": "probe_proxy_mandate_001",
-    "amount": {
-        "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "card_proxy": {  // Card proxy for vault-aliased payments.
-        "card_number": "4111111111111111",  // Card Identification.
-        "card_exp_month": "03",
-        "card_exp_year": "2030",
-        "card_cvc": "123",
-        "card_holder_name": "John Doe",  // Cardholder Information.
-    },
-    "customer": {
-        "id": "probe_customer_001",  // Internal customer ID.
-    },
-    "address": {
-        "billing_address": {
-        },
-    },
-    "return_url": "https://example.com/return",
-    "customer_acceptance": {
-        "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
-        "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "auth_type": "NO_THREE_DS",
-    "setup_future_usage": "OFF_SESSION",
-    "browser_info": {
-        "color_depth": 24,  // Display Information.
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings.
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers.
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information.
-    },
-    })).unwrap_or_default()
-}
-
 pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
     serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
     "connector_recurring_payment_id": {  // Reference to existing mandate.
@@ -458,13 +414,6 @@ pub async fn proxy_authorize(client: &ConnectorClient, _merchant_transaction_id:
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentService.ProxySetupRecurring
-#[allow(dead_code)]
-pub async fn proxy_setup_recurring(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.proxy_setup_recurring(build_proxy_setup_recurring_request(), &HashMap::new(), None).await?;
-    Ok(format!("status: {:?}", response.status()))
-}
-
 // Flow: RecurringPaymentService.Charge
 #[allow(dead_code)]
 pub async fn recurring_charge(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -521,13 +470,12 @@ async fn main() {
         "dispute_submit_evidence" => dispute_submit_evidence(&client, "order_001").await,
         "handle_event" => handle_event(&client, "order_001").await,
         "proxy_authorize" => proxy_authorize(&client, "order_001").await,
-        "proxy_setup_recurring" => proxy_setup_recurring(&client, "order_001").await,
         "recurring_charge" => recurring_charge(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "setup_recurring" => setup_recurring(&client, "order_001").await,
         "token_authorize" => token_authorize(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, authorize, capture, create_client_authentication_token, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, setup_recurring, token_authorize, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, authorize, capture, create_client_authentication_token, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, recurring_charge, refund, setup_recurring, token_authorize, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

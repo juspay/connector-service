@@ -35,7 +35,7 @@ connector_id: adyen
 doc: docs/connectors/adyen.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment
 payment_methods: Ach, Affirm, Afterpay, Alfamart, ApplePay, ApplePayDecrypted, Bacs, BancontactCard, BcaBankTransfer, Bizum, Blik, BniVaBankTransfer, Boleto, BriVaBankTransfer, Card, CimbVaBankTransfer, DanamonVaBankTransfer, Eps, FamilyMart, GooglePay, GooglePayDecrypted, Ideal, Indomaret, Klarna, Lawson, MandiriVaBankTransfer, MiniStop, OnlineBankingCzechRepublic, OnlineBankingFinland, OnlineBankingFpx, OnlineBankingSlovakia, OnlineBankingThailand, OpenBankingUk, Oxxo, PayEasy, PermataBankTransfer, Pix, Seicomart, Sepa, SevenEleven, Trustly
-flows: authorize, capture, create_client_authentication_token, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, setup_recurring, token_authorize, void
+flows: authorize, capture, create_client_authentication_token, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, recurring_charge, refund, setup_recurring, token_authorize, void
 examples_python: examples/adyen/adyen.py
 
 ## Airwallex
@@ -171,7 +171,7 @@ connector_id: cybersource
 doc: docs/connectors/cybersource.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: ApplePay, ApplePayDecrypted, Card, GooglePay, GooglePayDecrypted, SamsungPay
-flows: authenticate, authorize, capture, get, post_authenticate, pre_authenticate, proxy_authorize, recurring_charge, recurring_revoke, refund, refund_get, token_authorize, void
+flows: authorize, capture, get, proxy_authorize, recurring_charge, recurring_revoke, refund, refund_get, token_authorize, void
 examples_python: examples/cybersource/cybersource.py
 
 ## Datatrans
@@ -363,7 +363,7 @@ connector_id: nexixpay
 doc: docs/connectors/nexixpay.md
 scenarios: none
 payment_methods: none
-flows: capture, get, pre_authenticate, refund, refund_get, void
+flows: capture, get, refund, refund_get, void
 examples_python: none
 
 ## Nmi
@@ -371,7 +371,7 @@ connector_id: nmi
 doc: docs/connectors/nmi.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, Card, GooglePay, GooglePayDecrypted
-flows: authorize, capture, get, pre_authenticate, proxy_authorize, refund, refund_get, void
+flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
 examples_python: examples/nmi/nmi.py
 
 ## Noon
@@ -379,7 +379,7 @@ connector_id: noon
 doc: docs/connectors/noon.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card, GooglePay, GooglePayDecrypted, PaypalRedirect
-flows: authorize, capture, get, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, recurring_revoke, refund, refund_get, void
+flows: authorize, capture, get, handle_event, proxy_setup_recurring, recurring_charge, recurring_revoke, refund, refund_get, void
 examples_python: examples/noon/noon.py
 
 ## Novalnet
@@ -425,10 +425,10 @@ examples_python: examples/payme/payme.py
 ## Paypal
 connector_id: paypal
 doc: docs/connectors/paypal.md
-scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
-payment_methods: Card, Eps, Giropay, GooglePayDecrypted, Ideal, PaypalRedirect, PaypalSdk, Sofort
-flows: authorize, capture, create_order, create_server_authentication_token, get, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
-examples_python: examples/paypal/paypal.py
+scenarios: none
+payment_methods: PaypalSdk
+flows: authorize, capture, create_order, create_server_authentication_token, get, handle_event, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
+examples_python: none
 
 ## Paysafe
 connector_id: paysafe
@@ -523,7 +523,7 @@ connector_id: redsys
 doc: docs/connectors/redsys.md
 scenarios: none
 payment_methods: none
-flows: authenticate, capture, get, pre_authenticate, refund, refund_get, void
+flows: capture, get, refund, refund_get, void
 examples_python: none
 
 ## Revolut

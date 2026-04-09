@@ -22,7 +22,6 @@ import payments.DisputeServiceDefendRequest
 import payments.DisputeServiceSubmitEvidenceRequest
 import payments.EventServiceHandleRequest
 import payments.PaymentServiceProxyAuthorizeRequest
-import payments.PaymentServiceProxySetupRecurringRequest
 import payments.RecurringPaymentServiceChargeRequest
 import payments.PaymentServiceSetupRecurringRequest
 import payments.PaymentServiceTokenAuthorizeRequest
@@ -319,54 +318,6 @@ fun proxyAuthorize(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
-// Flow: PaymentService.ProxySetupRecurring
-fun proxySetupRecurring(txnId: String) {
-    val client = PaymentClient(_defaultConfig)
-    val request = PaymentServiceProxySetupRecurringRequest.newBuilder().apply {
-        merchantRecurringPaymentId = "probe_proxy_mandate_001"
-        amountBuilder.apply {
-            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00).
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        }
-        cardProxyBuilder.apply {  // Card proxy for vault-aliased payments.
-            cardNumberBuilder.value = "4111111111111111"  // Card Identification.
-            cardExpMonthBuilder.value = "03"
-            cardExpYearBuilder.value = "2030"
-            cardCvcBuilder.value = "123"
-            cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
-        }
-        customerBuilder.apply {
-            id = "probe_customer_001"  // Internal customer ID.
-        }
-        addressBuilder.apply {
-            billingAddressBuilder.apply {
-            }
-        }
-        returnUrl = "https://example.com/return"
-        customerAcceptanceBuilder.apply {
-            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
-            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        }
-        authType = AuthenticationType.NO_THREE_DS
-        setupFutureUsage = FutureUsage.OFF_SESSION
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information.
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings.
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers.
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information.
-        }
-    }.build()
-    val response = client.proxy_setup_recurring(request)
-    println("Status: ${response.status.name}")
-}
-
 // Flow: RecurringPaymentService.Charge
 fun recurringCharge(txnId: String) {
     val client = RecurringPaymentClient(_defaultConfig)
@@ -511,12 +462,11 @@ fun main(args: Array<String>) {
         "disputeSubmitEvidence" -> disputeSubmitEvidence(txnId)
         "handleEvent" -> handleEvent(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
-        "proxySetupRecurring" -> proxySetupRecurring(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "tokenAuthorize" -> tokenAuthorize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, createClientAuthenticationToken, disputeAccept, disputeDefend, disputeSubmitEvidence, handleEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, setupRecurring, tokenAuthorize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, authorize, capture, createClientAuthenticationToken, disputeAccept, disputeDefend, disputeSubmitEvidence, handleEvent, proxyAuthorize, recurringCharge, refund, setupRecurring, tokenAuthorize, void")
     }
 }

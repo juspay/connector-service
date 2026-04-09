@@ -5,7 +5,7 @@
 // Cybersource — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx cybersource.ts checkout_autocapture
 
-import { PaymentClient, PaymentMethodAuthenticationClient, RecurringPaymentClient, RefundClient, types } from 'hyperswitch-prism';
+import { PaymentClient, RecurringPaymentClient, RefundClient, types } from 'hyperswitch-prism';
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, AuthenticationType, CaptureMethod, Currency, PaymentMethodType } = types;
 
 const _defaultConfig: ConnectorConfig = {
@@ -18,39 +18,6 @@ const _defaultConfig: ConnectorConfig = {
 //     cybersource: { apiKey: { value: 'YOUR_API_KEY' } }
 // };
 
-
-function _buildAuthenticateRequest(): PaymentMethodAuthenticationServiceAuthenticateRequest {
-    return {
-        "amount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        },
-        "paymentMethod": {  // Payment Method.
-            "card": {  // Generic card payment.
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
-            }
-        },
-        "customer": {  // Customer Information.
-            "email": {"value": "test@example.com"}  // Customer's email address.
-        },
-        "address": {  // Address Information.
-            "billingAddress": {
-            }
-        },
-        "returnUrl": "https://example.com/3ds-return",  // URLs for Redirection.
-        "continueRedirectionUrl": "https://example.com/3ds-continue",
-        "redirectionResponse": {  // Redirection Information after DDC step.
-            "params": "probe_redirect_params",
-            "payload": {
-                "transactionId": "probe_txn_123"
-            }
-        }
-    };
-}
 
 function _buildAuthorizeRequest(captureMethod: CaptureMethod): PaymentServiceAuthorizeRequest {
     return {
@@ -100,58 +67,6 @@ function _buildGetRequest(connectorTransactionId: string): PaymentServiceGetRequ
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-    };
-}
-
-function _buildPostAuthenticateRequest(): PaymentMethodAuthenticationServicePostAuthenticateRequest {
-    return {
-        "amount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        },
-        "paymentMethod": {  // Payment Method.
-            "card": {  // Generic card payment.
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
-            }
-        },
-        "address": {  // Address Information.
-            "billingAddress": {
-            }
-        },
-        "redirectionResponse": {  // Redirection Information after DDC step.
-            "params": "probe_redirect_params",
-            "payload": {
-                "transactionId": "probe_txn_123"
-            }
-        }
-    };
-}
-
-function _buildPreAuthenticateRequest(): PaymentMethodAuthenticationServicePreAuthenticateRequest {
-    return {
-        "amount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        },
-        "paymentMethod": {  // Payment Method.
-            "card": {  // Generic card payment.
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
-            }
-        },
-        "address": {  // Address Information.
-            "billingAddress": {
-            }
-        },
-        "enrolledFor3Ds": false,  // Authentication Details.
-        "returnUrl": "https://example.com/3ds-return"  // URLs for Redirection.
     };
 }
 
@@ -383,15 +298,6 @@ async function processGetPayment(merchantTransactionId: string, config: Connecto
     return { status: getResponse.status, transactionId: getResponse.connectorTransactionId, error: getResponse.error };
 }
 
-// Flow: PaymentMethodAuthenticationService.Authenticate
-async function authenticate(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentMethodAuthenticationServiceAuthenticateResponse> {
-    const paymentMethodAuthenticationClient = new PaymentMethodAuthenticationClient(config);
-
-    const authenticateResponse = await paymentMethodAuthenticationClient.authenticate(_buildAuthenticateRequest());
-
-    return { status: authenticateResponse.status };
-}
-
 // Flow: PaymentService.Authorize (Card)
 async function authorize(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceAuthorizeResponse> {
     const paymentClient = new PaymentClient(config);
@@ -417,24 +323,6 @@ async function get(merchantTransactionId: string, config: ConnectorConfig = _def
     const getResponse = await paymentClient.get(_buildGetRequest('probe_connector_txn_001'));
 
     return { status: getResponse.status };
-}
-
-// Flow: PaymentMethodAuthenticationService.PostAuthenticate
-async function postAuthenticate(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentMethodAuthenticationServicePostAuthenticateResponse> {
-    const paymentMethodAuthenticationClient = new PaymentMethodAuthenticationClient(config);
-
-    const postResponse = await paymentMethodAuthenticationClient.postAuthenticate(_buildPostAuthenticateRequest());
-
-    return { status: postResponse.status };
-}
-
-// Flow: PaymentMethodAuthenticationService.PreAuthenticate
-async function preAuthenticate(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentMethodAuthenticationServicePreAuthenticateResponse> {
-    const paymentMethodAuthenticationClient = new PaymentMethodAuthenticationClient(config);
-
-    const preResponse = await paymentMethodAuthenticationClient.preAuthenticate(_buildPreAuthenticateRequest());
-
-    return { status: preResponse.status };
 }
 
 // Flow: PaymentService.ProxyAuthorize
@@ -503,7 +391,7 @@ async function voidPayment(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authenticate, authorize, capture, get, postAuthenticate, preAuthenticate, proxyAuthorize, recurringCharge, recurringRevoke, refund, refundGet, tokenAuthorize, voidPayment, _buildAuthenticateRequest, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildPostAuthenticateRequest, _buildPreAuthenticateRequest, _buildProxyAuthorizeRequest, _buildRecurringChargeRequest, _buildRecurringRevokeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenAuthorizeRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, proxyAuthorize, recurringCharge, recurringRevoke, refund, refundGet, tokenAuthorize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildProxyAuthorizeRequest, _buildRecurringChargeRequest, _buildRecurringRevokeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenAuthorizeRequest, _buildVoidRequest
 };
 
 // CLI runner

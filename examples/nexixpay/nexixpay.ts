@@ -5,7 +5,7 @@
 // Nexixpay — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx nexixpay.ts checkout_autocapture
 
-import { PaymentClient, PaymentMethodAuthenticationClient, RefundClient, types } from 'hyperswitch-prism';
+import { PaymentClient, RefundClient, types } from 'hyperswitch-prism';
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, Currency } = types;
 
 const _defaultConfig: ConnectorConfig = {
@@ -38,30 +38,6 @@ function _buildGetRequest(connectorTransactionId: string): PaymentServiceGetRequ
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-    };
-}
-
-function _buildPreAuthenticateRequest(): PaymentMethodAuthenticationServicePreAuthenticateRequest {
-    return {
-        "amount": {  // Amount Information.
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
-        },
-        "paymentMethod": {  // Payment Method.
-            "card": {  // Generic card payment.
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
-            }
-        },
-        "address": {  // Address Information.
-            "billingAddress": {
-            }
-        },
-        "enrolledFor3Ds": false,  // Authentication Details.
-        "returnUrl": "https://example.com/3ds-return"  // URLs for Redirection.
     };
 }
 
@@ -117,15 +93,6 @@ async function get(merchantTransactionId: string, config: ConnectorConfig = _def
     return { status: getResponse.status };
 }
 
-// Flow: PaymentMethodAuthenticationService.PreAuthenticate
-async function preAuthenticate(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentMethodAuthenticationServicePreAuthenticateResponse> {
-    const paymentMethodAuthenticationClient = new PaymentMethodAuthenticationClient(config);
-
-    const preResponse = await paymentMethodAuthenticationClient.preAuthenticate(_buildPreAuthenticateRequest());
-
-    return { status: preResponse.status };
-}
-
 // Flow: PaymentService.Refund
 async function refund(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<RefundResponse> {
     const paymentClient = new PaymentClient(config);
@@ -156,7 +123,7 @@ async function voidPayment(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    capture, get, preAuthenticate, refund, refundGet, voidPayment, _buildCaptureRequest, _buildGetRequest, _buildPreAuthenticateRequest, _buildRefundRequest, _buildRefundGetRequest, _buildVoidRequest
+    capture, get, refund, refundGet, voidPayment, _buildCaptureRequest, _buildGetRequest, _buildRefundRequest, _buildRefundGetRequest, _buildVoidRequest
 };
 
 // CLI runner

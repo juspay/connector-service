@@ -72,33 +72,6 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
     })).unwrap_or_default()
 }
 
-pub fn build_pre_authenticate_request() -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
-    serde_json::from_value::<PaymentMethodAuthenticationServicePreAuthenticateRequest>(serde_json::json!({
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "payment_method": {  // Payment Method.
-        "payment_method": {
-            "card": {  // Generic card payment.
-                "card_number": "4111111111111111",  // Card Identification.
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information.
-            },
-        }
-    },
-    "address": {  // Address Information.
-        "billing_address": {
-            "first_name": "John",  // Personal Information.
-        },
-    },
-    "enrolled_for_3ds": false,  // Authentication Details.
-    "return_url": "https://example.com/3ds-return",  // URLs for Redirection.
-    })).unwrap_or_default()
-}
-
 pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
     serde_json::from_value::<PaymentServiceProxyAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_proxy_txn_001",
@@ -278,13 +251,6 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentMethodAuthenticationService.PreAuthenticate
-#[allow(dead_code)]
-pub async fn pre_authenticate(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.pre_authenticate(build_pre_authenticate_request(), &HashMap::new(), None).await?;
-    Ok(format!("status: {:?}", response.status()))
-}
-
 // Flow: PaymentService.ProxyAuthorize
 #[allow(dead_code)]
 pub async fn proxy_authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -327,12 +293,11 @@ async fn main() {
         "authorize" => authorize(&client, "order_001").await,
         "capture" => capture(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
-        "pre_authenticate" => pre_authenticate(&client, "order_001").await,
         "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "refund_get" => refund_get(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, get, pre_authenticate, proxy_authorize, refund, refund_get, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, get, proxy_authorize, refund, refund_get, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

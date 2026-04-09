@@ -170,52 +170,6 @@ def _build_proxy_authorize_request():
         payment_pb2.PaymentServiceProxyAuthorizeRequest(),
     )
 
-def _build_proxy_setup_recurring_request():
-    return ParseDict(
-        {
-            "merchant_recurring_payment_id": "probe_proxy_mandate_001",
-            "amount": {
-                "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            },
-            "card_proxy": {  # Card proxy for vault-aliased payments.
-                "card_number": {"value": "4111111111111111"},  # Card Identification.
-                "card_exp_month": {"value": "03"},
-                "card_exp_year": {"value": "2030"},
-                "card_cvc": {"value": "123"},
-                "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-            },
-            "customer": {
-                "id": "probe_customer_001"  # Internal customer ID.
-            },
-            "address": {
-                "billing_address": {
-                }
-            },
-            "return_url": "https://example.com/return",
-            "customer_acceptance": {
-                "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
-                "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-            },
-            "auth_type": "NO_THREE_DS",
-            "setup_future_usage": "OFF_SESSION",
-            "browser_info": {
-                "color_depth": 24,  # Display Information.
-                "screen_height": 900,
-                "screen_width": 1440,
-                "java_enabled": False,  # Browser Settings.
-                "java_script_enabled": True,
-                "language": "en-US",
-                "time_zone_offset_minutes": -480,
-                "accept_header": "application/json",  # Browser Headers.
-                "user_agent": "Mozilla/5.0 (probe-bot)",
-                "accept_language": "en-US,en;q=0.9",
-                "ip_address": "1.2.3.4"  # Device Information.
-            }
-        },
-        payment_pb2.PaymentServiceProxySetupRecurringRequest(),
-    )
-
 def _build_recurring_charge_request():
     return ParseDict(
         {
@@ -492,15 +446,6 @@ async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.C
     payment_client = PaymentClient(config)
 
     proxy_response = await payment_client.proxy_authorize(_build_proxy_authorize_request())
-
-    return {"status": proxy_response.status}
-
-
-async def proxy_setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentService.ProxySetupRecurring"""
-    payment_client = PaymentClient(config)
-
-    proxy_response = await payment_client.proxy_setup_recurring(_build_proxy_setup_recurring_request())
 
     return {"status": proxy_response.status}
 
