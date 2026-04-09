@@ -1833,14 +1833,14 @@
           }
         },
         "sample": {
-          "url": "https://checkout-test.adyen.com/v68/sessions",
+          "url": "https://checkout-test.adyen.com/v68/orders",
           "method": "Post",
           "headers": {
             "content-type": "application/json",
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"merchantAccount\":\"probe_merchant\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"reference\":\"probe_order_001\",\"returnUrl\":\"https://example.com/redirect\"}"
+          "body": "{\"merchantAccount\":\"probe_merchant\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"reference\":\"probe_order_001\"}"
         }
       }
     },
