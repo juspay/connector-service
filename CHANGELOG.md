@@ -19,6 +19,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.09.0
+
+### Features
+
+- **smoke-tests:** Implement deterministic smoke test coverage with consistent behavior across all SDKs ([#953](https://github.com/juspay/connector-service/pull/953)) ([`90abad4`](https://github.com/juspay/connector-service/commit/90abad4162da9991cfc74ecf13c1356cb957c8c1))
+
+**Full Changelog:** [`2026.04.08.2...2026.04.09.0`](https://github.com/juspay/connector-service/compare/2026.04.08.2...2026.04.09.0)
+
+- - -
+
+## 2026.04.08.2
+
+### Miscellaneous Tasks
+
+- Fix build issue ([#1013](https://github.com/juspay/connector-service/pull/1013)) ([`15cc9c5`](https://github.com/juspay/connector-service/commit/15cc9c585e2b0be0f0736bdd4e6058d85ece788b))
+
+**Full Changelog:** [`2026.04.08.1...2026.04.08.2`](https://github.com/juspay/connector-service/compare/2026.04.08.1...2026.04.08.2)
+
+- - -
+
 ## 2026.04.08.1
 
 ### Features
