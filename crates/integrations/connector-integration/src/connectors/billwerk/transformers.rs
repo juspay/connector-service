@@ -957,7 +957,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Build inline customer for the session (Billwerk requires a customer)
         let customer = BillwerkSessionCustomer {
-            handle: format!("cust_{reference_id}"),
+            handle: reference_id.clone(),
             email: None,
             first_name: None,
             last_name: None,
@@ -965,7 +965,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         Ok(Self {
             order: BillwerkOrderObject {
-                handle: reference_id,
+                handle: reference_id.clone(),
                 amount: router_data.request.amount,
                 currency: router_data.request.currency,
                 order_text: None,
