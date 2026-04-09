@@ -12,7 +12,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError, WebhookError},
+    errors::{ConnectorError, IntegrationError, WebhookError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -55,10 +55,7 @@ pub fn get_webhook_object_from_body(
 fn get_webhook_response(
     response: responses::PeachpaymentsIncomingWebhook,
     status_code: u16,
-) -> CustomResult<
-    (AttemptStatus, Result<PaymentsResponseData, ErrorResponse>),
-    ConnectorResponseTransformationError,
-> {
+) -> CustomResult<(AttemptStatus, Result<PaymentsResponseData, ErrorResponse>), ConnectorError> {
     let transaction =
         response
             .transaction
@@ -360,7 +357,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<responses::PeachpaymentsPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsPaymentsResponse, Self>,
@@ -413,7 +410,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsSyncResponse, Self>,
@@ -469,7 +466,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsCaptureResponse, Self>,
@@ -542,7 +539,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsVoidResponse, Self>,
@@ -607,7 +604,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsRefundResponse, Self>,
@@ -628,7 +625,7 @@ impl TryFrom<ResponseRouterData<responses::PeachpaymentsRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsRefundSyncResponse, Self>,
