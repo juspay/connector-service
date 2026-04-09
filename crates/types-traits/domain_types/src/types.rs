@@ -3399,7 +3399,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             access_token,
             session_token: value.session_token,
             reference_id: value.merchant_order_id.clone(),
-            connector_order_id: None,
+            connector_order_id: value.connector_order_id,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
