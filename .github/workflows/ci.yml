@@ -22,15 +22,16 @@ permissions:
 #
 #   changes ─┬─ typos           (always, ~8s)
 #            ├─ formatting      (if *.rs changed, ~18s)
-#            │   ├─ check       (if rust/proto changed, ~11min — clippy + schema)
-#            │   ├─ test        (if rust/proto changed, ~25min — full nextest suite)
-#            │   └─ sdk-test    (if sdk/rust/proto changed, ~11min)
+#            │   ├─ check       (if rust changed, ~11min — clippy + schema)
+#            │   │   └─ test    (if rust changed, ~3min — reuses check cache)
+#            │   └─ sdk-test    (if sdk/rust-core/proto changed, ~11min)
 #            └─ docs-update     (if connector/docs code changed, PR only, ~9min)
 #            └─ ci-gate         (always — single required status check)
 #
-# Fast checks (typos, formatting) run first. Expensive jobs only start after
-# formatting passes and only when their relevant files are touched. The ci-gate
-# job aggregates all results into one required check for branch protection.
+# Key optimization: `test` runs AFTER `check` and shares its compilation
+# cache via shared-key. Since test compilation is 13min and test execution
+# is only 1.2min, reusing check's cache cuts test from 14min to ~3min.
+# For connector-only PRs, sdk-test is skipped entirely.
 # ─────────────────────────────────────────────────────────────────────────────
 
 jobs:
@@ -45,22 +46,45 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      rust: ${{ steps.filter.outputs.rust }}
+      rust-core: ${{ steps.filter.outputs.rust-core }}
+      connector: ${{ steps.filter.outputs.connector }}
+      any-rust: ${{ steps.filter.outputs.any-rust }}
       sdk: ${{ steps.filter.outputs.sdk }}
       proto: ${{ steps.filter.outputs.proto }}
       docs-trigger: ${{ steps.filter.outputs.docs-trigger }}
       any-rs: ${{ steps.filter.outputs.any-rs }}
       ci: ${{ steps.filter.outputs.ci }}
+      connector-names: ${{ steps.connector-names.outputs.list }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Need full history for accurate diff on push events
+          fetch-depth: 0
 
       - name: Detect changed paths
         uses: dorny/paths-filter@v3
         id: filter
         with:
+          list-files: json
           filters: |
-            rust:
+            rust-core:
+              - 'crates/common/**'
+              - 'crates/types-traits/**'
+              - 'crates/grpc-server/**'
+              - 'crates/ffi/**'
+              - 'crates/internal/composite-service/**'
+              - 'crates/internal/field-probe/**'
+              - 'crates/internal/uniffi-bindgen/**'
+              - 'crates/internal/integration-tests/src/harness/**'
+              - 'crates/internal/integration-tests/src/global_suites/**'
+              - 'crates/internal/integration-tests/src/lib.rs'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            connector:
+              - 'crates/integrations/**'
+              - 'crates/internal/integration-tests/src/connector_specs/**'
+            any-rust:
               - 'crates/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
@@ -82,6 +106,19 @@ jobs:
               - '**/*.rs'
             ci:
               - '.github/**'
+
+      - name: Extract changed connector names
+        id: connector-names
+        if: steps.filter.outputs.connector == 'true'
+        shell: bash
+        run: |
+          names=$(echo '${{ steps.filter.outputs.connector_files }}' | \
+            jq -r '.[]' | \
+            grep -oE '(connectors|connector_specs)/[^/]+' | \
+            sed 's|^connectors/||;s|^connector_specs/||' | \
+            sort -u | paste -sd ',' -)
+          echo "list=$names" >> $GITHUB_OUTPUT
+          echo "Changed connectors: $names"
 
   # ── Fast Checks ───────────────────────────────────────────────────────────
 
@@ -129,7 +166,7 @@ jobs:
     if: >-
       always() &&
       needs.formatting.result != 'failure' &&
-      (needs.changes.outputs.rust == 'true' ||
+      (needs.changes.outputs.any-rust == 'true' ||
        needs.changes.outputs.proto == 'true' ||
        needs.changes.outputs.ci == 'true')
     runs-on: ubuntu-latest
@@ -155,6 +192,8 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: Swatinem/rust-cache@v2.7.8
+        with:
+          shared-key: "ci-rust-${{ runner.os }}"
 
       - name: Run Clippy
         run: cargo +stable clippy --all-features --all-targets
@@ -172,13 +211,15 @@ jobs:
 
   test:
     name: Run Tests
-    needs: [changes, formatting]
-    # Same gating as `check`: rust/proto/CI changes, formatting must not fail.
-    # Runs in PARALLEL with `check` for lower wall-clock time (~25min vs ~43min serial).
+    needs: [changes, formatting, check]
+    # Runs AFTER check to reuse its compilation cache (shared-key).
+    # Test compilation is 13min vs 1.2min test execution — cache reuse is critical.
+    # With warm cache from check: ~3min instead of ~14min.
     if: >-
       always() &&
       needs.formatting.result != 'failure' &&
-      (needs.changes.outputs.rust == 'true' ||
+      needs.check.result == 'success' &&
+      (needs.changes.outputs.any-rust == 'true' ||
        needs.changes.outputs.proto == 'true' ||
        needs.changes.outputs.ci == 'true')
     runs-on: ubuntu-latest
@@ -213,6 +254,7 @@ jobs:
         if: ${{ env.RUN_TESTS == 'true' }}
         with:
           cache-on-failure: true
+          shared-key: "ci-rust-${{ runner.os }}"
 
       - name: Install nextest
         if: ${{ env.RUN_TESTS == 'true' }}
@@ -253,26 +295,50 @@ jobs:
       - name: Run Tests
         if: ${{ env.RUN_TESTS == 'true' }}
         shell: bash
-        # Exclude schema tests that the `check` job already runs explicitly.
-        # This avoids duplicate failures and saves ~10s of redundant test time.
+        # Schema tests excluded — already run in `check` job.
+        # Connector-only PRs: scope tests to changed connectors for faster feedback.
         run: |
-          cargo nextest run \
-            --config-file .nextest.toml \
-            --profile ci \
-            -E 'not test(=all_supported_scenarios_match_proto_schema_for_all_connectors)'
+          CONNECTOR_NAMES="${{ needs.changes.outputs.connector-names }}"
+          CORE_CHANGED="${{ needs.changes.outputs.rust-core }}"
+          PROTO_CHANGED="${{ needs.changes.outputs.proto }}"
+          CI_CHANGED="${{ needs.changes.outputs.ci }}"
+
+          EXCLUDE='-E not test(=all_supported_scenarios_match_proto_schema_for_all_connectors)'
+
+          if [[ -n "$CONNECTOR_NAMES" && "$CORE_CHANGED" != "true" && "$PROTO_CHANGED" != "true" && "$CI_CHANGED" != "true" ]]; then
+            # Connector-only PR: scope tests to changed connectors
+            FILTER=""
+            IFS=',' read -ra CONNECTORS <<< "$CONNECTOR_NAMES"
+            for c in "${CONNECTORS[@]}"; do
+              [[ -n "$FILTER" ]] && FILTER="$FILTER | "
+              FILTER="${FILTER}test(/${c}/)"
+            done
+            echo "🔍 Connector-only PR — scoping tests to: $CONNECTOR_NAMES"
+            cargo nextest run \
+              --config-file .nextest.toml \
+              --profile ci \
+              -E "($FILTER) & $EXCLUDE"
+          else
+            echo "🔍 Core change detected — running full test suite"
+            cargo nextest run \
+              --config-file .nextest.toml \
+              --profile ci \
+              -E "$EXCLUDE"
+          fi
 
   # ── SDK Tests ─────────────────────────────────────────────────────────────
 
   sdk-test:
     name: SDK Tests
     needs: [changes, formatting]
-    # Run when SDK, core Rust, proto, or CI files changed.
-    # SDK depends on FFI which depends on core crates, so core changes can break SDK.
+    # Run when SDK, core Rust (not just connectors), proto, or CI files changed.
+    # SDK depends on FFI which depends on core crates, but NOT on individual
+    # connector implementations. Connector-only PRs skip this entirely.
     if: >-
       always() &&
       needs.formatting.result != 'failure' &&
       (needs.changes.outputs.sdk == 'true' ||
-       needs.changes.outputs.rust == 'true' ||
+       needs.changes.outputs.rust-core == 'true' ||
        needs.changes.outputs.proto == 'true' ||
        needs.changes.outputs.ci == 'true')
     runs-on: ubuntu-latest
