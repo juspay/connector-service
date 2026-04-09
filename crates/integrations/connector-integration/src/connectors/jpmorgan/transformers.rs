@@ -507,8 +507,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     amount,
                     merchant,
                     payment_method_type,
-                    account_holder,
-                    statement_descriptor,
+                    account_holder: Some(account_holder),
+                    statement_descriptor: Some(statement_descriptor),
                 })
             }
             PaymentMethodData::BankDebit(_) => Err(IntegrationError::not_implemented(
@@ -588,7 +588,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                             context: Default::default(),
                                         })?
                                 } else {
-                                    gpay_token.signature.clone()
+                                    Secret::new(gpay_token.signature.clone())
                                 };
 
                             let googlepay = requests::JpmorganGooglePay {
@@ -601,11 +601,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     ),
                                     encrypted_payment_header:
                                         requests::JpmorganEncryptedPaymentHeader {
-                                            ephemeral_public_key: Secret::new(
-                                                signed_message.ephemeral_public_key,
-                                            ),
+                                            ephemeral_public_key: signed_message
+                                                .ephemeral_public_key,
                                         },
-                                    signature: Secret::new(signature),
+                                    signature,
                                     protocol_version: gpay_token.protocol_version,
                                 },
                             };

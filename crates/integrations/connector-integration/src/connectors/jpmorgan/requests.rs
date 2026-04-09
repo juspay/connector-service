@@ -186,12 +186,12 @@ pub struct GooglePayToken {
 
 #[derive(Debug, Deserialize)]
 pub struct GooglePayIntermediateSigningKey {
-    pub signatures: Vec<String>,
+    pub signatures: Vec<Secret<String>>,
 }
 
 /// The parsed signedMessage JSON inside the Google Pay token
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GooglePaySignedMessage {
-    pub ephemeral_public_key: String,
+    pub ephemeral_public_key: Secret<String>,
 }
