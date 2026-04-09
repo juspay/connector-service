@@ -13,7 +13,6 @@ use domain_types::{
         
         Authorize, Capture, ClientAuthenticationToken, CreateOrder, PaymentMethodToken, RSync, RepeatPayment,
         SetupMandate,
-    ,
     },
     connector_types::{
         BillwerkClientAuthenticationResponse as BillwerkClientAuthenticationResponseDomain,
@@ -915,16 +914,6 @@ pub struct BillwerkOrderObject {
     pub customer: Option<BillwerkSessionCustomer>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct BillwerkSessionCustomer {
-    pub handle: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_name: Option<String>,
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BillwerkCreateOrderResponse {
