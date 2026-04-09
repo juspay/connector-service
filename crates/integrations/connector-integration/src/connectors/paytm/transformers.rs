@@ -19,7 +19,7 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
     },
     errors::{ConnectorError, IntegrationError},
-    payment_method_data::{PaymentMethodData, UpiData},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
@@ -1199,7 +1199,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<PaytmRepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<PaytmRepeatPaymentResponse, Self>,
