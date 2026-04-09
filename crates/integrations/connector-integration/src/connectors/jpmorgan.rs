@@ -269,6 +269,18 @@ macros::create_all_prerequisites!(
             request_body: JpmorganClientAuthRequest,
             response_body: JpmorganClientAuthResponse,
             router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: JpmorganSetupMandateRequest<T>,
+            response_body: JpmorganSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: JpmorganRepeatPaymentRequest<T>,
+            response_body: JpmorganRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
