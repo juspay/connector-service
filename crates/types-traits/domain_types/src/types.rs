@@ -4603,7 +4603,7 @@ pub fn generate_create_order_response(
 
     let response = match transaction_response {
         Ok(PaymentCreateOrderResponse {
-            order_id,
+            connector_order_id,
             session_data,
         }) => {
             let grpc_session_data = session_data
@@ -4611,7 +4611,7 @@ pub fn generate_create_order_response(
                 .transpose()?;
 
             PaymentServiceCreateOrderResponse {
-                connector_order_id: Some(order_id),
+                connector_order_id: Some(connector_order_id),
                 status: grpc_status.into(),
                 error: None,
                 status_code: 200,
@@ -10646,6 +10646,73 @@ fn convert_connector_specific_to_grpc(
                     grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Billwerk(
                         grpc_api_types::payments::BillwerkClientAuthenticationResponse {
                             session_id: billwerk_data.session_id,
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Datatrans(datatrans_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Datatrans(
+                        grpc_api_types::payments::DatatransClientAuthenticationResponse {
+                            transaction_id: Some(datatrans_data.transaction_id),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Bambora(bambora_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Bambora(
+                        grpc_api_types::payments::BamboraClientAuthenticationResponse {
+                            token: Some(bambora_data.token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Payload(payload_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Payload(
+                        grpc_api_types::payments::PayloadClientAuthenticationResponse {
+                            client_token: Some(payload_data.client_token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Multisafepay(multisafepay_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Multisafepay(
+                        grpc_api_types::payments::MultisafepayClientAuthenticationResponse {
+                            api_token: Some(multisafepay_data.api_token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Nexinets(nexinets_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Nexinets(
+                        grpc_api_types::payments::NexinetsClientAuthenticationResponse {
+                            order_id: nexinets_data.order_id,
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Nexixpay(nexixpay_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Nexixpay(
+                        grpc_api_types::payments::NexixpayClientAuthenticationResponse {
+                            security_token: Some(nexixpay_data.security_token),
+                            hosted_page: nexixpay_data.hosted_page,
                         },
                     ),
                 ),

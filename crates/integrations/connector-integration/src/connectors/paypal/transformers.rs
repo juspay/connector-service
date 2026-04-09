@@ -928,7 +928,7 @@ impl TryFrom<PaypalOrderCreateResponse> for PaymentCreateOrderResponse {
 
     fn try_from(response: PaypalOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
-            order_id: response.id,
+            connector_order_id: response.id,
             session_data: None,
         })
     }
@@ -953,7 +953,7 @@ impl TryFrom<ResponseRouterData<PaypalOrderCreateResponse, Self>>
         let order_response = PaymentCreateOrderResponse::try_from(response.clone())?;
 
         // Extract order_id before moving
-        let order_id = order_response.order_id.clone();
+        let order_id = order_response.connector_order_id.clone();
 
         Ok(Self {
             response: Ok(order_response),
