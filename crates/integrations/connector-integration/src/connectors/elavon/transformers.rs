@@ -785,16 +785,15 @@ impl<
 
         let payments_response_data = match (&response.result, error_response) {
             (ElavonResult::Success(payment_resp_struct), None) => {
-                let ssl_token = if payment_resp_struct.ssl_token_response.as_deref()
-                    == Some("SUCCESS")
-                {
-                    payment_resp_struct
-                        .ssl_token
-                        .as_ref()
-                        .map(|t| t.peek().to_string())
-                } else {
-                    None
-                };
+                let ssl_token =
+                    if payment_resp_struct.ssl_token_response.as_deref() == Some("SUCCESS") {
+                        payment_resp_struct
+                            .ssl_token
+                            .as_ref()
+                            .map(|t| t.peek().to_string())
+                    } else {
+                        None
+                    };
                 let mandate_reference = ssl_token.map(|token| {
                     Box::new(MandateReference {
                         connector_mandate_id: None,

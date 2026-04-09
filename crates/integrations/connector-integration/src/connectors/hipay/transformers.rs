@@ -369,7 +369,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // or from connector_customer as fallback (when token is passed via gRPC)
         let cardtoken = match &item.router_data.request.payment_method_data {
             PaymentMethodData::PaymentMethodToken(t) => Some(t.token.peek().to_string()),
-            _ => item.router_data.resource_common_data.connector_customer.clone(),
+            _ => item
+                .router_data
+                .resource_common_data
+                .connector_customer
+                .clone(),
         };
 
         // Build callback URLs matching HS implementation

@@ -26,9 +26,9 @@ use domain_types::{
     },
     payment_method_data::{
         ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
-        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData,
-        NetworkTokenData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        VoucherData, VoucherNextStepData, WalletData,
+        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, NetworkTokenData,
+        PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
+        VoucherNextStepData, WalletData,
     },
     router_data::{
         ConnectorResponseData, ConnectorSpecificConfig, ErrorResponse,

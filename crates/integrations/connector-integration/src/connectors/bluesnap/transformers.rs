@@ -21,8 +21,7 @@ use serde::{Deserialize, Serialize};
 use super::{requests, responses};
 use crate::types::ResponseRouterData;
 use domain_types::errors::{
-    ConnectorError, IntegrationError, ResponseTransformationErrorContext,
-    WebhookError,
+    ConnectorError, IntegrationError, ResponseTransformationErrorContext, WebhookError,
 };
 
 // Wallet type constants
