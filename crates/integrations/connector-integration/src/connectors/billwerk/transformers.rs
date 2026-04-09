@@ -889,7 +889,7 @@ impl TryFrom<ResponseRouterData<BillwerkClientAuthResponse, Self>>
 pub struct BillwerkCreateOrderRequest {
     pub order: BillwerkOrderObject,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub settle: Option<Secret<bool>>,
+    pub settle: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locale: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
