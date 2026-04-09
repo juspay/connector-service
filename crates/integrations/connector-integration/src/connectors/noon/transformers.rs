@@ -1803,7 +1803,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let channel = NoonChannels::Web;
 
-        let category = item.request
+        let category = item
+            .request
             .metadata
             .as_ref()
             .and_then(|metadata| metadata.peek().get("order_category"))
