@@ -424,7 +424,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"order\":{\"handle\":\"probe_order_001\",\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"handle\":\"cust_probe_order_001\"}}}"
+          "body": "{\"order\":{\"handle\":\"probe_order_001\",\"amount\":1000,\"currency\":\"USD\",\"customer_handle\":\"probe_order_001\",\"customer\":{\"handle\":\"probe_order_001\"}}}"
         }
       }
     },

@@ -12,8 +12,8 @@ import payments.RecurringPaymentClient
 import payments.RefundClient
 import payments.PaymentMethodClient
 import payments.PaymentServiceCaptureRequest
-import payments.PaymentServiceGetRequest
 import payments.PaymentServiceCreateOrderRequest
+import payments.PaymentServiceGetRequest
 import payments.RecurringPaymentServiceChargeRequest
 import payments.PaymentServiceRefundRequest
 import payments.RefundServiceGetRequest
@@ -273,6 +273,6 @@ fun main(args: Array<String>) {
         "tokenSetupRecurring" -> tokenSetupRecurring(txnId)
         "tokenize" -> tokenize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createOrder, get, recurringCharge, refund, refundGet, setupRecurring, tokenize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: capture, createOrder, get, recurringCharge, refund, refundGet, tokenAuthorize, tokenSetupRecurring, tokenize, void")
     }
 }

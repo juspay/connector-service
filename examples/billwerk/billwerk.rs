@@ -269,7 +269,7 @@ async fn main() {
         "token_setup_recurring" => token_setup_recurring(&client, "order_001").await,
         "tokenize" => tokenize(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, create_order, get, recurring_charge, refund, refund_get, setup_recurring, tokenize, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: capture, create_order, get, recurring_charge, refund, refund_get, token_authorize, token_setup_recurring, tokenize, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),
