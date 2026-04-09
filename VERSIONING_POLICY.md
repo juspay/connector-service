@@ -1,6 +1,6 @@
 # Versioning Policy
 
-**Principle**: Same `MAJOR.MINOR` = same protocol compatibility across all languages.
+**Principle**: Same `MAJOR.MINOR` = same protocol compatibility across all languages Semantic Versioning.
 
 | Version | Rule |
 |---------|------|
