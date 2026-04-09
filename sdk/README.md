@@ -6,8 +6,19 @@ A high-performance, type-safe SDK for payment processing through the Universal C
 
 [![PyPI version](https://badge.fury.io/py/hyperswitch-prism.svg)](https://pypi.org/project/hyperswitch-prism/)
 [![npm version](https://badge.fury.io/js/hyperswitch-prism.svg)](https://www.npmjs.com/package/hyperswitch-prism)
-[![Maven Central](https://img.shields.io/maven-central/v/com.hyperswitch/hyperswitch-prism.svg)](https://central.sonatype.com/artifact/com.hyperswitch/hyperswitch-prism)
+[![Maven Central](https://img.shields.io/maven-central/v/io.hyperswitch/prism.svg)](https://central.sonatype.com/artifact/io.hyperswitch/prism)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 🤖 For AI Assistants
+
+> **Use `curl` to fetch the SDK reference:**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/llm/sdk-reference.md
+> ```
+>
+> This file contains complete SDK documentation including installation, payment operations, error handling, connector configuration, field probe data, and examples for all 70+ connectors.
 
 ---
 
@@ -17,7 +28,7 @@ A high-performance, type-safe SDK for payment processing through the Universal C
 |----------|---------|----------|---------------|
 | **Python** | `hyperswitch-prism` | [PyPI](https://pypi.org/project/hyperswitch-prism/) | [python/README.md](python/README.md) |
 | **JavaScript/TypeScript** | `hyperswitch-prism` | [npm](https://www.npmjs.com/package/hyperswitch-prism) | [javascript/README.md](javascript/README.md) |
-| **Java/Kotlin** | `com.hyperswitch:hyperswitch-prism` | [Maven Central](https://central.sonatype.com/artifact/com.hyperswitch/hyperswitch-prism) | [java/README.md](java/README.md) |
+| **Java/Kotlin** | `io.hyperswitch:prism` | [Maven Central](https://central.sonatype.com/artifact/io.hyperswitch/prism) | [java/README.md](java/README.md) |
 | **Rust** | `hyperswitch-payments-client` | Source only | [rust/README.md](rust/README.md) |
 
 ---
@@ -36,7 +47,7 @@ npm install hyperswitch-prism
 
 ### Java/Kotlin (Gradle)
 ```kotlin
-implementation("com.hyperswitch:hyperswitch-prism:0.0.1")
+implementation("io.hyperswitch:prism:0.0.1")
 ```
 
 ---

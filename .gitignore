@@ -439,6 +439,7 @@ opencode.json
 .opencode/**
 
 # Generated proto descriptor files
+# scripts/generators/code/services.desc
 scripts/generators/code/services.desc
 
 # Local Netlify folder
