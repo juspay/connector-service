@@ -17,7 +17,74 @@ concurrency:
 permissions:
   contents: read
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Job dependency graph:
+#
+#   changes ─┬─ typos           (always, ~8s)
+#            ├─ formatting      (if *.rs changed, ~18s)
+#            │   ├─ check       (if rust/proto changed, ~11min — clippy + schema)
+#            │   ├─ test        (if rust/proto changed, ~25min — full nextest suite)
+#            │   └─ sdk-test    (if sdk/rust/proto changed, ~11min)
+#            └─ docs-update     (if connector/docs code changed, PR only, ~9min)
+#            └─ ci-gate         (always — single required status check)
+#
+# Fast checks (typos, formatting) run first. Expensive jobs only start after
+# formatting passes and only when their relevant files are touched. The ci-gate
+# job aggregates all results into one required check for branch protection.
+# ─────────────────────────────────────────────────────────────────────────────
+
 jobs:
+
+  # ── Change Detection ──────────────────────────────────────────────────────
+  # Determines which file groups changed so downstream jobs can be skipped.
+  # On push-to-main, dorny/paths-filter compares against the previous commit,
+  # so only affected jobs run even on merge.
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      sdk: ${{ steps.filter.outputs.sdk }}
+      proto: ${{ steps.filter.outputs.proto }}
+      docs-trigger: ${{ steps.filter.outputs.docs-trigger }}
+      any-rs: ${{ steps.filter.outputs.any-rs }}
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            sdk:
+              - 'sdk/**'
+              - 'crates/ffi/**'
+            proto:
+              - 'crates/types-traits/grpc-api-types/proto/**'
+            docs-trigger:
+              - 'crates/integrations/**'
+              - 'crates/types-traits/**'
+              - 'crates/internal/field-probe/**'
+              - 'data/field_probe/**'
+              - 'docs/**'
+              - 'docs-generated/**'
+              - 'examples/**'
+              - 'scripts/**'
+            any-rs:
+              - '**/*.rs'
+            ci:
+              - '.github/**'
+
+  # ── Fast Checks ───────────────────────────────────────────────────────────
+
   typos:
     name: Spell check
     runs-on: ubuntu-latest
@@ -30,8 +97,41 @@ jobs:
         with:
           config: ./.typos.toml
 
+  formatting:
+    name: Check formatting
+    needs: changes
+    # Only check formatting when Rust source files or CI config changed
+    if: needs.changes.outputs.any-rs == 'true' || needs.changes.outputs.ci == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt
+
+      - name: Check formatting
+        shell: bash
+        run: cargo +nightly fmt --all --check
+
+  # ── Compilation & Lint ────────────────────────────────────────────────────
+
   check:
     name: Compilation Check
+    needs: [changes, formatting]
+    # Run if rust/proto/CI files changed AND formatting didn't fail.
+    # 'always()' is needed because `formatting` may be skipped (no .rs changes)
+    # and skipped dependencies cause downstream jobs to be skipped by default.
+    if: >-
+      always() &&
+      needs.formatting.result != 'failure' &&
+      (needs.changes.outputs.rust == 'true' ||
+       needs.changes.outputs.proto == 'true' ||
+       needs.changes.outputs.ci == 'true')
     runs-on: ubuntu-latest
 
     env:
@@ -41,17 +141,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # NOTE: Nightly Rust removed — this job only runs clippy (stable).
+      # Formatting is handled by the dedicated `formatting` job.
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           components: clippy
-
-      - name: Install Rust (nightly for fmt)
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
-          components: rustfmt
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -72,8 +168,19 @@ jobs:
       - name: Run Connector Specs Coverage Check
         run: cargo run --bin check_connector_specs
 
+  # ── Tests ─────────────────────────────────────────────────────────────────
+
   test:
     name: Run Tests
+    needs: [changes, formatting]
+    # Same gating as `check`: rust/proto/CI changes, formatting must not fail.
+    # Runs in PARALLEL with `check` for lower wall-clock time (~25min vs ~43min serial).
+    if: >-
+      always() &&
+      needs.formatting.result != 'failure' &&
+      (needs.changes.outputs.rust == 'true' ||
+       needs.changes.outputs.proto == 'true' ||
+       needs.changes.outputs.ci == 'true')
     runs-on: ubuntu-latest
 
     env:
@@ -146,34 +253,36 @@ jobs:
       - name: Run Tests
         if: ${{ env.RUN_TESTS == 'true' }}
         shell: bash
-        run: cargo nextest run --config-file .nextest.toml --profile ci
+        # Exclude schema tests that the `check` job already runs explicitly.
+        # This avoids duplicate failures and saves ~10s of redundant test time.
+        run: |
+          cargo nextest run \
+            --config-file .nextest.toml \
+            --profile ci \
+            -E 'not test(=all_supported_scenarios_match_proto_schema_for_all_connectors)'
 
-  formatting:
-    name: Check formatting
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
-          components: rustfmt
-
-      - name: Check formatting
-        shell: bash
-        run: cargo +nightly fmt --all --check
+  # ── SDK Tests ─────────────────────────────────────────────────────────────
 
   sdk-test:
     name: SDK Tests
-    runs-on: ubuntu-latest  # OPTIMIZATION: Use Ubuntu instead of macOS (2-3x faster, cheaper)
+    needs: [changes, formatting]
+    # Run when SDK, core Rust, proto, or CI files changed.
+    # SDK depends on FFI which depends on core crates, so core changes can break SDK.
+    if: >-
+      always() &&
+      needs.formatting.result != 'failure' &&
+      (needs.changes.outputs.sdk == 'true' ||
+       needs.changes.outputs.rust == 'true' ||
+       needs.changes.outputs.proto == 'true' ||
+       needs.changes.outputs.ci == 'true')
+    runs-on: ubuntu-latest
 
     env:
       RUSTFLAGS: "-D warnings"
-      PROFILE: dev  # OPTIMIZATION: Use debug profile instead of release (5x faster compilation)
-      CARGO_INCREMENTAL: 1  # OPTIMIZATION: Enable incremental compilation for dev profile
+      PROFILE: dev  # Use debug profile instead of release (5x faster compilation)
+      # CI should use CARGO_INCREMENTAL=0 for smaller, more cacheable artifacts.
+      # Swatinem/rust-cache docs recommend 0 for CI (better cache hit rate).
+      CARGO_INCREMENTAL: 0
 
     steps:
       - name: Checkout code
@@ -204,12 +313,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'  # OPTIMIZATION: Cache npm dependencies
+          cache: 'npm'
           cache-dependency-path: |
             sdk/javascript/package-lock.json
             sdk/tests/package.json
 
-      - name: Cache pip dependencies  # OPTIMIZATION: Cache Python dependencies
+      - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
@@ -220,9 +329,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2.7.8
         with:
           cache-on-failure: true
-          key: sdk-test-${{ runner.os }}  # OPTIMIZATION: Separate cache key for SDK tests
+          key: sdk-test-${{ runner.os }}
 
-      - name: Cache FFI library  # OPTIMIZATION: Cache compiled FFI library
+      - name: Cache FFI library
         uses: actions/cache@v4
         with:
           path: |
@@ -254,7 +363,7 @@ jobs:
             echo "No CONNECTOR_SPECIFIC_AUTH secret found, will run in dry-run mode"
           fi
 
-      - name: Build FFI library once  # OPTIMIZATION: Build FFI once and reuse
+      - name: Build FFI library once
         run: |
           # Determine target triple (matches PLATFORM detection in common.mk)
           ARCH=$(uname -m)
@@ -299,11 +408,18 @@ jobs:
         run: |
           git diff --exit-code || (echo "ERROR: Generated SDK code is out of date. Run 'make -C sdk generate' and commit the changes." && exit 1)
 
+  # ── Docs Update ───────────────────────────────────────────────────────────
+
   docs-update:
     name: Auto-update Connector Documentation
+    needs: changes
     runs-on: ubuntu-latest
-    # Only run on PRs (not push or merge_group), and only for human authors
-    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'github-actions[bot]'
+    # Only run on PRs when connector/docs files changed, for human authors
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login != 'github-actions[bot]' &&
+      (needs.changes.outputs.docs-trigger == 'true' ||
+       needs.changes.outputs.ci == 'true')
     permissions:
       contents: write
 
@@ -385,3 +501,40 @@ jobs:
           
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
           echo "✓ Documentation changes committed to PR #${{ github.event.pull_request.number }}"
+
+  # ── CI Gate ───────────────────────────────────────────────────────────────
+  # Single job to use as the required status check in branch protection.
+  # Succeeds if all jobs passed or were legitimately skipped (path filtering).
+  # Fails if any job failed or was cancelled.
+  ci-gate:
+    name: CI Result
+    if: always()
+    needs: [typos, formatting, check, test, sdk-test, docs-update]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate CI results
+        run: |
+          echo "Job results:"
+          echo "  typos:       ${{ needs.typos.result }}"
+          echo "  formatting:  ${{ needs.formatting.result }}"
+          echo "  check:       ${{ needs.check.result }}"
+          echo "  test:        ${{ needs.test.result }}"
+          echo "  sdk-test:    ${{ needs.sdk-test.result }}"
+          echo "  docs-update: ${{ needs.docs-update.result }}"
+          echo ""
+
+          results=(
+            "${{ needs.typos.result }}"
+            "${{ needs.formatting.result }}"
+            "${{ needs.check.result }}"
+            "${{ needs.test.result }}"
+            "${{ needs.sdk-test.result }}"
+            "${{ needs.docs-update.result }}"
+          )
+          for result in "${results[@]}"; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "❌ CI failed — one or more jobs returned: $result"
+              exit 1
+            fi
+          done
+          echo "✅ All CI checks passed (or were skipped due to path filtering)"
