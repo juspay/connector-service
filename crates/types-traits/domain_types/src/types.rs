@@ -9900,6 +9900,163 @@ fn convert_connector_specific_to_grpc(
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Bluesnap(bluesnap_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Bluesnap(
+                        grpc_api_types::payments::BluesnapClientAuthenticationResponse {
+                            pf_token: Some(bluesnap_data.pf_token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Rapyd(rapyd_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Rapyd(
+                        grpc_api_types::payments::RapydClientAuthenticationResponse {
+                            checkout_id: rapyd_data.checkout_id,
+                            redirect_url: rapyd_data.redirect_url,
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Shift4(shift4_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Shift4(
+                        grpc_api_types::payments::Shift4ClientAuthenticationResponse {
+                            client_secret: Some(shift4_data.client_secret),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::BankOfAmerica(boa_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::BankOfAmerica(
+                        grpc_api_types::payments::BankOfAmericaClientAuthenticationResponse {
+                            capture_context: Some(boa_data.capture_context),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Wellsfargo(wf_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Wellsfargo(
+                        grpc_api_types::payments::WellsfargoClientAuthenticationResponse {
+                            capture_context: Some(wf_data.capture_context),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Fiserv(fiserv_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Fiserv(
+                        grpc_api_types::payments::FiservClientAuthenticationResponse {
+                            session_id: Some(fiserv_data.session_id),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Elavon(elavon_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Elavon(
+                        grpc_api_types::payments::ElavonClientAuthenticationResponse {
+                            session_token: Some(elavon_data.session_token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Noon(noon_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Noon(
+                        grpc_api_types::payments::NoonClientAuthenticationResponse {
+                            order_id: noon_data.order_id,
+                            checkout_url: Some(noon_data.checkout_url),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Paysafe(paysafe_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Paysafe(
+                        grpc_api_types::payments::PaysafeClientAuthenticationResponse {
+                            payment_handle_token: Some(paysafe_data.payment_handle_token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Bamboraapac(bamboraapac_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Bamboraapac(
+                        grpc_api_types::payments::BamboraapacClientAuthenticationResponse {
+                            token: Some(bamboraapac_data.token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Jpmorgan(jpmorgan_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Jpmorgan(
+                        grpc_api_types::payments::JpmorganClientAuthenticationResponse {
+                            transaction_id: jpmorgan_data.transaction_id,
+                            request_id: jpmorgan_data.request_id,
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Billwerk(billwerk_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Billwerk(
+                        grpc_api_types::payments::BillwerkClientAuthenticationResponse {
+                            session_id: billwerk_data.session_id,
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Datatrans(datatrans_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Datatrans(
+                        grpc_api_types::payments::DatatransClientAuthenticationResponse {
+                            transaction_id: Some(datatrans_data.transaction_id),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Bambora(bambora_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Bambora(
+                        grpc_api_types::payments::BamboraClientAuthenticationResponse {
+                            token: Some(bambora_data.token),
+                        },
+                    ),
+                ),
+            }
+        }
         ConnectorSpecificClientAuthenticationResponse::Payload(payload_data) => {
             grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
                 connector: Some(
