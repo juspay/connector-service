@@ -263,7 +263,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(IntegrationError::RequestEncodingFailed {
+            .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
 
@@ -850,7 +850,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .resource_common_data
             .get_optional_billing_country()
             .map(|c| c.to_string())
-            .unwrap_or_else(|| "US".to_string());
+            .ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name: "billing_country",
+                    context: Default::default(),
+                })
+            })?;
 
         Ok(Self {
             amount,
