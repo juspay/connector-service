@@ -782,36 +782,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }),
                 }))
             }
-            PaymentMethodData::Wallet(WalletData::PaypalRedirect(_)) => {
-                PaymentSourceItem::Paypal(
-                    PaypalRedirectionRequest::PaypalRedirectionStruct(PaypalRedirectionStruct {
-                        experience_context: ContextStruct {
-                            return_url: item.router_data.request.complete_authorize_url.clone(),
-                            cancel_url: item.router_data.request.complete_authorize_url.clone(),
-                            shipping_preference: if item
-                                .router_data
-                                .resource_common_data
-                                .get_optional_shipping()
-                                .is_some()
-                            {
-                                ShippingPreference::SetProvidedAddress
-                            } else {
-                                ShippingPreference::GetFromFile
+            PaymentMethodData::Wallet(WalletData::PaypalRedirect(_)) => PaymentSourceItem::Paypal(
+                PaypalRedirectionRequest::PaypalRedirectionStruct(PaypalRedirectionStruct {
+                    experience_context: ContextStruct {
+                        return_url: item.router_data.request.complete_authorize_url.clone(),
+                        cancel_url: item.router_data.request.complete_authorize_url.clone(),
+                        shipping_preference: if item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_shipping()
+                            .is_some()
+                        {
+                            ShippingPreference::SetProvidedAddress
+                        } else {
+                            ShippingPreference::GetFromFile
+                        },
+                        user_action: Some(UserAction::PayNow),
+                    },
+                    attributes: match item.router_data.request.setup_future_usage {
+                        Some(common_enums::FutureUsage::OffSession) => Some(Attributes {
+                            vault: PaypalVault {
+                                store_in_vault: StoreInVault::OnSuccess,
+                                usage_type: UsageType::Merchant,
                             },
-                            user_action: Some(UserAction::PayNow),
-                        },
-                        attributes: match item.router_data.request.setup_future_usage {
-                            Some(common_enums::FutureUsage::OffSession) => Some(Attributes {
-                                vault: PaypalVault {
-                                    store_in_vault: StoreInVault::OnSuccess,
-                                    usage_type: UsageType::Merchant,
-                                },
-                            }),
-                            _ => None,
-                        },
-                    }),
-                )
-            }
+                        }),
+                        _ => None,
+                    },
+                }),
+            ),
             PaymentMethodData::Wallet(_) => Err(IntegrationError::not_implemented(
                 utils::get_unimplemented_payment_method_error_message("Paypal"),
             ))?,
