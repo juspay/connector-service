@@ -22,15 +22,16 @@ permissions:
 #
 #   changes ─┬─ typos           (always, ~8s)
 #            ├─ auto-fix        (PR only: format + docs → bot commit if needed)
-#            │   ├─ check       (if rust changed AND auto-fix didn't push)
-#            │   │   └─ test    (reuses check cache, ~3min)
-#            │   └─ sdk-test    (if sdk/rust-core/proto changed)
+#            │   ├─ check       (if rust changed AND auto-fix didn't push, ~11min)
+#            │   ├─ test        (parallel with check, ~15min)
+#            │   └─ sdk-test    (if sdk/rust-core/proto changed, ~9min)
 #            └─ ci-gate         (always — single required status check)
 #
 # Auto-fix runs first on PRs: formats code + generates docs. If changes are
 # found, it commits them and the remaining jobs SKIP (a new CI run triggers
 # on the bot commit with clean code). If no changes needed, checks proceed.
-# For push/merge_group events, auto-fix is skipped and checks run directly.
+# check and test run in PARALLEL with separate caches (faster wall clock).
+# For connector-only PRs, tests are scoped to changed connectors.
 # ─────────────────────────────────────────────────────────────────────────────
 
 jobs:
@@ -257,8 +258,6 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: Swatinem/rust-cache@v2.7.8
-        with:
-          shared-key: "ci-rust-${{ runner.os }}"
 
       - name: Run Clippy
         run: cargo +stable clippy --all-features --all-targets
@@ -276,12 +275,12 @@ jobs:
 
   test:
     name: Run Tests
-    needs: [changes, auto-fix, check]
-    # Runs AFTER check to reuse its compilation cache (shared-key).
+    needs: [changes, auto-fix]
+    # Runs in PARALLEL with check (separate caches, faster wall clock).
+    # Scopes tests to changed connectors for connector-only PRs.
     if: >-
       always() &&
       needs.auto-fix.outputs.pushed != 'true' &&
-      needs.check.result == 'success' &&
       (needs.changes.outputs.any-rust == 'true' ||
        needs.changes.outputs.proto == 'true' ||
        needs.changes.outputs.ci == 'true')
@@ -317,7 +316,6 @@ jobs:
         if: ${{ env.RUN_TESTS == 'true' }}
         with:
           cache-on-failure: true
-          shared-key: "ci-rust-${{ runner.os }}"
 
       - name: Install nextest
         if: ${{ env.RUN_TESTS == 'true' }}
