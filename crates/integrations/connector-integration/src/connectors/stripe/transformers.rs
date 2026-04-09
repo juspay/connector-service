@@ -1898,7 +1898,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let payment_method_options = None;
 
         let (
-            mut payment_data,
+            payment_data,
             payment_method,
             billing_address,
             payment_method_types,
@@ -1967,10 +1967,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 setup_future_usage,
             )
         };
-
-        if payment_method_token.is_some() {
-            payment_data = None;
-        }
 
         let setup_mandate_details = item
             .request
@@ -4930,7 +4926,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let mut payment_method_options = None;
 
         let (
-            mut payment_data,
+            payment_data,
             payment_method,
             billing_address,
             payment_method_types,
@@ -5049,10 +5045,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     }
                 }
             };
-
-        if payment_method_token.is_some() {
-            payment_data = None
-        };
 
         let meta_data = get_transaction_metadata(item.request.metadata.clone(), order_id);
 

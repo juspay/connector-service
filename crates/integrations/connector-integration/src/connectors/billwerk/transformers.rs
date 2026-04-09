@@ -23,7 +23,7 @@ use domain_types::{
         SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, PaymentMethodToken, RawCardNumber},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -285,10 +285,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => {
                 return Err(IntegrationError::MissingRequiredField {
                     field_name: "payment_method_token",
-                    context: Default::default(),
+                    context: IntegrationErrorContext {
+                        suggested_action: Some("Ensure a payment method token is obtained via PaymentMethodService.Tokenize before initiating a Billwerk payment.".to_string()),
+                        doc_url: Some("https://optimize.billwerk.com/reference/create-session".to_string()),
+                        additional_context: Some("Billwerk requires a tokenized payment source (ct_ or ca_ prefixed token) in the source field. Raw card data is not accepted.".to_string()),
+                    },
                 }
                 .into())
-            }
             }
         };
         let recurring = if item.router_data.request.setup_future_usage.is_some() {
@@ -572,7 +575,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => {
                 return Err(IntegrationError::MissingRequiredField {
                     field_name: "payment_method_token",
-                    context: Default::default(),
+                    context: IntegrationErrorContext {
+                        suggested_action: Some("Ensure a payment method token is obtained via PaymentMethodService.Tokenize before initiating a Billwerk payment.".to_string()),
+                        doc_url: Some("https://optimize.billwerk.com/reference/create-session".to_string()),
+                        additional_context: Some("Billwerk requires a tokenized payment source (ct_ or ca_ prefixed token) in the source field. Raw card data is not accepted.".to_string()),
+                    },
                 }
                 .into())
             }

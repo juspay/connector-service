@@ -438,6 +438,7 @@ pub struct PaymentFlowData {
     pub access_token: Option<ServerAuthenticationTokenResponseData>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
+    pub connector_order_id: Option<String>,
     pub preprocessing_id: Option<String>,
     ///for switching between two different versions of the same connector
     pub connector_api_version: Option<String>,
