@@ -225,7 +225,7 @@ pub type FiservemeaRepeatPaymentResponse = FiservemeaPaymentsResponse;
 
 // The macro creates a FiservemeaRouterData type. We need to provide the use statement.
 use super::FiservemeaRouterData;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 
 // Implementations for FiservemeaRouterData - needed for the macro framework
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -729,7 +729,7 @@ pub struct PaymentToken {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
@@ -787,7 +787,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaPaymentsRes
 impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
@@ -841,7 +841,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
@@ -895,7 +895,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
@@ -920,7 +920,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
@@ -945,7 +945,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
