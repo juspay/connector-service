@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use crate::connectors::paysafe::PaysafeRouterData;
 use crate::types::ResponseRouterData;
 use domain_types::errors::ConnectorError;
-use domain_types::errors::IntegrationError;
+use domain_types::errors::{IntegrationError, IntegrationErrorContext};
 
 pub use super::requests::*;
 pub use super::responses::*;
@@ -538,7 +538,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
                 .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "payment_method_token",
-                    context: Default::default(),
+                    context: IntegrationErrorContext {
+                        suggested_action: Some("Obtain a Paysafe payment_handle_token via PaymentMethodService.Tokenize before authorizing.".to_string()),
+                        doc_url: Some("https://developer.paysafe.com/en/payments/payment-handles/create-payment-handle/".to_string()),
+                        additional_context: Some("Paysafe requires a payment handle token. Pass it via PaymentMethodData::PaymentMethodToken or connector_feature_data metadata.".to_string()),
+                    },
                 })?,
         };
 

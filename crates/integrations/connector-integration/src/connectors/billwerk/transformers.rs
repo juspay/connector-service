@@ -283,8 +283,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let source = match &item.router_data.request.payment_method_data {
             PaymentMethodData::PaymentMethodToken(t) => t.token.clone(),
             _ => {
-                return Err(IntegrationError::MissingRequiredField {
-                    field_name: "payment_method_token",
+                return Err(IntegrationError::NotSupported {
+                    message: "Billwerk authorize only accepts a tokenized payment source (ct_ or ca_ prefixed token). Raw card data is not accepted.".to_string(),
+                    connector: "billwerk",
                     context: IntegrationErrorContext {
                         suggested_action: Some("Ensure a payment method token is obtained via PaymentMethodService.Tokenize before initiating a Billwerk payment.".to_string()),
                         doc_url: Some("https://optimize.billwerk.com/reference/create-session".to_string()),
@@ -573,8 +574,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let source = match &item.router_data.request.payment_method_data {
             PaymentMethodData::PaymentMethodToken(t) => t.token.clone(),
             _ => {
-                return Err(IntegrationError::MissingRequiredField {
-                    field_name: "payment_method_token",
+                return Err(IntegrationError::NotSupported {
+                    message: "Billwerk authorize only accepts a tokenized payment source (ct_ or ca_ prefixed token). Raw card data is not accepted.".to_string(),
+                    connector: "billwerk",
                     context: IntegrationErrorContext {
                         suggested_action: Some("Ensure a payment method token is obtained via PaymentMethodService.Tokenize before initiating a Billwerk payment.".to_string()),
                         doc_url: Some("https://optimize.billwerk.com/reference/create-session".to_string()),

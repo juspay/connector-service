@@ -11,7 +11,7 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorAuthType, ConnectorSpecificConfig},
     router_data_v2::RouterDataV2,
@@ -367,9 +367,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // First try to get token from payment_method_token, otherwise create instrument inline
         let source = match &router_data.request.payment_method_data {
             PaymentMethodData::PaymentMethodToken(t) => t.token.peek().to_string(),
-            _ => return Err(IntegrationError::MissingRequiredField {
-                field_name: "payment_method_token (source) - Call CreateConnectorCustomer and PaymentMethodToken first",
-                context: Default::default(),
+            _ => return Err(IntegrationError::NotSupported {
+                message: "Finix authorize only accepts a tokenized payment instrument ID as source. Raw card/wallet/bank data cannot be passed directly.".to_string(),
+                connector: "finix",
+                context: IntegrationErrorContext {
+                    suggested_action: Some("Call CreateConnectorCustomer then PaymentMethodToken to obtain a Finix Payment Instrument ID (PI...) before authorizing.".to_string()),
+                    doc_url: Some("https://docs.finix.com/api/authorizations".to_string()),
+                    additional_context: Some("The Finix POST /authorizations `source` field only accepts a Payment Instrument ID. See https://docs.finix.com/api/payment-instruments to tokenize first.".to_string()),
+                },
             }.into()),
         };
 
