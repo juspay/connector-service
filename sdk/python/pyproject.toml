@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hyperswitch-prism"
-version = "0.0.1"
+version = "0.0.4"
 description = "Hyperswitch Payments SDK — Python client for connector integrations via UniFFI FFI"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -12,6 +12,11 @@ dependencies = [
     "httpx[http2]>=0.27.0",
     "protobuf>=6.31.1",
 ]
+
+[project.urls]
+Repository = "https://github.com/juspay/hyperswitch-prism"
+Issues = "https://github.com/juspay/hyperswitch-prism/issues"
+Homepage = "https://github.com/juspay/hyperswitch-prism#readme"
 
 [tool.setuptools.packages.find]
 where = ["src"]
