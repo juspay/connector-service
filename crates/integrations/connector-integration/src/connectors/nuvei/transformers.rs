@@ -1,24 +1,27 @@
-use common_utils::{pii, types::StringMajorUnit};
+use common_utils::{consts, pii, types::StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void},
     connector_types::{
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
+        NuveiClientAuthenticationResponse as NuveiClientAuthenticationResponseDomain,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors,
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankTransferData, CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorSpecificConfig,
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
-use error_stack::ResultExt;
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::NuveiRouterData;
 use crate::types::ResponseRouterData;
+use domain_types::errors::{ConnectorError, IntegrationError};
 
 // Auth Type
 #[derive(Debug, Clone)]
@@ -29,7 +32,7 @@ pub struct NuveiAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for NuveiAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -43,7 +46,10 @@ impl TryFrom<&ConnectorSpecificConfig> for NuveiAuthType {
                 merchant_site_id: merchant_site_id.clone(),
                 merchant_secret: merchant_secret.clone(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
 }
@@ -137,6 +143,8 @@ pub struct NuveiPaymentOption<
     pub card: Option<NuveiCard<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alternative_payment_method: Option<NuveiAlternativePaymentMethod>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_payment_option_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -427,24 +435,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<
         NuveiRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateSessionToken,
+                domain_types::connector_flow::ServerSessionAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::SessionTokenRequestData,
-                domain_types::connector_types::SessionTokenResponseData,
+                domain_types::connector_types::ServerSessionAuthenticationTokenRequestData,
+                domain_types::connector_types::ServerSessionAuthenticationTokenResponseData,
             >,
             T,
         >,
     > for NuveiSessionTokenRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: NuveiRouterData<
             RouterDataV2<
-                domain_types::connector_flow::CreateSessionToken,
+                domain_types::connector_flow::ServerSessionAuthenticationToken,
                 PaymentFlowData,
-                domain_types::connector_types::SessionTokenRequestData,
-                domain_types::connector_types::SessionTokenResponseData,
+                domain_types::connector_types::ServerSessionAuthenticationTokenRequestData,
+                domain_types::connector_types::ServerSessionAuthenticationTokenResponseData,
             >,
             T,
         >,
@@ -481,13 +489,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // Session Token Response Transformation
 impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
     for RouterDataV2<
-        domain_types::connector_flow::CreateSessionToken,
+        domain_types::connector_flow::ServerSessionAuthenticationToken,
         PaymentFlowData,
-        domain_types::connector_types::SessionTokenRequestData,
-        domain_types::connector_types::SessionTokenResponseData,
+        domain_types::connector_types::ServerSessionAuthenticationTokenRequestData,
+        domain_types::connector_types::ServerSessionAuthenticationTokenResponseData,
     >
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NuveiSessionTokenResponse, Self>,
@@ -524,17 +532,17 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
         }
 
         // Extract session token
-        let session_token =
-            response
-                .session_token
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "session_token",
-                })?;
+        let session_token = response.session_token.clone().ok_or_else(|| {
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("session_token missing in Nuvei response".to_string()),
+            ))
+        })?;
 
-        let session_response_data = domain_types::connector_types::SessionTokenResponseData {
-            session_token: session_token.clone(),
-        };
+        let session_response_data =
+            domain_types::connector_types::ServerSessionAuthenticationTokenResponseData {
+                session_token: session_token.clone(),
+            };
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -557,7 +565,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NuveiSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: NuveiRouterData<
@@ -581,7 +589,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             ResponseId::EncodedData(id) => id.clone(),
             ResponseId::NoResponseId => {
-                return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
+                return Err(IntegrationError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                }
+                .into());
             }
         };
 
@@ -619,7 +630,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NuveiPaymentRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: NuveiRouterData<
@@ -644,8 +655,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .resource_common_data
                     .get_optional_billing_full_name()
                     .or(router_data.request.customer_name.clone().map(Secret::new))
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                    .ok_or(IntegrationError::MissingRequiredField {
                         field_name: "billing_address.first_name and billing_address.last_name or customer_name",
+                context: Default::default()
                     })?;
 
                 NuveiPaymentOption {
@@ -657,6 +669,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         cvv: card_data.card_cvc.clone(),
                     }),
                     alternative_payment_method: None,
+                    user_payment_option_id: None,
                 }
             }
             PaymentMethodData::BankTransfer(bank_transfer_data) => {
@@ -665,29 +678,33 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         // For ACH Bank Transfer, Nuvei requires account_number and routing_number
                         // These should be provided in the request metadata as ACH details
                         let metadata = router_data.request.metadata.as_ref().ok_or(
-                            errors::ConnectorError::MissingRequiredField {
+                            IntegrationError::MissingRequiredField {
                                 field_name: "metadata for ACH details",
+                                context: Default::default(),
                             },
                         )?;
 
                         let ach_data = metadata.peek().get("ach").ok_or(
-                            errors::ConnectorError::MissingRequiredField {
+                            IntegrationError::MissingRequiredField {
                                 field_name: "ach in metadata",
+                                context: Default::default(),
                             },
                         )?;
 
                         let account_number = ach_data
                             .get("account_number")
                             .and_then(|v: &serde_json::Value| v.as_str())
-                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                            .ok_or(IntegrationError::MissingRequiredField {
                                 field_name: "account_number",
+                                context: Default::default(),
                             })?;
 
                         let routing_number = ach_data
                             .get("routing_number")
                             .and_then(|v: &serde_json::Value| v.as_str())
-                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                            .ok_or(IntegrationError::MissingRequiredField {
                                 field_name: "routing_number",
+                                context: Default::default(),
                             })?;
 
                         let sec_code = ach_data
@@ -703,21 +720,50 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 routing_number: Secret::new(routing_number.to_string()),
                                 sec_code,
                             }),
+                            user_payment_option_id: None,
                         }
                     }
                     other => {
-                        return Err(errors::ConnectorError::NotSupported {
+                        return Err(IntegrationError::NotSupported {
                             message: format!("{:?} is not supported for Nuvei", other),
                             connector: "nuvei",
+                            context: Default::default(),
                         }
                         .into())
                     }
                 }
             }
+            // TODO: Handle additional CardToken fields (card_holder_name, card_cvc) if needed by Nuvei
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: domain_types::errors::IntegrationErrorContext {
+                                doc_url: Some("https://docs.nuvei.com/api/main/indexMain_v1_0.html?json#payment".to_string()),
+                                additional_context: Some("Nuvei requires a userPaymentOptionId (payment_method_token) for token-based card payments. Ensure the token was obtained via a prior openOrder or createPayment flow.".to_string()),
+                                ..Default::default()
+                            },
+                        })
+                    })?;
+
+                NuveiPaymentOption {
+                    card: None,
+                    alternative_payment_method: None,
+                    user_payment_option_id: Some(token),
+                }
+            }
             _ => {
-                return Err(errors::ConnectorError::NotSupported {
+                return Err(IntegrationError::NotSupported {
                     message: "Payment method not supported".to_string(),
                     connector: "nuvei",
+                    context: Default::default(),
                 }
                 .into())
             }
@@ -729,15 +775,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .get_optional_billing_email()
             .or_else(|| router_data.request.email.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "billing_address.email",
+                context: Default::default(),
             })?;
 
         let country = router_data
             .resource_common_data
             .get_optional_billing_country()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "billing_address.country",
+                context: Default::default(),
             })?;
 
         // Get first and last name from billing (optional fields)
@@ -786,12 +834,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .browser_info
             .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "browser_info",
+                context: Default::default(),
             })?
             .ip_address
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "browser_info.ip_address",
+                context: Default::default(),
             })?;
 
         let device_details = NuveiDeviceDetails {
@@ -812,18 +862,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let currency = router_data.request.currency;
 
         // Extract session token from PaymentFlowData
-        // The CreateSessionToken flow runs before Authorize and populates this field
+        // The ServerSessionAuthenticationToken flow runs before Authorize and populates this field
         let session_token = router_data
             .resource_common_data
             .session_token
             .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "session_token",
+                context: Default::default(),
             })?;
 
         // Determine transaction type based on capture method
@@ -882,7 +935,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<NuveiPaymentResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -919,7 +972,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Map transaction status to attempt status
         let status = match response.transaction_status {
             Some(NuveiTransactionStatus::Approved) => {
-                if router_data.request.is_auto_capture()? {
+                if router_data.request.is_auto_capture() {
                     common_enums::AttemptStatus::Charged
                 } else {
                     common_enums::AttemptStatus::Authorized
@@ -946,7 +999,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .transaction_id
             .clone()
             .or(response.order_id.clone())
-            .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+            .ok_or_else(|| {
+                Report::new(ConnectorError::response_handling_failed_with_context(
+                    item.http_code,
+                    Some("missing transaction_id and order_id in Nuvei PSync response".to_string()),
+                ))
+            })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
@@ -979,7 +1037,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NuveiCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: NuveiRouterData<
@@ -1007,7 +1065,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             ResponseId::EncodedData(id) => id.clone(),
             ResponseId::NoResponseId => {
-                return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
+                return Err(IntegrationError::MissingConnectorTransactionID {
+                    context: Default::default(),
+                }
+                .into());
             }
         };
 
@@ -1019,7 +1080,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let currency = router_data.request.currency;
 
@@ -1053,7 +1116,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1091,11 +1154,12 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         }
 
         // Extract transaction details
-        let transaction_details = response.transaction_details.as_ref().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "transaction_details",
-            },
-        )?;
+        let transaction_details = response.transaction_details.as_ref().ok_or_else(|| {
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_details missing in Nuvei PSync response".to_string()),
+            ))
+        })?;
 
         // Map transaction status to attempt status
         let status = match transaction_details.transaction_status {
@@ -1125,10 +1189,13 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         };
 
         // Get connector transaction ID from transaction_details
-        let connector_transaction_id = transaction_details
-            .transaction_id
-            .clone()
-            .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let connector_transaction_id =
+            transaction_details.transaction_id.clone().ok_or_else(|| {
+                Report::new(ConnectorError::response_handling_failed_with_context(
+                    item.http_code,
+                    Some("transaction_id missing in Nuvei PSync transaction_details".to_string()),
+                ))
+            })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
@@ -1156,7 +1223,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
 impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1207,10 +1274,12 @@ impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
         };
 
         // Get connector transaction ID
-        let connector_transaction_id = response
-            .transaction_id
-            .clone()
-            .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let connector_transaction_id = response.transaction_id.clone().ok_or_else(|| {
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_id missing in Nuvei capture response".to_string()),
+            ))
+        })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
@@ -1240,7 +1309,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         NuveiRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for NuveiRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: NuveiRouterData<
@@ -1274,7 +1343,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 common_utils::types::MinorUnit::new(router_data.request.refund_amount),
                 router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         let currency = router_data.request.currency;
 
@@ -1313,7 +1384,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NuveiRefundSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: NuveiRouterData<
@@ -1338,7 +1409,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction_id = router_data.request.connector_transaction_id.clone();
 
         if transaction_id.is_empty() {
-            return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
+            return Err(IntegrationError::MissingConnectorTransactionID {
+                context: Default::default(),
+            }
+            .into());
         }
 
         // Generate checksum for getTransactionDetails: merchantId + merchantSiteId + transactionId + clientUniqueId + timeStamp + merchantSecretKey
@@ -1365,7 +1439,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1416,10 +1490,12 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
         };
 
         // Get connector refund ID
-        let connector_refund_id = response
-            .transaction_id
-            .clone()
-            .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let connector_refund_id = response.transaction_id.clone().ok_or_else(|| {
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_id missing in Nuvei refund response".to_string()),
+            ))
+        })?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id,
@@ -1442,7 +1518,7 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<NuveiRefundSyncResponse, Self>,
@@ -1495,10 +1571,12 @@ impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
         };
 
         // Get connector refund ID
-        let connector_refund_id = response
-            .transaction_id
-            .clone()
-            .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let connector_refund_id = response.transaction_id.clone().ok_or_else(|| {
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_id missing in Nuvei refund sync response".to_string()),
+            ))
+        })?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id,
@@ -1526,7 +1604,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NuveiVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<IntegrationError>;
 
     fn try_from(
         item: NuveiRouterData<
@@ -1558,23 +1636,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             router_data
                 .request
                 .amount
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "amount",
+                    context: Default::default(),
                 })?;
 
         let currency =
             router_data
                 .request
                 .currency
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "currency",
+                    context: Default::default(),
                 })?;
 
         let amount = item
             .connector
             .amount_converter_webhooks
             .convert(minor_amount, currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + "" + "" + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -1608,7 +1690,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NuveiVoidResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1659,10 +1741,12 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
         };
 
         // Get connector transaction ID
-        let connector_transaction_id = response
-            .transaction_id
-            .clone()
-            .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let connector_transaction_id = response.transaction_id.clone().ok_or_else(|| {
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("transaction_id missing in Nuvei void response".to_string()),
+            ))
+        })?;
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
@@ -1682,6 +1766,158 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
             },
             response: Ok(payments_response_data),
             ..router_data.clone()
+        })
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Creates a Nuvei session token for client-side SDK initialization.
+/// Uses the same /getSessionToken.do endpoint as ServerSessionAuthenticationToken
+/// but returns the response in the ClientAuthenticationToken format.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiClientAuthRequest {
+    pub merchant_id: Secret<String>,
+    pub merchant_site_id: Secret<String>,
+    pub client_request_id: String,
+    pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
+    pub checksum: String,
+}
+
+/// Nuvei session token response for ClientAuthenticationToken flow.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiClientAuthResponse {
+    pub session_token: Option<String>,
+    pub internal_request_id: Option<i64>,
+    pub status: NuveiPaymentStatus,
+    pub err_code: Option<i32>,
+    pub reason: Option<String>,
+    pub merchant_id: Option<String>,
+    pub merchant_site_id: Option<String>,
+    pub version: Option<String>,
+    pub client_request_id: Option<String>,
+}
+
+// ClientAuthenticationToken Request Transformation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        NuveiRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NuveiClientAuthRequest
+{
+    type Error = Report<IntegrationError>;
+
+    fn try_from(
+        item: NuveiRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Extract auth data
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
+
+        let time_stamp = NuveiAuthType::get_timestamp();
+        let client_request_id = router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        // Generate checksum for getSessionToken: merchantId + merchantSiteId + clientRequestId + timeStamp + merchantSecretKey
+        let checksum = auth.generate_checksum(&[
+            auth.merchant_id.peek(),
+            auth.merchant_site_id.peek(),
+            &client_request_id,
+            &time_stamp.to_string(),
+        ]);
+
+        Ok(Self {
+            merchant_id: auth.merchant_id,
+            merchant_site_id: auth.merchant_site_id,
+            client_request_id,
+            time_stamp,
+            checksum,
+        })
+    }
+}
+
+// ClientAuthenticationToken Response Transformation
+impl TryFrom<ResponseRouterData<NuveiClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<NuveiClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        // Check if the overall request status is ERROR
+        if matches!(response.status, NuveiPaymentStatus::Error) {
+            let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
+            let error_message = response
+                .reason
+                .clone()
+                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
+
+            return Ok(Self {
+                response: Err(domain_types::router_data::ErrorResponse {
+                    code: error_code,
+                    message: error_message.clone(),
+                    reason: Some(error_message),
+                    status_code: item.http_code,
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..item.router_data
+            });
+        }
+
+        // Extract session token
+        let session_token = response.session_token.clone().ok_or_else(|| {
+            Report::new(ConnectorError::response_handling_failed_with_context(
+                item.http_code,
+                Some("session_token missing in Nuvei response".to_string()),
+            ))
+        })?;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Nuvei(
+                NuveiClientAuthenticationResponseDomain {
+                    session_token: Secret::new(session_token),
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
         })
     }
 }
