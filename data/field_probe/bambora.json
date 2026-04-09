@@ -443,13 +443,13 @@
           }
         },
         "sample": {
-          "url": "https://api.na.bambora.com/scripts/tokenization/tokens",
-          "method": "Post",
+          "url": "https://api.na.bambora.com/v1/payments",
+          "method": "Get",
           "headers": {
-            "content-type": "application/json",
+            "authorization": "Passcode cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
             "via": "HyperSwitch"
           },
-          "body": "{\"number\":\"4030000010001234\",\"expiry_month\":\"12\",\"expiry_year\":\"30\",\"cvd\":\"123\"}"
+          "body": null
         }
       }
     },
