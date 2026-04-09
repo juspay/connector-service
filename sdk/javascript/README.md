@@ -1,10 +1,10 @@
-# hyperswitch-prism
+# hs-paylib
 
 **Universal Connector Service — Node.js SDK**
 
 A high-performance, type-safe Node.js SDK for payment processing through the Universal Connector Service. Connect to 70+ payment processors (Stripe, Adyen, PayPal, Cybersource, and more) through a single, unified API.
 
-[![npm version](https://badge.fury.io/js/hyperswitch-prism.svg)](https://www.npmjs.com/package/hyperswitch-prism)
+[![npm version](https://badge.fury.io/js/hs-paylib.svg)](https://www.npmjs.com/package/hs-paylib)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -92,7 +92,7 @@ Your Node.js App
 ## Installation
 
 ```bash
-npm install hyperswitch-prism
+npm install hs-paylib
 ```
 
 > **Important:** The package name on npm is `hyperswitch-prism`. All imports must use `hyperswitch-prism`, not `hyperswitch-prism`.
@@ -106,7 +106,7 @@ npm install hyperswitch-prism
 ## Quick Start
 
 ```typescript
-import { PaymentClient, types } from 'hyperswitch-prism';
+import { PaymentClient, types } from 'hs-paylib';
 
 const config: types.ConnectorConfig = {
   connectorConfig: {
