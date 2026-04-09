@@ -1,5 +1,6 @@
 use std::{collections::HashMap, str::FromStr, sync::RwLock, time::Duration};
 
+use base64::Engine;
 use common_enums::ApiClientError;
 #[cfg(feature = "injector-client")]
 use common_utils::{
@@ -27,10 +28,9 @@ use domain_types::{
     },
     IntegrationError,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 #[cfg(feature = "injector-client")]
 use injector;
-use base64::Engine;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 /// Test context for mock server integration
@@ -114,9 +114,9 @@ use common_utils::events::{Event, EventConfig, FlowName};
 // TokenData is now imported from hyperswitch_injector
 use common_utils::{consts, emit_event_with_config};
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::Maskable;
 #[cfg(feature = "injector-client")]
-use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface};
+use hyperswitch_masking::ErasedMaskSerialize;
+use hyperswitch_masking::Maskable;
 #[cfg(feature = "injector-client")]
 use injector::{injector_core, HttpMethod, TokenData};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
@@ -891,18 +891,14 @@ pub fn create_client(
                 .fold(client_builder, |client_builder, certificate| {
                     client_builder.add_root_certificate(certificate)
                 });
-            client_builder  
+            client_builder
                 .identity(identity)
                 .use_rustls_tls()
                 .build()
                 .change_context(ApiClientError::ClientConstructionFailed)
-                .attach_printable(
-                    "Failed to construct client with certificate and certificate key",
-                )
+                .attach_printable("Failed to construct client with certificate and certificate key")
         }
-        _ => {
-            get_base_client(proxy_config, should_bypass_proxy, test_mode)
-        }
+        _ => get_base_client(proxy_config, should_bypass_proxy, test_mode),
     }
 }
 
