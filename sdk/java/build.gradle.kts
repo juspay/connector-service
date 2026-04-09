@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "io.hyperswitch"
-version = "0.0.2"
+version = "0.0.3"
 
 repositories {
     mavenCentral()
@@ -49,8 +49,7 @@ tasks.register<JavaExec>("runClientSanity") {
     dependsOn("compileSanityKotlin")
 }
 
-// Signing configuration - must be configured BEFORE centralPublisher
-// Fail fast if signing credentials are missing when publishing
+// Signing configuration
 signing {
     val signingKey = System.getenv("GPG_SIGNING_KEY")
     val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD")
@@ -67,6 +66,14 @@ signing {
         }
     } else {
         useInMemoryPgpKeys(signingKey, signingPassword)
+    }
+}
+
+// The central-publisher plugin creates publications in afterEvaluate,
+// so we must defer signing until publications are available.
+afterEvaluate {
+    signing {
+        sign(publishing.publications)
     }
 }
 
@@ -103,7 +110,7 @@ if (System.getenv("CENTRAL_TOKEN_USERNAME") != null) {
         }
 
         publishing {
-            autoPublish = false
+            autoPublish = true
             aggregation = true
             dryRun = false
         }
