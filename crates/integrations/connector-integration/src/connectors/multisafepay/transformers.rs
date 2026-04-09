@@ -1,13 +1,15 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::MinorUnit;
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync, RepeatPayment, SetupMandate},
+    connector_flow::{Authorize, ClientAuthenticationToken, PSync, RSync},
     connector_types::{
-        self as connector_types, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
+        MultisafepayClientAuthenticationResponse as MultisafepayClientAuthenticationResponseDomain,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -138,7 +140,8 @@ fn get_order_type_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Bank redirect payment method not supported")?,
@@ -262,7 +265,8 @@ fn get_gateway_from_payment_method<T: PaymentMethodDataTypes>(
             | BankRedirectData::OnlineBankingFpx { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
-            | BankRedirectData::OpenBanking {} => Err(IntegrationError::not_implemented(
+            | BankRedirectData::OpenBanking {}
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
                 crate::utils::get_unimplemented_payment_method_error_message("multisafepay"),
             ))
             .attach_printable("Bank redirect payment method not supported")?,
@@ -876,7 +880,7 @@ where
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepayPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MultisafepayPaymentsResponse, Self>,
@@ -919,7 +923,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepayPaymentsR
 impl TryFrom<ResponseRouterData<MultisafepayPaymentsResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MultisafepayPaymentsResponse, Self>,
@@ -1035,7 +1039,7 @@ pub struct MultisafepayRefundData {
 impl<F> TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MultisafepayRefundResponse, Self>,
@@ -1061,7 +1065,7 @@ impl<F> TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<MultisafepayRefundResponse, Self>,
@@ -1083,325 +1087,49 @@ impl TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
     }
 }
 
-// ===== RECURRING MODEL ENUM =====
+// ===== CLIENT AUTHENTICATION TOKEN FLOW STRUCTURES =====
 
-/// MultiSafepay recurring model types
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum RecurringModel {
-    CardOnFile,
-    Subscription,
-    Unscheduled,
+/// Response from the /auth/api_token endpoint for client-side Payment Components.
+/// The API token is used to encrypt sensitive payment details from a customer's device.
+/// Tokens are active for 600 seconds.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MultisafepayClientAuthResponse {
+    pub success: bool,
+    pub data: MultisafepayClientAuthData,
 }
 
-// ===== SETUP MANDATE (CIT INITIAL) =====
-
-/// SetupMandate request - initial CIT transaction that tokenizes card for recurring
-#[derive(Debug, Serialize)]
-pub struct MultisafepaySetupMandateRequest<T: PaymentMethodDataTypes> {
-    #[serde(rename = "type")]
-    pub order_type: Type,
-    pub order_id: String,
-    pub gateway: Gateway,
-    pub currency: common_enums::Currency,
-    pub amount: MinorUnit,
-    pub description: String,
-    pub payment_options: PaymentOptions,
-    pub customer: CustomerInfo,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub gateway_info: Option<MultisafepayGatewayInfo<T>>,
-    pub recurring_model: RecurringModel,
-    pub recurring_id: String,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MultisafepayClientAuthData {
+    pub api_token: Secret<String>,
 }
 
-/// SetupMandate response reuses the standard payments response
-pub type MultisafepaySetupMandateResponse = MultisafepayPaymentsResponse;
-
-// TryFrom for SetupMandate request - wrapper type from macro
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        crate::connectors::multisafepay::MultisafepayRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for MultisafepaySetupMandateRequest<T>
-{
-    type Error = error_stack::Report<IntegrationError>;
-
-    fn try_from(
-        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        use error_stack::ResultExt;
-
-        let item = &wrapper.router_data;
-        let order_type = get_order_type_from_payment_method(&item.request.payment_method_data)?;
-        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)?;
-        let gateway_info = build_gateway_info(&order_type, &item.request.payment_method_data)?;
-
-        let recurring_id = item
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-
-        let customer = CustomerInfo {
-            locale: None,
-            ip_address: None,
-            reference: Some(recurring_id.clone()),
-            email: item
-                .request
-                .email
-                .clone()
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "email",
-                    context: Default::default(),
-                })
-                .attach_printable("Missing email for setup mandate transaction")?
-                .expose()
-                .expose(),
-        };
-
-        let payment_options = PaymentOptions {
-            redirect_url: item
-                .request
-                .router_return_url
-                .clone()
-                .unwrap_or_else(|| "https://example.com/return".to_string()),
-            cancel_url: item
-                .request
-                .router_return_url
-                .clone()
-                .unwrap_or_else(|| "https://example.com/cancel".to_string()),
-        };
-
-        // Use zero amount for mandate setup if no amount specified
-        let amount = item.request.minor_amount.unwrap_or(MinorUnit::new(0));
-
-        let description = item
-            .resource_common_data
-            .get_description()
-            .unwrap_or_else(|_| "Setup recurring payment".to_string());
-
-        Ok(Self {
-            order_type,
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            gateway,
-            currency: item.request.currency,
-            amount,
-            description,
-            payment_options,
-            customer,
-            gateway_info,
-            recurring_model: RecurringModel::Unscheduled,
-            recurring_id,
-        })
-    }
-}
-
-// SetupMandate response transformer
-impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepaySetupMandateResponse, Self>>
+impl TryFrom<ResponseRouterData<MultisafepayClientAuthResponse, Self>>
     for RouterDataV2<
-        SetupMandate,
+        ClientAuthenticationToken,
         PaymentFlowData,
-        SetupMandateRequestData<T>,
+        ClientAuthenticationTokenRequestData,
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
-
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<MultisafepaySetupMandateResponse, Self>,
+        item: ResponseRouterData<MultisafepayClientAuthResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let response_data = &item.response.data;
-        let status = response_data.status.clone().into();
+        let response = item.response;
 
-        let redirection_data = response_data.payment_url.as_ref().map(|url| {
-            Box::new(domain_types::router_response_types::RedirectForm::Uri { uri: url.clone() })
-        });
-
-        let transaction_id = response_data
-            .transaction_id
-            .clone()
-            .or_else(|| response_data.order_id.clone())
-            .unwrap_or_else(|| "unknown".to_string());
-
-        // The recurring_id (customer reference) is the mandate reference for MultiSafepay
-        // It's used to identify the stored token for subsequent MIT payments
-        let mandate_reference = response_data.order_id.as_ref().map(|order_id| {
-            Box::new(connector_types::MandateReference {
-                connector_mandate_id: Some(order_id.clone()),
-                payment_method_id: None,
-                connector_mandate_request_reference_id: None,
-            })
-        });
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Multisafepay(
+                MultisafepayClientAuthenticationResponseDomain {
+                    api_token: response.data.api_token,
+                },
+            ),
+        ));
 
         Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(transaction_id),
-                redirection_data,
-                mandate_reference,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: response_data.order_id.clone(),
-                incremental_authorization_allowed: None,
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
                 status_code: item.http_code,
             }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
-    }
-}
-
-// ===== REPEAT PAYMENT (MIT SUBSEQUENT) =====
-
-/// RepeatPayment request - MIT subsequent transaction using stored token
-#[derive(Debug, Serialize)]
-pub struct MultisafepayRepeatPaymentRequest {
-    #[serde(rename = "type")]
-    pub order_type: Type,
-    pub order_id: String,
-    pub gateway: Gateway,
-    pub currency: common_enums::Currency,
-    pub amount: MinorUnit,
-    pub description: String,
-    pub recurring_model: RecurringModel,
-    pub recurring_id: String,
-    pub customer: CustomerInfo,
-}
-
-/// RepeatPayment response reuses the standard payments response
-pub type MultisafepayRepeatPaymentResponse = MultisafepayPaymentsResponse;
-
-// TryFrom for RepeatPayment request - wrapper type from macro
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        crate::connectors::multisafepay::MultisafepayRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for MultisafepayRepeatPaymentRequest
-{
-    type Error = error_stack::Report<IntegrationError>;
-
-    fn try_from(
-        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        use error_stack::ResultExt;
-
-        let item = &wrapper.router_data;
-
-        // Extract the connector_mandate_id which holds the recurring_id from SetupMandate
-        let recurring_id = item
-            .request
-            .connector_mandate_id()
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "connector_mandate_id (recurring_id)",
-                context: Default::default(),
-            })
-            .attach_printable(
-                "connector_mandate_id is required for MIT subsequent payment on MultiSafepay",
-            )?;
-
-        // Determine gateway from payment method data
-        let gateway = get_gateway_from_payment_method(&item.request.payment_method_data)?;
-
-        let customer = CustomerInfo {
-            locale: None,
-            ip_address: None,
-            reference: Some(recurring_id.clone()),
-            email: item
-                .request
-                .get_optional_email()
-                .map(|e| e.expose().expose())
-                .unwrap_or_else(|| "noreply@example.com".to_string()),
-        };
-
-        let description = item
-            .resource_common_data
-            .get_description()
-            .unwrap_or_else(|_| "Recurring payment".to_string());
-
-        Ok(Self {
-            order_type: Type::Direct,
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            gateway,
-            currency: item.request.currency,
-            amount: item.request.minor_amount,
-            description,
-            recurring_model: RecurringModel::Unscheduled,
-            recurring_id,
-            customer,
-        })
-    }
-}
-
-// RepeatPayment response transformer
-impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepayRepeatPaymentResponse, Self>>
-    for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
-
-    fn try_from(
-        item: ResponseRouterData<MultisafepayRepeatPaymentResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let response_data = &item.response.data;
-        let status = response_data.status.clone().into();
-
-        let transaction_id = response_data
-            .transaction_id
-            .clone()
-            .or_else(|| response_data.order_id.clone())
-            .unwrap_or_else(|| "unknown".to_string());
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(transaction_id),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: response_data.order_id.clone(),
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
             ..item.router_data
         })
     }

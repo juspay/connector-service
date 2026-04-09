@@ -5,7 +5,7 @@ use crate::{
 };
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{request::MultipartData, types::StringMajorUnit};
-use domain_types::errors::{ConnectorResponseTransformationError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -471,7 +471,7 @@ pub type HipayRSyncResponse = HipayRefundSyncResponse;
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<HipayAuthorizeResponse, Self>,
@@ -628,7 +628,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayTokenResponse, S
         PaymentMethodTokenResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<HipayTokenResponse, Self>) -> Result<Self, Self::Error> {
         use hyperswitch_masking::ExposeInterface;
@@ -686,7 +686,7 @@ fn get_sync_status(state: i32) -> AttemptStatus {
 impl TryFrom<ResponseRouterData<HipayPSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<HipayPSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Handle sync response - could be Response or Error variant
@@ -791,7 +791,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<HipayCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<HipayCaptureResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
@@ -885,7 +885,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<HipayRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<HipayRefundResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayRefundStatus enum directly to RefundStatus using From trait
@@ -907,7 +907,7 @@ impl TryFrom<ResponseRouterData<HipayRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<HipayRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<HipayRSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Map numeric status codes to RefundStatus (matching Hyperswitch)
@@ -973,7 +973,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<HipayVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<HipayVoidResponse, Self>) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
