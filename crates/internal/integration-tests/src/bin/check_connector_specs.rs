@@ -412,7 +412,7 @@ fn main() {
                 let formatted =
                     serde_json::to_string_pretty(&output).expect("failed to serialize specs.json");
                 fs::write(&specs_path, format!("{formatted}\n"))
-                    .unwrap_or_else(|e| panic!("failed to write {}: {e}", specs_path.display()));
+                    .expect("failed to write specs.json");
 
                 for suite in &added {
                     println!("       ADDED   {connector:<30}  suite={suite}");
