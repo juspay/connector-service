@@ -235,7 +235,7 @@ publish:
 		echo "  export CENTRAL_TOKEN_PASSWORD=your_token_password"; \
 		exit 1; \
 	fi
-	@if [ -z "$(GPG_SIGNING_KEY)" ] || [ -z "$(GPG_SIGNING_KEY_PASSWORD)" ]; then \
+	@if [ -z "$${GPG_SIGNING_KEY}" ] || [ -z "$(GPG_SIGNING_KEY_PASSWORD)" ]; then \
 		echo "Error: GPG_SIGNING_KEY and/or GPG_SIGNING_KEY_PASSWORD not set"; \
 		exit 1; \
 	fi
