@@ -3980,7 +3980,7 @@ pub fn generate_create_order_response(
                 .transpose()?;
 
             PaymentServiceCreateOrderResponse {
-                connector_order_id,
+                connector_order_id: Some(connector_order_id),
                 status: grpc_status.into(),
                 error: None,
                 status_code: 200,

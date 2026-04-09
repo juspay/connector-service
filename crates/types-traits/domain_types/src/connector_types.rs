@@ -1491,7 +1491,7 @@ pub struct PaymentCreateOrderResponse {
     /// Merchant's order ID from the original request
     pub merchant_order_id: Option<String>,
     /// Connector-generated order ID  
-    pub connector_order_id: Option<String>,
+    pub connector_order_id: String,
     /// Optional SDK session data for wallet flows (Apple Pay, Google Pay) and other SDK types
     pub session_data: Option<ClientAuthenticationTokenData>,
 }
