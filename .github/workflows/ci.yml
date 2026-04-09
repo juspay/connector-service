@@ -21,25 +21,21 @@ permissions:
 # Job dependency graph:
 #
 #   changes ─┬─ typos           (always, ~8s)
-#            ├─ formatting      (if *.rs changed, ~18s)
-#            │   ├─ check       (if rust changed, ~11min — clippy + schema)
-#            │   │   └─ test    (if rust changed, ~3min — reuses check cache)
-#            │   └─ sdk-test    (if sdk/rust-core/proto changed, ~11min)
-#            └─ docs-update     (if connector/docs code changed, PR only, ~9min)
+#            ├─ auto-fix        (PR only: format + docs → bot commit if needed)
+#            │   ├─ check       (if rust changed AND auto-fix didn't push)
+#            │   │   └─ test    (reuses check cache, ~3min)
+#            │   └─ sdk-test    (if sdk/rust-core/proto changed)
 #            └─ ci-gate         (always — single required status check)
 #
-# Key optimization: `test` runs AFTER `check` and shares its compilation
-# cache via shared-key. Since test compilation is 13min and test execution
-# is only 1.2min, reusing check's cache cuts test from 14min to ~3min.
-# For connector-only PRs, sdk-test is skipped entirely.
+# Auto-fix runs first on PRs: formats code + generates docs. If changes are
+# found, it commits them and the remaining jobs SKIP (a new CI run triggers
+# on the bot commit with clean code). If no changes needed, checks proceed.
+# For push/merge_group events, auto-fix is skipped and checks run directly.
 # ─────────────────────────────────────────────────────────────────────────────
 
 jobs:
 
   # ── Change Detection ──────────────────────────────────────────────────────
-  # Determines which file groups changed so downstream jobs can be skipped.
-  # On push-to-main, dorny/paths-filter compares against the previous commit,
-  # so only affected jobs run even on merge.
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
@@ -59,7 +55,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Need full history for accurate diff on push events
           fetch-depth: 0
 
       - name: Detect changed paths
@@ -134,38 +129,110 @@ jobs:
         with:
           config: ./.typos.toml
 
-  formatting:
-    name: Check formatting
+  # ── Auto-fix (formatting + docs) ─────────────────────────────────────────
+  # On PRs: auto-format code and regenerate docs, commit if changes found.
+  # If a commit is pushed, remaining jobs skip — the new push triggers fresh CI.
+  # On push/merge_group: not applicable (code should already be clean from PR).
+  auto-fix:
+    name: Auto-fix (format + docs)
     needs: changes
-    # Only check formatting when Rust source files or CI config changed
-    if: needs.changes.outputs.any-rs == 'true' || needs.changes.outputs.ci == 'true'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login != 'github-actions[bot]' &&
+      (needs.changes.outputs.any-rs == 'true' ||
+       needs.changes.outputs.docs-trigger == 'true' ||
+       needs.changes.outputs.ci == 'true')
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
+    outputs:
+      pushed: ${{ steps.commit.outputs.pushed }}
     steps:
-      - name: Checkout repository
+      - name: Checkout PR branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Rust
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Rust (nightly for fmt)
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
           components: rustfmt
 
-      - name: Check formatting
-        shell: bash
-        run: cargo +nightly fmt --all --check
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: Swatinem/rust-cache@v2.7.8
+
+      - name: Setup Python
+        if: needs.changes.outputs.docs-trigger == 'true' || needs.changes.outputs.ci == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        if: needs.changes.outputs.docs-trigger == 'true' || needs.changes.outputs.ci == 'true'
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install jinja2 google-cloud-vision python-dotenv requests types-requests grpcio-tools
+
+      - name: Format Rust code
+        run: cargo +nightly fmt --all
+
+      - name: Generate documentation
+        if: needs.changes.outputs.docs-trigger == 'true' || needs.changes.outputs.ci == 'true'
+        run: |
+          echo "Generating connector documentation..."
+          make docs CONNECTORS=all 2>&1 | tail -20
+
+      - name: Check for changes and commit
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Collect all auto-fixable changes
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "✅ No auto-fix changes needed"
+            echo "pushed=false" >> $GITHUB_OUTPUT
+          else
+            echo "📝 Auto-fix changes detected:"
+            git diff --cached --stat
+
+            git commit -m "chore: auto-fix formatting and generated code
+
+          Auto-applied by CI:
+          - cargo +nightly fmt --all
+          - make docs CONNECTORS=all (if applicable)
+
+          This commit was automatically generated by GitHub Actions."
+
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+            echo "✅ Auto-fix committed — new CI run will trigger on clean code"
+            echo "pushed=true" >> $GITHUB_OUTPUT
+          fi
 
   # ── Compilation & Lint ────────────────────────────────────────────────────
 
   check:
     name: Compilation Check
-    needs: [changes, formatting]
-    # Run if rust/proto/CI files changed AND formatting didn't fail.
-    # 'always()' is needed because `formatting` may be skipped (no .rs changes)
-    # and skipped dependencies cause downstream jobs to be skipped by default.
+    needs: [changes, auto-fix]
+    # Run if rust/proto/CI files changed AND auto-fix didn't push new code.
+    # If auto-fix pushed, skip — a new CI run is coming with clean code.
+    # 'always()' handles skipped auto-fix (non-PR events).
     if: >-
       always() &&
-      needs.formatting.result != 'failure' &&
+      needs.auto-fix.outputs.pushed != 'true' &&
       (needs.changes.outputs.any-rust == 'true' ||
        needs.changes.outputs.proto == 'true' ||
        needs.changes.outputs.ci == 'true')
@@ -178,8 +245,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # NOTE: Nightly Rust removed — this job only runs clippy (stable).
-      # Formatting is handled by the dedicated `formatting` job.
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@master
         with:
@@ -211,13 +276,11 @@ jobs:
 
   test:
     name: Run Tests
-    needs: [changes, formatting, check]
+    needs: [changes, auto-fix, check]
     # Runs AFTER check to reuse its compilation cache (shared-key).
-    # Test compilation is 13min vs 1.2min test execution — cache reuse is critical.
-    # With warm cache from check: ~3min instead of ~14min.
     if: >-
       always() &&
-      needs.formatting.result != 'failure' &&
+      needs.auto-fix.outputs.pushed != 'true' &&
       needs.check.result == 'success' &&
       (needs.changes.outputs.any-rust == 'true' ||
        needs.changes.outputs.proto == 'true' ||
@@ -284,7 +347,6 @@ jobs:
         if: ${{ env.RUN_TESTS == 'true' }}
         shell: bash
         run: |
-          # Only set the environment variable if the credentials file exists
           if [[ -f ".github/test/creds.json" ]]; then
             echo "CONNECTOR_AUTH_FILE_PATH=${{ github.workspace }}/.github/test/creds.json" >> $GITHUB_ENV
             echo "Connector credentials available for tests"
@@ -295,8 +357,6 @@ jobs:
       - name: Run Tests
         if: ${{ env.RUN_TESTS == 'true' }}
         shell: bash
-        # Schema tests excluded — already run in `check` job.
-        # Connector-only PRs: scope tests to changed connectors for faster feedback.
         run: |
           CONNECTOR_NAMES="${{ needs.changes.outputs.connector-names }}"
           CORE_CHANGED="${{ needs.changes.outputs.rust-core }}"
@@ -306,7 +366,6 @@ jobs:
           SCHEMA_EXCLUDE='not test(=all_supported_scenarios_match_proto_schema_for_all_connectors)'
 
           if [[ -n "$CONNECTOR_NAMES" && "$CORE_CHANGED" != "true" && "$PROTO_CHANGED" != "true" && "$CI_CHANGED" != "true" ]]; then
-            # Connector-only PR: scope tests to changed connectors
             FILTER=""
             IFS=',' read -ra CONNECTORS <<< "$CONNECTOR_NAMES"
             for c in "${CONNECTORS[@]}"; do
@@ -330,13 +389,12 @@ jobs:
 
   sdk-test:
     name: SDK Tests
-    needs: [changes, formatting]
+    needs: [changes, auto-fix]
     # Run when SDK, core Rust (not just connectors), proto, or CI files changed.
-    # SDK depends on FFI which depends on core crates, but NOT on individual
-    # connector implementations. Connector-only PRs skip this entirely.
+    # Connector-only PRs skip this entirely. Also skip if auto-fix pushed.
     if: >-
       always() &&
-      needs.formatting.result != 'failure' &&
+      needs.auto-fix.outputs.pushed != 'true' &&
       (needs.changes.outputs.sdk == 'true' ||
        needs.changes.outputs.rust-core == 'true' ||
        needs.changes.outputs.proto == 'true' ||
@@ -345,9 +403,7 @@ jobs:
 
     env:
       RUSTFLAGS: "-D warnings"
-      PROFILE: dev  # Use debug profile instead of release (5x faster compilation)
-      # CI should use CARGO_INCREMENTAL=0 for smaller, more cacheable artifacts.
-      # Swatinem/rust-cache docs recommend 0 for CI (better cache hit rate).
+      PROFILE: dev
       CARGO_INCREMENTAL: 0
 
     steps:
@@ -431,14 +487,12 @@ jobs:
 
       - name: Build FFI library once
         run: |
-          # Determine target triple (matches PLATFORM detection in common.mk)
           ARCH=$(uname -m)
           if [ "$ARCH" = "aarch64" ]; then
             PLATFORM="aarch64-unknown-linux-gnu"
           else
             PLATFORM="x86_64-unknown-linux-gnu"
           fi
-          # PROFILE=dev maps to 'debug' output directory in Cargo
           PROFILE_DIR="debug"
           LIB_PATH="target/${PLATFORM}/${PROFILE_DIR}/libconnector_service_ffi.so"
           if [ ! -f "$LIB_PATH" ]; then
@@ -461,8 +515,6 @@ jobs:
           else
             echo "Running SDK tests without connector credentials (dry-run mode)"
           fi
-          # Skip FFI rebuild during test - already built above
-          # Note: flows.json must be generated before running tests
           make -C sdk test FFI_SKIP_BUILD=1
 
       - name: Verify SDK code regeneration produces no changes
@@ -474,128 +526,39 @@ jobs:
         run: |
           git diff --exit-code || (echo "ERROR: Generated SDK code is out of date. Run 'make -C sdk generate' and commit the changes." && exit 1)
 
-  # ── Docs Update ───────────────────────────────────────────────────────────
-
-  docs-update:
-    name: Auto-update Connector Documentation
-    needs: changes
-    runs-on: ubuntu-latest
-    # Only run on PRs when connector/docs files changed, for human authors
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.user.login != 'github-actions[bot]' &&
-      (needs.changes.outputs.docs-trigger == 'true' ||
-       needs.changes.outputs.ci == 'true')
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # Checkout the PR branch so we can commit to it
-          ref: ${{ github.event.pull_request.head.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Rust (stable)
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Install Rust (nightly for fmt)
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
-          components: rustfmt
-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: Swatinem/rust-cache@v2.7.8
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          pip3 install jinja2 google-cloud-vision python-dotenv requests types-requests grpcio-tools
-
-      - name: Generate documentation
-        run: |
-          echo "Generating connector documentation..."
-          make docs CONNECTORS=all 2>&1 | tail -20
-
-      - name: Format Rust code
-        run: |
-          echo "Formatting Rust code..."
-          cargo +nightly fmt --all
-
-      - name: Check for doc changes
-        id: check_doc_changes
-        run: |
-          if git diff --quiet data/field_probe/ docs-generated/ examples/; then
-            echo "No documentation changes detected"
-            echo "has_doc_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "Documentation changes detected"
-            git diff --stat data/field_probe/ docs-generated/ examples/
-            echo "has_doc_changes=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit and push doc changes
-        if: steps.check_doc_changes.outputs.has_doc_changes == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git add data/field_probe/ docs-generated/ examples/
-          git commit -m "docs: auto-update connector documentation
-
-          Regenerated field probe data, documentation, and examples.
-          
-          - Updated data/field_probe/*.json
-          - Updated docs-generated/
-          - Updated examples/ (Python, TypeScript, Kotlin, Rust)
-          - Formatted Rust code with cargo +nightly fmt
-          
-          This commit was automatically generated by GitHub Actions."
-          
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          echo "✓ Documentation changes committed to PR #${{ github.event.pull_request.number }}"
-
   # ── CI Gate ───────────────────────────────────────────────────────────────
-  # Single job to use as the required status check in branch protection.
-  # Succeeds if all jobs passed or were legitimately skipped (path filtering).
-  # Fails if any job failed or was cancelled.
+  # Single required status check. Passes if all jobs succeeded, were skipped,
+  # or if auto-fix pushed a commit (new CI run will validate clean code).
   ci-gate:
     name: CI Result
     if: always()
-    needs: [typos, formatting, check, test, sdk-test, docs-update]
+    needs: [typos, auto-fix, check, test, sdk-test]
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate CI results
         run: |
           echo "Job results:"
-          echo "  typos:       ${{ needs.typos.result }}"
-          echo "  formatting:  ${{ needs.formatting.result }}"
-          echo "  check:       ${{ needs.check.result }}"
-          echo "  test:        ${{ needs.test.result }}"
-          echo "  sdk-test:    ${{ needs.sdk-test.result }}"
-          echo "  docs-update: ${{ needs.docs-update.result }}"
+          echo "  typos:     ${{ needs.typos.result }}"
+          echo "  auto-fix:  ${{ needs.auto-fix.result }}"
+          echo "  check:     ${{ needs.check.result }}"
+          echo "  test:      ${{ needs.test.result }}"
+          echo "  sdk-test:  ${{ needs.sdk-test.result }}"
+          echo "  auto-fix pushed: ${{ needs.auto-fix.outputs.pushed }}"
           echo ""
+
+          # If auto-fix pushed a commit, this run is stale — pass unconditionally.
+          # The new CI run on the bot commit will validate everything.
+          if [[ "${{ needs.auto-fix.outputs.pushed }}" == "true" ]]; then
+            echo "✅ Auto-fix committed changes — new CI run will validate clean code"
+            exit 0
+          fi
 
           results=(
             "${{ needs.typos.result }}"
-            "${{ needs.formatting.result }}"
+            "${{ needs.auto-fix.result }}"
             "${{ needs.check.result }}"
             "${{ needs.test.result }}"
             "${{ needs.sdk-test.result }}"
-            "${{ needs.docs-update.result }}"
           )
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
