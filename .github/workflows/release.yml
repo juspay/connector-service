@@ -274,6 +274,7 @@ jobs:
     name: Collect SDK Artifacts
     runs-on: ubuntu-latest
     needs: [package-sdk-java, package-sdk-python, package-sdk-javascript]
+    if: always() && (needs.package-sdk-java.result == 'success' || needs.package-sdk-python.result == 'success' || needs.package-sdk-javascript.result == 'success')
     steps:
       - name: Download all SDK artifacts
         uses: actions/download-artifact@v4
