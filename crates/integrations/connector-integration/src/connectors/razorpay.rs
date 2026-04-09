@@ -15,7 +15,7 @@ use common_utils::{
     types::{AmountConvertor, MinorUnit},
 };
 use domain_types::errors::ConnectorError;
-use domain_types::errors::{IntegrationError, WebhookError};
+use domain_types::errors::{IntegrationError, IntegrationErrorContext, WebhookError};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
@@ -1425,15 +1425,43 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ref)) => {
                 connector_mandate_ref.get_connector_mandate_id().ok_or(
                     IntegrationError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                        context: Default::default(),
+                        field_name: "mandate_reference_id.connector_mandate_id",
+                        context: IntegrationErrorContext {
+                            suggested_action: Some(
+                                "Populate `mandate_reference_id.connector_mandate_id` with the \
+                                 Razorpay token id (e.g. `token_xxx`) returned when the \
+                                 recurring mandate was created. Razorpay revokes a mandate by \
+                                 deleting its token via \
+                                 `DELETE /v1/customers/{customer_id}/tokens/{token_id}`."
+                                    .to_owned(),
+                            ),
+                            additional_context: Some(
+                                "Razorpay MandateRevoke requires a connector_mandate_id \
+                                 (token id) to build the delete-token URL."
+                                    .to_owned(),
+                            ),
+                            ..Default::default()
+                        },
                     },
                 )?
             }
             _ => {
                 return Err(IntegrationError::MissingRequiredField {
                     field_name: "mandate_reference_id",
-                    context: Default::default(),
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Send a `mandate_reference_id` of variant `ConnectorMandateId` \
+                             containing the Razorpay token id. Razorpay MandateRevoke does \
+                             not support `NetworkMandateId` or `NetworkTokenWithNTI`."
+                                .to_owned(),
+                        ),
+                        additional_context: Some(
+                            "Razorpay only accepts a ConnectorMandateId variant for the \
+                             MandateRevoke flow."
+                                .to_owned(),
+                        ),
+                        ..Default::default()
+                    },
                 }
                 .into())
             }

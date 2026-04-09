@@ -2818,7 +2818,13 @@ message RecurringPaymentServiceRevokeRequest {
 
   // Mandate Details
   string mandate_id = 2;
-  optional string connector_mandate_id = 3;
+  // DEPRECATED: use `mandate_reference_id` instead. Retained for backward
+  // compatibility with clients that still send a raw connector mandate id.
+  optional string connector_mandate_id = 3 [deprecated = true];
+  // Typed mandate reference supporting connector mandate ids, network
+  // transaction ids, and network-token-with-NTI references. Preferred over
+  // the legacy `connector_mandate_id` field above.
+  optional MandateReference mandate_reference_id = 4;
 }
 
 // Response message for a mandate revoke operation

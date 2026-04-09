@@ -11284,11 +11284,47 @@ impl ForeignTryFrom<RecurringPaymentServiceRevokeRequest> for MandateRevokeReque
     fn foreign_try_from(
         value: RecurringPaymentServiceRevokeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let mandate_reference_id = value.connector_mandate_id.map(|id| {
-            MandateReferenceId::ConnectorMandateId(
-                connector_types::ConnectorMandateReferenceId::new(Some(id), None, None, None, None),
-            )
-        });
+        // Prefer the typed `mandate_reference_id` field; fall back to the
+        // deprecated `connector_mandate_id` string field for backward
+        // compatibility with older clients.
+        #[allow(deprecated)]
+        let mandate_reference_id = match value.mandate_reference_id {
+            Some(mandate_reference_id) => match mandate_reference_id.mandate_id_type {
+                Some(grpc_payment_types::mandate_reference::MandateIdType::ConnectorMandateId(
+                    cm,
+                )) => Some(MandateReferenceId::ConnectorMandateId(
+                    ConnectorMandateReferenceId::new(
+                        cm.connector_mandate_id,
+                        cm.payment_method_id,
+                        None,
+                        None,
+                        cm.connector_mandate_request_reference_id,
+                    ),
+                )),
+                Some(grpc_payment_types::mandate_reference::MandateIdType::NetworkMandateId(
+                    nmi,
+                )) => Some(MandateReferenceId::NetworkMandateId(nmi)),
+                Some(
+                    grpc_payment_types::mandate_reference::MandateIdType::NetworkTokenWithNti(nti),
+                ) => Some(MandateReferenceId::NetworkTokenWithNTI(
+                    NetworkTokenWithNTIRef {
+                        network_transaction_id: nti.network_transaction_id,
+                        token_exp_month: nti.token_exp_month,
+                        token_exp_year: nti.token_exp_year,
+                    },
+                )),
+                None => None,
+            },
+            None => value.connector_mandate_id.map(|id| {
+                MandateReferenceId::ConnectorMandateId(ConnectorMandateReferenceId::new(
+                    Some(id),
+                    None,
+                    None,
+                    None,
+                    None,
+                ))
+            }),
+        };
 
         Ok(Self {
             mandate_id: Secret::new(value.mandate_id),
