@@ -12,7 +12,7 @@ use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::*,
     connector_types::*,
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -319,7 +319,7 @@ pub struct PayboxPaymentResponse {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<PayboxAuthorizeResponse, Self>,
@@ -489,7 +489,7 @@ pub struct PayboxPSyncResponse {
 impl TryFrom<ResponseRouterData<PayboxPSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<PayboxPSyncResponse, Self>) -> Result<Self, Self::Error> {
         let connector_payment_status = item.response.status;
@@ -630,7 +630,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<PayboxCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<PayboxCaptureResponse, Self>,
@@ -789,7 +789,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<PayboxVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<PayboxVoidResponse, Self>) -> Result<Self, Self::Error> {
         if item.response.response_code == SUCCESS_CODE {
@@ -955,7 +955,7 @@ pub struct PayboxRefundResponse {
 impl TryFrom<ResponseRouterData<PayboxRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<PayboxRefundResponse, Self>) -> Result<Self, Self::Error> {
         if item.response.response_code == SUCCESS_CODE {
@@ -1058,7 +1058,7 @@ pub struct PayboxRSyncResponse {
 impl TryFrom<ResponseRouterData<PayboxRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = Report<ConnectorResponseTransformationError>;
+    type Error = Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<PayboxRSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Determine refund status from either STATUS field or CODEREPONSE
