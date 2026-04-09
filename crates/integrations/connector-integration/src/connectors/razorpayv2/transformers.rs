@@ -897,7 +897,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     >
 {
-    type Error = ConnectorResponseTransformationError;
+    type Error = ConnectorError;
 
     fn foreign_try_from(
         (response, data, _status_code, _raw_response): (
@@ -1090,7 +1090,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ForeignTryFrom<(RazorpayV2RepeatPaymentResponse, Self, u16, Vec<u8>)>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = ConnectorResponseTransformationError;
+    type Error = ConnectorError;
 
     fn foreign_try_from(
         (response, data, _status_code, _raw_response): (
