@@ -3141,8 +3141,8 @@ message EventServiceParseResponse {
 // response from the webhook payload alone. Which fields are required depends on the
 // connector — refer to the connector integration guide.
 message EventContext {
-  // Needed by connectors that cannot distinguish CAPTURED vs PARTIALLY_CAPTURED
-  // without knowing the original authorization's capture method.
+  // Needed by connectors (e.g. Adyen) that map AUTHORISATION events to both
+  // CAPTURED (automatic) and AUTHORIZED (manual) depending on capture method.
   optional CaptureMethod capture_method = 1;
 }
 
