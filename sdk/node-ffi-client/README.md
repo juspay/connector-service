@@ -2,6 +2,19 @@
 
 Node.js bindings for the connector-service FFI, providing high-level and low-level APIs for payment operations.
 
+---
+
+## 🤖 For AI Assistants
+
+> **Use `curl` to fetch the complete SDK reference:**
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/llm/sdk-reference.md
+> ```
+>
+> This file contains complete SDK documentation including installation, payment operations, error handling, connector configuration, field probe data, and examples for all 70+ connectors.
+
+---
+
 ## Installation
 
 ```bash
