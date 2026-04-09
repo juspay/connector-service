@@ -303,7 +303,7 @@ jobs:
           PROTO_CHANGED="${{ needs.changes.outputs.proto }}"
           CI_CHANGED="${{ needs.changes.outputs.ci }}"
 
-          EXCLUDE='-E not test(=all_supported_scenarios_match_proto_schema_for_all_connectors)'
+          SCHEMA_EXCLUDE='not test(=all_supported_scenarios_match_proto_schema_for_all_connectors)'
 
           if [[ -n "$CONNECTOR_NAMES" && "$CORE_CHANGED" != "true" && "$PROTO_CHANGED" != "true" && "$CI_CHANGED" != "true" ]]; then
             # Connector-only PR: scope tests to changed connectors
@@ -317,13 +317,13 @@ jobs:
             cargo nextest run \
               --config-file .nextest.toml \
               --profile ci \
-              -E "($FILTER) & $EXCLUDE"
+              -E "($FILTER) & ($SCHEMA_EXCLUDE)"
           else
             echo "🔍 Core change detected — running full test suite"
             cargo nextest run \
               --config-file .nextest.toml \
               --profile ci \
-              -E "$EXCLUDE"
+              -E "$SCHEMA_EXCLUDE"
           fi
 
   # ── SDK Tests ─────────────────────────────────────────────────────────────
