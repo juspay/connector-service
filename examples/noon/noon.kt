@@ -347,7 +347,7 @@ fun recurringRevoke(txnId: String) {
     val request = RecurringPaymentServiceRevokeRequest.newBuilder().apply {
         merchantRevokeId = "probe_revoke_001"  // Identification.
         mandateId = "probe_mandate_001"  // Mandate Details.
-        connectorMandateId = "probe_connector_mandate_001"
+        connectorMandateId = "probe_connector_mandate_001"  // DEPRECATED: use `mandate_reference_id` instead. Retained for backward compatibility with clients that still send a raw connector mandate id.
     }.build()
     val response = client.recurring_revoke(request)
     println("Status: ${response.status.name}")

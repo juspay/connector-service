@@ -232,7 +232,7 @@ def _build_recurring_revoke_request():
         {
             "merchant_revoke_id": "probe_revoke_001",  # Identification.
             "mandate_id": "probe_mandate_001",  # Mandate Details.
-            "connector_mandate_id": "probe_connector_mandate_001"
+            "connector_mandate_id": "probe_connector_mandate_001"  # DEPRECATED: use `mandate_reference_id` instead. Retained for backward compatibility with clients that still send a raw connector mandate id.
         },
         payment_pb2.RecurringPaymentServiceRevokeRequest(),
     )

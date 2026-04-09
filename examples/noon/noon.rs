@@ -166,7 +166,7 @@ pub fn build_recurring_revoke_request() -> RecurringPaymentServiceRevokeRequest 
     serde_json::from_value::<RecurringPaymentServiceRevokeRequest>(serde_json::json!({
     "merchant_revoke_id": "probe_revoke_001",  // Identification.
     "mandate_id": "probe_mandate_001",  // Mandate Details.
-    "connector_mandate_id": "probe_connector_mandate_001",
+    "connector_mandate_id": "probe_connector_mandate_001",  // DEPRECATED: use `mandate_reference_id` instead. Retained for backward compatibility with clients that still send a raw connector mandate id.
     })).unwrap_or_default()
 }
 
