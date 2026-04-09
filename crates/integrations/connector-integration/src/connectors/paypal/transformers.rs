@@ -708,6 +708,126 @@ pub enum PaymentSourceItemResponse {
 }
 
 // ============================================================================
+// OrderAuthorize Request — used when authorizing an existing order (from CreateOrder)
+// Only sends payment_source; intent and purchase_units were set during CreateOrder.
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct PaypalOrderAuthorizeRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
+    payment_source: PaymentSourceItem<T>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PaypalRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PaypalOrderAuthorizeRequest<T>
+{
+    type Error = Report<IntegrationError>;
+
+    fn try_from(
+        item: PaypalRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let payment_source = match item.router_data.request.payment_method_data {
+            PaymentMethodData::Card(ref ccard) => {
+                let card = item.router_data.request.get_card()?;
+                let expiry = Some(card.get_expiry_date_as_yyyymm("-"));
+
+                let verification = match item.router_data.resource_common_data.auth_type {
+                    common_enums::AuthenticationType::ThreeDs => Some(ThreeDsMethod {
+                        method: ThreeDsType::ScaAlways,
+                    }),
+                    common_enums::AuthenticationType::NoThreeDs => None,
+                };
+
+                PaymentSourceItem::Card(CardRequest::CardRequestStruct(CardRequestStruct {
+                    billing_address: get_address_info(
+                        item.router_data
+                            .resource_common_data
+                            .get_optional_payment_billing(),
+                    ),
+                    expiry,
+                    name: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_payment_billing_full_name(),
+                    number: Some(ccard.card_number.clone()),
+                    security_code: Some(ccard.card_cvc.clone()),
+                    attributes: Some(CardRequestAttributes {
+                        vault: match item.router_data.request.setup_future_usage {
+                            Some(common_enums::FutureUsage::OffSession) => Some(PaypalVault {
+                                store_in_vault: StoreInVault::OnSuccess,
+                                usage_type: UsageType::Merchant,
+                            }),
+                            _ => None,
+                        },
+                        verification,
+                    }),
+                }))
+            }
+            PaymentMethodData::Wallet(WalletData::PaypalRedirect(_)) => {
+                PaymentSourceItem::Paypal(
+                    PaypalRedirectionRequest::PaypalRedirectionStruct(PaypalRedirectionStruct {
+                        experience_context: ContextStruct {
+                            return_url: item.router_data.request.complete_authorize_url.clone(),
+                            cancel_url: item.router_data.request.complete_authorize_url.clone(),
+                            shipping_preference: if item
+                                .router_data
+                                .resource_common_data
+                                .get_optional_shipping()
+                                .is_some()
+                            {
+                                ShippingPreference::SetProvidedAddress
+                            } else {
+                                ShippingPreference::GetFromFile
+                            },
+                            user_action: Some(UserAction::PayNow),
+                        },
+                        attributes: match item.router_data.request.setup_future_usage {
+                            Some(common_enums::FutureUsage::OffSession) => Some(Attributes {
+                                vault: PaypalVault {
+                                    store_in_vault: StoreInVault::OnSuccess,
+                                    usage_type: UsageType::Merchant,
+                                },
+                            }),
+                            _ => None,
+                        },
+                    }),
+                )
+            }
+            PaymentMethodData::Wallet(_) => Err(IntegrationError::not_implemented(
+                utils::get_unimplemented_payment_method_error_message("Paypal"),
+            ))?,
+            PaymentMethodData::BankRedirect(ref bank_redirection_data) => {
+                get_payment_source(item.router_data.clone(), bank_redirection_data)?
+            }
+            _ => Err(IntegrationError::not_implemented(
+                utils::get_unimplemented_payment_method_error_message("Paypal"),
+            ))?,
+        };
+
+        Ok(Self { payment_source })
+    }
+}
+
+// ============================================================================
 // CreateOrder Request/Response Types
 // ============================================================================
 
@@ -841,8 +961,8 @@ impl TryFrom<ResponseRouterData<PaypalOrderCreateResponse, Self>>
             response: Ok(order_response),
             resource_common_data: PaymentFlowData {
                 status: common_enums::AttemptStatus::Pending,
-                // KEY: Store order ID so Authorize flow can use it via reference_id
-                reference_id: Some(order_id),
+                // KEY: Store order ID so Authorize flow can use it via connector_order_id
+                connector_order_id: Some(order_id),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data

@@ -761,8 +761,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         {
             // Case 1: PaypalSdk wallet - complete order using SDK token
             format!("v2/checkout/orders/{}/{}", paypal_wallet_data.token, action)
-        } else if let Some(order_id) = &req.resource_common_data.reference_id {
-            // Case 2: Completing existing order
+        } else if let Some(order_id) = &req.resource_common_data.connector_order_id {
+            // Case 2: Completing existing order (order_id from CreateOrder)
             format!("v2/checkout/orders/{order_id}/{action}")
         } else {
             // Case 3: Creating new order
@@ -781,13 +781,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >,
     ) -> CustomResult<Option<common_utils::request::RequestContent>, IntegrationError> {
-        // No body needed when completing existing order (PaypalSdk or after redirect)
-        let body = if req.resource_common_data.reference_id.is_some()
-            || matches!(
-                req.request.payment_method_data,
-                PaymentMethodData::Wallet(WalletData::PaypalSdk(_))
-            ) {
+        let body = if matches!(
+            req.request.payment_method_data,
+            PaymentMethodData::Wallet(WalletData::PaypalSdk(_))
+        ) {
+            // PaypalSdk wallet: no body needed, buyer approved via SDK
             None
+        } else if req.resource_common_data.connector_order_id.is_some() {
+            // Completing existing order from CreateOrder — send only payment_source
+            let connector_router_data = PaypalRouterData {
+                connector: self.to_owned(),
+                router_data: req.to_owned(),
+            };
+            let connector_req =
+                paypal::PaypalOrderAuthorizeRequest::try_from(connector_router_data)?;
+            Some(common_utils::request::RequestContent::Json(Box::new(
+                connector_req,
+            )))
         } else {
             // Build full request body for creating new order (like HS Authorize)
             let connector_router_data = PaypalRouterData {
