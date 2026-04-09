@@ -177,6 +177,42 @@
 
 ---
 
+
+
+## Rust Core Changes → SDK Impact Reference
+
+Detailed mapping of Rust core changes to cross-language impact.
+
+| Rust Change | Affects | Impact | Mitigation |
+|-------------|---------|--------|------------|
+| **Proto field removal** | All SDKs | Generated code breaks | Reserve fields, deprecate first |
+| **Proto required field** | All SDKs | Validation rejects old requests | Always use optional |
+| **Proto field number change** | All SDKs | Wire incompatibility | Never change numbers |
+| **Proto field type change** | All SDKs | Deserialization fails | Add new field, deprecate old |
+| **Enum variant removal** | Rust, Java | Match/catch incomplete | Deprecate, remove in MAJOR |
+| **Enum value change** | All SDKs | Wrong values deserialized | Never change values |
+| **FFI function removal** | JS, Python, Java | Runtime symbol error | Version FFI separately |
+| **FFI signature change** | JS, Python, Java | Type/argument mismatch | Keep FFI stable |
+| **FFI ABI change** | JS, Python, Java | Crashes/corruption | Test across languages |
+| **Opaque handle change** | JS, Python, Java | Use-after-free | Version handle types |
+| **String encoding change** | JS, Python, Java | Corrupted text | Stick to UTF-8 |
+| **Buffer ownership change** | JS, Python, Java | Memory corruption | Clear ownership rules |
+| **Error type change** | All SDKs | Error handling fails | Keep error schema stable |
+| **Runtime change** | All SDKs | Async tasks fail | Abstract executor |
+| **Tokio version change** | All SDKs | Dependency conflicts | Careful version mgmt |
+| **Send/Sync addition** | Rust | Threading restriction | Design for thread safety |
+| **Drop behavior change** | All SDKs | Resource timing issues | Document Drop guarantees |
+| **Panic behavior change** | All SDKs | Abort vs unwind | Set panic policy |
+| **Allocator change** | JS, Python, Java | Heap corruption | Use system allocator |
+| **Module path change** | Rust | Import failures | Keep paths stable |
+| **Public type removal** | Rust | Type errors | Deprecate first |
+| **Trait method change** | Rust | Implementations break | Add new trait instead |
+| **Feature flag removal** | Rust | Code paths gone | Deprecate gradually |
+| **MSRV change** | Rust | Compilation fails | Support old versions |
+| **Edition change** | Rust | Syntax requirements | Edition migration guide |
+
+---
+
 ## Analysis
 
 ### Pros
