@@ -92,6 +92,7 @@ pub struct NetworkResponse {
     pub address_verification_result: Option<Secret<String>>,
     pub address_verification_result_code: Option<Secret<String>>,
     pub card_verification_result_code: Option<Secret<String>>,
+    pub network_transaction_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -173,3 +174,5 @@ pub type JpmorganPSyncResponse = JpmorganPaymentsResponse;
 pub type JpmorganCaptureResponse = JpmorganPaymentsResponse;
 pub type JpmorganVoidResponse = JpmorganPaymentsResponse;
 pub type JpmorganRSyncResponse = JpmorganRefundResponse;
+pub type JpmorganSetupMandateResponse = JpmorganPaymentsResponse;
+pub type JpmorganRepeatPaymentResponse = JpmorganPaymentsResponse;
