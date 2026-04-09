@@ -999,7 +999,7 @@ impl TryFrom<ResponseRouterData<MollieClientAuthResponse, Self>>
             .checkout
             .as_ref()
             .map(|link| Secret::new(link.href.clone()))
-            .ok_or(ConnectorError::ResponseDeserializationFailed {
+            .ok_or(ConnectorError::ResponseHandlingFailed {
                 context: Default::default(),
             })?;
 
