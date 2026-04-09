@@ -74,22 +74,19 @@ def _build_capture_request(connector_transaction_id: str):
     )
 
 def _build_create_order_request():
-    return ParseDict(
-        {
-            "merchant_order_id": "probe_order_001",  # Identification.
-            "amount": {  # Amount Information.
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            },
-            "state": {  # State Information.
-                "access_token": {  # Access token obtained from connector.
-                    "token": {"value": "probe_access_token"},  # The token string.
-                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch).
-                    "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-                }
-            }
-        },
-        payment_pb2.PaymentServiceCreateOrderRequest(),
+    return payment_pb2.PaymentServiceCreateOrderRequest(
+        merchant_order_id="probe_order_001",  # Identification.
+        amount=payment_pb2.Money(  # Amount Information.
+            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
+            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        ),
+        state=payment_pb2.ConnectorState(  # State Information.
+            access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
+                token="probe_access_token",  # The token string.
+                expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
+                token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
+            ),
+        ),
     )
 
 def _build_create_server_authentication_token_request():
