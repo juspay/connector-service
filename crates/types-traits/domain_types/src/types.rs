@@ -8478,6 +8478,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
                 .transpose()?,
             webhook_url,
             payment_method_type,
+            order_category: value.order_category.clone(),
         })
     }
 }

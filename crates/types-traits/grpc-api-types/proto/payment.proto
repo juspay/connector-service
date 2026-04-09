@@ -2404,6 +2404,10 @@ message PaymentServiceCreateOrderRequest {
   // Payment Method Type
   optional PaymentMethodType payment_method_type =
       8; // The type of payment method (e.g., apple_pay, google_pay)
+
+  // Order Category
+  optional string order_category =
+      9; // Category of the order/service (e.g., "pay", "subscription")
 }
 
 // Response message for create order operation

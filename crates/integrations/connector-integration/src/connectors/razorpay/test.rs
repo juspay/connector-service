@@ -1370,6 +1370,7 @@ mod tests {
                     metadata: None,
                     webhook_url: None,
                     payment_method_type: None,
+                    order_category: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1491,6 +1492,7 @@ mod tests {
                     metadata: None,
                     webhook_url: None,
                     payment_method_type: None,
+                    order_category: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1780,6 +1782,7 @@ mod tests {
                 metadata: None,
                 webhook_url: None,
                 payment_method_type: None,
+                order_category: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1913,6 +1916,7 @@ mod tests {
                 metadata: None,
                 webhook_url: None,
                 payment_method_type: None,
+                order_category: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -2035,6 +2039,7 @@ mod tests {
                 metadata: None,
                 webhook_url: None,
                 payment_method_type: None,
+                order_category: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
