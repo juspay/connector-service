@@ -1878,6 +1878,7 @@ impl TryFrom<ResponseRouterData<NoonCreateOrderResponse, Self>>
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
+                connector_order_id: Some(order.id.to_string()),
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentCreateOrderResponse {
