@@ -357,8 +357,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletData::BillDeskRedirect(_)
                 | WalletData::CashfreeRedirect(_)
                 | WalletData::PayURedirect(_)
-                | WalletData::EaseBuzzRedirect(_)
-                | WalletData::AmazonPayDirect(_) => Err(ConnectorError::NotImplemented(
+                | WalletData::EaseBuzzRedirect(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Noon"),
                 )),
             },
@@ -1231,8 +1230,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         | WalletData::BillDeskRedirect(_)
                         | WalletData::CashfreeRedirect(_)
                         | WalletData::PayURedirect(_)
-                        | WalletData::EaseBuzzRedirect(_)
-                        | WalletData::AmazonPayDirect(_) => Err(ConnectorError::NotImplemented(
+                        | WalletData::EaseBuzzRedirect(_) => Err(ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         )),
                     },

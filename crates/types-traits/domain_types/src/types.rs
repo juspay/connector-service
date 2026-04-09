@@ -290,7 +290,6 @@ use crate::{
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
-    pub amazonpay: ConnectorParams,
     pub forte: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub razorpayv2: ConnectorParams,
@@ -1021,24 +1020,6 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::EaseBuzzRedirect(
                         payment_method_data::EaseBuzzRedirectData {},
-                    )))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::AmazonPayDirect(data) => {
-                    Ok(Self::Wallet(payment_method_data::WalletData::AmazonPayDirect(
-                        Box::new(payment_method_data::AmazonPayDirectData {
-                            wallet_token: data.wallet_token
-                                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                                    sub_code: "MISSING_WALLET_TOKEN".to_owned(),
-                                    error_identifier: 400,
-                                    error_message: "Missing wallet token".to_owned(),
-                                    error_object: None,
-                                }))?,
-                            customer_id: if data.customer_id.as_ref().is_none_or(|s| s.is_empty()) {
-                                None
-                            } else {
-                                data.customer_id
-                            },
-                        }),
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CashappQr(_) => {
@@ -2252,7 +2233,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CashfreeRedirect(_) => Ok(Some(PaymentMethodType::Cashfree)),
                 grpc_api_types::payments::payment_method::PaymentMethod::PayuRedirect(_) => Ok(Some(PaymentMethodType::PayU)),
                 grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_) => Ok(Some(PaymentMethodType::EaseBuzz)),
-                grpc_api_types::payments::payment_method::PaymentMethod::AmazonPayDirect(_) => Ok(Some(PaymentMethodType::AmazonPay)),
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
@@ -4458,10 +4438,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_)),
-            } => Ok(Self::Wallet),
-            grpc_api_types::payments::PaymentMethod {
-                payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::AmazonPayDirect(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
@@ -8851,7 +8827,6 @@ pub enum PaymentMethodDataType {
     CashfreeRedirect,
     PayURedirect,
     EaseBuzzRedirect,
-    AmazonPayDirect,
     SepaGuaranteedBankDebit,
     IndonesianBankTransfer,
 }

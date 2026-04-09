@@ -686,8 +686,6 @@ pub enum WalletData {
     CashfreeRedirect(CashfreeRedirectData),
     PayURedirect(PayURedirectData),
     EaseBuzzRedirect(EaseBuzzRedirectData),
-    // Indian wallet direct variants
-    AmazonPayDirect(Box<AmazonPayDirectData>),
 }
 
 impl WalletData {
@@ -754,12 +752,6 @@ pub struct PayURedirectData {}
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct EaseBuzzRedirectData {}
-
-#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]
-pub struct AmazonPayDirectData {
-    pub wallet_token: Secret<String>,
-    pub customer_id: Option<String>,
-}
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct MifinityData {

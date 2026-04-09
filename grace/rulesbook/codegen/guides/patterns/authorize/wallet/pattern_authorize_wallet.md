@@ -17,7 +17,6 @@
    - [Redirect Form Wallet Pattern](#redirect-form-wallet-pattern)
    - [Specialized Wallet Pattern](#specialized-wallet-pattern)
    - [Per-Wallet Regional Redirect Pattern](#per-wallet-regional-redirect-pattern)
-   - [Direct Wallet Debit Pattern](#direct-wallet-debit-pattern)
 5. [Request Patterns](#request-patterns)
 6. [Response Patterns](#response-patterns)
 7. [Implementation Templates](#implementation-templates)
@@ -29,14 +28,13 @@
 
 ## Overview
 
-Wallet payments in the Grace-UCS system are represented by the `WalletData` enum in `payment_method_data.rs`. Wallets generally fall into six implementation categories:
+Wallet payments in the Grace-UCS system are represented by the `WalletData` enum in `payment_method_data.rs`. Wallets generally fall into five implementation categories:
 
 1. **Token-Based Wallets**: Apple Pay, Google Pay, Samsung Pay, Paze - Use encrypted payment tokens
 2. **Redirect Wallets**: PayPal, AliPay, WeChat Pay - Redirect customer to wallet provider
 3. **SDK-Based Wallets**: PayPal SDK, Google Pay SDK, Apple Pay SDK - Use provider SDKs
 4. **Specialized Wallets**: Mifinity - Require additional customer data (DOB, etc.)
 5. **Per-Wallet Regional Redirect Wallets**: LazyPay, PhonePe, BillDesk, Cashfree, PayU, EaseBuzz - Individual variants routed through aggregator connectors (e.g., Razorpay) that map each variant to a wallet name string
-6. **Direct Wallet Debit Wallets**: AmazonPay (Direct) - Server-to-server charge using a stored wallet token, no redirect
 
 ### Key Characteristics
 
@@ -93,7 +91,6 @@ Complete list of `WalletData` variants from `payment_method_data.rs`:
 | `CashfreeRedirect` | `CashfreeRedirectData` `{}` | Indian wallet redirect |
 | `PayURedirect` | `PayURedirectData` `{}` | Indian wallet redirect |
 | `EaseBuzzRedirect` | `EaseBuzzRedirectData` `{}` | Indian wallet redirect |
-| `AmazonPayDirect` | `Box<AmazonPayDirectData>` | Direct wallet debit |
 
 ---
 
@@ -109,7 +106,6 @@ Complete list of `WalletData` variants from `payment_method_data.rs`:
 | **Worldpay** | Apple Pay, Google Pay, PayPal | Token-based + Redirect |
 | **Bluesnap** | Apple Pay, Google Pay, PayPal | Token-based + Redirect |
 | **Razorpay** | LazyPay, PhonePe, BillDesk, Cashfree, PayU, EaseBuzz | Per-Wallet Regional Redirect |
-| **AmazonPay** | AmazonPay (Direct) | Direct Wallet Debit |
 
 ---
 
@@ -616,107 +612,6 @@ for pmt in [
 
 ---
 
-### Direct Wallet Debit Pattern
-
-**Applies to**: AmazonPay (Direct), and other server-to-server wallet charge flows
-
-**Characteristics**:
-- Request Format: JSON
-- No redirect -- the charge is initiated server-to-server using a stored wallet token (e.g., `charge_permission_id`)
-- Response Type: Synchronous (Charged / Pending / Declined)
-- The `WalletData` variant carries actual data fields (token, customer_id), unlike empty redirect variants
-
-| Characteristic | Value |
-|----------------|-------|
-| Request Format | JSON |
-| Amount Unit | MinorUnit |
-| Response Type | Synchronous |
-| Wallet Data | Contains `wallet_token` (required) + optional fields |
-| Auth | Bearer token (API key) |
-
-#### Implementation Template
-
-```rust
-// Request struct -- charges the wallet directly using a stored permission/token
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DirectWalletRequest {
-    pub charge_amount: WalletAmount,
-    pub charge_permission_id: Secret<String>,  // The wallet token
-    pub merchant_metadata: Option<MerchantMetadata>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WalletAmount {
-    pub amount: MinorUnit,
-    pub currency_code: String,
-}
-
-// Request TryFrom -- extract wallet token from the WalletData variant
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<...> for DirectWalletRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(item: ...) -> Result<Self, Self::Error> {
-        match item.router_data.request.payment_method_data.clone() {
-            PaymentMethodData::Wallet(WalletData::AmazonPayDirect(data)) => Ok(Self {
-                charge_amount: WalletAmount {
-                    amount: item.router_data.request.minor_amount,
-                    currency_code: item.router_data.request.currency.to_string(),
-                },
-                charge_permission_id: data.wallet_token.clone(),
-                merchant_metadata: Some(MerchantMetadata {
-                    merchant_reference_id: item.router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                }),
-            }),
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Payment method".to_string()
-            ).into()),
-        }
-    }
-}
-```
-
-#### Connector Examples
-
-**AmazonPay** (crates/integrations/connector-integration/src/connectors/amazonpay/transformers.rs):
-```rust
-// Response -- synchronous status, no redirect
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AmazonpayPaymentsResponse {
-    pub charge_id: String,
-    pub charge_amount: Option<AmazonpayResponseAmount>,
-    pub status_details: AmazonpayStatusDetails,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AmazonpayPaymentStatus {
-    Completed,      // -> AttemptStatus::Charged
-    Declined,       // -> AttemptStatus::Failure
-    Pending,        // -> AttemptStatus::Pending
-    CaptureInitiated, // -> AttemptStatus::CaptureInitiated
-}
-
-impl From<AmazonpayPaymentStatus> for AttemptStatus {
-    fn from(item: AmazonpayPaymentStatus) -> Self {
-        match item {
-            AmazonpayPaymentStatus::Completed => Self::Charged,
-            AmazonpayPaymentStatus::CaptureInitiated => Self::CaptureInitiated,
-            AmazonpayPaymentStatus::Pending => Self::Pending,
-            AmazonpayPaymentStatus::Declined => Self::Failure,
-        }
-    }
-}
-```
-
----
-
 ## Request Patterns
 
 ### Standard Token-Based Request
@@ -1040,8 +935,7 @@ WalletData::LazyPayRedirect(_)
 | WalletData::BillDeskRedirect(_)
 | WalletData::CashfreeRedirect(_)
 | WalletData::PayURedirect(_)
-| WalletData::EaseBuzzRedirect(_)
-| WalletData::AmazonPayDirect(_) => Err(errors::ConnectorError::NotImplemented(
+| WalletData::EaseBuzzRedirect(_) => Err(errors::ConnectorError::NotImplemented(
     "payment_method".into(),
 ))?,
 ```
@@ -1197,7 +1091,6 @@ mod integration_tests {
   - [ ] SDK flow (PayPal SDK, Google Pay SDK)
   - [ ] Specialized flow (Mifinity)
   - [ ] Per-wallet regional redirect flow (Razorpay-style aggregator mapping per-wallet variants to wallet name strings)
-  - [ ] Direct wallet debit flow (AmazonPay-style server-to-server charge with stored token)
 - [ ] Check for pre-decrypted token support (Apple Pay, Paze)
 - [ ] Understand connector's token format requirements
 - [ ] Verify webhook requirements for async flows
@@ -1320,15 +1213,6 @@ pub struct SamsungPayTokenData {
 pub struct MifinityData {
     pub date_of_birth: Secret<Date>,
     pub language_preference: Option<String>,
-}
-```
-
-### AmazonPayDirectData
-
-```rust
-pub struct AmazonPayDirectData {
-    pub wallet_token: Secret<String>,   // charge_permission_id for Amazon Pay
-    pub customer_id: Option<String>,
 }
 ```
 

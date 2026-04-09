@@ -1513,8 +1513,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | WalletData::BillDeskRedirect(_)
             | WalletData::CashfreeRedirect(_)
             | WalletData::PayURedirect(_)
-            | WalletData::EaseBuzzRedirect(_)
-            | WalletData::AmazonPayDirect(_) => Err(errors::ConnectorError::NotImplemented(
+            | WalletData::EaseBuzzRedirect(_) => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
         }

@@ -844,8 +844,7 @@ fn get_wallet_details<
         | WalletData::BillDeskRedirect(_)
         | WalletData::CashfreeRedirect(_)
         | WalletData::PayURedirect(_)
-        | WalletData::EaseBuzzRedirect(_)
-        | WalletData::AmazonPayDirect(_) => Err(ConnectorError::NotImplemented(
+        | WalletData::EaseBuzzRedirect(_) => Err(ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("nexinets"),
         ))?,
     }
