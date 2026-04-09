@@ -483,7 +483,7 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
             let response: PayuRepeatPaymentResponse = res
                 .response
                 .parse_struct("PayU RepeatPayment ErrorResponse")
