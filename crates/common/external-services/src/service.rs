@@ -5,11 +5,12 @@ use common_enums::ApiClientError;
 use common_utils::{
     consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     events::{EventStage, MaskedSerdeValue},
+    request::TransportType,
 };
 use common_utils::{
     ext_traits::AsyncExt,
     lineage,
-    request::{Method, Request, RequestContent, TransportType},
+    request::{Method, Request, RequestContent},
 };
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},
