@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L23) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L23) · [Rust](../../examples/fiserv/fiserv.rs#L27)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L139) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L103) · [Rust](../../examples/fiserv/fiserv.rs#L131)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,41 +122,48 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L62) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L51) · [Rust](../../examples/fiserv/fiserv.rs#L65)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L158) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L119) · [Rust](../../examples/fiserv/fiserv.rs#L147)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L116) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L90) · [Rust](../../examples/fiserv/fiserv.rs#L117)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L183) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L141) · [Rust](../../examples/fiserv/fiserv.rs#L170)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L172) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L131) · [Rust](../../examples/fiserv/fiserv.rs#L171)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L208) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L163) · [Rust](../../examples/fiserv/fiserv.rs#L193)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L219) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L165) · [Rust](../../examples/fiserv/fiserv.rs#L215)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L230) · [JavaScript](../../examples/fiserv/fiserv.js) · [Kotlin](../../examples/fiserv/fiserv.kt#L182) · [Rust](../../examples/fiserv/fiserv.rs#L212)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [capture](#capture) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [proxy_authorize](#proxy_authorize) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -260,36 +267,82 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "card_number": "4111111111111111",
-    "card_exp_month": "03",
-    "card_exp_year": "2030",
-    "card_cvc": "737",
-    "card_holder_name": "John Doe"
+    "card": {  # Generic card payment.
+        "card_number": {"value": "4111111111111111"},  # Card Identification.
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L270) · [TypeScript](../../examples/fiserv/fiserv.ts#L255) · [Kotlin](../../examples/fiserv/fiserv.kt) · [Rust](../../examples/fiserv/fiserv.rs#L262)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L252) · [TypeScript](../../examples/fiserv/fiserv.ts#L240) · [Kotlin](../../examples/fiserv/fiserv.kt#L200) · [Rust](../../examples/fiserv/fiserv.rs#L230)
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L306) · [TypeScript](../../examples/fiserv/fiserv.ts#L289) · [Kotlin](../../examples/fiserv/fiserv.kt) · [Rust](../../examples/fiserv/fiserv.rs#L296)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L328) · [TypeScript](../../examples/fiserv/fiserv.ts#L308) · [Kotlin](../../examples/fiserv/fiserv.kt) · [Rust](../../examples/fiserv/fiserv.rs#L310)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L261) · [TypeScript](../../examples/fiserv/fiserv.ts#L249) · [Kotlin](../../examples/fiserv/fiserv.kt#L212) · [Rust](../../examples/fiserv/fiserv.rs#L242)
 
-#### proxy_authorize
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L347) · [TypeScript](../../examples/fiserv/fiserv.ts#L323) · [Kotlin](../../examples/fiserv/fiserv.kt) · [Rust](../../examples/fiserv/fiserv.rs#L324)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### refund
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L377) · [TypeScript](../../examples/fiserv/fiserv.ts#L349) · [Kotlin](../../examples/fiserv/fiserv.kt) · [Rust](../../examples/fiserv/fiserv.rs#L351)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L270) · [TypeScript](../../examples/fiserv/fiserv.ts#L258) · [Kotlin](../../examples/fiserv/fiserv.kt#L222) · [Rust](../../examples/fiserv/fiserv.rs#L249)
 
-#### refund_get
+#### PaymentService.ProxyAuthorize
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L401) · [TypeScript](../../examples/fiserv/fiserv.ts#L370) · [Kotlin](../../examples/fiserv/fiserv.kt) · [Rust](../../examples/fiserv/fiserv.rs#L367)
+Authorize using vault-aliased card data. Proxy substitutes before connector.
 
-#### void
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceProxyAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/fiserv/fiserv.py#L417) · [TypeScript](../../examples/fiserv/fiserv.ts) · [Kotlin](../../examples/fiserv/fiserv.kt) · [Rust](../../examples/fiserv/fiserv.rs#L378)
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L279) · [TypeScript](../../examples/fiserv/fiserv.ts#L267) · [Kotlin](../../examples/fiserv/fiserv.kt#L230) · [Rust](../../examples/fiserv/fiserv.rs#L256)
+
+#### PaymentService.Refund
+
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L288) · [TypeScript](../../examples/fiserv/fiserv.ts#L276) · [Kotlin](../../examples/fiserv/fiserv.kt#L258) · [Rust](../../examples/fiserv/fiserv.rs#L263)
+
+#### PaymentService.Void
+
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L306) · [TypeScript](../../examples/fiserv/fiserv.ts) · [Kotlin](../../examples/fiserv/fiserv.kt#L280) · [Rust](../../examples/fiserv/fiserv.rs#L277)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/fiserv/fiserv.py#L297) · [TypeScript](../../examples/fiserv/fiserv.ts#L285) · [Kotlin](../../examples/fiserv/fiserv.kt#L268) · [Rust](../../examples/fiserv/fiserv.rs#L270)

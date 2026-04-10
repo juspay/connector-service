@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L23) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L23) · [Rust](../../examples/datatrans/datatrans.rs#L27)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L171) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L106) · [Rust](../../examples/datatrans/datatrans.rs#L162)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,43 +122,50 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L62) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L51) · [Rust](../../examples/datatrans/datatrans.rs#L65)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L190) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L122) · [Rust](../../examples/datatrans/datatrans.rs#L178)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L116) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L90) · [Rust](../../examples/datatrans/datatrans.rs#L117)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L215) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L144) · [Rust](../../examples/datatrans/datatrans.rs#L201)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L172) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L131) · [Rust](../../examples/datatrans/datatrans.rs#L171)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L240) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L166) · [Rust](../../examples/datatrans/datatrans.rs#L224)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L219) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L165) · [Rust](../../examples/datatrans/datatrans.rs#L215)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L262) · [JavaScript](../../examples/datatrans/datatrans.js) · [Kotlin](../../examples/datatrans/datatrans.kt#L185) · [Rust](../../examples/datatrans/datatrans.rs#L243)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [capture](#capture) | Other | `—` |
-| [create_client_authentication_token](#create_client_authentication_token) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [proxy_authorize](#proxy_authorize) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [token_authorize](#token_authorize) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [MerchantAuthenticationService.CreateClientAuthenticationToken](#merchantauthenticationservicecreateclientauthenticationtoken) | Authentication | `MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentService.TokenAuthorize](#paymentservicetokenauthorize) | Payments | `PaymentServiceTokenAuthorizeRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -262,44 +269,106 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "card_number": "4111111111111111",
-    "card_exp_month": "03",
-    "card_exp_year": "2030",
-    "card_cvc": "737",
-    "card_holder_name": "John Doe"
+    "card": {  # Generic card payment.
+        "card_number": {"value": "4111111111111111"},  # Card Identification.
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L270) · [TypeScript](../../examples/datatrans/datatrans.ts#L255) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L262)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L284) · [TypeScript](../../examples/datatrans/datatrans.ts#L267) · [Kotlin](../../examples/datatrans/datatrans.kt#L203) · [Rust](../../examples/datatrans/datatrans.rs#L261)
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L306) · [TypeScript](../../examples/datatrans/datatrans.ts#L289) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L296)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### create_client_authentication_token
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L328) · [TypeScript](../../examples/datatrans/datatrans.ts#L308) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L310)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L293) · [TypeScript](../../examples/datatrans/datatrans.ts#L276) · [Kotlin](../../examples/datatrans/datatrans.kt#L215) · [Rust](../../examples/datatrans/datatrans.rs#L273)
 
-#### get
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L346) · [TypeScript](../../examples/datatrans/datatrans.ts#L322) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L327)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### proxy_authorize
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L365) · [TypeScript](../../examples/datatrans/datatrans.ts#L337) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L341)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L311) · [TypeScript](../../examples/datatrans/datatrans.ts#L294) · [Kotlin](../../examples/datatrans/datatrans.kt#L241) · [Rust](../../examples/datatrans/datatrans.rs#L287)
 
-#### refund
+#### PaymentService.ProxyAuthorize
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L395) · [TypeScript](../../examples/datatrans/datatrans.ts#L363) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L368)
+Authorize using vault-aliased card data. Proxy substitutes before connector.
 
-#### refund_get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceProxyAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L419) · [TypeScript](../../examples/datatrans/datatrans.ts#L384) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L384)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L320) · [TypeScript](../../examples/datatrans/datatrans.ts#L303) · [Kotlin](../../examples/datatrans/datatrans.kt#L249) · [Rust](../../examples/datatrans/datatrans.rs#L294)
 
-#### token_authorize
+#### PaymentService.Refund
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L435) · [TypeScript](../../examples/datatrans/datatrans.ts#L396) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L395)
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
 
-#### void
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/datatrans/datatrans.py#L458) · [TypeScript](../../examples/datatrans/datatrans.ts) · [Kotlin](../../examples/datatrans/datatrans.kt) · [Rust](../../examples/datatrans/datatrans.rs#L415)
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L329) · [TypeScript](../../examples/datatrans/datatrans.ts#L312) · [Kotlin](../../examples/datatrans/datatrans.kt#L277) · [Rust](../../examples/datatrans/datatrans.rs#L301)
+
+#### PaymentService.TokenAuthorize
+
+Authorize using a connector-issued payment method token.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceTokenAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
+
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L347) · [TypeScript](../../examples/datatrans/datatrans.ts#L330) · [Kotlin](../../examples/datatrans/datatrans.kt#L299) · [Rust](../../examples/datatrans/datatrans.rs#L315)
+
+#### PaymentService.Void
+
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L356) · [TypeScript](../../examples/datatrans/datatrans.ts) · [Kotlin](../../examples/datatrans/datatrans.kt#L320) · [Rust](../../examples/datatrans/datatrans.rs#L322)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L338) · [TypeScript](../../examples/datatrans/datatrans.ts#L321) · [Kotlin](../../examples/datatrans/datatrans.kt#L287) · [Rust](../../examples/datatrans/datatrans.rs#L308)
+
+### Authentication
+
+#### MerchantAuthenticationService.CreateClientAuthenticationToken
+
+Initialize client-facing SDK sessions for wallets, device fingerprinting, etc. Returns structured data the client SDK needs to render payment/verification UI.
+
+| | Message |
+|---|---------|
+| **Request** | `MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest` |
+| **Response** | `MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse` |
+
+**Examples:** [Python](../../examples/datatrans/datatrans.py#L302) · [TypeScript](../../examples/datatrans/datatrans.ts#L285) · [Kotlin](../../examples/datatrans/datatrans.kt#L225) · [Rust](../../examples/datatrans/datatrans.rs#L280)

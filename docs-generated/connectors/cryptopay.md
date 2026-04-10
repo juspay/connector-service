@@ -96,15 +96,18 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [get](#get) | Other | `—` |
-| [handle_event](#handle_event) | Other | `—` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [EventService.HandleEvent](#eventservicehandleevent) | Events | `EventServiceHandleRequest` |
 
-### Other
+### Payments
 
-#### get
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/cryptopay/cryptopay.py#L23) · [TypeScript](../../examples/cryptopay/cryptopay.ts#L24) · [Kotlin](../../examples/cryptopay/cryptopay.kt) · [Rust](../../examples/cryptopay/cryptopay.rs#L26)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### handle_event
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/cryptopay/cryptopay.py#L42) · [TypeScript](../../examples/cryptopay/cryptopay.ts#L39) · [Kotlin](../../examples/cryptopay/cryptopay.kt) · [Rust](../../examples/cryptopay/cryptopay.rs#L40)
+**Examples:** [Python](../../examples/cryptopay/cryptopay.py#L45) · [TypeScript](../../examples/cryptopay/cryptopay.ts#L41) · [Kotlin](../../examples/cryptopay/cryptopay.kt#L38) · [Rust](../../examples/cryptopay/cryptopay.rs#L44)

@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L23) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L23) · [Rust](../../examples/bambora/bambora.rs#L27)
+**Examples:** [Python](../../examples/bambora/bambora.py#L145) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L108) · [Rust](../../examples/bambora/bambora.rs#L137)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,41 +122,48 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L63) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L52) · [Rust](../../examples/bambora/bambora.rs#L66)
+**Examples:** [Python](../../examples/bambora/bambora.py#L164) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L124) · [Rust](../../examples/bambora/bambora.rs#L153)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L118) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L92) · [Rust](../../examples/bambora/bambora.rs#L119)
+**Examples:** [Python](../../examples/bambora/bambora.py#L189) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L146) · [Rust](../../examples/bambora/bambora.rs#L176)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L175) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L134) · [Rust](../../examples/bambora/bambora.rs#L174)
+**Examples:** [Python](../../examples/bambora/bambora.py#L214) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L168) · [Rust](../../examples/bambora/bambora.rs#L199)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L227) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L171) · [Rust](../../examples/bambora/bambora.rs#L223)
+**Examples:** [Python](../../examples/bambora/bambora.py#L236) · [JavaScript](../../examples/bambora/bambora.js) · [Kotlin](../../examples/bambora/bambora.kt#L187) · [Rust](../../examples/bambora/bambora.rs#L218)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [capture](#capture) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [proxy_authorize](#proxy_authorize) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -260,36 +267,82 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "card_number": "4111111111111111",
-    "card_exp_month": "03",
-    "card_exp_year": "2030",
-    "card_cvc": "737",
-    "card_holder_name": "John Doe"
+    "card": {  # Generic card payment.
+        "card_number": {"value": "4111111111111111"},  # Card Identification.
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L279) · [TypeScript](../../examples/bambora/bambora.ts#L264) · [Kotlin](../../examples/bambora/bambora.kt) · [Rust](../../examples/bambora/bambora.rs#L271)
+**Examples:** [Python](../../examples/bambora/bambora.py#L258) · [TypeScript](../../examples/bambora/bambora.ts#L246) · [Kotlin](../../examples/bambora/bambora.kt#L205) · [Rust](../../examples/bambora/bambora.rs#L236)
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L316) · [TypeScript](../../examples/bambora/bambora.ts#L299) · [Kotlin](../../examples/bambora/bambora.kt) · [Rust](../../examples/bambora/bambora.rs#L306)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L338) · [TypeScript](../../examples/bambora/bambora.ts#L318) · [Kotlin](../../examples/bambora/bambora.kt) · [Rust](../../examples/bambora/bambora.rs#L320)
+**Examples:** [Python](../../examples/bambora/bambora.py#L267) · [TypeScript](../../examples/bambora/bambora.ts#L255) · [Kotlin](../../examples/bambora/bambora.kt#L217) · [Rust](../../examples/bambora/bambora.rs#L248)
 
-#### proxy_authorize
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L357) · [TypeScript](../../examples/bambora/bambora.ts#L333) · [Kotlin](../../examples/bambora/bambora.kt) · [Rust](../../examples/bambora/bambora.rs#L334)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### refund
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L388) · [TypeScript](../../examples/bambora/bambora.ts#L360) · [Kotlin](../../examples/bambora/bambora.kt) · [Rust](../../examples/bambora/bambora.rs#L362)
+**Examples:** [Python](../../examples/bambora/bambora.py#L276) · [TypeScript](../../examples/bambora/bambora.ts#L264) · [Kotlin](../../examples/bambora/bambora.kt#L227) · [Rust](../../examples/bambora/bambora.rs#L255)
 
-#### refund_get
+#### PaymentService.ProxyAuthorize
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L412) · [TypeScript](../../examples/bambora/bambora.ts#L381) · [Kotlin](../../examples/bambora/bambora.kt) · [Rust](../../examples/bambora/bambora.rs#L378)
+Authorize using vault-aliased card data. Proxy substitutes before connector.
 
-#### void
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceProxyAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/bambora/bambora.py#L428) · [TypeScript](../../examples/bambora/bambora.ts) · [Kotlin](../../examples/bambora/bambora.kt) · [Rust](../../examples/bambora/bambora.rs#L389)
+**Examples:** [Python](../../examples/bambora/bambora.py#L285) · [TypeScript](../../examples/bambora/bambora.ts#L273) · [Kotlin](../../examples/bambora/bambora.kt#L235) · [Rust](../../examples/bambora/bambora.rs#L262)
+
+#### PaymentService.Refund
+
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/bambora/bambora.py#L294) · [TypeScript](../../examples/bambora/bambora.ts#L282) · [Kotlin](../../examples/bambora/bambora.kt#L264) · [Rust](../../examples/bambora/bambora.rs#L269)
+
+#### PaymentService.Void
+
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/bambora/bambora.py#L312) · [TypeScript](../../examples/bambora/bambora.ts) · [Kotlin](../../examples/bambora/bambora.kt#L286) · [Rust](../../examples/bambora/bambora.rs#L283)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/bambora/bambora.py#L303) · [TypeScript](../../examples/bambora/bambora.ts#L291) · [Kotlin](../../examples/bambora/bambora.kt#L274) · [Rust](../../examples/bambora/bambora.rs#L276)

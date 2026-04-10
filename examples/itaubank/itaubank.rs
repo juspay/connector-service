@@ -21,12 +21,17 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-// Flow: PaymentService.create_server_authentication_token
+pub fn build_create_server_authentication_token_request() -> MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
+    serde_json::from_value::<MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest>(serde_json::json!({
+
+    })).unwrap_or_default()
+}
+
+
+// Flow: MerchantAuthenticationService.CreateServerAuthenticationToken
 #[allow(dead_code)]
 pub async fn create_server_authentication_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.create_server_authentication_token(serde_json::from_value::<>(serde_json::json!({
-
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.create_server_authentication_token(build_create_server_authentication_token_request(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 

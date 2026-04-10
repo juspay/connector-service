@@ -96,12 +96,19 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [get](#get) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -205,12 +212,21 @@ let config = ConnectorConfig {
 
 ```python
 "payment_method": {
-    "vpa_id": "test@upi"
+    "upi_collect": {  # UPI Collect.
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address.
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/phonepe/phonepe.py#L23) · [TypeScript](../../examples/phonepe/phonepe.ts#L24) · [Kotlin](../../examples/phonepe/phonepe.kt) · [Rust](../../examples/phonepe/phonepe.rs#L26)
+**Examples:** [Python](../../examples/phonepe/phonepe.py#L63) · [TypeScript](../../examples/phonepe/phonepe.ts#L60) · [Kotlin](../../examples/phonepe/phonepe.kt#L63) · [Rust](../../examples/phonepe/phonepe.rs#L65)
 
-#### get
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/phonepe/phonepe.py#L56) · [TypeScript](../../examples/phonepe/phonepe.ts#L55) · [Kotlin](../../examples/phonepe/phonepe.kt) · [Rust](../../examples/phonepe/phonepe.rs#L57)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
+
+**Examples:** [Python](../../examples/phonepe/phonepe.py#L72) · [TypeScript](../../examples/phonepe/phonepe.ts#L69) · [Kotlin](../../examples/phonepe/phonepe.kt#L75) · [Rust](../../examples/phonepe/phonepe.rs#L77)

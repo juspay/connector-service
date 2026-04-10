@@ -96,10 +96,4 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [handle_event](#handle_event) | Other | `—` |
-
-### Other
-
-#### handle_event
-
-**Examples:** [Python](../../examples/trustly/trustly.py#L23) · [TypeScript](../../examples/trustly/trustly.ts#L24) · [Kotlin](../../examples/trustly/trustly.kt) · [Rust](../../examples/trustly/trustly.rs#L26)
+| [EventService.HandleEvent](#eventservicehandleevent) | Events | `EventServiceHandleRequest` |

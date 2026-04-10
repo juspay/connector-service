@@ -96,10 +96,4 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [handle_event](#handle_event) | Other | `—` |
-
-### Other
-
-#### handle_event
-
-**Examples:** [Python](../../examples/cashtocode/cashtocode.py#L23) · [TypeScript](../../examples/cashtocode/cashtocode.ts#L24) · [Kotlin](../../examples/cashtocode/cashtocode.kt) · [Rust](../../examples/cashtocode/cashtocode.rs#L26)
+| [EventService.HandleEvent](#eventservicehandleevent) | Events | `EventServiceHandleRequest` |

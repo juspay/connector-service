@@ -5,8 +5,8 @@
 // Calida — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx calida.ts checkout_autocapture
 
-import { PaymentClient, types } from 'hyperswitch-prism';
-const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = types;
+import { PaymentClient, EventClient, types } from 'hyperswitch-prism';
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, Currency } = types;
 
 const _defaultConfig: ConnectorConfig = {
     options: {
@@ -19,28 +19,38 @@ const _defaultConfig: ConnectorConfig = {
 // };
 
 
-// ANCHOR: scenario_functions
-// Flow: PaymentService.get
-async function get(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: Get — retrieve current payment status from the connector
-    const getResponse = await paymentClient.get({
-        "merchantTransactionId": "probe_merchant_txn_001",
-        "connectorTransactionId": "probe_connector_txn_001",
-        "amount": {
-            "minorAmount": 1000,
-            "currency": "USD"
+function _buildGetRequest(connectorTransactionId: string): PaymentServiceGetRequest {
+    return {
+        "merchantTransactionId": "probe_merchant_txn_001",  // Identification.
+        "connectorTransactionId": connectorTransactionId,
+        "amount": {  // Amount Information.
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
-    });
+    };
+}
+
+function _buildHandleEventRequest(): EventServiceHandleRequest {
+    return {
+    };
+}
+
+
+// ANCHOR: scenario_functions
+// Flow: PaymentService.Get
+async function get(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<PaymentServiceGetResponse> {
+    const paymentClient = new PaymentClient(config);
+
+    const getResponse = await paymentClient.get(_buildGetRequest('probe_connector_txn_001'));
 
     return { status: getResponse.status };
 }
 
-// Flow: PaymentService.handle_event
-async function handleEvent(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
-    // Step 1: handle_event
-    const handleResponse = await paymentClient.handleEvent({
-        // No required fields
-    });
+// Flow: EventService.HandleEvent
+async function handleEvent(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<EventServiceHandleResponse> {
+    const eventClient = new EventClient(config);
+
+    const handleResponse = await eventClient.handleEvent(_buildHandleEventRequest());
 
     return { status: handleResponse.status };
 }
@@ -48,7 +58,7 @@ async function handleEvent(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    get, handleEvent
+    get, handleEvent, _buildGetRequest, _buildHandleEventRequest
 };
 
 // CLI runner

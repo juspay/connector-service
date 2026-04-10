@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L23) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L23) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L27)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L218) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L114) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L208)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,43 +122,50 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L65) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L52) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L68)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L237) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L130) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L224)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L122) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L92) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L123)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L262) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L152) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L247)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L181) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L134) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L180)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L287) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L174) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L270)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L235) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L171) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L231)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L309) · [JavaScript](../../examples/wellsfargo/wellsfargo.js) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L193) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L289)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [authorize](#authorize) | Other | `—` |
-| [capture](#capture) | Other | `—` |
-| [get](#get) | Other | `—` |
-| [proxy_authorize](#proxy_authorize) | Other | `—` |
-| [proxy_setup_recurring](#proxy_setup_recurring) | Other | `—` |
-| [refund](#refund) | Other | `—` |
-| [refund_get](#refund_get) | Other | `—` |
-| [setup_recurring](#setup_recurring) | Other | `—` |
-| [void](#void) | Other | `—` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
+| [PaymentService.ProxySetupRecurring](#paymentserviceproxysetuprecurring) | Payments | `PaymentServiceProxySetupRecurringRequest` |
+| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-### Other
+### Payments
 
-#### authorize
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
 **Supported payment method types:**
 
@@ -262,44 +269,104 @@ Retrieve current payment status from the connector.
 
 ```python
 "payment_method": {
-    "card_number": "4111111111111111",
-    "card_exp_month": "03",
-    "card_exp_year": "2030",
-    "card_cvc": "737",
-    "card_holder_name": "John Doe"
+    "card": {  # Generic card payment.
+        "card_number": {"value": "4111111111111111"},  # Card Identification.
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+    }
 }
 ```
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L289) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L274) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L281)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L331) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L315) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L211) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L307)
 
-#### capture
+#### PaymentService.Capture
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L328) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L311) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L318)
+Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
 
-#### get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L350) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L330) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L332)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L340) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L324) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L223) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L319)
 
-#### proxy_authorize
+#### PaymentService.Get
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L369) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L345) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L346)
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 
-#### proxy_setup_recurring
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L402) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L374) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L376)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L349) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L333) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L233) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L326)
 
-#### refund
+#### PaymentService.ProxyAuthorize
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L438) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L406) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L409)
+Authorize using vault-aliased card data. Proxy substitutes before connector.
 
-#### refund_get
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceProxyAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L462) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L427) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L425)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L358) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L342) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L241) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L333)
 
-#### setup_recurring
+#### PaymentService.ProxySetupRecurring
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L478) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L439) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L436)
+Setup recurring mandate using vault-aliased card data.
 
-#### void
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceProxySetupRecurringRequest` |
+| **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L523) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L477)
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L367) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L351) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L272) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L340)
+
+#### PaymentService.Refund
+
+Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceRefundRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L376) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L360) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L306) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L347)
+
+#### PaymentService.SetupRecurring
+
+Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceSetupRecurringRequest` |
+| **Response** | `PaymentServiceSetupRecurringResponse` |
+
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L394) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L378) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L328) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L361)
+
+#### PaymentService.Void
+
+Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L403) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L370) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L371)
+
+### Refunds
+
+#### RefundService.Get
+
+Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+
+| | Message |
+|---|---------|
+| **Request** | `RefundServiceGetRequest` |
+| **Response** | `RefundResponse` |
+
+**Examples:** [Python](../../examples/wellsfargo/wellsfargo.py#L385) · [TypeScript](../../examples/wellsfargo/wellsfargo.ts#L369) · [Kotlin](../../examples/wellsfargo/wellsfargo.kt#L316) · [Rust](../../examples/wellsfargo/wellsfargo.rs#L354)

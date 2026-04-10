@@ -21,99 +21,126 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-// Flow: PaymentService.capture
-#[allow(dead_code)]
-pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.capture(serde_json::from_value::<>(serde_json::json!({
-    "merchant_capture_id": "probe_capture_001",
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount_to_capture": {
-        "minor_amount": 1000,
-        "currency": "USD",
+pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
+    serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
+    "merchant_capture_id": "probe_capture_001",  // Identification.
+    "connector_transaction_id": connector_transaction_id,
+    "amount_to_capture": {  // Capture Details.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
-    Ok(format!("status: {:?}", response.status()))
+    })).unwrap_or_default()
 }
 
-// Flow: PaymentService.get
-#[allow(dead_code)]
-pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.get(serde_json::from_value::<>(serde_json::json!({
-    "merchant_transaction_id": "probe_merchant_txn_001",
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {
-        "minor_amount": 1000,
-        "currency": "USD",
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+    serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification.
+    "connector_transaction_id": connector_transaction_id,
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
-    Ok(format!("status: {:?}", response.status()))
+    })).unwrap_or_default()
 }
 
-// Flow: PaymentService.pre_authenticate
-#[allow(dead_code)]
-pub async fn pre_authenticate(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.pre_authenticate(serde_json::from_value::<>(serde_json::json!({
-    "amount": {
-        "minor_amount": 1000,
-        "currency": "USD",
+pub fn build_pre_authenticate_request() -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
+    serde_json::from_value::<PaymentMethodAuthenticationServicePreAuthenticateRequest>(serde_json::json!({
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
-    "payment_method": {
-        "card": {
-            "card_number": "4111111111111111",
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "737",
-            "card_holder_name": "John Doe",
-        },
+    "payment_method": {  // Payment Method.
+        "payment_method": {
+            "card": {  // Generic card payment.
+                "card_number": "4111111111111111",  // Card Identification.
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",  // Cardholder Information.
+            },
+        }
     },
-    "address": {
+    "address": {  // Address Information.
         "billing_address": {
         },
     },
-    "enrolled_for_3ds": false,
-    "return_url": "https://example.com/3ds-return",
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
-    Ok(format!("status: {:?}", response.status()))
+    "enrolled_for_3ds": false,  // Authentication Details.
+    "return_url": "https://example.com/3ds-return",  // URLs for Redirection.
+    })).unwrap_or_default()
 }
 
-// Flow: PaymentService.refund
-#[allow(dead_code)]
-pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.refund(serde_json::from_value::<>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",
-    "connector_transaction_id": "probe_connector_txn_001",
-    "payment_amount": 1000,
+pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+    serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
+    "merchant_refund_id": "probe_refund_001",  // Identification.
+    "connector_transaction_id": connector_transaction_id,
+    "payment_amount": 1000,  // Amount Information.
     "refund_amount": {
-        "minor_amount": 1000,
-        "currency": "USD",
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
-    "reason": "customer_request",
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
-    Ok(format!("status: {:?}", response.status()))
+    "reason": "customer_request",  // Reason for the refund.
+    })).unwrap_or_default()
 }
 
-// Flow: PaymentService.refund_get
-#[allow(dead_code)]
-pub async fn refund_get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.refund_get(serde_json::from_value::<>(serde_json::json!({
-    "merchant_refund_id": "probe_refund_001",
+pub fn build_refund_get_request() -> RefundServiceGetRequest {
+    serde_json::from_value::<RefundServiceGetRequest>(serde_json::json!({
+    "merchant_refund_id": "probe_refund_001",  // Identification.
     "connector_transaction_id": "probe_connector_txn_001",
     "refund_id": "probe_refund_id_001",
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    })).unwrap_or_default()
+}
+
+pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
+    serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
+    "merchant_void_id": "probe_void_001",  // Identification.
+    "connector_transaction_id": connector_transaction_id,
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    })).unwrap_or_default()
+}
+
+
+// Flow: PaymentService.Capture
+#[allow(dead_code)]
+pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.capture(build_capture_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
-// Flow: PaymentService.void
+// Flow: PaymentService.Get
+#[allow(dead_code)]
+pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: PaymentMethodAuthenticationService.PreAuthenticate
+#[allow(dead_code)]
+pub async fn pre_authenticate(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.pre_authenticate(build_pre_authenticate_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: PaymentService.Refund
+#[allow(dead_code)]
+pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: RefundService.Get
+#[allow(dead_code)]
+pub async fn refund_get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.refund_get(build_refund_get_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: PaymentService.Void
 #[allow(dead_code)]
 pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.void(serde_json::from_value::<>(serde_json::json!({
-    "merchant_void_id": "probe_void_001",
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {
-        "minor_amount": 1000,
-        "currency": "USD",
-    },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
