@@ -2,6 +2,8 @@ use crate::{connectors::sanlammultidata::SanlammultidataRouterData, types::Respo
 use common_enums::{AttemptStatus, BankNames, BankType, Currency};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    ext_traits::ValueExt,
+    pii::SecretSerdeValue,
     types::MinorUnit,
 };
 use domain_types::{
@@ -13,7 +15,8 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
-use hyperswitch_masking::Secret;
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 pub struct SanlammultidataAuthType {
@@ -32,6 +35,25 @@ impl TryFrom<&ConnectorSpecificConfig> for SanlammultidataAuthType {
             }
             .into()),
         }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SanlammultidataMetaData {
+    pub batch_user_reference: Option<String>,
+}
+
+impl TryFrom<SecretSerdeValue> for SanlammultidataMetaData {
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(metadata: SecretSerdeValue) -> Result<Self, Self::Error> {
+        let metadata = metadata
+            .expose()
+            .parse_value::<Self>("SanlammultidataMetaData")
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "metadata",
+                context: Default::default(),
+            })?;
+        Ok(metadata)
     }
 }
 
@@ -78,6 +100,10 @@ pub enum SanlammultidataBankNames {
 pub enum SanlammultidataBankType {
     Savings,
     Cheque,
+    Transmission,
+    Bond,
+    Current,
+    SubscriptionShare,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -107,17 +133,43 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let payment_method = match item.router_data.request.payment_method_data {
             PaymentMethodData::BankDebit(ref bank_debit_data) => match bank_debit_data {
-                BankDebitData::AchBankDebit {
+                BankDebitData::EftBankDebit {
                     account_number,
-                    routing_number,
-                    ..
-                } => Ok(SanlammultidataPaymentMethod::EftDebitOrder(EftDebitOrder {
-                    homing_account: account_number.clone(),
-                    homing_branch: routing_number.clone(),
-                    homing_account_name: Secret::new("John Doe".to_string()),
-                    bank_name: SanlammultidataBankNames::Absa,
-                    bank_type: SanlammultidataBankType::Savings,
-                })),
+                    branch_code,
+                    bank_account_holder_name,
+                    bank_name,
+                    bank_type,
+                } => {
+                    let homing_account_name = bank_account_holder_name.as_ref().ok_or(
+                        IntegrationError::MissingRequiredField {
+                            field_name: "bank_account_holder_name",
+                            context: Default::default(),
+                        },
+                    )?;
+
+                    let bank_name = bank_name
+                        .map(|b| SanlammultidataBankNames::try_from(b))
+                        .transpose()?
+                        .ok_or(IntegrationError::MissingRequiredField {
+                            field_name: "bank_name",
+                            context: Default::default(),
+                        })?;
+
+                    let bank_type = bank_type.map(|b| SanlammultidataBankType::from(b)).ok_or(
+                        IntegrationError::MissingRequiredField {
+                            field_name: "bank_type",
+                            context: Default::default(),
+                        },
+                    )?;
+
+                    Ok(SanlammultidataPaymentMethod::EftDebitOrder(EftDebitOrder {
+                        homing_account: account_number.clone(),
+                        homing_branch: branch_code.clone(),
+                        homing_account_name: homing_account_name.clone(),
+                        bank_name,
+                        bank_type,
+                    }))
+                }
                 _ => Err(IntegrationError::not_implemented(
                     get_unimplemented_payment_method_error_message("Sanlammultidata"),
                 ))?,
@@ -147,6 +199,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         }?;
 
+        let batch_user_reference = item
+            .router_data
+            .request
+            .metadata
+            .map(|m| SanlammultidataMetaData::try_from(m))
+            .transpose()?
+            .and_then(|m| m.batch_user_reference);
+
         Ok(Self {
             amount: item.router_data.request.minor_amount,
             currency: item.router_data.request.currency,
@@ -155,7 +215,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_data
                 .resource_common_data
                 .connector_request_reference_id,
-            batch_user_reference: None,
+            batch_user_reference,
             statement_descriptor: item
                 .router_data
                 .request
@@ -170,6 +230,7 @@ impl TryFrom<BankNames> for SanlammultidataBankNames {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(bank: BankNames) -> Result<Self, Self::Error> {
         match bank {
+            BankNames::Absa => Ok(Self::Absa),
             bank => Err(IntegrationError::NotSupported {
                 message: format!("Invalid BankName for EFT Debit order payment: {bank:?}"),
                 connector: "Sanlammultidata",
@@ -184,6 +245,10 @@ impl From<BankType> for SanlammultidataBankType {
         match value {
             BankType::Checking => Self::Cheque,
             BankType::Savings => Self::Savings,
+            BankType::Current => Self::Current,
+            BankType::Bond => Self::Bond,
+            BankType::Transmission => Self::Transmission,
+            BankType::SubscriptionShare => Self::SubscriptionShare,
         }
     }
 }

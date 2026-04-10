@@ -2951,6 +2951,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
                     Self::SepaGuaranteedBankDebit
                 }
+                payment_method_data::BankDebitData::EftBankDebit { .. } => Self::EftBankDebit,
             },
             PaymentMethodData::BankTransfer(bank_transfer_data) => match *bank_transfer_data {
                 payment_method_data::BankTransferData::AchBankTransfer { .. } => {

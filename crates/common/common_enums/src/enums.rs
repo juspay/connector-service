@@ -221,6 +221,10 @@ pub enum SamsungPayCardBrand {
 pub enum BankType {
     Checking,
     Savings,
+    Transmission,
+    Current,
+    Bond,
+    SubscriptionShare,
 }
 
 #[derive(
@@ -405,6 +409,7 @@ pub enum BankNames {
     Yoursafe,
     N26,
     NationaleNederlanden,
+    Absa,
 }
 
 /// Specifies the regulated name for a card network, primarily used for US debit card routing regulations.
