@@ -1809,9 +1809,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_ref()
             .and_then(|details| details.first())
             .and_then(|detail| detail.category.clone());
-        if category.is_none() {
-            tracing::warn!("noon: category not found in order_details; proceeding without it");
-        }
 
         // The description should not have leading or trailing whitespaces, also it should not have double whitespaces and a max 50 chars according to Noon's Docs
         let name: String = item
