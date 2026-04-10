@@ -2046,9 +2046,9 @@ impl TryFrom<NuveiOpenOrderResponse> for PaymentCreateOrderResponse {
     type Error = Report<ConnectorError>;
 
     fn try_from(response: NuveiOpenOrderResponse) -> Result<Self, Self::Error> {
-        let order_id = response.order_id.unwrap_or_default();
+        let connector_order_id = response.order_id.unwrap_or_default();
         Ok(Self {
-            order_id,
+            connector_order_id,
             session_data: None,
         })
     }
@@ -2105,7 +2105,7 @@ impl TryFrom<ResponseRouterData<NuveiOpenOrderResponse, Self>>
         let order_response = PaymentCreateOrderResponse::try_from(response.clone())?;
 
         // Extract order_id to store for Authorize flow
-        let order_id = order_response.order_id.clone();
+        let order_id = order_response.connector_order_id.clone();
 
         // Store session_token in session_token field for use by Authorize flow
         let session_token = response.session_token.clone();
