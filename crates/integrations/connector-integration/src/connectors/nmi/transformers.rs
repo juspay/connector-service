@@ -8,7 +8,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{
         BankDebitData, GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, WalletData,
@@ -702,7 +702,7 @@ pub type NmiPaymentsResponse = StandardResponse;
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -810,7 +810,7 @@ pub struct SyncTransactionData {
 impl TryFrom<ResponseRouterData<SyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<SyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -821,11 +821,9 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(
-                ConnectorResponseTransformationError::ResponseDeserializationFailed {
-                    context: Default::default(),
-                },
-            )?;
+            .change_context(ConnectorError::ResponseDeserializationFailed {
+                context: Default::default(),
+            })?;
 
         // Find the transaction matching the requested transaction_id
         // If not found, use the most recent one (last in list)
@@ -943,7 +941,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<StandardResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1061,7 +1059,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<StandardResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1133,7 +1131,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<SyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<SyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1152,7 +1150,7 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
         } else {
             // Empty response - treat as pending with proper error for connector_refund_id
             return Err(error_stack::report!(
-                ConnectorResponseTransformationError::ResponseDeserializationFailed {
+                ConnectorError::ResponseDeserializationFailed {
                     context: Default::default(),
                 }
             ));
@@ -1244,7 +1242,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<StandardResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1443,7 +1441,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<NmiVaultResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1451,23 +1449,19 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
         let (status, payment_response) = match response.response {
             Response::Approved => {
                 let auth_type = NmiAuthType::try_from(&item.router_data.connector_config)
-                    .change_context(
-                        ConnectorResponseTransformationError::ResponseHandlingFailed {
-                            context: Default::default(),
-                        },
-                    )?;
+                    .change_context(ConnectorError::ResponseHandlingFailed {
+                        context: Default::default(),
+                    })?;
                 let amount_data = item.router_data.request.amount;
                 let currency_data = item.router_data.request.currency.ok_or(
-                    ConnectorResponseTransformationError::ResponseHandlingFailed {
+                    ConnectorError::ResponseHandlingFailed {
                         context: Default::default(),
                     },
                 )?;
                 let customer_vault_id = response.customer_vault_id.clone().ok_or_else(|| {
-                    error_stack::report!(
-                        ConnectorResponseTransformationError::UnexpectedResponseError {
-                            context: Default::default(),
-                        }
-                    )
+                    error_stack::report!(ConnectorError::UnexpectedResponseError {
+                        context: Default::default(),
+                    })
                 })?;
 
                 (
@@ -1480,7 +1474,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 currency: Currency::foreign_try_from(currency_data)
                                     .map_err(|_| {
                                         error_stack::report!(
-                                            ConnectorResponseTransformationError::ResponseHandlingFailed {
+                                            ConnectorError::ResponseHandlingFailed {
                                                 context: Default::default(),
                                             }
                                         )
@@ -1488,7 +1482,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                     .into(),
                             },
                             public_key: auth_type.public_key.ok_or(
-                                ConnectorResponseTransformationError::ResponseHandlingFailed {
+                                ConnectorError::ResponseHandlingFailed {
                                     context: Default::default(),
                                 },
                             )?,
@@ -1505,11 +1499,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                                 .as_ref()
                                 .map(|url| url.to_string())
                                 .ok_or_else(|| {
-                                    error_stack::report!(
-                                        ConnectorResponseTransformationError::ResponseHandlingFailed {
-                                            context: Default::default(),
-                                        }
-                                    )
+                                    error_stack::report!(ConnectorError::ResponseHandlingFailed {
+                                        context: Default::default(),
+                                    })
                                 })?,
                         })),
                         connector_response_reference_id: Some(response.transactionid.clone()),

@@ -26,7 +26,7 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::StaxRouterData;
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
 // Empty request structures for GET requests that don't send request bodies
@@ -387,7 +387,7 @@ pub struct ChildTransaction {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -431,7 +431,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StaxPaymentResponse, 
 impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -517,7 +517,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -549,7 +549,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
 fn get_payment_status(
     response: &StaxPaymentResponse,
     http_status: u16,
-) -> Result<AttemptStatus, error_stack::Report<ConnectorResponseTransformationError>> {
+) -> Result<AttemptStatus, error_stack::Report<ConnectorError>> {
     let mut status = if !response.success {
         AttemptStatus::Failure
     } else {
@@ -578,7 +578,7 @@ fn get_payment_status(
 fn get_capture_status(
     response: &StaxPaymentResponse,
     http_status: u16,
-) -> Result<AttemptStatus, error_stack::Report<ConnectorResponseTransformationError>> {
+) -> Result<AttemptStatus, error_stack::Report<ConnectorError>> {
     get_payment_status(response, http_status)
 }
 
@@ -629,7 +629,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -671,7 +671,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
 impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -699,7 +699,7 @@ fn get_refund_status(
     response: &StaxPaymentResponse,
     refund_amount: FloatMajorUnit,
     http_status: u16,
-) -> Result<RefundStatus, error_stack::Report<ConnectorResponseTransformationError>> {
+) -> Result<RefundStatus, error_stack::Report<ConnectorError>> {
     // Following HS pattern: filter by amount, then find most recent by created_at
     let filtered_refunds: Vec<&ChildTransaction> = response
         .child_transactions
@@ -740,7 +740,7 @@ fn extract_refund_id(
     response: &StaxPaymentResponse,
     refund_amount: FloatMajorUnit,
     http_status: u16,
-) -> Result<String, error_stack::Report<ConnectorResponseTransformationError>> {
+) -> Result<String, error_stack::Report<ConnectorError>> {
     // Following HS pattern: filter by amount, then find most recent by created_at
     let filtered_refunds: Vec<&ChildTransaction> = response
         .child_transactions
@@ -776,7 +776,7 @@ fn extract_refund_id(
 impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StaxPaymentResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -881,7 +881,7 @@ impl TryFrom<ResponseRouterData<StaxCustomerResponse, Self>>
         domain_types::connector_types::ConnectorCustomerResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StaxCustomerResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -1123,7 +1123,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StaxTokenResponse, Se
         PaymentMethodTokenResponse,
     >
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: ResponseRouterData<StaxTokenResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {

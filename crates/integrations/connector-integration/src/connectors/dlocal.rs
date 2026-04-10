@@ -30,7 +30,7 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -48,13 +48,14 @@ use transformers::{
     self as dlocal, DlocalPaymentsCaptureRequest, DlocalPaymentsRequest, DlocalPaymentsResponse,
     DlocalPaymentsResponse as DlocalPaymentsSyncResponse,
     DlocalPaymentsResponse as DlocalPaymentsCaptureResponse,
-    DlocalPaymentsResponse as DlocalPaymentsVoidResponse, DlocalRefundRequest, RefundResponse,
+    DlocalPaymentsResponse as DlocalPaymentsVoidResponse, DlocalRefundRequest,
+    DlocalRepeatPaymentRequest, DlocalRepeatPaymentResponse, RefundResponse,
     RefundResponse as RefundSyncResponse,
 };
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
 const VERSION: &str = "2.1";
@@ -254,6 +255,12 @@ macros::create_all_prerequisites!(
             flow: Void,
             response_body: DlocalPaymentsVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: DlocalRepeatPaymentRequest,
+            response_body: DlocalRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -348,7 +355,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: dlocal::DlocalErrorResponse = res
             .response
             .parse_struct("Dlocal ErrorResponse")
@@ -397,7 +404,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
-            Ok(format!("{}secure_payments", self.connector_base_url_payments(req)))
+            let base_url = self.connector_base_url_payments(req);
+            match &req.request.payment_method_data {
+                PaymentMethodData::Card(_) => {
+                    Ok(format!("{base_url}secure_payments"))
+                }
+                _ => Ok(format!("{base_url}payments")),
+            }
         }
     }
 );
@@ -554,6 +567,34 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Dlocal,
+    curl_request: Json(DlocalRepeatPaymentRequest),
+    curl_response: DlocalRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}payments", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
 // Stub implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -588,16 +629,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Dlocal<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Dlocal<T>
 {

@@ -48,12 +48,14 @@ use interfaces::{
 use serde::Serialize;
 use transformers as billwerk;
 use transformers::{
-    BillwerkCaptureRequest, BillwerkPaymentsRequest, BillwerkPaymentsResponse,
+    BillwerkCaptureRequest, BillwerkClientAuthRequest, BillwerkClientAuthResponse,
+    BillwerkPaymentsRequest, BillwerkPaymentsResponse,
     BillwerkPaymentsResponse as BillwerkPaymentsSyncResponse,
     BillwerkPaymentsResponse as BillwerkPaymentsVoidResponse,
     BillwerkPaymentsResponse as BillwerkCaptureResponse, BillwerkRefundRequest,
-    BillwerkTokenRequest, BillwerkTokenResponse, RefundResponse as BillwerkRefundResponse,
-    RefundResponse as BillwerkRSyncResponse,
+    BillwerkRepeatPaymentRequest, BillwerkRepeatPaymentResponse, BillwerkSetupMandateRequest,
+    BillwerkSetupMandateResponse, BillwerkTokenRequest, BillwerkTokenResponse,
+    RefundResponse as BillwerkRefundResponse, RefundResponse as BillwerkRSyncResponse,
 };
 
 use crate::{types::ResponseRouterData, with_response_body};
@@ -243,26 +245,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Billwerk<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Billwerk<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
@@ -359,20 +341,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    > for Billwerk<T>
-{
-}
+// ClientAuthenticationToken flow implemented via macro_connector_implementation! below
 
 macros::create_amount_converter_wrapper!(connector_name: Billwerk, amount_type: MinorUnit);
 
 use super::macros;
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 macros::create_all_prerequisites!(
     connector_name: Billwerk,
@@ -416,6 +390,24 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: BillwerkRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: BillwerkRepeatPaymentRequest,
+            response_body: BillwerkRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: BillwerkSetupMandateRequest,
+            response_body: BillwerkSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: BillwerkClientAuthRequest,
+            response_body: BillwerkClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
 
     ],
@@ -489,7 +481,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: billwerk::BillwerkErrorResponse = res
             .response
             .parse_struct("BillwerkErrorResponse")
@@ -737,5 +729,93 @@ macros::macro_connector_implementation!(
             self.connector_base_url_refunds(req)
         ))
     }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Billwerk,
+    curl_request: Json(BillwerkRepeatPaymentRequest),
+    curl_response: BillwerkRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}v1/charge", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Billwerk,
+    curl_request: Json(BillwerkSetupMandateRequest),
+    curl_response: BillwerkSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}v1/charge", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Billwerk,
+    curl_request: Json(BillwerkClientAuthRequest),
+    curl_response: BillwerkClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            // Billwerk checkout sessions are on checkout-api.reepay.com
+            // Derive from base_url (api.reepay.com -> checkout-api.reepay.com)
+            let base_url = self.connector_base_url_payments(req);
+            let checkout_url = base_url.replace("://api.", "://checkout-api.");
+            Ok(format!("{checkout_url}v1/session/charge"))
+        }
     }
 );
