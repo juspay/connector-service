@@ -138,7 +138,7 @@ macro_rules! res_transformer {
             connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
             response: domain_types::router_response_types::Response,
-        ) -> Result<$response_type, grpc_api_types::payments::ConnectorResponseTransformationError> {
+        ) -> Result<$response_type, grpc_api_types::payments::ConnectorError> {
             let connector_data: connector_integration::types::ConnectorData<T> =
                 connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
@@ -156,7 +156,7 @@ macro_rules! res_transformer {
             )
             .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
                 let ctx = e.current_context();
-                grpc_api_types::payments::ConnectorResponseTransformationError {
+                grpc_api_types::payments::ConnectorError {
                     error_message: ctx.to_string(),
                     error_code: ctx.error_code().to_string(),
                     http_status_code: None,
@@ -171,7 +171,7 @@ macro_rules! res_transformer {
                 ))
                 .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
                     let ctx = e.current_context();
-                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                    grpc_api_types::payments::ConnectorError {
                         error_message: ctx.to_string(),
                         error_code: ctx.error_code().to_string(),
                         http_status_code: None,
@@ -182,7 +182,7 @@ macro_rules! res_transformer {
                 domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
                 .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
                     let ctx = e.current_context();
-                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                    grpc_api_types::payments::ConnectorError {
                         error_message: ctx.to_string(),
                         error_code: ctx.error_code().to_string(),
                         http_status_code: None,
@@ -213,18 +213,14 @@ macro_rules! res_transformer {
                 "".to_string(),
                 None,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
+            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
                 common_utils::errors::ErrorSwitch::switch(e.current_context())
             })?;
 
             domain_types::types::$generate_response_fn(response)
-                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
-                    let ctx = e.current_context();
-                    grpc_api_types::payments::ConnectorResponseTransformationError {
-                        error_message: ctx.to_string(),
-                        error_code: ctx.error_code().to_string(),
-                        http_status_code: ctx.http_status_code().map(u32::from),
-                    }
+                .map_err(|e| {
+                    use common_utils::errors::ErrorSwitch;
+                    ErrorSwitch::switch(e.current_context())
                 })
         }
     };
@@ -369,7 +365,7 @@ macro_rules! payout_res_transformer {
             connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
             response: domain_types::router_response_types::Response,
-        ) -> Result<$response_type, grpc_api_types::payments::ConnectorResponseTransformationError> {
+        ) -> Result<$response_type, grpc_api_types::payments::ConnectorError> {
             let connector_data: connector_integration::types::ConnectorData<T> =
                 connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
@@ -387,7 +383,7 @@ macro_rules! payout_res_transformer {
             )
             .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
                 let ctx = e.current_context();
-                grpc_api_types::payments::ConnectorResponseTransformationError {
+                grpc_api_types::payments::ConnectorError {
                     error_message: ctx.to_string(),
                     error_code: ctx.error_code().to_string(),
                     http_status_code: None,
@@ -402,7 +398,7 @@ macro_rules! payout_res_transformer {
                 ))
                 .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
                     let ctx = e.current_context();
-                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                    grpc_api_types::payments::ConnectorError {
                         error_message: ctx.to_string(),
                         error_code: ctx.error_code().to_string(),
                         http_status_code: None,
@@ -413,7 +409,7 @@ macro_rules! payout_res_transformer {
                 domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
                 .map_err(|e: error_stack::Report<domain_types::errors::IntegrationError>| {
                     let ctx = e.current_context();
-                    grpc_api_types::payments::ConnectorResponseTransformationError {
+                    grpc_api_types::payments::ConnectorError {
                         error_message: ctx.to_string(),
                         error_code: ctx.error_code().to_string(),
                         http_status_code: None,
@@ -444,12 +440,12 @@ macro_rules! payout_res_transformer {
                 "".to_string(),
                 None,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
+            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
                 common_utils::errors::ErrorSwitch::switch(e.current_context())
             })?;
 
             domain_types::payouts::types::$generate_response_fn(response)
-                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorResponseTransformationError>| {
+                .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
                     common_utils::errors::ErrorSwitch::switch(e.current_context())
                 })
         }

@@ -13,10 +13,7 @@ use serde_json::Value;
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::{
-        self, ConnectorResponseTransformationError, IntegrationError, IntegrationErrorContext,
-        ParsingError,
-    },
+    errors::{self, ConnectorError, IntegrationError, IntegrationErrorContext, ParsingError},
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_response_types::Response,
@@ -87,15 +84,15 @@ where
 pub fn handle_json_response_deserialization_failure(
     res: Response,
     _: &'static str,
-) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+) -> CustomResult<ErrorResponse, ConnectorError> {
     let status = res.status_code;
     let response_data = String::from_utf8(res.response.to_vec())
-        .change_context(ConnectorResponseTransformationError::response_handling_failed(status))?;
+        .change_context(ConnectorError::response_handling_failed(status))?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(ConnectorResponseTransformationError::response_handling_failed(status))?,
+        Ok(_) => Err(ConnectorError::response_handling_failed(status))?,
         // in case of unexpected response but in html or string format
         Err(_) => Ok(ErrorResponse {
             status_code: res.status_code,
@@ -171,12 +168,10 @@ pub fn get_amount_as_string(
 
 pub fn base64_decode(
     data: String,
-) -> core::result::Result<Vec<u8>, error_stack::Report<ConnectorResponseTransformationError>> {
+) -> core::result::Result<Vec<u8>, error_stack::Report<ConnectorError>> {
     base64::engine::general_purpose::STANDARD
         .decode(data)
-        .change_context(
-            ConnectorResponseTransformationError::response_handling_failed_http_status_unknown(),
-        )
+        .change_context(ConnectorError::response_handling_failed_http_status_unknown())
 }
 
 pub fn to_currency_base_unit(

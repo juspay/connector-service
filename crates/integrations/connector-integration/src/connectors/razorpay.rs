@@ -14,7 +14,7 @@ use common_utils::{
     request::{Method, RequestContent},
     types::{AmountConvertor, MinorUnit},
 };
-use domain_types::errors::ConnectorResponseTransformationError;
+use domain_types::errors::ConnectorError;
 use domain_types::errors::{IntegrationError, WebhookError};
 use domain_types::{
     connector_flow::{
@@ -269,7 +269,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: razorpay::RazorpayErrorResponse =
             res.response.parse_struct("ErrorResponse").map_err(|_| {
                 crate::utils::response_deserialization_fail(
@@ -342,10 +342,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsResponseData,
         >,
     {
+        // Netbanking and Card use JSON; UPI uses form-urlencoded
+        let content_type = match &req.request.payment_method_data {
+            PaymentMethodData::BankRedirect(
+                domain_types::payment_method_data::BankRedirectData::Netbanking { .. },
+            ) => "application/json",
+            _ => "application/x-www-form-urlencoded",
+        };
         let mut header = vec![
             (
                 headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
+                content_type.to_string().into(),
             ),
             (
                 headers::ACCEPT.to_string(),
@@ -405,6 +412,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     connector_req,
                 ))))
             }
+            PaymentMethodData::BankRedirect(
+                domain_types::payment_method_data::BankRedirectData::Netbanking { .. },
+            ) => {
+                let connector_req =
+                    razorpay::RazorpayNetbankingRequest::try_from(&connector_router_data)?;
+                Ok(Some(RequestContent::Json(Box::new(connector_req))))
+            }
             _ => {
                 let connector_req =
                     razorpay::RazorpayPaymentRequest::try_from(&connector_router_data)?;
@@ -425,7 +439,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     > {
         // Handle UPI payments differently from regular payments
         match &data.request.payment_method_data {
@@ -516,7 +530,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -524,7 +538,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -567,10 +581,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<String, IntegrationError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
 
-        // Check if request_ref_id is provided to determine URL pattern
-        match &req.resource_common_data.reference_id {
+        // Check if connector_order_id is provided to determine URL pattern
+        match &req.resource_common_data.connector_order_id {
             Some(ref_id) => {
-                // Use orders endpoint when request_ref_id is provided
+                // Use orders endpoint when connector_order_id is provided
                 Ok(format!("{base_url}v1/orders/{ref_id}/payments"))
             }
             None => {
@@ -595,7 +609,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     > {
         // Parse the response using the enum that handles both collection and direct payment responses
         let sync_response: RazorpayV2SyncResponse = res
@@ -626,7 +640,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -634,7 +648,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -730,7 +744,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentCreateOrderData,
             PaymentCreateOrderResponse,
         >,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     > {
         let response: razorpay::RazorpayOrderResponse = res
             .response
@@ -754,7 +768,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -762,7 +776,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -813,7 +827,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     > {
         let response: razorpay::RazorpayRefundResponse = res
             .response
@@ -835,7 +849,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -843,7 +857,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -994,7 +1008,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     > {
         let response: razorpay::RazorpayRefundResponse = res
             .response
@@ -1016,7 +1030,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -1024,7 +1038,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -1100,7 +1114,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ConnectorResponseTransformationError,
+        ConnectorError,
     > {
         let response: razorpay::RazorpayCaptureResponse = res
             .response
@@ -1125,7 +1139,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -1133,7 +1147,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorResponseTransformationError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -1284,6 +1298,17 @@ static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
                         supported_card_networks: razorpay_supported_card_network.clone(),
                     },
                 )),
+            },
+        );
+
+        razorpay_supported_payment_methods.add(
+            PaymentMethod::BankRedirect,
+            PaymentMethodType::Netbanking,
+            PaymentMethodDetails {
+                mandates: FeatureStatus::NotSupported,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: vec![CaptureMethod::Automatic],
+                specific_features: None,
             },
         );
 
