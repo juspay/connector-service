@@ -4,6 +4,8 @@
   - [Installation & Configuration](getting-started/installation.md)
   - [First Payment](getting-started/first-payment.md)
   - [Extend to More Flows](getting-started/extend-to-more-flows.md)
+  - [Payment Methods](getting-started/payment-methods/README.md)
+    - [Connector Token](getting-started/payment-methods/token.md)
 
 - [Architecture Overview](architecture/README.md)
   - [PCI Compliance](architecture/compliance/compliance.md)
