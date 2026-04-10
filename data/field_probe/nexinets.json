@@ -593,7 +593,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"transactionType\":\"PREAUTH\",\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"}}"
+          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"transactionType\":\"PREAUTH\",\"async\":{\"successUrl\":null,\"cancelUrl\":null,\"failureUrl\":null}}"
         }
       }
     },
