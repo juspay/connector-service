@@ -74,8 +74,14 @@ jobs:
           echo "LIBRARY_PATH=$(brew --prefix libpq)/lib:$LIBRARY_PATH" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=$(brew --prefix libpq)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
+      - name: Set up Python (for SDK codegen)
+        if: matrix.os == 'macos'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Build FFI binary (${{ matrix.target }})
-        run: make -C sdk/java build-ffi-lib PROFILE=release
+        run: make -C sdk/javascript build-ffi-lib PROFILE=release
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
@@ -86,7 +92,7 @@ jobs:
 
       - name: Generate JavaScript SDK (JS proto stubs + native lib)
         if: matrix.target == 'aarch64-apple-darwin'
-        run: make -C sdk/javascript generate-all
+        run: make -C sdk/javascript generate-all PROFILE=release
 
       - name: Upload JavaScript SDK generated files
         if: matrix.target == 'aarch64-apple-darwin'
@@ -204,15 +210,18 @@ jobs:
       - name: Install dependencies
         run: cd sdk/javascript && npm install --silent
       - name: Check npm auth
-        if: ${{ inputs.publish_npm == true }}
+        id: check-js-auth
+        continue-on-error: true
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: make -C sdk/javascript publish-check-auth
       - name: Check version
-        if: ${{ inputs.publish_npm == true }}
+        id: check-js-version
+        continue-on-error: true
         run: make -C sdk/javascript publish-check-version
       - name: Dry-run check
-        if: ${{ inputs.publish_npm == true }}
+        id: check-js-dryrun
+        continue-on-error: true
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: make -C sdk/javascript publish-check-dry-run
@@ -220,12 +229,21 @@ jobs:
         run: |
           echo "=== Pre-Publish Check Summary ==="
           echo ""
-          if [ "${{ inputs.publish_npm }}" == "true" ]; then
-            echo "  JavaScript: PASSED"
+          FAILED=0
+          js_auth="${{ steps.check-js-auth.outcome }}"
+          js_ver="${{ steps.check-js-version.outcome }}"
+          js_dry="${{ steps.check-js-dryrun.outcome }}"
+          if [ "$js_auth" == "failure" ] || [ "$js_ver" == "failure" ] || [ "$js_dry" == "failure" ]; then
+            echo "  JavaScript: FAILED (auth=$js_auth, version=$js_ver, dry-run=$js_dry)"
+            FAILED=1
           else
-            echo "  JavaScript: SKIPPED (preview mode)"
+            echo "  JavaScript: PASSED"
           fi
           echo ""
+          if [ "${{ inputs.publish_npm }}" == "true" ] && [ "$FAILED" -eq 1 ]; then
+            echo "One or more pre-publish checks FAILED. Publishing will be blocked."
+            exit 1
+          fi
 
   publish:
     name: Publish JavaScript SDK to npm
@@ -293,6 +311,8 @@ jobs:
 
       - name: Add npm package owners
         if: ${{ inputs.preview_only == false }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           npm owner add titanbot hyperswitch-prism
           npm owner add georgejames hyperswitch-prism
