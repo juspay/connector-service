@@ -49,6 +49,16 @@ tasks.register<JavaExec>("runClientSanity") {
     dependsOn("compileSanityKotlin")
 }
 
+tasks.register<JavaExec>("runWebhookTest") {
+    group = "verification"
+    description = "Run webhook SDK integration tests"
+    mainClass.set("tests.WebhookSdkIntegrationTestKt")
+    classpath = sourceSets["sanity"].runtimeClasspath
+    systemProperty("jna.library.path",
+        file("build/resources/main/native").absolutePath)
+    dependsOn("compileSanityKotlin")
+}
+
 // Signing configuration
 signing {
     val signingKey = System.getenv("GPG_SIGNING_KEY")

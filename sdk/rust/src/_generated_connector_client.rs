@@ -587,7 +587,7 @@ pub fn build_ffi_request<T>(
         payload,
         extracted_metadata: FfiMetadataPayload {
             connector,
-            connector_config,
+            connector_config: Some(connector_config),
         },
         masked_metadata: Some(masked_metadata),
     })

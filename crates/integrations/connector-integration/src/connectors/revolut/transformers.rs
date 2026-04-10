@@ -26,6 +26,7 @@ use time::PrimitiveDateTime;
 
 pub struct RevolutAuthType {
     pub secret_api_key: Secret<String>,
+    #[allow(dead_code)]
     pub signing_secret: Option<Secret<String>>,
 }
 

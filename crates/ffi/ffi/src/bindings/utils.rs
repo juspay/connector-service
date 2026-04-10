@@ -178,8 +178,6 @@ pub fn parse_metadata(
 pub fn parse_webhook_metadata(
     options: &FfiOptions,
 ) -> Result<crate::types::FfiMetadataPayload, IntegrationError> {
-    use grpc_api_types::payments::connector_specific_config::Config as ProtoConfig;
-
     let proto_config = options
         .connector_config
         .as_ref()
