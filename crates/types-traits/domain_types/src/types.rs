@@ -965,10 +965,14 @@ impl<
                     };
                     Ok(Self::CardRedirect(card_redirect_data))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::Token(_token) => {
-                    Ok(Self::CardToken(payment_method_data::CardToken {
-                        card_holder_name: None,
-                        card_cvc: None,
+                grpc_api_types::payments::payment_method::PaymentMethod::Token(token) => {
+                    Ok(Self::PaymentMethodToken(payment_method_data::PaymentMethodToken {
+                        token: token
+                            .token
+                            .ok_or_else(|| report!(IntegrationError::MissingRequiredField {
+                                field_name: "payment_method.token.token",
+                                context: Default::default(),
+                            }))?,
                     }))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(
@@ -3268,7 +3272,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -3354,21 +3357,6 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             .map(ServerAuthenticationTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let payment_method_token = value.payment_method.as_ref().and_then(|pm| {
-            pm.payment_method.as_ref().and_then(|method| {
-                if let grpc_api_types::payments::payment_method::PaymentMethod::Token(token_data) =
-                    method
-                {
-                    token_data
-                        .token
-                        .clone()
-                        .map(router_data::PaymentMethodToken::Token)
-                } else {
-                    None
-                }
-            })
-        });
-
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -3412,7 +3400,6 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             session_token: value.session_token,
             reference_id: value.merchant_order_id.clone(),
             connector_order_id: value.connector_order_id,
-            payment_method_token,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -3510,7 +3497,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -3588,7 +3574,6 @@ impl
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -3660,7 +3645,6 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -6201,7 +6185,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -6310,7 +6293,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -6918,7 +6900,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -6990,7 +6971,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -7297,21 +7277,6 @@ impl
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
 
-        let payment_method_token = value.payment_method.as_ref().and_then(|pm| {
-            pm.payment_method.as_ref().and_then(|method| {
-                if let grpc_api_types::payments::payment_method::PaymentMethod::Token(token_data) =
-                    method
-                {
-                    token_data
-                        .token
-                        .clone()
-                        .map(router_data::PaymentMethodToken::Token)
-                } else {
-                    None
-                }
-            })
-        });
-
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -7349,7 +7314,6 @@ impl
             session_token: value.session_token,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode,
@@ -7420,21 +7384,6 @@ impl
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
 
-        let payment_method_token = value.payment_method.as_ref().and_then(|pm| {
-            pm.payment_method.as_ref().and_then(|method| {
-                if let grpc_api_types::payments::payment_method::PaymentMethod::Token(token_data) =
-                    method
-                {
-                    token_data
-                        .token
-                        .clone()
-                        .map(router_data::PaymentMethodToken::Token)
-                } else {
-                    None
-                }
-            })
-        });
-
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -7471,7 +7420,6 @@ impl
             session_token: value.session_token,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -8544,7 +8492,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -8747,7 +8694,7 @@ pub enum PaymentMethodDataType {
     PayEasy,
     Givex,
     PaySafeCar,
-    CardToken,
+    PaymentMethodToken,
     LocalBankTransfer,
     Mifinity,
     Fps,
@@ -9051,7 +8998,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -9231,7 +9177,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -9380,7 +9325,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -11120,7 +11064,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -11210,7 +11153,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -11309,7 +11251,6 @@ impl
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -11386,7 +11327,6 @@ impl
             session_token: None,
             reference_id: None,
             connector_order_id: None,
-            payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
