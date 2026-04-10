@@ -570,11 +570,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             // Parse signedMessage to extract ephemeralPublicKey.
                             // signedMessage is itself a JSON string.
                             let signed_message: requests::GooglePaySignedMessage =
-                                serde_json::from_str(&gpay_token.signed_message).change_context(
-                                    IntegrationError::RequestEncodingFailed {
-                                        context: Default::default(),
-                                    },
-                                )?;
+                                serde_json::from_str(gpay_token.signed_message.peek())
+                                    .change_context(
+                                        IntegrationError::RequestEncodingFailed {
+                                            context: Default::default(),
+                                        },
+                                    )?;
 
                             // For ECv2, signature comes from intermediateSigningKey.signatures[0].
                             // For ECv1, signature comes from the top-level signature field.
@@ -588,7 +589,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                             context: Default::default(),
                                         })?
                                 } else {
-                                    Secret::new(gpay_token.signature.clone())
+                                    gpay_token.signature.clone()
                                 };
 
                             let googlepay = requests::JpmorganGooglePay {
@@ -596,9 +597,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 lat_long: "0,0".to_string(),
                                 encrypted_payment_bundle: requests::JpmorganEncryptedPaymentBundle {
                                     // encryptedPayload is the raw signedMessage JSON string
-                                    encrypted_payload: Secret::new(
-                                        gpay_token.signed_message.clone(),
-                                    ),
+                                    encrypted_payload: gpay_token.signed_message.clone(),
                                     encrypted_payment_header:
                                         requests::JpmorganEncryptedPaymentHeader {
                                             ephemeral_public_key: signed_message

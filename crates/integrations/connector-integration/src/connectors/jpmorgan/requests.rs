@@ -178,10 +178,10 @@ pub struct JpmorganEncryptedPaymentHeader {
 #[serde(rename_all = "camelCase")]
 pub struct GooglePayToken {
     pub protocol_version: String,
-    pub signature: String,
+    pub signature: Secret<String>,
     #[serde(default)]
     pub intermediate_signing_key: Option<GooglePayIntermediateSigningKey>,
-    pub signed_message: String,
+    pub signed_message: Secret<String>,
 }
 
 #[derive(Debug, Deserialize)]
