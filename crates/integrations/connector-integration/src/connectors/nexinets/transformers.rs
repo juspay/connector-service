@@ -946,16 +946,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let return_url = router_data
-            .resource_common_data
-            .return_url
-            .clone()
-            .unwrap_or_else(|| "https://example.com/return".to_string());
-
+        let return_url = router_data.resource_common_data.return_url.clone();
         let nexinets_async = NexinetsAsyncDetails {
-            success_url: Some(return_url.clone()),
-            cancel_url: Some(return_url.clone()),
-            failure_url: Some(return_url),
+            success_url: return_url.clone(),
+            cancel_url: return_url.clone(),
+            failure_url: return_url,
         };
 
         Ok(Self {
