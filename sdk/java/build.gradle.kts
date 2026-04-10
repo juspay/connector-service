@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "io.hyperswitch"
-version = "0.0.3"
+version = "0.0.4"
 
 repositories {
     mavenCentral()
@@ -92,8 +92,8 @@ if (System.getenv("CENTRAL_TOKEN_USERNAME") != null) {
             url = "https://github.com/juspay/hyperswitch-prism"
 
             license {
-                name = "Apache License 2.0"
-                url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                name = "MIT License"
+                url = "https://opensource.org/licenses/MIT"
             }
 
             developer {
