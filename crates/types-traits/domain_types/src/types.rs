@@ -8426,7 +8426,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
                     value
                         .order_details
                         .into_iter()
-                        .map(|od| ForeignTryFrom::foreign_try_from(od))
+                        .map(ForeignTryFrom::foreign_try_from)
                         .collect::<Result<Vec<_>, _>>()?,
                 )
             },
