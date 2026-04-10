@@ -19,7 +19,7 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId,
     },
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -1696,13 +1696,49 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = StringMinorUnitForConnector
             .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Ensure the request carries a valid minor-unit amount and a currency \
+                         supported by Nexi XPay. Nexi `/orders/hpp` expects \
+                         `paymentSession.amount` as a string of minor units (e.g. cents), so \
+                         the source `MinorUnit` must be representable as an integer string."
+                            .to_owned(),
+                    ),
+                    doc_url: Some(
+                        "https://developer.nexi.it/en/api/post-orders-hpp".to_owned(),
+                    ),
+                    additional_context: Some(format!(
+                        "Failed to encode amount={:?} currency={:?} as a Nexi \
+                         `paymentSession.amount` (string minor-units) for the /orders/hpp \
+                         ClientAuthenticationToken flow.",
+                        router_data.request.amount, router_data.request.currency,
+                    )),
+                },
             })?;
 
         let return_url = router_data.resource_common_data.return_url.clone().ok_or(
             IntegrationError::MissingRequiredField {
                 field_name: "return_url",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Populate `return_url` on the PaymentCreate/Confirm request so Nexi's \
+                         Hosted Payment Page can redirect the cardholder back to the merchant \
+                         on both successful and cancelled payments. This connector reuses \
+                         `return_url` for both `paymentSession.resultUrl` and \
+                         `paymentSession.cancelUrl`."
+                            .to_owned(),
+                    ),
+                    doc_url: Some(
+                        "https://developer.nexi.it/en/api/post-orders-hpp".to_owned(),
+                    ),
+                    additional_context: Some(
+                        "Nexi XPay /orders/hpp marks both `paymentSession.resultUrl` and \
+                         `paymentSession.cancelUrl` as REQUIRED; without `return_url` the \
+                         hosted payment session (ClientAuthenticationToken flow) cannot be \
+                         initialized."
+                            .to_owned(),
+                    ),
+                },
             },
         )?;
 
