@@ -1,3 +1,4 @@
+use common_enums::KafkaClientError;
 use domain_types::errors::{
     ApiClientError, ConnectorFlowError, ConnectorResponseTransformationError, IntegrationError,
     WebhookError,
@@ -163,6 +164,14 @@ impl IntoGrpcStatus for error_stack::Report<ApiClientError> {
     }
 }
 
+impl IntoGrpcStatus for error_stack::Report<KafkaClientError> {
+    fn into_grpc_status(self) -> Status {
+        logger::error!(error=?self);
+        let msg = self.current_context().to_string();
+        Status::internal(msg)
+    }
+}
+
 /// Direct gRPC status mapping for `ConnectorFlowError` (unified gRPC path wrapper).
 impl IntoGrpcStatus for error_stack::Report<ConnectorFlowError> {
     fn into_grpc_status(self) -> Status {
@@ -172,6 +181,9 @@ impl IntoGrpcStatus for error_stack::Report<ConnectorFlowError> {
                 error_stack::Report::new(e.clone()).into_grpc_status()
             }
             ConnectorFlowError::Client(e) => error_stack::Report::new(e.clone()).into_grpc_status(),
+            ConnectorFlowError::KafkaClient(e) => {
+                error_stack::Report::new(e.clone()).into_grpc_status()
+            }
             ConnectorFlowError::Response(e) => {
                 error_stack::Report::new(e.clone()).into_grpc_status()
             }

@@ -1584,6 +1584,23 @@ pub enum CountryAlpha3 {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
+pub enum KafkaClientError {
+    /// Invalid configuration provided
+    #[error("Invalid configuration: {message}")]
+    InvalidConfiguration { message: String },
+    #[error("Kafka connector request publishing not enabled")]
+    NotEnabled,
+    #[error("Kafka producer not initialized")]
+    ProducerNotInitialized,
+    #[error("Kafka producer construction failed")]
+    ProducerConstructionFailed,
+    #[error("Failed to fetch Kafka metadata")]
+    MetadataFetchFailed,
+    #[error("Unsupported payload format: {format}")]
+    UnsupportedPayloadFormat { format: String },
+}
+
+#[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
     HeaderMapConstructionFailed,
