@@ -9,9 +9,9 @@
 
 overview:
   total_connectors: 81
-  docs_root: https://github.com/juspay/hyperswitch-prism/tree/main/docs-generated/connectors/
-  examples_root: https://github.com/juspay/hyperswitch-prism/tree/main/examples/
-  all_connectors_matrix: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/all_connector.md
+  docs_root: docs-generated/connectors/
+  examples_root: examples/
+  all_connectors_matrix: docs-generated/all_connector.md
 
 integration_pattern:
   1. Configure ConnectorConfig with connector name and credentials
@@ -24,79 +24,79 @@ integration_pattern:
 
 ## ACI
 connector_id: aci
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/aci.md
+doc: docs/connectors/aci.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Affirm, Afterpay, AliPayRedirect, Card, Eft, Eps, Giropay, Ideal, Interac, Klarna, Przelewy24, Sofort, Trustly
 flows: authorize, capture, get, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/aci/aci.py
+examples_python: examples/aci/aci.py
 
 ## Adyen
 connector_id: adyen
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/adyen.md
+doc: docs/connectors/adyen.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment
 payment_methods: Ach, Affirm, Afterpay, Alfamart, ApplePay, ApplePayDecrypted, Bacs, BancontactCard, BcaBankTransfer, Bizum, Blik, BniVaBankTransfer, Boleto, BriVaBankTransfer, Card, CimbVaBankTransfer, DanamonVaBankTransfer, Eps, FamilyMart, GooglePay, GooglePayDecrypted, Ideal, Indomaret, Klarna, Lawson, MandiriVaBankTransfer, MiniStop, OnlineBankingCzechRepublic, OnlineBankingFinland, OnlineBankingFpx, OnlineBankingSlovakia, OnlineBankingThailand, OpenBankingUk, Oxxo, PayEasy, PermataBankTransfer, Pix, Seicomart, Sepa, SevenEleven, Trustly
 flows: authorize, capture, create_client_authentication_token, create_order, dispute_accept, dispute_defend, dispute_submit_evidence, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, setup_recurring, token_authorize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/adyen/adyen.py
+examples_python: examples/adyen/adyen.py
 
 ## Airwallex
 connector_id: airwallex
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/airwallex.md
+doc: docs/connectors/airwallex.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Blik, Card, Ideal, Trustly
 flows: authorize, capture, create_order, create_server_authentication_token, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/airwallex/airwallex.py
+examples_python: examples/airwallex/airwallex.py
 
 ## Authipay
 connector_id: authipay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/authipay.md
+doc: docs/connectors/authipay.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/authipay/authipay.py
+examples_python: examples/authipay/authipay.py
 
 ## Authorize.net
 connector_id: authorizedotnet
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/authorizedotnet.md
+doc: docs/connectors/authorizedotnet.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, Card
 flows: authorize, capture, create_customer, get, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/authorizedotnet/authorizedotnet.py
+examples_python: examples/authorizedotnet/authorizedotnet.py
 
 ## Bambora
 connector_id: bambora
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/bambora.md
+doc: docs/connectors/bambora.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/bambora/bambora.py
+examples_python: examples/bambora/bambora.py
 
 ## Bamboraapac
 connector_id: bamboraapac
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/bamboraapac.md
+doc: docs/connectors/bamboraapac.md
 scenarios: checkout_autocapture, checkout_card, refund, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/bamboraapac/bamboraapac.py
+examples_python: examples/bamboraapac/bamboraapac.py
 
 ## Bankofamerica
 connector_id: bankofamerica
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/bankofamerica.md
+doc: docs/connectors/bankofamerica.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, proxy_setup_recurring, refund, refund_get, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/bankofamerica/bankofamerica.py
+examples_python: examples/bankofamerica/bankofamerica.py
 
 ## Barclaycard
 connector_id: barclaycard
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/barclaycard.md
+doc: docs/connectors/barclaycard.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/barclaycard/barclaycard.py
+examples_python: examples/barclaycard/barclaycard.py
 
 ## Billwerk
 connector_id: billwerk
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/billwerk.md
+doc: docs/connectors/billwerk.md
 scenarios: none
 payment_methods: none
 flows: capture, get, recurring_charge, refund, refund_get, token_authorize, token_setup_recurring, tokenize, void
@@ -104,15 +104,15 @@ examples_python: none
 
 ## Bluesnap
 connector_id: bluesnap
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/bluesnap.md
+doc: docs/connectors/bluesnap.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, ApplePay, ApplePayDecrypted, Card, GooglePay, GooglePayDecrypted, Sepa
 flows: authorize, capture, create_client_authentication_token, get, handle_event, proxy_authorize, refund, refund_get, token_authorize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/bluesnap/bluesnap.py
+examples_python: examples/bluesnap/bluesnap.py
 
 ## Braintree
 connector_id: braintree
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/braintree.md
+doc: docs/connectors/braintree.md
 scenarios: none
 payment_methods: ApplePayThirdPartySdk, GooglePayThirdPartySdk, PaypalSdk
 flows: authorize, capture, create_client_authentication_token, get, refund, refund_get, tokenize, void
@@ -120,7 +120,7 @@ examples_python: none
 
 ## Calida
 connector_id: calida
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/calida.md
+doc: docs/connectors/calida.md
 scenarios: none
 payment_methods: none
 flows: get, handle_event
@@ -128,7 +128,7 @@ examples_python: none
 
 ## Cashfree
 connector_id: cashfree
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/cashfree.md
+doc: docs/connectors/cashfree.md
 scenarios: none
 payment_methods: UpiCollect, UpiIntent, UpiQr
 flows: authorize
@@ -136,7 +136,7 @@ examples_python: none
 
 ## CashtoCode
 connector_id: cashtocode
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/cashtocode.md
+doc: docs/connectors/cashtocode.md
 scenarios: none
 payment_methods: none
 flows: handle_event
@@ -144,23 +144,23 @@ examples_python: none
 
 ## Celero
 connector_id: celero
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/celero.md
+doc: docs/connectors/celero.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/celero/celero.py
+examples_python: examples/celero/celero.py
 
 ## Checkout.com
 connector_id: checkout
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/checkout.md
+doc: docs/connectors/checkout.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, ApplePayDecrypted, Card, GooglePayDecrypted
 flows: authorize, capture, get, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/checkout/checkout.py
+examples_python: examples/checkout/checkout.py
 
 ## CryptoPay
 connector_id: cryptopay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/cryptopay.md
+doc: docs/connectors/cryptopay.md
 scenarios: none
 payment_methods: none
 flows: get, handle_event
@@ -168,39 +168,39 @@ examples_python: none
 
 ## CyberSource
 connector_id: cybersource
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/cybersource.md
+doc: docs/connectors/cybersource.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: ApplePay, ApplePayDecrypted, Card, GooglePay, GooglePayDecrypted, SamsungPay
 flows: authenticate, authorize, capture, get, post_authenticate, pre_authenticate, proxy_authorize, recurring_charge, recurring_revoke, refund, refund_get, token_authorize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/cybersource/cybersource.py
+examples_python: examples/cybersource/cybersource.py
 
 ## Datatrans
 connector_id: datatrans
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/datatrans.md
+doc: docs/connectors/datatrans.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, create_client_authentication_token, get, proxy_authorize, refund, refund_get, token_authorize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/datatrans/datatrans.py
+examples_python: examples/datatrans/datatrans.py
 
 ## dLocal
 connector_id: dlocal
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/dlocal.md
+doc: docs/connectors/dlocal.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, recurring_charge, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/dlocal/dlocal.py
+examples_python: examples/dlocal/dlocal.py
 
 ## Elavon
 connector_id: elavon
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/elavon.md
+doc: docs/connectors/elavon.md
 scenarios: checkout_autocapture, checkout_card, refund, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/elavon/elavon.py
+examples_python: examples/elavon/elavon.py
 
 ## Finix
 connector_id: finix
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/finix.md
+doc: docs/connectors/finix.md
 scenarios: none
 payment_methods: none
 flows: capture, create_customer, get, refund, refund_get, token_authorize, tokenize, void
@@ -208,15 +208,15 @@ examples_python: none
 
 ## Fiserv
 connector_id: fiserv
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/fiserv.md
+doc: docs/connectors/fiserv.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/fiserv/fiserv.py
+examples_python: examples/fiserv/fiserv.py
 
 ## Fiservcommercehub
 connector_id: fiservcommercehub
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/fiservcommercehub.md
+doc: docs/connectors/fiservcommercehub.md
 scenarios: none
 payment_methods: none
 flows: create_server_authentication_token, get, refund, refund_get, void
@@ -224,39 +224,39 @@ examples_python: none
 
 ## Fiservemea
 connector_id: fiservemea
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/fiservemea.md
+doc: docs/connectors/fiservemea.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/fiservemea/fiservemea.py
+examples_python: examples/fiservemea/fiservemea.py
 
 ## Fiuu
 connector_id: fiuu
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/fiuu.md
+doc: docs/connectors/fiuu.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: ApplePayDecrypted, Card, GooglePay, OnlineBankingFpx
 flows: authorize, capture, get, handle_event, proxy_authorize, recurring_charge, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/fiuu/fiuu.py
+examples_python: examples/fiuu/fiuu.py
 
 ## Forte
 connector_id: forte
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/forte.md
+doc: docs/connectors/forte.md
 scenarios: checkout_autocapture, void_payment, get_payment
 payment_methods: Ach, Card
 flows: authorize, get, proxy_authorize, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/forte/forte.py
+examples_python: examples/forte/forte.py
 
 ## Getnet
 connector_id: getnet
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/getnet.md
+doc: docs/connectors/getnet.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, create_server_authentication_token, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/getnet/getnet.py
+examples_python: examples/getnet/getnet.py
 
 ## Gigadat
 connector_id: gigadat
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/gigadat.md
+doc: docs/connectors/gigadat.md
 scenarios: none
 payment_methods: Interac
 flows: authorize, get, refund
@@ -264,39 +264,39 @@ examples_python: none
 
 ## Globalpay
 connector_id: globalpay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/globalpay.md
+doc: docs/connectors/globalpay.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card, Eps, Ideal
 flows: authorize, capture, create_client_authentication_token, create_server_authentication_token, get, proxy_authorize, refund, refund_get, token_authorize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/globalpay/globalpay.py
+examples_python: examples/globalpay/globalpay.py
 
 ## Helcim
 connector_id: helcim
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/helcim.md
+doc: docs/connectors/helcim.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/helcim/helcim.py
+examples_python: examples/helcim/helcim.py
 
 ## Hipay
 connector_id: hipay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/hipay.md
+doc: docs/connectors/hipay.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, token_authorize, tokenize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/hipay/hipay.py
+examples_python: examples/hipay/hipay.py
 
 ## Hyperpg
 connector_id: hyperpg
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/hyperpg.md
+doc: docs/connectors/hyperpg.md
 scenarios: checkout_autocapture, refund, get_payment
 payment_methods: Card
 flows: authorize, get, proxy_authorize, refund, refund_get
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/hyperpg/hyperpg.py
+examples_python: examples/hyperpg/hyperpg.py
 
 ## Iatapay
 connector_id: iatapay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/iatapay.md
+doc: docs/connectors/iatapay.md
 scenarios: none
 payment_methods: Ideal, LocalBankRedirect, UpiCollect, UpiIntent, UpiQr
 flows: authorize, create_server_authentication_token, get, refund, refund_get
@@ -304,7 +304,7 @@ examples_python: none
 
 ## Itaubank
 connector_id: itaubank
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/itaubank.md
+doc: docs/connectors/itaubank.md
 scenarios: none
 payment_methods: none
 flows: create_server_authentication_token
@@ -312,15 +312,15 @@ examples_python: none
 
 ## Jpmorgan
 connector_id: jpmorgan
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/jpmorgan.md
+doc: docs/connectors/jpmorgan.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, Card
 flows: authorize, capture, create_client_authentication_token, create_server_authentication_token, get, proxy_authorize, refund, refund_get, token_authorize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/jpmorgan/jpmorgan.py
+examples_python: examples/jpmorgan/jpmorgan.py
 
 ## Loonio
 connector_id: loonio
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/loonio.md
+doc: docs/connectors/loonio.md
 scenarios: none
 payment_methods: Interac
 flows: authorize, get
@@ -328,7 +328,7 @@ examples_python: none
 
 ## MiFinity
 connector_id: mifinity
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/mifinity.md
+doc: docs/connectors/mifinity.md
 scenarios: none
 payment_methods: Mifinity
 flows: authorize, get
@@ -336,31 +336,31 @@ examples_python: none
 
 ## Mollie
 connector_id: mollie
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/mollie.md
+doc: docs/connectors/mollie.md
 scenarios: checkout_autocapture, refund, void_payment, get_payment
 payment_methods: Card
-flows: authorize, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/mollie/mollie.py
+flows: authorize, get, proxy_authorize, refund, refund_get, token_authorize, void
+examples_python: examples/mollie/mollie.py
 
 ## Multisafepay
 connector_id: multisafepay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/multisafepay.md
+doc: docs/connectors/multisafepay.md
 scenarios: checkout_autocapture, refund, get_payment
 payment_methods: AliPayRedirect, Card, Eps, Giropay, GooglePay, GooglePayDecrypted, Ideal, PaypalRedirect, Sepa, Sofort, Trustly
 flows: authorize, create_client_authentication_token, get, proxy_authorize, refund, refund_get
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/multisafepay/multisafepay.py
+examples_python: examples/multisafepay/multisafepay.py
 
 ## Nexinets
 connector_id: nexinets
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/nexinets.md
+doc: docs/connectors/nexinets.md
 scenarios: checkout_autocapture, refund, get_payment
 payment_methods: ApplePay, Card, Eps, Giropay, Ideal, PaypalRedirect, Sofort
 flows: authorize, get, proxy_authorize, refund
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/nexinets/nexinets.py
+examples_python: examples/nexinets/nexinets.py
 
 ## Nexixpay
 connector_id: nexixpay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/nexixpay.md
+doc: docs/connectors/nexixpay.md
 scenarios: none
 payment_methods: none
 flows: capture, get, pre_authenticate, refund, refund_get, void
@@ -368,71 +368,71 @@ examples_python: none
 
 ## Nmi
 connector_id: nmi
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/nmi.md
+doc: docs/connectors/nmi.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, Card, GooglePay, GooglePayDecrypted
 flows: authorize, capture, get, pre_authenticate, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/nmi/nmi.py
+examples_python: examples/nmi/nmi.py
 
 ## Noon
 connector_id: noon
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/noon.md
+doc: docs/connectors/noon.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card, GooglePay, GooglePayDecrypted, PaypalRedirect
 flows: authorize, capture, get, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, recurring_revoke, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/noon/noon.py
+examples_python: examples/noon/noon.py
 
 ## Novalnet
 connector_id: novalnet
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/novalnet.md
+doc: docs/connectors/novalnet.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, ApplePay, Card, GooglePay, PaypalRedirect, Sepa
 flows: authorize, capture, get, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/novalnet/novalnet.py
+examples_python: examples/novalnet/novalnet.py
 
 ## Nuvei
 connector_id: nuvei
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/nuvei.md
+doc: docs/connectors/nuvei.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
-flows: authorize, capture, create_client_authentication_token, create_server_session_authentication_token, get, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/nuvei/nuvei.py
+flows: authorize, capture, create_client_authentication_token, create_order, create_server_session_authentication_token, get, refund, refund_get, void
+examples_python: examples/nuvei/nuvei.py
 
 ## Paybox
 connector_id: paybox
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/paybox.md
+doc: docs/connectors/paybox.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/paybox/paybox.py
+examples_python: examples/paybox/paybox.py
 
 ## Payload
 connector_id: payload
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/payload.md
+doc: docs/connectors/payload.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, Card
 flows: authorize, capture, get, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/payload/payload.py
+examples_python: examples/payload/payload.py
 
 ## Payme
 connector_id: payme
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/payme.md
+doc: docs/connectors/payme.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, create_order, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/payme/payme.py
+examples_python: examples/payme/payme.py
 
 ## Paypal
 connector_id: paypal
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/paypal.md
+doc: docs/connectors/paypal.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card, Eps, Giropay, GooglePayDecrypted, Ideal, PaypalRedirect, PaypalSdk, Sofort
 flows: authorize, capture, create_order, create_server_authentication_token, get, handle_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/paypal/paypal.py
+examples_python: examples/paypal/paypal.py
 
 ## Paysafe
 connector_id: paysafe
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/paysafe.md
+doc: docs/connectors/paysafe.md
 scenarios: none
 payment_methods: none
 flows: capture, get, refund, refund_get, token_authorize, tokenize, void
@@ -440,7 +440,7 @@ examples_python: none
 
 ## Paytm
 connector_id: paytm
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/paytm.md
+doc: docs/connectors/paytm.md
 scenarios: none
 payment_methods: UpiCollect, UpiIntent, UpiQr
 flows: authorize, create_server_session_authentication_token, get
@@ -448,7 +448,7 @@ examples_python: none
 
 ## PayU
 connector_id: payu
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/payu.md
+doc: docs/connectors/payu.md
 scenarios: none
 payment_methods: UpiCollect, UpiIntent, UpiQr
 flows: authorize, get
@@ -456,15 +456,15 @@ examples_python: none
 
 ## Peachpayments
 connector_id: peachpayments
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/peachpayments.md
+doc: docs/connectors/peachpayments.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, handle_event, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/peachpayments/peachpayments.py
+examples_python: examples/peachpayments/peachpayments.py
 
 ## PhonePe
 connector_id: phonepe
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/phonepe.md
+doc: docs/connectors/phonepe.md
 scenarios: none
 payment_methods: UpiCollect, UpiIntent, UpiQr
 flows: authorize, get
@@ -472,23 +472,23 @@ examples_python: none
 
 ## PlacetoPay
 connector_id: placetopay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/placetopay.md
+doc: docs/connectors/placetopay.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/placetopay/placetopay.py
+examples_python: examples/placetopay/placetopay.py
 
 ## Powertranz
 connector_id: powertranz
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/powertranz.md
+doc: docs/connectors/powertranz.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/powertranz/powertranz.py
+examples_python: examples/powertranz/powertranz.py
 
 ## Ppro
 connector_id: ppro
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/ppro.md
+doc: docs/connectors/ppro.md
 scenarios: none
 payment_methods: AliPayRedirect, BancontactCard, Blik, Ideal, MbWay, Satispay, Trustly, UpiIntent, UpiQr, WeChatPayQr, Wero
 flows: authorize, capture, get, handle_event, recurring_charge, refund, refund_get, void
@@ -496,31 +496,31 @@ examples_python: none
 
 ## Rapyd
 connector_id: rapyd
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/rapyd.md
+doc: docs/connectors/rapyd.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: AliPayRedirect, AmazonPayRedirect, ApplePay, ApplePayThirdPartySdk, Bluecode, Card, CashappQr, GooglePay, GooglePayThirdPartySdk, MbWay, Mifinity, PaypalRedirect, PaypalSdk, RevolutPay, SamsungPay, Satispay, WeChatPayQr, Wero
 flows: authorize, capture, create_client_authentication_token, get, proxy_authorize, refund, refund_get, token_authorize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/rapyd/rapyd.py
+examples_python: examples/rapyd/rapyd.py
 
 ## Razorpay
 connector_id: razorpay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/razorpay.md
+doc: docs/connectors/razorpay.md
 scenarios: checkout_autocapture, checkout_card, refund, get_payment
 payment_methods: Card, UpiCollect, UpiIntent, UpiQr
 flows: authorize, capture, create_order, get, handle_event, proxy_authorize, refund, refund_get
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/razorpay/razorpay.py
+examples_python: examples/razorpay/razorpay.py
 
 ## Razorpay V2
 connector_id: razorpayv2
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/razorpayv2.md
+doc: docs/connectors/razorpayv2.md
 scenarios: checkout_autocapture, refund, get_payment
 payment_methods: Ach, AchBankTransfer, Affirm, Afterpay, Alfamart, AliPayRedirect, AmazonPayRedirect, ApplePay, ApplePayDecrypted, ApplePayThirdPartySdk, Bacs, BacsBankTransfer, BancontactCard, BcaBankTransfer, Becs, Bizum, Blik, Bluecode, BniVaBankTransfer, Boleto, BriVaBankTransfer, Card, CashappQr, CimbVaBankTransfer, ClassicReward, DanamonVaBankTransfer, EVoucher, Efecty, Eft, Eps, FamilyMart, Giropay, GooglePay, GooglePayDecrypted, GooglePayThirdPartySdk, Ideal, Indomaret, IndonesianBankTransfer, InstantBankTransfer, InstantBankTransferFinland, InstantBankTransferPoland, Interac, Klarna, Lawson, LocalBankRedirect, LocalBankTransfer, MandiriVaBankTransfer, MbWay, Mifinity, MiniStop, MultibancoBankTransfer, OnlineBankingCzechRepublic, OnlineBankingFinland, OnlineBankingFpx, OnlineBankingPoland, OnlineBankingSlovakia, OnlineBankingThailand, OpenBanking, OpenBankingUk, Oxxo, PagoEfectivo, PayEasy, PaypalRedirect, PaypalSdk, PermataBankTransfer, Pix, Przelewy24, Pse, RedCompra, RedPagos, RevolutPay, SamsungPay, Satispay, Seicomart, Sepa, SepaBankTransfer, SepaGuaranteedDebit, SevenEleven, Sofort, Trustly, UpiCollect, UpiIntent, UpiQr, WeChatPayQr, Wero
 flows: authorize, create_order, get, proxy_authorize, refund, refund_get, token_authorize
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/razorpayv2/razorpayv2.py
+examples_python: examples/razorpayv2/razorpayv2.py
 
 ## Redsys
 connector_id: redsys
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/redsys.md
+doc: docs/connectors/redsys.md
 scenarios: none
 payment_methods: none
 flows: authenticate, capture, get, pre_authenticate, refund, refund_get, void
@@ -528,39 +528,39 @@ examples_python: none
 
 ## Revolut
 connector_id: revolut
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/revolut.md
+doc: docs/connectors/revolut.md
 scenarios: checkout_autocapture, checkout_card, refund, get_payment
 payment_methods: Ach, AchBankTransfer, Affirm, Afterpay, Alfamart, AliPayRedirect, AmazonPayRedirect, ApplePay, ApplePayDecrypted, ApplePayThirdPartySdk, Bacs, BacsBankTransfer, BancontactCard, BcaBankTransfer, Becs, Bizum, Blik, Bluecode, BniVaBankTransfer, Boleto, BriVaBankTransfer, Card, CashappQr, CimbVaBankTransfer, ClassicReward, DanamonVaBankTransfer, EVoucher, Efecty, Eft, Eps, FamilyMart, Giropay, GooglePay, GooglePayDecrypted, GooglePayThirdPartySdk, Ideal, Indomaret, IndonesianBankTransfer, InstantBankTransfer, InstantBankTransferFinland, InstantBankTransferPoland, Interac, Klarna, Lawson, LocalBankRedirect, LocalBankTransfer, MandiriVaBankTransfer, MbWay, Mifinity, MiniStop, MultibancoBankTransfer, OnlineBankingCzechRepublic, OnlineBankingFinland, OnlineBankingFpx, OnlineBankingPoland, OnlineBankingSlovakia, OnlineBankingThailand, OpenBanking, OpenBankingUk, Oxxo, PagoEfectivo, PayEasy, PaypalRedirect, PaypalSdk, PermataBankTransfer, Pix, Przelewy24, Pse, RedCompra, RedPagos, RevolutPay, SamsungPay, Satispay, Seicomart, Sepa, SepaBankTransfer, SepaGuaranteedDebit, SevenEleven, Sofort, Trustly, UpiCollect, UpiIntent, UpiQr, WeChatPayQr, Wero
 flows: authorize, capture, get, handle_event, proxy_authorize, refund, refund_get, token_authorize, verify_redirect
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/revolut/revolut.py
+examples_python: examples/revolut/revolut.py
 
 ## Revolv3
 connector_id: revolv3
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/revolv3.md
+doc: docs/connectors/revolv3.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment
 payment_methods: Card
 flows: authorize, capture, proxy_authorize, proxy_setup_recurring, refund, refund_get, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/revolv3/revolv3.py
+examples_python: examples/revolv3/revolv3.py
 
 ## Shift4
 connector_id: shift4
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/shift4.md
+doc: docs/connectors/shift4.md
 scenarios: checkout_autocapture, checkout_card, refund, get_payment
 payment_methods: Card, Eps, Ideal
 flows: authorize, capture, create_customer, get, proxy_authorize, recurring_charge, refund, refund_get
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/shift4/shift4.py
+examples_python: examples/shift4/shift4.py
 
 ## Silverflow
 connector_id: silverflow
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/silverflow.md
+doc: docs/connectors/silverflow.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/silverflow/silverflow.py
+examples_python: examples/silverflow/silverflow.py
 
 ## Stax
 connector_id: stax
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/stax.md
+doc: docs/connectors/stax.md
 scenarios: none
 payment_methods: none
 flows: capture, create_customer, get, refund, refund_get, token_authorize, tokenize, void
@@ -568,15 +568,15 @@ examples_python: none
 
 ## Stripe
 connector_id: stripe
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/stripe.md
+doc: docs/connectors/stripe.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Ach, AchBankTransfer, Affirm, Afterpay, AliPayRedirect, AmazonPayRedirect, ApplePay, ApplePayDecrypted, Bacs, BacsBankTransfer, BancontactCard, Becs, Blik, Card, CashappQr, Eps, Giropay, GooglePay, Ideal, Klarna, MultibancoBankTransfer, Przelewy24, RevolutPay, Sepa, SepaBankTransfer, WeChatPayQr
 flows: authorize, capture, create_client_authentication_token, create_customer, get, incremental_authorization, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, token_authorize, tokenize, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/stripe/stripe.py
+examples_python: examples/stripe/stripe.py
 
 ## Truelayer
 connector_id: truelayer
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/truelayer.md
+doc: docs/connectors/truelayer.md
 scenarios: none
 payment_methods: none
 flows: create_server_authentication_token, get, handle_event, refund_get
@@ -584,7 +584,7 @@ examples_python: none
 
 ## Trustly
 connector_id: trustly
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/trustly.md
+doc: docs/connectors/trustly.md
 scenarios: none
 payment_methods: none
 flows: handle_event
@@ -592,31 +592,31 @@ examples_python: none
 
 ## TrustPay
 connector_id: trustpay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/trustpay.md
+doc: docs/connectors/trustpay.md
 scenarios: checkout_autocapture, refund, get_payment
 payment_methods: Blik, Card, Eps, Giropay, Ideal, InstantBankTransfer, InstantBankTransferFinland, InstantBankTransferPoland, SepaBankTransfer, Sofort
 flows: authorize, create_order, create_server_authentication_token, get, handle_event, proxy_authorize, refund, refund_get
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/trustpay/trustpay.py
+examples_python: examples/trustpay/trustpay.py
 
 ## Trustpayments
 connector_id: trustpayments
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/trustpayments.md
+doc: docs/connectors/trustpayments.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card, GooglePayDecrypted
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/trustpayments/trustpayments.py
+examples_python: examples/trustpayments/trustpayments.py
 
 ## Tsys
 connector_id: tsys
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/tsys.md
+doc: docs/connectors/tsys.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/tsys/tsys.py
+examples_python: examples/tsys/tsys.py
 
 ## Volt
 connector_id: volt
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/volt.md
+doc: docs/connectors/volt.md
 scenarios: none
 payment_methods: OpenBanking, OpenBankingUk
 flows: authorize, create_server_authentication_token, get, refund
@@ -624,48 +624,48 @@ examples_python: none
 
 ## Wellsfargo
 connector_id: wellsfargo
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/wellsfargo.md
+doc: docs/connectors/wellsfargo.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, proxy_setup_recurring, refund, refund_get, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/wellsfargo/wellsfargo.py
+examples_python: examples/wellsfargo/wellsfargo.py
 
 ## Worldpay
 connector_id: worldpay
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/worldpay.md
+doc: docs/connectors/worldpay.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: ApplePay, Card, GooglePay
 flows: authorize, capture, get, proxy_authorize, recurring_charge, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/worldpay/worldpay.py
+examples_python: examples/worldpay/worldpay.py
 
 ## Worldpayvantiv
 connector_id: worldpayvantiv
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/worldpayvantiv.md
+doc: docs/connectors/worldpayvantiv.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, reverse, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/worldpayvantiv/worldpayvantiv.py
+examples_python: examples/worldpayvantiv/worldpayvantiv.py
 
 ## Worldpayxml
 connector_id: worldpayxml
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/worldpayxml.md
+doc: docs/connectors/worldpayxml.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/worldpayxml/worldpayxml.py
+examples_python: examples/worldpayxml/worldpayxml.py
 
 ## Xendit
 connector_id: xendit
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/xendit.md
+doc: docs/connectors/xendit.md
 scenarios: checkout_autocapture, checkout_card, refund, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, refund, refund_get
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/xendit/xendit.py
+examples_python: examples/xendit/xendit.py
 
 ## Zift
 connector_id: zift
-doc: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/connectors/zift.md
+doc: docs/connectors/zift.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
 flows: authorize, capture, get, proxy_authorize, proxy_setup_recurring, refund, setup_recurring, void
-examples_python: https://github.com/juspay/hyperswitch-prism/tree/main/examples/zift/zift.py
+examples_python: examples/zift/zift.py
