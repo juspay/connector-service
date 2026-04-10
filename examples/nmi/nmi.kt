@@ -8,12 +8,14 @@
 package examples.nmi
 
 import payments.PaymentClient
+import payments.PaymentMethodAuthenticationClient
 import payments.RefundClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
+import payments.PaymentMethodAuthenticationServicePreAuthenticateRequest
 import payments.PaymentServiceProxyAuthorizeRequest
 import payments.RefundServiceGetRequest
 import payments.AuthenticationType
@@ -226,6 +228,35 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentMethodAuthenticationService.PreAuthenticate
+fun preAuthenticate(txnId: String) {
+    val client = PaymentMethodAuthenticationClient(_defaultConfig)
+    val request = PaymentMethodAuthenticationServicePreAuthenticateRequest.newBuilder().apply {
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        paymentMethodBuilder.apply {  // Payment Method.
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+            }
+        }
+        addressBuilder.apply {  // Address Information.
+            billingAddressBuilder.apply {
+                firstNameBuilder.value = "John"  // Personal Information.
+            }
+        }
+        enrolledFor3Ds = false  // Authentication Details.
+        returnUrl = "https://example.com/3ds-return"  // URLs for Redirection.
+    }.build()
+    val response = client.pre_authenticate(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.ProxyAuthorize
 fun proxyAuthorize(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -299,10 +330,11 @@ fun main(args: Array<String>) {
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
         "get" -> get(txnId)
+        "preAuthenticate" -> preAuthenticate(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
         "refund" -> refund(txnId)
         "refundGet" -> refundGet(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, proxyAuthorize, refund, refundGet, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, preAuthenticate, proxyAuthorize, refund, refundGet, void")
     }
 }

@@ -21,6 +21,41 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
+pub fn build_authenticate_request() -> PaymentMethodAuthenticationServiceAuthenticateRequest {
+    serde_json::from_value::<PaymentMethodAuthenticationServiceAuthenticateRequest>(serde_json::json!({
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "payment_method": {  // Payment Method.
+        "payment_method": {
+            "card": {  // Generic card payment.
+                "card_number": "4111111111111111",  // Card Identification.
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",  // Cardholder Information.
+            },
+        }
+    },
+    "customer": {  // Customer Information.
+        "email": "test@example.com",  // Customer's email address.
+    },
+    "address": {  // Address Information.
+        "billing_address": {
+        },
+    },
+    "return_url": "https://example.com/3ds-return",  // URLs for Redirection.
+    "continue_redirection_url": "https://example.com/3ds-continue",
+    "redirection_response": {  // Redirection Information after DDC step.
+        "params": "probe_redirect_params",
+        "payload": {
+            "transaction_id": "probe_txn_123",
+        },
+    },
+    })).unwrap_or_default()
+}
+
 pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",  // Identification.
@@ -72,6 +107,62 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
         "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
     },
+    })).unwrap_or_default()
+}
+
+pub fn build_post_authenticate_request() -> PaymentMethodAuthenticationServicePostAuthenticateRequest {
+    serde_json::from_value::<PaymentMethodAuthenticationServicePostAuthenticateRequest>(serde_json::json!({
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "payment_method": {  // Payment Method.
+        "payment_method": {
+            "card": {  // Generic card payment.
+                "card_number": "4111111111111111",  // Card Identification.
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",  // Cardholder Information.
+            },
+        }
+    },
+    "address": {  // Address Information.
+        "billing_address": {
+        },
+    },
+    "redirection_response": {  // Redirection Information after DDC step.
+        "params": "probe_redirect_params",
+        "payload": {
+            "transaction_id": "probe_txn_123",
+        },
+    },
+    })).unwrap_or_default()
+}
+
+pub fn build_pre_authenticate_request() -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
+    serde_json::from_value::<PaymentMethodAuthenticationServicePreAuthenticateRequest>(serde_json::json!({
+    "amount": {  // Amount Information.
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
+    },
+    "payment_method": {  // Payment Method.
+        "payment_method": {
+            "card": {  // Generic card payment.
+                "card_number": "4111111111111111",  // Card Identification.
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",  // Cardholder Information.
+            },
+        }
+    },
+    "address": {  // Address Information.
+        "billing_address": {
+        },
+    },
+    "enrolled_for_3ds": false,  // Authentication Details.
+    "return_url": "https://example.com/3ds-return",  // URLs for Redirection.
     })).unwrap_or_default()
 }
 
@@ -291,6 +382,13 @@ pub async fn process_get_payment(client: &ConnectorClient, _merchant_transaction
     Ok(format!("Status: {:?}", get_response.status()))
 }
 
+// Flow: PaymentMethodAuthenticationService.Authenticate
+#[allow(dead_code)]
+pub async fn authenticate(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.authenticate(build_authenticate_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: PaymentService.Authorize (Card)
 #[allow(dead_code)]
 pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -314,6 +412,20 @@ pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -
 #[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: PaymentMethodAuthenticationService.PostAuthenticate
+#[allow(dead_code)]
+pub async fn post_authenticate(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.post_authenticate(build_post_authenticate_request(), &HashMap::new(), None).await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: PaymentMethodAuthenticationService.PreAuthenticate
+#[allow(dead_code)]
+pub async fn pre_authenticate(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.pre_authenticate(build_pre_authenticate_request(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
@@ -377,9 +489,12 @@ async fn main() {
         "process_refund" => process_refund(&client, "order_001").await,
         "process_void_payment" => process_void_payment(&client, "order_001").await,
         "process_get_payment" => process_get_payment(&client, "order_001").await,
+        "authenticate" => authenticate(&client, "order_001").await,
         "authorize" => authorize(&client, "order_001").await,
         "capture" => capture(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
+        "post_authenticate" => post_authenticate(&client, "order_001").await,
+        "pre_authenticate" => pre_authenticate(&client, "order_001").await,
         "proxy_authorize" => proxy_authorize(&client, "order_001").await,
         "recurring_charge" => recurring_charge(&client, "order_001").await,
         "recurring_revoke" => recurring_revoke(&client, "order_001").await,
@@ -387,7 +502,7 @@ async fn main() {
         "refund_get" => refund_get(&client, "order_001").await,
         "token_authorize" => token_authorize(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authorize, capture, get, proxy_authorize, recurring_charge, recurring_revoke, refund, refund_get, token_authorize, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, authenticate, authorize, capture, get, post_authenticate, pre_authenticate, proxy_authorize, recurring_charge, recurring_revoke, refund, refund_get, token_authorize, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

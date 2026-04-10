@@ -8,6 +8,7 @@
 package examples.cybersource
 
 import payments.PaymentClient
+import payments.PaymentMethodAuthenticationClient
 import payments.RecurringPaymentClient
 import payments.RefundClient
 import payments.PaymentServiceAuthorizeRequest
@@ -15,6 +16,9 @@ import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
+import payments.PaymentMethodAuthenticationServiceAuthenticateRequest
+import payments.PaymentMethodAuthenticationServicePostAuthenticateRequest
+import payments.PaymentMethodAuthenticationServicePreAuthenticateRequest
 import payments.PaymentServiceProxyAuthorizeRequest
 import payments.RecurringPaymentServiceChargeRequest
 import payments.RecurringPaymentServiceRevokeRequest
@@ -209,6 +213,41 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
     return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId, "error" to getResponse.error)
 }
 
+// Flow: PaymentMethodAuthenticationService.Authenticate
+fun authenticate(txnId: String) {
+    val client = PaymentMethodAuthenticationClient(_defaultConfig)
+    val request = PaymentMethodAuthenticationServiceAuthenticateRequest.newBuilder().apply {
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        paymentMethodBuilder.apply {  // Payment Method.
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+            }
+        }
+        customerBuilder.apply {  // Customer Information.
+            emailBuilder.value = "test@example.com"  // Customer's email address.
+        }
+        addressBuilder.apply {  // Address Information.
+            billingAddressBuilder.apply {
+            }
+        }
+        returnUrl = "https://example.com/3ds-return"  // URLs for Redirection.
+        continueRedirectionUrl = "https://example.com/3ds-continue"
+        redirectionResponseBuilder.apply {  // Redirection Information after DDC step.
+            params = "probe_redirect_params"
+            putAllPayload(mapOf("transaction_id" to "probe_txn_123"))
+        }
+    }.build()
+    val response = client.authenticate(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.Authorize (Card)
 fun authorize(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -236,6 +275,64 @@ fun get(txnId: String) {
     val client = PaymentClient(_defaultConfig)
     val request = buildGetRequest("probe_connector_txn_001")
     val response = client.get(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: PaymentMethodAuthenticationService.PostAuthenticate
+fun postAuthenticate(txnId: String) {
+    val client = PaymentMethodAuthenticationClient(_defaultConfig)
+    val request = PaymentMethodAuthenticationServicePostAuthenticateRequest.newBuilder().apply {
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        paymentMethodBuilder.apply {  // Payment Method.
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+            }
+        }
+        addressBuilder.apply {  // Address Information.
+            billingAddressBuilder.apply {
+            }
+        }
+        redirectionResponseBuilder.apply {  // Redirection Information after DDC step.
+            params = "probe_redirect_params"
+            putAllPayload(mapOf("transaction_id" to "probe_txn_123"))
+        }
+    }.build()
+    val response = client.post_authenticate(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: PaymentMethodAuthenticationService.PreAuthenticate
+fun preAuthenticate(txnId: String) {
+    val client = PaymentMethodAuthenticationClient(_defaultConfig)
+    val request = PaymentMethodAuthenticationServicePreAuthenticateRequest.newBuilder().apply {
+        amountBuilder.apply {  // Amount Information.
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        paymentMethodBuilder.apply {  // Payment Method.
+            cardBuilder.apply {  // Generic card payment.
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+            }
+        }
+        addressBuilder.apply {  // Address Information.
+            billingAddressBuilder.apply {
+            }
+        }
+        enrolledFor3Ds = false  // Authentication Details.
+        returnUrl = "https://example.com/3ds-return"  // URLs for Redirection.
+    }.build()
+    val response = client.pre_authenticate(request)
     println("Status: ${response.status.name}")
 }
 
@@ -379,9 +476,12 @@ fun main(args: Array<String>) {
         "processRefund" -> processRefund(txnId)
         "processVoidPayment" -> processVoidPayment(txnId)
         "processGetPayment" -> processGetPayment(txnId)
+        "authenticate" -> authenticate(txnId)
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
         "get" -> get(txnId)
+        "postAuthenticate" -> postAuthenticate(txnId)
+        "preAuthenticate" -> preAuthenticate(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "recurringRevoke" -> recurringRevoke(txnId)
@@ -389,6 +489,6 @@ fun main(args: Array<String>) {
         "refundGet" -> refundGet(txnId)
         "tokenAuthorize" -> tokenAuthorize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, proxyAuthorize, recurringCharge, recurringRevoke, refund, refundGet, tokenAuthorize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authenticate, authorize, capture, get, postAuthenticate, preAuthenticate, proxyAuthorize, recurringCharge, recurringRevoke, refund, refundGet, tokenAuthorize, void")
     }
 }

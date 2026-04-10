@@ -9,6 +9,7 @@ import asyncio
 import sys
 from google.protobuf.json_format import ParseDict
 from payments import PaymentClient
+from payments import PaymentMethodAuthenticationClient
 from payments import RefundClient
 from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
@@ -75,6 +76,33 @@ def _build_get_request(connector_transaction_id: str):
             }
         },
         payment_pb2.PaymentServiceGetRequest(),
+    )
+
+def _build_pre_authenticate_request():
+    return ParseDict(
+        {
+            "amount": {  # Amount Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            },
+            "payment_method": {  # Payment Method.
+                "card": {  # Generic card payment.
+                    "card_number": {"value": "4111111111111111"},  # Card Identification.
+                    "card_exp_month": {"value": "03"},
+                    "card_exp_year": {"value": "2030"},
+                    "card_cvc": {"value": "737"},
+                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
+                }
+            },
+            "address": {  # Address Information.
+                "billing_address": {
+                    "first_name": {"value": "John"}  # Personal Information.
+                }
+            },
+            "enrolled_for_3ds": False,  # Authentication Details.
+            "return_url": "https://example.com/3ds-return"  # URLs for Redirection.
+        },
+        payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateRequest(),
     )
 
 def _build_proxy_authorize_request():
@@ -274,6 +302,15 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
 
     return {"status": get_response.status}
+
+
+async def pre_authenticate(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentMethodAuthenticationService.PreAuthenticate"""
+    paymentmethodauthentication_client = PaymentMethodAuthenticationClient(config)
+
+    pre_response = await paymentmethodauthentication_client.pre_authenticate(_build_pre_authenticate_request())
+
+    return {"status": pre_response.status}
 
 
 async def proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
