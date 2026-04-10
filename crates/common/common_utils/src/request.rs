@@ -419,3 +419,9 @@ impl KafkaRecordBuilder {
         }
     }
 }
+
+impl Default for KafkaRecordBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}

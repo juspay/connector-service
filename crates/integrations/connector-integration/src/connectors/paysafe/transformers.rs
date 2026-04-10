@@ -267,7 +267,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         })?;
                     let account_type = bank_type
                         .as_ref()
-                        .map(|bt| PaysafeAchAccountType::try_from(bt))
+                        .map(PaysafeAchAccountType::try_from)
                         .transpose()?
                         .ok_or(IntegrationError::MissingRequiredField {
                             field_name: "bank_type (ach.accountType)",

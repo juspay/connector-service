@@ -38,7 +38,7 @@ pub fn init_kafka_producer(
     let mut client_config = ClientConfig::new();
 
     client_config
-        .set("bootstrap.servers", &config.brokers.join(","))
+        .set("bootstrap.servers", config.brokers.join(","))
         .set("acks", &config.acks)
         .set("request.timeout.ms", config.request_timeout_ms.to_string())
         .set("message.timeout.ms", config.message_timeout_ms.to_string());
@@ -77,7 +77,7 @@ pub async fn publish_to_kafka(
 ) -> error_stack::Result<Result<Response, Response>, KafkaClientError> {
     let producer = KAFKA_PRODUCER
         .get()
-        .ok_or_else(|| KafkaClientError::ProducerNotInitialized)?;
+        .ok_or(KafkaClientError::ProducerNotInitialized)?;
 
     // Build OwnedHeaders from the KafkaRecord headers.
     let mut owned_headers = OwnedHeaders::new();
@@ -134,6 +134,7 @@ pub async fn publish_to_kafka(
 }
 
 /// Map a raw rdkafka delivery result to a synthetic [`Response`].
+#[allow(clippy::result_large_err)]
 fn classify_kafka_delivery_result(
     delivery_result: Result<(i32, i64), (KafkaError, OwnedMessage)>,
     topic: &str,
@@ -162,7 +163,6 @@ fn classify_kafka_delivery_result(
 
             let (error_code, error_message) = kafka_error_str
                 .split_once(": ")
-                .map(|(code, msg)| (code, msg))
                 .unwrap_or((kafka_error_str.as_str(), kafka_error_str.as_str()));
 
             match &kafka_error {

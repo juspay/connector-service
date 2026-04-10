@@ -9,7 +9,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
-    errors::{ConnectorResponseTransformationError, IntegrationError},
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -148,14 +148,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )?;
 
                     let bank_name = bank_name
-                        .map(|b| SanlammultidataBankNames::try_from(b))
+                        .map(SanlammultidataBankNames::try_from)
                         .transpose()?
                         .ok_or(IntegrationError::MissingRequiredField {
                             field_name: "bank_name",
                             context: Default::default(),
                         })?;
 
-                    let bank_type = bank_type.map(|b| SanlammultidataBankType::from(b)).ok_or(
+                    let bank_type = bank_type.map(SanlammultidataBankType::from).ok_or(
                         IntegrationError::MissingRequiredField {
                             field_name: "bank_type",
                             context: Default::default(),
@@ -189,7 +189,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::Voucher(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::PaymentMethodToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
@@ -203,7 +203,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .request
             .metadata
-            .map(|m| SanlammultidataMetaData::try_from(m))
+            .map(SanlammultidataMetaData::try_from)
             .transpose()?
             .and_then(|m| m.batch_user_reference);
 
@@ -273,7 +273,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<SanlammultidataPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorResponseTransformationError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<SanlammultidataPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
