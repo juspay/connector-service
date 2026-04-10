@@ -4,9 +4,50 @@ This document provides complete context for integrating the Hyperswitch Prism SD
 
 ---
 
+## PRIMARY USE CASE: Integrating an Existing Connector
+
+> **Most users of this SDK want to integrate a payment processor (connector) that is already implemented in Prism.**
+>
+> Examples: "I need to integrate Stripe", "I need to integrate Adyen", "I need to integrate PayPal"
+
+### Your Integration Workflow
+
+```
+START HERE — You want to integrate a connector (e.g., Stripe, Adyen, PayPal)
+    │
+    ▼
+STEP 0 ──► FETCH the Generated API Reference FIRST
+    │         URL: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/llms.txt
+    │         This contains the master index of ALL 81+ connectors
+    │         Find YOUR connector in the list — it has direct links to docs and examples
+    │
+    ▼
+STEP 1 ──► Read your connector's specific documentation (linked in the index)
+    │         Each connector doc has: authentication, required fields, scenarios, examples
+    │
+    ▼
+STEP 2 ──► Run Field Probe for your connector × flow × payment-method
+    │         Command: npx hyperswitch-prism probe --connector <name> --flow <flow>
+    │         This reveals REQUIRED fields. TypeScript types alone are insufficient.
+    │
+    ▼
+STEP 3 ──► Read Connector Example (Section 2 of this doc) for patterns
+    │         Use exact field names and structures from the example.
+    │         Do NOT invent field names from TypeScript types.
+    │
+    ▼
+STEP 4 ──► Apply Integration Rules (Section 3)
+    │         Critical: Status codes are numbers, not strings.
+    │
+    ▼
+STEP 5 ──► Write code following the patterns exactly
+```
+
+---
+
 ## DOCUMENT STRUCTURE
 
-- SECTION 0: AI Integration Protocol (READ FIRST)
+- SECTION 0: AI Integration Protocol (Mandatory Reading)
 - SECTION 1: Field Probe Tool Usage
 - SECTION 2: Connector-Specific Examples
 - SECTION 3: Integration Rules & Constraints
@@ -21,33 +62,20 @@ This document provides complete context for integrating the Hyperswitch Prism SD
 
 ## SECTION 0 — AI INTEGRATION PROTOCOL (Mandatory Reading)
 
-### Decision Tree for Payment Integration
+### What You Need to Know Before Writing Code
 
-```
-START HERE
-    │
-    ▼
-Are you writing payment integration code?
-    │
-    YES
-    │
-    ▼
-STEP 1 ──► Run Field Probe (Section 1) for connector × flow × payment-method
-    │         Command: npx hyperswitch-prism probe --connector <name> --flow <flow>
-    │         Why: TypeScript types alone are insufficient. Field Probe reveals REQUIRED fields.
-    │
-    ▼
-STEP 2 ──► Read Connector Example (Section 2) for your target connector
-    │         Use exact field names and structures from the example.
-    │         Do NOT invent field names from TypeScript types.
-    │
-    ▼
-STEP 3 ──► Apply Integration Rules (Section 3)
-    │         Critical: Status codes are numbers, not strings.
-    │
-    ▼
-STEP 4 ──► Write code following the patterns exactly
-```
+**Prism already implements 81+ connectors.** Your job is NOT to implement a connector — it is to **configure and call** the existing connector implementation correctly.
+
+**The Most Common Mistake:**
+Developers try to write integration code by looking at TypeScript types. This fails because:
+1. Types don't show which fields are **required** vs optional for each connector
+2. Each connector has different authentication patterns
+3. Each connector has different required fields for the same flow
+
+**The Solution:**
+1. **Start with the Generated API Reference** — find your connector there
+2. **Use Field Probe** — discover required fields dynamically
+3. **Copy from working examples** — don't invent field names
 
 ### Critical Rules (Violations Cause Runtime Errors)
 
@@ -599,5 +627,6 @@ Payment Processor APIs
 ## ADDITIONAL RESOURCES
 
 - Repository: https://github.com/juspay/hyperswitch-prism
-- Full Examples: /examples directory in repo
-- Field Probe Data: /data/field_probe in repo
+- Full Examples: https://github.com/juspay/hyperswitch-prism/tree/main/examples
+- Field Probe Data: https://github.com/juspay/hyperswitch-prism/tree/main/data/field_probe
+- Generated API Documentation: https://raw.githubusercontent.com/juspay/hyperswitch-prism/main/docs-generated/llms.txt
