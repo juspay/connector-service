@@ -13,8 +13,8 @@ use domain_types::{
         RefundsResponseData, ResponseId, ServerAuthenticationTokenRequestData,
         ServerAuthenticationTokenResponseData,
     },
-    payment_method_data::{BankDebitData, CardToken, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificConfig, PaymentMethodToken},
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -30,8 +30,6 @@ type ResponseError = error_stack::Report<ConnectorError>;
 
 const JPMORGAN_GETTING_STARTED_DOC: &str =
     "https://developer.payments.jpmorgan.com/docs/commerce-solutions/online-payments/guides/getting-started";
-const JPMORGAN_PAYMENTS_API_DOC: &str =
-    "https://developer.payments.jpmorgan.com/api/commerce-solutions/online-payments/payment-requests/create-a-payment";
 
 /// Build an `IntegrationErrorContext` for a missing JPMorgan connector config field.
 fn jpmorgan_missing_field_context(field_name: &str) -> IntegrationErrorContext {
@@ -416,37 +414,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     statement_descriptor: Some(statement_descriptor),
                 })
             }
-            PaymentMethodData::CardToken(CardToken { .. }) => {
-                // CardToken flow uses the payment_method_token obtained from
-                // CreateClientAuthenticationToken to make the payment without raw card details.
-                let token = item
-                    .router_data
-                    .resource_common_data
-                    .payment_method_token
-                    .as_ref()
-                    .map(|t| match t {
-                        PaymentMethodToken::Token(s) => s.clone(),
-                    })
-                    .ok_or_else(|| {
-                        error_stack::report!(IntegrationError::MissingRequiredField {
-                            field_name: "payment_method_token",
-                            context: IntegrationErrorContext {
-                                suggested_action: Some(
-                                    "The CardToken flow requires a payment_method_token obtained \
-                                     from the ClientAuthenticationToken step. Ensure the client-side \
-                                     SDK tokenisation completed before submitting the payment."
-                                        .to_owned(),
-                                ),
-                                doc_url: Some(JPMORGAN_PAYMENTS_API_DOC.to_owned()),
-                                additional_context: Some(
-                                    "JPMorgan CardToken payments use a tokenised card reference \
-                                     instead of raw card details; the token is missing from the \
-                                     payment method data."
-                                        .to_owned(),
-                                ),
-                            },
-                        })
-                    })?;
+            PaymentMethodData::PaymentMethodToken(token_data) => {
+                let token = token_data.token.clone();
 
                 let capture_method = map_capture_method(router_data.request.capture_method)?;
 
