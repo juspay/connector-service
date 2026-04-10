@@ -2091,7 +2091,7 @@ impl TryFrom<ResponseRouterData<NuveiOpenOrderResponse, Self>>
         // Construct CreateOrder response with merchant_order_id from request
         let connector_order_id = response.order_id.clone().unwrap_or_default();
         let merchant_order_id = item.router_data.request.merchant_order_id.clone();
-        
+
         let order_response = PaymentCreateOrderResponse {
             connector_order_id: connector_order_id.clone(),
             merchant_order_id,
