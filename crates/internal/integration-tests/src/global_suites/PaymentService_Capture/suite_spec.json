@@ -3,6 +3,7 @@
   "suite_type": "dependent",
   "depends_on": [
     "MerchantAuthenticationService/CreateServerAuthenticationToken",
+    "MerchantAuthenticationService/CreateServerSessionAuthenticationToken",
     "CustomerService/Create",
     "PaymentMethodService/Tokenize",
     {

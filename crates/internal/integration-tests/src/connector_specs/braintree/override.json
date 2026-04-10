@@ -255,5 +255,17 @@
         }
       }
     }
+  },
+  "MerchantAuthenticationService/CreateClientAuthenticationToken": {
+    "create_sdk_session_apple_pay": {
+      "grpc_req": {
+        "payment_method_type": "GOOGLE_PAY"
+      }
+    },
+    "create_sdk_session_with_taxes": {
+      "grpc_req": {
+        "payment_method_type": "GOOGLE_PAY"
+      }
+    }
   }
 }

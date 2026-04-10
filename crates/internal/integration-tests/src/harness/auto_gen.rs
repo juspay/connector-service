@@ -11,26 +11,19 @@ use crate::harness::scenario_types::ScenarioError;
 
 /// Replaces `auto_generate` sentinel placeholders in a request payload.
 ///
-/// Context-deferred fields are intentionally skipped here because those are
-/// expected to be copied from dependency responses later in the pipeline.
+/// This should be called **after** dependency context has been applied, so
+/// fields already filled from dependency responses are no longer sentinels
+/// and will be left untouched.
 pub fn resolve_auto_generate(current_grpc_req: &mut Value) -> Result<(), ScenarioError> {
     let mut paths = Vec::new();
     collect_leaf_paths(current_grpc_req, String::new(), &mut paths);
 
     let mut runner = TestRunner::default();
     for path in paths {
-        let lower_path = path.to_ascii_lowercase();
         let should_generate = lookup_json_path(current_grpc_req, &path)
             .map(is_auto_generate_sentinel)
             .unwrap_or(false);
         if !should_generate {
-            continue;
-        }
-
-        // Context-carried fields should not be synthesized.
-        // They are expected to be populated from dependency responses and
-        // pruned if still unresolved before execution.
-        if is_context_deferred_path(&lower_path) {
             continue;
         }
 
@@ -261,23 +254,9 @@ fn is_auto_generate_sentinel(value: &Value) -> bool {
     text.to_ascii_lowercase().contains("auto_generate")
 }
 
-fn is_context_deferred_path(path: &str) -> bool {
-    matches!(
-        path,
-        "customer.connector_customer_id"
-            | "state.connector_customer_id"
-            | "state.access_token.token.value"
-            | "state.access_token.token_type"
-            | "state.access_token.expires_in_seconds"
-            | "connector_feature_data"
-            | "connector_feature_data.value"
-            | "connector_transaction_id"
-            | "connector_transaction_id.id"
-            | "connector_mandate_id"
-            | "refund_id"
-    )
-}
-
+/// Checks whether the given path is a context-deferred field that should not
+/// be auto-generated.
+///
 fn collect_leaf_paths(value: &Value, current: String, paths: &mut Vec<String>) {
     match value {
         Value::Object(map) => {
@@ -375,7 +354,7 @@ mod tests {
 
     use super::{
         id_prefix_for_leaf_path, id_prefix_for_path, is_auto_generate_sentinel,
-        is_context_deferred_path, resolve_auto_generate,
+        resolve_auto_generate,
     };
 
     #[test]
@@ -455,7 +434,7 @@ mod tests {
     }
 
     #[test]
-    fn keeps_context_deferred_fields_unresolved() {
+    fn generates_all_auto_generate_fields_including_context_fields() {
         let mut req = json!({
             "customer": { "connector_customer_id": "auto_generate" },
             "state": {
@@ -474,39 +453,29 @@ mod tests {
 
         resolve_auto_generate(&mut req).expect("auto generation should succeed");
 
-        assert_eq!(
+        // All fields should now have generated values (none should remain "auto_generate").
+        assert_ne!(
             req["customer"]["connector_customer_id"],
             json!("auto_generate")
         );
-        assert_eq!(
+        assert_ne!(
             req["state"]["connector_customer_id"],
             json!("auto_generate")
         );
-        assert_eq!(
+        assert_ne!(
             req["state"]["access_token"]["token"]["value"],
             json!("auto_generate")
         );
-        assert_eq!(
+        assert_ne!(
             req["connector_feature_data"]["value"],
             json!("auto_generate")
         );
-        assert_eq!(req["connector_transaction_id"], json!("auto_generate"));
-        assert_eq!(req["refund_id"], json!("auto_generate"));
+        assert_ne!(req["connector_transaction_id"], json!("auto_generate"));
+        assert_ne!(req["refund_id"], json!("auto_generate"));
 
-        // Non-deferred path should still be generated.
         let merchant_txn_id = req["merchant_transaction_id"]
             .as_str()
             .expect("merchant transaction id should be generated");
         assert!(merchant_txn_id.starts_with("mti_"));
-    }
-
-    #[test]
-    fn context_deferred_path_matching() {
-        assert!(is_context_deferred_path("customer.connector_customer_id"));
-        assert!(is_context_deferred_path("state.access_token.token.value"));
-        assert!(is_context_deferred_path("connector_feature_data.value"));
-        assert!(is_context_deferred_path("connector_transaction_id"));
-        assert!(is_context_deferred_path("connector_transaction_id.id"));
-        assert!(!is_context_deferred_path("merchant_transaction_id.id"));
     }
 }

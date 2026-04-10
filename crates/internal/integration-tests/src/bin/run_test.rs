@@ -13,8 +13,8 @@ use integration_tests::harness::{
     scenario_api::{
         build_grpcurl_request_from_payload, do_assertion,
         execute_grpcurl_request_from_payload_with_trace, get_the_assertion_for_connector,
-        get_the_grpc_req_for_connector, run_test, DEFAULT_CONNECTOR, DEFAULT_ENDPOINT,
-        DEFAULT_SCENARIO, DEFAULT_SUITE,
+        get_the_grpc_req_for_connector, normalize_grpcurl_request_json, run_test,
+        DEFAULT_CONNECTOR, DEFAULT_ENDPOINT, DEFAULT_SCENARIO, DEFAULT_SUITE,
     },
     scenario_loader::load_suite_scenarios,
 };
@@ -151,6 +151,9 @@ fn main() {
     }
 
     let (pm, pmt) = extract_pm_and_pmt(Some(&grpc_req));
+
+    // Normalise scenario JSON to proto-native field names and shapes for grpcurl.
+    let grpc_req = normalize_grpcurl_request_json(connector, suite, scenario, grpc_req);
 
     if let Err(error) = run_test(Some(suite), Some(scenario), Some(connector)) {
         write_report_entry(

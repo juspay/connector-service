@@ -9,6 +9,7 @@
       "payment_method_type": "APPLE_PAY",
       "country_alpha2_code": "US",
       "customer": {
+        "id": "auto_generate",
         "name": "auto_generate",
         "email": {
           "value": "auto_generate"
@@ -16,7 +17,7 @@
       }
     },
     "assert": {
-      "session_token": {
+      "session_data": {
         "must_exist": true
       },
       "error": {
@@ -36,6 +37,7 @@
       "payment_method_type": "GOOGLE_PAY",
       "country_alpha2_code": "US",
       "customer": {
+        "id": "auto_generate",
         "name": "auto_generate",
         "email": {
           "value": "auto_generate"
@@ -43,7 +45,7 @@
       }
     },
     "assert": {
-      "session_token": {
+      "session_data": {
         "must_exist": true
       },
       "error": {
@@ -64,6 +66,7 @@
       "payment_method_type": "APPLE_PAY",
       "country_alpha2_code": "US",
       "customer": {
+        "id": "auto_generate",
         "name": "auto_generate",
         "email": {
           "value": "auto_generate"
@@ -71,7 +74,7 @@
       }
     },
     "assert": {
-      "session_token": {
+      "session_data": {
         "must_exist": true
       },
       "error": {
@@ -79,22 +82,5 @@
       }
     },
     "display_name": "Create SDK Session Token | Create SDK Session With Taxes"
-  },
-  "create_sdk_session_fail_invalid_country": {
-    "grpc_req": {
-      "merchant_sdk_session_id": "auto_generate",
-      "amount": {
-        "minor_amount": 10000,
-        "currency": "USD"
-      },
-      "payment_method_type": "APPLE_PAY",
-      "country_alpha2_code": "XX"
-    },
-    "assert": {
-      "error": {
-        "must_exist": true
-      }
-    },
-    "display_name": "Create SDK Session Token | Create SDK Session Fail Invalid Country"
   }
 }

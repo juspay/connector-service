@@ -136,7 +136,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -295,7 +296,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -454,7 +456,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -613,7 +616,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -772,7 +776,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -930,7 +935,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -1073,7 +1079,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -1217,7 +1224,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -1374,7 +1382,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -1518,7 +1527,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -1662,7 +1672,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -1806,7 +1817,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -1967,7 +1979,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -2111,7 +2124,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -2255,7 +2269,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -2399,7 +2414,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -2543,7 +2559,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -2687,7 +2704,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {
@@ -2831,7 +2849,8 @@
         "java_enabled": false,
         "java_script_enabled": true,
         "time_zone_offset_minutes": -480
-      }
+      },
+      "session_token": ""
     },
     "assert": {
       "status": {

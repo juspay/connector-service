@@ -23,8 +23,8 @@ use uuid::Uuid;
 use crate::harness::{
     auto_gen::resolve_auto_generate,
     connector_override::{
-        apply_connector_overrides, context_deferred_paths_for_connector,
-        normalize_tonic_request_for_connector, transform_response_for_connector,
+        apply_connector_overrides, normalize_tonic_request_for_connector,
+        transform_response_for_connector,
     },
     credentials::{creds_file_path, load_connector_config},
     metadata::add_connector_metadata,
@@ -102,7 +102,7 @@ pub fn do_assertion(
 
 pub const DEFAULT_SUITE: &str = "PaymentService/Authorize";
 pub const DEFAULT_SCENARIO: &str = "no3ds_auto_capture_credit_card";
-pub const DEFAULT_ENDPOINT: &str = "localhost:50051";
+pub const DEFAULT_ENDPOINT: &str = "localhost:8000";
 pub const DEFAULT_CONNECTOR: &str = "stripe";
 pub const DEFAULT_MERCHANT_ID: &str = "test_merchant";
 pub const DEFAULT_TENANT_ID: &str = "default";
@@ -257,7 +257,7 @@ pub fn add_context(
     }
 }
 
-fn prepare_context_placeholders(suite: &str, connector: &str, current_grpc_req: &mut Value) {
+fn prepare_context_placeholders(suite: &str, _connector: &str, current_grpc_req: &mut Value) {
     // Ensure metadata target exists for flows that need dependency-carried connector metadata.
     if matches!(
         suite,
@@ -276,29 +276,51 @@ fn prepare_context_placeholders(suite: &str, connector: &str, current_grpc_req: 
         );
     }
 
-    for path in context_deferred_paths(connector) {
-        if let Some(value) = lookup_json_path_with_case_fallback(current_grpc_req, &path) {
-            if is_empty_context_placeholder(&path, value) {
-                let _ = deep_set_json_path(
-                    current_grpc_req,
-                    &path,
-                    Value::String("auto_generate".to_string()),
-                );
+    // Normalize empty/null/zero placeholders to "auto_generate" sentinels so
+    // they can be filled by dependency context or auto-generated later.
+    normalize_empty_placeholders(current_grpc_req, String::new());
+}
+
+/// Recursively walks the JSON tree and replaces empty/null/zero leaf values
+/// with the `"auto_generate"` sentinel so they are eligible for context
+/// propagation or auto-generation.
+fn normalize_empty_placeholders(value: &mut Value, current_path: String) {
+    match value {
+        Value::Object(map) => {
+            let keys: Vec<String> = map.keys().cloned().collect();
+            for key in keys {
+                let child_path = if current_path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{current_path}.{key}")
+                };
+                if let Some(child) = map.get_mut(&key) {
+                    normalize_empty_placeholders(child, child_path);
+                }
             }
         }
+        Value::Null => {
+            *value = Value::String("auto_generate".to_string());
+        }
+        Value::String(text) => {
+            if text.trim().is_empty() {
+                *value = Value::String("auto_generate".to_string());
+            }
+        }
+        Value::Number(n) => {
+            // Treat 0 for known expiry fields as empty placeholder.
+            if current_path.ends_with("expires_in_seconds") && n.as_i64() == Some(0) {
+                *value = Value::String("auto_generate".to_string());
+            }
+        }
+        _ => {}
     }
 }
 
-fn prune_unresolved_context_fields(connector: &str, current_grpc_req: &mut Value) {
-    for path in context_deferred_paths(connector) {
-        let should_remove = lookup_json_path_with_case_fallback(current_grpc_req, &path)
-            .map(|value| is_unresolved_context_value(&path, value))
-            .unwrap_or(false);
-        if should_remove {
-            let _ = remove_json_path(current_grpc_req, &path);
-        }
-    }
-
+/// Cleans up empty wrapper objects that may remain after context propagation
+/// and auto-generation (e.g. an empty `state.access_token` wrapper when none
+/// of its children were filled).
+fn prune_empty_context_wrappers(current_grpc_req: &mut Value) {
     let should_remove_connector_feature =
         lookup_json_path_with_case_fallback(current_grpc_req, "connector_feature_data")
             .map(is_unresolved_connector_feature_data)
@@ -1229,58 +1251,6 @@ fn interpolate_rule_template(value: &Value, redirect_uri: Option<&str>) -> Optio
     }
 }
 
-fn context_deferred_paths(connector: &str) -> Vec<String> {
-    let mut base_paths = vec![
-        "customer.connector_customer_id".to_string(),
-        "state.connector_customer_id".to_string(),
-        "state.access_token.token.value".to_string(),
-        "state.access_token.token_type".to_string(),
-        "state.access_token.expires_in_seconds".to_string(),
-        "connector_feature_data.value".to_string(),
-        "connector_transaction_id.id".to_string(),
-        "connector_mandate_id".to_string(),
-        "refund_id".to_string(),
-    ];
-    base_paths.extend(context_deferred_paths_for_connector(connector));
-    base_paths.sort();
-    base_paths.dedup();
-    base_paths
-}
-
-fn is_empty_context_placeholder(path: &str, value: &Value) -> bool {
-    if value.is_null() {
-        return true;
-    }
-
-    if let Some(text) = value.as_str() {
-        return text.trim().is_empty();
-    }
-
-    // Historical placeholder for access token expiry.
-    if path == "state.access_token.expires_in_seconds" {
-        return value.as_i64() == Some(0);
-    }
-
-    false
-}
-
-fn is_unresolved_context_value(path: &str, value: &Value) -> bool {
-    if value.is_null() {
-        return true;
-    }
-
-    if let Some(text) = value.as_str() {
-        let normalized = text.trim().to_ascii_lowercase();
-        return normalized.is_empty() || normalized.contains("auto_generate");
-    }
-
-    if path == "state.access_token.expires_in_seconds" {
-        return value.as_i64() == Some(0);
-    }
-
-    false
-}
-
 fn is_unresolved_connector_feature_data(value: &Value) -> bool {
     match value {
         Value::Null => true,
@@ -1290,7 +1260,14 @@ fn is_unresolved_connector_feature_data(value: &Value) -> bool {
         }
         Value::Object(map) => map
             .get("value")
-            .map(|inner| is_unresolved_context_value("connector_feature_data.value", inner))
+            .map(|inner| match inner {
+                Value::Null => true,
+                Value::String(text) => {
+                    let normalized = text.trim().to_ascii_lowercase();
+                    normalized.is_empty() || normalized.contains("auto_generate")
+                }
+                _ => false,
+            })
             .unwrap_or(true),
         _ => false,
     }
@@ -2750,7 +2727,7 @@ pub(crate) fn parse_tonic_payload<T: DeserializeOwned>(
     })
 }
 
-fn normalize_tonic_request_json(
+pub fn normalize_tonic_request_json(
     connector: &str,
     suite: &str,
     scenario: &str,
@@ -2759,6 +2736,40 @@ fn normalize_tonic_request_json(
     normalize_value_wrappers(&mut value);
     normalize_proto_oneof_shapes(&mut value);
 
+    normalize_request_common(connector, suite, scenario, &mut value);
+    value
+}
+
+/// Normalises a scenario JSON payload for the grpcurl execution path.
+///
+/// Unlike [`normalize_tonic_request_json`], this does **not** strip `{"value": "..."}`
+/// wrappers (`SecretString`, `CardNumberType`, etc.) because grpcurl expects the
+/// full proto-native JSON shape.  It also does **not** wrap oneofs into the prost
+/// `{"payment_method": {"payment_method": {…}}}` double-nesting shape – grpcurl
+/// expects the proto field name directly.
+///
+/// What it does:
+/// - Suite-specific field renames (legacy → proto names)
+/// - Suite-specific field hoisting (e.g. flat fields → `domain_context`)
+/// - `convert_prost_oneofs_to_grpcurl` for `domain_context` (PascalCase → snake)
+/// - Connector-specific transforms
+pub fn normalize_grpcurl_request_json(
+    connector: &str,
+    suite: &str,
+    scenario: &str,
+    mut value: Value,
+) -> Value {
+    normalize_request_common(connector, suite, scenario, &mut value);
+
+    // domain_context hoisting above uses the prost format (`"Payment"` PascalCase).
+    // grpcurl expects the raw proto field name (`"payment"` lowercase).
+    convert_prost_oneofs_to_grpcurl(&mut value);
+
+    value
+}
+
+/// Shared normalisation logic used by both tonic and grpcurl paths.
+fn normalize_request_common(connector: &str, suite: &str, scenario: &str, value: &mut Value) {
     // Resolve alias_for so data-defined suite aliases apply the same
     // normalization rules as their canonical suite.
     let suite_spec_opt = load_suite_spec(suite).ok();
@@ -2770,7 +2781,7 @@ fn normalize_tonic_request_json(
     // Legacy scenario payloads used in grpcurl contain fields that do not map
     // directly to current proto request shapes used by tonic serde.
     // Drop or adjust known mismatches here so scenarios remain unchanged.
-    if let Value::Object(map) = &mut value {
+    if let Value::Object(map) = value {
         if matches!(
             effective_suite,
             "PaymentService/Authorize" | "PaymentService/CompleteAuthorize"
@@ -2813,8 +2824,14 @@ fn normalize_tonic_request_json(
 
         // client_authentication_token: flat scenario fields → nested proto shape.
         // Proto: merchant_client_session_id (string),
-        //        domain_context.Payment { amount, order_tax_amount,
+        //        oneof domain_context { payment (PaymentClientSessionContext) }
+        //        PaymentClientSessionContext { amount, order_tax_amount,
         //        shipping_cost, payment_method_type, country_alpha2_code, customer, metadata }
+        //
+        // NOTE: prost/serde expects `{"domainContext":{"Payment":{...}}}` (camelCase
+        //       wrapper + PascalCase variant) while grpcurl expects `{"payment":{...}}`
+        //       (raw field name).  We normalise to the prost shape here; the grpcurl
+        //       execution path converts to the grpcurl shape separately.
         if effective_suite == "MerchantAuthenticationService/CreateClientAuthenticationToken" {
             // Rename legacy field name → proto field name
             if let Some(val) = map.remove("merchant_sdk_session_id") {
@@ -2848,7 +2865,8 @@ fn normalize_tonic_request_json(
 
         // server_session_authentication_token: flat scenario fields → nested proto shape.
         // Proto: merchant_server_session_id (optional string), connector_feature_data,
-        //        state, test_mode, domain_context.Payment { amount, metadata, browser_info }
+        //        state, test_mode, oneof domain_context { payment (PaymentSessionContext) }
+        //        PaymentSessionContext { amount, metadata, browser_info }
         if effective_suite == "MerchantAuthenticationService/CreateServerSessionAuthenticationToken"
         {
             // Rename legacy field name → proto field name
@@ -2874,8 +2892,86 @@ fn normalize_tonic_request_json(
         }
     }
 
-    normalize_tonic_request_for_connector(connector, suite, scenario, &mut value);
-    value
+    normalize_tonic_request_for_connector(connector, suite, scenario, value);
+}
+
+/// Converts prost/serde-style oneof wrappers to grpcurl-compatible field names.
+///
+/// Prost serialises oneofs as `{"domain_context": {"Payment": {...}}}` (camelCase
+/// wrapper key + PascalCase variant).  Grpcurl expects the proto field name
+/// directly: `{"payment": {...}}`.  This function performs that translation for
+/// known oneof patterns.
+pub fn convert_prost_oneofs_to_grpcurl(value: &mut Value) {
+    if let Value::Object(map) = value {
+        // Recurse into all children first so nested oneofs are handled.
+        for child in map.values_mut() {
+            convert_prost_oneofs_to_grpcurl(child);
+        }
+
+        // domain_context → extract the single variant and use lowercase field name.
+        // Prost: {"domain_context": {"Payment": {...}}}
+        // grpcurl: {"payment": {...}}
+        if let Some(Value::Object(domain_ctx)) = map.remove("domain_context") {
+            for (variant_name, variant_value) in domain_ctx {
+                let field_name = pascal_to_snake_case(&variant_name);
+                map.entry(field_name).or_insert(variant_value);
+            }
+        }
+
+        // payment_method oneof: unwrap the inner prost wrapper.
+        // Prost: {"payment_method": {"payment_method": {"card": {...}}}}
+        // grpcurl: {"payment_method": {"card": {...}}}
+        if let Some(Value::Object(pm_outer)) = map.get_mut("payment_method") {
+            if let Some(Value::Object(inner_map)) = pm_outer.remove("payment_method") {
+                for (k, v) in inner_map {
+                    pm_outer.entry(k).or_insert(v);
+                }
+            }
+        }
+
+        // mandate_id_type oneof inside connector_recurring_payment_id:
+        // Prost: {"connector_recurring_payment_id": {"mandate_id_type": {"ConnectorMandateId": {...}}}}
+        // grpcurl: {"connector_recurring_payment_id": {"connector_mandate_id": {...}}}
+        if let Some(Value::Object(mandate_ref)) = map.get_mut("connector_recurring_payment_id") {
+            if let Some(Value::Object(mandate_type)) = mandate_ref.remove("mandate_id_type") {
+                for (variant_name, variant_value) in mandate_type {
+                    let field_name = pascal_to_snake_case(&variant_name);
+                    mandate_ref.entry(field_name).or_insert(variant_value);
+                }
+            }
+        }
+
+        // tokenization_data oneof: unwrap the inner prost wrapper.
+        // Prost: {"tokenization_data": {"tokenization_data": {"encrypted_data": {...}}}}
+        // grpcurl: {"tokenization_data": {"encrypted_data": {...}}}
+        if let Some(Value::Object(td_outer)) = map.get_mut("tokenization_data") {
+            if let Some(Value::Object(inner_map)) = td_outer.remove("tokenization_data") {
+                for (k, v) in inner_map {
+                    td_outer.entry(k).or_insert(v);
+                }
+            }
+        }
+    } else if let Value::Array(items) = value {
+        for item in items {
+            convert_prost_oneofs_to_grpcurl(item);
+        }
+    }
+}
+
+/// Converts a PascalCase or camelCase string to snake_case.
+fn pascal_to_snake_case(s: &str) -> String {
+    let mut result = String::with_capacity(s.len() + 4);
+    for (i, ch) in s.chars().enumerate() {
+        if ch.is_uppercase() {
+            if i > 0 {
+                result.push('_');
+            }
+            result.extend(ch.to_lowercase());
+        } else {
+            result.push(ch);
+        }
+    }
+    result
 }
 
 fn normalize_proto_oneof_shapes(value: &mut Value) {
@@ -4155,7 +4251,7 @@ fn maybe_sync_complete_authorize_pending(
     Ok(())
 }
 
-#[allow(clippy::print_stdout)]
+#[allow(clippy::print_stdout, clippy::print_stderr)]
 fn execute_single_scenario_with_context(
     suite: &str,
     scenario: &str,
@@ -4174,17 +4270,19 @@ fn execute_single_scenario_with_context(
     // Normalize legacy empty placeholders to auto_generate sentinels where needed.
     prepare_context_placeholders(suite, connector, &mut effective_req);
 
-    // Context first.
+    // Context first — fill fields from dependency responses.
     add_context(dependency_reqs, dependency_res, &mut effective_req);
 
     // Apply any explicit dependency path mappings from suite_spec.json.
     apply_context_map(explicit_context_entries, &mut effective_req);
 
-    // Fallback generation for unresolved non-context placeholders.
+    // Generate values for any remaining "auto_generate" sentinels.
+    // Since context has already been applied, dependency-carried fields are
+    // already filled and won't be touched.
     resolve_auto_generate(&mut effective_req)?;
 
-    // Drop unresolved context-only fields instead of sending invalid placeholders.
-    prune_unresolved_context_fields(connector, &mut effective_req);
+    // Clean up empty wrapper objects left over from context propagation.
+    prune_empty_context_wrappers(&mut effective_req);
 
     if std::env::var("UCS_DEBUG_EFFECTIVE_REQ").as_deref() == Ok("1") {
         if let Ok(request_json) = serde_json::to_string_pretty(&effective_req) {
@@ -4204,10 +4302,24 @@ fn execute_single_scenario_with_context(
 
     let (response, mut grpc_request, mut grpc_response) = match options.backend {
         ExecutionBackend::Grpcurl => {
+            // grpcurl validates field names against the proto schema, so the
+            // payload must use proto-native field names and nested shapes.
+            // Unlike the tonic path, grpcurl needs the full proto JSON shape
+            // (e.g. `{"value": "..."}` wrappers for SecretString/CardNumberType)
+            // and does NOT need prost-style oneof double-nesting.
+            let grpcurl_payload =
+                normalize_grpcurl_request_json(connector, suite, scenario, effective_req.clone());
+            if std::env::var("UCS_DEBUG_GRPCURL_PAYLOAD").as_deref() == Ok("1") {
+                if let Ok(dbg_json) = serde_json::to_string_pretty(&grpcurl_payload) {
+                    eprintln!(
+                        "[DEBUG] grpcurl_payload suite={suite} scenario={scenario}:\n{dbg_json}"
+                    );
+                }
+            }
             let trace = execute_grpcurl_request_from_payload_with_trace(
                 suite,
                 scenario,
-                &effective_req,
+                &grpcurl_payload,
                 options.endpoint,
                 Some(connector),
                 options.merchant_id,
@@ -4394,8 +4506,8 @@ mod tests {
         add_context, apply_context_map, build_grpcurl_command, build_grpcurl_request,
         deep_set_json_path, extract_json_body_from_grpc_output, get_the_assertion,
         get_the_assertion_for_connector, get_the_grpc_req_for_connector,
-        normalize_tonic_request_json, prepare_context_placeholders,
-        prune_unresolved_context_fields, run_test, DEFAULT_SCENARIO, DEFAULT_SUITE,
+        normalize_tonic_request_json, prepare_context_placeholders, prune_empty_context_wrappers,
+        run_test, DEFAULT_SCENARIO, DEFAULT_SUITE,
     };
     use crate::harness::scenario_loader::{
         connector_spec_dir, discover_all_connectors, load_suite_scenarios, load_suite_spec,
@@ -4990,34 +5102,31 @@ grpc-status: 0
     }
 
     #[test]
-    fn prune_unresolved_context_fields_drops_unresolved_values() {
+    fn prune_empty_context_wrappers_removes_unresolved_connector_feature_data() {
         let mut req = json!({
-            "customer": { "connector_customer_id": "auto_generate" },
+            "connector_feature_data": { "value": "auto_generate" },
             "state": {
-                "connector_customer_id": "auto_generate",
                 "access_token": {
-                    "token": { "value": "auto_generate" },
-                    "token_type": "auto_generate",
-                    "expires_in_seconds": "auto_generate"
+                    "token": {}
                 }
             },
-            "connector_feature_data": { "value": "auto_generate" },
-            "connector_transaction_id": { "id": "auto_generate" },
-            "refund_id": "auto_generate",
             "merchant_transaction_id": { "id": "mti_real" }
         });
 
-        prune_unresolved_context_fields("stripe", &mut req);
+        prune_empty_context_wrappers(&mut req);
 
-        assert!(req["customer"].get("connector_customer_id").is_none());
-        assert!(req["connector_feature_data"].is_null());
-        assert!(req["connector_transaction_id"].get("id").is_none());
-        assert!(req.get("refund_id").is_none());
+        // connector_feature_data with unresolved value should be removed.
+        assert!(
+            req.get("connector_feature_data").is_none() || req["connector_feature_data"].is_null()
+        );
+        // Empty nested wrappers should be cleaned up.
+        assert!(req.get("state").is_none() || req["state"].is_null());
+        // Real values should be kept.
         assert_eq!(req["merchant_transaction_id"]["id"], json!("mti_real"));
     }
 
     #[test]
-    fn prune_unresolved_context_fields_keeps_resolved_values() {
+    fn prune_empty_context_wrappers_keeps_resolved_values() {
         let mut req = json!({
             "customer": { "connector_customer_id": "cust_123" },
             "state": {
@@ -5033,7 +5142,7 @@ grpc-status: 0
             "refund_id": "re_123"
         });
 
-        prune_unresolved_context_fields("stripe", &mut req);
+        prune_empty_context_wrappers(&mut req);
 
         assert_eq!(req["customer"]["connector_customer_id"], json!("cust_123"));
         assert_eq!(
