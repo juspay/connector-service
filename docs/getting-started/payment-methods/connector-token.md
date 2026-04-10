@@ -33,19 +33,21 @@ const response = await paymentClient.tokenAuthorize({
 
 {% tab title="Python" %}
 ```python
-payment_client = PaymentClient(config)
+from payments import (
+    PaymentServiceTokenAuthorizeRequest, Money, Currency, CaptureMethod,
+    PaymentAddress, Address, SecretString,
+)
 
-response = await payment_client.token_authorize(ParseDict(
-    {
-        "merchant_transaction_id": "txn_001",
-        "amount": { "minor_amount": 1000, "currency": "USD" },
-        "connector_token": { "value": "pm_1AbcXyzStripeTestToken" },
-        "address": { "billing_address": {} },
-        "capture_method": "AUTOMATIC",
-        "return_url": "https://example.com/return",
-    },
-    payment_pb2.PaymentServiceTokenAuthorizeRequest(),
-))
+response = await payment_client.token_authorize(
+    PaymentServiceTokenAuthorizeRequest(
+        merchant_transaction_id="txn_001",
+        amount=Money(minor_amount=1000, currency=Currency.USD),
+        connector_token=SecretString(value="pm_1AbcXyzStripeTestToken"),
+        address=PaymentAddress(billing_address=Address()),
+        capture_method=CaptureMethod.AUTOMATIC,
+        return_url="https://example.com/return",
+    )
+)
 ```
 {% endtab %}
 
