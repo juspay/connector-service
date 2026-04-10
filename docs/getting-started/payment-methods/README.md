@@ -16,6 +16,5 @@ Prism's `authorize` call accepts a `payment_method` that describes how the payer
 | Crypto | `payment_method.crypto` |
 | Gift Card | `payment_method.givex` / ... |
 
-> **Non-PCI flow:** If card details are collected via the processor's JS SDK (Stripe.js, Adyen Drop-in, etc.), call `payments.tokenAuthorize()` with a top-level `connector_token` field instead of `payments.authorize()` — the `payment_method` field is absent in that call. See [Connector Token](./connector-token.md#non-pci-tokenize-then-authorize).
+> **Non-PCI flow:** If card details are collected via the processor's JS SDK (Stripe.js, Adyen Drop-in, etc.), call `payments.tokenAuthorize()` with a top-level `connector_token` field instead of `payments.authorize()` — the `payment_method` field is absent in that call. See [Connector Token](./connector-token.md).
 
-See [Connector Token](./connector-token.md) for usage examples.

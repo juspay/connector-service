@@ -6,7 +6,7 @@ There are two ways to use a token depending on your flow:
 
 ---
 
-## Non-PCI: tokenize then authorize {#non-pci-tokenize-then-authorize}
+## Non-PCI: tokenize then authorize
 
 **When:** Token was just collected from the processor's JS SDK in the browser right now.
 
