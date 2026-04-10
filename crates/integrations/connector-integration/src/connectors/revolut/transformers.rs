@@ -777,7 +777,8 @@ impl TryFrom<ResponseRouterData<RevolutCreateOrderResponse, Self>>
 
         Ok(Self {
             response: Ok(PaymentCreateOrderResponse {
-                order_id: response.id.clone(),
+                connector_order_id: response.id.clone(),
+                merchant_order_id: item.router_data.request.merchant_order_id.clone(),
                 session_data: None,
             }),
             resource_common_data: PaymentFlowData {
