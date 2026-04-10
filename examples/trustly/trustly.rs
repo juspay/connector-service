@@ -21,17 +21,12 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-pub fn build_handle_event_request() -> EventServiceHandleRequest {
-    serde_json::from_value::<EventServiceHandleRequest>(serde_json::json!({
-
-    })).unwrap_or_default()
-}
-
-
-// Flow: EventService.HandleEvent
+// Flow: PaymentService.handle_event
 #[allow(dead_code)]
 pub async fn handle_event(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.handle_event(build_handle_event_request(), &HashMap::new(), None).await?;
+    let response = client.handle_event(serde_json::from_value::<>(serde_json::json!({
+
+    })).unwrap_or_default(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
