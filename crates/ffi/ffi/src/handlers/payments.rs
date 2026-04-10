@@ -41,7 +41,15 @@ macro_rules! impl_flow_handlers {
                     request.payload,
                     &config,
                     request.extracted_metadata.connector,
-                    request.extracted_metadata.connector_config,
+                    request
+                        .extracted_metadata
+                        .connector_config
+                        .ok_or(IntegrationError {
+                            error_message: "Missing connector config".to_string(),
+                            error_code: "MISSING_CONNECTOR_CONFIG".to_string(),
+                            suggested_action: None,
+                            doc_url: None,
+                        })?,
                     &request.masked_metadata.unwrap_or_default(),
                 )
             }
@@ -60,7 +68,14 @@ macro_rules! impl_flow_handlers {
                     request.payload,
                     &config,
                     request.extracted_metadata.connector,
-                    request.extracted_metadata.connector_config,
+                    request
+                        .extracted_metadata
+                        .connector_config
+                        .ok_or(ConnectorError {
+                            error_message: "Missing connector config".to_string(),
+                            error_code: "MISSING_CONNECTOR_CONFIG".to_string(),
+                            http_status_code: None,
+                        })?,
                     &request.masked_metadata.unwrap_or_default(),
                     response,
                 )

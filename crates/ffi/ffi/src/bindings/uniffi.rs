@@ -20,7 +20,7 @@ mod uniffi_bindings_inner {
 
     use crate::bindings::utils::{
         build_domain_response, build_ffi_request_bytes, parse_ffi_options_for_req,
-        parse_ffi_options_for_res, parse_metadata,
+        parse_ffi_options_for_res, parse_metadata, parse_webhook_metadata,
     };
     use crate::define_ffi_flow;
 
@@ -289,27 +289,23 @@ mod uniffi_bindings_inner {
             }
         };
 
-        let ffi_options = match parse_ffi_options_for_res(options_bytes) {
+        let ffi_options = match parse_ffi_options_for_req(options_bytes) {
             Ok(o) => o,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(e)),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(e)),
                 }
                 .encode_to_vec()
             }
         };
 
-        let ffi_metadata = match parse_metadata(&ffi_options) {
+        let ffi_metadata = match parse_webhook_metadata(&ffi_options) {
             Ok(m) => m,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
-                        error_message: e.error_message,
-                        error_code: e.error_code,
-                        http_status_code: None,
-                    })),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -351,38 +347,35 @@ mod uniffi_bindings_inner {
             Ok(p) => p,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(IntegrationError {
                         error_message: format!("EventServiceHandleRequest decode failed: {e}"),
                         error_code: "DECODE_FAILED".to_string(),
-                        http_status_code: None,
+                        suggested_action: None,
+                        doc_url: None,
                     })),
                 }
                 .encode_to_vec();
             }
         };
 
-        let ffi_options = match parse_ffi_options_for_res(options_bytes) {
+        let ffi_options = match parse_ffi_options_for_req(options_bytes) {
             Ok(o) => o,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(e)),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(e)),
                 }
                 .encode_to_vec()
             }
         };
 
-        let ffi_metadata = match parse_metadata(&ffi_options) {
+        let ffi_metadata = match parse_webhook_metadata(&ffi_options) {
             Ok(m) => m,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ConnectorError.into(),
-                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
-                        error_message: e.error_message,
-                        error_code: e.error_code,
-                        http_status_code: None,
-                    })),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -467,7 +460,20 @@ mod uniffi_bindings_inner {
         };
 
         let connector = ffi_metadata.connector;
-        let connector_config = ffi_metadata.connector_config;
+        let connector_config = match ffi_metadata.connector_config {
+            Some(config) => config,
+            None => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                        error_message: "Missing connector config".to_string(),
+                        error_code: "MISSING_CONNECTOR_CONFIG".to_string(),
+                        http_status_code: None,
+                    })),
+                }
+                .encode_to_vec()
+            }
+        };
         let metadata = &common_utils::metadata::MaskedMetadata::default();
 
         let config = match ucs_env::configs::Config::new() {

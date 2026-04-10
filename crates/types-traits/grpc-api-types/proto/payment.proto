@@ -3143,6 +3143,8 @@ message EventContext {
   // Needed by connectors (e.g. Adyen) that map AUTHORISATION events to both
   // CAPTURED (automatic) and AUTHORIZED (manual) depending on capture method.
   optional CaptureMethod capture_method = 1;
+  // New optional field added to test backwards compatibility across SDKs.
+  optional string test_new_field = 2;
 }
 
 // Request for EventService.HandleEvent.

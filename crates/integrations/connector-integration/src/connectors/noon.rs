@@ -19,8 +19,8 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventContext, EventType,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets, EventContext,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
         MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentWebhookReference,

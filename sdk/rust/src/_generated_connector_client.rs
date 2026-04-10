@@ -298,6 +298,7 @@ impl ConnectorClient {
     );
     // ── EventService flows ───────────────────────────────────────────────────
     // TODO: Single-step flow handle_event needs different macro/implementation
+    // TODO: Single-step flow parse_event needs different macro/implementation
     // ── MerchantAuthenticationService flows ───────────────────────────────────────────────────
     impl_flow_method!(
         create_client_authentication_token,

@@ -517,20 +517,21 @@ pub fn parse_event_transformer(
             .ok_or(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)
             .map_err(|e| e.switch())?,
     )
-    .map_err(
-        |e: error_stack::Report<domain_types::errors::WebhookError>| e.current_context().switch(),
-    )?;
+    .map_err(|e: error_stack::Report<domain_types::errors::WebhookError>| {
+        e.current_context().switch()
+    })?;
 
     let connector_data: connector_integration::types::ConnectorData<
         domain_types::payment_method_data::DefaultPCIHolder,
     > = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
-    connector_integration::webhook_utils::parse_webhook_event(connector_data, request_details)
-        .map_err(
-            |e: error_stack::Report<domain_types::errors::WebhookError>| {
-                e.current_context().switch()
-            },
-        )
+    connector_integration::webhook_utils::parse_webhook_event(
+        connector_data,
+        request_details,
+    )
+    .map_err(|e: error_stack::Report<domain_types::errors::WebhookError>| {
+        e.current_context().switch()
+    })
 }
 
 /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
@@ -557,29 +558,25 @@ pub fn handle_event_transformer(
             .ok_or(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)
             .map_err(|e| e.switch())?,
     )
-    .map_err(
-        |e: error_stack::Report<domain_types::errors::WebhookError>| e.current_context().switch(),
-    )?;
+    .map_err(|e: error_stack::Report<domain_types::errors::WebhookError>| {
+        e.current_context().switch()
+    })?;
 
     let webhook_secrets = payload
         .webhook_secrets
         .map(ConnectorWebhookSecrets::foreign_try_from)
         .transpose()
-        .map_err(
-            |e: error_stack::Report<domain_types::errors::WebhookError>| {
-                e.current_context().switch()
-            },
-        )?;
+        .map_err(|e: error_stack::Report<domain_types::errors::WebhookError>| {
+            e.current_context().switch()
+        })?;
 
     let event_context = payload
         .event_context
         .map(domain_types::connector_types::EventContext::foreign_try_from)
         .transpose()
-        .map_err(
-            |e: error_stack::Report<domain_types::errors::WebhookError>| {
-                e.current_context().switch()
-            },
-        )?;
+        .map_err(|e: error_stack::Report<domain_types::errors::WebhookError>| {
+            e.current_context().switch()
+        })?;
 
     let connector_data: connector_integration::types::ConnectorData<
         domain_types::payment_method_data::DefaultPCIHolder,
@@ -604,9 +601,9 @@ pub fn handle_event_transformer(
         payload.merchant_event_id,
         event_context,
     )
-    .map_err(
-        |e: error_stack::Report<domain_types::errors::WebhookError>| e.current_context().switch(),
-    )
+    .map_err(|e: error_stack::Report<domain_types::errors::WebhookError>| {
+        e.current_context().switch()
+    })
 }
 
 // incremental_authorization
