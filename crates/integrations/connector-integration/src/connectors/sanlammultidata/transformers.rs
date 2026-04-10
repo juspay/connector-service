@@ -9,7 +9,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -31,7 +31,15 @@ impl TryFrom<&ConnectorSpecificConfig> for SanlammultidataAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(IntegrationError::FailedToObtainAuthType {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Ensure the connector is configured with a Sanlammultidata-specific config containing a valid api_key.".to_string(),
+                    ),
+                    additional_context: Some(
+                        "ConnectorSpecificConfig did not match the Sanlammultidata variant; received an unexpected config variant.".to_string(),
+                    ),
+                    doc_url: None,
+                },
             }
             .into()),
         }
@@ -51,7 +59,15 @@ impl TryFrom<SecretSerdeValue> for SanlammultidataMetaData {
             .parse_value::<Self>("SanlammultidataMetaData")
             .change_context(IntegrationError::InvalidDataFormat {
                 field_name: "metadata",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "Failed to deserialize connector metadata into SanlammultidataMetaData; ensure 'batch_user_reference' is a valid optional string.".to_string(),
+                    ),
+                    suggested_action: Some(
+                        "Verify the connector metadata is valid JSON with an optional 'batch_user_reference' string field.".to_string(),
+                    ),
+                    doc_url: None,
+                },
             })?;
         Ok(metadata)
     }
@@ -143,7 +159,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let homing_account_name = bank_account_holder_name.as_ref().ok_or(
                         IntegrationError::MissingRequiredField {
                             field_name: "bank_account_holder_name",
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                additional_context: Some(
+                                    "EFT debit order requires 'bank_account_holder_name' to populate the homing_account_name field in the Sanlammultidata payments request.".to_string(),
+                                ),
+                                suggested_action: Some(
+                                    "Provide the bank account holder name in the EFT bank debit payment method data.".to_string(),
+                                ),
+                                doc_url: None,
+                            },
                         },
                     )?;
 
@@ -152,13 +176,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .transpose()?
                         .ok_or(IntegrationError::MissingRequiredField {
                             field_name: "bank_name",
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                additional_context: Some(
+                                    "EFT debit order requires 'bank_name' to be provided and mapped to a supported Sanlammultidata bank (e.g., Absa).".to_string(),
+                                ),
+                                suggested_action: Some(
+                                    "Provide a supported bank name in the EFT bank debit payment method data.".to_string(),
+                                ),
+                                doc_url: None,
+                            },
                         })?;
 
                     let bank_type = bank_type.map(SanlammultidataBankType::from).ok_or(
                         IntegrationError::MissingRequiredField {
                             field_name: "bank_type",
-                            context: Default::default(),
+                            context: IntegrationErrorContext {
+                                additional_context: Some(
+                                    "EFT debit order requires 'bank_type' to be provided (e.g., Savings, Cheque, Current, Bond, Transmission, SubscriptionShare).".to_string(),
+                                ),
+                                suggested_action: Some(
+                                    "Provide a valid bank account type in the EFT bank debit payment method data.".to_string(),
+                                ),
+                                doc_url: None,
+                            },
                         },
                     )?;
 
