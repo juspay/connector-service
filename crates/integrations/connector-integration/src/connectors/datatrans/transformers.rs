@@ -4,14 +4,18 @@ use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::MinorUnit;
 use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void},
     connector_types::{
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse,
+        DatatransClientAuthenticationResponse as DatatransClientAuthenticationResponseDomain,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
+    router_data::PaymentMethodToken,
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -164,22 +168,52 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        // Extract card data
-        let card_data = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => card,
+        // Extract card data or token
+        let card = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                // Direct card flow - use raw card details
+                DatatransCard {
+                    alias: None,
+                    number: Some(card_data.card_number.clone()),
+                    expiry_month: Some(card_data.card_exp_month.clone()),
+                    expiry_year: Some(card_data.get_card_expiry_year_2_digit()?),
+                    cvv: Some(card_data.card_cvc.clone()),
+                    card_type: Some("PLAIN".to_string()),
+                }
+            }
+            // TODO: CardToken flow for Datatrans Secure Fields SDK.
+            // When the client SDK collects card data via Secure Fields, the transactionId
+            // from secureFieldsInit is used as an alias. The authorize-split endpoint
+            // (POST /v1/transactions/{transactionId}/authorize) should be called instead
+            // of the regular authorize endpoint. The payment_method_token carries the
+            // transactionId from the client authentication token response.
+            PaymentMethodData::CardToken(CardToken { .. }) => {
+                let token = router_data
+                    .resource_common_data
+                    .payment_method_token
+                    .as_ref()
+                    .map(|t| match t {
+                        PaymentMethodToken::Token(s) => s.clone(),
+                    })
+                    .ok_or_else(|| {
+                        error_stack::report!(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_token",
+                            context: Default::default(),
+                        })
+                    })?;
+
+                DatatransCard {
+                    alias: Some(token),
+                    number: None,
+                    expiry_month: None,
+                    expiry_year: None,
+                    cvv: None,
+                    card_type: None,
+                }
+            }
             _ => Err(IntegrationError::not_implemented(
                 UNSUPPORTED_PAYMENT_METHOD_ERROR.to_string(),
             ))?,
-        };
-
-        // Build card object - for authorize flow we use card details directly
-        let card = DatatransCard {
-            alias: None, // Alias is used for stored credentials, not for direct authorization
-            number: Some(card_data.card_number.clone()),
-            expiry_month: Some(card_data.card_exp_month.clone()),
-            expiry_year: Some(card_data.get_card_expiry_year_2_digit()?),
-            cvv: Some(card_data.card_cvc.clone()),
-            card_type: Some("PLAIN".to_string()), // Set card type to PLAIN to match Hyperswitch
         };
 
         // Determine auto_settle based on capture method
@@ -771,6 +805,98 @@ impl TryFrom<ResponseRouterData<DatatransVoidResponse, Self>>
             },
             response: Ok(payments_response_data),
             ..item.router_data.clone()
+        })
+    }
+}
+
+// ===== CLIENT AUTHENTICATION TOKEN FLOW STRUCTURES =====
+
+/// Request to initialize a Datatrans Secure Fields transaction.
+/// Returns a transactionId that serves as a client authentication token.
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransClientAuthRequest {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+    pub return_url: String,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::DatatransRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for DatatransClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: super::DatatransRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        Ok(Self {
+            amount: router_data.request.amount,
+            currency: router_data.request.currency,
+            return_url: router_data
+                .resource_common_data
+                .return_url
+                .clone()
+                .unwrap_or_else(|| "https://example.com/return".to_string()),
+        })
+    }
+}
+
+/// Datatrans Secure Fields init response — contains the transactionId
+/// used as a client authentication token (valid for 30 minutes).
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransClientAuthResponse {
+    pub transaction_id: String,
+}
+
+impl TryFrom<ResponseRouterData<DatatransClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<DatatransClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Datatrans(
+                DatatransClientAuthenticationResponseDomain {
+                    transaction_id: Secret::new(response.transaction_id),
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
         })
     }
 }

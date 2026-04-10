@@ -1487,7 +1487,7 @@ pub struct PaymentCreateOrderData {
 
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
-    pub order_id: String,
+    pub connector_order_id: String,
     /// Optional SDK session data for wallet flows (Apple Pay, Google Pay) and other SDK types
     pub session_data: Option<ClientAuthenticationTokenData>,
 }
@@ -3552,6 +3552,18 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Jpmorgan(JpmorganClientAuthenticationResponse),
     /// Billwerk SDK initialization data — session_id for checkout session
     Billwerk(BillwerkClientAuthenticationResponse),
+    /// Datatrans SDK initialization data — transaction_id for Secure Fields initialization
+    Datatrans(DatatransClientAuthenticationResponse),
+    /// Bambora SDK initialization data — token for Custom Checkout initialization
+    Bambora(BamboraClientAuthenticationResponse),
+    /// Payload SDK initialization data — client_token for Payload.js Checkout/Secure Input SDK
+    Payload(PayloadClientAuthenticationResponse),
+    /// Multisafepay SDK initialization data — api_token for Payment Components initialization
+    Multisafepay(MultisafepayClientAuthenticationResponse),
+    /// Nexinets SDK initialization data — order_id for client-side hosted payment page initialization
+    Nexinets(NexinetsClientAuthenticationResponse),
+    /// Nexixpay SDK initialization data — security_token and hosted_page URL for HPP initialization
+    Nexixpay(NexixpayClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3702,6 +3714,50 @@ pub struct JpmorganClientAuthenticationResponse {
 pub struct BillwerkClientAuthenticationResponse {
     /// The checkout session identifier
     pub session_id: String,
+}
+
+/// Datatrans's transaction_id for client-side Secure Fields initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatatransClientAuthenticationResponse {
+    /// The transaction ID returned from Secure Fields init, used as a client auth token
+    pub transaction_id: Secret<String>,
+}
+
+/// Bambora's token for client-side Custom Checkout SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BamboraClientAuthenticationResponse {
+    /// The tokenization token returned from Bambora's tokenization API
+    pub token: Secret<String>,
+}
+
+/// Payload's client_token for Payload.js Checkout/Secure Input SDK initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PayloadClientAuthenticationResponse {
+    /// The client token ID returned from POST /access_tokens for client-side SDK initialization
+    pub client_token: Secret<String>,
+}
+
+/// Multisafepay's api_token for client-side Payment Components initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultisafepayClientAuthenticationResponse {
+    /// The API token for encrypting sensitive payment details (valid for 600 seconds)
+    pub api_token: Secret<String>,
+}
+
+/// Nexinets' order_id for client-side hosted payment page initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexinetsClientAuthenticationResponse {
+    /// The order ID that serves as the client authentication token for hosted checkout
+    pub order_id: String,
+}
+
+/// Nexixpay's security_token and hosted_page URL for HPP (Hosted Payment Page) initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexixpayClientAuthenticationResponse {
+    /// The security token for authenticating client-side hosted payment page requests
+    pub security_token: Secret<String>,
+    /// The hosted payment page URL for client-side redirect
+    pub hosted_page: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
