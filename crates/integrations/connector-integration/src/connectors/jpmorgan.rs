@@ -249,17 +249,19 @@ fn regex_replace_empty_json_values(input: &str) -> String {
     let len = chars.len();
     let mut i = 0;
     while i < len {
-        result.push(chars[i]);
-        // After a colon+space, check if the next non-whitespace char is `,` or `}`
-        if chars[i] == ':' {
+        let Some(&c) = chars.get(i) else { break };
+        result.push(c);
+        // After a colon, check if the next non-whitespace char is `,` or `}`
+        if c == ':' {
             let mut j = i + 1;
             // consume whitespace
-            while j < len
-                && (chars[j] == ' ' || chars[j] == '\t' || chars[j] == '\r' || chars[j] == '\n')
+            while chars
+                .get(j)
+                .is_some_and(|&ch| matches!(ch, ' ' | '\t' | '\r' | '\n'))
             {
                 j += 1;
             }
-            if j < len && (chars[j] == ',' || chars[j] == '}') {
+            if chars.get(j).is_some_and(|&ch| ch == ',' || ch == '}') {
                 // empty value — insert null and advance past the whitespace we consumed
                 result.push_str(" null");
                 i = j; // will push chars[j] on next iteration
