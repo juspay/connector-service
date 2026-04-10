@@ -2541,7 +2541,7 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
             merchant_transaction_id: req.merchant_transaction_id.clone(),
             amount: req.amount,
             order_tax_amount: None,
-            shipping_cost: req.shipping_cost.clone(),
+            shipping_cost: req.shipping_cost,
             payment_method,
             capture_method: req.capture_method(),
             customer: req.customer.clone(),
