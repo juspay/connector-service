@@ -218,7 +218,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/payu/payu.py#L61) · [TypeScript](../../examples/payu/payu.ts#L65) · [Kotlin](../../examples/payu/payu.kt#L68) · [Rust](../../examples/payu/payu.rs#L77)
+**Examples:** [Python](../../examples/payu/payu.py) · [TypeScript](../../examples/payu/payu.ts#L65) · [Kotlin](../../examples/payu/payu.kt#L68) · [Rust](../../examples/payu/payu.rs)
 
 #### PaymentService.Get
 
@@ -229,4 +229,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/payu/payu.py#L70) · [TypeScript](../../examples/payu/payu.ts#L74) · [Kotlin](../../examples/payu/payu.kt#L80) · [Rust](../../examples/payu/payu.rs#L89)
+**Examples:** [Python](../../examples/payu/payu.py) · [TypeScript](../../examples/payu/payu.ts#L74) · [Kotlin](../../examples/payu/payu.kt#L80) · [Rust](../../examples/payu/payu.rs)

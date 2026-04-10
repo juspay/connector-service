@@ -36,7 +36,7 @@ def _build_get_request(connector_transaction_id: str):
         ),
         state=payment_pb2.ConnectorState(  # State Information.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
-                token="probe_access_token",  # The token string.
+                token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
                 expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
             ),
@@ -55,13 +55,13 @@ def _build_refund_request(connector_transaction_id: str):
         reason="customer_request",  # Reason for the refund.
         state=payment_pb2.ConnectorState(  # State data for access token storage and.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
-                token="probe_access_token",  # The token string.
+                token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
                 expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
             ),
         ),
     )
-async def create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: MerchantAuthenticationService.CreateServerAuthenticationToken"""
     merchantauthentication_client = MerchantAuthenticationClient(config)
 
@@ -70,7 +70,7 @@ async def create_server_authentication_token(merchant_transaction_id: str, confi
     return {"status": create_response.status}
 
 
-async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Get"""
     payment_client = PaymentClient(config)
 
@@ -79,7 +79,7 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     return {"status": get_response.status}
 
 
-async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Refund"""
     payment_client = PaymentClient(config)
 

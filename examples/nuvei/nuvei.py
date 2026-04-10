@@ -32,20 +32,20 @@ def _build_authorize_request(capture_method: str):
         ),
         payment_method=payment_methods_pb2.PaymentMethod(  # Payment method to be used.
             card=payment_methods_pb2.CardDetails(
-                card_number="4111111111111111",  # Card Identification.
-                card_exp_month="03",
-                card_exp_year="2030",
-                card_cvc="737",
-                card_holder_name="John Doe",  # Cardholder Information.
+                card_number=payment_methods_pb2.CardNumberType(value="4111111111111111"),  # Card Identification.
+                card_exp_month=payment_methods_pb2.SecretString(value="03"),
+                card_exp_year=payment_methods_pb2.SecretString(value="2030"),
+                card_cvc=payment_methods_pb2.SecretString(value="737"),
+                card_holder_name=payment_methods_pb2.SecretString(value="John Doe"),  # Cardholder Information.
             ),
         ),
         capture_method=payment_pb2.CaptureMethod.Value(capture_method),  # Method for capturing the payment.
         address=payment_pb2.PaymentAddress(  # Address Information.
             billing_address=payment_pb2.Address(
-                first_name="John",  # Personal Information.
-                last_name="Doe",
+                first_name=payment_methods_pb2.SecretString(value="John"),  # Personal Information.
+                last_name=payment_methods_pb2.SecretString(value="Doe"),
                 country_alpha2_code=payment_methods_pb2.CountryAlpha2.Value("US"),
-                email="test@example.com",  # Contact Information.
+                email=payment_methods_pb2.SecretString(value="test@example.com"),  # Contact Information.
             ),
         ),
         auth_type=payment_pb2.AuthenticationType.Value("NO_THREE_DS"),  # Authentication Details.
@@ -83,15 +83,12 @@ def _build_create_client_authentication_token_request():
     )
 
 def _build_create_order_request():
-    return ParseDict(
-        {
-            "merchant_order_id": "probe_order_001",  # Identification.
-            "amount": {  # Amount Information.
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
-            }
-        },
-        payment_pb2.PaymentServiceCreateOrderRequest(),
+    return payment_pb2.PaymentServiceCreateOrderRequest(
+        merchant_order_id="probe_order_001",  # Identification.
+        amount=payment_pb2.Money(  # Amount Information.
+            minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
+            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        ),
     )
 
 def _build_create_server_session_authentication_token_request():
@@ -250,7 +247,7 @@ async def process_get_payment(merchant_transaction_id: str, config: sdk_config_p
     return {"status": getattr(get_response, "status", ""), "transaction_id": getattr(get_response, "connector_transaction_id", ""), "error": getattr(get_response, "error", None)}
 
 
-async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Authorize (Card)"""
     payment_client = PaymentClient(config)
 
@@ -259,7 +256,7 @@ async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.Connect
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
 
-async def capture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_capture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Capture"""
     payment_client = PaymentClient(config)
 
@@ -268,7 +265,7 @@ async def capture(merchant_transaction_id: str, config: sdk_config_pb2.Connector
     return {"status": capture_response.status}
 
 
-async def create_client_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_create_client_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: MerchantAuthenticationService.CreateClientAuthenticationToken"""
     merchantauthentication_client = MerchantAuthenticationClient(config)
 
@@ -277,7 +274,7 @@ async def create_client_authentication_token(merchant_transaction_id: str, confi
     return {"status": create_response.status}
 
 
-async def create_order(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_create_order(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.CreateOrder"""
     payment_client = PaymentClient(config)
 
@@ -286,7 +283,7 @@ async def create_order(merchant_transaction_id: str, config: sdk_config_pb2.Conn
     return {"status": create_response.status}
 
 
-async def create_server_session_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_create_server_session_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: MerchantAuthenticationService.CreateServerSessionAuthenticationToken"""
     merchantauthentication_client = MerchantAuthenticationClient(config)
 
@@ -295,7 +292,7 @@ async def create_server_session_authentication_token(merchant_transaction_id: st
     return {"status": create_response.status}
 
 
-async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Get"""
     payment_client = PaymentClient(config)
 
@@ -304,7 +301,7 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     return {"status": get_response.status}
 
 
-async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Refund"""
     payment_client = PaymentClient(config)
 
@@ -313,7 +310,7 @@ async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorC
     return {"status": refund_response.status}
 
 
-async def refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: RefundService.Get"""
     refund_client = RefundClient(config)
 
@@ -322,7 +319,7 @@ async def refund_get(merchant_transaction_id: str, config: sdk_config_pb2.Connec
     return {"status": refund_response.status}
 
 
-async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Void"""
     payment_client = PaymentClient(config)
 

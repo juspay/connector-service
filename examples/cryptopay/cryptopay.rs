@@ -6,14 +6,21 @@
 // Run a scenario:  cargo run --example cryptopay -- process_checkout_card
 
 use grpc_api_types::payments::*;
+use grpc_api_types::payments::connector_specific_config;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
+
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {
-    // Set connector_config to authenticate: use ConnectorSpecificConfig with your CryptopayConfig
+    // Configure the connector with authentication
     let config = ConnectorConfig {
-        connector_config: None,  // TODO: Some(ConnectorSpecificConfig { config: Some(...) })
+        connector_config: Some(ConnectorSpecificConfig {
+            config: Some(connector_specific_config::Config::Cryptopay(CryptopayConfig {
+                api_key: Some(hyperswitch_masking::Secret::new("YOUR_API_KEY".to_string())),
+                ..Default::default()
+            }),),
+        }),
         options: Some(SdkOptions {
             environment: Environment::Sandbox.into(),
         }),
@@ -27,7 +34,7 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
         connector_transaction_id: connector_transaction_id.to_string(),
         amount: Some(Money {  // Amount Information.
             minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            currency: Currency::Usd.into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
             ..Default::default()
         }),
         ..Default::default()
@@ -44,14 +51,14 @@ pub fn build_handle_event_request() -> EventServiceHandleRequest {
 
 // Flow: PaymentService.Get
 #[allow(dead_code)]
-pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn process_get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: EventService.HandleEvent
 #[allow(dead_code)]
-pub async fn handle_event(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn process_handle_event(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.handle_event(build_handle_event_request(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
@@ -60,11 +67,11 @@ pub async fn handle_event(client: &ConnectorClient, _merchant_transaction_id: &s
 #[tokio::main]
 async fn main() {
     let client = build_client();
-    let flow = std::env::args().nth(1).unwrap_or_else(|| "get".to_string());
+    let flow = std::env::args().nth(1).unwrap_or_else(|| "process_get".to_string());
     let result: Result<String, Box<dyn std::error::Error>> = match flow.as_str() {
-        "get" => get(&client, "order_001").await,
-        "handle_event" => handle_event(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: get, handle_event", flow); return; }
+        "process_get" => process_get(&client, "txn_001").await,
+        "process_handle_event" => process_handle_event(&client, "txn_001").await,
+        _ => { eprintln!("Unknown flow: {}. Available: process_get, process_handle_event", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

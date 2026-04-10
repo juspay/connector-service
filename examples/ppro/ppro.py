@@ -77,7 +77,7 @@ def _build_recurring_charge_request():
         ),
         payment_method=payment_methods_pb2.PaymentMethod(  # Optional payment Method Information (for network transaction flows).
             token=payment_methods_pb2.TokenPaymentMethodType(
-                token="probe_pm_token",  # The token string representing a payment method.
+                token=payment_methods_pb2.SecretString(value="probe_pm_token"),  # The token string representing a payment method.
             ),
         ),
         return_url="https://example.com/recurring-return",
@@ -114,7 +114,7 @@ def _build_void_request(connector_transaction_id: str):
             currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
         ),
     )
-async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Authorize (Ideal)"""
     payment_client = PaymentClient(config)
 
@@ -123,7 +123,7 @@ async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.Connect
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
 
-async def capture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_capture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Capture"""
     payment_client = PaymentClient(config)
 
@@ -132,7 +132,7 @@ async def capture(merchant_transaction_id: str, config: sdk_config_pb2.Connector
     return {"status": capture_response.status}
 
 
-async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Get"""
     payment_client = PaymentClient(config)
 
@@ -141,7 +141,7 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     return {"status": get_response.status}
 
 
-async def handle_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_handle_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: EventService.HandleEvent"""
     event_client = EventClient(config)
 
@@ -150,7 +150,7 @@ async def handle_event(merchant_transaction_id: str, config: sdk_config_pb2.Conn
     return {"status": handle_response.status}
 
 
-async def recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: RecurringPaymentService.Charge"""
     recurringpayment_client = RecurringPaymentClient(config)
 
@@ -159,7 +159,7 @@ async def recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.
     return {"status": recurring_response.status}
 
 
-async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Refund"""
     payment_client = PaymentClient(config)
 
@@ -168,7 +168,7 @@ async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorC
     return {"status": refund_response.status}
 
 
-async def refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: RefundService.Get"""
     refund_client = RefundClient(config)
 
@@ -177,7 +177,7 @@ async def refund_get(merchant_transaction_id: str, config: sdk_config_pb2.Connec
     return {"status": refund_response.status}
 
 
-async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Void"""
     payment_client = PaymentClient(config)
 

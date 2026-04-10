@@ -30,7 +30,7 @@ def _build_authorize_request(capture_method: str):
         ),
         payment_method=payment_methods_pb2.PaymentMethod(  # Payment method to be used.
             upi_collect=payment_methods_pb2.UpiCollect(
-                vpa_id="test@upi",  # Virtual Payment Address.
+                vpa_id=payment_methods_pb2.SecretString(value="test@upi"),  # Virtual Payment Address.
             ),
         ),
         capture_method=payment_pb2.CaptureMethod.Value(capture_method),  # Method for capturing the payment.
@@ -41,7 +41,7 @@ def _build_authorize_request(capture_method: str):
         return_url="https://example.com/return",  # URLs for Redirection and Webhooks.
         connector_order_id="connector_order_id",  # Send the connector order identifier here if an order was created before authorize.
     )
-async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Authorize (UpiCollect)"""
     payment_client = PaymentClient(config)
 
