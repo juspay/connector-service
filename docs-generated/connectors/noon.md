@@ -108,7 +108,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/noon/noon.py#L218) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L114) · [Rust](../../examples/noon/noon.rs#L205)
+**Examples:** [Python](../../examples/noon/noon.py#L23) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L23) · [Rust](../../examples/noon/noon.rs#L27)
 
 ### Card Payment (Authorize + Capture)
 
@@ -122,52 +122,45 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/noon/noon.py#L237) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L130) · [Rust](../../examples/noon/noon.rs#L221)
+**Examples:** [Python](../../examples/noon/noon.py#L64) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L53) · [Rust](../../examples/noon/noon.rs#L67)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/noon/noon.py#L262) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L152) · [Rust](../../examples/noon/noon.rs#L244)
+**Examples:** [Python](../../examples/noon/noon.py#L120) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L94) · [Rust](../../examples/noon/noon.rs#L121)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/noon/noon.py#L287) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L174) · [Rust](../../examples/noon/noon.rs#L267)
+**Examples:** [Python](../../examples/noon/noon.py#L178) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L137) · [Rust](../../examples/noon/noon.rs#L177)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/noon/noon.py#L309) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L193) · [Rust](../../examples/noon/noon.rs#L286)
+**Examples:** [Python](../../examples/noon/noon.py#L227) · [JavaScript](../../examples/noon/noon.js) · [Kotlin](../../examples/noon/noon.kt#L173) · [Rust](../../examples/noon/noon.rs#L223)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [EventService.HandleEvent](#eventservicehandleevent) | Events | `EventServiceHandleRequest` |
-| [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
-| [PaymentService.ProxySetupRecurring](#paymentserviceproxysetuprecurring) | Payments | `PaymentServiceProxySetupRecurringRequest` |
-| [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
-| [RecurringPaymentService.Revoke](#recurringpaymentservicerevoke) | Mandates | `RecurringPaymentServiceRevokeRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
-| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [capture](#capture) | Other | `—` |
+| [get](#get) | Other | `—` |
+| [handle_event](#handle_event) | Other | `—` |
+| [proxy_authorize](#proxy_authorize) | Other | `—` |
+| [proxy_setup_recurring](#proxy_setup_recurring) | Other | `—` |
+| [recurring_charge](#recurring_charge) | Other | `—` |
+| [recurring_revoke](#recurring_revoke) | Other | `—` |
+| [refund](#refund) | Other | `—` |
+| [refund_get](#refund_get) | Other | `—` |
+| [void](#void) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -271,13 +264,11 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "card": {  # Generic card payment.
-        "card_number": {"value": "4111111111111111"},  # Card Identification.
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information.
-    }
+    "card_number": "4111111111111111",
+    "card_exp_month": "03",
+    "card_exp_year": "2030",
+    "card_cvc": "737",
+    "card_holder_name": "John Doe"
 }
 ```
 
@@ -285,20 +276,12 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "google_pay": {  # Google Pay.
-        "type": "CARD",  # Type of payment method.
-        "description": "Visa 1111",  # User-facing description of the payment method.
-        "info": {
-            "card_network": "VISA",  # Card network name.
-            "card_details": "1111"  # Card details (usually last 4 digits).
-        },
-        "tokenization_data": {
-            "encrypted_data": {  # Encrypted Google Pay payment data.
-                "token_type": "PAYMENT_GATEWAY",  # The type of the token.
-                "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet.
-            }
-        }
-    }
+    "type": "CARD",
+    "description": "Visa 1111",
+    "card_network": "VISA",
+    "card_details": "1111"
+    "token_type": "PAYMENT_GATEWAY",
+    "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"
 }
 ```
 
@@ -306,113 +289,48 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 ```python
 "payment_method": {
-    "paypal_redirect": {  # PayPal.
-        "email": {"value": "test@example.com"}  # PayPal's email address.
-    }
+    "email": "test@example.com"
 }
 ```
 
-**Examples:** [Python](../../examples/noon/noon.py#L331) · [TypeScript](../../examples/noon/noon.ts#L309) · [Kotlin](../../examples/noon/noon.kt#L211) · [Rust](../../examples/noon/noon.rs#L304)
+**Examples:** [Python](../../examples/noon/noon.py#L280) · [TypeScript](../../examples/noon/noon.ts#L265) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L272)
 
-#### PaymentService.Capture
+#### capture
 
-Finalize an authorized payment by transferring funds. Captures the authorized amount to complete the transaction and move funds to your merchant account.
+**Examples:** [Python](../../examples/noon/noon.py#L318) · [TypeScript](../../examples/noon/noon.ts#L301) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L308)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceCaptureRequest` |
-| **Response** | `PaymentServiceCaptureResponse` |
+#### get
 
-**Examples:** [Python](../../examples/noon/noon.py#L340) · [TypeScript](../../examples/noon/noon.ts#L318) · [Kotlin](../../examples/noon/noon.kt#L223) · [Rust](../../examples/noon/noon.rs#L316)
+**Examples:** [Python](../../examples/noon/noon.py#L340) · [TypeScript](../../examples/noon/noon.ts#L320) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L322)
 
-#### PaymentService.Get
+#### handle_event
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+**Examples:** [Python](../../examples/noon/noon.py#L359) · [TypeScript](../../examples/noon/noon.ts#L335) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L336)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+#### proxy_authorize
 
-**Examples:** [Python](../../examples/noon/noon.py#L349) · [TypeScript](../../examples/noon/noon.ts#L327) · [Kotlin](../../examples/noon/noon.kt#L233) · [Rust](../../examples/noon/noon.rs#L323)
+**Examples:** [Python](../../examples/noon/noon.py#L373) · [TypeScript](../../examples/noon/noon.ts#L345) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L345)
 
-#### PaymentService.ProxyAuthorize
+#### proxy_setup_recurring
 
-Authorize using vault-aliased card data. Proxy substitutes before connector.
+**Examples:** [Python](../../examples/noon/noon.py#L405) · [TypeScript](../../examples/noon/noon.ts#L373) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L374)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceProxyAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### recurring_charge
 
-**Examples:** [Python](../../examples/noon/noon.py#L367) · [TypeScript](../../examples/noon/noon.ts#L345) · [Kotlin](../../examples/noon/noon.kt#L251) · [Rust](../../examples/noon/noon.rs#L337)
+**Examples:** [Python](../../examples/noon/noon.py#L439) · [TypeScript](../../examples/noon/noon.ts#L403) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L405)
 
-#### PaymentService.ProxySetupRecurring
+#### recurring_revoke
 
-Setup recurring mandate using vault-aliased card data.
+**Examples:** [Python](../../examples/noon/noon.py#L470) · [TypeScript](../../examples/noon/noon.ts#L431) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L434)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceProxySetupRecurringRequest` |
-| **Response** | `PaymentServiceSetupRecurringResponse` |
+#### refund
 
-**Examples:** [Python](../../examples/noon/noon.py#L376) · [TypeScript](../../examples/noon/noon.ts#L354) · [Kotlin](../../examples/noon/noon.kt#L281) · [Rust](../../examples/noon/noon.rs#L344)
+**Examples:** [Python](../../examples/noon/noon.py#L486) · [TypeScript](../../examples/noon/noon.ts#L443) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L445)
 
-#### PaymentService.Refund
+#### refund_get
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
+**Examples:** [Python](../../examples/noon/noon.py#L510) · [TypeScript](../../examples/noon/noon.ts#L464) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L461)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
+#### void
 
-**Examples:** [Python](../../examples/noon/noon.py#L403) · [TypeScript](../../examples/noon/noon.ts#L381) · [Kotlin](../../examples/noon/noon.kt#L357) · [Rust](../../examples/noon/noon.rs#L365)
-
-#### PaymentService.Void
-
-Cancel an authorized payment that has not been captured. Releases held funds back to the customer's payment method when a transaction cannot be completed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceVoidRequest` |
-| **Response** | `PaymentServiceVoidResponse` |
-
-**Examples:** [Python](../../examples/noon/noon.py#L421) · [TypeScript](../../examples/noon/noon.ts) · [Kotlin](../../examples/noon/noon.kt#L379) · [Rust](../../examples/noon/noon.rs#L379)
-
-### Refunds
-
-#### RefundService.Get
-
-Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
-
-| | Message |
-|---|---------|
-| **Request** | `RefundServiceGetRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/noon/noon.py#L412) · [TypeScript](../../examples/noon/noon.ts#L390) · [Kotlin](../../examples/noon/noon.kt#L367) · [Rust](../../examples/noon/noon.rs#L372)
-
-### Mandates
-
-#### RecurringPaymentService.Charge
-
-Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
-
-| | Message |
-|---|---------|
-| **Request** | `RecurringPaymentServiceChargeRequest` |
-| **Response** | `RecurringPaymentServiceChargeResponse` |
-
-**Examples:** [Python](../../examples/noon/noon.py#L385) · [TypeScript](../../examples/noon/noon.ts#L363) · [Kotlin](../../examples/noon/noon.kt#L313) · [Rust](../../examples/noon/noon.rs#L351)
-
-#### RecurringPaymentService.Revoke
-
-Cancel an existing recurring payment mandate. Stops future automatic charges on customer's stored consent for subscription cancellations.
-
-| | Message |
-|---|---------|
-| **Request** | `RecurringPaymentServiceRevokeRequest` |
-| **Response** | `RecurringPaymentServiceRevokeResponse` |
-
-**Examples:** [Python](../../examples/noon/noon.py#L394) · [TypeScript](../../examples/noon/noon.ts#L372) · [Kotlin](../../examples/noon/noon.kt#L345) · [Rust](../../examples/noon/noon.rs#L358)
+**Examples:** [Python](../../examples/noon/noon.py#L526) · [TypeScript](../../examples/noon/noon.ts) · [Kotlin](../../examples/noon/noon.kt) · [Rust](../../examples/noon/noon.rs#L472)

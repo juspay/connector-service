@@ -5,7 +5,7 @@
 // Cashtocode — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx cashtocode.ts checkout_autocapture
 
-import { EventClient, types } from 'hyperswitch-prism';
+import { PaymentClient, types } from 'hyperswitch-prism';
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = types;
 
 const _defaultConfig: ConnectorConfig = {
@@ -19,18 +19,13 @@ const _defaultConfig: ConnectorConfig = {
 // };
 
 
-function _buildHandleEventRequest(): EventServiceHandleRequest {
-    return {
-    };
-}
-
-
 // ANCHOR: scenario_functions
-// Flow: EventService.HandleEvent
-async function handleEvent(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<EventServiceHandleResponse> {
-    const eventClient = new EventClient(config);
-
-    const handleResponse = await eventClient.handleEvent(_buildHandleEventRequest());
+// Flow: PaymentService.handle_event
+async function handleEvent(merchantTransactionId: string, config: ConnectorConfig = _defaultConfig): Promise<any> {
+    // Step 1: handle_event
+    const handleResponse = await paymentClient.handleEvent({
+        // No required fields
+    });
 
     return { status: handleResponse.status };
 }
@@ -38,7 +33,7 @@ async function handleEvent(merchantTransactionId: string, config: ConnectorConfi
 
 // Export all process* functions for the smoke test
 export {
-    handleEvent, _buildHandleEventRequest
+    handleEvent
 };
 
 // CLI runner

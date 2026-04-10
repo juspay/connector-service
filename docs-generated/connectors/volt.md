@@ -96,21 +96,14 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [MerchantAuthenticationService.CreateServerAuthenticationToken](#merchantauthenticationservicecreateserverauthenticationtoken) | Authentication | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
+| [authorize](#authorize) | Other | `—` |
+| [create_server_authentication_token](#create_server_authentication_token) | Other | `—` |
+| [get](#get) | Other | `—` |
+| [refund](#refund) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
+#### authorize
 
 **Supported payment method types:**
 
@@ -210,37 +203,14 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 **Examples:** [Python](../../examples/volt/volt.py) · [TypeScript](../../examples/volt/volt.ts) · [Kotlin](../../examples/volt/volt.kt) · [Rust](../../examples/volt/volt.rs)
 
-#### PaymentService.Get
+#### create_server_authentication_token
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+**Examples:** [Python](../../examples/volt/volt.py#L23) · [TypeScript](../../examples/volt/volt.ts#L24) · [Kotlin](../../examples/volt/volt.kt) · [Rust](../../examples/volt/volt.rs#L26)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+#### get
 
-**Examples:** [Python](../../examples/volt/volt.py#L83) · [TypeScript](../../examples/volt/volt.ts#L77) · [Kotlin](../../examples/volt/volt.kt#L76) · [Rust](../../examples/volt/volt.rs#L78)
+**Examples:** [Python](../../examples/volt/volt.py#L37) · [TypeScript](../../examples/volt/volt.ts#L34) · [Kotlin](../../examples/volt/volt.kt) · [Rust](../../examples/volt/volt.rs#L35)
 
-#### PaymentService.Refund
+#### refund
 
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/volt/volt.py#L92) · [TypeScript](../../examples/volt/volt.ts#L86) · [Kotlin](../../examples/volt/volt.kt#L84) · [Rust](../../examples/volt/volt.rs#L85)
-
-### Authentication
-
-#### MerchantAuthenticationService.CreateServerAuthenticationToken
-
-Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
-
-| | Message |
-|---|---------|
-| **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
-
-**Examples:** [Python](../../examples/volt/volt.py#L74) · [TypeScript](../../examples/volt/volt.ts#L68) · [Kotlin](../../examples/volt/volt.kt#L66) · [Rust](../../examples/volt/volt.rs#L71)
+**Examples:** [Python](../../examples/volt/volt.py#L61) · [TypeScript](../../examples/volt/volt.ts#L54) · [Kotlin](../../examples/volt/volt.kt) · [Rust](../../examples/volt/volt.rs#L56)

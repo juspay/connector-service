@@ -96,46 +96,25 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [MerchantAuthenticationService.CreateServerAuthenticationToken](#merchantauthenticationservicecreateserverauthenticationtoken) | Authentication | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [EventService.HandleEvent](#eventservicehandleevent) | Events | `EventServiceHandleRequest` |
-| [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
+| [create_server_authentication_token](#create_server_authentication_token) | Other | `—` |
+| [get](#get) | Other | `—` |
+| [handle_event](#handle_event) | Other | `—` |
+| [refund_get](#refund_get) | Other | `—` |
 
-### Payments
+### Other
 
-#### PaymentService.Get
+#### create_server_authentication_token
 
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+**Examples:** [Python](../../examples/truelayer/truelayer.py#L23) · [TypeScript](../../examples/truelayer/truelayer.ts#L24) · [Kotlin](../../examples/truelayer/truelayer.kt) · [Rust](../../examples/truelayer/truelayer.rs#L26)
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+#### get
 
-**Examples:** [Python](../../examples/truelayer/truelayer.py#L87) · [TypeScript](../../examples/truelayer/truelayer.ts#L77) · [Kotlin](../../examples/truelayer/truelayer.kt#L59) · [Rust](../../examples/truelayer/truelayer.rs#L79)
+**Examples:** [Python](../../examples/truelayer/truelayer.py#L37) · [TypeScript](../../examples/truelayer/truelayer.ts#L34) · [Kotlin](../../examples/truelayer/truelayer.kt) · [Rust](../../examples/truelayer/truelayer.rs#L35)
 
-### Refunds
+#### handle_event
 
-#### RefundService.Get
+**Examples:** [Python](../../examples/truelayer/truelayer.py#L61) · [TypeScript](../../examples/truelayer/truelayer.ts#L54) · [Kotlin](../../examples/truelayer/truelayer.kt) · [Rust](../../examples/truelayer/truelayer.rs#L56)
 
-Retrieve refund status from the payment processor. Tracks refund progress through processor settlement for accurate customer communication.
+#### refund_get
 
-| | Message |
-|---|---------|
-| **Request** | `RefundServiceGetRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/truelayer/truelayer.py#L105) · [TypeScript](../../examples/truelayer/truelayer.ts#L95) · [Kotlin](../../examples/truelayer/truelayer.kt#L77) · [Rust](../../examples/truelayer/truelayer.rs#L93)
-
-### Authentication
-
-#### MerchantAuthenticationService.CreateServerAuthenticationToken
-
-Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
-
-| | Message |
-|---|---------|
-| **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
-
-**Examples:** [Python](../../examples/truelayer/truelayer.py#L78) · [TypeScript](../../examples/truelayer/truelayer.ts#L68) · [Kotlin](../../examples/truelayer/truelayer.kt#L49) · [Rust](../../examples/truelayer/truelayer.rs#L72)
+**Examples:** [Python](../../examples/truelayer/truelayer.py#L75) · [TypeScript](../../examples/truelayer/truelayer.ts#L64) · [Kotlin](../../examples/truelayer/truelayer.kt) · [Rust](../../examples/truelayer/truelayer.rs#L65)

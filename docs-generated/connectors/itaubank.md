@@ -96,17 +96,10 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [MerchantAuthenticationService.CreateServerAuthenticationToken](#merchantauthenticationservicecreateserverauthenticationtoken) | Authentication | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
+| [create_server_authentication_token](#create_server_authentication_token) | Other | `—` |
 
-### Authentication
+### Other
 
-#### MerchantAuthenticationService.CreateServerAuthenticationToken
+#### create_server_authentication_token
 
-Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
-
-| | Message |
-|---|---------|
-| **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
-| **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
-
-**Examples:** [Python](../../examples/itaubank/itaubank.py#L31) · [TypeScript](../../examples/itaubank/itaubank.ts#L30) · [Kotlin](../../examples/itaubank/itaubank.kt#L23) · [Rust](../../examples/itaubank/itaubank.rs#L33)
+**Examples:** [Python](../../examples/itaubank/itaubank.py#L23) · [TypeScript](../../examples/itaubank/itaubank.ts#L24) · [Kotlin](../../examples/itaubank/itaubank.kt) · [Rust](../../examples/itaubank/itaubank.rs#L26)
