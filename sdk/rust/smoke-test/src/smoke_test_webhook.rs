@@ -183,7 +183,6 @@ fn test_parse_event(client: &ConnectorClient) -> bool {
 
     let request = EventServiceParseRequest {
         request_details: Some(make_request_details(ADYEN_WEBHOOK_BODY.as_bytes().to_vec())),
-        ..Default::default()
     };
 
     match client.parse_event(request) {
@@ -286,7 +285,7 @@ fn main() {
         }
     };
 
-    let results = vec![
+    let results = [
         test_handle_event(&client),
         test_parse_event(&client),
         test_malformed_body(&client),

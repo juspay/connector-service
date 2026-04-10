@@ -16,7 +16,15 @@ use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
 {%- set modules = {} -%}
-{%- for f in flows + single_flows -%}
+{%- for f in flows -%}
+  {%- set mod = f.module -%}
+  {%- if mod not in modules -%}
+    {%- set _ = modules.update({mod: []}) -%}
+  {%- endif -%}
+  {%- set _ = modules[mod].append(f.request) -%}
+  {%- set _ = modules[mod].append(f.response) -%}
+{%- endfor -%}
+{%- for f in single_flows if f.service == "EventService" -%}
   {%- set mod = f.module -%}
   {%- if mod not in modules -%}
     {%- set _ = modules.update({mod: []}) -%}
