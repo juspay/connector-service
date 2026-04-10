@@ -3026,7 +3026,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::GiftCardData::Givex(_) => Self::Givex,
                 payment_method_data::GiftCardData::PaySafeCard {} => Self::PaySafeCar,
             },
-            PaymentMethodData::PaymentMethodToken(_) => Self::CardToken,
+            PaymentMethodData::PaymentMethodToken(_) => Self::PaymentMethodToken,
             PaymentMethodData::OpenBanking(data) => match data {
                 payment_method_data::OpenBankingData::OpenBankingPIS {} => Self::OpenBanking,
             },

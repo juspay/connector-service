@@ -458,7 +458,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             }
 
-            // TODO: Add payment method token field and also rename the struct to PaymentMethodToken since it is not being used anywhere
             PaymentMethodData::PaymentMethodToken(t) => {
                 let token = t.token.clone();
 
