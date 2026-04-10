@@ -256,21 +256,6 @@ impl IntegrationError {
         Self::NotImplemented(message.into(), context)
     }
 
-    // /// Generic constructor for errors (compatible with legacy PaymentAuthorizationError).
-    // /// Creates a `ConfigurationError` variant.
-    // pub fn new(
-    //     _status: impl Into<String>,
-    //     message: impl Into<String>,
-    //     code: impl Into<String>,
-    //     _status_code: Option<u16>,
-    // ) -> Self {
-    //     Self::ConfigurationError {
-    //         code: code.into(),
-    //         message: message.into(),
-    //         context: IntegrationErrorContext::default(),
-    //     }
-    // }
-
     /// Optional connector-specific guidance for gRPC [`IntegrationError`] (overrides merged in `ucs_env`).
     pub fn integration_context(&self) -> &IntegrationErrorContext {
         match self {
