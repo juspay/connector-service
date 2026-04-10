@@ -20,6 +20,7 @@ import payments.PaymentServiceGetRequest
 import payments.PaymentServiceCreateOrderRequest
 import payments.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest
 import payments.EventServiceHandleRequest
+import payments.PaymentServiceProxyAuthorizeRequest
 import payments.PaymentServiceProxySetupRecurringRequest
 import payments.RecurringPaymentServiceChargeRequest
 import payments.RefundServiceGetRequest
@@ -314,6 +315,42 @@ fun handleEvent(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentService.ProxyAuthorize
+fun proxyAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = PaymentServiceProxyAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+        cardProxyBuilder.apply {  // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            cardNumberBuilder.value = "4111111111111111"  // Card Identification.
+            cardExpMonthBuilder.value = "03"
+            cardExpYearBuilder.value = "2030"
+            cardCvcBuilder.value = "123"
+            cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+        }
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        authType = AuthenticationType.NO_THREE_DS
+        returnUrl = "https://example.com/return"
+        stateBuilder.apply {
+            accessTokenBuilder.apply {  // Access token obtained from connector.
+                tokenBuilder.value = "probe_access_token"  // The token string.
+                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch).
+                tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        }
+        shippingCost = 0L  // Cost of shipping for the order.
+    }.build()
+    val response = client.proxy_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.ProxySetupRecurring
 fun proxySetupRecurring(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -491,12 +528,13 @@ fun main(args: Array<String>) {
         "createServerAuthenticationToken" -> createServerAuthenticationToken(txnId)
         "get" -> get(txnId)
         "handleEvent" -> handleEvent(txnId)
+        "proxyAuthorize" -> proxyAuthorize(txnId)
         "proxySetupRecurring" -> proxySetupRecurring(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
         "refundGet" -> refundGet(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createOrder, createServerAuthenticationToken, get, handleEvent, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createOrder, createServerAuthenticationToken, get, handleEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, void")
     }
 }
