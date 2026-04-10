@@ -12,9 +12,9 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{
-        BankTransferData, CardToken, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::{ConnectorSpecificConfig, PaymentMethodToken},
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::{Report, ResultExt};
@@ -735,32 +735,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 }
             }
-            // TODO: Handle additional CardToken fields (card_holder_name, card_cvc) if needed by Nuvei
-            PaymentMethodData::CardToken(CardToken { .. }) => {
-                let token = router_data
-                    .resource_common_data
-                    .payment_method_token
-                    .as_ref()
-                    .map(|t| match t {
-                        PaymentMethodToken::Token(s) => s.clone(),
-                    })
-                    .ok_or_else(|| {
-                        error_stack::report!(IntegrationError::MissingRequiredField {
-                            field_name: "payment_method_token",
-                            context: domain_types::errors::IntegrationErrorContext {
-                                doc_url: Some("https://docs.nuvei.com/api/main/indexMain_v1_0.html?json#payment".to_string()),
-                                additional_context: Some("Nuvei requires a userPaymentOptionId (payment_method_token) for token-based card payments. Ensure the token was obtained via a prior openOrder or createPayment flow.".to_string()),
-                                ..Default::default()
-                            },
-                        })
-                    })?;
-
-                NuveiPaymentOption {
-                    card: None,
-                    alternative_payment_method: None,
-                    user_payment_option_id: Some(token),
-                }
-            }
+            PaymentMethodData::PaymentMethodToken(token_data) => NuveiPaymentOption {
+                card: None,
+                alternative_payment_method: None,
+                user_payment_option_id: Some(token_data.token.clone()),
+            },
             _ => {
                 return Err(IntegrationError::NotSupported {
                     message: "Payment method not supported".to_string(),
