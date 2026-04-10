@@ -1704,9 +1704,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                          the source `MinorUnit` must be representable as an integer string."
                             .to_owned(),
                     ),
-                    doc_url: Some(
-                        "https://developer.nexi.it/en/api/post-orders-hpp".to_owned(),
-                    ),
+                    doc_url: Some("https://developer.nexi.it/en/api/post-orders-hpp".to_owned()),
                     additional_context: Some(format!(
                         "Failed to encode amount={:?} currency={:?} as a Nexi \
                          `paymentSession.amount` (string minor-units) for the /orders/hpp \
@@ -1728,9 +1726,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                          `paymentSession.cancelUrl`."
                             .to_owned(),
                     ),
-                    doc_url: Some(
-                        "https://developer.nexi.it/en/api/post-orders-hpp".to_owned(),
-                    ),
+                    doc_url: Some("https://developer.nexi.it/en/api/post-orders-hpp".to_owned()),
                     additional_context: Some(
                         "Nexi XPay /orders/hpp marks both `paymentSession.resultUrl` and \
                          `paymentSession.cancelUrl` as REQUIRED; without `return_url` the \
