@@ -284,13 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 data.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: IntegrationErrorContext {
-                    additional_context: Some(format!(
-                        "Failed to convert amount {} to Noon format for authorize request",
-                        data.router_data.request.minor_amount
-                    )),
-                    ..Default::default()
-                },
+                context: Default::default(),
             })?;
 
         let payment_data = match item.request.payment_method_data.clone() {
@@ -327,12 +321,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let payment_token = payment_token_data
                         .encode_to_string_of_json()
                         .change_context(IntegrationError::RequestEncodingFailed {
-                            context: IntegrationErrorContext {
-                                additional_context: Some(
-                                    "Failed to encode Apple Pay payment token to JSON for authorize request".to_string(),
-                                ),
-                                ..Default::default()
-                            },
+                            context: Default::default(),
                         })?;
 
                     Ok(NoonPaymentData::ApplePay(NoonApplePay {
@@ -486,13 +475,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
             .transpose()
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: IntegrationErrorContext {
-                    additional_context: Some(
-                        "Failed to encode subscription data to Noon format for authorize request"
-                            .to_string(),
-                    ),
-                    ..Default::default()
-                },
+                context: Default::default(),
             })?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
@@ -740,13 +723,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let transaction = NoonActionTransaction {
             amount: amount.change_context(IntegrationError::RequestEncodingFailed {
-                context: IntegrationErrorContext {
-                    additional_context: Some(format!(
-                        "Failed to convert amount {} {} to Noon format for capture request",
-                        data.router_data.request.minor_amount_to_capture, item.request.currency
-                    )),
-                    ..Default::default()
-                },
+                context: Default::default(),
             })?,
             currency: item.request.currency,
             transaction_reference: None,
@@ -854,13 +831,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let transaction = NoonActionTransaction {
             amount: refund_amount.change_context(IntegrationError::RequestEncodingFailed {
-                context: IntegrationErrorContext {
-                    additional_context: Some(format!(
-                        "Failed to convert refund amount {} {} to Noon format for refund request",
-                        data.router_data.request.refund_amount, item.request.currency
-                    )),
-                    ..Default::default()
-                },
+                context: Default::default(),
             })?,
             currency: item.request.currency,
             transaction_reference: Some(item.request.refund_id.clone()),
@@ -1235,12 +1206,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             let payment_token = payment_token_data
                                 .encode_to_string_of_json()
                                 .change_context(IntegrationError::RequestEncodingFailed {
-                                    context: IntegrationErrorContext {
-                                        additional_context: Some(
-                                            "Failed to encode Apple Pay payment token to JSON for repeat payment request".to_string(),
-                                        ),
-                                        ..Default::default()
-                                    },
+                                    context: Default::default(),
                                 })?;
 
                             Ok(NoonPaymentData::ApplePay(NoonApplePay {
@@ -1379,26 +1345,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
             .transpose()
             .change_context(IntegrationError::RequestEncodingFailed {
-                context: IntegrationErrorContext {
-                    additional_context: Some(
-                        "Failed to encode subscription data to Noon format for repeat payment request".to_string(),
-                    ),
-                    ..Default::default()
-                },
+                context: Default::default(),
             })?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
         let order = NoonOrder {
             amount: amount.change_context(IntegrationError::RequestEncodingFailed {
-                context: IntegrationErrorContext {
-                    additional_context: Some(format!(
-                        "Failed to convert amount {:?} {} to Noon format for setup mandate request",
-                        item.request.amount,
-                        currency.unwrap_or(item.request.currency)
-                    )),
-                    ..Default::default()
-                },
+                context: Default::default(),
             })?,
             currency,
             channel,
@@ -1791,11 +1745,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .convert(item.request.amount, item.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
+                    doc_url: Some("https://docs.noonpayments.com/payment-api/reference/get-order".to_string()),
+                    suggested_action: Some("Ensure the payment amount is valid and within Noon's acceptable range for the specified currency".to_string()),
                     additional_context: Some(format!(
                         "Failed to convert amount {} {} to Noon format for create order request",
                         item.request.amount, item.request.currency
                     )),
-                    ..Default::default()
                 },
             })?;
 
