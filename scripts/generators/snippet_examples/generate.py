@@ -78,6 +78,37 @@ _PROTO_OPTIONAL_FIELDS: dict[str, set[str]] = {}
 _PROTO_FILE_MAP: dict[str, str] = {}
 
 
+# ── Rust type mappings for value wrapper types ─────────────────────────────────
+#
+# Proto wrapper types (messages with single `value` field) that map to specific 
+# Rust types with custom constructors. Format:
+#   proto_type: (constructor_template, import_path, needs_std_fromstr)
+#
+# Constructor template uses {val} placeholder for the value expression.
+# Examples:
+#   - "Secret::new({val}.to_string())" for SecretString
+#   - "CardNumber::from_str({val}).unwrap()" for CardNumberType
+#
+_RUST_WRAPPER_CONSTRUCTORS: dict[str, tuple[str, str, bool]] = {
+    # (constructor_expr_template, import_path, needs_FromStr_import)
+    "SecretString": ("Secret::new({val}.to_string())", "hyperswitch_masking::Secret", False),
+    "CardNumberType": ("CardNumber::from_str({val}).unwrap()", "ucs_cards::CardNumber", True),
+    "NetworkTokenType": ("NetworkToken::from_str({val}).unwrap()", "ucs_cards::NetworkToken", True),
+}
+
+
+# ── Python wrapper types ───────────────────────────────────────────────────────
+#
+# Proto wrapper types that need special handling in Python (e.g., CardNumberType).
+# These wrap a string value and need to be constructed as WrapperType(value="...").
+#
+_PYTHON_WRAPPER_TYPES: frozenset[str] = frozenset({
+    "CardNumberType",
+    "NetworkTokenType",
+    "SecretString",
+})
+
+
 def load_proto_type_map(proto_dir: Path) -> None:
     """Parse all *.proto files in proto_dir to build _PROTO_FIELD_TYPES and _PROTO_WRAPPER_TYPES."""
     global _PROTO_FIELD_TYPES, _PROTO_WRAPPER_TYPES, _PROTO_REPEATED_FIELDS
@@ -858,11 +889,19 @@ def _scenario_step_python(
     method   = _FLOW_KEY_TO_METHOD.get(flow_key, flow_key)
     var_name = _FLOW_VAR_NAME.get(flow_key, f"{flow_key.split('_')[0]}_response")
     desc     = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
-    mod      = _py_module_for_type(grpc_req) if grpc_req else "payment_pb2"
+    
+    # Handle missing grpc request type gracefully  
+    if grpc_req:
+        mod = _py_module_for_type(grpc_req)
+        type_path = f"{mod}.{grpc_req}"
+    else:
+        # grpc_req is empty - this is a bug, flow_metadata should provide it
+        # Using placeholder to avoid syntax error
+        type_path = f"payment_pb2.TODO_FIX_MISSING_TYPE_{flow_key}"
+    
     lines: list[str] = []
-
     lines.append(f"    # Step {step_num}: {desc}")
-    lines.append(f"    {var_name} = await {client_var}.{method}({mod}.{grpc_req}(")
+    lines.append(f"    {var_name} = await {client_var}.{method}({type_path}(")
 
     drop_fields = _SCENARIO_DROP_FIELDS.get((scenario_key, flow_key), frozenset())
     # Build a filtered payload, substituting dynamic fields as raw expressions
@@ -1274,7 +1313,16 @@ def _scenario_step_rust(
 
     lines: list[str] = []
     lines.append(f"{pad}// Step {step_num}: {desc}")
-    lines.append(f"{pad}let {var_name} = client.{flow_key}({grpc_req} {{")
+    
+    # Handle missing grpc request type gracefully
+    if grpc_req:
+        rust_type = grpc_req
+    else:
+        # grpc_req is empty - this is a bug, flow_metadata should provide it
+        # Using placeholder to avoid syntax error
+        rust_type = f"TODO_FIX_MISSING_TYPE_{flow_key}"
+    
+    lines.append(f"{pad}let {var_name} = client.{flow_key}({rust_type} {{")
     for struct_line in _rust_struct_lines(static_payload, grpc_req, message_schemas, indent=2):
         lines.append(struct_line)
     for raw_lines in dyn_by_field.values():
@@ -1492,6 +1540,10 @@ def _py_direct_lines(
             if child_msg and _is_proto_enum(child_msg):
                 em = _py_module_for_type(child_msg)
                 lines.append(f"{pad}{key}={em}.{child_msg}.Value({json.dumps(val)}),{cmt_part}")
+            elif child_msg and child_msg in _PYTHON_WRAPPER_TYPES:
+                # Special wrapper types like CardNumberType need value= wrapping
+                wm = _py_module_for_type(child_msg)
+                lines.append(f"{pad}{key}={wm}.{child_msg}(value={json.dumps(val)}),{cmt_part}")
             else:
                 lines.append(f"{pad}{key}={json.dumps(val)},{cmt_part}")
         else:
@@ -1834,9 +1886,10 @@ def render_consolidated_python(
             body_lines.append(f'    return {{"status": {resp_var}.status}}')
 
         body = "\n".join(body_lines)
-        func_names.append(flow_key)
+        process_fn_name = f"process_{flow_key}"
+        func_names.append(process_fn_name)
         func_blocks.append(
-            f"async def {flow_key}(merchant_transaction_id: str, "
+            f"async def {process_fn_name}(merchant_transaction_id: str, "
             f"config: sdk_config_pb2.ConnectorConfig = _default_config):\n"
             f'    """Flow: {svc}.{rpc_name}{pm_part}"""\n'
             f"{body}\n"
@@ -2830,6 +2883,10 @@ def _rust_struct_lines(
         if key in variable_fields:
             if child_msg and _is_proto_enum(child_msg):
                 expr = f"{child_msg}::from_str_name({key}).unwrap_or_default().into()"
+            elif child_msg and child_msg in _RUST_WRAPPER_CONSTRUCTORS:
+                # Special Rust wrapper type with custom constructor (e.g., CardNumberType)
+                template, _, _ = _RUST_WRAPPER_CONSTRUCTORS[child_msg]
+                expr = template.format(val=key)
             elif child_msg and child_msg in _PROTO_WRAPPER_TYPES:
                 expr = f"Secret::new({key}.to_string())"
             else:
@@ -2838,7 +2895,14 @@ def _rust_struct_lines(
             continue
 
         if isinstance(val, dict):
-            if child_msg and child_msg in _PROTO_WRAPPER_TYPES:
+            if child_msg and child_msg in _RUST_WRAPPER_CONSTRUCTORS:
+                # Special Rust wrapper type with custom constructor
+                template, _, _ = _RUST_WRAPPER_CONSTRUCTORS[child_msg]
+                inner_val = val.get("value", "")
+                expr = template.format(val=json.dumps(inner_val))
+                lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
+
+            elif child_msg and child_msg in _PROTO_WRAPPER_TYPES:
                 # SecretString: extract the inner value from probe's {"value": "..."} dict
                 inner_val = val.get("value", "")
                 expr = f"Secret::new({json.dumps(inner_val)}.to_string())"
@@ -2888,6 +2952,9 @@ def _rust_struct_lines(
                 lines.append(f"{pad}{field}: Some({child_msg} {{{cmt_part}")
                 if inner:
                     lines.extend(inner)
+                # Special handling for Money type: ensure currency is set if not present
+                if child_msg == "Money" and "currency" not in val:
+                    lines.append(f'{pad}    currency: Currency::Usd.into(),  // Default currency for tests')
                 lines.append(f"{pad}    ..Default::default()")
                 lines.append(f"{pad}}}),")
             else:
@@ -2900,10 +2967,26 @@ def _rust_struct_lines(
             lines.append(f"{pad}{field}: {wrap(str(val))},{cmt_part}")
         elif isinstance(val, str):
             if child_msg and _is_proto_enum(child_msg):
-                expr = f"{child_msg}::from_str_name({json.dumps(val)}).unwrap_or_default().into()"
+                # For proto enums, convert string value to enum variant
+                # e.g., "USD" -> Currency::Usd
+                variant = "".join(word.capitalize() for word in val.lower().split("_"))
+                expr = f"{child_msg}::{variant}.into()"
+                lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
+                continue
+            elif child_msg and child_msg in _RUST_WRAPPER_CONSTRUCTORS:
+                # Special Rust wrapper type with custom constructor
+                template, _, _ = _RUST_WRAPPER_CONSTRUCTORS[child_msg]
+                expr = template.format(val=json.dumps(val))
+                lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
+                continue
+            elif child_msg and child_msg in _PROTO_WRAPPER_TYPES:
+                # Wrapper type with plain string value (SecretString, etc.)
+                expr = f"Secret::new({json.dumps(val)}.to_string())"
+                lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
+                continue
             else:
                 expr = f"{json.dumps(val)}.to_string()"
-            lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
+                lines.append(f"{pad}{field}: {wrap(expr)},{cmt_part}")
         else:
             lines.append(f"{pad}// {field}: {json.dumps(val)}{cmt_part}")
 
@@ -3529,6 +3612,7 @@ def render_consolidated_rust(
         return step_lines
 
     # Generate scenario function blocks first
+    # Both scenarios and flows use process_ prefix to match smoke-test expectations
     for scenario, flow_payloads in (scenarios_with_payloads or []):
         process_scenario_key = f"process_{scenario.key}"
         func_names.append(process_scenario_key)
@@ -3563,7 +3647,15 @@ def render_consolidated_rust(
         )
 
     # Generate standalone flow function blocks
+    seen_funcs = set(func_names)  # Track already-added function names
     for flow_key, proto_req, pm_label in flow_items:
+        process_fn_name = f"process_{flow_key}"
+        if process_fn_name in seen_funcs:
+            continue  # Skip duplicates
+        seen_funcs.add(process_fn_name)
+        func_names.append(process_fn_name)
+        match_arms.append(f'        "{process_fn_name}" => {process_fn_name}(&client, "txn_001").await,')
+
         meta      = flow_metadata.get(flow_key, {})
         svc       = meta.get("service_name", "PaymentService")
         grpc_req  = meta.get("grpc_request", "")
@@ -3597,9 +3689,6 @@ def render_consolidated_rust(
         else:
             status_block = '    Ok(format!("status: {:?}", response.status()))'
 
-        func_names.append(flow_key)
-        match_arms.append(f'        "{flow_key}" => {flow_key}(&client, "order_001").await,')
-
         if flow_key in has_builder:
             param_name, _ = _FLOW_BUILDER_EXTRA_PARAM[flow_key]
             if param_name == "capture_method":
@@ -3610,7 +3699,7 @@ def render_consolidated_rust(
             func_blocks.append(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
                 f"#[allow(dead_code)]\n"
-                f"pub async fn {flow_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
+                f"pub async fn {process_fn_name}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
                 f"    let response = client.{flow_key}({builder_call}, &HashMap::new(), None).await?;\n"
                 f"{status_block}\n"
                 f"}}"
@@ -3619,7 +3708,7 @@ def render_consolidated_rust(
             func_blocks.append(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
                 f"#[allow(dead_code)]\n"
-                f"pub async fn {flow_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
+                f"pub async fn {process_fn_name}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
                 f"    let response = client.{flow_key}(build_{flow_key}_request(), &HashMap::new(), None).await?;\n"
                 f"{status_block}\n"
                 f"}}"
@@ -3627,11 +3716,20 @@ def render_consolidated_rust(
         else:
             struct_lines = _rust_struct_lines(proto_req, grpc_req, message_schemas, indent=2)
             struct_body  = "\n".join(struct_lines)
+            
+            # Handle missing grpc request type gracefully
+            if grpc_req:
+                rust_type = grpc_req
+            else:
+                # grpc_req is empty - this is a bug, flow_metadata should provide it
+                # Using placeholder to avoid syntax error
+                rust_type = f"TODO_FIX_MISSING_TYPE_{flow_key}"
+            
             func_blocks.append(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
                 f"#[allow(dead_code)]\n"
-                f"pub async fn {flow_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
-                f"    let response = client.{flow_key}({grpc_req} {{\n"
+                f"pub async fn {process_fn_name}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
+                f"    let response = client.{flow_key}({rust_type} {{\n"
                 f"{struct_body}\n"
                 f"        ..Default::default()\n"
                 f"    }}, &HashMap::new(), None).await?;\n"
@@ -3645,6 +3743,12 @@ def render_consolidated_rust(
     match_arms_str = "\n".join(match_arms)
     first          = func_names[0] if func_names else "authorize"
 
+    # Build SUPPORTED_FLOWS constant from func_names (all functions have process_ prefix)
+    # Strip 'process_' prefix to get the names for the manifest
+    flow_names = [fn[8:] for fn in func_names if fn.startswith("process_")]
+    # Note: SUPPORTED_FLOWS is inserted by generate_harnesses.py for build.rs validation
+    # Don't add it here to avoid duplication
+    
     # Determine which additional imports the generated code needs
     all_generated = builders_text + "\n\n".join(func_blocks)
     need_secret         = "Secret::new" in all_generated
@@ -3658,6 +3762,26 @@ def render_consolidated_rust(
         extra_imports += "\nuse grpc_api_types::payments::payment_method;"
     if need_mandate_id:
         extra_imports += "\nuse grpc_api_types::payments::mandate_id_type;"
+    
+    # Dynamically add imports for special Rust wrapper types based on what's used
+    # Exclude types already handled above (e.g., Secret from hyperswitch_masking)
+    _HANDLED_IMPORTS = {"hyperswitch_masking::Secret"}
+    extra_rust_imports: set[str] = set()
+    need_fromstr = False
+    for proto_type, (_, import_path, uses_fromstr) in _RUST_WRAPPER_CONSTRUCTORS.items():
+        if import_path in _HANDLED_IMPORTS:
+            continue
+        # Check if this type's constructor is used in the generated code
+        type_name = import_path.split("::")[-1]  # e.g., "CardNumber" from "ucs_cards::CardNumber"
+        if type_name in all_generated:
+            extra_rust_imports.add(import_path)
+            if uses_fromstr:
+                need_fromstr = True
+    
+    for import_path in sorted(extra_rust_imports):
+        extra_imports += f"\nuse {import_path};"
+    if need_fromstr:
+        extra_imports += "\nuse std::str::FromStr;"
 
     return f"""\
 // This file is auto-generated. Do not edit manually.
@@ -3668,14 +3792,21 @@ def render_consolidated_rust(
 // Run a scenario:  cargo run --example {connector_name} -- process_checkout_card
 
 use grpc_api_types::payments::*;
+use grpc_api_types::payments::connector_specific_config;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;{extra_imports}
 
+
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {{
-    // Set connector_config to authenticate: use ConnectorSpecificConfig with your {conn_enum}Config
+    // Configure the connector with authentication
     let config = ConnectorConfig {{
-        connector_config: None,  // TODO: Some(ConnectorSpecificConfig {{ config: Some(...) }})
+        connector_config: Some(ConnectorSpecificConfig {{
+            config: Some(connector_specific_config::Config::{conn_enum}({conn_enum}Config {{
+                api_key: Some(hyperswitch_masking::Secret::new("YOUR_API_KEY".to_string())),
+                ..Default::default()
+            }}),),
+        }}),
         options: Some(SdkOptions {{
             environment: Environment::Sandbox.into(),
         }}),
