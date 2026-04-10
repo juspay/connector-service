@@ -603,7 +603,7 @@
     "token_authorize": {
       "default": {
         "status": "not_supported",
-        "error": "Payment method CardToken(CardToken { card_holder_name: None, card_cvc: None }) is not supported by Nexixpay"
+        "error": "Payment method PaymentMethodToken(PaymentMethodToken { token: *** alloc::string::String *** }) is not supported by Nexixpay"
       }
     },
     "token_setup_recurring": {
