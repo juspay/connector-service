@@ -99,6 +99,7 @@ let config = ConnectorConfig {
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [CustomerService.Create](#customerservicecreate) | Customers | `CustomerServiceCreateRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
 | [PaymentMethodService.Tokenize](#paymentmethodservicetokenize) | Payments | `PaymentMethodServiceTokenizeRequest` |
@@ -115,7 +116,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L125) · [TypeScript](../../examples/stax/stax.ts#L109) · [Kotlin](../../examples/stax/stax.kt#L76) · [Rust](../../examples/stax/stax.rs#L113)
+**Examples:** [Python](../../examples/stax/stax.py#L151) · [TypeScript](../../examples/stax/stax.ts#L132) · [Kotlin](../../examples/stax/stax.kt#L79) · [Rust](../../examples/stax/stax.rs#L140)
 
 #### PaymentService.Get
 
@@ -126,7 +127,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L143) · [TypeScript](../../examples/stax/stax.ts#L127) · [Kotlin](../../examples/stax/stax.kt#L99) · [Rust](../../examples/stax/stax.rs#L127)
+**Examples:** [Python](../../examples/stax/stax.py#L169) · [TypeScript](../../examples/stax/stax.ts#L150) · [Kotlin](../../examples/stax/stax.kt#L102) · [Rust](../../examples/stax/stax.rs#L154)
 
 #### PaymentService.Refund
 
@@ -137,7 +138,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L152) · [TypeScript](../../examples/stax/stax.ts#L136) · [Kotlin](../../examples/stax/stax.kt#L107) · [Rust](../../examples/stax/stax.rs#L134)
+**Examples:** [Python](../../examples/stax/stax.py#L187) · [TypeScript](../../examples/stax/stax.ts#L168) · [Kotlin](../../examples/stax/stax.kt#L141) · [Rust](../../examples/stax/stax.rs#L168)
 
 #### PaymentMethodService.Tokenize
 
@@ -148,7 +149,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L170) · [TypeScript](../../examples/stax/stax.ts#L154) · [Kotlin](../../examples/stax/stax.kt#L129) · [Rust](../../examples/stax/stax.rs#L148)
+**Examples:** [Python](../../examples/stax/stax.py#L205) · [TypeScript](../../examples/stax/stax.ts#L186) · [Kotlin](../../examples/stax/stax.kt#L163) · [Rust](../../examples/stax/stax.rs#L182)
 
 #### PaymentService.Void
 
@@ -159,7 +160,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L179) · [TypeScript](../../examples/stax/stax.ts) · [Kotlin](../../examples/stax/stax.kt#L158) · [Rust](../../examples/stax/stax.rs#L155)
+**Examples:** [Python](../../examples/stax/stax.py#L214) · [TypeScript](../../examples/stax/stax.ts) · [Kotlin](../../examples/stax/stax.kt#L192) · [Rust](../../examples/stax/stax.rs#L189)
 
 ### Refunds
 
@@ -172,7 +173,20 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L161) · [TypeScript](../../examples/stax/stax.ts#L145) · [Kotlin](../../examples/stax/stax.kt#L117) · [Rust](../../examples/stax/stax.rs#L141)
+**Examples:** [Python](../../examples/stax/stax.py#L196) · [TypeScript](../../examples/stax/stax.ts#L177) · [Kotlin](../../examples/stax/stax.kt#L151) · [Rust](../../examples/stax/stax.rs#L175)
+
+### Mandates
+
+#### RecurringPaymentService.Charge
+
+Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
+
+| | Message |
+|---|---------|
+| **Request** | `RecurringPaymentServiceChargeRequest` |
+| **Response** | `RecurringPaymentServiceChargeResponse` |
+
+**Examples:** [Python](../../examples/stax/stax.py#L178) · [TypeScript](../../examples/stax/stax.ts#L159) · [Kotlin](../../examples/stax/stax.kt#L110) · [Rust](../../examples/stax/stax.rs#L161)
 
 ### Customers
 
@@ -185,4 +199,4 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Examples:** [Python](../../examples/stax/stax.py#L134) · [TypeScript](../../examples/stax/stax.ts#L118) · [Kotlin](../../examples/stax/stax.kt#L86) · [Rust](../../examples/stax/stax.rs#L120)
+**Examples:** [Python](../../examples/stax/stax.py#L160) · [TypeScript](../../examples/stax/stax.ts#L141) · [Kotlin](../../examples/stax/stax.kt#L89) · [Rust](../../examples/stax/stax.rs#L147)
