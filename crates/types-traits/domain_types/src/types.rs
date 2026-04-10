@@ -12418,9 +12418,7 @@ pub fn generate_mandate_revoke_response(
     }
 }
 
-impl From<connector_types::WebhookResourceReference>
-    for grpc_api_types::payments::EventReference
-{
+impl From<connector_types::WebhookResourceReference> for grpc_api_types::payments::EventReference {
     fn from(r: connector_types::WebhookResourceReference) -> Self {
         use connector_types::{
             DisputeWebhookReference, MandateWebhookReference, PaymentWebhookReference,

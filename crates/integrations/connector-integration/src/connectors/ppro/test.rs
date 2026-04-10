@@ -652,7 +652,8 @@ mod tests {
     #[test]
     fn test_process_payment_webhook_malformed_json() {
         let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
-        let result = connector.process_payment_webhook(make_request(b"{invalid json}"), None, None, None);
+        let result =
+            connector.process_payment_webhook(make_request(b"{invalid json}"), None, None, None);
         assert!(result.is_err(), "malformed JSON should return an error");
     }
 

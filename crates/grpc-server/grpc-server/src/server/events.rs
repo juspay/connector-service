@@ -76,7 +76,9 @@ impl EventService for EventServiceImpl {
                     domain_types::connector_types::RequestDetails::foreign_try_from(
                         payload
                             .request_details
-                            .ok_or_else(|| error_stack::report!(WebhookError::WebhookBodyDecodingFailed))
+                            .ok_or_else(|| {
+                                error_stack::report!(WebhookError::WebhookBodyDecodingFailed)
+                            })
                             .into_grpc_status()?,
                     )
                     .into_grpc_status()?;

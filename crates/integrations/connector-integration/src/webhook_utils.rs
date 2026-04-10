@@ -1,10 +1,7 @@
 use domain_types::{
-    connector_types::EventContext,
-    errors::WebhookError,
-    payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorSpecificConfig,
-    types::CardConversionHelper,
-    utils::ForeignTryFrom,
+    connector_types::EventContext, errors::WebhookError,
+    payment_method_data::PaymentMethodDataTypes, router_data::ConnectorSpecificConfig,
+    types::CardConversionHelper, utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
@@ -44,9 +41,9 @@ pub fn process_webhook_event<
     merchant_event_id: Option<String>,
     event_context: Option<EventContext>,
 ) -> error_stack::Result<EventServiceHandleResponse, WebhookError> {
-    let event_type = connector_data.connector.get_event_type(
-        request_details.clone(),
-    )?;
+    let event_type = connector_data
+        .connector
+        .get_event_type(request_details.clone())?;
 
     let api_event_type = WebhookEventType::foreign_try_from(event_type.clone())
         .change_context(WebhookError::WebhookProcessingFailed)?;
@@ -99,9 +96,9 @@ pub fn parse_webhook_event<
     connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
 ) -> error_stack::Result<EventServiceParseResponse, WebhookError> {
-    let event_type = connector_data.connector.get_event_type(
-        request_details.clone(),
-    )?;
+    let event_type = connector_data
+        .connector
+        .get_event_type(request_details.clone())?;
 
     let api_event_type = WebhookEventType::foreign_try_from(event_type)
         .change_context(WebhookError::WebhookProcessingFailed)?;

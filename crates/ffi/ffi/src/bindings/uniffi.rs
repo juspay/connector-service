@@ -324,19 +324,11 @@ mod uniffi_bindings_inner {
         let environment = Some(ffi_options.environment());
 
         match crate::handlers::payments::parse_event_handler(request, environment) {
-            Ok(response) => {
-                let response_bytes = response.encode_to_vec();
-                let http_response = FfiConnectorHttpResponse {
-                    status_code: 200,
-                    headers: HashMap::new(),
-                    body: response_bytes,
-                };
-                FfiResult {
-                    r#type: ffi_result::Type::HttpResponse.into(),
-                    payload: Some(ffi_result::Payload::HttpResponse(http_response)),
-                }
-                .encode_to_vec()
+            Ok(response) => FfiResult {
+                r#type: ffi_result::Type::ProtoResponse.into(),
+                payload: Some(ffi_result::Payload::ProtoResponse(response.encode_to_vec())),
             }
+            .encode_to_vec(),
             Err(e) => FfiResult {
                 r#type: ffi_result::Type::IntegrationError.into(),
                 payload: Some(ffi_result::Payload::IntegrationError(e)),
@@ -405,21 +397,11 @@ mod uniffi_bindings_inner {
         let environment = Some(ffi_options.environment());
 
         match crate::handlers::payments::handle_event_handler(request, environment) {
-            Ok(response) => {
-                // Serialize the protobuf response and wrap it in FfiConnectorHttpResponse
-                // Note: handle_event doesn't have connector response headers (webhook processing)
-                let response_bytes = response.encode_to_vec();
-                let http_response = FfiConnectorHttpResponse {
-                    status_code: 200,
-                    headers: HashMap::new(),
-                    body: response_bytes,
-                };
-                FfiResult {
-                    r#type: ffi_result::Type::HttpResponse.into(),
-                    payload: Some(ffi_result::Payload::HttpResponse(http_response)),
-                }
-                .encode_to_vec()
+            Ok(response) => FfiResult {
+                r#type: ffi_result::Type::ProtoResponse.into(),
+                payload: Some(ffi_result::Payload::ProtoResponse(response.encode_to_vec())),
             }
+            .encode_to_vec(),
             Err(e) => FfiResult {
                 r#type: ffi_result::Type::IntegrationError.into(),
                 payload: Some(ffi_result::Payload::IntegrationError(e)),

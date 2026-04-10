@@ -17,8 +17,8 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets, EventContext,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventContext, EventType,
         MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
@@ -219,10 +219,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(WebhookError::WebhookSourceVerificationFailed)
     }
 
-    fn get_event_type(
-        &self,
-        request: RequestDetails,
-    ) -> Result<EventType, Report<WebhookError>> {
+    fn get_event_type(&self, request: RequestDetails) -> Result<EventType, Report<WebhookError>> {
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
             .parse_struct("TrustpayWebhookResponse")
