@@ -77,7 +77,25 @@ include!("_generated_flow_registrations.rs");
 
 // ── Hand-written handlers (not auto-generated) ───────────────────────────────
 
-/// handle_event handler — single-function webhook processing.
+/// parse_event handler — stateless webhook event type and resource reference extraction.
+///
+/// No secrets, no context. Returns the event type and resource IDs
+/// extracted purely from the raw webhook payload.
+pub fn parse_event_handler(
+    request: FfiRequestData<grpc_api_types::payments::EventServiceParseRequest>,
+    environment: Option<Environment>,
+) -> Result<grpc_api_types::payments::EventServiceParseResponse, IntegrationError> {
+    let config = get_config(environment)?;
+    crate::services::payments::parse_event_transformer(
+        request.payload,
+        &config,
+        request.extracted_metadata.connector,
+        request.extracted_metadata.connector_config,
+        &request.masked_metadata.unwrap_or_default(),
+    )
+}
+
+/// handle_event handler — synchronous webhook processing (single-step, no outgoing HTTP).
 ///
 /// Unlike all other handlers there is no req/res split: the caller provides
 /// the raw webhook payload and receives a fully-structured response directly.
@@ -85,12 +103,8 @@ include!("_generated_flow_registrations.rs");
 pub fn handle_event_handler(
     request: FfiRequestData<grpc_api_types::payments::EventServiceHandleRequest>,
     environment: Option<Environment>,
-) -> Result<grpc_api_types::payments::EventServiceHandleResponse, ConnectorError> {
-    let config = get_config(environment).map_err(|e| ConnectorError {
-        error_message: e.error_message,
-        error_code: e.error_code,
-        http_status_code: None,
-    })?;
+) -> Result<grpc_api_types::payments::EventServiceHandleResponse, IntegrationError> {
+    let config = get_config(environment)?;
     crate::services::payments::handle_event_transformer(
         request.payload,
         &config,

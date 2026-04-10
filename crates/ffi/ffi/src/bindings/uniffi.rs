@@ -264,6 +264,87 @@ mod uniffi_bindings_inner {
 
     // ── Hand-written exports (not auto-generated) ─────────────────────────────
 
+    /// parse_event — stateless webhook event type and resource reference extraction.
+    ///
+    /// No secrets, no context. The caller passes raw `EventServiceParseRequest` proto bytes
+    /// and receives encoded `EventServiceParseResponse` bytes directly.
+    #[uniffi::export]
+    pub fn parse_event_transformer(request_bytes: Vec<u8>, options_bytes: Vec<u8>) -> Vec<u8> {
+        use grpc_api_types::payments::EventServiceParseRequest;
+        use prost::Message as _;
+
+        let payload = match EventServiceParseRequest::decode(Bytes::from(request_bytes)) {
+            Ok(p) => p,
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(IntegrationError {
+                        error_message: format!("EventServiceParseRequest decode failed: {e}"),
+                        error_code: "DECODE_FAILED".to_string(),
+                        suggested_action: None,
+                        doc_url: None,
+                    })),
+                }
+                .encode_to_vec();
+            }
+        };
+
+        let ffi_options = match parse_ffi_options_for_res(options_bytes) {
+            Ok(o) => o,
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(e)),
+                }
+                .encode_to_vec()
+            }
+        };
+
+        let ffi_metadata = match parse_metadata(&ffi_options) {
+            Ok(m) => m,
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ConnectorError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorError(ConnectorError {
+                        error_message: e.error_message,
+                        error_code: e.error_code,
+                        http_status_code: None,
+                    })),
+                }
+                .encode_to_vec()
+            }
+        };
+
+        let request = crate::types::FfiRequestData {
+            payload,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: None,
+        };
+
+        let environment = Some(ffi_options.environment());
+
+        match crate::handlers::payments::parse_event_handler(request, environment) {
+            Ok(response) => {
+                let response_bytes = response.encode_to_vec();
+                let http_response = FfiConnectorHttpResponse {
+                    status_code: 200,
+                    headers: HashMap::new(),
+                    body: response_bytes,
+                };
+                FfiResult {
+                    r#type: ffi_result::Type::HttpResponse.into(),
+                    payload: Some(ffi_result::Payload::HttpResponse(http_response)),
+                }
+                .encode_to_vec()
+            }
+            Err(e) => FfiResult {
+                r#type: ffi_result::Type::IntegrationError.into(),
+                payload: Some(ffi_result::Payload::IntegrationError(e)),
+            }
+            .encode_to_vec(),
+        }
+    }
+
     /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
     ///
     /// Unlike req/res flows there is no split: the caller passes raw
@@ -340,8 +421,8 @@ mod uniffi_bindings_inner {
                 .encode_to_vec()
             }
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::ConnectorError.into(),
-                payload: Some(ffi_result::Payload::ConnectorError(e)),
+                r#type: ffi_result::Type::IntegrationError.into(),
+                payload: Some(ffi_result::Payload::IntegrationError(e)),
             }
             .encode_to_vec(),
         }

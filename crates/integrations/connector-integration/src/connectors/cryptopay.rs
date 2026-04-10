@@ -22,7 +22,7 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, EventContext, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, EventType, MandateRevokeRequestData, MandateRevokeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
@@ -491,8 +491,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_event_type(
         &self,
         request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
@@ -511,6 +509,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
+        _event_context: Option<EventContext>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
