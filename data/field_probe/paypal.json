@@ -8,276 +8,525 @@
     },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "AchBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Affirm": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Afterpay": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Alfamart": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "AliPayRedirect": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "AmazonPayRedirect": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "ApplePay": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "ApplePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "ApplePayThirdPartySdk": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Bacs": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BacsBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BancontactCard": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BcaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Becs": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Bizum": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Blik": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Bluecode": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BniVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Boleto": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "BriVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Card": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "shipping_cost": 0,
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"card\":{\"billing_address\":null,\"expiry\":\"2030-03\",\"name\":null,\"number\":\"4111111111111111\",\"security_code\":\"737\",\"attributes\":{\"vault\":null,\"verification\":null}}}}"
+        }
       },
       "CashappQr": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "CimbVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "ClassicReward": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Crypto": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "DanamonVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "DuitNow": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "EVoucher": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Efecty": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Eft": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Eps": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "shipping_cost": 0,
+          "payment_method": {
+            "eps": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {
+              "first_name": "John",
+              "country_alpha2_code": "US"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"eps\":{\"name\":\"John\",\"country_code\":\"US\",\"experience_context\":{\"return_url\":null,\"cancel_url\":null,\"user_action\":\"PAY_NOW\",\"shipping_preference\":\"GET_FROM_FILE\"}}}}"
+        }
       },
       "FamilyMart": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Giropay": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "shipping_cost": 0,
+          "payment_method": {
+            "giropay": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {
+              "first_name": "John",
+              "country_alpha2_code": "US"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"giropay\":{\"name\":\"John\",\"country_code\":\"US\",\"experience_context\":{\"return_url\":null,\"cancel_url\":null,\"user_action\":\"PAY_NOW\",\"shipping_preference\":\"GET_FROM_FILE\"}}}}"
+        }
       },
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "GooglePay": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: PayPal GooglePay encrypted flow"
       },
       "GooglePayDecrypted": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "shipping_cost": 0,
+          "payment_method": {
+            "google_pay": {
+              "type": "CARD",
+              "description": "Visa 1111",
+              "info": {
+                "card_network": "VISA",
+                "card_details": "1111"
+              },
+              "tokenization_data": {
+                "decrypted_data": {
+                  "card_exp_month": "03",
+                  "card_exp_year": "2030",
+                  "application_primary_account_number": "4111111111111111",
+                  "cryptogram": "AAAAAA==",
+                  "eci_indicator": "05"
+                }
+              }
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"google_pay\":{\"decrypted_token\":{\"message_id\":\"00000000-0000-0000-0000-000000000000\",\"message_expiration\":\"0000000000000\",\"payment_method\":\"CARD\",\"authentication_method\":\"CRYPTOGRAM_3DS\",\"cryptogram\":\"AAAAAA==\",\"eci_indicator\":\"05\",\"card\":{\"number\":\"4111111111111111\",\"expiry\":\"2030-03\"}}}}}"
+        }
       },
       "GooglePayThirdPartySdk": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Ideal": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "shipping_cost": 0,
+          "payment_method": {
+            "ideal": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {
+              "first_name": "John",
+              "country_alpha2_code": "US"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"ideal\":{\"name\":\"John\",\"country_code\":\"US\",\"experience_context\":{\"return_url\":null,\"cancel_url\":null,\"user_action\":\"PAY_NOW\",\"shipping_preference\":\"GET_FROM_FILE\"}}}}"
+        }
       },
       "Indomaret": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "IndonesianBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "InstantBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "InstantBankTransferFinland": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "InstantBankTransferPoland": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Interac": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Klarna": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Lawson": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "LocalBankRedirect": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "LocalBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "MandiriVaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "MbWay": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Mifinity": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "MiniStop": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "MultibancoBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingCzechRepublic": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingFinland": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingFpx": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingPoland": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingSlovakia": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OnlineBankingThailand": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OpenBanking": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "OpenBankingPis": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "OpenBankingUk": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Oxxo": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "PagoEfectivo": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "PayEasy": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "PaySafeCard": {
         "status": "not_supported",
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "PaypalRedirect": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "shipping_cost": 0,
+          "payment_method": {
+            "paypal_redirect": {
+              "email": "test@example.com"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"paypal\":{\"experience_context\":{\"return_url\":null,\"cancel_url\":null,\"user_action\":\"PAY_NOW\",\"shipping_preference\":\"GET_FROM_FILE\"},\"attributes\":null}}}"
+        }
       },
       "PaypalSdk": {
         "status": "supported",
@@ -325,88 +574,127 @@
         "error": "Invalid data format: unknown. Unsupported payment method"
       },
       "PermataBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Pix": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Przelewy24": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Pse": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "RedCompra": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "RedPagos": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "RevolutPay": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Satispay": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Seicomart": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Sepa": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "SepaBankTransfer": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "SepaGuaranteedDebit": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "SevenEleven": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Sofort": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "shipping_cost": 0,
+          "payment_method": {
+            "sofort": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {
+              "first_name": "John",
+              "country_alpha2_code": "US"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"sofort\":{\"name\":\"John\",\"country_code\":\"US\",\"experience_context\":{\"return_url\":null,\"cancel_url\":null,\"user_action\":\"PAY_NOW\",\"shipping_preference\":\"GET_FROM_FILE\"}}}}"
+        }
       },
       "Trustly": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "UpiCollect": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "UpiIntent": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "UpiQr": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "WeChatPayQr": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       },
       "Wero": {
-        "status": "error",
-        "error": "Stuck on field: shipping_cost — Missing required field: shipping_cost"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Paypal"
       }
     },
     "capture": {

@@ -2331,6 +2331,41 @@ where
     Output::foreign_try_from((ftf_input, pmd))
 }
 
+/// Build request data by extracting `PaymentMethodData<DefaultPCIHolder>` from the
+/// payload's `payment_method` field, wrapping it in `Some`, and calling
+/// `ForeignTryFrom::foreign_try_from((ftf_input, Some(pmd)))`.
+///
+/// This is the shared "optional PMD" pipeline used by pre_authenticate, authenticate, and
+/// post_authenticate flows, where the domain data type accepts `Option<PaymentMethodData<T>>`.
+/// If `payment_method` is absent the inner `Option` is `None`; otherwise extraction proceeds
+/// identically to [`build_request_data_with_required_pmd`].
+///
+/// # Arguments
+/// * `payment_method` - The optional gRPC PaymentMethod from the payload
+/// * `ftf_input` - The first element of the tuple passed to ForeignTryFrom
+pub fn build_request_data_with_some_pmd<Input, Output>(
+    payment_method: Option<grpc_api_types::payments::PaymentMethod>,
+    ftf_input: Input,
+) -> Result<Output, error_stack::Report<IntegrationError>>
+where
+    Output: ForeignTryFrom<
+        (
+            Input,
+            Option<payment_method_data::PaymentMethodData<payment_method_data::DefaultPCIHolder>>,
+        ),
+        Error = IntegrationError,
+    >,
+{
+    let pmd = match payment_method.clone() {
+        Some(pm) => {
+            let pm_action = PaymentMethodDataAction::get_payment_method_data_action(pm)?;
+            Some(pm_action.into_default_pci_payment_method_data(payment_method)?)
+        }
+        None => None,
+    };
+    Output::foreign_try_from((ftf_input, pmd))
+}
+
 /// ============================================================================
 /// INTERMEDIATE REQUEST TYPES FOR PCI COMPLIANCE
 /// ============================================================================

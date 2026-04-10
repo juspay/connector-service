@@ -489,7 +489,7 @@ req_transformer!(
     response_data_type: PaymentsResponseData,
     connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
     request_data_fn: |p: &PaymentMethodAuthenticationServicePreAuthenticateRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+        domain_types::types::build_request_data_with_some_pmd(p.payment_method.clone(), p.clone())
     },
 );
 
@@ -505,7 +505,7 @@ res_transformer!(
     generate_response_fn: generate_payment_pre_authenticate_response,
     connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
     request_data_fn: |p: &PaymentMethodAuthenticationServicePreAuthenticateRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+        domain_types::types::build_request_data_with_some_pmd(p.payment_method.clone(), p.clone())
     },
 );
 
@@ -519,7 +519,7 @@ req_transformer!(
     response_data_type: PaymentsResponseData,
     connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
     request_data_fn: |p: &PaymentMethodAuthenticationServiceAuthenticateRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+        domain_types::types::build_request_data_with_some_pmd(p.payment_method.clone(), p.clone())
     },
 );
 
@@ -535,7 +535,7 @@ res_transformer!(
     generate_response_fn: generate_payment_authenticate_response,
     connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
     request_data_fn: |p: &PaymentMethodAuthenticationServiceAuthenticateRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+        domain_types::types::build_request_data_with_some_pmd(p.payment_method.clone(), p.clone())
     },
 );
 
@@ -549,7 +549,7 @@ req_transformer!(
     response_data_type: PaymentsResponseData,
     connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
     request_data_fn: |p: &PaymentMethodAuthenticationServicePostAuthenticateRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+        domain_types::types::build_request_data_with_some_pmd(p.payment_method.clone(), p.clone())
     },
 );
 
@@ -565,7 +565,7 @@ res_transformer!(
     generate_response_fn: generate_payment_post_authenticate_response,
     connector_data_type: domain_types::payment_method_data::DefaultPCIHolder,
     request_data_fn: |p: &PaymentMethodAuthenticationServicePostAuthenticateRequest| {
-        domain_types::utils::ForeignTryFrom::foreign_try_from((p.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+        domain_types::types::build_request_data_with_some_pmd(p.payment_method.clone(), p.clone())
     },
 );
 
