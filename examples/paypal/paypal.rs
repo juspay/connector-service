@@ -86,20 +86,24 @@ pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCa
 }
 
 pub fn build_create_order_request() -> PaymentServiceCreateOrderRequest {
-    serde_json::from_value::<PaymentServiceCreateOrderRequest>(serde_json::json!({
-    "merchant_order_id": "probe_order_001",  // Identification.
-    "amount": {  // Amount Information.
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR").
-    },
-    "state": {  // State Information.
-        "access_token": {  // Access token obtained from connector.
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch).
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default()
+    PaymentServiceCreateOrderRequest {
+        merchant_order_id: Some("probe_order_001".to_string()),  // Identification.
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::from_str_name("USD").unwrap_or_default().into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
+            ..Default::default()
+        }),
+        state: Some(ConnectorState {  // State Information.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some("probe_access_token".to_string()),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }
 
 pub fn build_create_server_authentication_token_request() -> MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
