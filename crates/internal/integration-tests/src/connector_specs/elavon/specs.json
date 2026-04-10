@@ -5,6 +5,7 @@
     "capture",
     "refund",
     "refund_sync",
-    "get"
+    "get",
+    "recurring_charge"
   ]
 }
