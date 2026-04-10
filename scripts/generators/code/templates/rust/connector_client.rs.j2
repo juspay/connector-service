@@ -16,7 +16,7 @@ use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
 {%- set modules = {} -%}
-{%- for f in flows -%}
+{%- for f in flows + single_flows -%}
   {%- set mod = f.module -%}
   {%- if mod not in modules -%}
     {%- set _ = modules.update({mod: []}) -%}
@@ -258,7 +258,38 @@ impl ConnectorClient {
     );
 {% endfor %}
 {% for f in single_groups.get(service, []) %}
+{% if f.service == "EventService" %}
+    // ── {{ f.name }} — inbound only, no outgoing HTTP call ───────────────────
+    // Connector identity is extracted from the config variant; auth fields are not required.
+    pub fn {{ f.name }}(
+        &self,
+        request: {{ f.request }},
+    ) -> Result<{{ f.response }}, SdkError> {
+        use connector_service_ffi::bindings::utils::parse_webhook_metadata;
+        use connector_service_ffi::handlers::payments::{{ f.name }}_handler;
+        use connector_service_ffi::types::FfiRequestData;
+        let ffi_options = self.resolve_ffi_options(&None);
+        let environment = Some(
+            grpc_api_types::payments::Environment::try_from(ffi_options.environment).map_err(
+                |e| SdkError::IntegrationError {
+                    error_code: "INVALID_ENVIRONMENT".to_string(),
+                    error_message: format!("{:?}", e),
+                    suggested_action: None,
+                    doc_url: None,
+                },
+            )?,
+        );
+        let ffi_metadata = parse_webhook_metadata(&ffi_options).map_err(SdkError::from)?;
+        let ffi_request = FfiRequestData {
+            payload: request,
+            extracted_metadata: ffi_metadata,
+            masked_metadata: None,
+        };
+        {{ f.name }}_handler(ffi_request, environment).map_err(SdkError::from)
+    }
+{% else %}
     // TODO: Single-step flow {{ f.name }} needs different macro/implementation
+{% endif %}
 {% endfor %}
 {% endfor %}
 }
@@ -324,7 +355,7 @@ pub fn build_ffi_request<T>(
         payload,
         extracted_metadata: FfiMetadataPayload {
             connector,
-            connector_config,
+            connector_config: Some(connector_config),
         },
         masked_metadata: Some(masked_metadata),
     })

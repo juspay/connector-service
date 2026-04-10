@@ -212,8 +212,7 @@ pub fn parse_webhook_metadata(
     )?;
 
     // For webhook flows, connector config is optional.
-    // We leave it as None here; downstream webhook logic can optionally try to parse it later if needed.
-    let connector_config = None;
+    let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone()).ok();
 
     Ok(crate::types::FfiMetadataPayload {
         connector,

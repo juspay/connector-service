@@ -113,10 +113,6 @@ async function testHandleEvent(): Promise<boolean> {
     console.log(green("  ✓ PASSED: handleEvent returned response without crashing"));
     return true;
   } catch (e: any) {
-    if (e instanceof IntegrationError || e instanceof ConnectorError) {
-      console.log(yellow(`  ~ ${e.constructor.name}: ${e.message} (code=${e.errorCode})`));
-      return true; // SDK worked, connector rejected — not a smoke test failure
-    }
     console.log(red(`  ✗ FAILED: ${e?.constructor?.name}: ${e.message}`));
     return false;
   }
@@ -143,10 +139,6 @@ async function testParseEvent(): Promise<boolean> {
     console.log(green("  ✓ PASSED: parseEvent returned response"));
     return true;
   } catch (e: any) {
-    if (e instanceof IntegrationError || e instanceof ConnectorError) {
-      console.log(yellow(`  ~ ${e.constructor.name}: ${e.message} (code=${e.errorCode})`));
-      return true;
-    }
     console.log(red(`  ✗ FAILED: ${e?.constructor?.name}: ${e.message}`));
     return false;
   }
@@ -216,12 +208,12 @@ async function main(): Promise<void> {
   console.log(bold("Adyen Webhook Smoke Test"));
   console.log("─".repeat(50));
 
-  const results = await Promise.all([
-    testHandleEvent(),
-    testParseEvent(),
-    testMalformedBody(),
-    testUnknownEventCode(),
-  ]);
+  const results = [
+    await testHandleEvent(),
+    await testParseEvent(),
+    await testMalformedBody(),
+    await testUnknownEventCode(),
+  ];
 
   console.log("\n" + "=".repeat(50));
   const allPassed = results.every(r => r);

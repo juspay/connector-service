@@ -122,8 +122,8 @@ def test_handle_event() -> bool:
         print(_green("  ✓ PASSED: handle_event returned response without crashing"))
         return True
     except (IntegrationError, ConnectorError) as e:
-        print(_yellow(f"  ~ {type(e).__name__}: {e.error_message} (code={e.error_code})"))
-        return True  # SDK worked, connector rejected — not a smoke test failure
+        print(_red(f"  ✗ FAILED: {type(e).__name__}: {e.error_message} (code={e.error_code})"))
+        return False
     except Exception as e:
         print(_red(f"  ✗ FAILED: {type(e).__name__}: {e}"))
         return False
@@ -150,8 +150,8 @@ def test_parse_event() -> bool:
         print(_green("  ✓ PASSED: parse_event returned response"))
         return True
     except (IntegrationError, ConnectorError) as e:
-        print(_yellow(f"  ~ {type(e).__name__}: {e.error_message} (code={e.error_code})"))
-        return True
+        print(_red(f"  ✗ FAILED: {type(e).__name__}: {e.error_message} (code={e.error_code})"))
+        return False
     except Exception as e:
         print(_red(f"  ✗ FAILED: {type(e).__name__}: {e}"))
         return False
