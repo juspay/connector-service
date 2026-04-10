@@ -223,6 +223,30 @@ jobs:
             echo "pushed=true" >> $GITHUB_OUTPUT
           fi
 
+  # ── Formatting Check (non-PR events only) ──────────────────────────────
+  # On push/merge_group, auto-fix doesn't run (no PR branch to commit to).
+  # This lightweight check ensures unformatted code never lands on main.
+  formatting:
+    name: Check formatting
+    needs: changes
+    if: >-
+      github.event_name != 'pull_request' &&
+      (needs.changes.outputs.any-rs == 'true' ||
+       needs.changes.outputs.ci == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo +nightly fmt --all --check
+
   # ── Compilation & Lint ────────────────────────────────────────────────────
 
   check:
@@ -363,7 +387,11 @@ jobs:
 
           SCHEMA_EXCLUDE='not test(=all_supported_scenarios_match_proto_schema_for_all_connectors)'
 
-          if [[ -n "$CONNECTOR_NAMES" && "$CORE_CHANGED" != "true" && "$PROTO_CHANGED" != "true" && "$CI_CHANGED" != "true" ]]; then
+          # Scoped tests only on pull_request for connector-only changes.
+          # push (main) and merge_group always run the full suite as a safety net.
+          EVENT="${{ github.event_name }}"
+
+          if [[ "$EVENT" == "pull_request" && -n "$CONNECTOR_NAMES" && "$CORE_CHANGED" != "true" && "$PROTO_CHANGED" != "true" && "$CI_CHANGED" != "true" ]]; then
             FILTER=""
             IFS=',' read -ra CONNECTORS <<< "$CONNECTOR_NAMES"
             for c in "${CONNECTORS[@]}"; do
@@ -376,7 +404,7 @@ jobs:
               --profile ci \
               -E "($FILTER) & ($SCHEMA_EXCLUDE)"
           else
-            echo "🔍 Core change detected — running full test suite"
+            echo "🔍 Running full test suite (event=$EVENT)"
             cargo nextest run \
               --config-file .nextest.toml \
               --profile ci \
@@ -530,17 +558,18 @@ jobs:
   ci-gate:
     name: CI Result
     if: always()
-    needs: [typos, auto-fix, check, test, sdk-test]
+    needs: [typos, formatting, auto-fix, check, test, sdk-test]
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate CI results
         run: |
           echo "Job results:"
-          echo "  typos:     ${{ needs.typos.result }}"
-          echo "  auto-fix:  ${{ needs.auto-fix.result }}"
-          echo "  check:     ${{ needs.check.result }}"
-          echo "  test:      ${{ needs.test.result }}"
-          echo "  sdk-test:  ${{ needs.sdk-test.result }}"
+          echo "  typos:       ${{ needs.typos.result }}"
+          echo "  formatting:  ${{ needs.formatting.result }}"
+          echo "  auto-fix:    ${{ needs.auto-fix.result }}"
+          echo "  check:       ${{ needs.check.result }}"
+          echo "  test:        ${{ needs.test.result }}"
+          echo "  sdk-test:    ${{ needs.sdk-test.result }}"
           echo "  auto-fix pushed: ${{ needs.auto-fix.outputs.pushed }}"
           echo ""
 
@@ -553,6 +582,7 @@ jobs:
 
           results=(
             "${{ needs.typos.result }}"
+            "${{ needs.formatting.result }}"
             "${{ needs.auto-fix.result }}"
             "${{ needs.check.result }}"
             "${{ needs.test.result }}"
