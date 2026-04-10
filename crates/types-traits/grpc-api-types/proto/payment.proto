@@ -4320,6 +4320,7 @@ message PaymentServiceTokenAuthorizeRequest {
   // Send the connector order identifier here if an order was created before
   // authorize
   optional string connector_order_id = 22;
+  optional int64 shipping_cost = 23;    // Cost of shipping for the order
 }
 
 message PaymentServiceTokenSetupRecurringRequest {
@@ -4375,6 +4376,7 @@ message PaymentServiceProxyAuthorizeRequest {
   // Send the connector order identifier here if an order was created before
   // authorize
   optional string connector_order_id = 26;
+  optional int64 shipping_cost = 27;    // Cost of shipping for the order
 }
 
 message PaymentServiceProxySetupRecurringRequest {
