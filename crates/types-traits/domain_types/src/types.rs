@@ -1035,6 +1035,36 @@ impl<
                         )),
                     ))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::LazypayRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::LazyPayRedirect(
+                        payment_method_data::LazyPayRedirectData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PhonepeRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::PhonePeRedirect(
+                        payment_method_data::PhonePeRedirectData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::BilldeskRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::BillDeskRedirect(
+                        payment_method_data::BillDeskRedirectData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::CashfreeRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::CashfreeRedirect(
+                        payment_method_data::CashfreeRedirectData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::PayuRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::PayURedirect(
+                        payment_method_data::PayURedirectData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::EaseBuzzRedirect(
+                        payment_method_data::EaseBuzzRedirectData {},
+                    )))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::CashappQr(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::CashappQr(
                         Box::new(payment_method_data::CashappQr {}),
@@ -1987,6 +2017,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
                 Ok(Some(PaymentMethodType::Satispay))
             }
             grpc_api_types::payments::PaymentMethodType::Wero => Ok(Some(PaymentMethodType::Wero)),
+            grpc_api_types::payments::PaymentMethodType::LazyPay => {
+                Ok(Some(PaymentMethodType::LazyPay))
+            }
+            grpc_api_types::payments::PaymentMethodType::PhonePe => {
+                Ok(Some(PaymentMethodType::PhonePe))
+            }
+            grpc_api_types::payments::PaymentMethodType::BillDesk => {
+                Ok(Some(PaymentMethodType::BillDesk))
+            }
+            grpc_api_types::payments::PaymentMethodType::CashFree => {
+                Ok(Some(PaymentMethodType::Cashfree))
+            }
+            grpc_api_types::payments::PaymentMethodType::PayU => Ok(Some(PaymentMethodType::PayU)),
+            grpc_api_types::payments::PaymentMethodType::EaseBuzz => {
+                Ok(Some(PaymentMethodType::EaseBuzz))
+            }
             grpc_api_types::payments::PaymentMethodType::Netbanking => {
                 Ok(Some(PaymentMethodType::Netbanking))
             }
@@ -2076,6 +2122,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::MbWay(_) => Ok(Some(PaymentMethodType::MbWay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Satispay(_) => Ok(Some(PaymentMethodType::Satispay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Wero(_) => Ok(Some(PaymentMethodType::Wero)),
+                grpc_api_types::payments::payment_method::PaymentMethod::LazypayRedirect(_) => Ok(Some(PaymentMethodType::LazyPay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PhonepeRedirect(_) => Ok(Some(PaymentMethodType::PhonePe)),
+                grpc_api_types::payments::payment_method::PaymentMethod::BilldeskRedirect(_) => Ok(Some(PaymentMethodType::BillDesk)),
+                grpc_api_types::payments::payment_method::PaymentMethod::CashfreeRedirect(_) => Ok(Some(PaymentMethodType::Cashfree)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PayuRedirect(_) => Ok(Some(PaymentMethodType::PayU)),
+                grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_) => Ok(Some(PaymentMethodType::EaseBuzz)),
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
@@ -4318,6 +4370,30 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::LazypayRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::PhonepeRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BilldeskRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::CashfreeRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::PayuRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::InstantBankTransfer(_)),
             } => Ok(Self::BankTransfer),
             grpc_api_types::payments::PaymentMethod {
@@ -5473,6 +5549,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::MbWay => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::Satispay => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::Wero => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::LazyPay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::PhonePe => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::BillDesk => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::CashFree => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::PayU => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::EaseBuzz => Ok(Self::Wallet),
 
             grpc_api_types::payments::PaymentMethodType::UpiCollect => Ok(Self::Upi),
             grpc_api_types::payments::PaymentMethodType::UpiIntent => Ok(Self::Upi),
@@ -8765,6 +8847,12 @@ pub enum PaymentMethodDataType {
     MbWay,
     Satispay,
     Wero,
+    LazyPayRedirect,
+    PhonePeRedirect,
+    BillDeskRedirect,
+    CashfreeRedirect,
+    PayURedirect,
+    EaseBuzzRedirect,
     SepaGuaranteedBankDebit,
     IndonesianBankTransfer,
     Netbanking,
