@@ -1253,9 +1253,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         | WalletData::BillDeskRedirect(_)
                         | WalletData::CashfreeRedirect(_)
                         | WalletData::PayURedirect(_)
-                        | WalletData::EaseBuzzRedirect(_) => Err(IntegrationError::not_implemented(
-                            utils::get_unimplemented_payment_method_error_message("Noon"),
-                        )),
+                        | WalletData::EaseBuzzRedirect(_) => {
+                            Err(IntegrationError::not_implemented(
+                                utils::get_unimplemented_payment_method_error_message("Noon"),
+                            ))
+                        }
                     },
                     PaymentMethodData::CardRedirect(_)
                     | PaymentMethodData::PayLater(_)
