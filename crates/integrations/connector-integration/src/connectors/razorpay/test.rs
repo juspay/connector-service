@@ -1370,7 +1370,7 @@ mod tests {
                     webhook_url: None,
                     payment_method_type: None,
                     merchant_order_id: None,
-                    order_category: None,
+                    order_details: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1492,7 +1492,7 @@ mod tests {
                     webhook_url: None,
                     payment_method_type: None,
                     merchant_order_id: None,
-                    order_category: None,
+                    order_details: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1782,7 +1782,7 @@ mod tests {
                 webhook_url: None,
                 payment_method_type: None,
                 merchant_order_id: None,
-                order_category: None,
+                order_details: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1916,7 +1916,7 @@ mod tests {
                 webhook_url: None,
                 payment_method_type: None,
                 merchant_order_id: None,
-                order_category: None,
+                order_details: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -2039,7 +2039,7 @@ mod tests {
                 webhook_url: None,
                 payment_method_type: None,
                 merchant_order_id: None,
-                order_category: None,
+                order_details: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
