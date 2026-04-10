@@ -1803,10 +1803,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let channel = NoonChannels::Web;
 
-        let category = item.request.order_category.clone().or_else(|| {
-            tracing::warn!("noon: order_category not found in request; proceeding without it");
-            None
-        });
+        let category = item
+            .request
+            .order_details
+            .as_ref()
+            .and_then(|details| details.first())
+            .and_then(|detail| detail.category.clone())
+            .or_else(|| {
+                tracing::warn!("noon: category not found in order_details; proceeding without it");
+                None
+            });
 
         // The description should not have leading or trailing whitespaces, also it should not have double whitespaces and a max 50 chars according to Noon's Docs
         let name: String = item

@@ -8471,6 +8471,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
             amount: amount.amount,
             currency: amount.currency,
             merchant_order_id: value.merchant_order_id.clone(),
+            order_details: if value.order_details.is_empty() {
+                None
+            } else {
+                Some(
+                    value
+                        .order_details
+                        .into_iter()
+                        .map(|od| ForeignTryFrom::foreign_try_from(od))
+                        .collect::<Result<Vec<_>, _>>()?,
+                )
+            },
             integrity_object: None,
             metadata: value
                 .metadata
@@ -8478,7 +8489,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
                 .transpose()?,
             webhook_url,
             payment_method_type,
-            order_category: value.order_category.clone(),
         })
     }
 }

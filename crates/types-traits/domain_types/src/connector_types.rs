@@ -20,7 +20,7 @@ use time::PrimitiveDateTime;
 use crate::{
     errors::{IntegrationError, IntegrationErrorContext, WebhookError},
     mandates::{CustomerAcceptance, MandateData},
-    payment_address::{self, Address, AddressDetails, PhoneDetails},
+    payment_address::{self, Address, AddressDetails, OrderDetailsWithAmount, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{self, ConnectorResponseData, PaymentMethodToken},
     router_request_types::{
@@ -1480,11 +1480,11 @@ pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub merchant_order_id: Option<String>,
+    pub order_details: Option<Vec<OrderDetailsWithAmount>>,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<SecretSerdeValue>,
     pub webhook_url: Option<String>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
-    pub order_category: Option<String>,
 }
 
 #[derive(Debug, Clone)]
