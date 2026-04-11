@@ -9,26 +9,48 @@ use uuid::Uuid;
 
 use crate::harness::scenario_types::ScenarioError;
 
-/// Replaces `auto_generate` sentinel placeholders in a request payload.
+/// Replaces `auto_generate` and `connector_name` sentinel placeholders in a
+/// request payload.
 ///
 /// This should be called **after** dependency context has been applied, so
 /// fields already filled from dependency responses are no longer sentinels
 /// and will be left untouched.
-pub fn resolve_auto_generate(current_grpc_req: &mut Value) -> Result<(), ScenarioError> {
+///
+/// Sentinel types:
+/// - `"auto_generate"` — replaced with a generated value appropriate for the
+///   field's semantic role (e.g. UUID for IDs, email for email fields, etc.)
+/// - `"connector_name"` — replaced with the uppercase connector name (e.g.
+///   `"STRIPE"`, `"AIRWALLEX"`), matching the proto `Connector` enum values.
+pub fn resolve_auto_generate(
+    current_grpc_req: &mut Value,
+    connector: &str,
+) -> Result<(), ScenarioError> {
     let mut paths = Vec::new();
     collect_leaf_paths(current_grpc_req, String::new(), &mut paths);
 
+    let connector_upper = connector.to_uppercase();
     let mut runner = TestRunner::default();
+
     for path in paths {
-        let should_generate = lookup_json_path(current_grpc_req, &path)
-            .map(is_auto_generate_sentinel)
-            .unwrap_or(false);
-        if !should_generate {
+        let Some(current_value) = lookup_json_path(current_grpc_req, &path) else {
+            continue;
+        };
+
+        // Handle "connector_name" sentinel — replace with uppercase connector name.
+        if is_connector_name_sentinel(current_value) {
+            let _ = set_json_path_value(
+                current_grpc_req,
+                &path,
+                Value::String(connector_upper.clone()),
+            );
             continue;
         }
 
-        let generated = generate_value_for_path(&path, &mut runner)?;
-        let _ = set_json_path_value(current_grpc_req, &path, Value::String(generated));
+        // Handle "auto_generate" sentinel — replace with a generated value.
+        if is_auto_generate_sentinel(current_value) {
+            let generated = generate_value_for_path(&path, &mut runner)?;
+            let _ = set_json_path_value(current_grpc_req, &path, Value::String(generated));
+        }
     }
 
     Ok(())
@@ -254,6 +276,15 @@ fn is_auto_generate_sentinel(value: &Value) -> bool {
     text.to_ascii_lowercase().contains("auto_generate")
 }
 
+/// Detects the `"connector_name"` sentinel — a placeholder that should be
+/// replaced with the uppercase connector name (matching proto `Connector` enum).
+fn is_connector_name_sentinel(value: &Value) -> bool {
+    let Some(text) = value.as_str() else {
+        return false;
+    };
+    text == "connector_name"
+}
+
 /// Checks whether the given path is a context-deferred field that should not
 /// be auto-generated.
 ///
@@ -354,7 +385,7 @@ mod tests {
 
     use super::{
         id_prefix_for_leaf_path, id_prefix_for_path, is_auto_generate_sentinel,
-        resolve_auto_generate,
+        is_connector_name_sentinel, resolve_auto_generate,
     };
 
     #[test]
@@ -405,7 +436,7 @@ mod tests {
             }
         });
 
-        resolve_auto_generate(&mut req).expect("auto generation should succeed");
+        resolve_auto_generate(&mut req, "test_connector").expect("auto generation should succeed");
 
         let generated_id = req["merchant_transaction_id"]
             .as_str()
@@ -451,7 +482,7 @@ mod tests {
             "merchant_transaction_id": "auto_generate"
         });
 
-        resolve_auto_generate(&mut req).expect("auto generation should succeed");
+        resolve_auto_generate(&mut req, "test_connector").expect("auto generation should succeed");
 
         // All fields should now have generated values (none should remain "auto_generate").
         assert_ne!(
@@ -477,5 +508,66 @@ mod tests {
             .as_str()
             .expect("merchant transaction id should be generated");
         assert!(merchant_txn_id.starts_with("mti_"));
+    }
+
+    #[test]
+    fn sentinel_detection_supports_connector_name() {
+        assert!(is_connector_name_sentinel(&json!("connector_name")));
+        assert!(!is_connector_name_sentinel(&json!("CONNECTOR_NAME")));
+        assert!(!is_connector_name_sentinel(&json!("auto_generate")));
+        assert!(!is_connector_name_sentinel(&json!(
+            "some_connector_name_field"
+        )));
+        assert!(!is_connector_name_sentinel(&json!(42)));
+        assert!(!is_connector_name_sentinel(&json!(null)));
+    }
+
+    #[test]
+    fn resolves_connector_name_sentinel_to_uppercase_connector() {
+        let mut req = json!({
+            "connector": "connector_name",
+            "merchant_transaction_id": "auto_generate",
+            "payment_method": {
+                "card": {
+                    "card_number": {"value": "4111111111111111"}
+                }
+            }
+        });
+
+        resolve_auto_generate(&mut req, "airwallex").expect("resolution should succeed");
+
+        // connector_name sentinel should be replaced with uppercase connector.
+        assert_eq!(req["connector"], json!("AIRWALLEX"));
+
+        // auto_generate fields should still be resolved normally.
+        let txn_id = req["merchant_transaction_id"]
+            .as_str()
+            .expect("id should be string");
+        assert!(txn_id.starts_with("mti_"));
+
+        // Fixed values should be untouched.
+        assert_eq!(
+            req["payment_method"]["card"]["card_number"]["value"],
+            json!("4111111111111111")
+        );
+    }
+
+    #[test]
+    fn connector_name_sentinel_works_for_different_connectors() {
+        for (input, expected) in [
+            ("stripe", "STRIPE"),
+            ("airwallex", "AIRWALLEX"),
+            ("adyen", "ADYEN"),
+            ("globalpay", "GLOBALPAY"),
+            ("jpmorgan", "JPMORGAN"),
+        ] {
+            let mut req = json!({"connector": "connector_name"});
+            resolve_auto_generate(&mut req, input).expect("resolution should succeed");
+            assert_eq!(
+                req["connector"],
+                json!(expected),
+                "failed for connector '{input}'"
+            );
+        }
     }
 }

@@ -127,7 +127,7 @@ fn main() {
         }
     };
 
-    if let Err(error) = resolve_auto_generate(&mut grpc_req) {
+    if let Err(error) = resolve_auto_generate(&mut grpc_req, connector) {
         write_report_entry(
             args.report,
             suite,

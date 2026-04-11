@@ -276,50 +276,20 @@ fn prepare_context_placeholders(suite: &str, _connector: &str, current_grpc_req:
         );
     }
 
-    // Normalize empty/null/zero placeholders to "auto_generate" sentinels so
-    // they can be filled by dependency context or auto-generated later.
-    normalize_empty_placeholders(current_grpc_req, String::new());
-}
-
-/// Recursively walks the JSON tree and replaces empty/null/zero leaf values
-/// with the `"auto_generate"` sentinel so they are eligible for context
-/// propagation or auto-generation.
-fn normalize_empty_placeholders(value: &mut Value, current_path: String) {
-    match value {
-        Value::Object(map) => {
-            let keys: Vec<String> = map.keys().cloned().collect();
-            for key in keys {
-                let child_path = if current_path.is_empty() {
-                    key.clone()
-                } else {
-                    format!("{current_path}.{key}")
-                };
-                if let Some(child) = map.get_mut(&key) {
-                    normalize_empty_placeholders(child, child_path);
-                }
-            }
-        }
-        Value::Null => {
-            *value = Value::String("auto_generate".to_string());
-        }
-        Value::String(text) => {
-            if text.trim().is_empty() {
-                *value = Value::String("auto_generate".to_string());
-            }
-        }
-        Value::Number(n) => {
-            // Treat 0 for known expiry fields as empty placeholder.
-            if current_path.ends_with("expires_in_seconds") && n.as_i64() == Some(0) {
-                *value = Value::String("auto_generate".to_string());
-            }
-        }
-        _ => {}
-    }
+    // NOTE: We intentionally do NOT normalize empty/null values to "auto_generate".
+    // Templates use explicit "auto_generate" sentinels for fields that should be
+    // generated.  Empty strings ("") and null values mean "omit or send empty" —
+    // they will be filled by dependency context if available, otherwise left as-is.
 }
 
 /// Cleans up empty wrapper objects that may remain after context propagation
 /// and auto-generation (e.g. an empty `state.access_token` wrapper when none
 /// of its children were filled).
+///
+/// Uses `has_only_default_leaves` to detect subtrees where ALL leaf values are
+/// defaults (`""`, `0`, `null`, `false`).  This handles cases like an
+/// `access_token` block with `{"token": {"value": ""}, "expires_in_seconds": 0}`
+/// that should be pruned when dependency context didn't fill any real values.
 fn prune_empty_context_wrappers(current_grpc_req: &mut Value) {
     let should_remove_connector_feature =
         lookup_json_path_with_case_fallback(current_grpc_req, "connector_feature_data")
@@ -329,11 +299,12 @@ fn prune_empty_context_wrappers(current_grpc_req: &mut Value) {
         let _ = remove_json_path(current_grpc_req, "connector_feature_data");
     }
 
-    // Cleanup optional empty wrappers after field-level pruning.
-    let _ = remove_json_path_if_empty_object(current_grpc_req, "state.access_token.token");
-    let _ = remove_json_path_if_empty_object(current_grpc_req, "state.access_token");
-    let _ = remove_json_path_if_empty_object(current_grpc_req, "state");
-    let _ = remove_json_path_if_empty_object(current_grpc_req, "connector_feature_data");
+    // Cleanup optional wrappers that contain only default leaf values.
+    // Order matters: prune inner paths first, then check outer wrappers.
+    let _ = remove_json_path_if_all_defaults(current_grpc_req, "state.access_token.token");
+    let _ = remove_json_path_if_all_defaults(current_grpc_req, "state.access_token");
+    let _ = remove_json_path_if_all_defaults(current_grpc_req, "state");
+    let _ = remove_json_path_if_all_defaults(current_grpc_req, "connector_feature_data");
 }
 
 fn maybe_execute_browser_automation_for_suite(
@@ -1609,10 +1580,28 @@ fn remove_json_path(root: &mut Value, path: &str) -> bool {
     false
 }
 
-fn remove_json_path_if_empty_object(root: &mut Value, path: &str) -> bool {
+/// Recursively checks whether all leaf values in a JSON subtree are "default"
+/// values (`""`, `0`, `0.0`, `null`, `false`, empty arrays, or objects/arrays
+/// where all children are themselves defaults).
+///
+/// This is used to prune wrapper objects that remain after context propagation
+/// when none of their fields were actually filled with meaningful data.
+fn has_only_default_leaves(value: &Value) -> bool {
+    match value {
+        Value::Null | Value::Bool(false) => true,
+        Value::String(s) => s.is_empty(),
+        Value::Number(n) => n.as_f64().map(|f| f == 0.0).unwrap_or(false),
+        Value::Array(items) => items.is_empty() || items.iter().all(has_only_default_leaves),
+        Value::Object(map) => map.is_empty() || map.values().all(has_only_default_leaves),
+        Value::Bool(true) => false,
+    }
+}
+
+/// Removes a JSON path if the value at that path has only default leaves
+/// (empty strings, zeros, nulls, false, or nested objects/arrays of the same).
+fn remove_json_path_if_all_defaults(root: &mut Value, path: &str) -> bool {
     let should_remove = lookup_json_path_with_case_fallback(root, path)
-        .and_then(Value::as_object)
-        .map(|object| object.is_empty())
+        .map(has_only_default_leaves)
         .unwrap_or(false);
     if should_remove {
         return remove_json_path(root, path);
@@ -1665,7 +1654,7 @@ pub fn build_grpcurl_request(
     let scenario = scenario.unwrap_or(DEFAULT_SCENARIO);
     let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
     let mut grpc_req = get_the_grpc_req_for_connector(suite, scenario, connector)?;
-    resolve_auto_generate(&mut grpc_req)?;
+    resolve_auto_generate(&mut grpc_req, connector)?;
     build_grpcurl_request_from_payload(
         suite,
         scenario,
@@ -1806,7 +1795,7 @@ pub fn execute_grpcurl_request_with_trace(
     let scenario = scenario.unwrap_or(DEFAULT_SCENARIO);
     let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
     let mut grpc_req = get_the_grpc_req_for_connector(suite, scenario, connector)?;
-    resolve_auto_generate(&mut grpc_req)?;
+    resolve_auto_generate(&mut grpc_req, connector)?;
     execute_grpcurl_request_from_payload_with_trace(
         suite,
         scenario,
@@ -2068,7 +2057,7 @@ pub fn execute_tonic_request(
     let scenario = scenario.unwrap_or(DEFAULT_SCENARIO);
     let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
     let mut grpc_req = get_the_grpc_req_for_connector(suite, scenario, connector)?;
-    resolve_auto_generate(&mut grpc_req)?;
+    resolve_auto_generate(&mut grpc_req, connector)?;
     execute_tonic_request_from_payload(
         suite,
         scenario,
@@ -4276,10 +4265,11 @@ fn execute_single_scenario_with_context(
     // Apply any explicit dependency path mappings from suite_spec.json.
     apply_context_map(explicit_context_entries, &mut effective_req);
 
-    // Generate values for any remaining "auto_generate" sentinels.
+    // Generate values for any remaining "auto_generate" sentinels and resolve
+    // "connector_name" placeholders to the uppercase connector enum name.
     // Since context has already been applied, dependency-carried fields are
     // already filled and won't be touched.
-    resolve_auto_generate(&mut effective_req)?;
+    resolve_auto_generate(&mut effective_req, connector)?;
 
     // Clean up empty wrapper objects left over from context propagation.
     prune_empty_context_wrappers(&mut effective_req);
@@ -4506,9 +4496,11 @@ mod tests {
         add_context, apply_context_map, build_grpcurl_command, build_grpcurl_request,
         deep_set_json_path, extract_json_body_from_grpc_output, get_the_assertion,
         get_the_assertion_for_connector, get_the_grpc_req_for_connector,
-        normalize_tonic_request_json, prepare_context_placeholders, prune_empty_context_wrappers,
-        run_test, DEFAULT_SCENARIO, DEFAULT_SUITE,
+        has_only_default_leaves, normalize_tonic_request_json, prepare_context_placeholders,
+        prune_empty_context_wrappers, remove_json_path_if_all_defaults, run_test,
+        DEFAULT_SCENARIO, DEFAULT_SUITE,
     };
+    use crate::harness::auto_gen::resolve_auto_generate;
     use crate::harness::scenario_loader::{
         connector_spec_dir, discover_all_connectors, load_suite_scenarios, load_suite_spec,
         load_supported_suites_for_connector,
@@ -5060,7 +5052,7 @@ grpc-status: 0
     }
 
     #[test]
-    fn prepare_context_placeholders_converts_empty_values_to_auto_generate() {
+    fn prepare_context_placeholders_preserves_empty_values_and_injects_connector_feature_data() {
         let mut req = json!({
             "customer": { "connector_customer_id": "" },
             "state": {
@@ -5075,26 +5067,14 @@ grpc-status: 0
 
         prepare_context_placeholders("PaymentService/Capture", "stripe", &mut req);
 
-        assert_eq!(
-            req["customer"]["connector_customer_id"],
-            json!("auto_generate")
-        );
-        assert_eq!(
-            req["state"]["connector_customer_id"],
-            json!("auto_generate")
-        );
-        assert_eq!(
-            req["state"]["access_token"]["token"]["value"],
-            json!("auto_generate")
-        );
-        assert_eq!(
-            req["state"]["access_token"]["token_type"],
-            json!("auto_generate")
-        );
-        assert_eq!(
-            req["state"]["access_token"]["expires_in_seconds"],
-            json!("auto_generate")
-        );
+        // Empty values should be left as-is (NOT converted to "auto_generate").
+        assert_eq!(req["customer"]["connector_customer_id"], json!(""));
+        assert_eq!(req["state"]["connector_customer_id"], json!(""));
+        assert_eq!(req["state"]["access_token"]["token"]["value"], json!(""));
+        assert_eq!(req["state"]["access_token"]["token_type"], json!(""));
+        assert_eq!(req["state"]["access_token"]["expires_in_seconds"], json!(0));
+
+        // connector_feature_data should be injected for dependent suites.
         assert_eq!(
             req["connector_feature_data"]["value"],
             json!("auto_generate")
@@ -5155,6 +5135,134 @@ grpc-status: 0
         );
         assert_eq!(req["connector_transaction_id"]["id"], json!("pi_123"));
         assert_eq!(req["refund_id"], json!("re_123"));
+    }
+
+    #[test]
+    fn has_only_default_leaves_detects_all_default_shapes() {
+        // Primitive defaults.
+        assert!(has_only_default_leaves(&json!("")));
+        assert!(has_only_default_leaves(&json!(0)));
+        assert!(has_only_default_leaves(&json!(0.0)));
+        assert!(has_only_default_leaves(&json!(null)));
+        assert!(has_only_default_leaves(&json!(false)));
+
+        // Non-default primitives.
+        assert!(!has_only_default_leaves(&json!("hello")));
+        assert!(!has_only_default_leaves(&json!(42)));
+        assert!(!has_only_default_leaves(&json!(3.14)));
+        assert!(!has_only_default_leaves(&json!(true)));
+
+        // Empty containers are all-default.
+        assert!(has_only_default_leaves(&json!({})));
+        assert!(has_only_default_leaves(&json!([])));
+
+        // Nested all-default objects.
+        assert!(has_only_default_leaves(&json!({
+            "token": {"value": ""},
+            "token_type": "",
+            "expires_in_seconds": 0
+        })));
+
+        // Mixed: one real value makes it non-default.
+        assert!(!has_only_default_leaves(&json!({
+            "token": {"value": "tok_123"},
+            "token_type": "",
+            "expires_in_seconds": 0
+        })));
+
+        // Deeply nested all-default.
+        assert!(has_only_default_leaves(&json!({
+            "a": {"b": {"c": ""}, "d": 0},
+            "e": null
+        })));
+
+        // Array of defaults.
+        assert!(has_only_default_leaves(&json!(["", 0, null, false])));
+
+        // Array with one real value.
+        assert!(!has_only_default_leaves(&json!(["", "real", 0])));
+    }
+
+    #[test]
+    fn prune_removes_all_default_subtree_for_access_token() {
+        // This is the critical Bug 2 scenario: access_token has default
+        // values (empty string, 0) that should be pruned when context
+        // didn't fill any real values.
+        let mut req = json!({
+            "merchant_transaction_id": "mti_abc123",
+            "state": {
+                "access_token": {
+                    "token": {"value": ""},
+                    "token_type": "",
+                    "expires_in_seconds": 0
+                }
+            }
+        });
+
+        prune_empty_context_wrappers(&mut req);
+
+        // The entire state block should be pruned since all leaves are defaults.
+        assert!(
+            req.get("state").is_none() || req["state"].is_null(),
+            "state with all-default access_token should be pruned"
+        );
+        // Real values should be kept.
+        assert_eq!(req["merchant_transaction_id"], json!("mti_abc123"));
+    }
+
+    #[test]
+    fn prune_keeps_access_token_with_real_values() {
+        let mut req = json!({
+            "state": {
+                "access_token": {
+                    "token": {"value": "tok_real_123"},
+                    "token_type": "Bearer",
+                    "expires_in_seconds": 3600
+                }
+            }
+        });
+
+        prune_empty_context_wrappers(&mut req);
+
+        // Nothing should be pruned — real values present.
+        assert_eq!(
+            req["state"]["access_token"]["token"]["value"],
+            json!("tok_real_123")
+        );
+        assert_eq!(
+            req["state"]["access_token"]["expires_in_seconds"],
+            json!(3600)
+        );
+    }
+
+    #[test]
+    fn remove_json_path_if_all_defaults_removes_default_subtree() {
+        let mut root = json!({
+            "wrapper": {
+                "inner": {"value": ""},
+                "count": 0
+            },
+            "keep": "real_data"
+        });
+
+        let removed = remove_json_path_if_all_defaults(&mut root, "wrapper");
+        assert!(removed, "should remove all-default subtree");
+        assert!(root.get("wrapper").is_none());
+        assert_eq!(root["keep"], json!("real_data"));
+    }
+
+    #[test]
+    fn remove_json_path_if_all_defaults_keeps_non_default_subtree() {
+        let mut root = json!({
+            "wrapper": {
+                "inner": {"value": "real"},
+                "count": 0
+            }
+        });
+
+        let removed = remove_json_path_if_all_defaults(&mut root, "wrapper");
+        assert!(!removed, "should NOT remove subtree with real values");
+        assert_eq!(root["wrapper"]["inner"]["value"], json!("real"));
     }
 
     #[test]
@@ -5565,8 +5673,21 @@ grpc-status: 0
                         }
                     };
 
+                    // Resolve sentinels (e.g. "connector_name" → "STRIPE")
+                    // before schema validation so template placeholders don't
+                    // cause spurious proto parse failures.
+                    let mut resolved_req = grpc_req;
                     if let Err(error) =
-                        validate_suite_scenario_schema(connector, &suite, &scenario, &grpc_req)
+                        resolve_auto_generate(&mut resolved_req, connector)
+                    {
+                        failures.push(format!(
+                            "{connector}/{suite}/{scenario}: sentinel resolution failed: {error}"
+                        ));
+                        continue;
+                    }
+
+                    if let Err(error) =
+                        validate_suite_scenario_schema(connector, &suite, &scenario, &resolved_req)
                     {
                         failures.push(error);
                     }
