@@ -4265,14 +4265,19 @@ fn execute_single_scenario_with_context(
     // Apply any explicit dependency path mappings from suite_spec.json.
     apply_context_map(explicit_context_entries, &mut effective_req);
 
+    // Clean up empty wrapper objects left over from context propagation.
+    // This MUST run before resolve_auto_generate so that unresolved
+    // "auto_generate" sentinels inside wrapper objects like
+    // connector_feature_data and state.access_token are detected and
+    // removed — otherwise resolve_auto_generate would replace them with
+    // random "gen_XXXXX" values that the server cannot parse.
+    prune_empty_context_wrappers(&mut effective_req);
+
     // Generate values for any remaining "auto_generate" sentinels and resolve
     // "connector_name" placeholders to the uppercase connector enum name.
     // Since context has already been applied, dependency-carried fields are
     // already filled and won't be touched.
     resolve_auto_generate(&mut effective_req, connector)?;
-
-    // Clean up empty wrapper objects left over from context propagation.
-    prune_empty_context_wrappers(&mut effective_req);
 
     if std::env::var("UCS_DEBUG_EFFECTIVE_REQ").as_deref() == Ok("1") {
         if let Ok(request_json) = serde_json::to_string_pretty(&effective_req) {
