@@ -4500,10 +4500,9 @@ mod tests {
     use super::{
         add_context, apply_context_map, build_grpcurl_command, build_grpcurl_request,
         deep_set_json_path, extract_json_body_from_grpc_output, get_the_assertion,
-        get_the_assertion_for_connector, get_the_grpc_req_for_connector,
-        has_only_default_leaves, normalize_tonic_request_json, prepare_context_placeholders,
-        prune_empty_context_wrappers, remove_json_path_if_all_defaults, run_test,
-        DEFAULT_SCENARIO, DEFAULT_SUITE,
+        get_the_assertion_for_connector, get_the_grpc_req_for_connector, has_only_default_leaves,
+        normalize_tonic_request_json, prepare_context_placeholders, prune_empty_context_wrappers,
+        remove_json_path_if_all_defaults, run_test, DEFAULT_SCENARIO, DEFAULT_SUITE,
     };
     use crate::harness::auto_gen::resolve_auto_generate;
     use crate::harness::scenario_loader::{
@@ -5682,9 +5681,7 @@ grpc-status: 0
                     // before schema validation so template placeholders don't
                     // cause spurious proto parse failures.
                     let mut resolved_req = grpc_req;
-                    if let Err(error) =
-                        resolve_auto_generate(&mut resolved_req, connector)
-                    {
+                    if let Err(error) = resolve_auto_generate(&mut resolved_req, connector) {
                         failures.push(format!(
                             "{connector}/{suite}/{scenario}: sentinel resolution failed: {error}"
                         ));
