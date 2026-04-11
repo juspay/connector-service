@@ -14,6 +14,10 @@
 //! When a connector does not yet support a flow's suite, do not add it to
 //! the flow-to-suite mapping in `flow_to_suites` (map it to `None` instead).
 //!
+//! Pass `--fix` to automatically add missing suites to each connector's
+//! `specs.json` instead of failing. The file is rewritten with sorted,
+//! deduplicated suites.
+//!
 //! **Phase 3 — testable suite report**
 //! Derives the known suite list directly from `grpc_method_for_suite` in
 //! `scenario_api.rs` (the single source of truth). For every suite found there,
@@ -23,6 +27,7 @@
 //!
 //! Run with:
 //!   cargo run --bin check_connector_specs
+//!   cargo run --bin check_connector_specs -- --fix   # auto-add missing suites
 
 #![allow(
     clippy::print_stdout,
@@ -209,6 +214,8 @@ fn extract_suites_from_scenario_api(scenario_api_path: &PathBuf) -> Vec<String> 
 // ---------------------------------------------------------------------------
 
 fn main() {
+    let fix_mode = std::env::args().any(|a| a == "--fix");
+
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     // CARGO_MANIFEST_DIR = .../crates/internal/integration-tests
     // workspace root is three levels up.
@@ -371,6 +378,58 @@ fn main() {
     }
 
     // -----------------------------------------------------------------------
+    // --fix: auto-add missing suites to specs.json
+    // -----------------------------------------------------------------------
+    let mut fixed_connectors: Vec<String> = Vec::new();
+
+    if fix_mode && !errors.is_empty() {
+        println!("[FIX]  --fix flag set — auto-adding missing suites to specs.json");
+        println!();
+
+        for (connector, pairs) in &errors {
+            let specs_path = specs_root.join(connector).join("specs.json");
+            let existing_content = fs::read_to_string(&specs_path).unwrap_or_default();
+            let mut specs: ConnectorSpecs =
+                serde_json::from_str(&existing_content).unwrap_or_default();
+
+            let mut added = Vec::new();
+            for (_flow, suite) in pairs {
+                if !specs.supported_suites.contains(suite) {
+                    specs.supported_suites.push(suite.clone());
+                    added.push(suite.clone());
+                }
+            }
+
+            if !added.is_empty() {
+                // Sort for consistent output.
+                specs.supported_suites.sort();
+                specs.supported_suites.dedup();
+
+                let output = serde_json::json!({
+                    "connector": connector,
+                    "supported_suites": specs.supported_suites,
+                });
+                let formatted =
+                    serde_json::to_string_pretty(&output).expect("failed to serialize specs.json");
+                fs::write(&specs_path, format!("{formatted}\n"))
+                    .expect("failed to write specs.json");
+
+                for suite in &added {
+                    println!("       ADDED   {connector:<30}  suite={suite}");
+                }
+                fixed_connectors.push(connector.clone());
+            }
+        }
+
+        // Clear the errors for connectors we just fixed so Phase 2 does not
+        // report them as failures.
+        for connector in &fixed_connectors {
+            errors.remove(connector);
+        }
+        println!();
+    }
+
+    // -----------------------------------------------------------------------
     // Print per-connector Phase 2 results
     // -----------------------------------------------------------------------
     for connector in &connectors {
@@ -383,7 +442,10 @@ fn main() {
             continue;
         }
 
-        if has_errors {
+        if fixed_connectors.contains(connector) {
+            let n = covered.map(|v| v.len()).unwrap_or(0);
+            println!("[FIXED] {connector}  ({n} flows previously mapped, missing suites added)");
+        } else if has_errors {
             println!("[FAIL] {connector}");
             if let Some(covered_list) = covered {
                 for (flow, suite) in covered_list {
@@ -512,9 +574,13 @@ fn main() {
     println!("--- Phase 2: Flow coverage ---");
     let total = connectors.len() - no_macro.len();
     let fail_count = errors.len();
-    let ok_count = total - fail_count;
+    let fixed_count = fixed_connectors.len();
+    let ok_count = total - fail_count - fixed_count;
     println!("Connectors checked:       {total}");
     println!("All flows accounted:      {ok_count}");
+    if fixed_count > 0 {
+        println!("Auto-fixed (--fix):       {fixed_count}");
+    }
     println!("With missing suites:      {fail_count}");
     println!("Skipped (no macro):       {}", no_macro.len());
 
