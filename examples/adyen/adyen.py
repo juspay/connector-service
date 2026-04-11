@@ -13,7 +13,7 @@ from payments import MerchantAuthenticationClient
 from payments import DisputeClient
 from payments import EventClient
 from payments import RecurringPaymentClient
-from payments.generated import sdk_config_pb2, payment_pb2
+from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -90,6 +90,18 @@ def _build_create_client_authentication_token_request():
             }
         },
         payment_pb2.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest(),
+    )
+
+def _build_create_order_request():
+    return ParseDict(
+        {
+            "merchant_order_id": "probe_order_001",  # Identification.
+            "amount": {  # Amount Information.
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR").
+            }
+        },
+        payment_pb2.PaymentServiceCreateOrderRequest(),
     )
 
 def _build_dispute_accept_request():
@@ -447,6 +459,15 @@ async def create_client_authentication_token(merchant_transaction_id: str, confi
     merchantauthentication_client = MerchantAuthenticationClient(config)
 
     create_response = await merchantauthentication_client.create_client_authentication_token(_build_create_client_authentication_token_request())
+
+    return {"status": create_response.status}
+
+
+async def create_order(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.CreateOrder"""
+    payment_client = PaymentClient(config)
+
+    create_response = await payment_client.create_order(_build_create_order_request())
 
     return {"status": create_response.status}
 
