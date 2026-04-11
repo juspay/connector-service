@@ -253,6 +253,10 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         base_url: Option<String>,
     },
+    Imerchantsolutions {
+        api_key: Secret<String>,
+        base_url: Option<String>,
+    },
     Bambora {
         merchant_id: Secret<String>,
         api_key: Secret<String>,
@@ -1010,7 +1014,8 @@ impl ConnectorSpecificConfig {
             Itaubank {
                 client_id,
                 client_secret
-            }
+            },
+            Imerchantsolutions { api_key },
         )
     }
 
@@ -1398,7 +1403,8 @@ impl ConnectorSpecificConfig {
                 Itaubank {
                     client_id,
                     client_secret
-                }
+                },
+                Imerchantsolutions { api_key },
             ),
             serde_json::Value::Object(connector_patch),
         );
@@ -2025,6 +2031,13 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::RazorpayV2 {
                     api_key: api_key.clone(),
                     api_secret: Some(key1.clone()),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Imerchantsolutions => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Imerchantsolutions {
+                    api_key: api_key.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

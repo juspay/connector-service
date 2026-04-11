@@ -110,6 +110,7 @@ pub enum ConnectorEnum {
     Globalpay,
     Nuvei,
     Iatapay,
+    Imerchantsolutions,
     Nmi,
     Shift4,
     Paybox,
@@ -225,6 +226,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
             grpc_api_types::payments::Connector::Trustly => Ok(Self::Trustly),
             grpc_api_types::payments::Connector::Itaubank => Ok(Self::Itaubank),
+            grpc_api_types::payments::Connector::Imerchantsolutions => Ok(Self::Imerchantsolutions),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(IntegrationError::InvalidDataFormat {
                     field_name: "connector",
