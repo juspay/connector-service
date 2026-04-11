@@ -14,7 +14,7 @@ use domain_types::{
     utils::is_payment_failure,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -63,6 +63,20 @@ pub struct ImerchantsolutionsPaymentsRequestData<T: PaymentMethodDataTypes> {
     billing: Option<AddressDetails>,
     delivery_address: Option<AddressDetails>,
     manual_capture: bool,
+    capture_delay_hours: Option<u32>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct ImerchantsolutionsMetadata {
+    capture_delay_hours: Option<u32>,
+}
+
+fn get_imerchantsolutions_metadata(
+    metadata: Option<serde_json::Value>,
+) -> ImerchantsolutionsMetadata {
+    metadata
+        .and_then(|value| serde_json::from_value(value).ok())
+        .unwrap_or_default()
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -184,6 +198,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .get_optional_shipping_country(),
                 });
+                let imerchantsolutions_metadata = get_imerchantsolutions_metadata(
+                    item.router_data.request.metadata.clone().expose_option(),
+                );
                 Ok(Self {
                     amount: item.router_data.request.amount,
                     currency: item.router_data.request.currency,
@@ -202,6 +219,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     billing,
                     delivery_address,
                     manual_capture: is_manual_capture(item.router_data.request.capture_method),
+                    capture_delay_hours: imerchantsolutions_metadata.capture_delay_hours,
                 })
             }
             PaymentMethodData::CardRedirect(_)
@@ -240,6 +258,7 @@ pub struct ImerchantsolutionsPaymentsResponseData {
     merchant_reference: Option<String>,
     amount: AmountDetails,
     result_code: ResultCode,
+    status: ImerchantsolutionsPaymentStatus,
     capture_mode: Option<CaptureMode>,
     capture_delay_hours: Option<i32>,
     message: Option<String>,
@@ -298,9 +317,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsPaymentsResponseData, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = get_payment_status(
-            item.response.result_code.clone(),
-            item.router_data.request.is_auto_capture(),
+        let status = get_attempt_status(
+            item.response.status.clone(),
+            item.router_data.request.capture_method,
         );
 
         if is_payment_failure(status) {
@@ -486,29 +505,13 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>>
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = if item.response.success {
-            match item.response.status {
-                ImerchantsolutionsVoidStatus::Received => AttemptStatus::VoidInitiated,
-                ImerchantsolutionsVoidStatus::Cancelled => AttemptStatus::Voided,
-            }
-        } else {
-            AttemptStatus::VoidFailed
+        let status = match item.response.status {
+            ImerchantsolutionsVoidStatus::Received => AttemptStatus::VoidInitiated,
+            ImerchantsolutionsVoidStatus::Cancelled => AttemptStatus::Voided,
         };
 
-        let response = if is_payment_failure(status) {
-            Err(ErrorResponse {
-                code: consts::NO_ERROR_CODE.to_string(),
-                message: consts::NO_ERROR_MESSAGE.to_string(),
-                reason: None,
-                status_code: item.http_code,
-                attempt_status: Some(status),
-                connector_transaction_id: Some(item.response.original_reference.clone()),
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            })
-        } else {
-            Ok(PaymentsResponseData::TransactionResponse {
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.original_reference.clone(),
                 ),
@@ -519,11 +522,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>>
                 connector_response_reference_id: Some(item.response.psp_reference.clone()),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
-            })
-        };
-
-        Ok(Self {
-            response,
+            }),
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -603,51 +602,30 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>>
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = if item.response.success {
-            get_capture_status(
-                item.response.status,
-                item.router_data.request.capture_method,
-            )
-        } else {
-            AttemptStatus::CaptureFailed
-        };
+        let status = get_capture_status(
+            item.response.status,
+            item.router_data.request.capture_method,
+        );
 
-        if is_payment_failure(status) {
-            Ok(Self {
-                response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(
-                        item.response.original_reference.clone(),
-                    ),
-                    redirection_data: None,
-                    mandate_reference: None,
-                    connector_metadata: None,
-                    network_txn_id: None,
-                    connector_response_reference_id: Some(item.response.psp_reference.clone()),
-                    incremental_authorization_allowed: None,
-                    status_code: item.http_code,
-                }),
-                resource_common_data: PaymentFlowData {
-                    status,
-                    ..item.router_data.resource_common_data
-                },
-                ..item.router_data
-            })
-        } else {
-            Ok(Self {
-                response: Err(ErrorResponse {
-                    code: consts::NO_ERROR_CODE.to_string(),
-                    message: consts::NO_ERROR_MESSAGE.to_string(),
-                    reason: None,
-                    status_code: item.http_code,
-                    attempt_status: Some(status),
-                    connector_transaction_id: Some(item.response.original_reference.clone()),
-                    network_advice_code: None,
-                    network_decline_code: None,
-                    network_error_message: None,
-                }),
-                ..item.router_data
-            })
-        }
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.original_reference.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.psp_reference.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
     }
 }
 
@@ -716,34 +694,14 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>>
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>,
     ) -> Result<Self, Self::Error> {
-        let refund_status = if item.response.success {
-            get_refund_status(item.response.status)
-        } else {
-            RefundStatus::Failure
-        };
+        let refund_status = get_refund_status(item.response.status);
 
-        let response = if utils::is_refund_failure(refund_status) {
-            Err(ErrorResponse {
-                code: consts::NO_ERROR_CODE.to_string(),
-                message: consts::NO_ERROR_MESSAGE.to_string(),
-                reason: None,
-                status_code: item.http_code,
-                attempt_status: None,
-                connector_transaction_id: Some(item.response.original_reference.clone()),
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            })
-        } else {
-            Ok(RefundsResponseData {
+        Ok(Self {
+            response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.psp_reference.to_string(),
                 refund_status,
                 status_code: item.http_code,
-            })
-        };
-
-        Ok(Self {
-            response,
+            }),
             ..item.router_data
         })
     }
@@ -782,52 +740,17 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>>
     fn try_from(
         item: ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = get_refund_status(item.response.status.clone());
-
+        let refund_status = get_refund_status(item.response.status.clone());
         let connector_refund_id = item.router_data.request.connector_refund_id.clone();
 
-        let response = if utils::is_refund_failure(status) {
-            Err(ErrorResponse {
-                code: consts::NO_ERROR_CODE.to_string(),
-                message: consts::NO_ERROR_MESSAGE.to_string(),
-                reason: None,
-                status_code: item.http_code,
-                attempt_status: None,
-                connector_transaction_id: Some(item.response.psp_reference.clone()),
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            })
-        } else {
-            Ok(RefundsResponseData {
-                connector_refund_id,
-                refund_status: status,
-                status_code: item.http_code,
-            })
-        };
-
         Ok(Self {
-            response,
+            response: Ok(RefundsResponseData {
+                connector_refund_id,
+                refund_status,
+                status_code: item.http_code,
+            }),
             ..item.router_data
         })
-    }
-}
-
-fn get_payment_status(item: ResultCode, is_auto_capture: bool) -> AttemptStatus {
-    match item {
-        ResultCode::Authorised => {
-            if is_auto_capture {
-                AttemptStatus::Charged
-            } else {
-                AttemptStatus::Authorized
-            }
-        }
-        ResultCode::Refused | ResultCode::Error => AttemptStatus::Failure,
-        ResultCode::Pending => AttemptStatus::Pending,
-        ResultCode::Cancelled => AttemptStatus::Voided,
-        ResultCode::RedirectShopper
-        | ResultCode::ChallengeShopper
-        | ResultCode::IdentifyShopper => AttemptStatus::AuthenticationPending,
     }
 }
 
@@ -837,13 +760,8 @@ fn get_attempt_status(
 ) -> AttemptStatus {
     match item {
         ImerchantsolutionsPaymentStatus::Authorised
-        | ImerchantsolutionsPaymentStatus::Authorized => match capture_method {
-            Some(common_enums::CaptureMethod::Automatic)
-            | Some(common_enums::CaptureMethod::SequentialAutomatic)
-            | None => AttemptStatus::Charged,
-            _ => AttemptStatus::Authorized,
-        },
-        ImerchantsolutionsPaymentStatus::PendingCapture => AttemptStatus::Authorized,
+        | ImerchantsolutionsPaymentStatus::Authorized
+        | ImerchantsolutionsPaymentStatus::PendingCapture => AttemptStatus::Authorized,
         ImerchantsolutionsPaymentStatus::Pending3ds => AttemptStatus::AuthenticationPending,
         ImerchantsolutionsPaymentStatus::Cancelled => AttemptStatus::Voided,
         ImerchantsolutionsPaymentStatus::PartiallyCaptured => match capture_method {
