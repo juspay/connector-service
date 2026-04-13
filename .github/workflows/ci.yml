@@ -402,6 +402,7 @@ jobs:
             cargo nextest run \
               --config-file .nextest.toml \
               --profile ci \
+              --no-tests=warn \
               -E "($FILTER) & ($SCHEMA_EXCLUDE)"
           else
             echo "🔍 Running full test suite (event=$EVENT)"
