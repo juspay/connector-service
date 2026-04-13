@@ -30,15 +30,15 @@ def _build_authorize_request(capture_method: str):
         ),
         payment_method=payment_methods_pb2.PaymentMethod(  # Payment method to be used.
             upi_collect=payment_methods_pb2.UpiCollect(
-                vpa_id="test@upi",  # Virtual Payment Address.
+                vpa_id=payment_methods_pb2.SecretString(value="test@upi"),  # Virtual Payment Address.
             ),
         ),
         capture_method=payment_pb2.CaptureMethod.Value(capture_method),  # Method for capturing the payment.
         address=payment_pb2.PaymentAddress(  # Address Information.
             billing_address=payment_pb2.Address(
-                first_name="John",  # Personal Information.
-                email="test@example.com",  # Contact Information.
-                phone_number="4155552671",
+                first_name=payment_methods_pb2.SecretString(value="John"),  # Personal Information.
+                email=payment_methods_pb2.SecretString(value="test@example.com"),  # Contact Information.
+                phone_number=payment_methods_pb2.SecretString(value="4155552671"),
                 phone_country_code="+1",
             ),
         ),
@@ -58,7 +58,7 @@ def _build_get_request(connector_transaction_id: str):
             currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
         ),
     )
-async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Authorize (UpiCollect)"""
     payment_client = PaymentClient(config)
 
@@ -67,7 +67,7 @@ async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.Connect
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
 
-async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Get"""
     payment_client = PaymentClient(config)
 

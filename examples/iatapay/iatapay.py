@@ -42,7 +42,7 @@ def _build_authorize_request(capture_method: str):
         webhook_url="https://example.com/webhook",
         state=payment_pb2.ConnectorState(  # State Information.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
-                token="probe_access_token",  # The token string.
+                token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
                 expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
             ),
@@ -63,7 +63,7 @@ def _build_get_request(connector_transaction_id: str):
         ),
         state=payment_pb2.ConnectorState(  # State Information.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
-                token="probe_access_token",  # The token string.
+                token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
                 expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
             ),
@@ -84,7 +84,7 @@ def _build_refund_request(connector_transaction_id: str):
         webhook_url="https://example.com/webhook",  # URL for webhook notifications.
         state=payment_pb2.ConnectorState(  # State data for access token storage and.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
-                token="probe_access_token",  # The token string.
+                token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
                 expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
             ),
@@ -98,13 +98,13 @@ def _build_refund_get_request():
         refund_id="probe_refund_id_001",
         state=payment_pb2.ConnectorState(  # State Information.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
-                token="probe_access_token",  # The token string.
+                token=payment_methods_pb2.SecretString(value="probe_access_token"),  # The token string.
                 expires_in_seconds=3600,  # Expiration timestamp (seconds since epoch).
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
             ),
         ),
     )
-async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Authorize (Ideal)"""
     payment_client = PaymentClient(config)
 
@@ -113,7 +113,7 @@ async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.Connect
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
 
-async def create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: MerchantAuthenticationService.CreateServerAuthenticationToken"""
     merchantauthentication_client = MerchantAuthenticationClient(config)
 
@@ -122,7 +122,7 @@ async def create_server_authentication_token(merchant_transaction_id: str, confi
     return {"status": create_response.status}
 
 
-async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Get"""
     payment_client = PaymentClient(config)
 
@@ -131,7 +131,7 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     return {"status": get_response.status}
 
 
-async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Refund"""
     payment_client = PaymentClient(config)
 
@@ -140,7 +140,7 @@ async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorC
     return {"status": refund_response.status}
 
 
-async def refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_refund_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: RefundService.Get"""
     refund_client = RefundClient(config)
 

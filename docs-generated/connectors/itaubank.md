@@ -109,4 +109,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
 
-**Examples:** [Python](../../examples/itaubank/itaubank.py#L27) · [TypeScript](../../examples/itaubank/itaubank.ts#L30) · [Kotlin](../../examples/itaubank/itaubank.kt#L23) · [Rust](../../examples/itaubank/itaubank.rs#L34)
+**Examples:** [Python](../../examples/itaubank/itaubank.py) · [TypeScript](../../examples/itaubank/itaubank.ts#L30) · [Kotlin](../../examples/itaubank/itaubank.kt#L23) · [Rust](../../examples/itaubank/itaubank.rs)

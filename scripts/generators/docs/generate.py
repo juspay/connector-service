@@ -1264,6 +1264,40 @@ def check_example_syntax(examples_dir: Path, connectors: Optional[list[str]] = N
                         errors.append(f"Rust (cargo): {line.strip()}")
                 if not any("Rust (cargo)" in e for e in errors):
                     errors.append(f"Rust (cargo check failed): {combined[:500].strip()}")
+            
+            # Check examples directly to catch import resolution errors
+            # Use temp copy to sdk/rust/examples for auto-discovery (cleaner than 80 [[example]] entries)
+            import shutil
+            examples_dst = repo_root / "sdk" / "rust" / "examples"
+            examples_dst.mkdir(exist_ok=True)
+            
+            # Copy all .rs files for auto-discovery
+            copied = 0
+            for connector in connector_names:
+                src_file = examples_dir / connector / f"{connector}.rs"
+                if src_file.exists():
+                    shutil.copy2(src_file, examples_dst / f"{connector}.rs")
+                    copied += 1
+            
+            if copied > 0:
+                # Check all examples at once (much faster than 80 individual checks)
+                example_check = subprocess.run(
+                    ["cargo", "check", "--examples", "--message-format=short"],
+                    cwd=str(repo_root / "sdk" / "rust"),
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+                if example_check.returncode != 0:
+                    for line in (example_check.stdout + example_check.stderr).splitlines():
+                        if "error[" in line or "error:" in line:
+                            errors.append(f"Rust (examples): {line.strip()}")
+                
+                # Clean up only the files we copied (not the entire directory)
+                for connector in connector_names:
+                    copied_file = examples_dst / f"{connector}.rs"
+                    if copied_file.exists():
+                        copied_file.unlink()
 
     if errors:
         print(f"\n  Syntax errors in {len(errors)} example file(s):")

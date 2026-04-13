@@ -24,7 +24,7 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 def _build_create_server_authentication_token_request():
     return payment_pb2.MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest(
     )
-async def create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_create_server_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: MerchantAuthenticationService.CreateServerAuthenticationToken"""
     merchantauthentication_client = MerchantAuthenticationClient(config)
 

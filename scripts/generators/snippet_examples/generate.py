@@ -55,6 +55,10 @@ _PROTO_FIELD_TYPES: dict[str, dict[str, str]] = {}
 # JSON (no #[serde(default)] generated), so we must always emit "field": [].
 _PROTO_REPEATED_FIELDS: dict[str, set[str]] = {}
 
+# Maps message name -> set of field names that are `map<>` in proto.
+# These map to HashMap<K,V> in prost, represented as {"key": "value"} in generated code.
+_PROTO_MAP_FIELDS: dict[str, set[str]] = {}
+
 # Set of message type names that are "scalar wrappers" (single `value` field).
 # These are stored as plain scalars in probe data but must be sent as
 # {"value": ...} dicts in ParseDict calls.
@@ -66,6 +70,7 @@ _PROTO_WRAPPER_TYPES: set[str] = set()
 _ONEOF_WRAPPER_FIELD: dict[str, str] = {
     "PaymentMethod": "payment_method",
     "MandateId":     "mandate_id_type",
+    "MandateType":   "mandate_type",
 }
 
 # Fields that use the `optional` keyword in proto3 (tracked per message).
@@ -92,8 +97,8 @@ _PROTO_FILE_MAP: dict[str, str] = {}
 _RUST_WRAPPER_CONSTRUCTORS: dict[str, tuple[str, str, bool]] = {
     # (constructor_expr_template, import_path, needs_FromStr_import)
     "SecretString": ("Secret::new({val}.to_string())", "hyperswitch_masking::Secret", False),
-    "CardNumberType": ("CardNumber::from_str({val}).unwrap()", "ucs_cards::CardNumber", True),
-    "NetworkTokenType": ("NetworkToken::from_str({val}).unwrap()", "ucs_cards::NetworkToken", True),
+    "CardNumberType": ("CardNumber::from_str({val}).unwrap()", "cards::CardNumber", True),
+    "NetworkTokenType": ("NetworkToken::from_str({val}).unwrap()", "cards::NetworkToken", True),
 }
 
 
@@ -108,18 +113,93 @@ _PYTHON_WRAPPER_TYPES: frozenset[str] = frozenset({
     "SecretString",
 })
 
+def _get_client_method(flow_key: str) -> str:
+    """Map flow key to ConnectorClient method name.
+    
+    Handles special prefixes like dispute_*, webhook_*, etc.
+    """
+    # Strip dispute_ prefix for dispute flows
+    if flow_key.startswith("dispute_"):
+        return flow_key[8:]  # Remove "dispute_" prefix
+    # Add other prefixes as needed
+    elif flow_key.startswith("webhook_"):
+        return flow_key[8:]  # Remove "webhook_" prefix
+    return flow_key
+
+# Flows that are not yet implemented in ConnectorClient
+_UNSUPPORTED_FLOWS: frozenset[str] = frozenset({
+    "handle_event",
+    "verify_redirect",
+})
+
+
+def _generate_connector_config_rust(connector_name: str) -> str:
+    """Generate accurate Rust config code using parsed proto metadata.
+    
+    Returns the config initialization code or None if connector has no Config struct.
+    Uses _PROTO_FIELD_TYPES which is populated by load_proto_type_map().
+    """
+    conn_enum = _conn_enum_rust(connector_name)
+    config_name = f"{conn_enum}Config"
+    
+    # Check if config exists in parsed proto types
+    if config_name not in _PROTO_FIELD_TYPES:
+        return None
+    
+    fields = _PROTO_FIELD_TYPES[config_name]
+    if not fields:
+        return None
+    
+    # Get repeated and optional field info
+    repeated_fields = _PROTO_REPEATED_FIELDS.get(config_name, set())
+    optional_fields = _PROTO_OPTIONAL_FIELDS.get(config_name, set())
+    
+    field_lines = []
+    for field_name, field_type in fields.items():
+        is_repeated = field_name in repeated_fields
+        is_optional = field_name in optional_fields
+        
+        # Generate appropriate Rust code based on type
+        if is_repeated and field_type == 'string':
+            # Repeated string fields like Vec<String> or Option<Vec<String>>
+            if is_optional:
+                field_lines.append(f'                {field_name}: Some(vec!["value".to_string()]),  // Array field')
+            else:
+                field_lines.append(f'                {field_name}: vec!["value".to_string()],  // Array field')
+        elif field_type == 'SecretString':
+            field_lines.append(f'                {field_name}: Some(hyperswitch_masking::Secret::new("YOUR_{field_name.upper()}".to_string())),  // Authentication credential')
+        elif field_type == 'string':
+            field_lines.append(f'                {field_name}: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls')
+        elif field_type == 'bool':
+            field_lines.append(f'                {field_name}: Some(false),  // Feature flag')
+    
+    if not field_lines:
+        return None
+        
+    config_code = '\n'.join(field_lines)
+    return f'''Some(ConnectorSpecificConfig {{
+            config: Some(connector_specific_config::Config::{conn_enum}({config_name} {{
+{config_code}
+                ..Default::default()
+            }})),
+        }})'''
+
 
 def load_proto_type_map(proto_dir: Path) -> None:
     """Parse all *.proto files in proto_dir to build _PROTO_FIELD_TYPES and _PROTO_WRAPPER_TYPES."""
     global _PROTO_FIELD_TYPES, _PROTO_WRAPPER_TYPES, _PROTO_REPEATED_FIELDS
-    global _PROTO_OPTIONAL_FIELDS, _PROTO_FILE_MAP
+    global _PROTO_OPTIONAL_FIELDS, _PROTO_FILE_MAP, _PROTO_ONEOF_FIELDS, _PROTO_MAP_FIELDS
 
     type_map: dict[str, dict[str, str]] = {}
     repeated_map: dict[str, set[str]] = {}
     optional_map: dict[str, set[str]] = {}
+    map_map: dict[str, set[str]] = {}
     file_map: dict[str, str] = {}
     _FIELD_RE = re.compile(
         r"^\s*(repeated\s+)?(optional\s+)?([\w<>,\s]+?)\s+(\w+)\s*=\s*\d+"
+    )
+    _MAP_FIELD_RE = re.compile(
+        r"^\s*map<([^>]+)>\s+(\w+)\s*=\s*\d+"
     )
     _SKIP_KEYWORDS = frozenset(
         ["message", "enum", "oneof", "reserved", "option", "extensions",
@@ -164,6 +244,7 @@ def load_proto_type_map(proto_dir: Path) -> None:
             fields: dict[str, str] = {}
             repeated_fields: set[str] = set()
             optional_fields: set[str] = set()
+            map_fields: set[str] = set()
             inner_depth = 0
             in_oneof = False
             for line in body.splitlines():
@@ -178,6 +259,14 @@ def load_proto_type_map(proto_dir: Path) -> None:
                     continue
                 if inner_depth > 1:
                     continue
+                # First check for map<> fields
+                mm = _MAP_FIELD_RE.match(line)
+                if mm:
+                    ftype, fname = mm.group(1), mm.group(2)
+                    if fname not in _SKIP_KEYWORDS:
+                        fields[fname] = f"map<{ftype}>"
+                        map_fields.add(fname)
+                    continue
                 fm = _FIELD_RE.match(line)
                 if fm:
                     is_repeated, is_optional, ftype, fname = fm.group(1), fm.group(2), fm.group(3), fm.group(4)
@@ -191,6 +280,7 @@ def load_proto_type_map(proto_dir: Path) -> None:
             type_map[msg_name] = fields
             repeated_map[msg_name] = repeated_fields
             optional_map[msg_name] = optional_fields
+            map_map[msg_name] = map_fields
             file_map[msg_name] = proto_file.stem
             pos = i  # advance past the entire message body
 
@@ -201,6 +291,8 @@ def load_proto_type_map(proto_dir: Path) -> None:
     _PROTO_REPEATED_FIELDS.update(repeated_map)
     _PROTO_OPTIONAL_FIELDS.clear()
     _PROTO_OPTIONAL_FIELDS.update(optional_map)
+    _PROTO_MAP_FIELDS.clear()
+    _PROTO_MAP_FIELDS.update(map_map)
     _PROTO_FILE_MAP.clear()
     _PROTO_FILE_MAP.update(file_map)
     # Wrapper types: messages whose only field is named "value"
@@ -1274,7 +1366,7 @@ def _rust_status_check_lines(flow_key: str, var_name: str, pad: str = "    ") ->
         lines.append(f'{pad}    return Err(format!("Refund failed: {{:?}}", {var_name}.error).into());')
         lines.append(f'{pad}}}')
         lines.append("")
-    elif flow_key in ("pre_authenticate", "authenticate", "post_authenticate"):
+    elif flow_key in ("pre_authenticate", "authenticate", "post_authenticate", "create_server_session_authentication_token"):
         label = flow_key.replace("_", " ").title()
         lines.append(f'{pad}if {var_name}.status_code >= 400 {{')
         lines.append(f'{pad}    return Err(format!("{label} failed (status_code={{}})", {var_name}.status_code).into());')
@@ -1311,6 +1403,12 @@ def _scenario_step_rust(
     drop_fields    = _SCENARIO_DROP_FIELDS.get((scenario_key, flow_key), frozenset())
     static_payload = {k: v for k, v in payload.items() if k not in drop_fields and k not in dyn_by_field}
 
+    # Skip flows that aren't implemented in ConnectorClient
+    if flow_key in _UNSUPPORTED_FLOWS:
+        lines.append(f"{pad}// TODO: {flow_key} not yet implemented in ConnectorClient")
+        lines.append(f"{pad}let {var_name} = todo!(\"{flow_key} not implemented\");")
+        return lines
+    
     lines: list[str] = []
     lines.append(f"{pad}// Step {step_num}: {desc}")
     
@@ -1322,7 +1420,7 @@ def _scenario_step_rust(
         # Using placeholder to avoid syntax error
         rust_type = f"TODO_FIX_MISSING_TYPE_{flow_key}"
     
-    lines.append(f"{pad}let {var_name} = client.{flow_key}({rust_type} {{")
+    lines.append(f"{pad}let {var_name} = client.{_get_client_method(flow_key)}({rust_type} {{")
     for struct_line in _rust_struct_lines(static_payload, grpc_req, message_schemas, indent=2):
         lines.append(struct_line)
     for raw_lines in dyn_by_field.values():
@@ -2861,6 +2959,7 @@ def _rust_struct_lines(
     db  = _SchemaDB(message_schemas)
     lines: list[str] = []
     msg_optional = _PROTO_OPTIONAL_FIELDS.get(msg_name, set())
+    msg_map_fields = _PROTO_MAP_FIELDS.get(msg_name, set())
 
     for key, val in obj.items():
         comment   = db.get_comment(msg_name, key)
@@ -2871,9 +2970,11 @@ def _rust_struct_lines(
         # Determine whether this field is Option<T> in prost:
         # - All message types (including wrapper types) are always Option<T>
         # - Non-message fields are Option<T> only when marked `optional` in proto3
+        # - Map fields are NEVER Option<T> (they default to empty HashMap)
+        is_map = key in msg_map_fields
         is_msg = bool(child_msg and (
             child_msg in _PROTO_FIELD_TYPES or child_msg in _PROTO_WRAPPER_TYPES
-        ))
+        )) and not is_map
         is_opt = is_msg or (key in msg_optional)
 
         def wrap(expr: str) -> str:
@@ -2945,6 +3046,14 @@ def _rust_struct_lines(
                     lines.append(
                         f"{pad}{field}: Some({child_msg} {{ ..Default::default() }}),{cmt_part}"
                     )
+
+            elif is_map and isinstance(val, dict):
+                # Map field — convert dict to Rust HashMap literal (NOT wrapped in Some())
+                map_entries = []
+                for k, v in val.items():
+                    map_entries.append(f"({json.dumps(k)}.to_string(), {json.dumps(v)}.to_string())")
+                hashmap_expr = f'[{" ,".join(map_entries)}].into_iter().collect::<HashMap<_, _>>()'
+                lines.append(f"{pad}{field}: {hashmap_expr},{cmt_part}")
 
             elif child_msg:
                 # Regular nested message — recurse
@@ -3605,7 +3714,7 @@ def render_consolidated_rust(
 
         step_lines: list[str] = [
             f"{pad}// Step {step_num}: {desc}",
-            f"{pad}let {var_name} = client.{flow_key}({builder_call}, &HashMap::new(), None).await?;",
+            f"{pad}let {var_name} = client.{_get_client_method(flow_key)}({builder_call}, &HashMap::new(), None).await?;",
             "",
         ]
         step_lines.extend(_rust_status_check_lines(flow_key, var_name, pad))
@@ -3649,6 +3758,9 @@ def render_consolidated_rust(
     # Generate standalone flow function blocks
     seen_funcs = set(func_names)  # Track already-added function names
     for flow_key, proto_req, pm_label in flow_items:
+        # Skip flows that aren't implemented in ConnectorClient
+        if flow_key in _UNSUPPORTED_FLOWS:
+            continue
         process_fn_name = f"process_{flow_key}"
         if process_fn_name in seen_funcs:
             continue  # Skip duplicates
@@ -3684,7 +3796,7 @@ def render_consolidated_rust(
             status_block = '    Ok(format!("customer_id: {}", response.connector_customer_id))'
         elif flow_key in ("dispute_accept", "dispute_defend", "dispute_submit_evidence"):
             status_block = '    Ok(format!("dispute_status: {:?}", response.dispute_status()))'
-        elif flow_key in ("create_access_token", "create_session_token", "create_client_authentication_token"):
+        elif flow_key in ("create_access_token", "create_session_token", "create_client_authentication_token", "create_server_session_authentication_token"):
             status_block = '    Ok(format!("status: {:?}", response.status_code))'
         else:
             status_block = '    Ok(format!("status: {:?}", response.status()))'
@@ -3700,7 +3812,7 @@ def render_consolidated_rust(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
                 f"#[allow(dead_code)]\n"
                 f"pub async fn {process_fn_name}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
-                f"    let response = client.{flow_key}({builder_call}, &HashMap::new(), None).await?;\n"
+                f"    let response = client.{_get_client_method(flow_key)}({builder_call}, &HashMap::new(), None).await?;\n"
                 f"{status_block}\n"
                 f"}}"
             )
@@ -3709,7 +3821,7 @@ def render_consolidated_rust(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
                 f"#[allow(dead_code)]\n"
                 f"pub async fn {process_fn_name}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
-                f"    let response = client.{flow_key}(build_{flow_key}_request(), &HashMap::new(), None).await?;\n"
+                f"    let response = client.{_get_client_method(flow_key)}(build_{flow_key}_request(), &HashMap::new(), None).await?;\n"
                 f"{status_block}\n"
                 f"}}"
             )
@@ -3729,7 +3841,7 @@ def render_consolidated_rust(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
                 f"#[allow(dead_code)]\n"
                 f"pub async fn {process_fn_name}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
-                f"    let response = client.{flow_key}({rust_type} {{\n"
+                f"    let response = client.{_get_client_method(flow_key)}({rust_type} {{\n"
                 f"{struct_body}\n"
                 f"        ..Default::default()\n"
                 f"    }}, &HashMap::new(), None).await?;\n"
@@ -3783,6 +3895,11 @@ def render_consolidated_rust(
     if need_fromstr:
         extra_imports += "\nuse std::str::FromStr;"
 
+    # Generate connector config if available
+    connector_config = _generate_connector_config_rust(connector_name)
+    if connector_config is None:
+        connector_config = "None,  // TODO: Add your connector config here"
+
     return f"""\
 // This file is auto-generated. Do not edit manually.
 // Replace YOUR_API_KEY and placeholder values with real data.
@@ -3801,12 +3918,7 @@ use std::collections::HashMap;{extra_imports}
 fn build_client() -> ConnectorClient {{
     // Configure the connector with authentication
     let config = ConnectorConfig {{
-        connector_config: Some(ConnectorSpecificConfig {{
-            config: Some(connector_specific_config::Config::{conn_enum}({conn_enum}Config {{
-                api_key: Some(hyperswitch_masking::Secret::new("YOUR_API_KEY".to_string())),
-                ..Default::default()
-            }}),),
-        }}),
+        connector_config: {connector_config},
         options: Some(SdkOptions {{
             environment: Environment::Sandbox.into(),
         }}),

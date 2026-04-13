@@ -5,19 +5,26 @@
 // Stripe — all scenarios and flows in one file.
 // Run a scenario:  cargo run --example stripe -- process_checkout_card
 
+use cards::CardNumber;
+use grpc_api_types::payments::connector_specific_config;
 use grpc_api_types::payments::payment_method;
 use grpc_api_types::payments::*;
 use hyperswitch_masking::Secret;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 use std::str::FromStr;
-use ucs_cards::CardNumber;
 
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {
-    // Set connector_config to authenticate: use ConnectorSpecificConfig with your StripeConfig
+    // Configure the connector with authentication
     let config = ConnectorConfig {
-        connector_config: None, // TODO: Some(ConnectorSpecificConfig { config: Some(...) })
+        connector_config: Some(ConnectorSpecificConfig {
+            config: Some(connector_specific_config::Config::Stripe(StripeConfig {
+                api_key: Some(hyperswitch_masking::Secret::new("YOUR_API_KEY".to_string())), // Authentication credential
+                base_url: Some("https://sandbox.example.com".to_string()), // Base URL for API calls
+                ..Default::default()
+            })),
+        }),
         options: Some(SdkOptions {
             environment: Environment::Sandbox.into(),
         }),

@@ -24,7 +24,7 @@ _default_config = sdk_config_pb2.ConnectorConfig(
 def _build_handle_event_request():
     return payment_pb2.EventServiceHandleRequest(
     )
-async def handle_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+async def process_handle_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: EventService.HandleEvent"""
     event_client = EventClient(config)
 
