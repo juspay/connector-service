@@ -18,11 +18,11 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
-    payment_method_data::{BankDebitData, CardToken, PaymentMethodData, PaymentMethodDataTypes},
+    errors::{ConnectorError, IntegrationError},
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
-        ErrorResponse, PaymentMethodToken,
+        ErrorResponse,
     },
     router_data_v2::RouterDataV2,
 };
@@ -386,55 +386,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
                 .into()),
             },
-            // TODO: Map CardToken payment_method_id into Payload's payment request body
-            // once the exact field mapping is confirmed. Payload.js Secure Inputs
-            // return a payment_method_id that must be sent server-side.
-            PaymentMethodData::CardToken(CardToken { .. }) => {
-                let token = router_data
-                    .resource_common_data
-                    .payment_method_token
-                    .as_ref()
-                    .map(|t| match t {
-                        PaymentMethodToken::Token(s) => s.clone(),
-                    })
-                    .ok_or(IntegrationError::MissingRequiredField {
-                        field_name: "payment_method_token",
-                        context: IntegrationErrorContext {
-                            suggested_action: Some(
-                                "Tokenize the card client-side using Payload.js Secure Inputs \
-                                 and pass the returned `payment_method_id` as \
-                                 `payment_method_token` on the authorize request."
-                                    .to_owned(),
-                            ),
-                            doc_url: Some(
-                                "https://docs.payload.com/ui/secure-input".to_owned(),
-                            ),
-                            additional_context: Some(
-                                "Payload's CardToken flow requires a server-side \
-                                 `payment_method_id` produced by Payload.js Secure Inputs; \
-                                 none was provided on the router data."
-                                    .to_owned(),
-                            ),
-                        },
-                    })?;
+            // Payload.js Secure Inputs return a payment_method_id (pm_xxx) that is
+            // sent server-side to /transactions as a top-level `payment_method_id`
+            // form field — same wire shape as the repeat-payment path.
+            // Docs: https://docs.payload.com/ui/payloadjs/secure-input/handle-results/
+            PaymentMethodData::PaymentMethodToken(t) => {
+                let token = t.token.clone();
 
-                let is_mandate = router_data.request.is_mandate_payment();
+                let status = if is_manual_capture(router_data.request.capture_method) {
+                    Some(responses::PayloadPaymentStatus::Authorized)
+                } else {
+                    None
+                };
 
-                let cards_data = build_payload_cards_request_data(
-                    &router_data.request.payment_method_data,
-                    &router_data.connector_config,
-                    router_data.request.currency,
-                    amount,
-                    &router_data.resource_common_data,
-                    router_data.request.capture_method,
-                    is_mandate,
-                )?;
-
-                // TODO: Attach `token` to the request body once the Payload API
-                // field for pre-tokenized payment methods is confirmed.
-                let _ = token;
-
-                Ok(Self::PayloadCardsRequest(Box::new(cards_data)))
+                Ok(Self::PayloadCardTokenRequest(Box::new(
+                    requests::PayloadCardTokenRequestData {
+                        amount,
+                        transaction_types: requests::TransactionTypes::Payment,
+                        payment_method_id: token,
+                        status,
+                    },
+                )))
             }
             _ => Err(IntegrationError::NotSupported {
                 message: "Payment method".to_string(),
