@@ -18,7 +18,7 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{BankDebitData, CardToken, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
@@ -397,11 +397,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .map(|t| match t {
                         PaymentMethodToken::Token(s) => s.clone(),
                     })
-                    .ok_or_else(|| {
-                        error_stack::report!(IntegrationError::MissingRequiredField {
-                            field_name: "payment_method_token",
-                            context: Default::default(),
-                        })
+                    .ok_or(IntegrationError::MissingRequiredField {
+                        field_name: "payment_method_token",
+                        context: IntegrationErrorContext {
+                            suggested_action: Some(
+                                "Tokenize the card client-side using Payload.js Secure Inputs \
+                                 and pass the returned `payment_method_id` as \
+                                 `payment_method_token` on the authorize request."
+                                    .to_owned(),
+                            ),
+                            doc_url: Some(
+                                "https://docs.payload.com/ui/secure-input".to_owned(),
+                            ),
+                            additional_context: Some(
+                                "Payload's CardToken flow requires a server-side \
+                                 `payment_method_id` produced by Payload.js Secure Inputs; \
+                                 none was provided on the router data."
+                                    .to_owned(),
+                            ),
+                        },
                     })?;
 
                 let is_mandate = router_data.request.is_mandate_payment();
