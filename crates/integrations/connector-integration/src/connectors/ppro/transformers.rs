@@ -223,9 +223,9 @@ where
             .ok()
             .map(|billing| PproConsumer {
                 name: billing.get_full_name().ok(),
-                email: email.clone(),
+                email,
                 country: billing.country.map(|c| c.to_string()),
-                merchant_consumer_reference: merchant_consumer_reference.clone(),
+                merchant_consumer_reference,
             });
 
         Ok(Self {
@@ -989,9 +989,9 @@ where
                         .as_ref()
                         .map(|n| Secret::new(n.clone()))
                 }),
-                email: email.clone(),
+                email,
                 country: billing.country.map(|c| c.to_string()),
-                merchant_consumer_reference: merchant_consumer_reference.clone(),
+                merchant_consumer_reference,
             });
 
         let start_date = router_data
