@@ -37,7 +37,6 @@ pub fn build_handle_event_request() -> EventServiceHandleRequest {
 
 
 
-
 #[allow(dead_code)]
 #[tokio::main]
 async fn main() {
