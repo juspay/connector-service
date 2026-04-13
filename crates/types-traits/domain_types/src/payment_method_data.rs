@@ -264,7 +264,7 @@ pub enum PaymentMethodData<T: PaymentMethodDataTypes> {
     Upi(UpiData),
     Voucher(VoucherData),
     GiftCard(Box<GiftCardData>),
-    CardToken(CardToken),
+    PaymentMethodToken(PaymentMethodToken),
     OpenBanking(OpenBankingData),
     NetworkToken(NetworkTokenData),
     MobilePayment(MobilePaymentData),
@@ -378,14 +378,10 @@ pub struct GiftCardDetails {
     pub cvc: Secret<String>,
 }
 
-#[derive(Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone, Default)]
+#[derive(Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
 #[serde(rename_all = "snake_case")]
-pub struct CardToken {
-    /// The card holder's name
-    pub card_holder_name: Option<Secret<String>>,
-
-    /// The CVC number for the card
-    pub card_cvc: Option<Secret<String>>,
+pub struct PaymentMethodToken {
+    pub token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -667,6 +663,9 @@ pub enum BankRedirectData {
         provider: String,
     },
     OpenBanking {},
+    Netbanking {
+        issuer: common_enums::BankNames,
+    },
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -997,6 +996,15 @@ impl GooglePayDecryptedData {
         let year = self.get_two_digit_expiry_year()?.expose();
         let month = self.get_expiry_month()?.clone().expose();
         Ok(Secret::new(format!("{month}{year}")))
+    }
+
+    pub fn get_expiry_date_as_yyyymm(
+        &self,
+        delimiter: &str,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
+        let year = self.get_four_digit_expiry_year()?.expose();
+        let month = self.get_expiry_month()?.clone().expose();
+        Ok(Secret::new(format!("{year}{delimiter}{month}")))
     }
 
     pub fn get_expiry_month(&self) -> error_stack::Result<Secret<String>, ValidationError> {
