@@ -221,8 +221,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(IntegrationError::not_implemented(
+                Err(IntegrationError::NotImplemented(
                     crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
+                    Default::default(),
                 ))?
             }
         }
@@ -379,9 +380,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })?,
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                Err(IntegrationError::not_implemented(
-                    "Network mandate ID not supported for repeat payments in dlocal".to_string(),
-                ))?
+                Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: "Network mandate ID not supported for repeat payments in dlocal"
+                        .to_string(),
+                    connector: "Dlocal",
+                    context: Default::default(),
+                }))?
             }
         };
 
@@ -557,9 +561,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 description,
                 notification_url: router_data.request.webhook_url.clone(),
             }),
-            _ => Err(IntegrationError::not_implemented(
-                crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
-            ))?,
+            _ => Err(error_stack::report!(IntegrationError::NotSupported {
+                message: crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
+                connector: "Dlocal",
+                context: Default::default(),
+            }))?,
         }
     }
 }
@@ -1023,9 +1029,11 @@ fn get_bank_debit_payment_method_id(
         payment_method_data::BankDebitData::BecsBankDebit { .. }
         | payment_method_data::BankDebitData::EftBankDebit { .. }
         | payment_method_data::BankDebitData::BacsBankDebit { .. } => {
-            Err(IntegrationError::not_implemented(
-                crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
-            ))?
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
+                connector: "Dlocal",
+                context: Default::default(),
+            }))?
         }
     }
 }
