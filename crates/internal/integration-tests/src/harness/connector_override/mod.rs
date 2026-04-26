@@ -85,6 +85,17 @@ impl OverrideRegistry {
     }
 }
 
+pub use loader::PreRequestHttpHook;
+
+/// Returns the optional `pre_request_http` hook spec for a scenario.
+pub fn connector_pre_request_http_hook(
+    connector: &str,
+    suite: &str,
+    scenario: &str,
+) -> Result<Option<PreRequestHttpHook>, ScenarioError> {
+    loader::load_scenario_pre_request_http(connector, suite, scenario)
+}
+
 /// Applies connector override patches to request payload and assertions.
 pub fn apply_connector_overrides(
     connector: &str,
