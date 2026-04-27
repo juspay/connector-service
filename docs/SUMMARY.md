@@ -4,6 +4,16 @@
   - [Installation & Configuration](getting-started/installation.md)
   - [First Payment](getting-started/first-payment.md)
   - [Extend to More Flows](getting-started/extend-to-more-flows.md)
+  - [Payment Methods](getting-started/payment-methods/README.md)
+    - [Connector Token](getting-started/payment-methods/connector-token.md)
+    - [Card](getting-started/payment-methods/card.md)
+    - [Apple Pay](getting-started/payment-methods/apple-pay.md)
+    - [Google Pay](getting-started/payment-methods/google-pay.md)
+    - [PayPal](getting-started/payment-methods/paypal.md)
+    - [iDEAL](getting-started/payment-methods/ideal.md)
+    - [SEPA Direct Debit](getting-started/payment-methods/sepa.md)
+    - [ACH Direct Debit](getting-started/payment-methods/ach.md)
+    - [Klarna](getting-started/payment-methods/klarna.md)
 
 - [Architecture Overview](architecture/README.md)
   - [PCI Compliance](architecture/compliance/compliance.md)
@@ -54,6 +64,8 @@
     - [Create Session Token](api-reference/services/merchant-authentication-service/create-session-token.md)
     - [Create SDK Session Token](api-reference/services/merchant-authentication-service/create-sdk-session-token.md)
   - [Domain Schema](api-reference/domain-schema/README.md)
+
+- [FAQs](FAQs.md)
 
 - [Java SDK Overview](sdks/java/README.md)
   - [Payment Service Overview](sdks/java/payment-service/README.md)

@@ -52,6 +52,9 @@
       "Becs": {
         "status": "not_implemented"
       },
+      "BillDeskRedirect": {
+        "status": "not_implemented"
+      },
       "Bizum": {
         "status": "not_implemented"
       },
@@ -76,6 +79,9 @@
       "CashappQr": {
         "status": "not_implemented"
       },
+      "CashfreeRedirect": {
+        "status": "not_implemented"
+      },
       "CimbVaBankTransfer": {
         "status": "not_implemented"
       },
@@ -84,16 +90,22 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_implemented"
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented"
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_implemented"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_implemented"
       },
       "Efecty": {
@@ -108,12 +120,18 @@
       "FamilyMart": {
         "status": "not_implemented"
       },
+      "GCash": {
+        "status": "not_implemented"
+      },
       "Giropay": {
         "status": "not_implemented"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented"
       },
       "GooglePay": {
         "status": "not_implemented"
@@ -145,10 +163,16 @@
       "Interac": {
         "status": "not_implemented"
       },
+      "KakaoPay": {
+        "status": "not_implemented"
+      },
       "Klarna": {
         "status": "not_implemented"
       },
       "Lawson": {
+        "status": "not_implemented"
+      },
+      "LazyPayRedirect": {
         "status": "not_implemented"
       },
       "LocalBankRedirect": {
@@ -169,7 +193,17 @@
       "MiniStop": {
         "status": "not_implemented"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_implemented"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_implemented"
+      },
+      "Netbanking": {
         "status": "not_implemented"
       },
       "OnlineBankingCzechRepublic": {
@@ -195,7 +229,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_implemented"
@@ -211,7 +245,10 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_implemented"
       },
       "PaypalRedirect": {
         "status": "not_implemented"
@@ -219,11 +256,18 @@
       "PaypalSdk": {
         "status": "not_implemented"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_implemented"
+      },
+      "PhonePeRedirect": {
         "status": "not_implemented"
       },
       "Pix": {
@@ -265,10 +309,23 @@
       "SevenEleven": {
         "status": "not_implemented"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented"
       },
+      "Swish": {
+        "status": "not_implemented"
+      },
+      "TouchNGo": {
+        "status": "not_implemented"
+      },
       "Trustly": {
+        "status": "not_implemented"
+      },
+      "Twint": {
         "status": "not_implemented"
       },
       "UpiCollect": {
@@ -278,6 +335,9 @@
         "status": "not_implemented"
       },
       "UpiQr": {
+        "status": "not_implemented"
+      },
+      "Vipps": {
         "status": "not_implemented"
       },
       "WeChatPayQr": {
@@ -365,6 +425,11 @@
       }
     },
     "incremental_authorization": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "parse_event": {
       "default": {
         "status": "not_implemented"
       }
