@@ -2484,6 +2484,7 @@ where
                         payment_method_id: None,
                         connector_mandate_request_reference_id: None,
                     })),
+                    charges: None,
                     status_code: item.http_code,
                     connector_metadata: Some(connector_meta),
                     network_txn_id: None,
@@ -2598,6 +2599,7 @@ impl TryFrom<ResponseRouterData<PaypalRedirectResponse, Self>>
                     purchase_units.map_or(item.response.id, |item| item.invoice_id.clone()),
                 ),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -2627,6 +2629,7 @@ impl<F, T> TryFrom<ResponseRouterData<PaypalThreeDsSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -2708,6 +2711,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -2750,6 +2754,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     purchase_units.map_or(item.response.id, |item| item.invoice_id.clone()),
                 ),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -2822,6 +2827,7 @@ impl<F, T> TryFrom<ResponseRouterData<PaypalPaymentsSyncResponse, Self>>
                     .clone()
                     .or(Some(item.response.supplementary_data.related_ids.order_id)),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -3003,6 +3009,7 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: invoice_id.or(Some(capture_id)),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -3050,6 +3057,7 @@ impl<F, T> TryFrom<ResponseRouterData<PaypalPaymentsCancelResponse, Self>>
                     .invoice_id
                     .or(Some(item.response.id)),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -3091,6 +3099,7 @@ impl<F, T> TryFrom<ResponseRouterData<PaypalSetupMandatesResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(info_response.id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data

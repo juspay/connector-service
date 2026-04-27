@@ -348,6 +348,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxAuthorizeRespon
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
@@ -502,6 +503,7 @@ impl TryFrom<ResponseRouterData<PayboxPSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -643,6 +645,7 @@ impl TryFrom<ResponseRouterData<PayboxCaptureResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
@@ -804,6 +807,7 @@ impl TryFrom<ResponseRouterData<PayboxVoidResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {

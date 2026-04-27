@@ -4466,6 +4466,7 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
             mandate_reference: None,
+            charges: None,
             status_code: http_code,
         };
 
@@ -4561,6 +4562,7 @@ pub fn get_adyen_response(
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
         mandate_reference: mandate_reference.map(Box::new),
+        charges: None,
         status_code,
     };
 
@@ -4650,6 +4652,7 @@ pub fn get_present_to_shopper_response(
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
         mandate_reference: None,
+        charges: None,
         status_code,
     };
 
@@ -4723,6 +4726,7 @@ pub fn get_redirection_error_response(
             .clone()
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
 
@@ -4784,6 +4788,7 @@ pub fn get_qr_code_response(
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
         mandate_reference: None,
+        charges: None,
         status_code,
     };
 
@@ -4923,6 +4928,7 @@ pub fn get_webhook_response(
             network_txn_id: None,
             connector_response_reference_id: Some(response.merchant_reference_id),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code,
         };
 
@@ -5074,6 +5080,7 @@ pub fn get_redirection_response(
             .clone()
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
 
@@ -5956,6 +5963,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
+                charges: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {

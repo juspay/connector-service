@@ -654,6 +654,7 @@ impl<
                 network_txn_id: None,
                 connector_response_reference_id: connector_ref_id,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };
@@ -795,6 +796,7 @@ impl TryFrom<ResponseRouterData<PaytmTransactionStatusResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: connector_ref_id,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };

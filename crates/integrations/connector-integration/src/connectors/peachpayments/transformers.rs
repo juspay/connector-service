@@ -89,6 +89,7 @@ fn get_webhook_response(
             network_txn_id: None,
             connector_response_reference_id: Some(transaction.reference_id.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code,
         })
     };
@@ -385,6 +386,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };
@@ -425,6 +427,7 @@ impl TryFrom<ResponseRouterData<responses::PeachpaymentsSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -481,6 +484,7 @@ impl TryFrom<ResponseRouterData<responses::PeachpaymentsCaptureResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -554,6 +558,7 @@ impl TryFrom<ResponseRouterData<responses::PeachpaymentsVoidResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

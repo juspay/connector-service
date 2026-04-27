@@ -565,6 +565,7 @@ impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<PowertranzPayments
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -606,6 +607,7 @@ impl<F> TryFrom<ResponseRouterData<PowertranzPaymentsSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -647,6 +649,7 @@ impl<F> TryFrom<ResponseRouterData<PowertranzCaptureResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -688,6 +691,7 @@ impl<F> TryFrom<ResponseRouterData<PowertranzVoidResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -949,6 +953,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PowertranzSetupMandat
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             })
         };
@@ -1131,6 +1136,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PowertranzRepeatPayme
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             })
         };

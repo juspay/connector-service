@@ -2753,6 +2753,7 @@ where
                     .router_data
                     .request
                     .get_request_incremental_authorization(),
+                charges: None,
                 status_code: item.http_code,
             })
         };
@@ -3037,6 +3038,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
                 network_txn_id: network_transaction_id,
                 connector_response_reference_id: Some(item.response.id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };
@@ -3153,6 +3155,7 @@ impl<F, T> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
                 network_txn_id: network_transaction_id,
                 connector_response_reference_id: Some(item.response.id),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };

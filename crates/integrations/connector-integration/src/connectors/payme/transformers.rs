@@ -355,6 +355,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PaymePaymentResponse,
                 network_txn_id: response.payme_transaction_id.clone(),
                 connector_response_reference_id: response.transaction_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             };
 
@@ -519,6 +520,7 @@ impl TryFrom<ResponseRouterData<PaymeSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: sale_item.transaction_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             };
 
@@ -653,6 +655,7 @@ impl TryFrom<ResponseRouterData<PaymeCaptureResponse, Self>>
                 network_txn_id: response.payme_transaction_id.clone(),
                 connector_response_reference_id: response.transaction_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             };
 
@@ -1027,6 +1030,7 @@ impl TryFrom<ResponseRouterData<PaymeVoidResponse, Self>>
                 network_txn_id: response.payme_transaction_id.clone(),
                 connector_response_reference_id: response.transaction_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             };
 

@@ -859,6 +859,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };
@@ -1432,6 +1433,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };

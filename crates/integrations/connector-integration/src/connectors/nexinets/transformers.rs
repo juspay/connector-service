@@ -447,6 +447,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_id),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -576,6 +577,7 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order.order_id),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -1259,6 +1261,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             })
         };
@@ -1460,6 +1463,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             })
         };

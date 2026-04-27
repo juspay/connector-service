@@ -1981,6 +1981,33 @@ pub enum StripeChargeType {
 }
 
 #[derive(
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    strum::Display,
+    strum::EnumString,
+    Hash,
+)]
+#[strum(serialize_all = "PascalCase")]
+#[serde(rename_all = "PascalCase")]
+pub enum AdyenSplitType {
+    BalanceAccount,
+    AcquiringFees,
+    PaymentFee,
+    AdyenFees,
+    AdyenCommission,
+    AdyenMarkup,
+    Interchange,
+    SchemeFee,
+    Commission,
+    TopUp,
+    Vat,
+}
+
+#[derive(
     Default,
     Clone,
     Debug,

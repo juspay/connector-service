@@ -731,6 +731,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
                 network_txn_id,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
         };
@@ -809,6 +810,7 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
                 network_txn_id,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
         };
@@ -887,6 +889,7 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
                 network_txn_id,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
         };
@@ -1085,6 +1088,7 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -1376,6 +1380,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpaySetupMandate
                 network_txn_id: None,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -1582,6 +1587,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayRepeatPaymen
                 network_txn_id,
                 connector_response_reference_id: item.response.reference.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
         };
