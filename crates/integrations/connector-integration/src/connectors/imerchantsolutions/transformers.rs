@@ -251,6 +251,47 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let imerchantsolutions_metadata = get_imerchantsolutions_metadata(
                     item.router_data.request.metadata.clone().expose_option(),
                 )?;
+                let capture_delay_hours = {
+                    let metadata_capture_delay = imerchantsolutions_metadata.capture_delay_hours;
+
+                    if item.router_data.request.is_auto_capture() {
+                        match metadata_capture_delay {
+                            Some(0) | None => metadata_capture_delay,
+                            Some(_) => {
+                                return Err(errors::IntegrationError::InvalidDataFormat {
+                                    field_name: "metadata.capture_delay_hours",
+                                    context: errors::IntegrationErrorContext {
+                                        suggested_action: Some("Remove `capture_delay_hours` or set it to 0 when using auto-capture.".to_string()),
+                                        doc_url: Some("https://imerchantsolutions.com/docs/api#post--payments".to_string()),
+                                        additional_context: Some(
+                                            "Positive `capture_delay_hours` does not enable delayed auto-capture. \
+                                            For immediate capture, omit this field or set it to 0.".to_string()
+                                        ),
+                                    },
+                                }
+                                .into())
+                            }
+                        }
+                    } else {
+                        match metadata_capture_delay {
+                            Some(0) => {
+                                return Err(errors::IntegrationError::InvalidDataFormat {
+                                    field_name: "metadata.capture_delay_hours",
+                                    context: errors::IntegrationErrorContext {
+                                        suggested_action: Some("Use a positive integer for `capture_delay_hours` or omit it for manual capture.".to_string()),
+                                        doc_url: Some("https://imerchantsolutions.com/docs/api#post--payments".to_string()),
+                                        additional_context: Some(
+                                            "`capture_delay_hours = 0` does not enable manual capture. \
+                                            To enable manual capture, provide a positive value or use `manualCapture: true`.".to_string()
+                                        ),
+                                    },
+                                }
+                                .into())
+                            }
+                            Some(_) | None => metadata_capture_delay,
+                        }
+                    }
+                };
                 Ok(Self {
                     amount: item.router_data.request.amount,
                     currency: item.router_data.request.currency,
@@ -269,7 +310,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     billing,
                     delivery_address,
                     manual_capture: is_manual_capture(item.router_data.request.capture_method),
-                    capture_delay_hours: imerchantsolutions_metadata.capture_delay_hours,
+                    capture_delay_hours,
                 })
             }
             PaymentMethodData::CardRedirect(_)

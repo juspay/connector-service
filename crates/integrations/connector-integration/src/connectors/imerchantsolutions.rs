@@ -320,21 +320,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
-        let auth =
-            imerchantsolutions::ImerchantsolutionsAuthType::try_from(auth_type).map_err(|_| {
-                errors::IntegrationError::FailedToObtainAuthType {
-                    context: errors::IntegrationErrorContext {
-                        suggested_action: Some("Provide AuthType as HeaderKey".to_string()),
-                        doc_url: Some(
-                            "https://imerchantsolutions.com/docs#authentication".to_string(),
-                        ),
-                        additional_context: Some(
-                            "Provided AuthType is incorrect. AuthType should be HeaderKey."
-                                .to_string(),
-                        ),
-                    },
-                }
-            })?;
+        let auth = imerchantsolutions::ImerchantsolutionsAuthType::try_from(auth_type)?;
 
         let mut auth_header = vec![(headers::X_API_KEY.to_string(), auth.api_key.into_masked())];
 
