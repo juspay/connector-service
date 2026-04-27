@@ -51,6 +51,10 @@ pub trait ConnectorOverride: Send + Sync {
     fn normalize_tonic_request(&self, _suite: &str, _scenario: &str, _req: &mut Value) {}
 
     fn transform_response(&self, _suite: &str, _scenario: &str, _response: &mut Value) {}
+
+    fn extra_context_deferred_paths(&self) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 /// Minimal registry wrapper used to resolve override strategy by connector.
@@ -79,6 +83,17 @@ impl OverrideRegistry {
             connector.to_string(),
         ))
     }
+}
+
+pub use loader::PreRequestHttpHook;
+
+/// Returns the optional `pre_request_http` hook spec for a scenario.
+pub fn connector_pre_request_http_hook(
+    connector: &str,
+    suite: &str,
+    scenario: &str,
+) -> Result<Option<PreRequestHttpHook>, ScenarioError> {
+    loader::load_scenario_pre_request_http(connector, suite, scenario)
 }
 
 /// Applies connector override patches to request payload and assertions.
@@ -113,6 +128,13 @@ pub fn transform_response_for_connector(
 ) {
     let strategy = OverrideRegistry::new().resolve(connector);
     strategy.transform_response(suite, scenario, response);
+}
+
+/// Returns request paths that should defer auto-generation until dependency
+/// context propagation.
+pub fn context_deferred_paths_for_connector(connector: &str) -> Vec<String> {
+    let strategy = OverrideRegistry::new().resolve(connector);
+    strategy.extra_context_deferred_paths()
 }
 
 /// Loads `webhook_payload.json` for the connector/scenario, merges the

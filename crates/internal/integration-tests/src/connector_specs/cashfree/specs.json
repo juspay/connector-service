@@ -8,5 +8,6 @@
     "PaymentService/Refund",
     "RefundService/Get",
     "PaymentService/Void"
-  ]
+  ],
+  "sync_poll_until_terminal_seconds": 60
 }
