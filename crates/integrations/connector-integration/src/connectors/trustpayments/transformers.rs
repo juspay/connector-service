@@ -558,6 +558,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             network_txn_id: None,
             connector_response_reference_id: Some(item.response.requestreference.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -793,6 +794,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: Some(item.response.requestreference.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -968,6 +970,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsCaptureResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: Some(item.response.requestreference.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -1113,6 +1116,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsVoidResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: Some(item.response.requestreference.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 

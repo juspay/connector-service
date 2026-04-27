@@ -413,6 +413,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     network_txn_id: None,
                     connector_response_reference_id: response.merchant_payment_id.clone(),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }
             }
@@ -427,6 +428,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 network_txn_id: None,
                 connector_response_reference_id: response.merchant_payment_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             },
         };
@@ -492,6 +494,7 @@ impl TryFrom<ResponseRouterData<IatapaySyncResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: response.merchant_payment_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 

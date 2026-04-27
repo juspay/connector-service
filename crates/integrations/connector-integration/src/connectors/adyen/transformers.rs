@@ -4,7 +4,7 @@ use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
-    ext_traits::{ByteSliceExt, Encode, OptionExt, ValueExt},
+    ext_traits::{ByteSliceExt, Encode, ValueExt},
     request::Method,
     types::{MinorUnit, SemanticVersion},
     SecretSerdeValue,
@@ -3861,16 +3861,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let encoded_data = item
-            .router_data
-            .request
-            .encoded_data
-            .clone()
-            .get_required_value("encoded_data")
-            .change_context(IntegrationError::MissingRequiredField {
-                field_name: "encoded_data: AdyenRedirectRequestTypes",
-                context: Default::default(),
-            })?;
+        let encoded_data = match item.router_data.request.encoded_data.clone() {
+            Some(data) if !data.is_empty() => data,
+            _ => {
+                return Ok(Self {
+                    details: AdyenRedirectRequestTypes::AdyenRedirection(AdyenRedirection {
+                        redirect_result: String::new(),
+                        type_of_redirection_result: None,
+                        result_code: None,
+                    }),
+                });
+            }
+        };
         let adyen_redirection_type =
             serde_urlencoded::from_str::<AdyenRedirectRequestTypes>(encoded_data.as_str())
                 .change_context(IntegrationError::RequestEncodingFailed {
@@ -4466,6 +4468,7 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
             mandate_reference: None,
+            charges: None,
             status_code: http_code,
         };
 
@@ -4561,6 +4564,7 @@ pub fn get_adyen_response(
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
         mandate_reference: mandate_reference.map(Box::new),
+        charges: None,
         status_code,
     };
 
@@ -4650,6 +4654,7 @@ pub fn get_present_to_shopper_response(
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
         mandate_reference: None,
+        charges: None,
         status_code,
     };
 
@@ -4723,6 +4728,7 @@ pub fn get_redirection_error_response(
             .clone()
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
 
@@ -4784,6 +4790,7 @@ pub fn get_qr_code_response(
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
         mandate_reference: None,
+        charges: None,
         status_code,
     };
 
@@ -4923,6 +4930,7 @@ pub fn get_webhook_response(
             network_txn_id: None,
             connector_response_reference_id: Some(response.merchant_reference_id),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code,
         };
 
@@ -5074,6 +5082,7 @@ pub fn get_redirection_response(
             .clone()
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
 
@@ -5219,7 +5228,7 @@ pub enum DisputeStatus {
     Won,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdyenAdditionalDataWH {
     #[serde(rename = "hmacSignature")]
@@ -5250,12 +5259,16 @@ pub struct AdyenAdditionalDataWH {
 pub struct AdyenNotificationRequestItemWH {
     pub original_reference: Option<String>,
     pub psp_reference: String,
+    #[serde(default)]
     pub amount: AdyenAmountWH,
     pub event_code: WebhookEventCode,
+    #[serde(default)]
     pub merchant_account_code: String,
+    #[serde(default)]
     pub merchant_reference: String,
     pub success: String,
     pub reason: Option<String>,
+    #[serde(default)]
     pub additional_data: AdyenAdditionalDataWH,
 }
 
@@ -5263,6 +5276,15 @@ pub struct AdyenNotificationRequestItemWH {
 pub struct AdyenAmountWH {
     pub value: MinorUnit,
     pub currency: common_enums::Currency,
+}
+
+impl Default for AdyenAmountWH {
+    fn default() -> Self {
+        Self {
+            value: MinorUnit::new(0),
+            currency: common_enums::Currency::USD,
+        }
+    }
 }
 
 pub(crate) fn get_adyen_mandate_reference_from_webhook(
@@ -5956,6 +5978,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
+                charges: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -6022,12 +6045,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let (recurring_processing_model, store_payment_method, _) =
             get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
 
-        let return_url = item.router_data.request.router_return_url.clone().ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "return_url",
-                context: Default::default(),
-            },
-        )?;
+        let return_url = item
+            .router_data
+            .request
+            .router_return_url
+            .clone()
+            .or_else(|| item.router_data.request.return_url.clone())
+            .unwrap_or_else(|| "https://hyperswitch.io/redirect/complete".to_string());
 
         let billing_address = get_address_info(
             item.router_data
@@ -6449,12 +6473,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             get_recurring_processing_model_for_repeat_payment(&item.router_data)?;
         let browser_info = None;
         let additional_data = get_additional_data_for_repeat_payment(&item.router_data);
-        let return_url = item.router_data.request.router_return_url.clone().ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "return_url",
-                context: Default::default(),
-            },
-        )?;
+        let return_url = item
+            .router_data
+            .request
+            .router_return_url
+            .clone()
+            .unwrap_or_else(|| "https://hyperswitch.io/redirect/complete".to_string());
         let payment_method_type = item.router_data.request.payment_method_type;
         let testing_data = item
             .router_data
@@ -7685,8 +7709,7 @@ impl TryFrom<ResponseRouterData<AdyenOrderCreateResponse, Self>>
         let connector_order_id = order_response.connector_order_id.clone();
 
         let status = if item.http_code == 200 {
-            // Update status to indicate successful order creation
-            AttemptStatus::Pending
+            AttemptStatus::Started
         } else {
             AttemptStatus::Failure
         };

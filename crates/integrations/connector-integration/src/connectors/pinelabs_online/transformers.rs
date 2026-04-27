@@ -890,6 +890,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PinelabsOnlineResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: response.data.merchant_order_reference,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 });
 
@@ -956,6 +957,7 @@ impl<F, T> TryFrom<ResponseRouterData<PinelabsOnlineCaptureResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: response.data.merchant_order_reference,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 });
 
@@ -1021,6 +1023,7 @@ impl<F, T> TryFrom<ResponseRouterData<PinelabsOnlineVoidResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: response.data.merchant_order_reference,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 });
 

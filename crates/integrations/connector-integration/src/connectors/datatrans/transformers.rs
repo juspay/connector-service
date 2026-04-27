@@ -275,6 +275,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: item.response.acquirer_authorization_code.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -434,6 +435,7 @@ impl TryFrom<ResponseRouterData<DatatransSyncResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -530,6 +532,7 @@ impl TryFrom<ResponseRouterData<DatatransCaptureResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: item.response.acquirer_authorization_code.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -783,6 +786,7 @@ impl TryFrom<ResponseRouterData<DatatransVoidResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: item.response.acquirer_authorization_code.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 

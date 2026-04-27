@@ -659,6 +659,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .map(|auth_id| auth_id.id.clone()),
             connector_response_reference_id: Some(order_status.order_code.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -726,6 +727,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: Some(capture_received.order_code.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -793,6 +795,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: Some(cancel_received.order_code.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -867,6 +870,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                             network_txn_id: None,
                             connector_response_reference_id: Some(order_status.order_code.clone()),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         };
 
@@ -934,6 +938,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                         .map(|auth_id| auth_id.id.clone()),
                     connector_response_reference_id: Some(order_status.order_code.clone()),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 };
 
@@ -987,6 +992,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                     network_txn_id: None,
                     connector_response_reference_id: Some(order_code),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 };
 

@@ -615,6 +615,7 @@ fn handle_cards_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -644,6 +645,7 @@ fn handle_bank_redirects_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -689,6 +691,7 @@ fn handle_bank_redirects_error_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -753,6 +756,7 @@ fn handle_bank_redirects_sync_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -804,6 +808,7 @@ pub fn handle_webhook_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -863,6 +868,7 @@ pub fn handle_webhook_response_incoming_webhook(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
+        charges: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -2789,6 +2795,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -2942,6 +2949,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 

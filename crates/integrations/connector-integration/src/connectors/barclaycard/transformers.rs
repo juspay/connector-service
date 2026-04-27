@@ -332,6 +332,7 @@ fn transform_payment_response<F, Req>(
                             .unwrap_or(info_response.id.clone()),
                     ),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 })
             };
@@ -806,6 +807,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardTransactionResponse, Self>
                                 .and_then(|cref| cref.code)
                                 .or(Some(item.response.id)),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                         resource_common_data: PaymentFlowData {
@@ -825,6 +827,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardTransactionResponse, Self>
                     network_txn_id: None,
                     connector_response_reference_id: Some(item.response.id),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data
@@ -1138,6 +1141,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         ),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
+                        charges: None,
                     })
                 };
 
@@ -1441,6 +1445,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         ),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
+                        charges: None,
                     })
                 };
 

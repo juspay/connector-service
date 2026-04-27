@@ -424,6 +424,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraPaymentsRespon
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_number.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -504,6 +505,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_number.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -590,6 +592,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_number.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -778,6 +781,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_number.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

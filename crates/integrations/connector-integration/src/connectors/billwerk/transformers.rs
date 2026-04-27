@@ -416,6 +416,7 @@ impl<F, T> TryFrom<ResponseRouterData<BillwerkPaymentsResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: Some(response.handle),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: http_code,
         };
         Ok(Self {

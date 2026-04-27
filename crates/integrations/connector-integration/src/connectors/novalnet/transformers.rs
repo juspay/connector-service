@@ -809,6 +809,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -913,6 +914,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1013,6 +1015,7 @@ impl<
                         }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1530,6 +1533,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                         }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1619,6 +1623,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1827,6 +1832,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data

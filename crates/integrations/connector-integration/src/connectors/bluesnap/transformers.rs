@@ -716,6 +716,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.transaction_id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -751,6 +752,7 @@ impl TryFrom<ResponseRouterData<BluesnapCaptureResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.transaction_id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -789,6 +791,7 @@ impl TryFrom<ResponseRouterData<BluesnapVoidResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.transaction_id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -824,6 +827,7 @@ impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.transaction_id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

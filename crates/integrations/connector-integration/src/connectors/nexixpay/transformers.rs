@@ -570,6 +570,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsRespo
                 network_txn_id,
                 connector_response_reference_id: Some(operation.order_id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -631,6 +632,7 @@ impl TryFrom<ResponseRouterData<NexixpaySyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -742,6 +744,7 @@ impl TryFrom<ResponseRouterData<NexixpayCaptureResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -952,6 +955,7 @@ impl TryFrom<ResponseRouterData<NexixpayVoidResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

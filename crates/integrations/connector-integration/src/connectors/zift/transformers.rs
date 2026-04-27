@@ -673,6 +673,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                         network_txn_id: None,
                         connector_response_reference_id: item.response.transaction_code.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -822,6 +823,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                         network_txn_id: None,
                         connector_response_reference_id: item.response.transaction_code.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -893,6 +895,7 @@ impl TryFrom<ResponseRouterData<ZiftSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };
@@ -996,6 +999,7 @@ impl<F> TryFrom<ResponseRouterData<ZiftCaptureResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data
@@ -1140,6 +1144,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     network_txn_id: None,
                     connector_response_reference_id: item.response.transaction_code.clone(),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data
@@ -1216,6 +1221,7 @@ impl<F> TryFrom<ResponseRouterData<ZiftVoidResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         } else {

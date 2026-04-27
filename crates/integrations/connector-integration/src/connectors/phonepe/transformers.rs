@@ -585,6 +585,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 data.merchant_transaction_id.clone(),
                             ),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                         resource_common_data: PaymentFlowData {
@@ -609,6 +610,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 data.merchant_transaction_id.clone(),
                             ),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                         resource_common_data: PaymentFlowData {
@@ -895,6 +897,7 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                             network_txn_id: None,
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                         resource_common_data: PaymentFlowData {

@@ -929,6 +929,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MultisafepayPaymentsR
                 network_txn_id: None,
                 connector_response_reference_id: response_data.order_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -968,6 +969,7 @@ impl TryFrom<ResponseRouterData<MultisafepayPaymentsResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: response_data.order_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

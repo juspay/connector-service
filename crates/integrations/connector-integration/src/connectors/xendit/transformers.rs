@@ -517,6 +517,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             })
         };
@@ -595,6 +596,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: http_code,
                     })
                 };
@@ -718,6 +720,7 @@ impl<F> TryFrom<ResponseRouterData<XenditCaptureResponse, Self>>
                     item.response.reference_id.peek().to_string(),
                 ),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };

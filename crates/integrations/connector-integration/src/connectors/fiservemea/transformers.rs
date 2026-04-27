@@ -753,6 +753,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<FiservemeaPaymentsRes
                 network_txn_id: item.response.api_trace_id.clone(),
                 connector_response_reference_id: item.response.client_request_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -807,6 +808,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
                 network_txn_id: item.response.api_trace_id.clone(),
                 connector_response_reference_id: item.response.client_request_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -861,6 +863,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
                 network_txn_id: item.response.api_trace_id.clone(),
                 connector_response_reference_id: item.response.client_request_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -966,6 +969,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
                 network_txn_id: item.response.api_trace_id.clone(),
                 connector_response_reference_id: item.response.client_request_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

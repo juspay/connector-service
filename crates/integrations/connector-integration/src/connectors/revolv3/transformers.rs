@@ -482,6 +482,7 @@ impl Revolv3SaleResponse {
                 network_txn_id: self.network_transaction_id.clone(),
                 connector_response_reference_id: self.merchant_invoice_ref_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code,
             })
         };
@@ -523,6 +524,7 @@ impl Revolv3AuthorizeResponse {
                     network_txn_id: self.network_transaction_id.clone(),
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code,
                 }),
             }),
@@ -693,6 +695,7 @@ impl TryFrom<ResponseRouterData<Revolv3PaymentSyncResponse, Self>>
                 network_txn_id: item.response.network_transaction_id.clone(),
                 connector_response_reference_id: item.response.merchant_invoice_ref_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             })
         };
@@ -1021,6 +1024,7 @@ impl TryFrom<ResponseRouterData<Revolv3AuthReversalResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

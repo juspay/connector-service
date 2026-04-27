@@ -570,6 +570,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: Some(response.receipt.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -697,6 +698,7 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: Some(response.receipt.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -846,6 +848,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: Some(response.receipt.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -1340,6 +1343,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -1511,6 +1515,7 @@ impl<
             network_txn_id: None,
             connector_response_reference_id: Some(response.receipt.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
