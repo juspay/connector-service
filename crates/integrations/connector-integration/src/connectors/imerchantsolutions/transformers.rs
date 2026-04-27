@@ -3,7 +3,7 @@ use common_utils::{consts, errors::ParsingError, pii, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        EventType, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
@@ -419,6 +419,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum ImerchantsolutionsPaymentSyncResponse {
+    ImerchantsolutionsPSyncResponse(ImerchantsolutionsPSyncResponseData),
+    ImerchantsolutionsWebhookResponse(ImerchantsolutionsWebhookData),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ImerchantsolutionsPSyncResponseData {
     payment_id: String,
@@ -476,93 +483,207 @@ impl<'a> utils::MultipleCaptureSyncResponse for CaptureWithStatus<'a> {
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>>
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ImerchantsolutionsWebhookData {
+    #[serde(rename = "type")]
+    pub event_type: ImerchantsolutionsWebhookEventType,
+    pub payment_id: String,
+    pub psp_reference: String,
+    pub original_reference: Option<String>,
+    pub reference: Option<String>,
+    pub merchant_reference: Option<String>,
+    pub status: ImerchantsolutionsWebhookStatus,
+    pub reason: Option<String>,
+    pub error: Option<String>,
+    amount: Option<MinorUnit>,
+    refunded_amount: Option<MinorUnit>,
+    total_refunded: Option<MinorUnit>,
+    currency: Currency,
+    processor: Option<String>,
+    card_last4: Option<String>,
+    card_brand: Option<String>,
+    customer_email: Option<pii::Email>,
+    partner_id: Option<Secret<String>>,
+    merchant_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ImerchantsolutionsWebhookEventType {
+    #[serde(rename = "payment.completed")]
+    PaymentCompleted,
+    #[serde(rename = "payment.cancelled")]
+    PaymentCancelled,
+    #[serde(rename = "payment.failed")]
+    PaymentFailed,
+    #[serde(rename = "payment.refunded")]
+    PaymentRefunded,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ImerchantsolutionsWebhookStatus {
+    PartiallyCaptured,
+    Captured,
+    PartiallyRefunded,
+    Refunded,
+    Cancelled,
+    Failed,
+    Refused,
+}
+
+impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>,
+        item: ResponseRouterData<ImerchantsolutionsPaymentSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let is_multiple_capture_psync_flow = match item.router_data.request.sync_type {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let is_multiple_capture_psync_flow = match router_data.request.sync_type {
             SyncRequestType::MultipleCaptureSync => true,
             SyncRequestType::SinglePaymentSync => false,
         };
 
-        let status = AttemptStatus::foreign_try_from((
-            item.response.status.clone(),
-            item.router_data.request.capture_method,
-            item.http_code,
-        ))?;
+        match response {
+            ImerchantsolutionsPaymentSyncResponse::ImerchantsolutionsPSyncResponse(response) => {
+                let status = AttemptStatus::foreign_try_from((
+                    response.status.clone(),
+                    router_data.request.capture_method,
+                    http_code,
+                ))?;
 
-        if is_payment_failure(status) {
-            let error_response = ErrorResponse {
-                code: consts::NO_ERROR_CODE.to_string(),
-                message: consts::NO_ERROR_MESSAGE.to_string(),
-                reason: None,
-                status_code: item.http_code,
-                attempt_status: Some(status),
-                connector_transaction_id: Some(item.response.psp_reference),
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            };
+                if is_payment_failure(status) {
+                    let error_response = ErrorResponse {
+                        code: consts::NO_ERROR_CODE.to_string(),
+                        message: consts::NO_ERROR_MESSAGE.to_string(),
+                        reason: None,
+                        status_code: http_code,
+                        attempt_status: Some(status),
+                        connector_transaction_id: Some(response.psp_reference),
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
+                    };
 
-            Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status,
-                    ..item.router_data.resource_common_data
-                },
-                response: Err(error_response),
-                ..item.router_data
-            })
-        } else if is_multiple_capture_psync_flow {
-            let wrapped_captures: Vec<CaptureWithStatus<'_>> = item
-                .response
-                .captures
-                .iter()
-                .map(|c| CaptureWithStatus {
-                    capture: c,
-                    status: &item.response.status,
-                    psp_reference: &item.response.psp_reference,
-                })
-                .collect();
+                    Ok(Self {
+                        resource_common_data: PaymentFlowData {
+                            status,
+                            ..router_data.resource_common_data
+                        },
+                        response: Err(error_response),
+                        ..router_data
+                    })
+                } else if is_multiple_capture_psync_flow {
+                    let wrapped_captures: Vec<CaptureWithStatus<'_>> = response
+                        .captures
+                        .iter()
+                        .map(|c| CaptureWithStatus {
+                            capture: c,
+                            status: &response.status,
+                            psp_reference: &response.psp_reference,
+                        })
+                        .collect();
 
-            let capture_sync_response_list =
-                utils::construct_captures_response_hashmap(wrapped_captures).change_context(
-                    utils::response_handling_fail_for_connector(item.http_code, IMERCHANTSOLUTIONS),
-                )?;
+                    let capture_sync_response_list =
+                        utils::construct_captures_response_hashmap(wrapped_captures)
+                            .change_context(utils::response_handling_fail_for_connector(
+                                http_code,
+                                IMERCHANTSOLUTIONS,
+                            ))?;
 
-            Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status: item.response.status.clone().into(),
-                    ..item.router_data.resource_common_data
-                },
-                response: Ok(PaymentsResponseData::MultipleCaptureResponse {
-                    capture_sync_response_list,
-                    status_code: item.http_code,
-                }),
-                ..item.router_data
-            })
-        } else {
-            Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status,
-                    ..item.router_data.resource_common_data
-                },
-                response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(
-                        item.response.psp_reference.clone(),
-                    ),
-                    redirection_data: None,
-                    mandate_reference: None,
-                    connector_metadata: None,
-                    network_txn_id: None,
-                    connector_response_reference_id: Some(item.response.payment_id.clone()),
-                    incremental_authorization_allowed: None,
-                    status_code: item.http_code,
-                }),
-                ..item.router_data
-            })
+                    Ok(Self {
+                        resource_common_data: PaymentFlowData {
+                            status: response.status.clone().into(),
+                            ..router_data.resource_common_data
+                        },
+                        response: Ok(PaymentsResponseData::MultipleCaptureResponse {
+                            capture_sync_response_list,
+                            status_code: http_code,
+                        }),
+                        ..router_data
+                    })
+                } else {
+                    Ok(Self {
+                        resource_common_data: PaymentFlowData {
+                            status,
+                            ..router_data.resource_common_data
+                        },
+                        response: Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                response.psp_reference.clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: Some(response.payment_id.clone()),
+                            incremental_authorization_allowed: None,
+                            status_code: http_code,
+                        }),
+                        ..router_data
+                    })
+                }
+            }
+            ImerchantsolutionsPaymentSyncResponse::ImerchantsolutionsWebhookResponse(response) => {
+                let status = AttemptStatus::foreign_try_from((
+                    response.status.clone(),
+                    router_data.request.capture_method,
+                ))
+                .map_err(|_| {
+                    utils::response_handling_fail_for_connector(http_code, "imerchantsolutions")
+                })?;
+
+                if is_payment_failure(status) {
+                    let error_response = ErrorResponse {
+                        code: consts::NO_ERROR_CODE.to_string(),
+                        message: response
+                            .error
+                            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                        reason: response.reason,
+                        status_code: http_code,
+                        attempt_status: Some(status),
+                        connector_transaction_id: Some(response.psp_reference),
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
+                    };
+
+                    Ok(Self {
+                        resource_common_data: PaymentFlowData {
+                            status,
+                            ..router_data.resource_common_data
+                        },
+                        response: Err(error_response),
+                        ..router_data
+                    })
+                } else {
+                    Ok(Self {
+                        resource_common_data: PaymentFlowData {
+                            status,
+                            ..router_data.resource_common_data
+                        },
+                        response: Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                response.psp_reference.clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: Some(response.payment_id.clone()),
+                            incremental_authorization_allowed: None,
+                            status_code: http_code,
+                        }),
+                        ..router_data
+                    })
+                }
+            }
         }
     }
 }
@@ -835,8 +956,15 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundResponseData, Self>>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum ImerchantsolutionsRefundSyncResponse {
+    ImerchantsolutionsRsyncResponse(ImerchantsolutionsRsyncResponseData),
+    ImerchantsolutionsWebhookResponse(ImerchantsolutionsWebhookData),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ImerchantsolutionsRsyncResponse {
+pub struct ImerchantsolutionsRsyncResponseData {
     payment_id: String,
     psp_reference: String,
     merchant_reference: Option<String>,
@@ -860,24 +988,76 @@ struct Refunds {
     created_at: Option<String>,
 }
 
-impl TryFrom<ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>>
+impl TryFrom<ResponseRouterData<ImerchantsolutionsRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<ImerchantsolutionsRsyncResponse, Self>,
+        item: ResponseRouterData<ImerchantsolutionsRefundSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let refund_status = item.response.status.clone().into();
-        let connector_refund_id = item.router_data.request.connector_refund_id.clone();
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
 
-        Ok(Self {
-            response: Ok(RefundsResponseData {
-                connector_refund_id,
-                refund_status,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
+        let connector_refund_id = router_data.request.connector_refund_id.clone();
+
+        match response {
+            ImerchantsolutionsRefundSyncResponse::ImerchantsolutionsRsyncResponse(response) => {
+                let refund_status = response.status.clone().into();
+
+                Ok(Self {
+                    response: Ok(RefundsResponseData {
+                        connector_refund_id,
+                        refund_status,
+                        status_code: http_code,
+                    }),
+                    ..router_data
+                })
+            }
+            ImerchantsolutionsRefundSyncResponse::ImerchantsolutionsWebhookResponse(response) => {
+                let refund_status =
+                    RefundStatus::try_from(response.status.clone()).map_err(|err| {
+                        err.change_context(utils::response_handling_fail_for_connector(
+                            http_code,
+                            "imerchantsolutions",
+                        ))
+                        .attach_printable(format!("Invalid refund status: {:?}", response.status))
+                    })?;
+
+                if utils::is_refund_failure(refund_status) {
+                    let error_response = Err(ErrorResponse {
+                        status_code: http_code,
+                        code: consts::NO_ERROR_CODE.to_string(),
+                        message: response
+                            .reason
+                            .clone()
+                            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                        reason: response.reason,
+                        attempt_status: None,
+                        connector_transaction_id: response.original_reference,
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
+                    });
+
+                    Ok(Self {
+                        response: error_response,
+                        ..router_data
+                    })
+                } else {
+                    Ok(Self {
+                        response: Ok(RefundsResponseData {
+                            connector_refund_id,
+                            refund_status,
+                            status_code: http_code,
+                        }),
+                        ..router_data
+                    })
+                }
+            }
+        }
     }
 }
 
@@ -899,41 +1079,68 @@ impl ForeignTryFrom<(ImerchantsolutionsPaymentStatus, Option<CaptureMethod>, u16
             u16,
         ),
     ) -> Result<Self, Self::Error> {
-        Ok(match item {
+        match item {
             ImerchantsolutionsPaymentStatus::Authorised
             | ImerchantsolutionsPaymentStatus::Authorized
-            | ImerchantsolutionsPaymentStatus::PendingCapture => Self::Authorized,
+            | ImerchantsolutionsPaymentStatus::PendingCapture => Ok(Self::Authorized),
 
-            ImerchantsolutionsPaymentStatus::Pending3ds => Self::AuthenticationPending,
+            ImerchantsolutionsPaymentStatus::Pending3ds => Ok(Self::AuthenticationPending),
 
-            ImerchantsolutionsPaymentStatus::Cancelled => Self::Voided,
+            ImerchantsolutionsPaymentStatus::Cancelled => Ok(Self::Voided),
 
             ImerchantsolutionsPaymentStatus::PartiallyCaptured => match capture_method {
-                Some(CaptureMethod::ManualMultiple) => Self::PartialChargedAndChargeable,
-                Some(CaptureMethod::Manual) => Self::PartialCharged,
+                Some(CaptureMethod::ManualMultiple) => Ok(Self::PartialChargedAndChargeable),
+                Some(CaptureMethod::Manual) => Ok(Self::PartialCharged),
                 Some(CaptureMethod::Automatic)
                 | Some(CaptureMethod::SequentialAutomatic)
                 | Some(CaptureMethod::Scheduled)
-                | None => {
-                    return Err(error_stack::Report::new(
-                        errors::ConnectorError::response_handling_failed_with_context(
-                            http_status,
-                            Some("capture method not supported".to_string()),
-                        ),
-                    ));
-                }
+                | None => Err(error_stack::Report::new(
+                    errors::ConnectorError::response_handling_failed_with_context(
+                        http_status,
+                        Some("capture method not supported".to_string()),
+                    ),
+                )),
             },
 
             ImerchantsolutionsPaymentStatus::Captured
             | ImerchantsolutionsPaymentStatus::PartiallyRefunded
-            | ImerchantsolutionsPaymentStatus::Refunded => Self::Charged,
+            | ImerchantsolutionsPaymentStatus::Refunded => Ok(Self::Charged),
 
-            ImerchantsolutionsPaymentStatus::Pending => Self::Pending,
+            ImerchantsolutionsPaymentStatus::Pending => Ok(Self::Pending),
 
             ImerchantsolutionsPaymentStatus::Refused | ImerchantsolutionsPaymentStatus::Failed => {
-                Self::Failure
+                Ok(Self::Failure)
             }
-        })
+        }
+    }
+}
+
+impl ForeignTryFrom<(ImerchantsolutionsWebhookStatus, Option<CaptureMethod>)> for AttemptStatus {
+    type Error = error_stack::Report<errors::WebhookError>;
+
+    fn foreign_try_from(
+        (item, capture_method): (ImerchantsolutionsWebhookStatus, Option<CaptureMethod>),
+    ) -> Result<Self, Self::Error> {
+        match item {
+            ImerchantsolutionsWebhookStatus::PartiallyCaptured => match capture_method {
+                Some(CaptureMethod::ManualMultiple) => Ok(Self::PartialChargedAndChargeable),
+                Some(CaptureMethod::Manual) => Ok(Self::PartialCharged),
+                Some(CaptureMethod::Automatic)
+                | Some(CaptureMethod::SequentialAutomatic)
+                | Some(CaptureMethod::Scheduled)
+                | None => Err(errors::WebhookError::WebhookBodyDecodingFailed.into()),
+            },
+
+            ImerchantsolutionsWebhookStatus::Cancelled => Ok(Self::Voided),
+
+            ImerchantsolutionsWebhookStatus::Captured
+            | ImerchantsolutionsWebhookStatus::PartiallyRefunded
+            | ImerchantsolutionsWebhookStatus::Refunded => Ok(Self::Charged),
+
+            ImerchantsolutionsWebhookStatus::Failed | ImerchantsolutionsWebhookStatus::Refused => {
+                Ok(Self::Failure)
+            }
+        }
     }
 }
 
@@ -949,27 +1156,25 @@ impl ForeignTryFrom<(ImerchantsolutionsCaptureStatus, Option<CaptureMethod>, u16
             u16,
         ),
     ) -> Result<Self, Self::Error> {
-        Ok(match capture_status {
-            ImerchantsolutionsCaptureStatus::Received => Self::CaptureInitiated,
+        match capture_status {
+            ImerchantsolutionsCaptureStatus::Received => Ok(Self::CaptureInitiated),
 
             ImerchantsolutionsCaptureStatus::PartiallyCaptured => match capture_method {
-                Some(CaptureMethod::ManualMultiple) => Self::PartialChargedAndChargeable,
-                Some(CaptureMethod::Manual) => Self::PartialCharged,
+                Some(CaptureMethod::ManualMultiple) => Ok(Self::PartialChargedAndChargeable),
+                Some(CaptureMethod::Manual) => Ok(Self::PartialCharged),
                 Some(CaptureMethod::Automatic)
                 | Some(CaptureMethod::SequentialAutomatic)
                 | Some(CaptureMethod::Scheduled)
-                | None => {
-                    return Err(error_stack::Report::new(
-                        errors::ConnectorError::response_handling_failed_with_context(
-                            http_status,
-                            Some("capture method not supported".to_string()),
-                        ),
-                    ));
-                }
+                | None => Err(error_stack::Report::new(
+                    errors::ConnectorError::response_handling_failed_with_context(
+                        http_status,
+                        Some("capture method not supported".to_string()),
+                    ),
+                )),
             },
 
-            ImerchantsolutionsCaptureStatus::Captured => Self::Charged,
-        })
+            ImerchantsolutionsCaptureStatus::Captured => Ok(Self::Charged),
+        }
     }
 }
 
@@ -1000,6 +1205,64 @@ impl From<ImerchantsolutionsRefundStatus> for RefundStatus {
             ImerchantsolutionsRefundStatus::Received => Self::Pending,
             ImerchantsolutionsRefundStatus::PartiallyRefunded
             | ImerchantsolutionsRefundStatus::Refunded => Self::Success,
+        }
+    }
+}
+
+impl TryFrom<ImerchantsolutionsWebhookStatus> for RefundStatus {
+    type Error = error_stack::Report<errors::WebhookError>;
+
+    fn try_from(status: ImerchantsolutionsWebhookStatus) -> Result<Self, Self::Error> {
+        match status {
+            ImerchantsolutionsWebhookStatus::PartiallyRefunded
+            | ImerchantsolutionsWebhookStatus::Refunded => Ok(Self::Success),
+
+            ImerchantsolutionsWebhookStatus::Failed | ImerchantsolutionsWebhookStatus::Refused => {
+                Ok(Self::Failure)
+            }
+
+            ImerchantsolutionsWebhookStatus::Cancelled
+            | ImerchantsolutionsWebhookStatus::PartiallyCaptured
+            | ImerchantsolutionsWebhookStatus::Captured => {
+                Err(errors::WebhookError::WebhookBodyDecodingFailed.into())
+            }
+        }
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        ImerchantsolutionsWebhookEventType,
+        ImerchantsolutionsWebhookStatus,
+    )> for EventType
+{
+    type Error = error_stack::Report<errors::WebhookError>;
+
+    fn foreign_try_from(
+        (event_type, status): (
+            ImerchantsolutionsWebhookEventType,
+            ImerchantsolutionsWebhookStatus,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match event_type {
+            ImerchantsolutionsWebhookEventType::PaymentCompleted => match status {
+                ImerchantsolutionsWebhookStatus::PartiallyCaptured => {
+                    Ok(Self::PaymentIntentPartiallyFunded)
+                }
+                ImerchantsolutionsWebhookStatus::Captured => Ok(Self::PaymentIntentCaptureSuccess),
+                ImerchantsolutionsWebhookStatus::Cancelled
+                | ImerchantsolutionsWebhookStatus::Failed
+                | ImerchantsolutionsWebhookStatus::Refused
+                | ImerchantsolutionsWebhookStatus::PartiallyRefunded
+                | ImerchantsolutionsWebhookStatus::Refunded => {
+                    Err(errors::WebhookError::WebhookBodyDecodingFailed.into())
+                }
+            },
+            ImerchantsolutionsWebhookEventType::PaymentCancelled => {
+                Ok(Self::PaymentIntentCancelled)
+            }
+            ImerchantsolutionsWebhookEventType::PaymentFailed => Ok(Self::PaymentIntentFailure),
+            ImerchantsolutionsWebhookEventType::PaymentRefunded => Ok(Self::RefundSuccess),
         }
     }
 }
