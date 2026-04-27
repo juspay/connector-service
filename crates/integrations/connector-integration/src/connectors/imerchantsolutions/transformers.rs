@@ -384,6 +384,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     network_txn_id: None,
                     connector_response_reference_id: Some(item.response.payment_id.clone()),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data
@@ -533,6 +534,7 @@ impl<F> TryFrom<ResponseRouterData<ImerchantsolutionsPSyncResponseData, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: Some(item.response.payment_id.clone()),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data
@@ -612,6 +614,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsVoidResponseData, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.psp_reference.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -719,6 +722,7 @@ impl TryFrom<ResponseRouterData<ImerchantsolutionsCaptureResponseData, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.psp_reference.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

@@ -819,6 +819,7 @@ impl<
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     mandate_reference,
+                    charges: None,
                     status_code: http_code,
                 })
             }
@@ -1062,6 +1063,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                     connector_response_reference_id: payment_resp_struct.ssl_approval_code.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
+                    charges: None,
                     status_code: http_code,
                 })
             }
@@ -1462,6 +1464,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             mandate_reference: None,
+            charges: None,
             status_code: value.http_code,
         };
 

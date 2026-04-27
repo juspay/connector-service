@@ -1173,6 +1173,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                     .as_ref()
                     .and_then(|info| info.code.clone()),
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
+                charges: None,
                 status_code: item.http_code,
             })
         } else {
@@ -1246,6 +1247,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .as_ref()
                     .and_then(|info| info.code.clone()),
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
+                charges: None,
                 status_code: item.http_code,
             })
         } else {
@@ -1299,6 +1301,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .as_ref()
                     .and_then(|info| info.code.clone()),
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
+                charges: None,
                 status_code: item.http_code,
             })
         } else {
@@ -1352,6 +1355,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
                     .as_ref()
                     .and_then(|info| info.code.clone()),
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
+                charges: None,
                 status_code: item.http_code,
             })
         } else {
@@ -1434,6 +1438,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
                     .or_else(|| Some(response.id.clone())),
                 incremental_authorization_allowed: Some(status == AttemptStatus::Authorized),
 
+                charges: None,
                 status_code: item.http_code,
             })
         } else {

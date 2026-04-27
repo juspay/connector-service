@@ -741,6 +741,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.orderid.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -866,6 +867,7 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -965,6 +967,7 @@ impl TryFrom<ResponseRouterData<StandardResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.orderid.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -1266,6 +1269,7 @@ impl TryFrom<ResponseRouterData<StandardResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.orderid.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -1762,6 +1766,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         network_txn_id: None,
                         connector_response_reference_id: Some(response.transactionid.clone()),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                 )
@@ -1900,6 +1905,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     network_txn_id: None,
                     connector_response_reference_id: Some(response.transactionid.clone()),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
             ),

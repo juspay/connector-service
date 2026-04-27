@@ -148,6 +148,7 @@ impl<F, T> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                                     .merchant_reference_id
                                     .to_owned(),
                                 incremental_authorization_allowed: None,
+                                charges: None,
                                 status_code: item.http_code,
                             }),
                         )

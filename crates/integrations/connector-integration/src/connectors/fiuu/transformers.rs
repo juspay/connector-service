@@ -1090,6 +1090,7 @@ where
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 ..router_data
@@ -1136,6 +1137,7 @@ where
                             network_txn_id: None,
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                         ..router_data
@@ -1195,6 +1197,7 @@ where
                             network_txn_id: None,
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         })
                     };
@@ -1247,6 +1250,7 @@ where
                                 network_txn_id: None,
                                 connector_response_reference_id: None,
                                 incremental_authorization_allowed: None,
+                                charges: None,
                                 status_code: item.http_code,
                             })
                         };
@@ -1269,6 +1273,7 @@ where
                             network_txn_id: None,
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         });
                         Self {
@@ -1682,6 +1687,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                         .map(|id| id.clone().expose()),
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: http_code,
                 };
                 Ok(Self {
@@ -1739,6 +1745,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: http_code,
                 };
                 Ok(Self {
@@ -1953,6 +1960,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
         Ok(Self {
@@ -2087,6 +2095,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
         Ok(Self {

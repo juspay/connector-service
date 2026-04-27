@@ -375,6 +375,7 @@ fn get_payments_response(connector_response: TsysResponse, http_code: u16) -> Pa
         network_txn_id: None,
         connector_response_reference_id: Some(connector_response.transaction_id),
         incremental_authorization_allowed: None,
+        charges: None,
         status_code: http_code,
     }
 }
@@ -720,6 +721,7 @@ fn get_payments_sync_response(
                 .clone(),
         ),
         incremental_authorization_allowed: None,
+        charges: None,
         status_code: http_code,
     }
 }

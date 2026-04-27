@@ -1390,6 +1390,7 @@ pub enum PaymentsResponseData {
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
+        charges: Option<ConnectorChargeResponseData>,
         status_code: u16,
     },
     ClientAuthenticationTokenResponse {
@@ -3219,6 +3220,23 @@ pub struct StripeSplitPaymentRequest {
 pub enum ConnectorChargeResponseData {
     /// StripeChargeResponseData
     StripeSplitPayment(StripeChargeResponseData),
+    /// AdyenSplitData
+    AdyenSplitPayment(AdyenSplitData),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct AdyenSplitData {
+    pub store: Option<String>,
+    pub split_items: Vec<AdyenSplitItem>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct AdyenSplitItem {
+    pub amount: Option<MinorUnit>,
+    pub split_type: common_enums::AdyenSplitType,
+    pub account: Option<String>,
+    pub reference: String,
+    pub description: Option<String>,
 }
 
 /// Fee information to be charged on the payment being collected via Stripe
@@ -3241,6 +3259,7 @@ pub struct StripeChargeResponseData {
 #[derive(Debug, serde::Deserialize, Clone)]
 pub enum SplitRefundsRequest {
     StripeSplitRefund(StripeSplitRefund),
+    AdyenSplitRefund(AdyenSplitData),
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]

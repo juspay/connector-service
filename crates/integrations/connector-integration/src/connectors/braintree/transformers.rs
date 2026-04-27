@@ -706,6 +706,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };
@@ -739,6 +740,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         network_txn_id: None,
                         connector_response_reference_id: transaction_data.legacy_id.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };
@@ -792,6 +794,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -954,6 +957,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };
@@ -993,6 +997,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         network_txn_id: None,
                         connector_response_reference_id: transaction_data.legacy_id.clone(),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };
@@ -1047,6 +1052,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1809,6 +1815,7 @@ impl<F, T> TryFrom<ResponseRouterData<BraintreeCaptureResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };
@@ -2252,6 +2259,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeCancelResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };
@@ -2375,6 +2383,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };
@@ -2922,6 +2931,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     })
                 };

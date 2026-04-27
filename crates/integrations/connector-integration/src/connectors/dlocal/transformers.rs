@@ -683,6 +683,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: item.response.order_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -787,6 +788,7 @@ impl<F, T> TryFrom<ResponseRouterData<DlocalPaymentsResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: item.response.order_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
         Ok(Self {
@@ -827,6 +829,7 @@ impl<F> TryFrom<ResponseRouterData<DlocalPaymentsSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: item.response.order_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -861,6 +864,7 @@ impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCaptureResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: item.response.order_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -894,6 +898,7 @@ impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCancelResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data

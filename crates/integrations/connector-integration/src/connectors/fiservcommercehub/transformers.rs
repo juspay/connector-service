@@ -498,6 +498,7 @@ impl<T: PaymentMethodDataTypes>
                 network_txn_id: None,
                 connector_response_reference_id: txn.order_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -608,6 +609,7 @@ impl TryFrom<ResponseRouterData<FiservcommercehubPSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -916,6 +918,7 @@ impl TryFrom<ResponseRouterData<FiservcommercehubVoidResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: txn.order_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
