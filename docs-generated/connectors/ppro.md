@@ -163,6 +163,15 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | MB Way | ✓ |
 | Satispay | ✓ |
 | Wero | ✓ |
+| GoPay | x |
+| GCash | x |
+| Momo | x |
+| Dana | x |
+| Kakao Pay | x |
+| Touch 'n Go | x |
+| Twint | x |
+| Vipps | x |
+| Swish | x |
 | Affirm | x |
 | Afterpay | x |
 | Klarna | x |

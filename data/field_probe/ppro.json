@@ -210,6 +210,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "payment method dana is not supported by PPRO is not supported by ppro"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "payment method danamon_va is not supported by PPRO is not supported by ppro"
@@ -242,6 +246,10 @@
         "status": "not_supported",
         "error": "payment method family_mart is not supported by PPRO is not supported by ppro"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "payment method gcash is not supported by PPRO is not supported by ppro"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "payment method giropay is not supported by PPRO is not supported by ppro"
@@ -249,6 +257,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "payment method go_pay is not supported by PPRO is not supported by ppro"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -318,6 +330,10 @@
         "status": "not_supported",
         "error": "payment method interac is not supported by PPRO is not supported by ppro"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "payment method kakao_pay is not supported by PPRO is not supported by ppro"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "payment method klarna is not supported by PPRO is not supported by ppro"
@@ -381,6 +397,14 @@
       "MiniStop": {
         "status": "not_supported",
         "error": "payment method mini_stop is not supported by PPRO is not supported by ppro"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_supported",
+        "error": "payment method momo is not supported by PPRO is not supported by ppro"
       },
       "MultibancoBankTransfer": {
         "status": "not_supported",
@@ -453,6 +477,10 @@
       "PaypalSdk": {
         "status": "not_supported",
         "error": "payment method paypal is not supported by PPRO is not supported by ppro"
+      },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "Paze": {
         "status": "not_supported",
@@ -546,13 +574,29 @@
         "status": "not_supported",
         "error": "payment method seven_eleven is not supported by PPRO is not supported by ppro"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "payment method sofort is not supported by PPRO is not supported by ppro"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "payment method swish is not supported by PPRO is not supported by ppro"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "payment method touch_n_go is not supported by PPRO is not supported by ppro"
+      },
       "Trustly": {
         "status": "error",
         "error": "Stuck on field: connector_customer_id — Missing required field: connector_customer_id"
+      },
+      "Twint": {
+        "status": "not_supported",
+        "error": "payment method twint is not supported by PPRO is not supported by ppro"
       },
       "UpiCollect": {
         "status": "not_supported",
@@ -621,6 +665,10 @@
           },
           "body": "{\"paymentMethod\":\"UPI\",\"paymentMedium\":\"ECOMMERCE\",\"merchantPaymentChargeReference\":\"probe_txn_001\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"consumer\":{},\"authenticationSettings\":[{\"type\":\"REDIRECT\",\"settings\":{\"returnUrl\":\"https://example.com/return\"}}],\"webhooksUrl\":\"https://example.com/webhook\"}"
         }
+      },
+      "Vipps": {
+        "status": "not_supported",
+        "error": "payment method vipps is not supported by PPRO is not supported by ppro"
       },
       "WeChatPayQr": {
         "status": "supported",

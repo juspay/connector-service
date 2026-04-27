@@ -191,6 +191,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
@@ -223,6 +227,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method through fiuu is not supported by Fiuu"
@@ -230,6 +238,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
       },
       "GooglePay": {
         "status": "supported",
@@ -308,6 +320,10 @@
         "status": "not_supported",
         "error": "Selected payment method through fiuu is not supported by Fiuu"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
@@ -341,6 +357,14 @@
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
@@ -442,6 +466,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -506,13 +534,29 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method through fiuu is not supported by Fiuu"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
+      },
       "Trustly": {
         "status": "not_supported",
         "error": "Selected payment method through fiuu is not supported by Fiuu"
+      },
+      "Twint": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
       },
       "UpiCollect": {
         "status": "not_implemented",
@@ -523,6 +567,10 @@
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through fiuu"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through fiuu"
       },

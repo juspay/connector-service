@@ -92,6 +92,9 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented"
       },
@@ -117,12 +120,18 @@
       "FamilyMart": {
         "status": "not_implemented"
       },
+      "GCash": {
+        "status": "not_implemented"
+      },
       "Giropay": {
         "status": "not_implemented"
       },
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented"
       },
       "GooglePay": {
         "status": "not_implemented"
@@ -154,6 +163,9 @@
       "Interac": {
         "status": "not_implemented"
       },
+      "KakaoPay": {
+        "status": "not_implemented"
+      },
       "Klarna": {
         "status": "not_implemented"
       },
@@ -179,6 +191,13 @@
         "status": "not_implemented"
       },
       "MiniStop": {
+        "status": "not_implemented"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented"
       },
       "MultibancoBankTransfer": {
@@ -237,6 +256,10 @@
       "PaypalSdk": {
         "status": "not_implemented"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -286,10 +309,23 @@
       "SevenEleven": {
         "status": "not_implemented"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented"
       },
+      "Swish": {
+        "status": "not_implemented"
+      },
+      "TouchNGo": {
+        "status": "not_implemented"
+      },
       "Trustly": {
+        "status": "not_implemented"
+      },
+      "Twint": {
         "status": "not_implemented"
       },
       "UpiCollect": {
@@ -299,6 +335,9 @@
         "status": "not_implemented"
       },
       "UpiQr": {
+        "status": "not_implemented"
+      },
+      "Vipps": {
         "status": "not_implemented"
       },
       "WeChatPayQr": {
