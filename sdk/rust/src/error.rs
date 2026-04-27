@@ -64,7 +64,7 @@ pub enum SdkError {
         /// HTTP status code returned by the connector, if known.
         http_status_code: Option<u16>,
         /// Structured error details containing decline codes, advice codes, etc.
-        error_info: Box<Option<grpc_api_types::payments::ErrorInfo>>,
+        error_info: Option<Box<grpc_api_types::payments::ErrorInfo>>,
     },
 
     /// Transport-layer failure. The connector was never reached, or the
@@ -126,7 +126,7 @@ impl From<grpc_api_types::payments::ConnectorError> for SdkError {
             error_code: e.error_code,
             error_message: e.error_message,
             http_status_code: e.http_status_code.map(|s| s as u16),
-            error_info: Box::new(e.error_info),
+            error_info: e.error_info.map(Box::new),
         }
     }
 }
