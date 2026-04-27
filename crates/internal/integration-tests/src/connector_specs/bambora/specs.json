@@ -1,13 +1,13 @@
 {
   "connector": "bambora",
   "supported_suites": [
-    "authorize",
-    "capture",
-    "void",
-    "refund",
-    "get",
-    "refund_sync",
-    "setup_recurring",
-    "recurring_charge"
+    "PaymentService/Authorize",
+    "PaymentService/Capture",
+    "PaymentService/Void",
+    "PaymentService/Refund",
+    "PaymentService/Get",
+    "RefundService/Get",
+    "PaymentService/SetupRecurring",
+    "RecurringPaymentService/Charge"
   ]
 }

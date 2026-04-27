@@ -4402,7 +4402,16 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            amount: None,
+            amount: value
+                .amount
+                .as_ref()
+                .map(|money| {
+                    Ok::<_, error_stack::Report<IntegrationError>>(common_utils::types::Money {
+                        amount: common_utils::types::MinorUnit::new(money.minor_amount),
+                        currency: common_enums::Currency::foreign_try_from(money.currency())?,
+                    })
+                })
+                .transpose()?,
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
@@ -6242,11 +6251,29 @@ pub fn generate_payment_sync_response(
                 }
                 None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
+            let amount = router_data_v2
+                .resource_common_data
+                .amount
+                .as_ref()
+                .map(|money| {
+                    grpc_api_types::payments::Currency::foreign_try_from(money.currency).map(
+                        |currency| grpc_api_types::payments::Money {
+                            minor_amount: money.amount.get_amount_as_i64(),
+                            currency: currency as i32,
+                        },
+                    )
+                })
+                .transpose()?;
             Ok(PaymentServiceGetResponse {
                 connector_transaction_id: extract_connector_request_reference_id(
                     &e.connector_transaction_id,
                 ),
-                merchant_transaction_id: None,
+                merchant_transaction_id: Some(
+                    router_data_v2
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
                 mandate_reference: None,
                 status: status as i32,
                 error: Some(grpc_api_types::payments::ErrorInfo {
@@ -6267,7 +6294,7 @@ pub fn generate_payment_sync_response(
                     }),
                 }),
                 network_transaction_id: None,
-                amount: None,
+                amount,
                 captured_amount: None,
                 payment_method_type: None,
                 capture_method: None,
@@ -7969,6 +7996,30 @@ impl
             _ => None,
         };
 
+        // Extract customer data from the payment domain context (if available)
+        let customer = match &value.domain_context {
+            Some(grpc_api_types::payments::merchant_authentication_service_create_client_authentication_token_request::DomainContext::Payment(ctx)) => {
+                ctx.customer.clone()
+            }
+            _ => None,
+        };
+
+        let customer_id = customer
+            .as_ref()
+            .and_then(|c| c.id.as_ref())
+            .map(|id| common_utils::id_type::CustomerId::from_str(id))
+            .transpose()
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "customer.id",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Failed to parse customer id".to_string()),
+                    ..Default::default()
+                },
+            })?;
+
+        let connector_customer = customer
+            .as_ref()
+            .and_then(|c| c.connector_customer_id.clone());
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -7978,8 +8029,8 @@ impl
             address: PaymentAddress::default(),
             auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: value.merchant_client_session_id,
-            customer_id: None,
-            connector_customer: None,
+            customer_id,
+            connector_customer,
             description: None,
             return_url,
             connector_feature_data: value
