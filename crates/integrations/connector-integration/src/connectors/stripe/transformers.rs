@@ -4332,6 +4332,12 @@ impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseDat
                         },
                     })
                 }
+                _ => Err(IntegrationError::FlowNotSupported {
+                    flow: "non-Stripe split refund on Stripe connector".to_string(),
+                    connector: "stripe".to_string(),
+                    context: Default::default(),
+                }
+                .into()),
             },
         }
     }

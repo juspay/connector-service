@@ -3256,6 +3256,7 @@ pub struct StripeChargeResponseData {
 #[derive(Debug, serde::Deserialize, Clone)]
 pub enum SplitRefundsRequest {
     StripeSplitRefund(StripeSplitRefund),
+    AdyenSplitRefund(AdyenSplitData),
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
