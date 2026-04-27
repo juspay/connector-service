@@ -177,6 +177,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(DanaRedirect) is not supported by authorizedotnet"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Payment method BankTransfer(DanamonVaBankTransfer) is not supported by authorizedotnet"
@@ -209,6 +213,10 @@
         "status": "not_supported",
         "error": "Payment method Voucher(FamilyMart(JCSVoucherData)) is not supported by authorizedotnet"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(GcashRedirect(GcashRedirection)) is not supported by authorizedotnet"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Payment method BankRedirect(Giropay { bank_account_bic: None, bank_account_iban: None, country: None }) is not supported by authorizedotnet"
@@ -216,6 +224,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(GoPayRedirect(GoPayRedirection)) is not supported by authorizedotnet"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -257,6 +269,10 @@
         "status": "not_supported",
         "error": "Payment method BankRedirect(Interac { country: None, email: None }) is not supported by authorizedotnet"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(KakaoPayRedirect(KakaoPayRedirection)) is not supported by authorizedotnet"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Payment method PayLater(KlarnaRedirect) is not supported by authorizedotnet"
@@ -292,6 +308,14 @@
       "MiniStop": {
         "status": "not_supported",
         "error": "Payment method Voucher(MiniStop(JCSVoucherData)) is not supported by authorizedotnet"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(MomoRedirect(MomoRedirection)) is not supported by authorizedotnet"
       },
       "MultibancoBankTransfer": {
         "status": "not_supported",
@@ -365,6 +389,10 @@
         "status": "not_supported",
         "error": "Payment method Wallet(PaypalSdk(PayPalWalletData { token: \"probe_paypal_sdk_token\" })) is not supported by authorizedotnet"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -429,13 +457,29 @@
         "status": "not_supported",
         "error": "Payment method Voucher(SevenEleven(JCSVoucherData)) is not supported by authorizedotnet"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Payment method BankRedirect(Sofort { country: None, preferred_language: None }) is not supported by authorizedotnet"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(SwishQr(SwishQrData)) is not supported by authorizedotnet"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(TouchNGoRedirect(TouchNGoRedirection)) is not supported by authorizedotnet"
+      },
       "Trustly": {
         "status": "not_supported",
         "error": "Payment method BankRedirect(Trustly { country: None }) is not supported by authorizedotnet"
+      },
+      "Twint": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(TwintRedirect) is not supported by authorizedotnet"
       },
       "UpiCollect": {
         "status": "not_supported",
@@ -448,6 +492,10 @@
       "UpiQr": {
         "status": "not_supported",
         "error": "Payment method Upi(UpiQr(UpiQrData { upi_source: None })) is not supported by authorizedotnet"
+      },
+      "Vipps": {
+        "status": "not_supported",
+        "error": "Payment method Wallet(VippsRedirect) is not supported by authorizedotnet"
       },
       "WeChatPayQr": {
         "status": "not_supported",

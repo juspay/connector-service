@@ -1,13 +1,13 @@
 {
   "connector": "paybox",
   "supported_suites": [
-    "authorize",
-    "capture",
-    "void",
-    "refund",
-    "get",
-    "refund_sync",
-    "recurring_charge",
-    "setup_recurring"
+    "PaymentService/Authorize",
+    "PaymentService/Capture",
+    "PaymentService/Void",
+    "PaymentService/Refund",
+    "PaymentService/Get",
+    "RefundService/Get", 
+    "PaymentService/SetupRecurring",
+    "RecurringPaymentService/Charge"
   ]
 }
