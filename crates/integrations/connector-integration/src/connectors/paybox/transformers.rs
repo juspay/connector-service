@@ -1177,12 +1177,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
 
-        let expiration_date = Secret::new(
-            card_data
-                .get_card_expiry_month_year_2_digit_with_delimiter("".to_owned())?
-                .peek()
-                .to_string(),
-        );
+        let expiration_date = card_data.get_expiry_date_as_mmyy()?;
 
         // Use minor_amount if available, otherwise default to zero for zero-dollar auth
         let amount = match router_data.request.minor_amount {
@@ -1254,7 +1249,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxSetupMandateRes
                 Some(carrier) => {
                     let expiry = match &item.router_data.request.payment_method_data {
                         PaymentMethodData::Card(card) => card
-                            .get_card_expiry_month_year_2_digit_with_delimiter("".to_owned())
+                            .get_expiry_date_as_mmyy()
                             .map_err(|_| ConnectorError::ResponseHandlingFailed {
                                 context: ResponseTransformationErrorContext {
                                     http_status_code: Some(item.http_code),
@@ -1371,7 +1366,7 @@ fn get_subscriber_transaction_type(
     capture_method: Option<common_enums::CaptureMethod>,
 ) -> &'static str {
     match capture_method {
-        Some(common_enums::CaptureMethod::Automatic) => SUBSCRIBER_AUTH_AND_CAPTURE_REQUEST,
+        Some(common_enums::CaptureMethod::Automatic) | None => SUBSCRIBER_AUTH_AND_CAPTURE_REQUEST,
         _ => SUBSCRIBER_AUTH_REQUEST,
     }
 }
