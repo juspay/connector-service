@@ -264,7 +264,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   TrustlyConfig: ["username", "password", "privateKey"],
   TruelayerConfig: ["clientId", "clientSecret", "merchantAccountId", "accountHolderName", "privateKey", "kid"],
   PinelabsOnlineConfig: ["clientId", "clientSecret"],
-  ImerchantsolutionsConfig: ["apiKey"],
+  ImerchantsolutionsConfig: ["apiKey", "merchantId"],
   PaymentServiceTokenAuthorizeRequest: ["connectorToken", "metadata", "connectorFeatureData"],
   PaymentServiceTokenSetupRecurringRequest: ["connectorToken", "metadata", "connectorFeatureData"],
   PaymentServiceProxyAuthorizeRequest: ["metadata", "connectorFeatureData"],
