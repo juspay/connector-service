@@ -29,6 +29,7 @@ fn build_client() -> ConnectorClient {
                 )), // Authentication credential
                 base_url: Some("https://sandbox.example.com".to_string()), // Base URL for API calls
                 site: Some("https://sandbox.example.com".to_string()),     // Base URL for API calls
+                test_mode: Some(false),                                    // Feature flag
                 ..Default::default()
             })),
         }),

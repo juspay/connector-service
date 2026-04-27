@@ -1,19 +1,19 @@
 use common_enums::{AttemptStatus, Currency, PayoutStatus, RefundStatus};
 use common_utils::{id_type, request::Method, types::FloatMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, PayoutCreate, PayoutGet, PayoutStage, PSync, PayoutTransfer, Refund},
+    connector_flow::{
+        Authorize, PSync, PayoutCreate, PayoutGet, PayoutStage, PayoutTransfer, Refund,
+    },
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
-    payouts::{
-        payouts_types::{
-            PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData as PayoutsFlowData,
-            PayoutGetRequest, PayoutGetResponse, PayoutStageRequest, PayoutStageResponse,
-            PayoutTransferRequest, PayoutTransferResponse,
-        },
+    payouts::payouts_types::{
+        PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData as PayoutsFlowData,
+        PayoutGetRequest, PayoutGetResponse, PayoutStageRequest, PayoutStageResponse,
+        PayoutTransferRequest, PayoutTransferResponse,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -731,12 +731,7 @@ pub struct GigadatPayoutStageResponse {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &GigadatRouterData<
-            RouterDataV2<
-                PayoutStage,
-                PayoutsFlowData,
-                PayoutStageRequest,
-                PayoutStageResponse,
-            >,
+            RouterDataV2<PayoutStage, PayoutsFlowData, PayoutStageRequest, PayoutStageResponse>,
             T,
         >,
     > for GigadatPayoutStageRequest
@@ -745,12 +740,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: &GigadatRouterData<
-            RouterDataV2<
-                PayoutStage,
-                PayoutsFlowData,
-                PayoutStageRequest,
-                PayoutStageResponse,
-            >,
+            RouterDataV2<PayoutStage, PayoutsFlowData, PayoutStageRequest, PayoutStageResponse>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -799,11 +789,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
         )?;
 
-        let customer_id = id_type::CustomerId::try_from(
-            std::borrow::Cow::from(
-                item.router_data.resource_common_data.merchant_id.get_string_repr()
-            )
-        ).change_context(IntegrationError::InvalidDataFormat {
+        let customer_id = id_type::CustomerId::try_from(std::borrow::Cow::from(
+            item.router_data
+                .resource_common_data
+                .merchant_id
+                .get_string_repr(),
+        ))
+        .change_context(IntegrationError::InvalidDataFormat {
             field_name: "customer_id",
             context: Default::default(),
         })?;

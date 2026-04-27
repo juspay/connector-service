@@ -7,15 +7,17 @@ use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent, FloatMajorUnit};
+use common_utils::{
+    errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent, FloatMajorUnit,
+};
 use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateOrder, DefendDispute, PSync,
-        PaymentMethodToken, PostAuthenticate, PreAuthenticate, PayoutCreate, PayoutGet, PayoutStage, PayoutTransfer, RSync,
-        Refund, RepeatPayment, ServerAuthenticationToken, ServerSessionAuthenticationToken,
-        SetupMandate, SubmitEvidence, Void, VoidPC,
+        PaymentMethodToken, PayoutCreate, PayoutGet, PayoutStage, PayoutTransfer, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, ServerAuthenticationToken,
+        ServerSessionAuthenticationToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse, DisputeDefendData,
@@ -30,11 +32,12 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
+    payment_method_data::PaymentMethodDataTypes,
     payouts::payouts_types::{
-        PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData, PayoutGetRequest, PayoutGetResponse, PayoutStageRequest, PayoutStageResponse, PayoutTransferRequest,
+        PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData, PayoutGetRequest,
+        PayoutGetResponse, PayoutStageRequest, PayoutStageResponse, PayoutTransferRequest,
         PayoutTransferResponse,
     },
-    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -277,45 +280,60 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PayoutStage, PayoutFlowData, PayoutStageRequest, PayoutStageResponse>,
     ) -> CustomResult<Option<RequestContent>, IntegrationError> {
+        let auth = gigadat::GigadatAuthType::try_from(&req.connector_config).change_context(
+            IntegrationError::FailedToObtainAuthType {
+                context: Default::default(),
+            },
+        )?;
 
-        let auth = gigadat::GigadatAuthType::try_from(&req.connector_config)
-            .change_context(IntegrationError::FailedToObtainAuthType {
+        let site = auth
+            .site
+            .ok_or_else(|| IntegrationError::InvalidConnectorConfig {
+                config: "missing 'site' in connector config",
                 context: Default::default(),
             })?;
 
-        let site = auth.site.ok_or_else(|| {
-            IntegrationError::InvalidConnectorConfig {
-                config: "missing 'site' in connector config",
+        let email = req
+            .request
+            .email
+            .clone()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "email",
                 context: Default::default(),
-            }
-        })?;
-
-        let email = req.request.email.clone().ok_or(IntegrationError::MissingRequiredField {
-            field_name: "email",
-            context: Default::default(),
-        })?;
-        let name = req.request.name.clone().ok_or(IntegrationError::MissingRequiredField {
-            field_name: "name",
-            context: Default::default(),
-        })?;
-        let mobile = req.request.mobile.clone().ok_or(IntegrationError::MissingRequiredField {
-            field_name: "mobile",
-            context: Default::default(),
-        })?;
+            })?;
+        let name = req
+            .request
+            .name
+            .clone()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "name",
+                context: Default::default(),
+            })?;
+        let mobile = req
+            .request
+            .mobile
+            .clone()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "mobile",
+                context: Default::default(),
+            })?;
         tracing::info!(
             "GIGADAT PAYOUT STAGE: mobile being sent = {}",
             mobile.peek()
         );
-        let user_ip = req.request.user_ip.clone().ok_or(IntegrationError::MissingRequiredField {
-            field_name: "user_ip",
-            context: Default::default(),
-        })?;
+        let user_ip =
+            req.request
+                .user_ip
+                .clone()
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "user_ip",
+                    context: Default::default(),
+                })?;
 
-        let customer_id = common_utils::id_type::CustomerId::try_from(
-            std::borrow::Cow::from(
-                req.resource_common_data.merchant_id.get_string_repr()
-            )
-        ).change_context(IntegrationError::InvalidDataFormat {
+        let customer_id = common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(
+            req.resource_common_data.merchant_id.get_string_repr(),
+        ))
+        .change_context(IntegrationError::InvalidDataFormat {
             field_name: "customer_id",
             context: Default::default(),
         })?;
@@ -337,7 +355,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             mobile,
             name,
             site,
-            transaction_id: req.resource_common_data.connector_request_reference_id.clone(),
+            transaction_id: req
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             transaction_type: gigadat::GigadatTransactionType::Eto,
             user_id: customer_id,
             user_ip,
@@ -389,12 +410,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PayoutGet,
-        PayoutFlowData,
-        PayoutGetRequest,
-        PayoutGetResponse,
-    > for Gigadat<T>
+    ConnectorIntegrationV2<PayoutGet, PayoutFlowData, PayoutGetRequest, PayoutGetResponse>
+    for Gigadat<T>
 {
     fn get_http_method(&self) -> common_utils::request::Method {
         common_utils::request::Method::Get
@@ -408,11 +425,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PayoutGet, PayoutFlowData, PayoutGetRequest, PayoutGetResponse>,
     ) -> CustomResult<String, IntegrationError> {
-        let transfer_id = req.request.connector_payout_id.as_ref()
-            .ok_or(IntegrationError::MissingRequiredField {
+        let transfer_id = req.request.connector_payout_id.as_ref().ok_or(
+            IntegrationError::MissingRequiredField {
                 field_name: "connector_payout_id",
                 context: Default::default(),
-            })?;
+            },
+        )?;
 
         Ok(format!(
             "{}api/transactions/{}",
@@ -504,7 +522,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             },
         )?;
 
-        
         let token = req.request.payout_method_data.as_ref()
             .and_then(|pmd| {
                 if let domain_types::payouts::payout_method_data::PayoutMethodData::Passthrough(pt) = pmd {
@@ -604,12 +621,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PayoutCreate,
-        PayoutFlowData,
-        PayoutCreateRequest,
-        PayoutCreateResponse,
-    > for Gigadat<T>
+    ConnectorIntegrationV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>
+    for Gigadat<T>
 {
     fn get_http_method(&self) -> common_utils::request::Method {
         common_utils::request::Method::Post
@@ -623,14 +636,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>,
     ) -> CustomResult<String, IntegrationError> {
-        let transfer_id = req.request.connector_payout_id.as_ref()
+        let transfer_id = req
+            .request
+            .connector_payout_id
+            .as_ref()
             .or(req.request.connector_quote_id.as_ref())
             .ok_or(IntegrationError::MissingRequiredField {
                 field_name: "connector_payout_id or connector_quote_id",
                 context: Default::default(),
             })?;
 
-        
         let token = req.request.payout_method_data.as_ref()
             .and_then(|pmd| {
                 if let domain_types::payouts::payout_method_data::PayoutMethodData::Passthrough(pt) = pmd {
@@ -668,14 +683,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn get_request_body(
         &self,
-        _req: &RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>,
+        _req: &RouterDataV2<
+            PayoutCreate,
+            PayoutFlowData,
+            PayoutCreateRequest,
+            PayoutCreateResponse,
+        >,
     ) -> CustomResult<Option<RequestContent>, IntegrationError> {
         Ok(None)
     }
 
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>,
+        data: &RouterDataV2<
+            PayoutCreate,
+            PayoutFlowData,
+            PayoutCreateRequest,
+            PayoutCreateResponse,
+        >,
         event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
@@ -1190,7 +1215,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         with_error_response_body!(event_builder, response);
 
         // Check for specific Gigadat error message
-        let is_duplicate_error = error_message.eq_ignore_ascii_case("Transaction already in progress or completed");
+        let is_duplicate_error =
+            error_message.eq_ignore_ascii_case("Transaction already in progress or completed");
 
         // Set appropriate code and attempt_status based on error type
         let (code, attempt_status) = if is_duplicate_error {

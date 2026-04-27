@@ -20,6 +20,7 @@ const _defaultConfig: types.IConnectorConfig = {
             securityToken: { value: 'YOUR_SECURITY_TOKEN' },
             baseUrl: 'YOUR_BASE_URL',
             site: 'YOUR_SITE',
+            testMode: false,
         }
     },
 };
