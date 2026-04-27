@@ -1094,13 +1094,9 @@ impl<F> TryFrom<ResponseRouterData<WorldpayEventResponse, Self>>
         item: ResponseRouterData<WorldpayEventResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(&item.response.last_event);
+        let resource_id = item.router_data.request.connector_transaction_id.clone();
         let response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
+            resource_id,
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
