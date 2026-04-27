@@ -288,7 +288,7 @@ fun proxySetupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig)
         }
         addressBuilder.apply {
             billingAddressBuilder.apply {
-                lastNameBuilder.value = "Doe"
+                firstNameBuilder.value = "John"  // Personal Information.
             }
         }
         customerAcceptanceBuilder.apply {
@@ -344,7 +344,7 @@ fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
         }
         addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
-                lastNameBuilder.value = "Doe"
+                firstNameBuilder.value = "John"  // Personal Information.
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used.

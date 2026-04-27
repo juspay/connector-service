@@ -113,7 +113,7 @@ def _build_proxy_setup_recurring_request():
         ),
         address=payment_pb2.PaymentAddress(
             billing_address=payment_pb2.Address(
-                last_name=payment_methods_pb2.SecretString(value="Doe"),
+                first_name=payment_methods_pb2.SecretString(value="John"),  # Personal Information.
             ),
         ),
         customer_acceptance=payment_pb2.CustomerAcceptance(
@@ -161,7 +161,7 @@ def _build_setup_recurring_request():
         ),
         address=payment_pb2.PaymentAddress(  # Address Information.
             billing_address=payment_pb2.Address(
-                last_name=payment_methods_pb2.SecretString(value="Doe"),
+                first_name=payment_methods_pb2.SecretString(value="John"),  # Personal Information.
             ),
         ),
         auth_type=payment_pb2.AuthenticationType.Value("NO_THREE_DS"),  # Type of authentication to be used.

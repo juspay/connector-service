@@ -113,7 +113,7 @@ function _buildProxySetupRecurringRequest(): types.IPaymentServiceProxySetupRecu
         },
         "address": {
             "billingAddress": {
-                "lastName": {"value": "Doe"}
+                "firstName": {"value": "John"}  // Personal Information.
             }
         },
         "customerAcceptance": {
@@ -164,7 +164,7 @@ function _buildSetupRecurringRequest(): types.IPaymentServiceSetupRecurringReque
         },
         "address": {  // Address Information.
             "billingAddress": {
-                "lastName": {"value": "Doe"}
+                "firstName": {"value": "John"}  // Personal Information.
             }
         },
         "authType": AuthenticationType.NO_THREE_DS,  // Type of authentication to be used.

@@ -160,7 +160,7 @@ pub fn build_proxy_setup_recurring_request() -> PaymentServiceProxySetupRecurrin
         }),
         address: Some(PaymentAddress {
             billing_address: Some(Address {
-                last_name: Some(Secret::new("Doe".to_string())),
+                first_name: Some(Secret::new("John".to_string())), // Personal Information.
                 ..Default::default()
             }),
             ..Default::default()
@@ -221,7 +221,7 @@ pub fn build_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
         address: Some(PaymentAddress {
             // Address Information.
             billing_address: Some(Address {
-                last_name: Some(Secret::new("Doe".to_string())),
+                first_name: Some(Secret::new("John".to_string())), // Personal Information.
                 ..Default::default()
             }),
             ..Default::default()

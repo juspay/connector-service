@@ -608,7 +608,7 @@
           },
           "address": {
             "billing_address": {
-              "last_name": "Doe"
+              "first_name": "John"
             }
           },
           "customer_acceptance": {
@@ -626,7 +626,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"order_number\":\"probe_proxy_mandate_001\",\"amount\":0.0,\"payment_method\":\"card\",\"card\":{\"name\":\"Doe\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvd\":\"123\",\"complete\":true},\"card_on_file\":{\"type\":\"first_recurring\"},\"billing\":{\"name\":\"Doe\"}}"
+          "body": "{\"order_number\":\"probe_proxy_mandate_001\",\"amount\":0.0,\"payment_method\":\"card\",\"card\":{\"name\":\"John\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvd\":\"123\",\"complete\":true},\"card_on_file\":{\"type\":\"first_recurring\"},\"billing\":{\"name\":\"John\"}}"
         }
       }
     },
@@ -710,7 +710,7 @@
           },
           "address": {
             "billing_address": {
-              "last_name": "Doe"
+              "first_name": "John"
             }
           },
           "auth_type": "NO_THREE_DS",
@@ -731,7 +731,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"order_number\":\"probe_mandate_001\",\"amount\":0.0,\"payment_method\":\"card\",\"card\":{\"name\":\"Doe\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvd\":\"737\",\"complete\":true},\"card_on_file\":{\"type\":\"first_recurring\"},\"billing\":{\"name\":\"Doe\"}}"
+          "body": "{\"order_number\":\"probe_mandate_001\",\"amount\":0.0,\"payment_method\":\"card\",\"card\":{\"name\":\"John\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvd\":\"737\",\"complete\":true},\"card_on_file\":{\"type\":\"first_recurring\"},\"billing\":{\"name\":\"John\"}}"
         }
       }
     },
