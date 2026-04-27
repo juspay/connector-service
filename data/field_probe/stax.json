@@ -119,6 +119,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
@@ -151,6 +155,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
@@ -158,6 +166,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -199,6 +211,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
@@ -232,6 +248,14 @@
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
@@ -307,6 +331,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -371,11 +399,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
@@ -388,6 +432,10 @@
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card and ACH bank debit payments are supported for Stax"
       },

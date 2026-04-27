@@ -228,6 +228,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
@@ -260,6 +264,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
@@ -267,6 +275,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "GooglePay": {
         "status": "supported",
@@ -350,6 +362,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
@@ -383,6 +399,14 @@
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
@@ -489,6 +513,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -585,11 +613,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
@@ -602,6 +646,10 @@
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through novalnet"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through novalnet"
       },
