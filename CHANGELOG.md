@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.27.0
+
+### Features
+
+- **test-suite:** UPI test scenarios + sandbox-interaction harness extensions for razorpay, phonepe, cashfree, paytm ([#1161](https://github.com/juspay/connector-service/pull/1161)) ([`a0bb4bc`](https://github.com/juspay/connector-service/commit/a0bb4bc19b0d318eb13546e3bc9bf57fb08ef501))
+
+**Full Changelog:** [`2026.04.24.1...2026.04.27.0`](https://github.com/juspay/connector-service/compare/2026.04.24.1...2026.04.27.0)
+
+- - -
+
 ## 2026.04.24.1
 
 ### Bug Fixes
