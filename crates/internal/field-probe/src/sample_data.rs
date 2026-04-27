@@ -448,6 +448,9 @@ pub(crate) fn skrill_method() -> PaymentMethod {
 pub(crate) fn paysera_method() -> PaymentMethod {
     PaymentMethod {
         payment_method: Some(PmVariant::Paysera(proto::PayseraWallet::default())),
+    }
+}
+
 pub(crate) fn lazypay_redirect_method() -> PaymentMethod {
     PaymentMethod {
         payment_method: Some(PmVariant::LazypayRedirect(
