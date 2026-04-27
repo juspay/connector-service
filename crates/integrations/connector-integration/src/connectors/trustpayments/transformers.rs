@@ -3,11 +3,15 @@ use std::fmt::Debug;
 use common_enums::{AttemptStatus, AuthorizationStatus, CaptureMethod, Currency};
 use common_utils::types::StringMinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, IncrementalAuthorization, RepeatPayment, SetupMandate, PSync, RSync, Refund, Void},
+    connector_flow::{
+        Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund, RepeatPayment,
+        SetupMandate, Void,
+    },
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData, RepeatPaymentData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{
