@@ -1145,8 +1145,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             _ => Err(IntegrationError::NotImplemented(
-                "Only Card payment method is implemented for JPMorgan SetupMandate"
-                    .to_string(),
+                "Only Card payment method is implemented for JPMorgan SetupMandate".to_string(),
                 Default::default(),
             )
             .into()),
@@ -1221,7 +1220,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(router_data.request.minor_amount, router_data.request.currency)
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
