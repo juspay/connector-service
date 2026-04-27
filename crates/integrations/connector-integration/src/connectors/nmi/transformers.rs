@@ -757,7 +757,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
 #[derive(Debug, Serialize)]
 pub struct NmiSyncRequest {
     security_key: Secret<String>,
-    order_id: String, // Uses attempt_id, NOT connector_transaction_id
+    transaction_id: String,
 }
 
 // Implementation for NmiRouterData wrapper (needed by macros)
@@ -780,16 +780,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
-        // PSync uses attempt_id as order_id (NOT connector_transaction_id)
-        // The connector_transaction_id contains the attempt_id for sync operations
-        let order_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let transaction_id = router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(IntegrationError::MissingRequiredField {
+                field_name: "connector_transaction_id",
+                context: Default::default(),
+            })?;
 
         Ok(Self {
             security_key: auth.api_key,
-            order_id,
+            transaction_id,
         })
     }
 }
