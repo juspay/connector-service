@@ -16,6 +16,7 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
+    utils::is_payment_failure,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -798,11 +799,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         pan: card_info.card_number.clone(),
                         cardholder_name: card_info.card_holder_name.clone(),
                         expiry_year: Some(
-                            card_info.get_card_expiry_year_2_digit().change_context(
+                            card_info.get_card_expiry_year_2_digit().map_err(|e| {
                                 IntegrationError::RequestEncodingFailed {
-                                    context: Default::default(),
-                                },
-                            )?,
+                                    context: IntegrationErrorContext {
+                                        additional_context: Some(format!(
+                                            "Failed to extract 2-digit expiry year for SetupMandate card: {e:?}"
+                                        )),
+                                        ..Default::default()
+                                    },
+                                }
+                            })?,
                         ),
                         expiry_month: Some(card_info.card_exp_month),
                         cvv: Some(card_info.card_cvc),
@@ -869,7 +875,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let (status, response) = match item.response {
             responses::PeachpaymentsPaymentsResponse::Response(data) => {
                 let status: AttemptStatus = data.transaction_result.clone().into();
-                let response = if status == AttemptStatus::Failure {
+                let response = if is_payment_failure(status) {
                     Err(ErrorResponse {
                         code: get_error_code(data.response_code.as_ref()),
                         message: get_error_message(data.response_code.as_ref()),
@@ -985,11 +991,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         pan: card_info.card_number.clone(),
                         cardholder_name: card_info.card_holder_name.clone(),
                         expiry_year: Some(
-                            card_info.get_card_expiry_year_2_digit().change_context(
+                            card_info.get_card_expiry_year_2_digit().map_err(|e| {
                                 IntegrationError::RequestEncodingFailed {
-                                    context: Default::default(),
-                                },
-                            )?,
+                                    context: IntegrationErrorContext {
+                                        additional_context: Some(format!(
+                                            "Failed to extract 2-digit expiry year for RepeatPayment card: {e:?}"
+                                        )),
+                                        ..Default::default()
+                                    },
+                                }
+                            })?,
                         ),
                         expiry_month: Some(card_info.card_exp_month),
                         cvv: Some(card_info.card_cvc),
@@ -1018,11 +1029,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         routing,
                         network_token_data: requests::PeachpaymentsNetworkTokenDetails {
                             token: Secret::new(token_data.token_number.peek().clone()),
-                            expiry_year: token_data
-                                .get_token_expiry_year_2_digit()
-                                .change_context(IntegrationError::RequestEncodingFailed {
-                                    context: Default::default(),
-                                })?,
+                            expiry_year: token_data.get_token_expiry_year_2_digit().map_err(
+                                |e| IntegrationError::RequestEncodingFailed {
+                                    context: IntegrationErrorContext {
+                                        additional_context: Some(format!(
+                                            "Failed to extract 2-digit expiry year for RepeatPayment network token: {e:?}"
+                                        )),
+                                        ..Default::default()
+                                    },
+                                },
+                            )?,
                             expiry_month: token_data.token_exp_month,
                             cryptogram: token_data.token_cryptogram,
                             eci: token_data.eci,
@@ -1030,8 +1046,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 .card_network
                                 .map(requests::CardNetworkLowercase::try_from)
                                 .transpose()
-                                .change_context(IntegrationError::RequestEncodingFailed {
-                                    context: Default::default(),
+                                .map_err(|e| IntegrationError::RequestEncodingFailed {
+                                    context: IntegrationErrorContext {
+                                        additional_context: Some(format!(
+                                            "Failed to map card network to PeachPayments scheme for RepeatPayment: {e:?}"
+                                        )),
+                                        ..Default::default()
+                                    },
                                 })?,
                         },
                         amount: requests::PeachpaymentsAmount {
@@ -1103,7 +1124,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let (status, response) = match item.response {
             responses::PeachpaymentsPaymentsResponse::Response(data) => {
                 let status: AttemptStatus = data.transaction_result.clone().into();
-                let response = if status == AttemptStatus::Failure {
+                let response = if is_payment_failure(status) {
                     Err(ErrorResponse {
                         code: get_error_code(data.response_code.as_ref()),
                         message: get_error_message(data.response_code.as_ref()),
