@@ -251,11 +251,11 @@ pub struct BamboraCardOnFileRequest {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BamboraCardOnFileResponse {
     #[serde(rename = "type")]
-    pub cof_type: Option<String>,
+    pub cof_type: Option<BamboraCardOnFileType>,
     pub series_id: Option<i64>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BamboraCardOnFileType {
     FirstRecurring,
@@ -991,15 +991,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .router_data
             .resource_common_data
             .get_optional_billing_full_name()
-            .or_else(|| {
-                item.router_data
-                    .request
-                    .customer_name
-                    .clone()
-                    .map(Secret::new)
-            })
             .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "billing.first_name or customer_name",
+                field_name: "billing.first_name",
                 context: Default::default(),
             })?;
 
@@ -1035,26 +1028,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .address
             .get_payment_billing()
             .and_then(|payment_billing| {
-                let billing_address = payment_billing.address.as_ref()?;
-                let province = billing_address.state.clone().and_then(|state| {
-                    utils::get_state_code_for_country(&state, billing_address.country)
-                });
-                Some(BamboraBillingAddress {
-                    name: billing_address
-                        .first_name
-                        .clone()
-                        .or(billing_address.last_name.clone()),
-                    address_line1: billing_address.line1.clone(),
-                    address_line2: billing_address.line2.clone(),
-                    city: billing_address.city.clone().map(|s| s.expose()),
-                    province,
-                    country: billing_address.country,
-                    postal_code: billing_address.zip.clone(),
-                    phone_number: payment_billing
-                        .phone
-                        .as_ref()
-                        .and_then(|p| p.number.clone()),
-                    email_address: payment_billing.email.clone(),
+                payment_billing.address.as_ref().map(|billing_address| {
+                    let province = billing_address.state.clone().and_then(|state| {
+                        utils::get_state_code_for_country(&state, billing_address.country)
+                    });
+                    BamboraBillingAddress {
+                        name: billing_address.get_optional_full_name(),
+                        address_line1: billing_address.line1.clone(),
+                        address_line2: billing_address.line2.clone(),
+                        city: billing_address.city.clone().map(|s| s.expose()),
+                        province,
+                        country: billing_address.country,
+                        postal_code: billing_address.zip.clone(),
+                        phone_number: payment_billing
+                            .phone
+                            .as_ref()
+                            .and_then(|p| p.number.clone()),
+                        email_address: payment_billing.email.clone(),
+                    }
                 })
             });
 
