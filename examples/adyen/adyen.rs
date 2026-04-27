@@ -282,7 +282,6 @@ pub fn build_proxy_setup_recurring_request() -> PaymentServiceProxySetupRecurrin
             }),
             ..Default::default()
         }),
-        return_url: Some("https://example.com/return".to_string()),
         customer_acceptance: Some(CustomerAcceptance {
             acceptance_type: AcceptanceType::Offline.into(), // Type of acceptance (e.g., online, offline).
             accepted_at: 0, // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).

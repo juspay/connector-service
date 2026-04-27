@@ -399,7 +399,6 @@ fun proxySetupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig)
             billingAddressBuilder.apply {
             }
         }
-        returnUrl = "https://example.com/return"
         customerAcceptanceBuilder.apply {
             acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
             acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).

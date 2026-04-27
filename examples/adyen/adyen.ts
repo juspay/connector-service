@@ -225,7 +225,6 @@ function _buildProxySetupRecurringRequest(): types.IPaymentServiceProxySetupRecu
             "billingAddress": {
             }
         },
-        "returnUrl": "https://example.com/return",
         "customerAcceptance": {
             "acceptanceType": AcceptanceType.OFFLINE,  // Type of acceptance (e.g., online, offline).
             "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).

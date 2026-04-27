@@ -200,7 +200,6 @@ def _build_proxy_setup_recurring_request():
         address=payment_pb2.PaymentAddress(
             billing_address=payment_pb2.Address(),
         ),
-        return_url="https://example.com/return",
         customer_acceptance=payment_pb2.CustomerAcceptance(
             acceptance_type=payment_pb2.AcceptanceType.Value("OFFLINE"),  # Type of acceptance (e.g., online, offline).
             accepted_at=0,  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
