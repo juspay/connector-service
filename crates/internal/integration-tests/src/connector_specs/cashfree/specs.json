@@ -2,6 +2,12 @@
   "connector": "cashfree",
   "supported_suites": [
     "authorize",
-    "create_order"
-  ]
+    "create_order",
+    "get",
+    "capture",
+    "void",
+    "refund",
+    "refund_sync"
+  ],
+  "sync_poll_until_terminal_seconds": 60
 }
