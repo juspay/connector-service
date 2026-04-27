@@ -2253,6 +2253,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CashfreeRedirect(_) => Ok(Some(PaymentMethodType::Cashfree)),
                 grpc_api_types::payments::payment_method::PaymentMethod::PayuRedirect(_) => Ok(Some(PaymentMethodType::PayU)),
                 grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_) => Ok(Some(PaymentMethodType::EaseBuzz)),
+                grpc_api_types::payments::payment_method::PaymentMethod::MobilePayRedirect(_) => Ok(Some(PaymentMethodType::MobilePay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Venmo(_) => Ok(Some(PaymentMethodType::Venmo)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Skrill(_) => Ok(Some(PaymentMethodType::Skrill)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Paysera(_) => Ok(Some(PaymentMethodType::Paysera)),
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
