@@ -2253,6 +2253,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CashfreeRedirect(_) => Ok(Some(PaymentMethodType::Cashfree)),
                 grpc_api_types::payments::payment_method::PaymentMethod::PayuRedirect(_) => Ok(Some(PaymentMethodType::PayU)),
                 grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_) => Ok(Some(PaymentMethodType::EaseBuzz)),
+                grpc_api_types::payments::payment_method::PaymentMethod::MobilePayRedirect(_) => Ok(Some(PaymentMethodType::MobilePay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Venmo(_) => Ok(Some(PaymentMethodType::Venmo)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Skrill(_) => Ok(Some(PaymentMethodType::Skrill)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Paysera(_) => Ok(Some(PaymentMethodType::Paysera)),
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
@@ -3421,7 +3425,10 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             email,
-            customer_name: None,
+            customer_name: value
+                .customer
+                .as_ref()
+                .and_then(|customer| customer.name.clone()),
             return_url: value.complete_authorize_url.clone(),
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
                 value.payment_method.clone().ok_or_else(|| {
@@ -7843,6 +7850,7 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateClientAuthenticationToken
                 .shipping_cost
                 .map(common_utils::types::MinorUnit::new),
             payment_method_type,
+            permissions: value.permissions.map(|p| p.values),
         })
     }
 }
@@ -7996,6 +8004,30 @@ impl
             _ => None,
         };
 
+        // Extract customer data from the payment domain context (if available)
+        let customer = match &value.domain_context {
+            Some(grpc_api_types::payments::merchant_authentication_service_create_client_authentication_token_request::DomainContext::Payment(ctx)) => {
+                ctx.customer.clone()
+            }
+            _ => None,
+        };
+
+        let customer_id = customer
+            .as_ref()
+            .and_then(|c| c.id.as_ref())
+            .map(|id| common_utils::id_type::CustomerId::from_str(id))
+            .transpose()
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "customer.id",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Failed to parse customer id".to_string()),
+                    ..Default::default()
+                },
+            })?;
+
+        let connector_customer = customer
+            .as_ref()
+            .and_then(|c| c.connector_customer_id.clone());
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -8005,8 +8037,8 @@ impl
             address: PaymentAddress::default(),
             auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: value.merchant_client_session_id,
-            customer_id: None,
-            connector_customer: None,
+            customer_id,
+            connector_customer,
             description: None,
             return_url,
             connector_feature_data: value
