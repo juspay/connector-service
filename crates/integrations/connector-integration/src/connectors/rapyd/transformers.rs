@@ -44,10 +44,9 @@ use super::RapydRouterData;
 /// payment-method type per the same `[#369]` TODO.
 ///
 /// Reference: https://docs.rapyd.net/en/list-payment-methods-by-country.html
-#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RapydPaymentMethodType {
-    #[default]
     InAmexCard,
     InVisaCard,
     InMastercardCard,
@@ -212,7 +211,7 @@ impl TryFrom<&ConnectorSpecificConfig> for RapydAuthType {
     }
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct RapydPaymentsRequest<
     T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
@@ -277,21 +276,13 @@ pub enum RapydPaymentMethodData<
     PaymentMethod(Box<PaymentMethod<T>>),
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Default> Default
-    for RapydPaymentMethodData<T>
-{
-    fn default() -> Self {
-        Self::PaymentMethod(Box::default())
-    }
-}
-
-#[derive(Default, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct PaymentMethodOptions {
     #[serde(rename = "3d_required")]
     pub three_ds: bool,
 }
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct PaymentMethod<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "type")]
     pub pm_type: RapydPaymentMethodType,
