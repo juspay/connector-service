@@ -791,7 +791,7 @@
     "recurring_charge": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only Card and MandatePayment are supported for RepeatPayment"
+        "error": "This feature is not implemented: Only Card and MandatePayment are implemented for JPMorgan RepeatPayment"
       }
     },
     "recurring_revoke": {
@@ -959,7 +959,7 @@
     "token_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Only Card payment method is supported for SetupMandate"
+        "error": "This feature is not implemented: Only Card payment method is implemented for JPMorgan SetupMandate"
       }
     },
     "tokenize": {

@@ -10,7 +10,9 @@ use std::fmt::Debug;
 use base64::Engine;
 use bytes::Bytes;
 use common_enums::CurrencyUnit;
-use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{
+    consts, errors::CustomResult, events, ext_traits::ByteSliceExt, types::MinorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
@@ -336,7 +338,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: MinorUnit
+    ],
     member_functions: {
         // Generic header builder that works for both PaymentFlowData and RefundFlowData
         pub fn build_headers<F, ResourceData, Req, Res>(

@@ -178,12 +178,15 @@ pub struct JpmorganRecurring {
     pub is_variable_amount: Option<bool>,
 }
 
-/// JPMorgan card with optional originalNetworkTransactionId for MIT
+/// JPMorgan card for MIT. `account_number` and `expiry` are absent in
+/// `MandatePayment` flows where only the network transaction ID is available.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganMitCard<T: PaymentMethodDataTypes> {
-    pub account_number: RawCardNumber<T>,
-    pub expiry: Expiry,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_number: Option<RawCardNumber<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiry: Option<Expiry>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub original_network_transaction_id: Option<String>,
 }
