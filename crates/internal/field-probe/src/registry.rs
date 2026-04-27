@@ -78,6 +78,12 @@ pub(crate) fn authorize_pm_variants() -> Vec<(&'static str, fn() -> PaymentMetho
         ("Vipps", vipps_method as fn() -> PaymentMethod),
         ("Swish", swish_method as fn() -> PaymentMethod),
         (
+            "MobilePayRedirect",
+            mobile_pay_redirect_method as fn() -> PaymentMethod,
+        ),
+        ("Skrill", skrill_method as fn() -> PaymentMethod),
+        ("Paysera", paysera_method as fn() -> PaymentMethod),
+        (
             "LazyPayRedirect",
             lazypay_redirect_method as fn() -> PaymentMethod,
         ),
