@@ -508,7 +508,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Option<common_utils::request::Request>, IntegrationError> {
-            if req.request.encoded_data.clone().is_some() {
+            if req.request.encoded_data.as_deref().is_some_and(|s| !s.is_empty()) {
                 let url = self.get_url(req)?;
                 let headers = self.get_headers(req)?;
                 let body = ConnectorIntegrationV2::<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>::get_request_body(self, req)?;

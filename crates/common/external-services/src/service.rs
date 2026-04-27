@@ -509,12 +509,41 @@ where
                             )?;
 
                         // Convert injector response to connector service Response format
-                        let response_bytes = serde_json::to_vec(&injector_response.response)
-                            .map_err(|_| {
-                                ConnectorFlowError::from(
-                                    ConnectorError::response_handling_failed_http_status_unknown(),
-                                )
-                            })?;
+                        // When the injector receives a non-JSON response, it wraps the raw
+                        // text in Value::String. Serializing that back with to_vec would
+                        // produce a JSON-encoded string (with quotes), which the connector
+                        // response parser can't deserialize.  Use the raw text bytes instead.
+                        let response_bytes = match &injector_response.response {
+                            serde_json::Value::String(raw_text) => {
+                                tracing::debug!(
+                                    raw_text_len = raw_text.len(),
+                                    status_code = injector_response.status_code,
+                                    "Injector response was non-JSON text, using raw bytes"
+                                );
+                                raw_text.as_bytes().to_vec()
+                            }
+                            serde_json::Value::Null => {
+                                tracing::debug!(
+                                    status_code = injector_response.status_code,
+                                    "Injector response body was null, using empty bytes"
+                                );
+                                Vec::new()
+                            }
+                            other => {
+                                tracing::debug!(
+                                    response_type = other.is_object().then_some("object")
+                                        .or_else(|| other.is_array().then_some("array"))
+                                        .unwrap_or("other"),
+                                    status_code = injector_response.status_code,
+                                    "Injector response is structured JSON"
+                                );
+                                serde_json::to_vec(other).map_err(|_| {
+                                    ConnectorFlowError::from(
+                                        ConnectorError::response_handling_failed_http_status_unknown(),
+                                    )
+                                })?
+                            }
+                        };
 
                         // Convert headers from HashMap<String, String> to reqwest::HeaderMap if present
                         let headers = injector_response.headers.map(|h| {
