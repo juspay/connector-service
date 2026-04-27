@@ -79,7 +79,7 @@ def _build_refund_get_request():
     return payment_pb2.RefundServiceGetRequest(
         merchant_refund_id="probe_refund_001",  # Identification.
         connector_transaction_id="probe_connector_txn_001",
-        refund_id="probe_refund_id_001",
+        refund_id="probe_refund_id_001",  # Deprecated.
     )
 async def process_capture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Capture"""
