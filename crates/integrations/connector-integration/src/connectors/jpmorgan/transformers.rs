@@ -1099,14 +1099,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 let expiry = build_jpmorgan_expiry(card_data)?;
 
-                let card = requests::JpmorganMitCard {
-                    account_number: Some(card_data.card_number.clone()),
-                    expiry: Some(expiry),
-                    original_network_transaction_id: None,
+                let payment_method_type = requests::JpmorganSetupMandatePaymentMethodType {
+                    card: requests::JpmorganSetupMandateCard {
+                        account_number: card_data.card_number.clone(),
+                        expiry,
+                    },
                 };
-
-                let payment_method_type =
-                    requests::JpmorganMitPaymentMethodType { card: Some(card) };
 
                 // Use connector_request_reference_id as agreement_id
                 let agreement_id = router_data
@@ -1228,44 +1226,62 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 context: Default::default(),
             })?;
 
-        // The network_transaction_id from the mandate reference is required for MIT
-        // on EU Visa/Mastercard, US/EU tokens, and Discover/Amex/CB tokens.
-        // For US Visa PAN (and Mastercard) it is optional.
-        let network_transaction_id = match &router_data.request.mandate_reference {
-            MandateReferenceId::NetworkMandateId(nti) => Some(nti.clone()),
-            _ => None,
-        };
-
-        let card = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card_data) => {
+        // For a subsequent MIT, the request shape depends on the mandate handle:
+        //   ConnectorMandateId  → reference the stored credential by JPMorgan's
+        //                         own transactionId via paymentMethodType.transactionReference;
+        //                         no card data is sent.
+        //   NetworkMandateId    → JPMorgan still requires card.{accountNumber,
+        //                         expiry}; the originalNetworkTransactionId is
+        //                         what reclassifies the txn as MIT (paired with
+        //                         initiatorType=MERCHANT, accountOnFile=STORED,
+        //                         recurringSequence=SUBSEQUENT), not a substitute
+        //                         for the card payload.
+        let payment_method_type = match &router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
+                let transaction_reference_id = connector_mandate_ref
+                    .get_connector_mandate_id()
+                    .ok_or(IntegrationError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                        context: Default::default(),
+                    })?;
+                requests::JpmorganRepeatPaymentMethodType {
+                    card: None,
+                    transaction_reference: Some(requests::JpmorganTransactionReference {
+                        transaction_reference_id,
+                    }),
+                }
+            }
+            MandateReferenceId::NetworkMandateId(nti) => {
+                let card_data = match &router_data.request.payment_method_data {
+                    PaymentMethodData::Card(c) => c,
+                    _ => {
+                        return Err(IntegrationError::MissingRequiredField {
+                            field_name: "payment_method_data.card",
+                            context: Default::default(),
+                        }
+                        .into())
+                    }
+                };
                 let expiry = build_jpmorgan_expiry(card_data)?;
-                requests::JpmorganMitCard {
-                    account_number: Some(card_data.card_number.clone()),
-                    expiry: Some(expiry),
-                    original_network_transaction_id: network_transaction_id,
+                requests::JpmorganRepeatPaymentMethodType {
+                    card: Some(requests::JpmorganMitCardByNti {
+                        account_number: card_data.card_number.clone(),
+                        expiry,
+                        original_network_transaction_id: nti.clone(),
+                    }),
+                    transaction_reference: None,
                 }
             }
-            PaymentMethodData::MandatePayment => {
-                // No card data is available here; the stored mandate is referenced
-                // through the network transaction ID, which JPMorgan requires for MIT.
-                requests::JpmorganMitCard {
-                    account_number: None,
-                    expiry: None,
-                    original_network_transaction_id: network_transaction_id,
-                }
-            }
-            _ => {
+            MandateReferenceId::NetworkTokenWithNTI(_) => {
                 return Err(IntegrationError::NotImplemented(
-                    "Only Card and MandatePayment are implemented for JPMorgan RepeatPayment"
+                    "NetworkTokenWithNTI mandate reference is not implemented for \
+                     JPMorgan RepeatPayment"
                         .to_string(),
                     Default::default(),
                 )
-                .into())
+                .into());
             }
         };
-
-        let payment_method_type =
-            requests::JpmorganMitPaymentMethodType { card: Some(card) };
 
         let recurring = requests::JpmorganRecurring {
             recurring_sequence: requests::JpmorganRecurringSequence::Subsequent,
