@@ -17,6 +17,8 @@ const _defaultConfig: types.IConnectorConfig = {
         itaubank: {
             clientSecret: { value: 'YOUR_CLIENT_SECRET' },
             clientId: { value: 'YOUR_CLIENT_ID' },
+            certificates: { value: 'YOUR_CERTIFICATES' },
+            privateKey: { value: 'YOUR_PRIVATE_KEY' },
             baseUrl: 'YOUR_BASE_URL',
         }
     },
