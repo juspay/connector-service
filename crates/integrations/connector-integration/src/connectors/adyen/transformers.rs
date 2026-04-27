@@ -1,4 +1,5 @@
 use std::num::NonZeroU8;
+use std::str::FromStr;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use cards::{CardNumber, NetworkToken};
@@ -5868,10 +5869,35 @@ pub struct AdyenRefusal {
 pub struct AdyenRefundRequest {
     merchant_account: Secret<String>,
     amount: Amount,
-    merchant_refund_reason: Option<String>,
+    merchant_refund_reason: Option<AdyenRefundRequestReason>,
     reference: String,
     splits: Option<Vec<AdyenSplitData>>,
     store: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum AdyenRefundRequestReason {
+    FRAUD,
+    #[serde(rename = "CUSTOMER REQUEST")]
+    CUSTOMERREQUEST,
+    RETURN,
+    DUPLICATE,
+    OTHER,
+}
+
+impl FromStr for AdyenRefundRequestReason {
+    type Err = error_stack::Report<IntegrationError>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "FRAUD" => Ok(Self::FRAUD),
+            "CUSTOMER REQUEST" | "CUSTOMERREQUEST" => Ok(Self::CUSTOMERREQUEST),
+            "RETURN" => Ok(Self::RETURN),
+            "DUPLICATE" => Ok(Self::DUPLICATE),
+            "OTHER" => Ok(Self::OTHER),
+            _ => Ok(Self::OTHER),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -5904,7 +5930,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 currency: item.router_data.request.currency,
                 value: item.router_data.request.minor_refund_amount,
             },
-            merchant_refund_reason: item.router_data.request.reason.clone(),
+            merchant_refund_reason: item
+                .router_data
+                .request
+                .reason
+                .as_ref()
+                .map(|reason| AdyenRefundRequestReason::from_str(reason))
+                .transpose()?,
             reference: item.router_data.request.refund_id.clone(),
             store: None,
             splits: None,
