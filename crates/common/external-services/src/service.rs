@@ -530,11 +530,15 @@ where
                             header_map
                         });
 
-                        Ok(Ok(Response {
+                        let response = Response {
                             headers,
                             response: response_bytes.into(),
-                            status_code: injector_response.status_code, // Use actual status code from connector
-                        }))
+                            status_code: injector_response.status_code,
+                        };
+                        match injector_response.status_code {
+                            200..=202 | 302 | 204 => Ok(Ok(response)),
+                            _ => Ok(Err(response)),
+                        }
                     } else {
                         let test_mode = test_context.is_some();
                         call_connector_api(

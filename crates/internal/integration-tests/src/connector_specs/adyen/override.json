@@ -254,6 +254,77 @@
       }
     }
   },
+  "proxy_authorize": {
+    "proxy_auto_capture_card": {
+      "grpc_req": {
+        "address": {
+          "shipping_address": {
+            "first_name": { "value": "auto_generate" },
+            "last_name": { "value": "auto_generate" },
+            "line1": { "value": "auto_generate" },
+            "city": { "value": "auto_generate" },
+            "state": { "value": "CA" },
+            "zip_code": { "value": "94025" },
+            "country_alpha2_code": "US",
+            "email": { "value": "auto_generate" },
+            "phone_number": { "value": "auto_generate" },
+            "phone_country_code": "+1"
+          },
+          "billing_address": {
+            "first_name": { "value": "auto_generate" },
+            "last_name": { "value": "auto_generate" },
+            "line1": { "value": "auto_generate" },
+            "city": { "value": "auto_generate" },
+            "state": { "value": "CA" },
+            "zip_code": { "value": "94025" },
+            "country_alpha2_code": "US",
+            "email": { "value": "auto_generate" },
+            "phone_number": { "value": "auto_generate" },
+            "phone_country_code": "+1"
+          }
+        },
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    }
+  },
+  "proxy_setup_recurring": {
+    "proxy_setup_mandate": {
+      "grpc_req": {
+        "address": {
+          "shipping_address": {
+            "first_name": { "value": "auto_generate" },
+            "last_name": { "value": "auto_generate" },
+            "line1": { "value": "auto_generate" },
+            "city": { "value": "auto_generate" },
+            "state": { "value": "CA" },
+            "zip_code": { "value": "94025" },
+            "country_alpha2_code": "US",
+            "email": { "value": "auto_generate" },
+            "phone_number": { "value": "auto_generate" },
+            "phone_country_code": "+1"
+          },
+          "billing_address": {
+            "first_name": { "value": "auto_generate" },
+            "last_name": { "value": "auto_generate" },
+            "line1": { "value": "auto_generate" },
+            "city": { "value": "auto_generate" },
+            "state": { "value": "CA" },
+            "zip_code": { "value": "94025" },
+            "country_alpha2_code": "US",
+            "email": { "value": "auto_generate" },
+            "phone_number": { "value": "auto_generate" },
+            "phone_country_code": "+1"
+          }
+        },
+        "return_url": "https://google.com",
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    }
+  },
   "setup_recurring": {
     "setup_recurring": {
       "grpc_req": {
