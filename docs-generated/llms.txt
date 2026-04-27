@@ -91,7 +91,7 @@ connector_id: barclaycard
 doc: docs/connectors/barclaycard.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
-flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
+flows: authorize, capture, get, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
 examples_python: examples/barclaycard/barclaycard.py
 
 ## Billwerk
@@ -411,7 +411,7 @@ connector_id: paybox
 doc: docs/connectors/paybox.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
-flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
+flows: authorize, capture, get, proxy_authorize, proxy_setup_recurring, refund, refund_get, setup_recurring, void
 examples_python: examples/paybox/paybox.py
 
 ## Payload
@@ -467,7 +467,7 @@ connector_id: peachpayments
 doc: docs/connectors/peachpayments.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
-flows: authorize, capture, get, handle_event, parse_event, proxy_authorize, refund, refund_get, void
+flows: authorize, capture, get, handle_event, parse_event, proxy_authorize, proxy_setup_recurring, refund, refund_get, setup_recurring, void
 examples_python: examples/peachpayments/peachpayments.py
 
 ## PhonePe
@@ -515,7 +515,7 @@ connector_id: rapyd
 doc: docs/connectors/rapyd.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: AliPayRedirect, AmazonPayRedirect, ApplePay, ApplePayThirdPartySdk, BillDeskRedirect, Bluecode, Card, CashappQr, CashfreeRedirect, Dana, EaseBuzzRedirect, GCash, GoPay, GooglePay, GooglePayThirdPartySdk, KakaoPay, LazyPayRedirect, MbWay, Mifinity, Momo, PayURedirect, PaypalRedirect, PaypalSdk, PhonePeRedirect, RevolutPay, SamsungPay, Satispay, Swish, TouchNGo, Twint, Vipps, WeChatPayQr, Wero
-flows: authorize, capture, create_client_authentication_token, get, proxy_authorize, refund, refund_get, token_authorize, void
+flows: authorize, capture, create_client_authentication_token, get, proxy_authorize, recurring_charge, refund, refund_get, token_authorize, void
 examples_python: examples/rapyd/rapyd.py
 
 ## Razorpay
@@ -587,7 +587,7 @@ connector_id: stax
 doc: docs/connectors/stax.md
 scenarios: none
 payment_methods: none
-flows: capture, create_customer, get, refund, refund_get, token_authorize, tokenize, void
+flows: capture, create_customer, get, recurring_charge, refund, refund_get, token_authorize, token_setup_recurring, tokenize, void
 examples_python: none
 
 ## Stripe
