@@ -67,6 +67,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "BillDeskRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "Bizum": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
@@ -99,6 +103,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "CashfreeRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
@@ -109,7 +117,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
@@ -117,9 +129,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
@@ -139,13 +155,21 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -187,11 +211,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
       "Lawson": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "LazyPayRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
@@ -219,7 +251,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "Netbanking": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
@@ -253,7 +297,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_implemented",
@@ -273,7 +317,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
       },
       "PaypalRedirect": {
         "status": "not_implemented",
@@ -283,11 +331,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "PhonePeRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
@@ -343,11 +399,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
@@ -360,6 +432,10 @@
         "error": "This feature is not implemented: Payment method"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
@@ -452,12 +528,46 @@
     },
     "handle_event": {
       "default": {
-        "status": "supported"
+        "status": "supported",
+        "proto_request": {
+          "merchant_event_id": "probe_event_001",
+          "request_details": {
+            "method": "HTTP_METHOD_POST",
+            "uri": "https://example.com/webhook",
+            "headers": {},
+            "body": "{\"id\":1,\"order_id\":\"probe_order_001\",\"status\":\"succeeded\",\"amount\":10.0,\"currency\":\"EUR\"}"
+          }
+        },
+        "sample": {
+          "url": "",
+          "method": "Post",
+          "headers": {},
+          "body": "{\"id\":1,\"order_id\":\"probe_order_001\",\"status\":\"succeeded\",\"amount\":10.0,\"currency\":\"EUR\"}"
+        }
       }
     },
     "incremental_authorization": {
       "default": {
         "status": "not_implemented"
+      }
+    },
+    "parse_event": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "request_details": {
+            "method": "HTTP_METHOD_POST",
+            "uri": "https://example.com/webhook",
+            "headers": {},
+            "body": "{\"id\":1,\"order_id\":\"probe_order_001\",\"status\":\"succeeded\",\"amount\":10.0,\"currency\":\"EUR\"}"
+          }
+        },
+        "sample": {
+          "url": "",
+          "method": "Post",
+          "headers": {},
+          "body": "{\"id\":1,\"order_id\":\"probe_order_001\",\"status\":\"succeeded\",\"amount\":10.0,\"currency\":\"EUR\"}"
+        }
       }
     },
     "post_authenticate": {

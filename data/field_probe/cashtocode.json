@@ -67,6 +67,10 @@
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
+      "BillDeskRedirect": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
       "Bizum": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
@@ -99,6 +103,10 @@
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
+      "CashfreeRedirect": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
       "CimbVaBankTransfer": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
@@ -109,7 +117,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
       },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
@@ -117,9 +129,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
@@ -139,13 +155,21 @@
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -187,11 +211,19 @@
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
       "Lawson": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
+      "LazyPayRedirect": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
@@ -219,7 +251,19 @@
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
+      "Netbanking": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
@@ -253,7 +297,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_supported",
@@ -273,7 +317,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
       },
       "PaypalRedirect": {
         "status": "not_supported",
@@ -283,11 +331,19 @@
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
+      "PhonePeRedirect": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
@@ -343,11 +399,27 @@
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
@@ -360,6 +432,10 @@
         "error": "The given currency is not configured with the given connector"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "The given currency is not configured with the given connector"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "The given currency is not configured with the given connector"
       },
@@ -434,12 +510,46 @@
     },
     "handle_event": {
       "default": {
-        "status": "supported"
+        "status": "supported",
+        "proto_request": {
+          "merchant_event_id": "probe_event_001",
+          "request_details": {
+            "method": "HTTP_METHOD_POST",
+            "uri": "https://example.com/webhook",
+            "headers": {},
+            "body": "{\"amount\":10.0,\"currency\":\"EUR\",\"foreignTransactionId\":\"probe_foreign_001\",\"type\":\"payment\",\"transactionId\":\"probe_txn_001\"}"
+          }
+        },
+        "sample": {
+          "url": "",
+          "method": "Post",
+          "headers": {},
+          "body": "{\"amount\":10.0,\"currency\":\"EUR\",\"foreignTransactionId\":\"probe_foreign_001\",\"type\":\"payment\",\"transactionId\":\"probe_txn_001\"}"
+        }
       }
     },
     "incremental_authorization": {
       "default": {
         "status": "not_implemented"
+      }
+    },
+    "parse_event": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "request_details": {
+            "method": "HTTP_METHOD_POST",
+            "uri": "https://example.com/webhook",
+            "headers": {},
+            "body": "{\"amount\":10.0,\"currency\":\"EUR\",\"foreignTransactionId\":\"probe_foreign_001\",\"type\":\"payment\",\"transactionId\":\"probe_txn_001\"}"
+          }
+        },
+        "sample": {
+          "url": "",
+          "method": "Post",
+          "headers": {},
+          "body": "{\"amount\":10.0,\"currency\":\"EUR\",\"foreignTransactionId\":\"probe_foreign_001\",\"type\":\"payment\",\"transactionId\":\"probe_txn_001\"}"
+        }
       }
     },
     "post_authenticate": {
