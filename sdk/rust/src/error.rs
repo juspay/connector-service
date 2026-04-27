@@ -63,6 +63,8 @@ pub enum SdkError {
         error_message: String,
         /// HTTP status code returned by the connector, if known.
         http_status_code: Option<u16>,
+        /// Structured error details containing decline codes, advice codes, etc.
+        error_info: Box<Option<grpc_api_types::payments::ErrorInfo>>,
     },
 
     /// Transport-layer failure. The connector was never reached, or the
@@ -87,6 +89,7 @@ impl std::fmt::Display for SdkError {
                 error_code,
                 error_message,
                 http_status_code,
+                ..
             } => match http_status_code {
                 Some(status) => write!(
                     f,
@@ -123,6 +126,7 @@ impl From<grpc_api_types::payments::ConnectorError> for SdkError {
             error_code: e.error_code,
             error_message: e.error_message,
             http_status_code: e.http_status_code.map(|s| s as u16),
+            error_info: Box::new(e.error_info),
         }
     }
 }

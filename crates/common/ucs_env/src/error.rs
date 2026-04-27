@@ -59,6 +59,8 @@ impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
 
         // Serialize the IntegrationError proto to bytes
         let mut buf = Vec::new();
+        // SAFETY: IntegrationError only contains String fields with valid UTF-8
+        // and prost encoding cannot fail for these controlled types
         let _ = integration_error.encode(&mut buf);
 
         match self.current_context() {
@@ -114,6 +116,8 @@ impl IntoGrpcStatus for error_stack::Report<ConnectorError> {
 
         // Serialize the ConnectorError proto to bytes
         let mut buf = Vec::new();
+        // SAFETY: ConnectorError only contains String fields with valid UTF-8
+        // and prost encoding cannot fail for these controlled types
         let _ = connector_error.encode(&mut buf);
 
         match self.current_context() {
