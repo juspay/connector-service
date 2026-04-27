@@ -3,7 +3,7 @@ use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use crate::{
     connector_flow::MandateRevoke,
-    connector_types::{self, ConnectorEnum},
+    connector_types::{self, CaptureSyncResponse, ConnectorEnum},
     payment_method_data::SamsungPayWalletCredentials,
     utils::extract_connector_request_reference_id,
 };
@@ -390,6 +390,7 @@ pub struct Connectors {
     pub itaubank: ConnectorParams,
     pub sanlam: ConnectorParams,
     pub pinelabs_online: ConnectorParams,
+    pub imerchantsolutions: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -534,6 +535,21 @@ impl Connectors {
             ConnectorEnum::Worldpay => {
                 patched.worldpay.apply(params_patch);
             }
+            ConnectorEnum::Rapyd => {
+                patched.rapyd.apply(params_patch);
+            }
+            ConnectorEnum::Fiserv => {
+                patched.fiserv.apply(params_patch);
+            }
+            ConnectorEnum::Nexinets => {
+                patched.nexinets.apply(params_patch);
+            }
+            ConnectorEnum::Elavon => {
+                patched.elavon.apply(params_patch);
+            }
+            ConnectorEnum::Novalnet => {
+                patched.novalnet.apply(params_patch);
+            }
             ConnectorEnum::Trustpay => {
                 // TrustPay uses ConnectorParamsWithMoreUrls which has different fields
                 let trustpay_patch = ConnectorParamsWithMoreUrlsPatch {
@@ -549,7 +565,7 @@ impl Connectors {
                     context: IntegrationErrorContext {
                         additional_context: Some(format!(
                             "Connector '{}' is not supported for dynamic URL patching from superposition. \
-                             Supported connectors: stripe, adyen, paypal, braintree, checkout, cybersource, revolut, worldpay, trustpay",
+                             Supported connectors: stripe, adyen, paypal, braintree, checkout, cybersource, revolut, worldpay, rapyd, fiserv, nexinets, elavon, novalnet, trustpay",
                             connector
                         )),
                         ..Default::default()
@@ -936,9 +952,7 @@ impl<
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(_) |
                 grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(_) => {
-                    Err(report!(IntegrationError::not_implemented(
-                        "UNSUPPORTED_PAYMENT_METHOD: This flow should never be hit for card or cardproxy types. Please check payment method dispatch/branching logic."
-                    )))
+                    Err(report!(IntegrationError::NotImplemented(("UNSUPPORTED_PAYMENT_METHOD: This flow should never be hit for card or cardproxy types. Please check payment method dispatch/branching logic.").into(), Default::default())))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(
                     card_redirect,
@@ -1087,32 +1101,32 @@ impl<
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::LazypayRedirect(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::LazyPayRedirect(
-                        payment_method_data::LazyPayRedirectData {},
+                        payment_method_data::LazyPayRedirection {},
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::PhonepeRedirect(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::PhonePeRedirect(
-                        payment_method_data::PhonePeRedirectData {},
+                        payment_method_data::PhonePeRedirection {},
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::BilldeskRedirect(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::BillDeskRedirect(
-                        payment_method_data::BillDeskRedirectData {},
+                        payment_method_data::BillDeskRedirection {},
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CashfreeRedirect(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::CashfreeRedirect(
-                        payment_method_data::CashfreeRedirectData {},
+                        payment_method_data::CashfreeRedirection {},
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::PayuRedirect(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::PayURedirect(
-                        payment_method_data::PayURedirectData {},
+                        payment_method_data::PayURedirection {},
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::EaseBuzzRedirect(
-                        payment_method_data::EaseBuzzRedirectData {},
+                        payment_method_data::EaseBuzzRedirection {},
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CashappQr(_) => {
@@ -1939,10 +1953,21 @@ impl<
                     ))
                 }
 
-                _ => Err(report!(IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("This payment method type is not yet supported".to_string()), ..Default::default() } })),
+                _ => Err(report!(IntegrationError::InvalidDataFormat {
+                    field_name: "payment_method",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("This payment method type is not yet supported".to_string()),
+                        ..Default::default()
+                    }
+                })),
             },
-            None => Err(IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Payment method data is required".to_string()), ..Default::default() } }
-            .into()),
+            None => Err(report!(IntegrationError::InvalidDataFormat {
+                field_name: "payment_method",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Payment method data is required".to_string()),
+                    ..Default::default()
+                }
+            })),
         }
     }
 }
@@ -2447,8 +2472,9 @@ impl PaymentMethodDataAction {
                 payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(pm)
             }
             PaymentMethodDataAction::CardProxy(_) => {
-                Err(report!(IntegrationError::not_implemented(
-                    "CardProxy not supported in this flow; use the proxy endpoint"
+                Err(report!(IntegrationError::NotImplemented(
+                    ("CardProxy not supported in this flow; use the proxy endpoint").into(),
+                    Default::default()
                 )))
             }
         }
@@ -4118,7 +4144,9 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
                 &value.merchant_transaction_id,
             ),
             customer_id: None,
-            connector_customer: None,
+            connector_customer: value
+                .customer
+                .and_then(|customer| customer.connector_customer_id),
             description: None,
             return_url: value.return_url.clone(),
             connector_feature_data,
@@ -4374,7 +4402,16 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
-            amount: None,
+            amount: value
+                .amount
+                .as_ref()
+                .map(|money| {
+                    Ok::<_, error_stack::Report<IntegrationError>>(common_utils::types::Money {
+                        amount: common_utils::types::MinorUnit::new(money.minor_amount),
+                        currency: common_enums::Currency::foreign_try_from(money.currency())?,
+                    })
+                })
+                .transpose()?,
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
@@ -5426,7 +5463,23 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Netbanking(_)),
             } => Ok(Self::BankRedirect),
-            _ => Err(report!(IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Unsupported payment method".to_string()), ..Default::default() } })),
+            _ => Err(report!(IntegrationError::InvalidDataFormat {
+                field_name: "payment_method",
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Use a supported payment method: Card, Wallet, UPI, BankRedirect (Netbanking), or PayLater"
+                            .to_owned(),
+                    ),
+                    doc_url: Some(
+                        "https://razorpay.com/docs/api/payments/#supported-payment-methods"
+                            .to_owned(),
+                    ),
+                    additional_context: Some(
+                        "The provided payment method variant is not supported by Razorpay"
+                            .to_owned(),
+                    ),
+                },
+            })),
         }
     }
 }
@@ -6088,6 +6141,97 @@ pub fn generate_payment_sync_response(
                     payment_method_update: None,
                 })
             }
+            PaymentsResponseData::MultipleCaptureResponse {
+                capture_sync_response_list,
+                status_code,
+            } => {
+                let status = router_data_v2.resource_common_data.status;
+                let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+
+                let (resource_id, connector_response_reference_id) =
+                    match capture_sync_response_list.values().next() {
+                        Some(CaptureSyncResponse::Success {
+                            resource_id,
+                            connector_response_reference_id,
+                            ..
+                        }) => (
+                            Some(
+                                resource_id.get_connector_transaction_id().change_context(
+                                    ConnectorError::ResponseHandlingFailed {
+                                        context: ResponseTransformationErrorContext {
+                                            http_status_code: None,
+                                            additional_context: Some(
+                                                "Expected connector transaction ID not found"
+                                                    .to_string(),
+                                            ),
+                                        },
+                                    },
+                                )?,
+                            ),
+                            connector_response_reference_id.clone(),
+                        ),
+                        Some(CaptureSyncResponse::Error { .. }) => (None, None),
+                        _ => {
+                            return Err(ConnectorError::ResponseHandlingFailed {
+                                context: ResponseTransformationErrorContext {
+                                    http_status_code: None,
+                                    additional_context: Some(
+                                        "Expected capture sync response not found".to_string(),
+                                    ),
+                                },
+                            }
+                            .into())
+                        }
+                    };
+
+                let amount = router_data_v2
+                    .resource_common_data
+                    .amount
+                    .as_ref()
+                    .map(|money| {
+                        grpc_api_types::payments::Currency::foreign_try_from(money.currency).map(
+                            |currency| grpc_api_types::payments::Money {
+                                minor_amount: money.amount.get_amount_as_i64(),
+                                currency: currency as i32,
+                            },
+                        )
+                    })
+                    .transpose()?;
+
+                Ok(PaymentServiceGetResponse {
+                    connector_transaction_id: resource_id.unwrap_or_default(),
+                    merchant_transaction_id: connector_response_reference_id,
+                    redirection_data: None,
+                    status: grpc_status as i32,
+                    mandate_reference: None,
+                    error: None,
+                    network_transaction_id: None,
+                    amount,
+                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    payment_method_type: None,
+                    capture_method: None,
+                    auth_type: None,
+                    created_at: None,
+                    updated_at: None,
+                    authorized_at: None,
+                    captured_at: None,
+                    customer_name: None,
+                    email: None,
+                    connector_customer_id: None,
+                    merchant_order_id: None,
+                    metadata: None,
+                    status_code: status_code as u32,
+                    raw_connector_response,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
+                    state,
+                    raw_connector_request,
+                    connector_response,
+                    incremental_authorization_allowed: None,
+                    payment_method_update: None,
+                })
+            }
             _ => Err(report!(ConnectorError::UnexpectedResponseError {
                 context: ResponseTransformationErrorContext {
                     http_status_code: None,
@@ -6107,11 +6251,29 @@ pub fn generate_payment_sync_response(
                 }
                 None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
+            let amount = router_data_v2
+                .resource_common_data
+                .amount
+                .as_ref()
+                .map(|money| {
+                    grpc_api_types::payments::Currency::foreign_try_from(money.currency).map(
+                        |currency| grpc_api_types::payments::Money {
+                            minor_amount: money.amount.get_amount_as_i64(),
+                            currency: currency as i32,
+                        },
+                    )
+                })
+                .transpose()?;
             Ok(PaymentServiceGetResponse {
                 connector_transaction_id: extract_connector_request_reference_id(
                     &e.connector_transaction_id,
                 ),
-                merchant_transaction_id: None,
+                merchant_transaction_id: Some(
+                    router_data_v2
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
                 mandate_reference: None,
                 status: status as i32,
                 error: Some(grpc_api_types::payments::ErrorInfo {
@@ -6132,7 +6294,7 @@ pub fn generate_payment_sync_response(
                     }),
                 }),
                 network_transaction_id: None,
-                amount: None,
+                amount,
                 captured_amount: None,
                 payment_method_type: None,
                 capture_method: None,
@@ -6177,7 +6339,11 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             connector_transaction_id,
-            connector_refund_id: value.refund_id.clone(),
+            connector_refund_id: if value.connector_refund_id.is_empty() {
+                value.refund_id.clone()
+            } else {
+                value.connector_refund_id.clone()
+            },
             reason: value.refund_reason.clone(),
             refund_status: common_enums::RefundStatus::Pending,
             refund_connector_metadata: value
@@ -13225,5 +13391,66 @@ pub fn generate_mandate_revoke_response(
             raw_connector_response,
             raw_connector_request,
         }),
+    }
+}
+
+impl From<connector_types::WebhookResourceReference> for grpc_api_types::payments::EventReference {
+    fn from(r: connector_types::WebhookResourceReference) -> Self {
+        use connector_types::{
+            DisputeWebhookReference, MandateWebhookReference, PaymentWebhookReference,
+            PayoutWebhookReference, RefundWebhookReference, WebhookResourceReference,
+        };
+        use grpc_api_types::payments::{
+            event_reference, DisputeEventReference, EventReference, MandateEventReference,
+            PaymentEventReference, PayoutEventReference, RefundEventReference,
+        };
+
+        match r {
+            WebhookResourceReference::Payment(PaymentWebhookReference {
+                connector_transaction_id,
+                merchant_transaction_id,
+            }) => EventReference {
+                resource: Some(event_reference::Resource::Payment(PaymentEventReference {
+                    connector_transaction_id,
+                    merchant_transaction_id,
+                })),
+            },
+            WebhookResourceReference::Refund(RefundWebhookReference {
+                connector_refund_id,
+                merchant_refund_id,
+                connector_transaction_id,
+            }) => EventReference {
+                resource: Some(event_reference::Resource::Refund(RefundEventReference {
+                    connector_refund_id,
+                    merchant_refund_id,
+                    connector_transaction_id,
+                })),
+            },
+            WebhookResourceReference::Dispute(DisputeWebhookReference {
+                connector_dispute_id,
+                connector_transaction_id,
+            }) => EventReference {
+                resource: Some(event_reference::Resource::Dispute(DisputeEventReference {
+                    connector_dispute_id,
+                    connector_transaction_id,
+                })),
+            },
+            WebhookResourceReference::Mandate(MandateWebhookReference {
+                connector_mandate_id,
+            }) => EventReference {
+                resource: Some(event_reference::Resource::Mandate(MandateEventReference {
+                    connector_mandate_id,
+                })),
+            },
+            WebhookResourceReference::Payout(PayoutWebhookReference {
+                connector_payout_id,
+                merchant_payout_id,
+            }) => EventReference {
+                resource: Some(event_reference::Resource::Payout(PayoutEventReference {
+                    connector_payout_id,
+                    merchant_payout_id,
+                })),
+            },
+        }
     }
 }
