@@ -84,6 +84,10 @@ message PaymentMethod {
     GcashRedirectWallet gcash_redirect = 172;           // GCash Redirect
     GoPayRedirectWallet go_pay_redirect = 173;          // GoPay Redirect
     SwishQrWallet swish_qr = 174;                       // Swish QR
+    MobilePayRedirectWallet mobile_pay_redirect = 175;  // MobilePay Redirect
+    VenmoWallet venmo = 176;                            // Venmo
+    SkrillWallet skrill = 177;                          // Skrill
+    PayseraWallet paysera = 178;                        // Paysera
 
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -633,6 +637,21 @@ message VippsRedirectWallet {
 // Swish QR - Swedish mobile payment Swish QR code payment
 message SwishQrWallet {
   // Fields will be added as needed for Swish QR integration
+}
+
+// MobilePay Redirect - Danish mobile payment MobilePay redirect
+message MobilePayRedirectWallet {
+  // Fields will be added as needed for MobilePay redirect integration
+}
+
+// Skrill - Digital wallet for online payments
+message SkrillWallet {
+  // Fields will be added as needed for Skrill integration
+}
+
+// Paysera - European digital wallet and payment service
+message PayseraWallet {
+  // Fields will be added as needed for Paysera integration
 }
 
 // Apple Pay Third Party SDK - Apple Pay with token from third-party SDK

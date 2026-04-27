@@ -150,6 +150,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
@@ -182,6 +186,10 @@
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
@@ -189,6 +197,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -230,6 +242,10 @@
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
@@ -263,6 +279,14 @@
         "error": "Only card payments are supported is not supported by Silverflow"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
       },
@@ -338,6 +362,10 @@
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -402,11 +430,27 @@
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
       },
@@ -419,6 +463,10 @@
         "error": "Only card payments are supported is not supported by Silverflow"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Silverflow"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Silverflow"
       },
