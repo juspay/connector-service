@@ -474,8 +474,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             )),
             status,
             connector_response_reference_id: charge
-                .merchant_payment_charge_reference
-                .or(Some(charge.payment_charge_id)),
+                .merchant_payment_charge_reference,
             error_code,
             error_message,
             error_reason,
