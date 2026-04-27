@@ -1248,17 +1248,19 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxSetupMandateRes
             let carrier_with_expiry = match item.response.carrier_id.as_ref() {
                 Some(carrier) => {
                     let expiry = match &item.router_data.request.payment_method_data {
-                        PaymentMethodData::Card(card) => card
-                            .get_expiry_date_as_mmyy()
-                            .map_err(|_| ConnectorError::ResponseHandlingFailed {
-                                context: ResponseTransformationErrorContext {
-                                    http_status_code: Some(item.http_code),
-                                    additional_context: Some(
-                                        "Failed to extract card expiry for mandate storage"
-                                            .to_string(),
-                                    ),
-                                },
-                            })?,
+                        PaymentMethodData::Card(card) => {
+                            card.get_expiry_date_as_mmyy().map_err(|_| {
+                                ConnectorError::ResponseHandlingFailed {
+                                    context: ResponseTransformationErrorContext {
+                                        http_status_code: Some(item.http_code),
+                                        additional_context: Some(
+                                            "Failed to extract card expiry for mandate storage"
+                                                .to_string(),
+                                        ),
+                                    },
+                                }
+                            })?
+                        }
                         _ => {
                             return Err(ConnectorError::ResponseHandlingFailed {
                                 context: ResponseTransformationErrorContext {
