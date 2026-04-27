@@ -119,6 +119,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
@@ -151,6 +155,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
@@ -158,6 +166,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -199,6 +211,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
@@ -232,6 +248,14 @@
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
@@ -307,6 +331,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -371,11 +399,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
@@ -467,6 +511,10 @@
           },
           "body": "{\"head\":{\"version\":\"v1\",\"requestTimestamp\":\"0000000000\",\"channelId\":null,\"txnToken\":\"probe_session_token\"},\"body\":{\"mid\":\"probe_merchant\",\"orderId\":\"probe_txn_001\",\"requestType\":\"NATIVE\",\"paymentMode\":\"UPI_INTENT\",\"paymentFlow\":\"NONE\"}}"
         }
+      },
+      "Vipps": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only UPI payment methods are supported by this Paytm transformer"
       },
       "WeChatPayQr": {
         "status": "not_implemented",

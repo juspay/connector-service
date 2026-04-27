@@ -379,13 +379,17 @@ pub(crate) fn wero_method() -> PaymentMethod {
 
 pub(crate) fn gopay_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::GoPayRedirect(proto::GoPayRedirectWallet::default())),
+        payment_method: Some(PmVariant::GoPayRedirect(
+            proto::GoPayRedirectWallet::default(),
+        )),
     }
 }
 
 pub(crate) fn gcash_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::GcashRedirect(proto::GcashRedirectWallet::default())),
+        payment_method: Some(PmVariant::GcashRedirect(
+            proto::GcashRedirectWallet::default(),
+        )),
     }
 }
 
@@ -403,25 +407,33 @@ pub(crate) fn dana_method() -> PaymentMethod {
 
 pub(crate) fn kakaopay_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::KakaoPayRedirect(proto::KakaoPayRedirectWallet::default())),
+        payment_method: Some(PmVariant::KakaoPayRedirect(
+            proto::KakaoPayRedirectWallet::default(),
+        )),
     }
 }
 
 pub(crate) fn touchn_go_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::TouchNGoRedirect(proto::TouchNGoRedirectWallet::default())),
+        payment_method: Some(PmVariant::TouchNGoRedirect(
+            proto::TouchNGoRedirectWallet::default(),
+        )),
     }
 }
 
 pub(crate) fn twint_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::TwintRedirect(proto::TwintRedirectWallet::default())),
+        payment_method: Some(PmVariant::TwintRedirect(
+            proto::TwintRedirectWallet::default(),
+        )),
     }
 }
 
 pub(crate) fn vipps_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::VippsRedirect(proto::VippsRedirectWallet::default())),
+        payment_method: Some(PmVariant::VippsRedirect(
+            proto::VippsRedirectWallet::default(),
+        )),
     }
 }
 
