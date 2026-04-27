@@ -172,7 +172,7 @@ pub struct TrustpaymentsAuthRequest {
     pub orderreference: String,
     pub requesttypedescriptions: Vec<TrustpaymentsRequestType>,
     pub sitereference: Secret<String>,
-    pub settlestatus: String,
+    pub settlestatus: TrustpaymentsSettleStatus,
     #[serde(flatten)]
     pub payment_method: TrustpaymentsPaymentMethod,
 }
@@ -485,10 +485,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .clone(),
             requesttypedescriptions: vec![TrustpaymentsRequestType::Auth],
             sitereference: auth.site_reference.clone(),
-            settlestatus: serde_json::to_value(&settlestatus)
-                .ok()
-                .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_else(|| "0".to_string()),
+            settlestatus,
             payment_method,
         };
 
@@ -824,7 +821,7 @@ pub struct TrustpaymentsCaptureRequestItem {
 
 #[derive(Debug, Serialize)]
 pub struct TrustpaymentsCaptureUpdates {
-    pub settlestatus: String,
+    pub settlestatus: TrustpaymentsSettleStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub baseamount: Option<StringMinorUnit>,
 }
@@ -891,12 +888,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Trust Payments TRANSACTIONUPDATE for capture only needs settlestatus change
         // Do NOT send baseamount - it causes "Invalid updates specified" error
         // The full authorized amount will be captured automatically
-        let settlestatus = TrustpaymentsSettleStatus::AutomaticCapture;
         let updates = TrustpaymentsCaptureUpdates {
-            settlestatus: serde_json::to_value(&settlestatus)
-                .ok()
-                .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_else(|| "0".to_string()),
+            settlestatus: TrustpaymentsSettleStatus::AutomaticCapture,
             baseamount: None, // Never send amount for Trust Payments captures
         };
 
@@ -999,7 +992,7 @@ pub struct TrustpaymentsVoidRequestItem {
 
 #[derive(Debug, Serialize)]
 pub struct TrustpaymentsVoidUpdates {
-    pub settlestatus: String,
+    pub settlestatus: TrustpaymentsSettleStatus,
 }
 
 // ===== VOID RESPONSE =====
@@ -1041,12 +1034,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         // settlestatus="3" means Cancelled/Reversed (Void)
-        let settlestatus = TrustpaymentsSettleStatus::Cancelled;
         let updates = TrustpaymentsVoidUpdates {
-            settlestatus: serde_json::to_value(&settlestatus)
-                .ok()
-                .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_else(|| "3".to_string()),
+            settlestatus: TrustpaymentsSettleStatus::Cancelled,
         };
 
         let request_item = TrustpaymentsVoidRequestItem {
@@ -1747,6 +1736,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let auth_request = TrustpaymentsAuthRequest {
             accounttypedescription: Some(TRUSTPAYMENTS_ACCOUNT_TYPE_ECOM.to_string()),
+            authmethod: None,
             baseamount: amount,
             billingfirstname: first_name,
             billinglastname: last_name,
@@ -1759,10 +1749,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .clone(),
             requesttypedescriptions: vec![TrustpaymentsRequestType::Auth],
             sitereference: auth.site_reference.clone(),
-            settlestatus: serde_json::to_value(&settlestatus)
-                .ok()
-                .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_else(|| "0".to_string()),
+            settlestatus,
             payment_method,
         };
 
@@ -1886,7 +1873,7 @@ pub struct TrustpaymentsRepeatPaymentRequestItem {
     pub subscriptiontype: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subscriptionnumber: Option<String>,
-    pub settlestatus: String,
+    pub settlestatus: TrustpaymentsSettleStatus,
 }
 
 // ===== REPEAT PAYMENT RESPONSE =====
@@ -1968,10 +1955,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             initiationreason: Some("C".to_string()),
             subscriptiontype: None,
             subscriptionnumber: None,
-            settlestatus: serde_json::to_value(&settlestatus)
-                .ok()
-                .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_else(|| "0".to_string()),
+            settlestatus,
         };
 
         Ok(Self {
