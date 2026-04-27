@@ -119,6 +119,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Payment method not supported by Iatapay is not supported by Iatapay"
@@ -151,6 +155,10 @@
         "status": "not_supported",
         "error": "Payment method not supported by Iatapay is not supported by Iatapay"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Unsupported bank redirect type for Iatapay is not supported by Iatapay"
@@ -158,6 +166,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -232,6 +244,10 @@
         "status": "not_supported",
         "error": "Unsupported bank redirect type for Iatapay is not supported by Iatapay"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Payment method not supported by Iatapay is not supported by Iatapay"
@@ -298,6 +314,14 @@
         "error": "Payment method not supported by Iatapay is not supported by Iatapay"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Payment method not supported by Iatapay is not supported by Iatapay"
       },
@@ -373,6 +397,10 @@
         "status": "not_supported",
         "error": "Payment method not supported by Iatapay is not supported by Iatapay"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -437,13 +465,29 @@
         "status": "not_supported",
         "error": "Payment method not supported by Iatapay is not supported by Iatapay"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Unsupported bank redirect type for Iatapay is not supported by Iatapay"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
+      },
       "Trustly": {
         "status": "not_supported",
         "error": "Unsupported bank redirect type for Iatapay is not supported by Iatapay"
+      },
+      "Twint": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
       },
       "UpiCollect": {
         "status": "supported",
@@ -557,6 +601,10 @@
           },
           "body": "{\"merchantId\":\"probe_merchant\",\"merchantPaymentId\":\"probe_txn_001\",\"amount\":10.0,\"currency\":\"USD\",\"country\":\"IN\",\"locale\":\"en-IN\",\"redirectUrls\":{\"successUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"notificationUrl\":\"https://example.com/webhook\"}"
         }
+      },
+      "Vipps": {
+        "status": "not_supported",
+        "error": "Payment method not supported by Iatapay is not supported by Iatapay"
       },
       "WeChatPayQr": {
         "status": "not_supported",

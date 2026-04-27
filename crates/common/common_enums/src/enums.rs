@@ -1082,6 +1082,8 @@ pub enum PaymentMethodType {
     RevolutPay,
     SepaGuaranteedDebit,
     IndonesianBankTransfer,
+    Skrill,
+    Paysera,
 }
 
 impl PaymentMethodType {
