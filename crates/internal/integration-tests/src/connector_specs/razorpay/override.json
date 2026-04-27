@@ -1,5 +1,5 @@
 {
-  "create_order": {
+  "PaymentService/CreateOrder": {
     "create_order_basic": {
       "grpc_req": {
         "amount": {
@@ -14,7 +14,7 @@
       }
     }
   },
-  "authorize": {
+  "PaymentService/Authorize": {
     "no3ds_auto_capture_upi_collect": {
       "grpc_req": {
         "connector_order_id": ""

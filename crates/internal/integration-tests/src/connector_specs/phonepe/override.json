@@ -1,5 +1,5 @@
 {
-  "authorize": {
+  "PaymentService/Authorize": {
     "no3ds_auto_capture_upi_collect": {
       "grpc_req": {
         "payment_method": {
@@ -22,7 +22,7 @@
       }
     }
   },
-  "get": {
+  "PaymentService/Get": {
     "sync_upi_collect": {
       "assert": {
         "error": null

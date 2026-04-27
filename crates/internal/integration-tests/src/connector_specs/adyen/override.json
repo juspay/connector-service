@@ -1,5 +1,5 @@
 {
-  "authorize": {
+  "PaymentService/Authorize": {
     "no3ds_auto_capture_credit_card": {
       "grpc_req": {
         "payment_method": {
@@ -216,46 +216,15 @@
       }
     }
   },
-  "incremental_authorization": {
-    "incremental_auth_basic": {
-      "assert": {
-        "status": {
-          "one_of": ["AUTHORIZATION_SUCCESS"]
-        }
-      }
-    },
-    "incremental_auth_with_tip": {
-      "assert": {
-        "status": {
-          "one_of": ["AUTHORIZATION_SUCCESS"]
-        }
-      }
-    },
-    "incremental_auth_multiple_increase": {
-      "assert": {
-        "status": {
-          "one_of": ["AUTHORIZATION_SUCCESS", "AUTHORIZATION_FAILURE"]
-        }
-      }
-    },
-    "incremental_auth_fail_invalid_transaction_id": {
-      "assert": {
-        "status": {
-          "one_of": ["AUTHORIZATION_SUCCESS", "AUTHORIZATION_FAILURE", "AUTHORIZATION_PROCESSING"]
-        },
-        "error": null
-      }
-    }
-  },
-  "refund": {
+  "PaymentService/Refund": {
     "refund_with_reason": {
       "grpc_req": {
         "reason": "CUSTOMER REQUEST"
       }
     }
   },
-  "setup_recurring": {
-    "setup_recurring": {
+  "PaymentService/SetupRecurring": {
+    "PaymentService/SetupRecurring": {
       "grpc_req": {
         "return_url": "https://google.com",
         "payment_method": {

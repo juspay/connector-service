@@ -41,7 +41,7 @@ pub trait ConnectorOverride: Send + Sync {
         // 2. For handle_event suite: load webhook_payload.json as an
         //    additional merge-patch layer, then run post-merge transforms
         //    (base64-encode body, compute HMAC signatures, inject webhook_secrets).
-        if suite == "handle_event" {
+        if suite == "EventService/HandleEvent" {
             apply_webhook_payload_overrides(self.connector_name(), scenario, grpc_req)?;
         }
 
