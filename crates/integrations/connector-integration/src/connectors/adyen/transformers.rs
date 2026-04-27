@@ -27,7 +27,8 @@ use domain_types::{
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SplitRefundsRequest, SubmitEvidenceData,
+        AdyenSplitData as DomainAdyenSplitData,
     },
     payment_method_data::{
         ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
@@ -1261,6 +1262,24 @@ pub enum AdyenSplitType {
     TopUp,
     /// The value-added tax charged on the payment, booked to your platforms liable balance account.
     Vat,
+}
+
+impl From<common_enums::AdyenSplitType> for AdyenSplitType {
+    fn from(value: common_enums::AdyenSplitType) -> Self {
+        match value {
+            common_enums::AdyenSplitType::BalanceAccount => Self::BalanceAccount,
+            common_enums::AdyenSplitType::AcquiringFees => Self::AcquiringFees,
+            common_enums::AdyenSplitType::PaymentFee => Self::PaymentFee,
+            common_enums::AdyenSplitType::AdyenFees => Self::AdyenFees,
+            common_enums::AdyenSplitType::AdyenCommission => Self::AdyenCommission,
+            common_enums::AdyenSplitType::AdyenMarkup => Self::AdyenMarkup,
+            common_enums::AdyenSplitType::Interchange => Self::Interchange,
+            common_enums::AdyenSplitType::SchemeFee => Self::SchemeFee,
+            common_enums::AdyenSplitType::Commission => Self::Commission,
+            common_enums::AdyenSplitType::TopUp => Self::TopUp,
+            common_enums::AdyenSplitType::Vat => Self::Vat,
+        }
+    }
 }
 
 // Wrapper types for RepeatPayment to avoid duplicate templating structs in macro
@@ -5923,6 +5942,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
+        let (store, splits) = match item.router_data.request.split_refunds.as_ref() {
+            Some(SplitRefundsRequest::AdyenSplitRefund(data)) => {
+                get_adyen_split_refund_request(data, item.router_data.request.currency)
+            }
+            _ => {
+                let store = item
+                    .router_data
+                    .request
+                    .refund_connector_metadata
+                    .clone()
+                    .map(|metadata| metadata.expose())
+                    .and_then(get_store_id);
+                (store, None)
+            }
+        };
 
         Ok(Self {
             merchant_account: auth_type.merchant_account,
@@ -5938,8 +5972,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|reason| AdyenRefundRequestReason::from_str(reason))
                 .transpose()?,
             reference: item.router_data.request.refund_id.clone(),
-            store: None,
-            splits: None,
+            store,
+            splits,
         })
     }
 }
@@ -7565,6 +7599,34 @@ fn get_adyen_split_request(
             (store, Some(splits))
         })
         .unwrap_or_else(|| (adyen_store.clone(), None))
+}
+
+fn get_adyen_split_refund_request(
+    split_request: &DomainAdyenSplitData,
+    currency: common_enums::Currency,
+) -> (Option<String>, Option<Vec<AdyenSplitData>>) {
+    let splits = split_request
+        .split_items
+        .iter()
+        .map(|split_item| {
+            let amount = split_item.amount.map(|value| Amount { currency, value });
+            AdyenSplitData {
+                amount,
+                reference: split_item.reference.clone(),
+                split_type: split_item.split_type.clone().into(),
+                account: split_item.account.clone(),
+                description: split_item.description.clone(),
+            }
+        })
+        .collect();
+    (split_request.store.clone(), Some(splits))
+}
+
+fn get_store_id(metadata: serde_json::Value) -> Option<String> {
+    metadata
+        .get("store")
+        .and_then(|store| store.as_str())
+        .map(|store| store.to_string())
 }
 
 // ---- ClientAuthenticationToken flow types ----
