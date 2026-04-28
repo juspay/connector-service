@@ -649,7 +649,7 @@
     "proxy_authorize": {
       "default": {
         "status": "error",
-        "error": "Invalid data format: payment_method_data.card.card_exp_month. Expected format: MM"
+        "error": "Field 'ds_merchant_order' is too long for connector 'Redsys'"
       }
     },
     "proxy_setup_recurring": {

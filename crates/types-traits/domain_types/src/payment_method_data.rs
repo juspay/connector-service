@@ -125,15 +125,15 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         match month_str {
             m if m.contains("{{") => Ok(Secret::new(m.to_string())),
             m => {
-                let exp_month = m.parse::<u8>().map_err(|_| {
-                    IntegrationError::InvalidDataFormat {
-                        field_name: "payment_method_data.card.card_exp_month",
-                        context: IntegrationErrorContext {
-                            additional_context: Some("Expected format: MM".to_owned()),
-                            ..Default::default()
-                        },
-                    }
-                })?;
+                let exp_month =
+                    m.parse::<u8>()
+                        .map_err(|_| IntegrationError::InvalidDataFormat {
+                            field_name: "payment_method_data.card.card_exp_month",
+                            context: IntegrationErrorContext {
+                                additional_context: Some("Expected format: MM".to_owned()),
+                                ..Default::default()
+                            },
+                        })?;
                 let month =
                     cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
                         IntegrationError::InvalidDataFormat {

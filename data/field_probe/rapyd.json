@@ -1617,7 +1617,7 @@
     "proxy_setup_recurring": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Card Type"
+        "error": "This feature is not implemented: Card issuer detection is not supported for vault token placeholders"
       }
     },
     "recurring_charge": {

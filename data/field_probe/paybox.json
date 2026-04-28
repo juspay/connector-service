@@ -633,8 +633,39 @@
     },
     "proxy_setup_recurring": {
       "default": {
-        "status": "error",
-        "error": "Invalid data format: payment_method_data.card.card_exp_month. Expected format: MM"
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_proxy_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "card_proxy": {
+            "card_number": "4111111111111111",
+            "card_exp_month": "03",
+            "card_exp_year": "2030",
+            "card_cvc": "123",
+            "card_holder_name": "John Doe"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "customer_acceptance": {
+            "acceptance_type": "OFFLINE",
+            "accepted_at": 0
+          },
+          "auth_type": "NO_THREE_DS",
+          "setup_future_usage": "OFF_SESSION"
+        },
+        "sample": {
+          "url": "https://preprod-ppps.paybox.com/PPPS.php",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
+          },
+          "body": "VERSION=00104&TYPE=00056&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=0&DEVISE=840&REFERENCE=probe_proxy_mandate_001&DATEQ=00000000000000&PORTEUR=%7B%7B%24card_number%7D%7D&DATEVAL=%7B%7B%24card_exp_month%7D%7D%7B%7B%24card_exp_year%7D%7D&CVV=%7B%7B%24card_cvc%7D%7D&REFABONNE=probe_proxy_mandate_001&ACTIVITE=024"
+        }
       }
     },
     "recurring_charge": {

@@ -622,7 +622,7 @@
     "proxy_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Card Type"
+        "error": "This feature is not implemented: Card issuer detection is not supported for vault token placeholders"
       }
     },
     "proxy_setup_recurring": {

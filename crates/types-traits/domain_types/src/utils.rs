@@ -6,10 +6,7 @@ use std::{
 use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethodType};
 use common_utils::{
-    consts,
-    fp_utils::when,
-    metadata::MaskedMetadata,
-    AmountConvertor, CustomResult, MinorUnit,
+    consts, fp_utils::when, metadata::MaskedMetadata, AmountConvertor, CustomResult, MinorUnit,
 };
 use error_stack::{report, Result, ResultExt};
 use regex::Regex;
