@@ -20,6 +20,7 @@ pub const SUPPORTED_FLOWS: &[&str] = &[
     "create_client_authentication_token",
     "get",
     "proxy_authorize",
+    "recurring_charge",
     "refund",
     "refund_get",
     "token_authorize",
@@ -151,6 +152,35 @@ pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
     }
 }
 
+pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
+    RecurringPaymentServiceChargeRequest {
+        connector_recurring_payment_id: Some(MandateReference {
+            // Reference to existing mandate.
+            // mandate_id_type: {"connector_mandate_id": {"connector_mandate_id": "probe-mandate-123"}}
+            ..Default::default()
+        }),
+        amount: Some(Money {
+            // Amount Information.
+            minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+        }),
+        payment_method: Some(PaymentMethod {
+            // Optional payment Method Information (for network transaction flows).
+            payment_method: Some(payment_method::PaymentMethod::Token(
+                TokenPaymentMethodType {
+                    token: Some(Secret::new("probe_pm_token".to_string())), // The token string representing a payment method.
+                },
+            )),
+            ..Default::default()
+        }),
+        return_url: Some("https://example.com/recurring-return".to_string()),
+        connector_customer_id: Some("cust_probe_123".to_string()),
+        payment_method_type: Some(PaymentMethodType::PayPal.into()),
+        off_session: Some(true), // Behavioral Flags and Preferences.
+        ..Default::default()
+    }
+}
+
 pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
         merchant_refund_id: Some("probe_refund_001".to_string()), // Identification.
@@ -169,7 +199,7 @@ pub fn build_refund_get_request() -> RefundServiceGetRequest {
     RefundServiceGetRequest {
         merchant_refund_id: Some("probe_refund_001".to_string()), // Identification.
         connector_transaction_id: "probe_connector_txn_001".to_string(),
-        refund_id: "probe_refund_id_001".to_string(),
+        refund_id: "probe_refund_id_001".to_string(), // Deprecated.
         ..Default::default()
     }
 }
@@ -475,6 +505,18 @@ pub async fn process_proxy_authorize(
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: RecurringPaymentService.Charge
+#[allow(dead_code)]
+pub async fn process_recurring_charge(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .recurring_charge(build_recurring_charge_request(), &HashMap::new(), None)
+        .await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: RefundService.Get
 #[allow(dead_code)]
 pub async fn process_refund_get(
@@ -535,11 +577,12 @@ async fn main() {
         }
         "process_get" => process_get(&client, "txn_001").await,
         "process_proxy_authorize" => process_proxy_authorize(&client, "txn_001").await,
+        "process_recurring_charge" => process_recurring_charge(&client, "txn_001").await,
         "process_refund_get" => process_refund_get(&client, "txn_001").await,
         "process_token_authorize" => process_token_authorize(&client, "txn_001").await,
         "process_void" => process_void(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_get, process_proxy_authorize, process_refund_get, process_token_authorize, process_void", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_get, process_proxy_authorize, process_recurring_charge, process_refund_get, process_token_authorize, process_void", flow);
             return;
         }
     };

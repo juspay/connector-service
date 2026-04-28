@@ -67,6 +67,10 @@
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
+      "BillDeskRedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
       "Bizum": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
@@ -99,6 +103,10 @@
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
+      "CashfreeRedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
       "CimbVaBankTransfer": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
@@ -109,7 +117,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
@@ -117,9 +129,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
@@ -139,13 +155,21 @@
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -187,11 +211,19 @@
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
       "Lawson": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
+      "LazyPayRedirect": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
@@ -219,7 +251,19 @@
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
+      "Netbanking": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
@@ -253,7 +297,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_supported",
@@ -273,7 +317,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
       "PaypalRedirect": {
         "status": "not_supported",
@@ -283,11 +331,19 @@
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
+      "PhonePeRedirect": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
@@ -343,11 +399,27 @@
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
@@ -360,6 +432,10 @@
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method through Sanlam is not supported by Sanlam"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method through Sanlam is not supported by Sanlam"
       },

@@ -95,6 +95,10 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "BillDeskRedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "Bizum": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
@@ -127,6 +131,10 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "CashfreeRedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "CimbVaBankTransfer": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
@@ -137,7 +145,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
@@ -145,9 +157,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
@@ -167,13 +183,21 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -243,11 +267,19 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "Lawson": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "LazyPayRedirect": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
@@ -275,7 +307,19 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "Netbanking": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
@@ -309,7 +353,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_supported",
@@ -329,7 +373,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "PaypalRedirect": {
         "status": "not_supported",
@@ -367,11 +415,19 @@
           "body": "{\"query\":\"mutation ChargePaypal($input: ChargePaymentMethodInput!) { chargePaymentMethod(input: $input) { transaction { id status amount { value currencyCode } } } }\",\"variables\":{\"input\":{\"paymentMethodId\":\"probe_paypal_sdk_token\",\"transaction\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"orderId\":\"probe_txn_001\"}}}}"
         }
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "PhonePeRedirect": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
@@ -427,11 +483,27 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
@@ -444,6 +516,10 @@
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
@@ -651,24 +727,8 @@
     },
     "refund_get": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_refund_id": "probe_refund_001",
-          "connector_transaction_id": "probe_connector_txn_001",
-          "refund_id": "probe_refund_id_001",
-          "refund_metadata": "{\"currency\":\"USD\"}"
-        },
-        "sample": {
-          "url": "https://payments.sandbox.braintree-api.com/graphql",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "braintree-version": "2019-01-01",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"query\":\"query($input: RefundSearchInput!) { search { refunds(input: $input, first: 1) { edges { node { id status createdAt amount { value currencyCode } orderId } } } } }\",\"variables\":{\"input\":{\"id\":{\"is\":\"probe_refund_id_001\"}}}}"
-        }
+        "status": "error",
+        "error": "Stuck on field: currency — Missing required field: currency"
       }
     },
     "reverse": {

@@ -67,6 +67,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
+      "BillDeskRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
       "Bizum": {
         "status": "not_supported",
         "error": "Selected payment method through Loonio is not supported by Loonio"
@@ -99,6 +103,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
+      "CashfreeRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
@@ -109,7 +117,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
@@ -117,9 +129,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
@@ -139,13 +155,21 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method through Loonio is not supported by Loonio"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -221,11 +245,19 @@
           "body": "{\"currency_code\":\"USD\",\"customer_profile\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"test@example.com\"},\"amount\":10.0,\"customer_id\":\"cust_probe_123\",\"transaction_id\":\"probe_txn_001\",\"payment_method_type\":\"INTERAC_ETRANSFER\",\"locale\":\"EN\",\"redirect_url\":{\"success_url\":\"https://example.com/return\",\"failed_url\":\"https://example.com/return\"},\"webhook_url\":\"https://example.com/webhook\"}"
         }
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "Lawson": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
+      "LazyPayRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
@@ -253,9 +285,21 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
+      "Netbanking": {
+        "status": "not_supported",
+        "error": "Selected payment method through Loonio is not supported by Loonio"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_supported",
@@ -287,7 +331,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_supported",
@@ -307,7 +351,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "PaypalRedirect": {
         "status": "not_implemented",
@@ -317,11 +365,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
+      "PhonePeRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
@@ -377,13 +433,29 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method through Loonio is not supported by Loonio"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
       "Trustly": {
         "status": "not_supported",
         "error": "Selected payment method through Loonio is not supported by Loonio"
+      },
+      "Twint": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "UpiCollect": {
         "status": "not_implemented",
@@ -394,6 +466,10 @@
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Loonio"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Loonio"
       },

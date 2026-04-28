@@ -11,8 +11,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute, PSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
+        IncrementalAuthorization, PSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData,
@@ -21,9 +21,10 @@ use domain_types::{
         ConnectorSpecificClientAuthenticationResponse, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, EventType, MandateReference, MandateReferenceId,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodUpdate,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     payment_method_data::{
         ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
@@ -4896,6 +4897,7 @@ pub fn get_webhook_response(
             error,
             payments_response_data: PaymentsResponseData::MultipleCaptureResponse {
                 capture_sync_response_list,
+                status_code,
             },
             txn_amount,
             connector_response,
@@ -7696,6 +7698,125 @@ impl TryFrom<ResponseRouterData<AdyenOrderCreateResponse, Self>>
                 connector_order_id: Some(connector_order_id),
                 ..item.router_data.resource_common_data
             },
+            ..item.router_data
+        })
+    }
+}
+
+// ==================== Incremental Authorization ====================
+// Adyen endpoint: POST /v68/payments/{paymentPspReference}/amountUpdates
+// The `amount.value` is the new total authorized amount (replaces original).
+// Response HTTP 201 indicates the adjustment request was accepted; the final
+// outcome is delivered asynchronously via the AUTHORISATION_ADJUSTMENT webhook.
+// Ref: https://docs.adyen.com/api-explorer/Checkout/68/post/payments/-paymentPspReference-/amountUpdates
+
+// Adyen's /amountUpdates endpoint is documented to return exactly one synchronous
+// status value — `"received"` — acknowledging that the adjustment has been queued.
+// The eventual Authorised/Refused outcome is delivered asynchronously via the
+// AUTHORISATION_ADJUSTMENT webhook (handled separately). The casing below matches
+// Adyen's documented response verbatim, so we do not normalize casing here.
+const ADYEN_INCREMENTAL_AUTH_STATUS_RECEIVED: &str = "received";
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenIncrementalAuthRequest {
+    pub merchant_account: Secret<String>,
+    pub amount: Amount,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                IncrementalAuthorization,
+                PaymentFlowData,
+                PaymentsIncrementalAuthorizationData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AdyenIncrementalAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                IncrementalAuthorization,
+                PaymentFlowData,
+                PaymentsIncrementalAuthorizationData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
+        Ok(Self {
+            merchant_account: auth_type.merchant_account,
+            amount: Amount {
+                currency: item.router_data.request.currency,
+                value: item.router_data.request.minor_amount.to_owned(),
+            },
+            reference: Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenIncrementalAuthResponse {
+    pub psp_reference: String,
+    pub payment_psp_reference: Option<String>,
+    pub amount: Option<Amount>,
+    pub merchant_account: Option<String>,
+    pub reference: Option<String>,
+    pub status: Option<String>,
+}
+
+// Maps the /amountUpdates synchronous status string to AuthorizationStatus.
+//
+// Adyen's /amountUpdates synchronous body carries only `status: "received"`
+// (see doc link above). Final Authorised/Refused outcomes arrive asynchronously
+// via the AUTHORISATION_ADJUSTMENT webhook. Non-2xx responses are handled
+// upstream by get_error_response_v2, so this only runs on 2xx.
+//   - status = "received"  -> Success (adjustment accepted)
+//   - any other / missing  -> Processing (Adyen changed API; fall back
+//                              to Processing and rely on the webhook)
+fn map_incremental_auth_status(status: Option<&str>) -> common_enums::AuthorizationStatus {
+    match status {
+        Some(s) if s == ADYEN_INCREMENTAL_AUTH_STATUS_RECEIVED => {
+            common_enums::AuthorizationStatus::Success
+        }
+        _ => common_enums::AuthorizationStatus::Processing,
+    }
+}
+
+impl TryFrom<ResponseRouterData<AdyenIncrementalAuthResponse, Self>>
+    for RouterDataV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<AdyenIncrementalAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let authorization_status = map_incremental_auth_status(item.response.status.as_deref());
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::IncrementalAuthorizationResponse {
+                status: authorization_status,
+                connector_authorization_id: Some(item.response.psp_reference.clone()),
+                status_code: item.http_code,
+            }),
             ..item.router_data
         })
     }

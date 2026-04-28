@@ -651,5 +651,9 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             base_url: None,
             secondary_base_url: None,
         },
+        ConnectorEnum::Imerchantsolutions => ConnectorSpecificConfig::Imerchantsolutions {
+            api_key: k(),
+            base_url: None,
+        },
     }
 }

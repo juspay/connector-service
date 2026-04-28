@@ -67,6 +67,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
+      "BillDeskRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
       "Bizum": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
@@ -129,6 +133,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
+      "CashfreeRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
@@ -139,7 +147,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
@@ -147,9 +159,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
@@ -169,13 +185,21 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -217,11 +241,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
       "Lawson": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
+      "LazyPayRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
@@ -249,7 +281,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
+      "Netbanking": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
@@ -283,7 +327,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_implemented",
@@ -303,7 +347,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
       "PaypalRedirect": {
         "status": "not_implemented",
@@ -313,11 +361,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
+      "PhonePeRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
@@ -373,11 +429,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
@@ -390,6 +462,10 @@
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported for Elavon"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported for Elavon"
       },

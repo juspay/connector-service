@@ -105,6 +105,10 @@
         "status": "not_supported",
         "error": "Only ACH Bank Debit is supported is not supported by Jpmorgan"
       },
+      "BillDeskRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
+      },
       "Bizum": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
@@ -177,6 +181,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Wallet not supported"
       },
+      "CashfreeRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
+      },
       "CimbVaBankTransfer": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
@@ -187,7 +195,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
       },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
@@ -195,11 +207,15 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
+      },
+      "EaseBuzzRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
       },
       "Efecty": {
         "status": "not_supported",
@@ -217,13 +233,21 @@
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
       },
       "GooglePay": {
         "status": "error",
@@ -265,6 +289,10 @@
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
@@ -272,6 +300,10 @@
       "Lawson": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
+      },
+      "LazyPayRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
       },
       "LocalBankRedirect": {
         "status": "not_supported",
@@ -297,7 +329,19 @@
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Jpmorgan"
+      },
+      "Netbanking": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
       },
@@ -331,7 +375,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_supported",
@@ -351,7 +395,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
       },
       "PaypalRedirect": {
         "status": "not_implemented",
@@ -361,13 +409,21 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Wallet not supported"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
+      },
+      "PhonePeRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
       },
       "Pix": {
         "status": "not_supported",
@@ -421,13 +477,29 @@
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
+      },
       "Trustly": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
+      },
+      "Twint": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
       },
       "UpiCollect": {
         "status": "not_supported",
@@ -440,6 +512,10 @@
       "UpiQr": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Jpmorgan"
+      },
+      "Vipps": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Wallet not supported"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
