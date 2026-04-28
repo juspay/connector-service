@@ -1,4 +1,4 @@
-use super::payout_method_data::PayoutMethodData;
+use super::payout_method_data::{Bank, PayoutMethodData};
 use crate::{
     connector_types::{
         ConnectorResponseHeaders, RawConnectorRequestResponse,
@@ -85,7 +85,7 @@ pub struct PayoutCreateRequest {
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
-    // Add additional nested structures as needed
+    pub source_bank_data: Option<Bank>,
 }
 
 #[derive(Debug, Clone)]
@@ -108,6 +108,7 @@ pub struct PayoutTransferRequest {
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
+    pub source_bank_data: Option<Bank>,
 }
 
 #[derive(Debug, Clone)]

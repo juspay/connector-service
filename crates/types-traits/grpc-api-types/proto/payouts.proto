@@ -260,6 +260,8 @@ message PayoutServiceCreateRequest {
   optional BrowserInformation browser_info = 13;
   // access token
   optional SecretString access_token = 14;
+  // Source Bank Data
+  optional SourceBankData source_bank_data = 15;
 }
 
 // Response message for creating a payout
@@ -304,6 +306,8 @@ message PayoutServiceTransferRequest {
   optional BrowserInformation browser_info = 12;
   // access token
   optional SecretString access_token = 13;
+  // Source Bank Data
+  optional SourceBankData source_bank_data = 14;
 }
 
 // Response message for transferring a payout

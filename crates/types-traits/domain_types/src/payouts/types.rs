@@ -123,6 +123,10 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRequest>
             connector_payout_method_id: value.connector_payout_method_id.clone(),
             webhook_url: value.webhook_url.clone(),
             payout_method_data,
+            source_bank_data: value
+                .source_bank_data
+                .map(payouts::payout_method_data::Bank::foreign_try_from)
+                .transpose()?,
         })
     }
 }
@@ -973,6 +977,48 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutMethod>
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payouts::SourceBankData> for payouts::payout_method_data::Bank {
+    type Error = IntegrationError;
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::SourceBankData,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let data = value.source_bank_data.ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "source_bank_data",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Source bank data is required".to_owned()),
+                    ..Default::default()
+                },
+            })
+        })?;
+
+        match data {
+            grpc_api_types::payouts::source_bank_data::SourceBankData::Ach(ach) => Ok(Self::Ach(
+                payouts::payout_method_data::AchBankTransfer::foreign_try_from(ach)?,
+            )),
+            grpc_api_types::payouts::source_bank_data::SourceBankData::Bacs(bacs) => Ok(
+                Self::Bacs(payouts::payout_method_data::BacsBankTransfer::foreign_try_from(bacs)?),
+            ),
+            grpc_api_types::payouts::source_bank_data::SourceBankData::Sepa(sepa) => Ok(
+                Self::Sepa(payouts::payout_method_data::SepaBankTransfer::foreign_try_from(sepa)?),
+            ),
+            grpc_api_types::payouts::source_bank_data::SourceBankData::Pix(pix) => Ok(Self::Pix(
+                payouts::payout_method_data::PixBankTransfer::foreign_try_from(pix)?,
+            )),
+            grpc_api_types::payouts::source_bank_data::SourceBankData::PixKey(pix_key) => {
+                Ok(Self::PixKey(
+                    payouts::payout_method_data::PixKeyBankTransfer::foreign_try_from(pix_key)?,
+                ))
+            }
+            grpc_api_types::payouts::source_bank_data::SourceBankData::PixEmv(pix_emv) => {
+                Ok(Self::PixEmv(
+                    payouts::payout_method_data::PixEmvBankTransfer::foreign_try_from(pix_emv)?,
+                ))
+            }
+        }
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
     for payouts::payouts_types::PayoutTransferRequest
 {
@@ -1052,6 +1098,10 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             connector_payout_method_id: value.connector_payout_method_id,
             webhook_url: value.webhook_url,
             payout_method_data,
+            source_bank_data: value
+                .source_bank_data
+                .map(payouts::payout_method_data::Bank::foreign_try_from)
+                .transpose()?,
         })
     }
 }
