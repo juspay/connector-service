@@ -745,6 +745,7 @@ enum Connector {
   PINELABS_ONLINE = 117;
   IMERCHANTSOLUTIONS = 118;
   AXISBANK = 119;
+  AUBANK = 120;
 }
 
 // Payment method types
@@ -4174,6 +4175,14 @@ message AxisbankConfig {
   optional string base_url = 50;
 }
 
+message AubankConfig {
+  SecretString merchant_kid = 3;
+  SecretString juspay_kid = 4;
+  SecretString merchant_private_key = 5;
+  SecretString juspay_public_key = 6;
+  optional string base_url = 50;
+}
+
 // ConnectorSpecificConfig message with oneof containing all connector
 // configurations. Comment above each field (e.g. "// PAYPAL = 62") is the
 // Connector enum value from this file;
@@ -4425,8 +4434,11 @@ message ConnectorSpecificConfig {
     // IMERCHANTSOLUTIONS = 118
     ImerchantsolutionsConfig imerchantsolutions = 118;
 
-    // AXISBANK = 117
+    // AXISBANK = 119
     AxisbankConfig axisbank = 119;
+
+    // AUBANK = 120
+    AubankConfig aubank = 120;
   }
 }
 
