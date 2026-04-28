@@ -1616,8 +1616,8 @@
     },
     "proxy_setup_recurring": {
       "default": {
-        "status": "error",
-        "error": "Stuck on field: return_url — Missing required field: return_url"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Card Type"
       }
     },
     "recurring_charge": {
