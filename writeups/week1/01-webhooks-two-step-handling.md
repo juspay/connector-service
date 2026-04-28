@@ -20,28 +20,26 @@ In production, it's:
 
 Most webhook libraries collapse all of this into one function: `verify_and_parse(request, secret) -> Event`. That collapse is the bug. It forces you to know which credentials signed the webhook *before* you know what the webhook is about.
 
-Prism splits it into two phases, and exposes both — granular (`EventService`) and composite (`CompositeEventService`) — so you can pick the shape that matches your architecture.
+Prism handles webhooks the way you'd actually want: **parse the event identity first, look up the right secret on your side, then verify**. Two cheap endpoints — orchestrate them yourself when you want control, or call the one-shot composite when you don't.
 
 ---
 
-## The two phases
+## How Prism handles it
 
 ```proto
 service EventService {
-  // Phase 1: Parse a raw webhook payload. No credentials required.
-  // Returns resource reference and event type — sufficient to resolve
-  // secrets or early-exit.
+  // Parse a raw webhook payload. No credentials required.
+  // Returns resource reference and event type — sufficient to
+  // resolve secrets or early-exit.
   rpc ParseEvent(EventServiceParseRequest) returns (EventServiceParseResponse);
 
-  // Phase 2: Verify webhook source and return a unified typed response.
+  // Verify webhook source and return a unified typed response.
   // Response mirrors PaymentService.Get / RefundService.Get / DisputeService.Get.
   rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 ```
 
-That's it. Two RPCs. Read them slowly:
-
-**`ParseEvent`** takes only the raw HTTP request — headers, body, method, URI, query params. **No secret. No credentials.** It returns an `EventReference` (a oneof of `payment | refund | dispute | mandate | payout` IDs — both connector-side and merchant-side) plus a `WebhookEventType`.
+**`ParseEvent`** takes only the raw HTTP request — headers, body, method, URI, query params. **No secret. No credentials.** It returns an `EventReference` (a oneof of `payment | refund | dispute | mandate | payout` IDs — both connector-side and merchant-side) plus a `WebhookEventType`. That's enough to look up which credentials should verify it, dedup it against ones you've already processed, or skip it entirely if it's an event you don't care about.
 
 **`HandleEvent`** takes the request *plus* the secret(s), an optional access token, and an optional `EventContext`. It does source verification, returns the verified, unified typed event content, and an `EventAckResponse` you should send back to the connector.
 
@@ -57,9 +55,9 @@ message EventReference {
 }
 ```
 
-## Why splitting matters
+## What that unlocks
 
-Once you have `ParseEvent` separately, a whole class of architectures that used to be painful become trivial.
+Once parse and verify are separate, a class of architectures that used to be painful becomes trivial.
 
 **1. Resolve the right secret before verifying.**
 If you're a payment platform serving multiple businesses, you don't have *one* webhook secret per processor — you have one per credential set (your customer's account at the processor). The webhook arrives carrying only a processor-side ID like `pi_abc123` and a signature; nothing in the headers tells you which credential set it belongs to.
@@ -97,11 +95,11 @@ Connectors fire events you don't care about — `account.updated`, `capability.c
 **4. Routing.**
 Got a multi-region setup? `ParseEvent` is enough to route the webhook to the region that owns the resource. The expensive `HandleEvent` runs once, in the right place.
 
-## When you don't need any of that — the composite shape
+## Don't need orchestration? Use the one-shot call.
 
 If you're a single-tenant integrator, none of the above matters. You already know the secret. You just want a `webhook_in -> typed_event_out` function.
 
-That's `CompositeEventService.HandleEvent`. One RPC. Internally orchestrates `ParseEvent` then `HandleEvent`. From the implementation:
+That's `CompositeEventService.HandleEvent`. Internally it runs the parse-then-verify flow for you. From the implementation:
 
 ```rust
 // crates/internal/composite-service/src/events.rs
@@ -123,7 +121,7 @@ async fn handle_event(...) -> ... {
 }
 ```
 
-Same building blocks. Different ergonomic. **Granular for orchestrators, composite for integrators.** You pick.
+Same building blocks. Different ergonomic. **Granular when you need to do tenant resolution / dedup / routing yourself, one-shot when you don't.**
 
 ---
 
@@ -205,11 +203,11 @@ If you've ever found yourself writing a "webhook router" service that does verif
 
 ## TL;DR
 
-- **Two RPCs**: `ParseEvent` (no secret) and `HandleEvent` (with secret). Plus `CompositeEventService` for one-shot.
-- **Reference before verify** lets you do tenant resolution, dedup, routing, early-exit cheaply.
-- **Webhook output = poll output** — same proto types. One handler downstream.
+- **Parse before verify**: identify the event without credentials, look up the right secret on your side, then verify. Cheap dedup, multi-tenant routing, and early-exit fall out for free.
+- **Webhook output = poll output**: same proto types. One handler downstream.
 - **EventContext** is the explicit stateless handshake — the bits Prism can't infer, you pass back in.
 - **EventAckResponse** tells you exactly what to reply with.
+- One-shot `CompositeEventService` for integrators who don't need the orchestration.
 
 It's a webhook library that takes the shape of webhooks seriously, instead of pretending they're "just HTTP POST + signature".
 
