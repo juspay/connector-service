@@ -67,6 +67,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
+      "BillDeskRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
       "Bizum": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
@@ -99,6 +103,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
+      "CashfreeRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
@@ -109,7 +117,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
@@ -117,11 +129,15 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
+      "EaseBuzzRedirect": {
+        "status": "error",
+        "error": "Stuck on field: connector_order_id. Easebuzz seamless API requires a two-step flow: POST /payment/initiateLink returns an access_key which must be passed to POST /initiate_seamless_payment/ — Missing required field: connector_order_id. Easebuzz seamless API requires a two-step flow: POST /payment/initiateLink returns an access_key which must be passed to POST /initiate_seamless_payment/"
       },
       "Efecty": {
         "status": "not_implemented",
@@ -139,13 +155,21 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -187,11 +211,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
       "Lawson": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
+      "LazyPayRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
@@ -219,9 +251,21 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
+      "Netbanking": {
+        "status": "error",
+        "error": "Stuck on field: connector_order_id. Easebuzz seamless API requires a two-step flow: POST /payment/initiateLink returns an access_key which must be passed to POST /initiate_seamless_payment/ — Missing required field: connector_order_id. Easebuzz seamless API requires a two-step flow: POST /payment/initiateLink returns an access_key which must be passed to POST /initiate_seamless_payment/"
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
@@ -253,7 +297,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_implemented",
@@ -273,7 +317,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
       "PaypalRedirect": {
         "status": "not_implemented",
@@ -283,11 +331,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
+      "PhonePeRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
@@ -343,11 +399,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
@@ -362,6 +434,10 @@
       "UpiQr": {
         "status": "error",
         "error": "Stuck on field: connector_order_id. Easebuzz seamless API requires a two-step flow: POST /payment/initiateLink returns an access_key which must be passed to POST /initiate_seamless_payment/ — Missing required field: connector_order_id. Easebuzz seamless API requires a two-step flow: POST /payment/initiateLink returns an access_key which must be passed to POST /initiate_seamless_payment/"
+      },
+      "Vipps": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: This payment method is not supported for Easebuzz"
       },
       "WeChatPayQr": {
         "status": "not_implemented",
