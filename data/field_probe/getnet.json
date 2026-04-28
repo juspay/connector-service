@@ -158,6 +158,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
@@ -190,6 +194,10 @@
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
@@ -197,6 +205,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -238,6 +250,10 @@
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
@@ -271,6 +287,14 @@
         "error": "Payment method  is not supported by Getnet"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
       },
@@ -346,6 +370,10 @@
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -410,11 +438,27 @@
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
       },
@@ -427,6 +471,10 @@
         "error": "Payment method  is not supported by Getnet"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Payment method  is not supported by Getnet"
       },

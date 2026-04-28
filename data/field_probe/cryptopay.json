@@ -119,6 +119,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
@@ -151,6 +155,10 @@
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
@@ -158,6 +166,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -199,6 +211,10 @@
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
@@ -232,6 +248,14 @@
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
@@ -307,6 +331,10 @@
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -371,11 +399,27 @@
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
@@ -388,6 +432,10 @@
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method through CryptoPay is not supported by Cryptopay"
       },

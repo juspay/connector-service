@@ -119,6 +119,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
@@ -151,6 +155,10 @@
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
@@ -158,6 +166,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
       },
       "GooglePay": {
         "status": "not_supported",
@@ -199,6 +211,10 @@
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
@@ -234,6 +250,14 @@
       "MiniStop": {
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
       },
       "MultibancoBankTransfer": {
         "status": "not_supported",
@@ -307,6 +331,10 @@
         "status": "not_supported",
         "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -371,13 +399,29 @@
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
+      },
       "Trustly": {
         "status": "not_supported",
         "error": "Payment method not supported by PayU. Only UPI, Wallet, and Netbanking payments are supported is not supported by payu"
+      },
+      "Twint": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
       },
       "UpiCollect": {
         "status": "error",
@@ -390,6 +434,10 @@
       "UpiQr": {
         "status": "error",
         "error": "Stuck on field: billing.first_name. PayU requires firstname as a mandatory field in the payment request hash. — Missing required field: billing.first_name. PayU requires firstname as a mandatory field in the payment request hash."
+      },
+      "Vipps": {
+        "status": "not_supported",
+        "error": "Wallet type not supported by PayU is not supported by payu. PayU only supports specific Indian wallet redirect flows."
       },
       "WeChatPayQr": {
         "status": "not_supported",

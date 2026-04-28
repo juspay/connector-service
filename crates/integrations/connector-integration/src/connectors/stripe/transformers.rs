@@ -931,6 +931,8 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::Cashfree
             | common_enums::PaymentMethodType::PayU
             | common_enums::PaymentMethodType::EaseBuzz
+            | common_enums::PaymentMethodType::Skrill
+            | common_enums::PaymentMethodType::Paysera
             | common_enums::PaymentMethodType::Netbanking => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
                 Default::default(),
