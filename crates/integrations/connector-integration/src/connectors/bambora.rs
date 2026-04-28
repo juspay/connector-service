@@ -51,7 +51,8 @@ pub(crate) mod headers {
 }
 
 use transformers::{
-    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse, BamboraPSyncResponse,
+    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse,
+    BamboraClientAuthRequest, BamboraClientAuthResponse, BamboraPSyncResponse,
     BamboraPaymentsRequest, BamboraRSyncResponse, BamboraRefundRequest, BamboraRefundResponse,
     BamboraVoidRequest, BamboraVoidResponse,
 };
@@ -93,6 +94,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: BamboraRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: BamboraClientAuthRequest,
+            response_body: BamboraClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [amount_converter: FloatMajorUnit],
@@ -594,6 +601,48 @@ macros::macro_connector_implementation!(
     }
 );
 
+// ClientAuthenticationToken Flow
+//
+// Bambora's Custom Checkout SDK is initialized client-side using merchant_id —
+// there is no server-side session-init API. To satisfy the framework's
+// request/response pipeline, we POST to Bambora's single-use tokenization
+// endpoint with a synthetic body and then surface merchant_id (read from
+// connector_config in the response TryFrom impl) as the SDK's client auth
+// token. The token returned by Bambora is intentionally discarded.
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Bambora,
+    curl_request: Json(BamboraClientAuthRequest),
+    curl_response: BamboraClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            // Tokenization API lives at the api host root, not under /v1.
+            let base = self
+                .connector_base_url_payments(req)
+                .trim_end_matches("/v1")
+                .trim_end_matches('/');
+            Ok(format!("{base}/scripts/tokenization/tokens"))
+        }
+    }
+);
+
 // ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -644,79 +693,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ServerSessionAuthenticationTokenResponseData,
     > for Bambora<T>
 {
-}
-
-// ClientAuthenticationToken flow — returns merchant_id from connector config
-// for Bambora Custom Checkout SDK initialization.
-// Bambora's Custom Checkout SDK is initialized client-side by loading the SDK script
-// with the merchant_id. There is no server-side session initialization API,
-// so no HTTP call to Bambora is needed.
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    > for Bambora<T>
-{
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<
-            ClientAuthenticationToken,
-            PaymentFlowData,
-            ClientAuthenticationTokenRequestData,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, IntegrationError> {
-        // No HTTP call needed — Bambora's Custom Checkout SDK is initialized
-        // client-side with the merchant_id from connector config.
-        // We construct a minimal request that will trigger handle_response_v2
-        // with the merchant_id extracted from connector config.
-        let url = format!("{}/payments", self.connector_base_url_payments(req));
-        let mut auth_header = self.get_auth_header(&req.connector_config)?;
-        let mut header = vec![];
-        header.append(&mut auth_header);
-        Ok(Some(
-            common_utils::request::RequestBuilder::new()
-                .method(common_utils::request::Method::Get)
-                .url(url.as_str())
-                .attach_default_headers()
-                .headers(header)
-                .build(),
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            ClientAuthenticationToken,
-            PaymentFlowData,
-            ClientAuthenticationTokenRequestData,
-            PaymentsResponseData,
-        >,
-        _event_builder: Option<&mut events::Event>,
-        _res: Response,
-    ) -> CustomResult<
-        RouterDataV2<
-            ClientAuthenticationToken,
-            PaymentFlowData,
-            ClientAuthenticationTokenRequestData,
-            PaymentsResponseData,
-        >,
-        ConnectorError,
-    > {
-        // Ignore the HTTP response — extract merchant_id from connector config
-        // and return it as the client authentication token
-        bambora::build_client_auth_token_response(data)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
