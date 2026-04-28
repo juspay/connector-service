@@ -265,7 +265,7 @@ macros::create_all_prerequisites!(
                     ConnectorError::ResponseDeserializationFailed {
                         context: ResponseTransformationErrorContext {
                             http_status_code: None,
-                            additional_context: Some("Failed to extract AxisbankAuthConfig from connector_config. Verify all required fields are present: merchant_id, merchant_channel_id, merchant_kid, juspay_kid, merchant_private_key, juspay_public_key. See documentation: https://juspay.io/in/docs/upi-merchant-stack/docs/transactions".to_string()),
+                            additional_context: Some(format!("Failed to extract AxisbankAuthConfig from connector_config. Verify all required fields are present: merchant_id, merchant_channel_id, merchant_kid, juspay_kid, merchant_private_key, juspay_public_key. See documentation: {}/docs/transactions", crate::connectors::juspay_upi_stack::constants::DOC_URL_BASE)),
                         },
                     }
                 })?;
@@ -372,7 +372,7 @@ macros::macro_connector_implementation!(
                     field_name: "connector_transaction_id",
                     context: IntegrationErrorContext {
                         suggested_action: Some("connector_transaction_id must be set before calling PSync".to_string()),
-                        doc_url: Some("https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/transaction-status-360".to_string()),
+                        doc_url: Some(crate::connectors::juspay_upi_stack::constants::DOC_URL_TRANSACTION_STATUS_360.to_string()),
                         additional_context: Some("PSync requires the merchantRequestId returned from Register Intent. Ensure the payment was initialized successfully before querying status.".to_string()),
                     },
                 })?;

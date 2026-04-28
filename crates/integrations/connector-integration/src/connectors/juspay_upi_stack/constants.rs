@@ -76,3 +76,22 @@ pub const X_MERCHANT_PAYLOAD_SIGNATURE: &str = "x-merchant-payload-signature";
 
 /// Juspay KID header
 pub const X_JUSPAY_KID: &str = "x-juspay-kid";
+
+// ============================================
+// DOCUMENTATION URLS
+// ============================================
+
+/// Base documentation URL for Juspay UPI Merchant Stack
+pub const DOC_URL_BASE: &str = "https://juspay.io/in/docs/upi-merchant-stack";
+
+/// Register Intent API documentation URL
+pub const DOC_URL_REGISTER_INTENT: &str =
+    "https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/register-intent";
+
+/// Transaction Status 360 API documentation URL
+pub const DOC_URL_TRANSACTION_STATUS_360: &str =
+    "https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/transaction-status-360";
+
+/// Refund 360 API documentation URL
+pub const DOC_URL_REFUND_360: &str =
+    "https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/refund-360";

@@ -67,7 +67,7 @@ impl TryFrom<&ConnectorSpecificConfig> for AxisbankAuthConfig {
             _ => Err(IntegrationError::FailedToObtainAuthType {
                 context: IntegrationErrorContext {
                     suggested_action: Some("Check connector_specific_config in merchant connector account configuration".to_string()),
-                    doc_url: Some("https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/register-intent".to_string()),
+                    doc_url: Some(crate::connectors::juspay_upi_stack::constants::DOC_URL_REGISTER_INTENT.to_string()),
                     additional_context: Some("Expected Axisbank variant with fields: merchant_kid, juspay_kid, merchant_private_key, juspay_public_key".to_string()),
                 },
             }
@@ -169,7 +169,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: IntegrationErrorContext {
                     suggested_action: Some("Verify amount and currency values are valid".to_string()),
-                    doc_url: Some("https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/register-intent".to_string()),
+                    doc_url: Some(crate::connectors::juspay_upi_stack::constants::DOC_URL_REGISTER_INTENT.to_string()),
                     additional_context: Some("Amount must be a positive integer in minor units (paise). Currency should be INR for UPI transactions.".to_string()),
                 },
             })?;
@@ -298,18 +298,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = AxisbankAuthConfig::try_from(&router_data.connector_config)?;
         let shared_auth: SharedAuthConfig = auth.into();
 
-        let connector_transaction_id = router_data.request.connector_transaction_id.clone();
-        let connector_refund_id = router_data.request.connector_refund_id.clone();
-        let refund_amount = router_data.request.refund_amount;
-        let connector_feature_data = &router_data.request.connector_feature_data;
-
-        build_rsync_request(
-            connector_transaction_id,
-            connector_refund_id,
-            refund_amount,
-            connector_feature_data,
-            &shared_auth,
-        )
+        build_rsync_request(&router_data.request, &shared_auth)
     }
 }
 

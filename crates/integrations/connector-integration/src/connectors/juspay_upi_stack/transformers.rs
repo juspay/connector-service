@@ -38,8 +38,8 @@ pub fn construct_upi_deeplink(params: &RegisterIntentResponsePayload) -> String 
     params_map.insert("am", params.amount.clone());
     params_map.insert("cu", params.currency.clone());
     params_map.insert("mc", params.payee_mcc.clone());
-    params_map.insert("pa", params.payee_vpa.clone());
-    params_map.insert("pn", params.payee_name.clone());
+    params_map.insert("pa", params.payee_vpa.peek().to_string());
+    params_map.insert("pn", params.payee_name.peek().to_string());
     params_map.insert("tid", params.gateway_transaction_id.clone());
     params_map.insert("tr", params.order_id.clone());
 
@@ -231,7 +231,7 @@ pub fn extract_merchant_identifiers_from_metadata(
                 suggested_action: Some(
                     "Provide merchant_id and merchant_channel_id in request metadata".to_string(),
                 ),
-                doc_url: Some("https://juspay.io/in/docs/upi-merchant-stack".to_string()),
+                doc_url: Some(DOC_URL_BASE.to_string()),
                 additional_context: Some(
                     "metadata must contain 'merchant_id' and 'merchant_channel_id' fields"
                         .to_string(),
@@ -247,7 +247,7 @@ pub fn extract_merchant_identifiers_from_metadata(
             field_name: "metadata.merchant_id",
             context: IntegrationErrorContext {
                 suggested_action: Some("Add 'merchant_id' field to request metadata".to_string()),
-                doc_url: Some("https://juspay.io/in/docs/upi-merchant-stack".to_string()),
+                doc_url: Some(DOC_URL_BASE.to_string()),
                 additional_context: Some(
                     "merchant_id is required for all Juspay UPI Stack bank connectors".to_string(),
                 ),
@@ -264,7 +264,7 @@ pub fn extract_merchant_identifiers_from_metadata(
                 suggested_action: Some(
                     "Add 'merchant_channel_id' field to request metadata".to_string(),
                 ),
-                doc_url: Some("https://juspay.io/in/docs/upi-merchant-stack".to_string()),
+                doc_url: Some(DOC_URL_BASE.to_string()),
                 additional_context: Some(
                     "merchant_channel_id is required for all Juspay UPI Stack bank connectors"
                         .to_string(),
@@ -336,10 +336,7 @@ pub fn build_authorize_request<T: PaymentMethodDataTypes + serde::Serialize>(
             suggested_action: Some(
                 "Verify all request fields have valid formats and lengths".to_string(),
             ),
-            doc_url: Some(
-                "https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/register-intent"
-                    .to_string(),
-            ),
+            doc_url: Some(DOC_URL_REGISTER_INTENT.to_string()),
             additional_context: Some(
                 "upi_request_id must be max 35 alphanumeric characters. Amount must be a string."
                     .to_string(),
@@ -374,10 +371,7 @@ pub fn build_psync_request(
                     "Verify merchant_request_id is valid and transaction_type is correctly set"
                         .to_string(),
                 ),
-                doc_url: Some(
-                    "https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/transaction-status-360"
-                        .to_string(),
-                ),
+                doc_url: Some(DOC_URL_TRANSACTION_STATUS_360.to_string()),
                 additional_context: Some(
                     "transaction_type should be 'MERCHANT_CREDITED_VIA_PAY' for payment status queries."
                         .to_string(),
@@ -451,10 +445,7 @@ pub fn build_refund_request(
                     "Verify refund fields are valid: original_merchant_request_id, refund_amount, and refund_type"
                         .to_string(),
                 ),
-                doc_url: Some(
-                    "https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/refund-360"
-                        .to_string(),
-                ),
+                doc_url: Some(DOC_URL_REFUND_360.to_string()),
                 additional_context: Some(
                     "refund_type can be 'ONLINE', 'OFFLINE', or 'UDIR'. refund_amount must be in rupees with 2 decimal places (e.g., '100.00')."
                         .to_string(),
@@ -471,25 +462,20 @@ pub fn build_refund_request(
 
 /// Build a JWS-signed RSync (Refund Status 360) request body.
 pub fn build_rsync_request(
-    connector_transaction_id: String,
-    connector_refund_id: String,
-    refund_amount: Option<common_utils::types::MinorUnit>,
-    connector_feature_data: &Option<SecretSerdeValue>,
+    refund_sync_data: &RefundSyncData,
     auth: &JuspayUpiAuthConfig,
 ) -> Result<JwsObject, error_stack::Report<IntegrationError>> {
     use crate::connectors::juspay_upi_stack::crypto::get_current_timestamp_ms;
     use crate::connectors::juspay_upi_stack::types::Refund360Type;
 
-    let amount_str = refund_amount
+    let amount_str = refund_sync_data
+        .refund_amount
         .map(|a| minor_to_major_amount(a.get_amount_as_i64()))
         .ok_or_else(|| IntegrationError::MissingRequiredField {
             field_name: "refund_amount",
             context: IntegrationErrorContext {
                 suggested_action: Some("Provide refund_amount in RSync request".to_string()),
-                doc_url: Some(
-                    "https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/refund-360"
-                        .to_string(),
-                ),
+                doc_url: Some(DOC_URL_REFUND_360.to_string()),
                 additional_context: Some(
                     "refund_amount is required for Juspay UPI Stack refund status check"
                         .to_string(),
@@ -498,7 +484,8 @@ pub fn build_rsync_request(
         })?;
 
     // Determine refund type from connector_feature_data (default to Offline for safety)
-    let refund_type = connector_feature_data
+    let refund_type = refund_sync_data
+        .connector_feature_data
         .as_ref()
         .and_then(|m| m.peek().get("refund_type").cloned())
         .and_then(|v| {
@@ -510,12 +497,18 @@ pub fn build_rsync_request(
         })
         .unwrap_or(Refund360Type::Offline);
 
+    // Use refund reason if provided, otherwise default to "Status check"
+    let remarks = refund_sync_data
+        .reason
+        .clone()
+        .unwrap_or_else(|| "Status check".to_string());
+
     let refund_sync = Refund360Request {
-        original_merchant_request_id: connector_transaction_id,
-        refund_request_id: connector_refund_id,
+        original_merchant_request_id: refund_sync_data.connector_transaction_id.clone(),
+        refund_request_id: refund_sync_data.connector_refund_id.clone(),
         refund_type,
         refund_amount: amount_str,
-        remarks: "Status check".to_string(),
+        remarks,
         adj_code: None,
         adj_flag: None,
         iat: get_current_timestamp_ms(),
@@ -527,10 +520,7 @@ pub fn build_rsync_request(
                 suggested_action: Some(
                     "Verify connector_refund_id is provided for refund status query".to_string(),
                 ),
-                doc_url: Some(
-                    "https://juspay.io/in/docs/upi-merchant-stack/docs/transactions/refund-360"
-                        .to_string(),
-                ),
+                doc_url: Some(DOC_URL_REFUND_360.to_string()),
                 additional_context: Some(
                     "For RSync, connector_refund_id is the refund_request_id from the original Refund request."
                         .to_string(),
