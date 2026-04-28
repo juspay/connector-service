@@ -1,11 +1,11 @@
 {
   "connector": "easebuzz",
   "supported_suites": [
-    "create_order",
-    "authorize",
-    "get",
-    "capture",
-    "refund",
-    "refund_sync"
+    "PaymentService/Authorize",
+    "PaymentService/Capture",
+    "PaymentService/CreateOrder",
+    "PaymentService/Get",
+    "PaymentService/Refund",
+    "RefundService/Get"
   ]
 }
