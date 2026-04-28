@@ -15,9 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
-use integration_tests::harness::scenario_api::all_known_suites;
 use regex::Regex;
-use serde_json::Value as JsonValue;
 
 const IGNORE_SERVICES: &[&str] = &["PayoutService", "DisputeService"];
 
@@ -40,6 +38,7 @@ fn main() {
 
     let proto_file = root.join("crates/types-traits/grpc-api-types/proto/services.proto");
     let suites_dir = root.join("crates/internal/integration-tests/src/global_suites");
+    let scenario_api = root.join("crates/internal/integration-tests/src/harness/scenario_api.rs");
 
     println!("{}", "=".repeat(80));
     println!("gRPC PROTO SERVICE COVERAGE ANALYSIS");
@@ -47,7 +46,7 @@ fn main() {
     println!();
 
     let proto_methods = extract_proto_methods(&proto_file);
-    let suite_mappings = get_suite_mappings();
+    let suite_mappings = extract_suite_mappings(&scenario_api);
     let available_suites = get_available_suites(&suites_dir);
 
     analyze_coverage(&proto_methods, &suite_mappings, &available_suites);

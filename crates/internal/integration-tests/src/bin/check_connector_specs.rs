@@ -39,7 +39,6 @@ use std::{
     path::PathBuf,
 };
 
-use integration_tests::harness::scenario_api::all_known_suites;
 use regex::Regex;
 use serde::Deserialize;
 
@@ -231,8 +230,10 @@ fn main() {
     let connectors_src = root.join("crates/integrations/connector-integration/src/connectors");
     let specs_root = root.join("crates/internal/integration-tests/src/connector_specs");
     let suites_root = root.join("crates/internal/integration-tests/src/global_suites");
+    let scenario_api = root.join("crates/internal/integration-tests/src/harness/scenario_api.rs");
 
-    let all_proto_suites = known_proto_suites();
+    // Derive the known suite list from scenario_api.rs at runtime.
+    let all_proto_suites = extract_suites_from_scenario_api(&scenario_api);
 
     // -----------------------------------------------------------------------
     // Phase 1: connector list parity
