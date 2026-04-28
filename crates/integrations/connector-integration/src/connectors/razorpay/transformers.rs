@@ -14,7 +14,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     payment_method_data::{
-        self, Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+        self, Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, UpiSource, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -762,6 +762,44 @@ fn get_psync_razorpay_payment_status(
     }
 }
 
+/// Extract the UPI sub-mode (CC / CL / PPI / Account) from a Razorpay PSync response.
+///
+/// Two-level decision, mirroring euler-api-txns
+/// (`Gateway/Razorpay/Flow.hs::extractUpiTransactionModeInSync` +
+/// `defaultRazorpayUpiMode`):
+///
+///   1. Primary  — `notes["pay_mode"]`. Razorpay (or the merchant) can place an
+///                  explicit mode string here. This is the only path that can
+///                  yield `UpiCl`, since `payer_account_type` has no credit-line value.
+///                  Recognised values: `CREDIT_CARD`, `CREDIT_LINE`, `PREPAID_INSTRUMENT`.
+///   2. Fallback — `upi.payer_account_type`. `credit_card` ⇒ `UpiCc`;
+///                 `savings`/`current`/`overdraft` ⇒ `UpiAccount`.
+///
+/// Anything else (including unknown `pay_mode` strings that don't match a known
+/// mode) falls through to the fallback, preserving the legacy behaviour.
+///
+/// Takes partial references so the caller can still move other fields out of
+/// the response struct (e.g. `psync_response.id`) afterwards.
+fn extract_razorpay_upi_mode(
+    notes: Option<&HashMap<String, String>>,
+    upi: Option<&SyncUPIDetails>,
+) -> Option<UpiSource> {
+    if let Some(pay_mode) = notes.and_then(|m| m.get("pay_mode")) {
+        match pay_mode.as_str() {
+            "CREDIT_CARD" => return Some(UpiSource::UpiCc),
+            "CREDIT_LINE" => return Some(UpiSource::UpiCl),
+            "PREPAID_INSTRUMENT" => return Some(UpiSource::UpiPpi),
+            _ => { /* fall through to payer_account_type */ }
+        }
+    }
+
+    upi.and_then(|upi| match upi.payer_account_type.as_str() {
+        "credit_card" => Some(UpiSource::UpiCc),
+        "savings" | "current" | "overdraft" => Some(UpiSource::UpiAccount),
+        _ => None,
+    })
+}
+
 impl ForeignTryFrom<(RazorpayRefundResponse, Self, u16)>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
@@ -887,19 +925,22 @@ impl<F, Req>
                 let status =
                     get_psync_razorpay_payment_status(is_manual_capture, psync_response.status);
 
-                // Extract UPI mode and set in connector_response
-                let connector_response = psync_response
-                    .upi
-                    .as_ref()
-                    .filter(|upi| upi.payer_account_type == "credit_card")
-                    .map(|_| {
-                        domain_types::router_data::ConnectorResponseData::
-                            with_additional_payment_method_data(
-                                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                                    upi_mode: Some(payment_method_data::UpiSource::UpiCc)
-},
-                            )
-                    });
+                // Extract UPI mode and set in connector_response.
+                // Mirrors the legacy euler-api-txns Razorpay parser
+                // (Gateway/Razorpay/Flow.hs::extractUpiTransactionMode):
+                //   1. notes["pay_mode"] is the primary signal (Razorpay/merchant-set)
+                //   2. upi.payer_account_type is the fallback (Razorpay's structured field)
+                let upi_mode = extract_razorpay_upi_mode(
+                    psync_response.notes.as_ref(),
+                    psync_response.upi.as_ref(),
+                );
+                let connector_response = upi_mode.map(|mode| {
+                    domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
+                        domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
+                            upi_mode: Some(mode),
+                        },
+                    )
+                });
 
                 let psync_response_data = PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(psync_response.id),
