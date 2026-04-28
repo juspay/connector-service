@@ -144,9 +144,7 @@ pub enum AuthipayRequestType {
 #[serde(rename_all = "camelCase")]
 pub struct AuthipayPaymentsRequest<T: PaymentMethodDataTypes> {
     pub request_type: AuthipayRequestType,
-    pub merchant_transaction_id: String,
     pub transaction_amount: TransactionAmount,
-    pub order: OrderDetails,
     pub payment_method: PaymentMethod<T>,
 }
 
@@ -154,12 +152,6 @@ pub struct AuthipayPaymentsRequest<T: PaymentMethodDataTypes> {
 pub struct TransactionAmount {
     pub total: FloatMajorUnit,
     pub currency: common_enums::Currency,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OrderDetails {
-    pub order_id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -174,8 +166,6 @@ pub struct PaymentCard<T: PaymentMethodDataTypes> {
     pub number: RawCardNumber<T>,
     pub expiry_date: ExpiryDate,
     pub security_code: Option<Secret<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub holder: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -228,7 +218,6 @@ impl<T: PaymentMethodDataTypes>
                         year: year_yy,
                     },
                     security_code: Some(card_data.card_cvc.clone()),
-                    holder: item.request.customer_name.clone().map(Secret::new),
                 };
                 PaymentMethod { payment_card }
             }
@@ -247,31 +236,16 @@ impl<T: PaymentMethodDataTypes>
             .map(|cm| matches!(cm, common_enums::CaptureMethod::Manual))
             .unwrap_or(false);
 
-        // Generate unique merchant transaction ID using connector request reference ID
-        let merchant_transaction_id = item
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-
-        // Create order details with same ID
-        let order = OrderDetails {
-            order_id: merchant_transaction_id.clone(),
-        };
-
         if is_manual_capture {
             Ok(Self {
                 request_type: AuthipayRequestType::PaymentCardPreAuthTransaction,
-                merchant_transaction_id,
                 transaction_amount,
-                order,
                 payment_method,
             })
         } else {
             Ok(Self {
                 request_type: AuthipayRequestType::PaymentCardSaleTransaction,
-                merchant_transaction_id,
                 transaction_amount,
-                order,
                 payment_method,
             })
         }
