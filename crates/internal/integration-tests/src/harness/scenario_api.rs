@@ -4452,6 +4452,118 @@ fn maybe_sync_complete_authorize_pending(
     Ok(())
 }
 
+/// Determines if a gRPC execution error is retriable.
+///
+/// Checks the gRPC error string for retriable patterns like:
+/// - grpc-status=NotFound (transaction not indexed yet)
+/// - grpc-status=Unavailable (service temporarily down)
+/// - HTTP 404, 5xx status codes in error details
+fn is_grpc_error_retriable(error_str: &str) -> bool {
+    let error_lower = error_str.to_lowercase();
+
+    // Check for retriable gRPC status codes
+    if error_lower.contains("grpc-status=notfound")
+        || error_lower.contains("grpc-status=unavailable")
+        || error_lower.contains("grpc-status=deadlineexceeded")
+        || error_lower.contains("grpc-status=resourceexhausted")
+    {
+        return true;
+    }
+
+    // Check for HTTP status codes indicating retriable errors
+    if error_lower.contains("404")
+        || error_lower.contains("503")
+        || error_lower.contains("502")
+        || error_lower.contains("500")
+        || error_lower.contains("504")
+    {
+        return true;
+    }
+
+    // Check for common retriable error messages
+    if error_lower.contains("not found")
+        || error_lower.contains("does not exist")
+        || error_lower.contains("unavailable")
+        || error_lower.contains("timeout")
+        || error_lower.contains("try again")
+        || error_lower.contains("temporary")
+    {
+        return true;
+    }
+
+    false
+}
+
+/// Determines if an error response is retriable.
+///
+/// Retriable errors include:
+/// - Transaction not found (common during indexing delays for Get operations)
+/// - Timeout errors
+/// - Service unavailable / infrastructure errors
+/// - 5xx server errors
+///
+/// Terminal errors (non-retriable) include:
+/// - Invalid request parameters
+/// - Authentication/authorization failures
+/// - Business logic errors (insufficient funds, invalid card, etc.)
+fn is_error_retriable(response: &Value) -> bool {
+    // No error = not retriable (success case)
+    let Some(error) = response.get("error") else {
+        return false;
+    };
+
+    // Check unified error details for retriable error codes
+    if let Some(unified) = error.get("unified_details") {
+        if let Some(code) = unified.get("code").and_then(|c| c.as_str()) {
+            // Retriable unified error codes
+            return matches!(
+                code,
+                "NOT_FOUND" | // Transaction not indexed yet
+                "TIMEOUT" | // Network timeout
+                "SERVICE_UNAVAILABLE" | // Temporary service issue
+                "INTERNAL_ERROR" | // Server error that might be transient
+                "GATEWAY_TIMEOUT" | // Gateway timeout
+                "TOO_MANY_REQUESTS" // Rate limit - can retry after delay
+            );
+        }
+    }
+
+    // Check connector-specific error details for common retriable patterns
+    if let Some(connector_details) = error.get("connector_details") {
+        if let Some(message) = connector_details.get("message").and_then(|m| m.as_str()) {
+            let message_lower = message.to_lowercase();
+            // Common patterns in connector error messages indicating retriable errors
+            // HTTP 404 often means transaction not indexed yet (especially for Get/PSync)
+            // HTTP 5xx errors are server errors that may be transient
+            if message_lower.contains("not found")
+                || message_lower.contains("404")
+                || message_lower.contains("status 404")
+                || message_lower.contains("timeout")
+                || message_lower.contains("unavailable")
+                || message_lower.contains("503")
+                || message_lower.contains("502")
+                || message_lower.contains("500")
+                || message_lower.contains("try again")
+                || message_lower.contains("temporary")
+            {
+                return true;
+            }
+        }
+
+        // Check for HTTP status code in connector_details.code field
+        if let Some(code) = connector_details.get("code").and_then(|c| c.as_str()) {
+            // HTTP 404 for Get operations = transaction not indexed yet
+            // HTTP 5xx = server errors that may be transient
+            if code == "404" || code.starts_with('5') {
+                return true;
+            }
+        }
+    }
+
+    // Default: treat as terminal error to avoid unnecessary retries
+    false
+}
+
 /// Executes a scenario with optional retry logic based on configuration.
 ///
 /// Configuration is read from override.json:
@@ -4464,7 +4576,7 @@ fn maybe_sync_complete_authorize_pending(
 /// - `polling_config.retry_delay_ms`: Delay between retry attempts
 ///
 /// If no configuration is provided, defaults to legacy behavior:
-/// - PaymentService/Get retries on errors (idempotent operation)
+/// - PaymentService/Get retries on retriable errors only (idempotent operation)
 fn execute_scenario_with_retry(
     suite: &str,
     scenario: &str,
@@ -4513,13 +4625,29 @@ fn execute_scenario_with_retry(
             dependency_entries,
         )?;
 
-        // Check if response contains an error
-        let has_error = result.response_json.get("error").is_some();
+        // Check if response contains a retriable error
+        // Check both response_json.error (application errors) and execution_error (gRPC errors)
+        let is_retriable_json_error = is_error_retriable(&result.response_json);
+        let is_retriable_grpc_error = result
+            .execution_error
+            .as_ref()
+            .map(|err| is_grpc_error_retriable(err))
+            .unwrap_or(false);
 
-        // Success or last attempt - return the result
-        if !has_error || attempt == retry_params.max_retries {
+        let is_retriable_error = is_retriable_json_error || is_retriable_grpc_error;
+
+        // Success or last attempt or terminal error - return the result
+        if !is_retriable_error || attempt == retry_params.max_retries {
             return Ok(result);
         }
+
+        // Log retry attempt for debugging
+        tracing::debug!(
+            "Attempt {}/{}: Retriable error encountered, retrying after {}ms",
+            attempt + 1,
+            retry_params.max_retries,
+            retry_params.retry_delay_ms
+        );
 
         // Wait before retry
         thread::sleep(Duration::from_millis(retry_params.retry_delay_ms));
@@ -4568,7 +4696,9 @@ fn resolve_retry_params(config: &SuiteConfig, suite: &str) -> RetryParams {
     } else {
         RetryParams {
             max_retries: 0,
-            retry_delay_ms: 0,
+            // Always default to safe delay even when retries disabled
+            // to prevent hot loops if configuration is later enabled
+            retry_delay_ms: DEFAULT_RETRY_DELAY_MS,
         }
     }
 }
@@ -4644,6 +4774,20 @@ fn execute_single_scenario_with_context(
             // and does NOT need prost-style oneof double-nesting.
             let grpcurl_payload =
                 normalize_grpcurl_request_json(connector, suite, scenario, effective_req.clone());
+
+            // Debug logging for grpcurl payload (enable with RUST_LOG=debug)
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                if let Ok(dbg_json) = serde_json::to_string_pretty(&grpcurl_payload) {
+                    tracing::debug!(
+                        suite = suite,
+                        scenario = scenario,
+                        connector = connector,
+                        "grpcurl payload:\n{}",
+                        dbg_json
+                    );
+                }
+            }
+
             let trace = execute_grpcurl_request_from_payload_with_trace(
                 suite,
                 scenario,

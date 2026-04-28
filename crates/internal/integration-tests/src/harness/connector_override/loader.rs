@@ -1,9 +1,29 @@
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs,
+    path::PathBuf,
+    sync::Mutex,
+};
 
 use serde::Deserialize;
 use serde_json::Value;
 
 use crate::harness::{scenario_loader::connector_specs_root, scenario_types::ScenarioError};
+
+/// Cache for parsed connector override files to avoid repeated I/O.
+/// Key: connector name, Value: parsed override file.
+static OVERRIDE_FILE_CACHE: Mutex<Option<HashMap<String, ConnectorOverrideFile>>> =
+    Mutex::new(None);
+
+/// Clears the override file cache. Used for testing.
+#[cfg(test)]
+fn clear_override_cache() {
+    #[allow(clippy::expect_used)]
+    let mut cache_guard = OVERRIDE_FILE_CACHE
+        .lock()
+        .expect("override file cache lock should not be poisoned");
+    *cache_guard = Some(HashMap::new());
+}
 
 /// Polling configuration for retry logic.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -268,6 +288,28 @@ pub fn load_webhook_payload_patch(
 fn load_connector_override_file(
     connector: &str,
 ) -> Result<Option<ConnectorOverrideFile>, ScenarioError> {
+    // Check cache first
+    {
+        #[allow(clippy::expect_used)]
+        let mut cache_guard = OVERRIDE_FILE_CACHE
+            .lock()
+            .expect("override file cache lock should not be poisoned");
+
+        // Initialize cache on first access
+        if cache_guard.is_none() {
+            *cache_guard = Some(HashMap::new());
+        }
+
+        #[allow(clippy::expect_used)]
+        let cache = cache_guard.as_ref().expect("cache should be initialized");
+
+        // Return cached value if present
+        if let Some(cached) = cache.get(connector) {
+            return Ok(Some(cached.clone()));
+        }
+    }
+
+    // Cache miss - load from disk
     let path = connector_override_file_path(connector);
     if !path.exists() {
         return Ok(None);
@@ -285,6 +327,19 @@ fn load_connector_override_file(
             source,
         }
     })?;
+
+    // Store in cache
+    {
+        #[allow(clippy::expect_used)]
+        let mut cache_guard = OVERRIDE_FILE_CACHE
+            .lock()
+            .expect("override file cache lock should not be poisoned");
+
+        #[allow(clippy::expect_used)]
+        let cache = cache_guard.as_mut().expect("cache should be initialized");
+
+        cache.insert(connector.to_string(), parsed.clone());
+    }
 
     Ok(Some(parsed))
 }
@@ -326,10 +381,35 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        connector_override_file_path, load_scenario_override_patch, ScenarioOverridePatch,
+        clear_override_cache, connector_override_file_path, load_scenario_override_patch,
+        ScenarioOverridePatch,
     };
 
     static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// RAII guard that restores an environment variable to its previous value on drop.
+    /// Prevents test pollution and ensures cleanup even if the test panics.
+    struct EnvVarGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn new(key: &'static str, new_value: impl AsRef<std::ffi::OsStr>) -> Self {
+            let previous = std::env::var(key).ok();
+            std::env::set_var(key, new_value);
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match &self.previous {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
 
     fn unique_temp_dir() -> PathBuf {
         let nanos = SystemTime::now()
@@ -341,12 +421,13 @@ mod tests {
 
     #[test]
     fn missing_override_file_returns_none() {
-        let env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        let _env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        clear_override_cache(); // Clear cache to ensure test isolation
+
         let temp_root = unique_temp_dir();
         fs::create_dir_all(&temp_root).expect("temp root should be created");
 
-        let previous = std::env::var("UCS_CONNECTOR_OVERRIDE_ROOT").ok();
-        std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
+        let _env_guard = EnvVarGuard::new("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
 
         let loaded = load_scenario_override_patch(
             "stripe",
@@ -356,17 +437,15 @@ mod tests {
         .expect("loading missing override should not fail");
         assert!(loaded.is_none());
 
-        match previous {
-            Some(value) => std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", value),
-            None => std::env::remove_var("UCS_CONNECTOR_OVERRIDE_ROOT"),
-        }
-        drop(env_lock);
         let _ = fs::remove_dir_all(temp_root);
+        // _env_guard and _env_lock are automatically dropped here, ensuring cleanup
     }
 
     #[test]
     fn loads_scenario_override_patch_from_connector_file() {
-        let env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        let _env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        clear_override_cache(); // Clear cache to ensure test isolation
+
         let temp_root = unique_temp_dir();
         let connector_dir = temp_root.join("stripe");
         fs::create_dir_all(&connector_dir).expect("connector directory should be created");
@@ -398,8 +477,7 @@ mod tests {
         )
         .expect("override file should be written");
 
-        let previous = std::env::var("UCS_CONNECTOR_OVERRIDE_ROOT").ok();
-        std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
+        let _env_guard = EnvVarGuard::new("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
 
         let loaded = load_scenario_override_patch(
             "stripe",
@@ -426,19 +504,17 @@ mod tests {
         let computed_path = connector_override_file_path("stripe");
         assert_eq!(computed_path, override_path);
 
-        match previous {
-            Some(value) => std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", value),
-            None => std::env::remove_var("UCS_CONNECTOR_OVERRIDE_ROOT"),
-        }
-        drop(env_lock);
         let _ = fs::remove_dir_all(temp_root);
+        // _env_guard and _env_lock are automatically dropped here, ensuring cleanup
     }
 
     #[test]
     fn loads_suite_and_scenario_config_with_merge() {
         use super::load_scenario_config;
 
-        let env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        let _env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        clear_override_cache(); // Clear cache to ensure test isolation
+
         let temp_root = unique_temp_dir();
         let connector_dir = temp_root.join("testconnector");
         fs::create_dir_all(&connector_dir).expect("connector directory should be created");
@@ -469,8 +545,7 @@ mod tests {
         )
         .expect("override file should be written");
 
-        let previous = std::env::var("UCS_CONNECTOR_OVERRIDE_ROOT").ok();
-        std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
+        let _env_guard = EnvVarGuard::new("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
 
         // Load scenario config - should merge suite and scenario levels
         let config = load_scenario_config("testconnector", "PaymentService/Get", "get_payment")
@@ -483,11 +558,7 @@ mod tests {
         assert_eq!(polling.max_retries, Some(20)); // Overridden by scenario level
         assert_eq!(polling.retry_delay_ms, Some(500)); // From suite level (not overridden)
 
-        match previous {
-            Some(value) => std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", value),
-            None => std::env::remove_var("UCS_CONNECTOR_OVERRIDE_ROOT"),
-        }
-        drop(env_lock);
         let _ = fs::remove_dir_all(temp_root);
+        // _env_guard and _env_lock are automatically dropped here, ensuring cleanup
     }
 }
