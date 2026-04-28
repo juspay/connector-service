@@ -9,16 +9,17 @@ use domain_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse,
         JpmorganClientAuthenticationResponse as JpmorganClientAuthenticationResponseDomain,
-        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
         SetupMandateRequestData,
     },
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificConfig,
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
+use common_utils::consts::NO_ERROR_MESSAGE;
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -754,10 +755,20 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for PaymentsResponseData {
             .and_then(|card| card.network_response.as_ref())
             .and_then(|nr| nr.network_transaction_id.clone());
 
+        // JPMorgan's RepeatPayment flow uses the prior payment's `transaction_id`
+        // as the `transactionReference.transactionReferenceId` to identify the stored
+        // credential. Surface it as the `connector_mandate_id` so the framework can
+        // pass it back on subsequent MIT charges.
+        let mandate_reference = MandateReference {
+            connector_mandate_id: Some(item.transaction_id.clone()),
+            payment_method_id: None,
+            connector_mandate_request_reference_id: None,
+        };
+
         Ok(Self::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(item.transaction_id.clone()),
             redirection_data: None,
-            mandate_reference: None,
+            mandate_reference: Some(Box::new(mandate_reference)),
             connector_metadata: None,
             network_txn_id,
             connector_response_reference_id: Some(item.request_id.clone()),
@@ -774,6 +785,33 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for AttemptStatus {
             &item.transaction_state,
             &item.capture_method,
         ))
+    }
+}
+
+/// Build the `response` field for a JPMorgan payments flow: `Err(ErrorResponse)`
+/// when the transaction was declined/errored, otherwise `Ok(PaymentsResponseData)`.
+fn build_payments_response_result(
+    response: &responses::JpmorganPaymentsResponse,
+    http_code: u16,
+    status: AttemptStatus,
+) -> Result<Result<PaymentsResponseData, ErrorResponse>, ResponseError> {
+    if status == AttemptStatus::Failure {
+        Ok(Err(ErrorResponse {
+            attempt_status: Some(AttemptStatus::Failure),
+            code: response.response_code.clone(),
+            message: response
+                .response_message
+                .clone()
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+            reason: response.response_message.clone(),
+            status_code: http_code,
+            connector_transaction_id: Some(response.transaction_id.clone()),
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
+        }))
+    } else {
+        Ok(Ok(PaymentsResponseData::try_from(response)?))
     }
 }
 
@@ -805,10 +843,10 @@ impl<T: PaymentMethodDataTypes, F>
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
-        let response_data = PaymentsResponseData::try_from(&item.response)?;
+        let response = build_payments_response_result(&item.response, item.http_code, status)?;
 
         Ok(Self {
-            response: Ok(response_data),
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -826,10 +864,10 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
-        let response_data = PaymentsResponseData::try_from(&item.response)?;
+        let response = build_payments_response_result(&item.response, item.http_code, status)?;
 
         Ok(Self {
-            response: Ok(response_data),
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -847,10 +885,10 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
-        let response_data = PaymentsResponseData::try_from(&item.response)?;
+        let response = build_payments_response_result(&item.response, item.http_code, status)?;
 
         Ok(Self {
-            response: Ok(response_data),
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -868,10 +906,10 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
-        let response_data = PaymentsResponseData::try_from(&item.response)?;
+        let response = build_payments_response_result(&item.response, item.http_code, status)?;
 
         Ok(Self {
-            response: Ok(response_data),
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -1168,10 +1206,10 @@ impl<T: PaymentMethodDataTypes>
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
-        let response_data = PaymentsResponseData::try_from(&item.response)?;
+        let response = build_payments_response_result(&item.response, item.http_code, status)?;
 
         Ok(Self {
-            response: Ok(response_data),
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
@@ -1315,10 +1353,10 @@ impl<T: PaymentMethodDataTypes>
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
-        let response_data = PaymentsResponseData::try_from(&item.response)?;
+        let response = build_payments_response_result(&item.response, item.http_code, status)?;
 
         Ok(Self {
-            response: Ok(response_data),
+            response,
             resource_common_data: PaymentFlowData {
                 status,
                 ..item.router_data.resource_common_data
