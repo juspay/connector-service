@@ -102,6 +102,7 @@ message ConnectorErrorDetails {
   optional string code = 1;    // Connector-specific error code
   optional string message = 2; // Human-readable error message
   optional string reason = 3;  // Detailed explanation
+  optional string connector_transaction_id = 4; // Connector's unique transaction ID for debugging and support reference
 }
 
 // Metadata consolidates all metadata types

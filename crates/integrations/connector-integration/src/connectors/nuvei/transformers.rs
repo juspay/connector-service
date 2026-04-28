@@ -14,7 +14,7 @@ use domain_types::{
         ResponseId, SetupMandateRequestData,
     },
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -163,6 +163,11 @@ pub struct NuveiCard<
     #[serde(rename = "CVV")]
     pub cvv: Secret<String>,
 }
+
+// Nuvei's APM (Alternative Payment Method) identifier for ACH. Required literal
+// per Nuvei's API; reused by both BankTransfer::AchBankTransfer and
+// BankDebit::AchBankDebit. See https://docs.nuvei.com/documentation/us-and-canada-guides/ach/
+const NUVEI_ACH_PAYMENT_METHOD: &str = "apmgw_ACH";
 
 // ACH Bank Transfer specific structures
 #[derive(Debug, Serialize)]
@@ -683,6 +688,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract auth data
         let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
+        // Extract billing email up-front so ACH arms can populate `user_token_id`
+        // from it. Nuvei requires `userTokenId` for ACH (BankDebit/BankTransfer)
+        // but not for cards, so it is populated conditionally below.
+        let email = router_data
+            .resource_common_data
+            .get_optional_billing_email()
+            .or_else(|| router_data.request.email.clone())
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "billing_address.email",
+                context: Default::default(),
+            })?;
+
+        let mut user_token_id: Option<String> = None;
+
         // Extract payment method data
         let payment_option = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
@@ -705,6 +724,49 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }),
                     alternative_payment_method: None,
                     user_payment_option_id: None,
+                }
+            }
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                match bank_debit_data {
+                    BankDebitData::AchBankDebit {
+                        account_number,
+                        routing_number,
+                        bank_account_holder_name: _,
+                        bank_holder_type,
+                        ..
+                    } => {
+                        // SEC (Standard Entry Class) code: CCD for Business,
+                        // WEB for Personal/consumer-initiated entries.
+                        let sec_code = Some(
+                            match bank_holder_type {
+                                Some(common_enums::BankHolderType::Business) => "CCD",
+                                Some(common_enums::BankHolderType::Personal) | None => "WEB",
+                            }
+                            .to_string(),
+                        );
+
+                        // Nuvei requires userTokenId for ACH flows.
+                        user_token_id = Some(email.peek().to_string());
+
+                        NuveiPaymentOption {
+                            card: None,
+                            alternative_payment_method: Some(NuveiAlternativePaymentMethod {
+                                payment_method: NUVEI_ACH_PAYMENT_METHOD.to_string(),
+                                account_number: Secret::new(account_number.peek().to_string()),
+                                routing_number: Secret::new(routing_number.peek().to_string()),
+                                sec_code,
+                            }),
+                            user_payment_option_id: None,
+                        }
+                    }
+                    other => {
+                        return Err(IntegrationError::NotSupported {
+                            message: format!("{:?} is not supported for Nuvei", other),
+                            connector: "nuvei",
+                            context: Default::default(),
+                        }
+                        .into())
+                    }
                 }
             }
             PaymentMethodData::BankTransfer(bank_transfer_data) => {
@@ -747,10 +809,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .and_then(|v: &serde_json::Value| v.as_str())
                             .map(String::from);
 
+                        // Nuvei requires userTokenId for ACH flows.
+                        user_token_id = Some(email.peek().to_string());
+
                         NuveiPaymentOption {
                             card: None,
                             alternative_payment_method: Some(NuveiAlternativePaymentMethod {
-                                payment_method: "apmgw_ACH".to_string(),
+                                payment_method: NUVEI_ACH_PAYMENT_METHOD.to_string(),
                                 account_number: Secret::new(account_number.to_string()),
                                 routing_number: Secret::new(routing_number.to_string()),
                                 sec_code,
@@ -782,17 +847,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        // Extract billing address - Nuvei requires email, firstName, lastName, and country
-        // Try to get email from billing, if not available, try from request email field
-        let email = router_data
-            .resource_common_data
-            .get_optional_billing_email()
-            .or_else(|| router_data.request.email.clone())
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "billing_address.email",
-                context: Default::default(),
-            })?;
-
+        // Nuvei requires firstName, lastName, and country for the billing address.
+        // (`email` was already extracted above so ACH arms could populate `user_token_id`.)
         let country = router_data
             .resource_common_data
             .get_optional_billing_country()
@@ -925,7 +981,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             client_request_id,
             amount,
             currency,
-            user_token_id: None,
+            user_token_id,
             client_unique_id: Some(
                 router_data
                     .resource_common_data
