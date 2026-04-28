@@ -2,7 +2,7 @@ use domain_types::{
     connector_flow::*,
     connector_types::*,
     errors::{ConnectorError, IntegrationError},
-    payouts::payout_method_data::{Bank, PayoutMethodData, PixBankTransfer},
+    payouts::payout_method_data::{Bank, PayoutMethodData, PixBankTransfer, PixEmvBankTransfer},
     payouts::payouts_types::*,
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -185,8 +185,6 @@ impl
                 bank_branch,
                 bank_account_number,
                 bank_name,
-                pix_emv,
-                ..
             }))) => {
                 let tipo_pessoa = tax_id.clone().expose_option().map(|id| {
                     if id.len() == 11 {
@@ -211,12 +209,15 @@ impl
                         banco: bank_name.map(|bank| bank.to_string()),
                         tipo_conta: Some(ItaubankAccountType::Checking),
                         agencia,
-                        conta: bank_account_number,
+                        conta: Some(bank_account_number),
                         tipo_pessoa,
                         documento: tax_id,
                     }),
-                    pix_emv,
+                    None,
                 )
+            }
+            Some(PayoutMethodData::Bank(Bank::PixEmv(PixEmvBankTransfer { emv }))) => {
+                (None, Some(emv))
             }
             _ => (None, None),
         };

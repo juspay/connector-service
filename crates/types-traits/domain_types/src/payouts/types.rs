@@ -574,10 +574,64 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
         Ok(payouts::payout_method_data::PixBankTransfer {
             bank_name,
             bank_branch: pix.bank_branch,
-            bank_account_number: pix.bank_account_number,
-            pix_key: pix.pix_key,
+            bank_account_number: pix.bank_account_number.ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name: "bank_account_number",
+                    context: IntegrationErrorContext {
+                        additional_context: Some(
+                            "Bank account number is required for Pix bank transfer".to_owned()
+                        ),
+                        ..Default::default()
+                    },
+                })
+            })?,
             tax_id: pix.tax_id,
-            pix_emv: pix.pix_emv,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PixKeyBankTransferPayout>
+    for payouts::payout_method_data::PixKeyBankTransfer
+{
+    type Error = IntegrationError;
+    fn foreign_try_from(
+        pix: grpc_api_types::payouts::PixKeyBankTransferPayout,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(payouts::payout_method_data::PixKeyBankTransfer {
+            pix_key: pix.pix_key.ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name: "pix_key",
+                    context: IntegrationErrorContext {
+                        additional_context: Some(
+                            "Pix key is required for Pix key bank transfer".to_owned()
+                        ),
+                        ..Default::default()
+                    },
+                })
+            })?,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PixEmvBankTransferPayout>
+    for payouts::payout_method_data::PixEmvBankTransfer
+{
+    type Error = IntegrationError;
+    fn foreign_try_from(
+        pix: grpc_api_types::payouts::PixEmvBankTransferPayout,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(payouts::payout_method_data::PixEmvBankTransfer {
+            emv: pix.emv.ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name: "emv",
+                    context: IntegrationErrorContext {
+                        additional_context: Some(
+                            "EMV is required for Pix EMV bank transfer".to_owned()
+                        ),
+                        ..Default::default()
+                    },
+                })
+            })?,
         })
     }
 }
@@ -867,6 +921,16 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutMethod>
             grpc_api_types::payouts::payout_method::PayoutMethodData::Pix(pix) => {
                 Ok(Self::Bank(payouts::payout_method_data::Bank::Pix(
                     payouts::payout_method_data::PixBankTransfer::foreign_try_from(pix)?,
+                )))
+            }
+            grpc_api_types::payouts::payout_method::PayoutMethodData::PixKey(pix_key) => {
+                Ok(Self::Bank(payouts::payout_method_data::Bank::PixKey(
+                    payouts::payout_method_data::PixKeyBankTransfer::foreign_try_from(pix_key)?,
+                )))
+            }
+            grpc_api_types::payouts::payout_method::PayoutMethodData::PixEmv(pix_emv) => {
+                Ok(Self::Bank(payouts::payout_method_data::Bank::PixEmv(
+                    payouts::payout_method_data::PixEmvBankTransfer::foreign_try_from(pix_emv)?,
                 )))
             }
             grpc_api_types::payouts::payout_method::PayoutMethodData::ApplePayDecrypt(

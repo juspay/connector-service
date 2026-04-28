@@ -124,13 +124,19 @@ message PixBankTransferPayout {
   // The branch office of the bank
   optional string bank_branch = 2;
   // The bank account number
-  optional SecretString bank_account_number = 3;
-  // The PIX key (e.g., CPF, CNPJ, Email, Phone, or Random Key)
-  optional SecretString pix_key = 4;
+  SecretString bank_account_number = 3;
   // The tax identification number (CPF for individuals, CNPJ for companies)
-  optional SecretString tax_id = 5;
+  optional SecretString tax_id = 4;
+}
+
+message PixKeyBankTransferPayout {
+  // The PIX key (e.g., CPF, CNPJ, Email, Phone, or Random Key)
+  SecretString pix_key = 1;
+}
+
+message PixEmvBankTransferPayout {
   // EMV data for pix
-  optional SecretString pix_emv = 6;
+  SecretString emv = 1;
 }
 
 message ApplePayDecrypt {
@@ -203,9 +209,23 @@ message PayoutMethod {
 
     // PASSTHROUGH METHOD
     Passthrough passthrough = 11;
+
+    // BANK TRANSFER METHODS
+    PixKeyBankTransferPayout pix_key = 12;
+    PixEmvBankTransferPayout pix_emv = 13;
   }
 }
 
+message SourceBankData {
+  oneof source_bank_data {
+    AchBankTransferPayout ach = 2;
+    BacsBankTransferPayout bacs = 3;
+    SepaBankTransferPayout sepa = 4;
+    PixBankTransferPayout pix = 5;
+    PixKeyBankTransferPayout pix_key = 6;
+    PixEmvBankTransferPayout pix_emv = 7;
+ }
+}
 // ============================================================================
 // API REQUEST AND RESPONSE MESSAGES
 // ============================================================================
