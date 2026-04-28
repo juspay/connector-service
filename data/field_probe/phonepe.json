@@ -120,8 +120,8 @@
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "Dana": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
@@ -156,8 +156,8 @@
         "error": "Payment method not supported is not supported by Phonepe"
       },
       "GCash": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "Giropay": {
         "status": "not_supported",
@@ -168,8 +168,8 @@
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "GoPay": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -212,8 +212,8 @@
         "error": "Payment method not supported is not supported by Phonepe"
       },
       "KakaoPay": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "Klarna": {
         "status": "not_supported",
@@ -256,8 +256,8 @@
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "Momo": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "MultibancoBankTransfer": {
         "status": "not_supported",
@@ -408,20 +408,20 @@
         "error": "Payment method not supported is not supported by Phonepe"
       },
       "Swish": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "TouchNGo": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "Trustly": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Phonepe"
       },
       "Twint": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "UpiCollect": {
         "status": "supported",
@@ -525,8 +525,8 @@
         }
       },
       "Vipps": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Phonepe currently implements UPI payment methods only"
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
       },
       "WeChatPayQr": {
         "status": "not_supported",
