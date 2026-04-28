@@ -280,24 +280,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     };
 
                 let expiry = requests::Expiry {
-                    month: Secret::new(
-                        card_data
-                            .card_exp_month
-                            .peek()
-                            .parse::<i32>()
-                            .change_context(IntegrationError::RequestEncodingFailed {
-                                context: Default::default(),
-                            })?,
-                    ),
-                    year: Secret::new(
-                        card_data
-                            .get_expiry_year_4_digit()
-                            .peek()
-                            .parse::<i32>()
-                            .change_context(IntegrationError::RequestEncodingFailed {
-                                context: Default::default(),
-                            })?,
-                    ),
+                    month: Secret::new(card_data.card_exp_month.peek().to_string()),
+                    year: Secret::new(card_data.get_expiry_year_4_digit().peek().to_string()),
                 };
 
                 let card = requests::JpmorganCard {

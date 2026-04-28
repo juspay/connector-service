@@ -410,20 +410,12 @@ fn build_gateway_info<T: PaymentMethodDataTypes>(
     match (order_type, payment_method_data) {
         (Type::Direct, PaymentMethodData::Card(card_data)) => {
             // Build gateway_info with card details
-            // Format card expiry as YYMM (2-digit year + 2-digit month) as integer
-            let card_expiry_str = card_data
+            // Format card expiry as YYMM (2-digit year + 2-digit month)
+            let card_expiry_date = card_data
                 .get_card_expiry_year_month_2_digit_with_delimiter(String::new())
                 .change_context(IntegrationError::RequestEncodingFailed {
                     context: Default::default(),
-                })?
-                .expose();
-
-            let card_expiry_date: i64 = card_expiry_str
-                .parse::<i64>()
-                .change_context(IntegrationError::RequestEncodingFailed {
-                    context: Default::default(),
-                })
-                .attach_printable("Failed to parse card expiry date as integer")?;
+                })?;
 
             Ok(Some(MultisafepayGatewayInfo::Card(GatewayInfo {
                 card_number: card_data.card_number.clone(),
@@ -568,7 +560,7 @@ pub struct CustomerInfo {
 #[derive(Debug, Serialize)]
 pub struct GatewayInfo<T: PaymentMethodDataTypes> {
     pub card_number: RawCardNumber<T>,
-    pub card_expiry_date: i64, // Format: YYMM as integer
+    pub card_expiry_date: Secret<String>, // Format: YYMM as integer
     pub card_cvc: Secret<String>,
     pub card_holder_name: Option<Secret<String>>,
     pub flexible_3d: Option<bool>,
