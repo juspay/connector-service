@@ -19,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.28.0
+
+### Features
+
+- **connector:**
+  - Implement MIT for peachpayments ([#912](https://github.com/juspay/connector-service/pull/912)) ([`4a14e4f`](https://github.com/juspay/connector-service/commit/4a14e4fd91001d84c06aac1040f1f9649e61e627))
+  - Implement MIT for paybox ([#909](https://github.com/juspay/connector-service/pull/909)) ([`b5aec2b`](https://github.com/juspay/connector-service/commit/b5aec2b55737a0ab4d3d1553682261316cf670bf))
+  - Implement SetupRecurring for stax ([#1065](https://github.com/juspay/connector-service/pull/1065)) ([`c3119de`](https://github.com/juspay/connector-service/commit/c3119def15ee84cab81ff8350741cef9c43a5433))
+
+**Full Changelog:** [`2026.04.27.1...2026.04.28.0`](https://github.com/juspay/connector-service/compare/2026.04.27.1...2026.04.28.0)
+
+- - -
+
 ## 2026.04.27.1
 
 ### Features
