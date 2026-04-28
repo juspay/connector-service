@@ -402,10 +402,13 @@ macros::create_all_prerequisites!(
                 .ok_or(IntegrationError::InvalidConnectorConfig {
                     config: "secondary_base_url",
                     context: errors::IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Set secondary_base_url to the Easebuzz dashboard URL in connector config".to_string()
+                        ),
+                        doc_url: None,
                         additional_context: Some(
                             "Easebuzz requires secondary_base_url (dashboard URL) for PSync and Refund flows".to_string()
                         ),
-                        ..Default::default()
                     },
                 })
                 .map_err(error_stack::Report::from)
@@ -454,10 +457,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .parse_struct("EasebuzzErrorResponse")
             .change_context(ConnectorError::ResponseDeserializationFailed {
                 context: errors::ResponseTransformationErrorContext {
+                    http_status_code: Some(res.status_code),
                     additional_context: Some(
                         "Failed to parse Easebuzz response body as JSON".to_string(),
                     ),
-                    ..Default::default()
                 },
             })?;
 
@@ -468,7 +471,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             code: response.code,
             message: response.message,
             reason: None,
-            attempt_status: None,
+            attempt_status: Some(enums::AttemptStatus::Failure),
             connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
@@ -547,8 +550,8 @@ macros::macro_connector_implementation!(
                 .parse_struct("EasebuzzErrorResponse")
                 .change_context(ConnectorError::ResponseDeserializationFailed {
                     context: errors::ResponseTransformationErrorContext {
+                        http_status_code: Some(res.status_code),
                         additional_context: Some("Failed to parse Easebuzz response body as JSON".to_string()),
-                        ..Default::default()
                     },
                 })?;
 
@@ -819,8 +822,8 @@ macros::macro_connector_implementation!(
                 .parse_struct("EasebuzzErrorResponse")
                 .change_context(ConnectorError::ResponseDeserializationFailed {
                     context: errors::ResponseTransformationErrorContext {
+                        http_status_code: Some(res.status_code),
                         additional_context: Some("Failed to parse Easebuzz response body as JSON".to_string()),
-                        ..Default::default()
                     },
                 })?;
 
@@ -888,8 +891,8 @@ macros::macro_connector_implementation!(
                 .parse_struct("EasebuzzErrorResponse")
                 .change_context(ConnectorError::ResponseDeserializationFailed {
                     context: errors::ResponseTransformationErrorContext {
+                        http_status_code: Some(res.status_code),
                         additional_context: Some("Failed to parse Easebuzz response body as JSON".to_string()),
-                        ..Default::default()
                     },
                 })?;
 
@@ -974,10 +977,13 @@ macros::macro_connector_implementation!(
                 .ok_or(IntegrationError::InvalidConnectorConfig {
                     config: "secondary_base_url",
                     context: errors::IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Set secondary_base_url to the Easebuzz dashboard URL in connector config".to_string()
+                        ),
+                        doc_url: None,
                         additional_context: Some(
                             "Easebuzz requires secondary_base_url (dashboard URL) for PSync and Refund flows".to_string()
                         ),
-                        ..Default::default()
                     },
                 })
                 .map_err(error_stack::Report::from)?;
@@ -998,8 +1004,8 @@ macros::macro_connector_implementation!(
                 .parse_struct("EasebuzzErrorResponse")
                 .change_context(ConnectorError::ResponseDeserializationFailed {
                     context: errors::ResponseTransformationErrorContext {
+                        http_status_code: Some(res.status_code),
                         additional_context: Some("Failed to parse Easebuzz response body as JSON".to_string()),
-                        ..Default::default()
                     },
                 })?;
 
@@ -1008,7 +1014,7 @@ macros::macro_connector_implementation!(
                 code: response.code,
                 message: response.message,
                 reason: None,
-                attempt_status: None,
+                attempt_status: Some(enums::AttemptStatus::Failure),
                 connector_transaction_id: None,
                 network_decline_code: None,
                 network_advice_code: None,
@@ -1058,10 +1064,13 @@ macros::macro_connector_implementation!(
                 .ok_or(IntegrationError::InvalidConnectorConfig {
                     config: "secondary_base_url",
                     context: errors::IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Set secondary_base_url to the Easebuzz dashboard URL in connector config".to_string()
+                        ),
+                        doc_url: None,
                         additional_context: Some(
                             "Easebuzz requires secondary_base_url (dashboard URL) for PSync and Refund flows".to_string()
                         ),
-                        ..Default::default()
                     },
                 })
                 .map_err(error_stack::Report::from)?;
@@ -1082,8 +1091,8 @@ macros::macro_connector_implementation!(
                 .parse_struct("EasebuzzErrorResponse")
                 .change_context(ConnectorError::ResponseDeserializationFailed {
                     context: errors::ResponseTransformationErrorContext {
+                        http_status_code: Some(res.status_code),
                         additional_context: Some("Failed to parse Easebuzz response body as JSON".to_string()),
-                        ..Default::default()
                     },
                 })?;
 
@@ -1092,7 +1101,7 @@ macros::macro_connector_implementation!(
                 code: response.code,
                 message: response.message,
                 reason: None,
-                attempt_status: None,
+                attempt_status: Some(enums::AttemptStatus::Failure),
                 connector_transaction_id: None,
                 network_decline_code: None,
                 network_advice_code: None,

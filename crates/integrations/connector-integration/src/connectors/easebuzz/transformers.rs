@@ -55,10 +55,13 @@ impl TryFrom<&ConnectorSpecificConfig> for EasebuzzAuthType {
             _ => Err(error_stack::report!(
                 IntegrationError::FailedToObtainAuthType {
                     context: errors::IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                        ),
+                        doc_url: None,
                         additional_context: Some(
                             "Expected ConnectorSpecificConfig::Easebuzz variant with api_key and api_salt fields".to_string()
                         ),
-                        ..Default::default()
                     },
                 }
             )),
@@ -168,11 +171,14 @@ impl
         let auth = EasebuzzAuthType::try_from(&router_data.connector_config).change_context(
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Easebuzz requires api_key and api_salt in ConnectorSpecificConfig"
                             .to_string(),
                     ),
-                    ..Default::default()
                 },
             },
         )?;
@@ -181,11 +187,14 @@ impl
             .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Verify amount and currency are valid for major-unit conversion".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Failed to convert amount to major units for Easebuzz initiateLink"
                             .to_string(),
                     ),
-                    ..Default::default()
                 },
             })?;
         let txnid = router_data
@@ -402,7 +411,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 _ => {
                     return Err(error_stack::report!(IntegrationError::NotImplemented(
                         "This payment method is not supported for Easebuzz".to_string(),
-                        Default::default(),
+                        errors::IntegrationErrorContext {
+                            suggested_action: Some(
+                                "Use a supported payment method: Card, UPI, Wallet, or NetBanking".to_string(),
+                            ),
+                            doc_url: None,
+                            additional_context: Some(
+                                "Easebuzz supports Card, UPI Collect/Intent/QR, Wallet, and NetBanking only".to_string(),
+                            ),
+                        },
                     )));
                 }
             };
@@ -418,10 +435,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     suggested_action: Some(
                         "Call PaymentService.CreateOrder first to obtain an access_key, then pass it as connector_order_id in the Authorize request".to_string()
                     ),
+                    doc_url: None,
                     additional_context: Some(
                         "Easebuzz seamless API requires a two-step flow: POST /payment/initiateLink returns an access_key which must be passed to POST /initiate_seamless_payment/".to_string()
                     ),
-                    ..Default::default()
                 },
             })?;
 
@@ -617,11 +634,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = EasebuzzAuthType::try_from(&router_data.connector_config).change_context(
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Easebuzz requires api_key and api_salt in ConnectorSpecificConfig"
                             .to_string(),
                     ),
-                    ..Default::default()
                 },
             },
         )?;
@@ -632,8 +652,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_connector_transaction_id()
             .change_context(IntegrationError::MissingConnectorTransactionID {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Propagate the easepayid returned by the original Authorize response".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some("Easebuzz capture/refund requires the easepayid from the original authorize response".to_string()),
-                    ..Default::default()
                 },
             })?;
 
@@ -646,10 +669,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Verify the capture amount and currency are valid for major-unit conversion".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Failed to convert capture amount for Easebuzz".to_string(),
                     ),
-                    ..Default::default()
                 },
             })?;
         let amount_for_hash = string_major_unit_to_string(&amount);
@@ -874,11 +900,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = EasebuzzAuthType::try_from(&router_data.connector_config).change_context(
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Easebuzz requires api_key and api_salt in ConnectorSpecificConfig"
                             .to_string(),
                     ),
-                    ..Default::default()
                 },
             },
         )?;
@@ -895,10 +924,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Verify the refund amount and currency are valid for major-unit conversion".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Failed to convert refund amount for Easebuzz".to_string(),
                     ),
-                    ..Default::default()
                 },
             })?;
         let refund_amount_str = string_major_unit_to_string(&refund_amount);
@@ -966,7 +998,7 @@ impl TryFrom<ResponseRouterData<EasebuzzRefundResponse, Self>>
                     code: "REFUND_FAILED".to_string(),
                     message: reason.clone(),
                     reason: Some(reason),
-                    attempt_status: None,
+                    attempt_status: Some(AttemptStatus::Failure),
                     connector_transaction_id: response.easebuzz_id.clone(),
                     network_decline_code: None,
                     network_advice_code: None,
@@ -1097,11 +1129,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = EasebuzzAuthType::try_from(&router_data.connector_config).change_context(
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Easebuzz requires api_key and api_salt in ConnectorSpecificConfig"
                             .to_string(),
                     ),
-                    ..Default::default()
                 },
             },
         )?;
@@ -1118,10 +1153,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Verify the sync amount and currency are valid for major-unit conversion".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Failed to convert sync amount for Easebuzz".to_string(),
                     ),
-                    ..Default::default()
                 },
             })?;
         let amount_str = string_major_unit_to_string(&amount);
@@ -1291,11 +1329,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = EasebuzzAuthType::try_from(&router_data.connector_config).change_context(
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                    ),
+                    doc_url: None,
                     additional_context: Some(
                         "Easebuzz requires api_key and api_salt in ConnectorSpecificConfig"
                             .to_string(),
                     ),
-                    ..Default::default()
                 },
             },
         )?;
@@ -1417,7 +1458,7 @@ impl TryFrom<ResponseRouterData<EasebuzzRefundSyncResponse, Self>>
                         code: "REFUND_SYNC_ERROR".to_string(),
                         message: err_msg.clone(),
                         reason: Some(err_msg),
-                        attempt_status: None,
+                        attempt_status: Some(AttemptStatus::Failure),
                         connector_transaction_id: None,
                         network_decline_code: None,
                         network_advice_code: None,
