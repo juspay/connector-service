@@ -141,7 +141,7 @@ pub struct RegisterIntentResponsePayload {
     pub payee_name: Secret<String>,
     pub payee_mcc: String,
     pub amount: String,
-    pub currency: String,
+    pub currency: common_enums::Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remarks: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

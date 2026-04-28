@@ -36,7 +36,7 @@ pub fn construct_upi_deeplink(params: &RegisterIntentResponsePayload) -> String 
 
     // Required parameters (sorted alphabetically by key)
     params_map.insert("am", params.amount.clone());
-    params_map.insert("cu", params.currency.clone());
+    params_map.insert("cu", params.currency.to_string());
     params_map.insert("mc", params.payee_mcc.clone());
     params_map.insert("pa", params.payee_vpa.peek().to_string());
     params_map.insert("pn", params.payee_name.peek().to_string());
@@ -469,16 +469,16 @@ pub fn build_rsync_request(
     use crate::connectors::juspay_upi_stack::types::Refund360Type;
 
     let amount_str = refund_sync_data
-        .refund_amount
-        .map(|a| minor_to_major_amount(a.get_amount_as_i64()))
+        .refund_money
+        .as_ref()
+        .map(|m| minor_to_major_amount(m.amount.get_amount_as_i64()))
         .ok_or_else(|| IntegrationError::MissingRequiredField {
-            field_name: "refund_amount",
+            field_name: "refund_money",
             context: IntegrationErrorContext {
-                suggested_action: Some("Provide refund_amount in RSync request".to_string()),
+                suggested_action: Some("Provide refund_money in RSync request".to_string()),
                 doc_url: Some(DOC_URL_REFUND_360.to_string()),
                 additional_context: Some(
-                    "refund_amount is required for Juspay UPI Stack refund status check"
-                        .to_string(),
+                    "refund_money is required for Juspay UPI Stack refund status check".to_string(),
                 ),
             },
         })?;
