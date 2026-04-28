@@ -2063,9 +2063,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | Some(common_enums::BankType::Bond)
                     | Some(common_enums::BankType::SubscriptionShare) => {
                         return Err(error_stack::report!(IntegrationError::NotSupported {
-                            message: domain_types::utils::get_unimplemented_payment_method_error_message(
-                                "Cybersource",
-                            ),
+                            message:
+                                domain_types::utils::get_unimplemented_payment_method_error_message(
+                                    "Cybersource",
+                                ),
                             connector: "Cybersource",
                             context: Default::default(),
                         }));
@@ -2086,8 +2087,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         },
                     }));
 
-                let processing_information =
-                    ProcessingInformation::try_from((item, None, None))?;
+                let processing_information = ProcessingInformation::try_from((item, None, None))?;
 
                 let client_reference_information = ClientReferenceInformation::from(item);
                 let merchant_defined_information = convert_metadata_to_merchant_defined_info(
