@@ -1,4 +1,5 @@
 use common_enums::{AttemptStatus, CaptureMethod};
+use common_utils::consts::NO_ERROR_MESSAGE;
 use common_utils::pii::SecretSerdeValue;
 use domain_types::{
     connector_flow::{
@@ -19,7 +20,6 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use common_utils::consts::NO_ERROR_MESSAGE;
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
