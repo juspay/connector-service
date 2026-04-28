@@ -4525,7 +4525,18 @@ fn execute_scenario_with_retry(
         thread::sleep(Duration::from_millis(retry_params.retry_delay_ms));
     }
 
-    unreachable!("Loop should always return via early exit")
+    // Safety: Loop always returns on last iteration (attempt == max_retries)
+    // This path is unreachable but required for type checking
+    execute_single_scenario_with_context(
+        suite,
+        scenario,
+        connector,
+        options,
+        dependency_reqs,
+        dependency_res,
+        explicit_context_entries,
+        dependency_entries,
+    )
 }
 
 /// Retry parameters for scenario execution.
@@ -4634,13 +4645,6 @@ fn execute_single_scenario_with_context(
             // and does NOT need prost-style oneof double-nesting.
             let grpcurl_payload =
                 normalize_grpcurl_request_json(connector, suite, scenario, effective_req.clone());
-            if std::env::var("UCS_DEBUG_GRPCURL_PAYLOAD").as_deref() == Ok("1") {
-                if let Ok(dbg_json) = serde_json::to_string_pretty(&grpcurl_payload) {
-                    eprintln!(
-                        "[DEBUG] grpcurl_payload suite={suite} scenario={scenario}:\n{dbg_json}"
-                    );
-                }
-            }
             let trace = execute_grpcurl_request_from_payload_with_trace(
                 suite,
                 scenario,
