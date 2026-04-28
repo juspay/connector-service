@@ -4546,17 +4546,16 @@ struct RetryParams {
 }
 
 /// Resolves retry parameters from configuration, with legacy defaults.
-fn resolve_retry_params(
-    config: &SuiteConfig,
-    suite: &str,
-) -> RetryParams {
+fn resolve_retry_params(config: &SuiteConfig, suite: &str) -> RetryParams {
     const DEFAULT_RETRY_DELAY_MS: u64 = 500;
     const LEGACY_GET_MAX_RETRIES: u32 = 10;
 
     if let Some(ref polling_config) = config.polling_config {
         return RetryParams {
             max_retries: polling_config.max_retries.unwrap_or(0),
-            retry_delay_ms: polling_config.retry_delay_ms.unwrap_or(DEFAULT_RETRY_DELAY_MS),
+            retry_delay_ms: polling_config
+                .retry_delay_ms
+                .unwrap_or(DEFAULT_RETRY_DELAY_MS),
         };
     }
 
