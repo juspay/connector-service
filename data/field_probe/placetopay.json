@@ -163,6 +163,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
@@ -195,6 +199,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
@@ -202,6 +210,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -243,6 +255,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
@@ -276,6 +292,14 @@
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
@@ -351,6 +375,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -415,11 +443,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
@@ -432,6 +476,10 @@
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Placetopay"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Placetopay"
       },

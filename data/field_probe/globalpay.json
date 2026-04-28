@@ -160,6 +160,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
@@ -227,6 +231,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Bank redirect payment method not supported"
@@ -234,6 +242,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -310,6 +322,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Bank redirect payment method not supported"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
@@ -343,6 +359,14 @@
         "error": "This feature is not implemented: Payment method not supported"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
@@ -418,6 +442,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -482,13 +510,29 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Bank redirect payment method not supported"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
       "Trustly": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Bank redirect payment method not supported"
+      },
+      "Twint": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "UpiCollect": {
         "status": "not_implemented",
@@ -499,6 +543,10 @@
         "error": "This feature is not implemented: Payment method not supported"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
@@ -564,7 +612,7 @@
             "via": "HyperSwitch",
             "x-gp-version": "2021-03-22"
           },
-          "body": "{\"app_id\":\"probe_id\",\"nonce\":\"probeNonceVal001\",\"secret\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\",\"grant_type\":\"client_credentials\"}"
+          "body": "{\"app_id\":\"probe_id\",\"nonce\":\"probeNonceVal001\",\"secret\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\",\"grant_type\":\"client_credentials\",\"interval_to_expire\":\"1_HOUR\",\"restricted_token\":\"YES\"}"
         }
       }
     },

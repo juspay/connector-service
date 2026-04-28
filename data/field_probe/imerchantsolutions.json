@@ -150,6 +150,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
@@ -182,6 +186,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
@@ -189,6 +197,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -230,6 +242,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
@@ -263,6 +279,14 @@
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
@@ -338,6 +362,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -402,11 +430,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
@@ -419,6 +463,10 @@
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Imerchantsolutions"
       },

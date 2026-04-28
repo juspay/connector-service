@@ -154,6 +154,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
@@ -186,6 +190,10 @@
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
@@ -193,6 +201,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -234,6 +246,10 @@
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
@@ -267,6 +283,14 @@
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
@@ -342,6 +366,10 @@
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -406,11 +434,27 @@
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
@@ -423,6 +467,10 @@
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Payment method not yet implemented for Payme is not supported by Payme"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Payment method not yet implemented for Payme is not supported by Payme"
       },

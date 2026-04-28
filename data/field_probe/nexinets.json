@@ -185,6 +185,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
@@ -242,6 +246,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
+      },
       "Giropay": {
         "status": "supported",
         "proto_request": {
@@ -274,6 +282,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -340,6 +352,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
@@ -373,6 +389,14 @@
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },
@@ -475,6 +499,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -539,6 +567,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "supported",
         "proto_request": {
@@ -568,7 +600,19 @@
           "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"sofort\",\"payment\":null,\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":null}"
         }
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },
@@ -581,6 +625,10 @@
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through nexinets"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through nexinets"
       },

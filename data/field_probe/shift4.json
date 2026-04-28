@@ -152,6 +152,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
@@ -209,6 +213,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "BankRedirect type Giropay { bank_account_bic: None, bank_account_iban: None, country: None } is not supported by Shift4 is not supported by Shift4"
@@ -216,6 +224,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -282,6 +294,10 @@
         "status": "not_supported",
         "error": "BankRedirect type Interac { country: None, email: None } is not supported by Shift4 is not supported by Shift4"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
@@ -315,6 +331,14 @@
         "error": "This feature is not implemented: Payment method"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
@@ -390,6 +414,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -454,13 +482,29 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "BankRedirect type Sofort { country: None, preferred_language: None } is not supported by Shift4 is not supported by Shift4"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
       "Trustly": {
         "status": "not_supported",
         "error": "BankRedirect type Trustly { country: None } is not supported by Shift4 is not supported by Shift4"
+      },
+      "Twint": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
       },
       "UpiCollect": {
         "status": "not_implemented",
@@ -471,6 +515,10 @@
         "error": "This feature is not implemented: Payment method"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method"
       },

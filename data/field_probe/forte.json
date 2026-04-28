@@ -185,6 +185,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
@@ -217,6 +221,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
@@ -224,6 +232,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -265,6 +277,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
@@ -298,6 +314,14 @@
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
@@ -373,6 +397,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -437,11 +465,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
@@ -454,6 +498,10 @@
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through Forte"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Forte"
       },
