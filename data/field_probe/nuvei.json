@@ -168,6 +168,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "DanamonVaBankTransfer is not supported for Nuvei is not supported by nuvei"
@@ -200,6 +204,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
@@ -207,6 +215,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -248,6 +260,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
@@ -281,6 +297,14 @@
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
@@ -356,6 +380,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -420,11 +448,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
@@ -437,6 +481,10 @@
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported by Nuvei in this transformer"
       },

@@ -213,6 +213,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Selected payment method through trustpay is not supported by trustpay"
@@ -283,6 +287,10 @@
         "status": "not_supported",
         "error": "Selected payment method through trustpay is not supported by trustpay"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
+      },
       "Giropay": {
         "status": "supported",
         "proto_request": {
@@ -328,6 +336,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -530,6 +542,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through trustpay"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method through trustpay is not supported by trustpay"
@@ -563,6 +579,14 @@
         "error": "Selected payment method through trustpay is not supported by trustpay"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Selected payment method through trustpay is not supported by trustpay"
       },
@@ -637,6 +661,10 @@
       "PaypalSdk": {
         "status": "not_supported",
         "error": "Selected payment method through trustpay is not supported by trustpay"
+      },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "Paze": {
         "status": "not_supported",
@@ -743,6 +771,10 @@
         "status": "not_supported",
         "error": "Selected payment method through trustpay is not supported by trustpay"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "supported",
         "proto_request": {
@@ -785,9 +817,21 @@
           "body": "{\"paymentMethod\":\"Sofort\",\"merchantIdentification\":{\"ProjectId\":\"probe_id\"},\"paymentInformation\":{\"Amount\":{\"Amount\":\"10.00\",\"Currency\":\"USD\"},\"References\":{\"MerchantReference\":\"probe_txn_001\"}},\"callbackUrls\":{\"success\":\"https://example.com/return?status=SuccessOk\",\"cancel\":\"https://example.com/return\",\"error\":\"https://example.com/return\"}}"
         }
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
+      },
       "Trustly": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through trustpay"
+      },
+      "Twint": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
       },
       "UpiCollect": {
         "status": "not_supported",
@@ -798,6 +842,10 @@
         "error": "Selected payment method through trustpay is not supported by trustpay"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method through trustpay is not supported by trustpay"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method through trustpay is not supported by trustpay"
       },
