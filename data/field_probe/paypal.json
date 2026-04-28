@@ -215,6 +215,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Paypal"
@@ -286,6 +290,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Paypal"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
+      },
       "Giropay": {
         "status": "supported",
         "proto_request": {
@@ -332,6 +340,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -464,6 +476,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Paypal"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method through Paypal is not supported by Paypal"
@@ -499,6 +515,14 @@
       "MiniStop": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Paypal"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
@@ -647,6 +671,10 @@
           "body": null
         }
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -711,6 +739,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Paypal"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "supported",
         "proto_request": {
@@ -754,9 +786,21 @@
           "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"sofort\":{\"name\":\"John\",\"country_code\":\"US\",\"experience_context\":{\"return_url\":null,\"cancel_url\":null,\"user_action\":\"PAY_NOW\",\"shipping_preference\":\"GET_FROM_FILE\"}}}}"
         }
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
+      },
       "Trustly": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through Paypal"
+      },
+      "Twint": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "UpiCollect": {
         "status": "not_supported",
@@ -767,6 +811,10 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
