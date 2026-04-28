@@ -122,19 +122,17 @@ pub fn load_suite_config(
         return Ok(None);
     }
 
-    let content = fs::read_to_string(&path).map_err(|source| {
-        ScenarioError::ConnectorOverrideRead {
+    let content =
+        fs::read_to_string(&path).map_err(|source| ScenarioError::ConnectorOverrideRead {
             path: path.clone(),
             source,
-        }
-    })?;
+        })?;
 
-    let parsed: Value = serde_json::from_str(&content).map_err(|source| {
-        ScenarioError::ConnectorOverrideParse {
+    let parsed: Value =
+        serde_json::from_str(&content).map_err(|source| ScenarioError::ConnectorOverrideParse {
             path: path.clone(),
             source,
-        }
-    })?;
+        })?;
 
     // Navigate to suite -> __config__
     let suite_config_value = parsed
@@ -142,18 +140,18 @@ pub fn load_suite_config(
         .and_then(|suite_obj| suite_obj.get("__config__"));
 
     if let Some(config_value) = suite_config_value {
-        let config = serde_json::from_value::<SuiteConfig>(config_value.clone()).map_err(
-            |source| ScenarioError::ConnectorOverrideParse {
-                path: path.clone(),
-                source,
-            },
-        )?;
+        let config =
+            serde_json::from_value::<SuiteConfig>(config_value.clone()).map_err(|source| {
+                ScenarioError::ConnectorOverrideParse {
+                    path: path.clone(),
+                    source,
+                }
+            })?;
         return Ok(Some(config));
     }
 
     Ok(None)
 }
-
 
 pub fn load_scenario_config(
     connector: &str,
