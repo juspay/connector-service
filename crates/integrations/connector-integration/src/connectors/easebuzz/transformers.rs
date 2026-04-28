@@ -172,7 +172,8 @@ impl
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
-                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt"
+                            .to_string(),
                     ),
                     doc_url: None,
                     additional_context: Some(
@@ -188,7 +189,8 @@ impl
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
-                        "Verify amount and currency are valid for major-unit conversion".to_string(),
+                        "Verify amount and currency are valid for major-unit conversion"
+                            .to_string(),
                     ),
                     doc_url: None,
                     additional_context: Some(
@@ -389,27 +391,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Determine payment mode and payment-method-specific fields
-        let (payment_mode, upi_va, upi_qr, bank_code) =
-            match &router_data.request.payment_method_data {
-                PaymentMethodData::Upi(upi_data) => match upi_data {
-                    UpiData::UpiCollect(collect_data) => {
-                        let vpa = collect_data
-                            .vpa_id
-                            .as_ref()
-                            .map(|v| Secret::new(v.peek().to_string()));
-                        ("UPI".to_string(), vpa, None, None)
-                    }
-                    UpiData::UpiIntent(_) => ("UPI".to_string(), None, None, None),
-                    UpiData::UpiQr(_) => ("UPI".to_string(), None, Some("1".to_string()), None),
-                },
-                PaymentMethodData::Wallet(WalletData::EaseBuzzRedirect(_)) => {
-                    ("MW".to_string(), None, None, None)
+        let (payment_mode, upi_va, upi_qr, bank_code) = match &router_data
+            .request
+            .payment_method_data
+        {
+            PaymentMethodData::Upi(upi_data) => match upi_data {
+                UpiData::UpiCollect(collect_data) => {
+                    let vpa = collect_data
+                        .vpa_id
+                        .as_ref()
+                        .map(|v| Secret::new(v.peek().to_string()));
+                    ("UPI".to_string(), vpa, None, None)
                 }
-                PaymentMethodData::BankRedirect(BankRedirectData::Netbanking { issuer }) => {
-                    ("NB".to_string(), None, None, Some(issuer.to_string()))
-                }
-                _ => {
-                    return Err(error_stack::report!(IntegrationError::NotImplemented(
+                UpiData::UpiIntent(_) => ("UPI".to_string(), None, None, None),
+                UpiData::UpiQr(_) => ("UPI".to_string(), None, Some("1".to_string()), None),
+            },
+            PaymentMethodData::Wallet(WalletData::EaseBuzzRedirect(_)) => {
+                ("MW".to_string(), None, None, None)
+            }
+            PaymentMethodData::BankRedirect(BankRedirectData::Netbanking { issuer }) => {
+                ("NB".to_string(), None, None, Some(issuer.to_string()))
+            }
+            _ => {
+                return Err(error_stack::report!(IntegrationError::NotImplemented(
                         "This payment method is not supported for Easebuzz".to_string(),
                         errors::IntegrationErrorContext {
                             suggested_action: Some(
@@ -421,8 +425,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             ),
                         },
                     )));
-                }
-            };
+            }
+        };
 
         // access_key comes from the CreateOrder (initiateLink) step
         let access_key = router_data
@@ -635,7 +639,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
-                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt"
+                            .to_string(),
                     ),
                     doc_url: None,
                     additional_context: Some(
@@ -901,7 +906,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
-                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt"
+                            .to_string(),
                     ),
                     doc_url: None,
                     additional_context: Some(
@@ -925,7 +931,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
-                        "Verify the refund amount and currency are valid for major-unit conversion".to_string(),
+                        "Verify the refund amount and currency are valid for major-unit conversion"
+                            .to_string(),
                     ),
                     doc_url: None,
                     additional_context: Some(
@@ -1130,7 +1137,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
-                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt"
+                            .to_string(),
                     ),
                     doc_url: None,
                     additional_context: Some(
@@ -1154,7 +1162,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
-                        "Verify the sync amount and currency are valid for major-unit conversion".to_string(),
+                        "Verify the sync amount and currency are valid for major-unit conversion"
+                            .to_string(),
                     ),
                     doc_url: None,
                     additional_context: Some(
@@ -1330,7 +1339,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
-                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt".to_string(),
+                        "Provide ConnectorSpecificConfig::Easebuzz with api_key and api_salt"
+                            .to_string(),
                     ),
                     doc_url: None,
                     additional_context: Some(
