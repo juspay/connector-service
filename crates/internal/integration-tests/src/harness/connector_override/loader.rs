@@ -61,6 +61,9 @@ pub struct ScenarioOverridePatch {
     /// sync returns `CHARGED` without browser automation.
     #[serde(default)]
     pub pre_request_http: Option<PreRequestHttpHook>,
+    /// Configuration options using __config__ key.
+    #[serde(rename = "__config__", default)]
+    pub config: Option<SuiteConfig>,
 }
 
 /// Fire-and-forget HTTP call issued before the scenario's gRPC request.
@@ -102,6 +105,68 @@ fn connector_override_root() -> PathBuf {
     std::env::var("UCS_CONNECTOR_OVERRIDE_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|_| connector_specs_root())
+}
+
+/// Loads suite-level configuration from the `__config__` key in override.json.
+///
+/// This provides default configuration for all scenarios in the suite.
+/// Individual scenarios can override this with their own `__config__` key.
+pub fn load_suite_config(
+    connector: &str,
+    suite: &str,
+) -> Result<Option<SuiteConfig>, ScenarioError> {
+    // We need to load the raw JSON because suite-level __config__ is stored
+    // as a raw config object, not wrapped in ScenarioOverridePatch
+    let path = connector_override_file_path(connector);
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let content = fs::read_to_string(&path).map_err(|source| {
+        ScenarioError::ConnectorOverrideRead {
+            path: path.clone(),
+            source,
+        }
+    })?;
+
+    let parsed: Value = serde_json::from_str(&content).map_err(|source| {
+        ScenarioError::ConnectorOverrideParse {
+            path: path.clone(),
+            source,
+        }
+    })?;
+
+    // Navigate to suite -> __config__
+    let suite_config_value = parsed
+        .get(suite)
+        .and_then(|suite_obj| suite_obj.get("__config__"));
+
+    if let Some(config_value) = suite_config_value {
+        let config = serde_json::from_value::<SuiteConfig>(config_value.clone()).map_err(
+            |source| ScenarioError::ConnectorOverrideParse {
+                path: path.clone(),
+                source,
+            },
+        )?;
+        return Ok(Some(config));
+    }
+
+    Ok(None)
+}
+
+
+pub fn load_scenario_config(
+    connector: &str,
+    suite: &str,
+    scenario: &str,
+) -> Result<SuiteConfig, ScenarioError> {
+    let suite_config = load_suite_config(connector, suite)?.unwrap_or_default();
+    let scenario_config = load_scenario_override_patch(connector, suite, scenario)?
+        .and_then(|patch| patch.config)
+        .unwrap_or_default();
+
+    // Merge configs: scenario-level overrides suite-level
+    Ok(suite_config.merge_with(scenario_config))
 }
 
 /// Legacy path used by older suite-level override file layouts.

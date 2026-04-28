@@ -23,9 +23,9 @@ use uuid::Uuid;
 use crate::harness::{
     auto_gen::resolve_auto_generate,
     connector_override::{
-        apply_connector_overrides, connector_pre_request_http_hook,
+        apply_connector_overrides, connector_pre_request_http_hook, load_scenario_config,
         normalize_tonic_request_for_connector, transform_response_for_connector,
-        PreRequestHttpHook,
+        PreRequestHttpHook, SuiteConfig,
     },
     credentials::{creds_file_path, load_connector_config},
     metadata::add_connector_metadata,
@@ -4450,6 +4450,117 @@ fn maybe_sync_complete_authorize_pending(
     }
 
     Ok(())
+}
+
+/// Executes a scenario with optional retry logic based on configuration.
+///
+/// Configuration is read from override.json:
+/// - Suite-level `__config__` applies to all scenarios in the suite
+/// - Scenario-level `__config__` overrides suite-level settings
+///
+/// Configuration options:
+/// - `delay_ms`: Sleep time before/during scenario execution
+/// - `polling_config.max_retries`: Maximum number of retry attempts
+/// - `polling_config.retry_delay_ms`: Delay between retry attempts
+///
+/// If no configuration is provided, defaults to legacy behavior:
+/// - PaymentService/Get retries on errors (idempotent operation)
+fn execute_scenario_with_retry(
+    suite: &str,
+    scenario: &str,
+    connector: &str,
+    options: SuiteRunOptions<'_>,
+    dependency_reqs: &[Value],
+    dependency_res: &[Value],
+    explicit_context_entries: &[ExplicitContextEntry],
+    dependency_entries: &[ExecutedDependency],
+) -> Result<ExecutedScenario, ScenarioError> {
+    // Load configuration from override.json (suite + scenario merged)
+    let config = load_scenario_config(connector, suite, scenario)?;
+
+    // Apply delay if configured
+    if let Some(delay_ms) = config.delay_ms {
+        thread::sleep(Duration::from_millis(delay_ms));
+    }
+
+    // Determine retry parameters
+    let retry_params = resolve_retry_params(&config, suite);
+
+    // If no retries, execute once and return
+    if retry_params.max_retries == 0 {
+        return execute_single_scenario_with_context(
+            suite,
+            scenario,
+            connector,
+            options,
+            dependency_reqs,
+            dependency_res,
+            explicit_context_entries,
+            dependency_entries,
+        );
+    }
+
+    // Execute with retry logic
+    for attempt in 0..=retry_params.max_retries {
+        let result = execute_single_scenario_with_context(
+            suite,
+            scenario,
+            connector,
+            options,
+            dependency_reqs,
+            dependency_res,
+            explicit_context_entries,
+            dependency_entries,
+        )?;
+
+        // Check if response contains an error
+        let has_error = result.response_json.get("error").is_some();
+
+        // Success or last attempt - return the result
+        if !has_error || attempt == retry_params.max_retries {
+            return Ok(result);
+        }
+
+        // Wait before retry
+        thread::sleep(Duration::from_millis(retry_params.retry_delay_ms));
+    }
+
+    unreachable!("Loop should always return via early exit")
+}
+
+/// Retry parameters for scenario execution.
+struct RetryParams {
+    max_retries: u32,
+    retry_delay_ms: u64,
+}
+
+/// Resolves retry parameters from configuration, with legacy defaults.
+fn resolve_retry_params(
+    config: &SuiteConfig,
+    suite: &str,
+) -> RetryParams {
+    const DEFAULT_RETRY_DELAY_MS: u64 = 500;
+    const LEGACY_GET_MAX_RETRIES: u32 = 10;
+
+    if let Some(ref polling_config) = config.polling_config {
+        return RetryParams {
+            max_retries: polling_config.max_retries.unwrap_or(0),
+            retry_delay_ms: polling_config.retry_delay_ms.unwrap_or(DEFAULT_RETRY_DELAY_MS),
+        };
+    }
+
+    // Legacy defaults: only retry for PaymentService/Get
+    if suite == "PaymentService/Get" {
+        RetryParams {
+            max_retries: LEGACY_GET_MAX_RETRIES,
+            retry_delay_ms: DEFAULT_RETRY_DELAY_MS,
+        }
+    } else {
+        RetryParams {
+            max_retries: 0,
+            retry_delay_ms: 0,
+        }
+    }
 }
 
 #[allow(clippy::print_stdout)]
