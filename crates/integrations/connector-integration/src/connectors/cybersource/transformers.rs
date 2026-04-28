@@ -846,13 +846,21 @@ pub struct ECheckBank {
 pub struct ECheckBankAccount {
     number: Secret<String>,
     #[serde(rename = "type")]
-    account_type: String,
+    account_type: ECheckAccountType,
+}
+
+#[derive(Debug, Serialize)]
+pub enum ECheckAccountType {
+    #[serde(rename = "C")]
+    Checking,
+    #[serde(rename = "S")]
+    Savings,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ECheckPaymentType {
-    name: String,
+    name: Secret<String>,
 }
 
 /// Empty payment information used when a transient token JWT is provided
@@ -2046,8 +2054,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
 
                 let account_type = match bank_type {
-                    Some(common_enums::BankType::Savings) => "S".to_string(),
-                    Some(common_enums::BankType::Checking) | None => "C".to_string(),
+                    Some(common_enums::BankType::Savings) => ECheckAccountType::Savings,
+                    // Default to Checking when bank_type is unspecified — matches
+                    // Cybersource's most common ACH usage and mirrors typical merchant input.
+                    Some(common_enums::BankType::Checking) | None => ECheckAccountType::Checking,
                     Some(common_enums::BankType::Transmission)
                     | Some(common_enums::BankType::Current)
                     | Some(common_enums::BankType::Bond)
@@ -2072,19 +2082,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             routing_number,
                         },
                         payment_type: ECheckPaymentType {
-                            name: "check".to_string(),
+                            name: Secret::new("check".to_string()),
                         },
                     }));
 
-                let processing_information = ProcessingInformation {
-                    capture: Some(true),
-                    capture_options: None,
-                    action_list: None,
-                    action_token_types: None,
-                    authorization_options: None,
-                    commerce_indicator: String::from("internet"),
-                    payment_solution: None,
-                };
+                let processing_information =
+                    ProcessingInformation::try_from((item, None, None))?;
 
                 let client_reference_information = ClientReferenceInformation::from(item);
                 let merchant_defined_information = convert_metadata_to_merchant_defined_info(
