@@ -15,6 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
+use integration_tests::harness::scenario_api::all_known_suites;
 use regex::Regex;
 use serde_json::Value as JsonValue;
 
@@ -39,7 +40,6 @@ fn main() {
 
     let proto_file = root.join("crates/types-traits/grpc-api-types/proto/services.proto");
     let suites_dir = root.join("crates/internal/integration-tests/src/global_suites");
-    let scenario_api = root.join("crates/internal/integration-tests/src/harness/scenario_api.rs");
 
     println!("{}", "=".repeat(80));
     println!("gRPC PROTO SERVICE COVERAGE ANALYSIS");
@@ -47,7 +47,7 @@ fn main() {
     println!();
 
     let proto_methods = extract_proto_methods(&proto_file);
-    let suite_mappings = extract_suite_mappings(&scenario_api);
+    let suite_mappings = get_suite_mappings();
     let available_suites = get_available_suites(&suites_dir);
 
     analyze_coverage(&proto_methods, &suite_mappings, &available_suites);
@@ -86,22 +86,29 @@ fn extract_suite_mappings(scenario_api: &PathBuf) -> HashMap<String, String> {
     let content = fs::read_to_string(scenario_api).expect("Failed to read scenario_api.rs");
     let mut mappings = HashMap::new();
 
-    // Parse suite names from the all_known_suites() array.
-    // Each entry is a string like "PaymentService/Authorize".
-    let suite_re = Regex::new(r#""([A-Za-z]+/[A-Za-z]+)""#).unwrap();
+    // Find the grpc_method_for_suite function - use multiline matching with (?s)
+    let func_re =
+        Regex::new(r#"(?s)fn grpc_method_for_suite.*?let method = match suite \{(.*?)_ => \{"#)
+            .unwrap();
 
-    // Find the all_known_suites function block
-    if let Some(start) = content.find("fn all_known_suites()") {
-        let block = &content[start..];
-        // Find the closing of the array (look for the first "]" after "&[")
-        if let Some(array_start) = block.find("&[") {
-            if let Some(array_end) = block[array_start..].find(']') {
-                let array_content = &block[array_start..array_start + array_end];
-                for caps in suite_re.captures_iter(array_content) {
-                    let suite = caps[1].to_string();
-                    // With new naming, suite IS the service/method path
-                    mappings.insert(suite.clone(), suite);
-                }
+    if let Some(caps) = func_re.captures(&content) {
+        let match_block = &caps[1];
+
+        // Match both single-line and block formats
+        // "suite_name" => "types.Service/Method"
+        // or
+        // "suite_name" => {
+        //     "types.Service/Method"
+        // }
+        let case_re =
+            Regex::new(r#""([^"]+)"\s*=>\s*(?:\{[^"]*)?["\s]*types\.(\w+)/(\w+)"#).unwrap();
+
+        for line in match_block.lines() {
+            if let Some(caps) = case_re.captures(line) {
+                let suite = caps[1].to_string();
+                let service = caps[2].to_string();
+                let method = caps[3].to_string();
+                mappings.insert(suite, format!("{}/{}", service, method));
             }
         }
     }
@@ -115,15 +122,12 @@ fn get_available_suites(suites_dir: &PathBuf) -> HashSet<String> {
     if let Ok(entries) = fs::read_dir(suites_dir) {
         for entry in entries.flatten() {
             if entry.path().is_dir() {
-                let suite_spec_path = entry.path().join("suite_spec.json");
-                if suite_spec_path.exists() {
-                    // Read the suite name from suite_spec.json
-                    if let Ok(content) = fs::read_to_string(&suite_spec_path) {
-                        if let Ok(value) = serde_json::from_str::<JsonValue>(&content) {
-                            if let Some(suite_name) = value.get("suite").and_then(|v| v.as_str()) {
-                                suites.insert(suite_name.to_string());
-                            }
-                        }
+                let suite_spec = entry.path().join("suite_spec.json");
+                if suite_spec.exists() {
+                    if let Some(name) = entry.file_name().to_str() {
+                        // Remove _suite suffix
+                        let suite_name = name.trim_end_matches("_suite");
+                        suites.insert(suite_name.to_string());
                     }
                 }
             }

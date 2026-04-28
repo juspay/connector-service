@@ -23,8 +23,9 @@ use uuid::Uuid;
 use crate::harness::{
     auto_gen::resolve_auto_generate,
     connector_override::{
-        apply_connector_overrides, load_scenario_config, normalize_tonic_request_for_connector,
-        transform_response_for_connector, SuiteConfig,
+        apply_connector_overrides, connector_pre_request_http_hook,
+        normalize_tonic_request_for_connector, transform_response_for_connector,
+        PreRequestHttpHook,
     },
     credentials::{creds_file_path, load_connector_config},
     metadata::add_connector_metadata,
@@ -1636,7 +1637,10 @@ fn remove_json_path(root: &mut Value, path: &str) -> bool {
 fn has_only_default_leaves(value: &Value) -> bool {
     match value {
         Value::Null | Value::Bool(false) => true,
-        Value::String(s) => s.is_empty(),
+        // Treat "auto_generate" sentinels as unresolved defaults so they are
+        // pruned before resolve_auto_generate runs, preventing bogus UUIDs from
+        // being generated for fields whose dependency context was never populated.
+        Value::String(s) => s.is_empty() || s == "auto_generate",
         Value::Number(n) => n.as_f64().map(|f| f == 0.0).unwrap_or(false),
         Value::Array(items) => items.is_empty() || items.iter().all(has_only_default_leaves),
         Value::Object(map) => map.is_empty() || map.values().all(has_only_default_leaves),
@@ -4167,6 +4171,166 @@ fn append_follow_up_trace(existing: &mut Option<String>, heading: &str, payload:
     *existing = Some(merged);
 }
 
+/// Templates `{{dep_res.<index>.<json-path>}}` placeholders in a string
+/// using the list of dependency responses. Unknown placeholders are left as-is
+/// so the caller can see what didn't resolve.
+fn template_with_dep_res(template: &str, dependency_res: &[Value]) -> String {
+    let mut out = template.to_string();
+    while let Some(start) = out.find("{{dep_res.") {
+        let Some(end) = out[start..].find("}}") else {
+            break;
+        };
+        let end_abs = start + end;
+        let inner = &out[start + 10..end_abs];
+        let (idx_str, rest) = match inner.find('.') {
+            Some(dot) => (&inner[..dot], &inner[dot + 1..]),
+            None => (inner, ""),
+        };
+        let replacement = idx_str
+            .parse::<usize>()
+            .ok()
+            .and_then(|i| dependency_res.get(i))
+            .and_then(|res| {
+                if rest.is_empty() {
+                    res.as_str().map(|s| s.to_string())
+                } else {
+                    lookup_json_path_with_case_fallback(res, rest)
+                        .and_then(|v| v.as_str().map(|s| s.to_string()))
+                }
+            })
+            .unwrap_or_default();
+        out.replace_range(start..end_abs + 2, &replacement);
+    }
+    out
+}
+
+/// Fires the configured pre-request HTTP hook. Fire-and-forget: network
+/// errors are logged (when debug env is set) but do not fail the scenario.
+#[allow(clippy::print_stdout)]
+fn fire_pre_request_http_hook(hook: &PreRequestHttpHook, dependency_res: &[Value]) {
+    let url = template_with_dep_res(&hook.url, dependency_res);
+    let body = hook
+        .body
+        .as_ref()
+        .map(|b| template_with_dep_res(b, dependency_res));
+    let method = hook.method.to_uppercase();
+
+    let mut cmd = Command::new("curl");
+    cmd.arg("-sS")
+        .arg("-m")
+        .arg(hook.timeout_secs.to_string())
+        .arg("-X")
+        .arg(&method)
+        .arg(&url);
+    for (k, v) in &hook.headers {
+        cmd.arg("-H").arg(format!("{k}: {v}"));
+    }
+    if let Some(body) = body.as_ref() {
+        cmd.arg("-H")
+            .arg("Content-Type: application/json")
+            .arg("-d")
+            .arg(body);
+    }
+    let output = cmd.output();
+    if std::env::var("UCS_DEBUG_PRE_REQUEST_HOOK").as_deref() == Ok("1") {
+        match output {
+            Ok(out) => println!(
+                "[suite_run_test] pre_request_http → status={} body={}",
+                out.status,
+                String::from_utf8_lossy(&out.stdout)
+                    .chars()
+                    .take(300)
+                    .collect::<String>()
+            ),
+            Err(e) => println!("[suite_run_test] pre_request_http error: {e}"),
+        }
+    }
+}
+
+/// For the `get`/sync suite only: if the connector spec has
+/// `sync_poll_until_terminal_seconds` set and the response status is still
+/// non-terminal (e.g. `PENDING`), re-issue the sync call every 5s until a
+/// terminal status arrives or the budget elapses. Mutates `response_json` in
+/// place with the final body.
+///
+/// Used for connectors whose sandbox auto-settles after a delay — e.g.
+/// Cashfree's `testsuccess@gocash` UPI collect transitions from
+/// `NOT_ATTEMPTED` to `SUCCESS` at ~30s.
+fn maybe_poll_sync_until_terminal(
+    suite: &str,
+    scenario: &str,
+    connector: &str,
+    options: SuiteRunOptions<'_>,
+    effective_req: &Value,
+    response_json: &mut Value,
+    grpc_request: &mut Option<String>,
+    grpc_response: &mut Option<String>,
+) {
+    if suite != "get" || options.backend != ExecutionBackend::Grpcurl {
+        return;
+    }
+    let Some(spec) = load_connector_spec(connector) else {
+        return;
+    };
+    let Some(budget_secs) = spec.sync_poll_until_terminal_seconds else {
+        return;
+    };
+
+    let is_terminal = |status: &str| {
+        matches!(
+            status,
+            "CHARGED" | "AUTHORIZED" | "VOIDED" | "FAILURE" | "REJECTED" | "CANCELLED" | "EXPIRED"
+        )
+    };
+    let current_status = |body: &Value| {
+        lookup_json_path_with_case_fallback(body, "status")
+            .and_then(Value::as_str)
+            .map(|s| s.to_string())
+    };
+
+    if let Some(status) = current_status(response_json) {
+        if is_terminal(&status) {
+            return;
+        }
+    }
+
+    let deadline = std::time::Instant::now() + Duration::from_secs(budget_secs);
+    let poll_interval = Duration::from_secs(5);
+
+    while std::time::Instant::now() < deadline {
+        thread::sleep(poll_interval);
+
+        let trace = match execute_grpcurl_request_from_payload_with_trace(
+            suite,
+            scenario,
+            effective_req,
+            options.endpoint,
+            Some(connector),
+            options.merchant_id,
+            options.tenant_id,
+            options.plaintext,
+        ) {
+            Ok(trace) if trace.success => trace,
+            _ => continue,
+        };
+
+        let Ok(mut next_json) = serde_json::from_str::<Value>(&trace.response_body) else {
+            continue;
+        };
+        transform_response_for_connector(connector, suite, scenario, &mut next_json);
+
+        *response_json = next_json;
+        *grpc_request = Some(trace.request_command);
+        *grpc_response = Some(trace.response_output);
+
+        if let Some(status) = current_status(response_json) {
+            if is_terminal(&status) {
+                break;
+            }
+        }
+    }
+}
+
 fn maybe_sync_complete_authorize_pending(
     suite: &str,
     connector: &str,
@@ -4288,118 +4452,7 @@ fn maybe_sync_complete_authorize_pending(
     Ok(())
 }
 
-/// Executes a scenario with optional retry logic based on configuration.
-///
-/// Configuration is read from override.json:
-/// - Suite-level `__config__` applies to all scenarios in the suite
-/// - Scenario-level `__config__` overrides suite-level settings
-///
-/// Configuration options:
-/// - `delay_ms`: Sleep time before/during scenario execution
-/// - `polling_config.max_retries`: Maximum number of retry attempts
-/// - `polling_config.retry_delay_ms`: Delay between retry attempts
-///
-/// If no configuration is provided, defaults to legacy behavior:
-/// - PaymentService/Get retries on errors (idempotent operation)
-fn execute_scenario_with_retry(
-    suite: &str,
-    scenario: &str,
-    connector: &str,
-    options: SuiteRunOptions<'_>,
-    dependency_reqs: &[Value],
-    dependency_res: &[Value],
-    explicit_context_entries: &[ExplicitContextEntry],
-    dependency_entries: &[ExecutedDependency],
-) -> Result<ExecutedScenario, ScenarioError> {
-    // Load configuration from override.json (suite + scenario merged)
-    let config = load_scenario_config(connector, suite, scenario)?;
-
-    // Apply delay if configured
-    if let Some(delay_ms) = config.delay_ms {
-        thread::sleep(Duration::from_millis(delay_ms));
-    }
-
-    // Determine retry parameters
-    let retry_params = resolve_retry_params(&config, suite);
-
-    // If no retries, execute once and return
-    if retry_params.max_retries == 0 {
-        return execute_single_scenario_with_context(
-            suite,
-            scenario,
-            connector,
-            options,
-            dependency_reqs,
-            dependency_res,
-            explicit_context_entries,
-            dependency_entries,
-        );
-    }
-
-    // Execute with retry logic
-    for attempt in 0..=retry_params.max_retries {
-        let result = execute_single_scenario_with_context(
-            suite,
-            scenario,
-            connector,
-            options,
-            dependency_reqs,
-            dependency_res,
-            explicit_context_entries,
-            dependency_entries,
-        )?;
-
-        // Check if response contains an error
-        let has_error = result.response_json.get("error").is_some();
-
-        // Success or last attempt - return the result
-        if !has_error || attempt == retry_params.max_retries {
-            return Ok(result);
-        }
-
-        // Wait before retry
-        thread::sleep(Duration::from_millis(retry_params.retry_delay_ms));
-    }
-
-    unreachable!("Loop should always return via early exit")
-}
-
-/// Retry parameters for scenario execution.
-struct RetryParams {
-    max_retries: u32,
-    retry_delay_ms: u64,
-}
-
-/// Resolves retry parameters from configuration, with legacy defaults.
-fn resolve_retry_params(
-    config: &SuiteConfig,
-    suite: &str,
-) -> RetryParams {
-    const DEFAULT_RETRY_DELAY_MS: u64 = 500;
-    const LEGACY_GET_MAX_RETRIES: u32 = 10;
-
-    if let Some(ref polling_config) = config.polling_config {
-        return RetryParams {
-            max_retries: polling_config.max_retries.unwrap_or(0),
-            retry_delay_ms: polling_config.retry_delay_ms.unwrap_or(DEFAULT_RETRY_DELAY_MS),
-        };
-    }
-
-    // Legacy defaults: only retry for PaymentService/Get
-    if suite == "PaymentService/Get" {
-        RetryParams {
-            max_retries: LEGACY_GET_MAX_RETRIES,
-            retry_delay_ms: DEFAULT_RETRY_DELAY_MS,
-        }
-    } else {
-        RetryParams {
-            max_retries: 0,
-            retry_delay_ms: 0,
-        }
-    }
-}
-
-#[allow(clippy::print_stdout, clippy::print_stderr)]
+#[allow(clippy::print_stdout)]
 fn execute_single_scenario_with_context(
     suite: &str,
     scenario: &str,
@@ -4453,6 +4506,13 @@ fn execute_single_scenario_with_context(
         dependency_entries,
         &mut effective_req,
     )?;
+
+    // Fire any connector-specific `pre_request_http` hook (e.g. Cashfree's
+    // `/pg/view/simulate` to flip a UPI Intent payment to SUCCESS before
+    // sync). Dependency responses are available for body templating.
+    if let Ok(Some(hook)) = connector_pre_request_http_hook(connector, suite, scenario) {
+        fire_pre_request_http_hook(&hook, dependency_res);
+    }
 
     let (response, mut grpc_request, mut grpc_response) = match options.backend {
         ExecutionBackend::Grpcurl => {
@@ -4523,6 +4583,17 @@ fn execute_single_scenario_with_context(
     })?;
 
     transform_response_for_connector(connector, suite, scenario, &mut response_json);
+
+    maybe_poll_sync_until_terminal(
+        suite,
+        scenario,
+        connector,
+        options,
+        &effective_req,
+        &mut response_json,
+        &mut grpc_request,
+        &mut grpc_response,
+    );
 
     maybe_sync_complete_authorize_pending(
         suite,
@@ -4869,7 +4940,7 @@ mod tests {
         let command = build_grpcurl_command(
             Some("PaymentService/Authorize"),
             Some("no3ds_auto_capture_credit_card"),
-            Some("localhost:50051"),
+            Some("localhost:8000"),
             Some("stripe"),
             Some("test_merchant"),
             Some("default"),
@@ -4888,7 +4959,7 @@ mod tests {
         let request = build_grpcurl_request(
             Some("PaymentService/Authorize"),
             Some("no3ds_auto_capture_credit_card"),
-            Some("localhost:50051"),
+            Some("localhost:8000"),
             Some("stripe"),
             Some("test_merchant"),
             Some("default"),
@@ -4897,7 +4968,7 @@ mod tests {
         )
         .expect("grpcurl request should build");
 
-        assert_eq!(request.endpoint, "localhost:50051");
+        assert_eq!(request.endpoint, "localhost:8000");
         assert_eq!(request.method, "types.PaymentService/Authorize");
         assert!(request.payload.contains("\"auth_type\": \"NO_THREE_DS\""));
         assert!(!request.headers.is_empty());
@@ -4949,7 +5020,7 @@ grpc-status: 0
         let request = build_grpcurl_request(
             Some("PaymentService/Authorize"),
             Some("no3ds_manual_capture_credit_card"),
-            Some("localhost:50051"),
+            Some("localhost:8000"),
             Some("stripe"),
             Some("test_merchant"),
             Some("default"),

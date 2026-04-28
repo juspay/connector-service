@@ -54,9 +54,37 @@ pub struct ScenarioOverridePatch {
     pub grpc_req: Option<Value>,
     #[serde(rename = "assert", default)]
     pub assert_rules: Option<BTreeMap<String, Value>>,
-    /// Configuration options using __config__ key.
-    #[serde(rename = "__config__", default)]
-    pub config: Option<SuiteConfig>,
+    /// Fire an HTTP request (fire-and-forget) before this scenario runs.
+    /// Used to drive sandbox simulators that settle a payment outside of the
+    /// normal connector API surface — e.g. Cashfree's `/pg/view/simulate`
+    /// endpoint which flips a UPI Intent payment to SUCCESS so the subsequent
+    /// sync returns `CHARGED` without browser automation.
+    #[serde(default)]
+    pub pre_request_http: Option<PreRequestHttpHook>,
+}
+
+/// Fire-and-forget HTTP call issued before the scenario's gRPC request.
+/// Body supports `{{dep_res.<index>.<json-path>}}` templating from
+/// dependency responses (e.g. pulling cf_payment_id out of the authorize
+/// response at dep_res index 1).
+#[derive(Debug, Clone, Deserialize)]
+pub struct PreRequestHttpHook {
+    pub url: String,
+    #[serde(default = "default_http_method")]
+    pub method: String,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
+    #[serde(default)]
+    pub body: Option<String>,
+    #[serde(default = "default_hook_timeout_secs")]
+    pub timeout_secs: u64,
+}
+
+fn default_http_method() -> String {
+    "POST".to_string()
+}
+fn default_hook_timeout_secs() -> u64 {
+    10
 }
 
 type SuiteOverrideFile = BTreeMap<String, ScenarioOverridePatch>;
@@ -109,67 +137,14 @@ pub fn load_scenario_override_patch(
     Ok(None)
 }
 
-/// Loads suite-level configuration from the `__config__` key in override.json.
-///
-/// This provides default configuration for all scenarios in the suite.
-/// Individual scenarios can override this with their own `__config__` key.
-pub fn load_suite_config(
-    connector: &str,
-    suite: &str,
-) -> Result<Option<SuiteConfig>, ScenarioError> {
-    // We need to load the raw JSON because suite-level __config__ is stored
-    // as a raw config object, not wrapped in ScenarioOverridePatch
-    let path = connector_override_file_path(connector);
-    if !path.exists() {
-        return Ok(None);
-    }
-
-    let content = fs::read_to_string(&path).map_err(|source| {
-        ScenarioError::ConnectorOverrideRead {
-            path: path.clone(),
-            source,
-        }
-    })?;
-
-    let parsed: Value = serde_json::from_str(&content).map_err(|source| {
-        ScenarioError::ConnectorOverrideParse {
-            path: path.clone(),
-            source,
-        }
-    })?;
-
-    // Navigate to suite -> __config__
-    let suite_config_value = parsed
-        .get(suite)
-        .and_then(|suite_obj| suite_obj.get("__config__"));
-
-    if let Some(config_value) = suite_config_value {
-        let config = serde_json::from_value::<SuiteConfig>(config_value.clone()).map_err(
-            |source| ScenarioError::ConnectorOverrideParse {
-                path: path.clone(),
-                source,
-            },
-        )?;
-        return Ok(Some(config));
-    }
-
-    Ok(None)
-}
-
-/// Loads merged configuration for a specific scenario, combining suite-level
-/// and scenario-level configs. Scenario-level config takes precedence.
-pub fn load_scenario_config(
+/// Loads the optional `pre_request_http` hook for a scenario override.
+pub fn load_scenario_pre_request_http(
     connector: &str,
     suite: &str,
     scenario: &str,
-) -> Result<SuiteConfig, ScenarioError> {
-    let suite_config = load_suite_config(connector, suite)?.unwrap_or_default();
-    let scenario_config = load_scenario_override_patch(connector, suite, scenario)?
-        .and_then(|patch| patch.config)
-        .unwrap_or_default();
-
-    // Merge configs: scenario-level overrides suite-level
-    Ok(suite_config.merge_with(scenario_config))
+) -> Result<Option<PreRequestHttpHook>, ScenarioError> {
+    Ok(load_scenario_override_patch(connector, suite, scenario)?
+        .and_then(|patch| patch.pre_request_http))
 }
 
 /// Path to `<connector>/webhook_payload.json` under connector override root.
