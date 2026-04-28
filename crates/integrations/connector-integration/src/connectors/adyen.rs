@@ -796,6 +796,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ConnectorError,
     > {
+        if res.status_code != 200 {
+            let error_response = self
+                .build_error_response(res, event_builder)
+                .change_context(ConnectorError::ResponseHandlingFailed {
+                    context: Default::default(),
+                })?;
+            return Err(report!(ConnectorError::ConnectorErrorResponse(
+                error_response
+            )));
+        }
         let response: AdyenRefundResponse = res
             .response
             .parse_struct("AdyenRefundResponse")
