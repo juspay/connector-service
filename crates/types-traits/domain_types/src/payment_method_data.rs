@@ -100,17 +100,22 @@ impl<T: PaymentMethodDataTypes> Card<T> {
     pub fn get_card_expiry_year_2_digit(&self) -> Result<Secret<String>, IntegrationError> {
         let binding = self.card_exp_year.clone();
         let year = binding.peek();
-        Ok(Secret::new(
-            year.get(year.len() - 2..)
-                .ok_or(IntegrationError::InvalidDataFormat {
-                    field_name: "payment_method_data.card.card_exp_year",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Expected format: YY or YYYY".to_owned()),
-                        ..Default::default()
-                    },
-                })?
-                .to_string(),
-        ))
+        // If the value is a vault template token (e.g. {{$card_exp_year}}), pass it through as-is
+        // so that the injector template substitution works correctly.
+        match year {
+            y if y.contains("{{") => Ok(Secret::new(y.to_string())),
+            y => Ok(Secret::new(
+                y.get(y.len() - 2..)
+                    .ok_or(IntegrationError::InvalidDataFormat {
+                        field_name: "payment_method_data.card.card_exp_year",
+                        context: IntegrationErrorContext {
+                            additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                            ..Default::default()
+                        },
+                    })?
+                    .to_string(),
+            )),
+        }
     }
 
     pub fn get_card_expiry_month_2_digit(&self) -> Result<Secret<String>, IntegrationError> {
@@ -1531,19 +1536,23 @@ pub struct CardDetailsForNetworkTransactionId {
 
 impl CardDetailsForNetworkTransactionId {
     pub fn get_card_expiry_year_2_digit(&self) -> Result<Secret<String>, IntegrationError> {
-        let binding = self.card_exp_year.clone();
-        let year = binding.peek();
-        Ok(Secret::new(
-            year.get(year.len() - 2..)
-                .ok_or(IntegrationError::InvalidDataFormat {
-                    field_name: "payment_method_data.card.card_exp_year",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Expected format: YY or YYYY".to_owned()),
-                        ..Default::default()
-                    },
-                })?
-                .to_string(),
-        ))
+        let year = self.card_exp_year.peek();
+        // If the value is a vault template token (e.g. {{$card_exp_year}}), pass it through as-is
+        // so that the injector template substitution works correctly.
+        match year {
+            y if y.contains("{{") => Ok(Secret::new(y.to_string())),
+            y => Ok(Secret::new(
+                y.get(y.len() - 2..)
+                    .ok_or(IntegrationError::InvalidDataFormat {
+                        field_name: "payment_method_data.card.card_exp_year",
+                        context: IntegrationErrorContext {
+                            additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                            ..Default::default()
+                        },
+                    })?
+                    .to_string(),
+            )),
+        }
     }
     pub fn get_card_issuer(&self) -> Result<CardIssuer, error_stack::Report<IntegrationError>> {
         get_card_issuer(self.card_number.peek())
