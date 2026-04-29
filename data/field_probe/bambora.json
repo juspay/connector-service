@@ -519,13 +519,14 @@
           }
         },
         "sample": {
-          "url": "https://api.na.bambora.com/v1/payments",
-          "method": "Get",
+          "url": "https://api.na.bambora.com/scripts/tokenization/tokens",
+          "method": "Post",
           "headers": {
             "authorization": "Passcode cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": null
+          "body": "{\"number\":\"4030000010001234\",\"expiry_month\":\"02\",\"expiry_year\":\"29\",\"cvd\":\"123\"}"
         }
       }
     },
