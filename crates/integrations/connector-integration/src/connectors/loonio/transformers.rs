@@ -1,13 +1,11 @@
 use super::LoonioRouterData;
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, PayoutStatus};
-use common_utils::{
-    id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method,
-};
 use common_utils::types::AmountConvertor;
+use common_utils::{id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method};
 use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
-    connector_flow::{Authorize, PayoutGet, PayoutTransfer, PSync},
+    connector_flow::{Authorize, PSync, PayoutGet, PayoutTransfer},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
@@ -605,17 +603,32 @@ pub struct LoonioPayoutTransferRequest {
     pub webhook_url: Option<String>,
 }
 
-impl TryFrom<&RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>>
-    for LoonioPayoutTransferRequest
+impl
+    TryFrom<
+        &RouterDataV2<
+            PayoutTransfer,
+            PayoutFlowData,
+            PayoutTransferRequest,
+            PayoutTransferResponse,
+        >,
+    > for LoonioPayoutTransferRequest
 {
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
-        req: &RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>,
+        req: &RouterDataV2<
+            PayoutTransfer,
+            PayoutFlowData,
+            PayoutTransferRequest,
+            PayoutTransferResponse,
+        >,
     ) -> Result<Self, Self::Error> {
         match req.request.payout_method_data.clone() {
             Some(PayoutMethodData::BankRedirect(BankRedirect::Interac(Interac { email }))) => {
-                let transaction_id = req.resource_common_data.connector_request_reference_id.clone();
+                let transaction_id = req
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone();
 
                 // Helper closure for missing required field errors
                 let missing_field = |field_name: &'static str| {
@@ -626,30 +639,44 @@ impl TryFrom<&RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest
                 };
 
                 // Extract customer name from the customer field - NO FALLBACK
-                let customer = req.request.customer.as_ref().ok_or_else(|| missing_field("customer"))?;
+                let customer = req
+                    .request
+                    .customer
+                    .as_ref()
+                    .ok_or_else(|| missing_field("customer"))?;
 
-                let name = customer.customer_name.as_ref().ok_or_else(|| missing_field("customer.name"))?;
+                let name = customer
+                    .customer_name
+                    .as_ref()
+                    .ok_or_else(|| missing_field("customer.name"))?;
 
                 // Split the name into first and last name
                 let name_str = name.peek();
                 let mut name_parts = name_str.split_whitespace();
 
                 let first_name = Secret::new(
-                    name_parts.next().map(String::from).ok_or_else(|| missing_field("customer.name (first_name)"))?
+                    name_parts
+                        .next()
+                        .map(String::from)
+                        .ok_or_else(|| missing_field("customer.name (first_name)"))?,
                 );
 
                 let last_name_str: String = name_parts.collect::<Vec<_>>().join(" ");
                 let last_name = Secret::new(
                     (!last_name_str.is_empty())
                         .then_some(last_name_str)
-                        .ok_or_else(|| missing_field("customer.name (last_name)"))?
+                        .ok_or_else(|| missing_field("customer.name (last_name)"))?,
                 );
 
                 let customer_profile = LoonioCustomerProfile {
                     first_name,
                     last_name,
                     email,
-                    phone: req.request.customer.as_ref().and_then(|c| c.customer_phone_number.clone()),
+                    phone: req
+                        .request
+                        .customer
+                        .as_ref()
+                        .and_then(|c| c.customer_phone_number.clone()),
                     address_a: None,
                     city: None,
                     province: None,

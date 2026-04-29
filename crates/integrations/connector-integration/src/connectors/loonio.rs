@@ -28,8 +28,8 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    LoonioAuthorizeRequest, LoonioAuthorizeResponse, LoonioErrorResponse, LoonioPaymentResponseData,
-    LoonioPayoutGetResponse,
+    LoonioAuthorizeRequest, LoonioAuthorizeResponse, LoonioErrorResponse,
+    LoonioPaymentResponseData, LoonioPayoutGetResponse,
 };
 
 use super::macros;
