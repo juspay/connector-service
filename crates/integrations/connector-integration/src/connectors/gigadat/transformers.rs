@@ -854,21 +854,15 @@ impl TryFrom<ResponseRouterData<GigadatPayoutStageResponse, Self>>
         let response = &item.response;
         let router_data = &item.router_data;
 
-        // Store token in connector_metadata as JSON
         let connector_metadata = serde_json::json!({
             "token": response.token.peek().clone()
         });
         let connector_metadata_string = connector_metadata.to_string();
 
-        // NOTE: Gigadat PayoutStage API does not return a status field.
-        // This endpoint only initializes/stages the payout and returns a token.
-        // The actual status will be determined after the PayoutTransfer call.
-        // Using RequiresCreation to indicate the payout is staged but needs
-        // the subsequent transfer step to be completed.
         Ok(Self {
             response: Ok(PayoutStageResponse {
                 merchant_payout_id: None,
-                payout_status: PayoutStatus::RequiresCreation,
+                payout_status: None,
                 connector_payout_id: Some(response.data.transaction_id.clone()),
                 status_code: item.http_code,
                 connector_metadata: Some(connector_metadata_string.clone()),

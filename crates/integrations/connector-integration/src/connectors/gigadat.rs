@@ -56,7 +56,6 @@ use transformers::{
 };
 
 // ===== PAYOUT UTILITY FUNCTIONS =====
-/// Extracts connector_payout_id from payout request
 fn get_connector_payout_id(
     connector_payout_id: &Option<String>,
 ) -> CustomResult<String, IntegrationError> {
@@ -69,7 +68,6 @@ fn get_connector_payout_id(
     })
 }
 
-/// Extracts connector_payout_id or connector_quote_id from payout create request
 fn get_connector_payout_or_quote_id(
     connector_payout_id: &Option<String>,
     connector_quote_id: &Option<String>,
@@ -87,7 +85,6 @@ fn get_connector_payout_or_quote_id(
         })
 }
 
-/// Extracts psp_token from payout_method_data passthrough
 fn get_psp_token_from_payout_method_data(
     payout_method_data: &Option<domain_types::payouts::payout_method_data::PayoutMethodData>,
 ) -> CustomResult<Secret<String>, IntegrationError> {
@@ -111,7 +108,6 @@ fn get_psp_token_from_payout_method_data(
         })
 }
 
-/// Extracts psp_token from raw_connector_response JSON by deserializing into GigadatPayoutMeta
 fn get_psp_token_from_raw_response(
     raw_connector_response: &Option<Secret<String>>,
 ) -> CustomResult<Secret<String>, IntegrationError> {

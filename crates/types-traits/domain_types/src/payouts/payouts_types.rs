@@ -147,7 +147,7 @@ pub struct PayoutStageRequest {
 #[derive(Debug, Clone)]
 pub struct PayoutStageResponse {
     pub merchant_payout_id: Option<String>,
-    pub payout_status: common_enums::PayoutStatus,
+    pub payout_status: Option<common_enums::PayoutStatus>,
     pub connector_payout_id: Option<String>,
     pub status_code: u16,
     pub connector_metadata: Option<String>,
