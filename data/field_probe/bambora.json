@@ -152,6 +152,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
@@ -184,6 +188,10 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
@@ -191,6 +199,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -232,6 +244,10 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
@@ -265,6 +281,14 @@
         "error": "Selected payment method is not supported by bambora"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
@@ -340,6 +364,10 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -404,11 +432,27 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
@@ -421,6 +465,10 @@
         "error": "Selected payment method is not supported by bambora"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },

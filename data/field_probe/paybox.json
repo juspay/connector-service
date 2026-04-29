@@ -126,7 +126,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_txn_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=737&ACTIVITE=024"
+          "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=840&REFERENCE=probe_txn_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=737&ACTIVITE=024"
         }
       },
       "CashappQr": {
@@ -148,6 +148,10 @@
       "Crypto": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
       },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
@@ -181,6 +185,10 @@
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
@@ -188,6 +196,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -229,6 +241,10 @@
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
@@ -262,6 +278,14 @@
         "error": "Only card payments are supported is not supported by Paybox"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
       },
@@ -337,6 +361,10 @@
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -401,11 +429,27 @@
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
       },
@@ -418,6 +462,10 @@
         "error": "Only card payments are supported is not supported by Paybox"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Only card payments are supported is not supported by Paybox"
       },
@@ -448,7 +496,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "VERSION=00104&TYPE=00002&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_capture_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001"
+          "body": "VERSION=00104&TYPE=00002&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=840&REFERENCE=probe_capture_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001"
         }
       }
     },
@@ -579,18 +627,51 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_proxy_txn_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=123&ACTIVITE=024"
+          "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=840&REFERENCE=probe_proxy_txn_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=123&ACTIVITE=024"
         }
       }
     },
     "proxy_setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_proxy_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "card_proxy": {
+            "card_number": "4111111111111111",
+            "card_exp_month": "03",
+            "card_exp_year": "2030",
+            "card_cvc": "123",
+            "card_holder_name": "John Doe"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "customer_acceptance": {
+            "acceptance_type": "OFFLINE",
+            "accepted_at": 0
+          },
+          "auth_type": "NO_THREE_DS",
+          "setup_future_usage": "OFF_SESSION"
+        },
+        "sample": {
+          "url": "https://preprod-ppps.paybox.com/PPPS.php",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
+          },
+          "body": "VERSION=00104&TYPE=00056&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=0&DEVISE=840&REFERENCE=probe_proxy_mandate_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=123&REFABONNE=probe_proxy_mandate_001&ACTIVITE=024"
+        }
       }
     },
     "recurring_charge": {
       "default": {
-        "status": "not_implemented"
+        "status": "error",
+        "error": "Invalid data format: connector_mandate_id. Expected format 'PORTEUR::DATEVAL' from Paybox SetupMandate"
       }
     },
     "recurring_revoke": {
@@ -618,7 +699,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "VERSION=00104&TYPE=00014&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_refund_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001&ACTIVITE=024"
+          "body": "VERSION=00104&TYPE=00014&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=840&REFERENCE=probe_refund_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001&ACTIVITE=024"
         }
       }
     },
@@ -648,7 +729,44 @@
     },
     "setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "enrolled_for_3ds": false,
+          "return_url": "https://example.com/mandate-return",
+          "setup_future_usage": "OFF_SESSION",
+          "request_incremental_authorization": false,
+          "customer_acceptance": {
+            "acceptance_type": "OFFLINE",
+            "accepted_at": 0
+          }
+        },
+        "sample": {
+          "url": "https://preprod-ppps.paybox.com/PPPS.php",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
+          },
+          "body": "VERSION=00104&TYPE=00056&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=0&DEVISE=840&REFERENCE=probe_mandate_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=737&REFABONNE=probe_mandate_001&ACTIVITE=024"
+        }
       }
     },
     "token_authorize": {
@@ -659,7 +777,8 @@
     },
     "token_setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "Only card payments are supported for SetupMandate is not supported by Paybox"
       }
     },
     "tokenize": {
@@ -690,7 +809,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "VERSION=00104&TYPE=00005&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_void_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001"
+          "body": "VERSION=00104&TYPE=00005&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=840&REFERENCE=probe_void_001&DATEQ=00000000000000&NUMTRANS=probe_req_001&NUMAPPEL=probe_connector_txn_001"
         }
       }
     }
