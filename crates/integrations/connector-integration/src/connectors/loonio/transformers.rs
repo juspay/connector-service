@@ -637,48 +637,40 @@ impl
                     })
                 };
 
-                let customer = req
+                // Get billing address as PRIMARY source for name and address
+                let billing = req
                     .request
-                    .customer
+                    .address
                     .as_ref()
-                    .ok_or_else(|| missing_field("customer"))?;
+                    .and_then(|a| a.billing_address.as_ref())
+                    .ok_or_else(|| missing_field("address.billing_address"))?;
 
-                let name = customer
-                    .customer_name
+                let billing_address = billing
+                    .address
                     .as_ref()
-                    .ok_or_else(|| missing_field("customer.name"))?;
+                    .ok_or_else(|| missing_field("address.billing_address.address"))?;
 
-                let name_str = name.peek();
-                let mut name_parts = name_str.split_whitespace();
+                // Extract first_name/last_name from billing address
+                let first_name = billing_address
+                    .first_name
+                    .clone()
+                    .ok_or_else(|| missing_field("address.billing_address.address.first_name"))?;
+                let last_name = billing_address
+                    .last_name
+                    .clone()
+                    .ok_or_else(|| missing_field("address.billing_address.address.last_name"))?;
 
-                let first_name = Secret::new(
-                    name_parts
-                        .next()
-                        .map(String::from)
-                        .ok_or_else(|| missing_field("customer.name (first_name)"))?,
-                );
-
-                let last_name_str: String = name_parts.collect::<Vec<_>>().join(" ");
-                let last_name = Secret::new(
-                    (!last_name_str.is_empty())
-                        .then_some(last_name_str)
-                        .ok_or_else(|| missing_field("customer.name (last_name)"))?,
-                );
-
+                // Build customer profile from billing address data
                 let customer_profile = LoonioCustomerProfile {
                     first_name,
                     last_name,
                     email,
-                    phone: req
-                        .request
-                        .customer
-                        .as_ref()
-                        .and_then(|c| c.customer_phone_number.clone()),
-                    address_a: None,
-                    city: None,
-                    province: None,
-                    postal_code: None,
-                    country: None,
+                    phone: billing.phone.as_ref().and_then(|p| p.number.clone()),
+                    address_a: billing_address.line1.clone(),
+                    city: billing_address.city.as_ref().map(|s| s.peek().clone()),
+                    province: billing_address.state.clone(),
+                    postal_code: billing_address.zip.clone(),
+                    country: billing_address.country.map(|c| c.to_string()),
                 };
 
                 let converter = common_utils::types::FloatMajorUnitForConnector;
@@ -688,17 +680,29 @@ impl
                         context: Default::default(),
                     })?;
 
-                Ok(Self {
-                    currency_code: req.request.source_currency,
-                    customer_profile,
-                    amount,
-                    customer_id: CustomerId::try_from(std::borrow::Cow::from(format!(
+                // Determine customer_id: use customer.id if available, else generate fallback
+                let customer_id = if let Some(id) = req
+                    .request
+                    .customer
+                    .as_ref()
+                    .and_then(|c| c.customer_id.clone())
+                {
+                    id
+                } else {
+                    CustomerId::try_from(std::borrow::Cow::from(format!(
                         "payout_{transaction_id}"
                     )))
                     .change_context(IntegrationError::InvalidDataFormat {
                         field_name: "customer_id",
                         context: Default::default(),
-                    })?,
+                    })?
+                };
+
+                Ok(Self {
+                    currency_code: req.request.source_currency,
+                    customer_profile,
+                    amount,
+                    customer_id,
                     transaction_id,
                     webhook_url: req.request.webhook_url.clone(),
                 })

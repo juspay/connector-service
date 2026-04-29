@@ -1012,6 +1012,11 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             .map(crate::connector_types::CustomerInfo::foreign_try_from)
             .transpose()?;
 
+        let address = value
+            .address
+            .map(payouts::payouts_types::PayoutAddress::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
             merchant_payout_id: value.merchant_payout_id.clone(),
             connector_quote_id: value.connector_quote_id.clone(),
@@ -1024,8 +1029,50 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             webhook_url: value.webhook_url,
             payout_method_data,
             customer,
+            address,
         })
     }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutAddress>
+    for payouts::payouts_types::PayoutAddress
+{
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutAddress,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            shipping_address: value
+                .shipping_address
+                .map(convert_payouts_address_to_domain)
+                .transpose()?,
+            billing_address: value
+                .billing_address
+                .map(convert_payouts_address_to_domain)
+                .transpose()?,
+        })
+    }
+}
+
+fn convert_payouts_address_to_domain(
+    addr: grpc_api_types::payouts::Address,
+) -> Result<crate::payment_address::Address, error_stack::Report<IntegrationError>> {
+    let payments_addr = grpc_api_types::payments::Address {
+        first_name: addr.first_name,
+        last_name: addr.last_name,
+        line1: addr.line1,
+        line2: addr.line2,
+        line3: addr.line3,
+        city: addr.city,
+        state: addr.state,
+        zip_code: addr.zip_code,
+        country_alpha2_code: addr.country_alpha2_code,
+        email: addr.email,
+        phone_number: addr.phone_number,
+        phone_country_code: addr.phone_country_code,
+    };
+    crate::payment_address::Address::foreign_try_from(payments_addr)
 }
 
 impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceGetRequest>

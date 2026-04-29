@@ -4,6 +4,7 @@ use crate::{
         ConnectorResponseHeaders, CustomerInfo, RawConnectorRequestResponse,
         ServerAuthenticationTokenResponseData,
     },
+    payment_address::Address,
     types::Connectors,
     utils::{missing_field_err, Error},
 };
@@ -97,6 +98,12 @@ pub struct PayoutCreateResponse {
 }
 
 #[derive(Debug, Clone)]
+pub struct PayoutAddress {
+    pub shipping_address: Option<Address>,
+    pub billing_address: Option<Address>,
+}
+
+#[derive(Debug, Clone)]
 pub struct PayoutTransferRequest {
     pub merchant_payout_id: Option<String>,
     pub connector_quote_id: Option<String>,
@@ -109,6 +116,7 @@ pub struct PayoutTransferRequest {
     pub webhook_url: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
     pub customer: Option<CustomerInfo>,
+    pub address: Option<PayoutAddress>,
 }
 
 #[derive(Debug, Clone)]
