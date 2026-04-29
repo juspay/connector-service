@@ -1006,6 +1006,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             .map(common_enums::PayoutPriority::foreign_try_from)
             .transpose()?;
 
+        let customer = value
+            .customer
+            .as_ref()
+            .map(crate::connector_types::CustomerInfo::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
             merchant_payout_id: value.merchant_payout_id.clone(),
             connector_quote_id: value.connector_quote_id.clone(),
@@ -1017,6 +1023,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             connector_payout_method_id: value.connector_payout_method_id,
             webhook_url: value.webhook_url,
             payout_method_data,
+            customer,
         })
     }
 }

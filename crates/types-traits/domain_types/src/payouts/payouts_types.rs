@@ -1,7 +1,7 @@
 use super::payout_method_data::PayoutMethodData;
 use crate::{
     connector_types::{
-        ConnectorResponseHeaders, RawConnectorRequestResponse,
+        ConnectorResponseHeaders, CustomerInfo, RawConnectorRequestResponse,
         ServerAuthenticationTokenResponseData,
     },
     types::Connectors,
@@ -108,6 +108,7 @@ pub struct PayoutTransferRequest {
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
+    pub customer: Option<CustomerInfo>,
 }
 
 #[derive(Debug, Clone)]
