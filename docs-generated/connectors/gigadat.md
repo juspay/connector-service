@@ -29,6 +29,7 @@ config = sdk_config_pb2.ConnectorConfig(
             security_token=payment_methods_pb2.SecretString(value="YOUR_SECURITY_TOKEN"),
             base_url="YOUR_BASE_URL",
             site="YOUR_SITE",
+            test_mode=False,
         ),
     ),
 )
@@ -56,6 +57,7 @@ const config = ConnectorConfig.create({
             securityToken: { value: 'YOUR_SECURITY_TOKEN' },
             baseUrl: 'YOUR_BASE_URL',
             site: 'YOUR_SITE',
+            testMode: false,
         }
     },
 });
@@ -79,6 +81,7 @@ val config = ConnectorConfig.newBuilder()
                 .setSecurityToken(SecretString.newBuilder().setValue("YOUR_SECURITY_TOKEN").build())
                 .setBaseUrl("YOUR_BASE_URL")
                 .setSite("YOUR_SITE")
+                .setTestMode(false)
                 .build())
             .build()
     )
@@ -104,6 +107,7 @@ let config = ConnectorConfig {
                 security_token: Some(hyperswitch_masking::Secret::new("YOUR_SECURITY_TOKEN".to_string())),  // Authentication credential
                 base_url: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
                 site: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
+                test_mode: Some(false),  // Feature flag
                 ..Default::default()
             })),
         }),
@@ -254,7 +258,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/gigadat/gigadat.py) · [TypeScript](../../examples/gigadat/gigadat.ts#L55) · [Kotlin](../../examples/gigadat/gigadat.kt#L65) · [Rust](../../examples/gigadat/gigadat.rs)
+**Examples:** [Python](../../examples/gigadat/gigadat.py) · [TypeScript](../../examples/gigadat/gigadat.ts#L56) · [Kotlin](../../examples/gigadat/gigadat.kt#L66) · [Rust](../../examples/gigadat/gigadat.rs)
 
 #### PaymentService.Refund
 
@@ -265,4 +269,4 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/gigadat/gigadat.py) · [TypeScript](../../examples/gigadat/gigadat.ts#L64) · [Kotlin](../../examples/gigadat/gigadat.kt#L73) · [Rust](../../examples/gigadat/gigadat.rs)
+**Examples:** [Python](../../examples/gigadat/gigadat.py) · [TypeScript](../../examples/gigadat/gigadat.ts#L65) · [Kotlin](../../examples/gigadat/gigadat.kt#L74) · [Rust](../../examples/gigadat/gigadat.rs)
