@@ -300,6 +300,7 @@ fun proxySetupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig)
             cardExpYearBuilder.value = "2030"
             cardCvcBuilder.value = "123"
             cardHolderNameBuilder.value = "John Doe"  // Cardholder Information.
+            cardNetwork = CardNetwork.VISA
         }
         addressBuilder.apply {
             billingAddressBuilder.apply {
