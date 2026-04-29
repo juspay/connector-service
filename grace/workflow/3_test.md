@@ -94,20 +94,32 @@ test-prism --connector {CONNECTOR} --suite authorize
    - Just assert the test to fail to make it pass
    - This is wrong — do NOT do this, report as FAILED
 
-3. **Real Bug (NOT your job to fix):**
+3. **Credentials Issue (FIX):**
+   - The creds.json format is incorrect
+   - Not a code bug — creds just need correct structure
+   - **→ Fix creds.json to match what connector expects**
+
+4. **Real Bug (NOT your job to fix):**
    - Connector implementation has actual bugs
    - API behavior changed on connector side
    - Missing required connector setup (merchant config, etc.)
    - **→ STOP, report to master, do NOT fix connector code**
 
-4. **UCS Code Bug (NOT your job to fix):**
+5. **Payment Method Not Supported (REPORT_TO_MASTER):**
+   - Payment method not implemented in connector
+   - Flow not supported by connector API
+   - **→ STOP, report to master that PM is not implemented**
+
+6. **UCS Code Bug (NOT your job to fix):**
    - Bug requires change to connector implementation code
    - Requires change to testing framework core (harness, global_suites)
    - **→ STOP, report to master, do NOT modify codebase**
 
 **For POSITIVE Override Test Bugs** → Proceed to Phase 3  
+**For Credentials Issues** → Fix creds.json, rerun tests  
 **For NEGATIVE Override** → Result: **FAILED** (report, don't fix)  
 **For Real Bugs** → Result: **FAILED** (report, don't fix connector)  
+**For Payment Method Not Supported** → Result: **REPORT_TO_MASTER** (notify not implemented)  
 **For UCS Code Bugs** → Result: **REPORT_TO_MASTER** (stop, notify)
 
 ---
@@ -159,12 +171,12 @@ test-prism --connector {CONNECTOR} --report
 
 **Return result:**
 
-| Field      | Value                       |
-| ---------- | --------------------------- |
-| CONNECTOR  | {connector}                 |
-| STATUS     | HARDENED | FAILED | SKIPPED | REPORT_TO_MASTER |
-| REASON     | {explanation}               |
-| FIX_COMMIT | {commit hash if applicable} |
+| Field      | Value                                                                      |
+| ---------- | -------------------------------------------------------------------------- |
+| CONNECTOR  | {connector}                                                                 |
+| STATUS     | HARDENED | FAILED | SKIPPED | REPORT_TO_MASTER | CREDENTIALS_FIXED |
+| REASON     | {explanation}                                                             |
+| FIX_COMMIT | {commit hash if applicable}                                              |
 
 ---
 
