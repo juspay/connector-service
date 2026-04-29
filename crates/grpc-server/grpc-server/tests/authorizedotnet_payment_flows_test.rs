@@ -499,6 +499,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         state: None,
         connector_feature_data: None,
         payment_method_type: None,
+        refund_amount: None,
     }
 }
 
