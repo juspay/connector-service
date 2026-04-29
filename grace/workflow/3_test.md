@@ -73,6 +73,13 @@ test-prism --connector {CONNECTOR} --suite authorize
 
 ### If tests FAIL:
 
+**FORCE FIX — NEVER ASK:**
+- If test fails due to test data (positive override) → FIX IT NOW, don't ask
+- If test fails due to connector code bug → FAILED (report)
+- If test fails due to framework bug → REPORT_TO_MASTER (stop)
+- **NEVER present options to user — NEVER ask "do you want me to"**
+- **If you find yourself about to ask a question, STOP and fix it instead**
+
 **Determine failure type:**
 
 1. **Test Bug — POSITIVE Override Issue (FIX):**
@@ -81,10 +88,11 @@ test-prism --connector {CONNECTOR} --suite authorize
    - Test assertion logic is wrong → fix assertion to match expected behavior
    - Missing connector config in test → add config
    - **Key: The fix makes the test correct, not just asserts failure**
+   - **→ FIX NOW, proceed to Phase 3 immediately**
 
 2. **Test Bug — NEGATIVE Override Issue (DO NOT FIX):**
    - Just assert the test to fail to make it pass
-   - This is wrong — do NOT do this
+   - This is wrong — do NOT do this, report as FAILED
 
 3. **Real Bug (NOT your job to fix):**
    - Connector implementation has actual bugs
