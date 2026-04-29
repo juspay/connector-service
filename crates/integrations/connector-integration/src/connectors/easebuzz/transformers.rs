@@ -1264,7 +1264,7 @@ impl TryFrom<ResponseRouterData<EasebuzzSyncResponse, Self>>
                 let err_msg = err_val.to_string();
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status: AttemptStatus::Failure,
+                        status: AttemptStatus::Pending,
                         ..router_data.resource_common_data
                     },
                     response: Err(ErrorResponse {
@@ -1272,7 +1272,7 @@ impl TryFrom<ResponseRouterData<EasebuzzSyncResponse, Self>>
                         code: "SYNC_ERROR".to_string(),
                         message: err_msg.clone(),
                         reason: Some(err_msg),
-                        attempt_status: Some(AttemptStatus::Failure),
+                        attempt_status: Some(AttemptStatus::Pending),
                         connector_transaction_id: None,
                         network_decline_code: None,
                         network_advice_code: None,
@@ -1460,7 +1460,7 @@ impl TryFrom<ResponseRouterData<EasebuzzRefundSyncResponse, Self>>
                 let err_msg = err_val.to_string();
                 Ok(Self {
                     resource_common_data: RefundFlowData {
-                        status: RefundStatus::Failure,
+                        status: RefundStatus::Pending,
                         ..router_data.resource_common_data
                     },
                     response: Err(ErrorResponse {
@@ -1468,7 +1468,7 @@ impl TryFrom<ResponseRouterData<EasebuzzRefundSyncResponse, Self>>
                         code: "REFUND_SYNC_ERROR".to_string(),
                         message: err_msg.clone(),
                         reason: Some(err_msg),
-                        attempt_status: Some(AttemptStatus::Failure),
+                        attempt_status: Some(AttemptStatus::Pending),
                         connector_transaction_id: None,
                         network_decline_code: None,
                         network_advice_code: None,
