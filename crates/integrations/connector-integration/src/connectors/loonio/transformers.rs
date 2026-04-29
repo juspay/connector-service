@@ -637,7 +637,6 @@ impl
                     })
                 };
 
-                // Get billing address as PRIMARY source for name and address
                 let billing = req
                     .request
                     .address
@@ -650,7 +649,6 @@ impl
                     .as_ref()
                     .ok_or_else(|| missing_field("address.billing_address.address"))?;
 
-                // Extract first_name/last_name from billing address
                 let first_name = billing_address
                     .first_name
                     .clone()
@@ -660,7 +658,6 @@ impl
                     .clone()
                     .ok_or_else(|| missing_field("address.billing_address.address.last_name"))?;
 
-                // Build customer profile from billing address data
                 let customer_profile = LoonioCustomerProfile {
                     first_name,
                     last_name,
@@ -680,7 +677,6 @@ impl
                         context: Default::default(),
                     })?;
 
-                // Determine customer_id: use customer.id if available, else generate fallback
                 let customer_id = if let Some(id) = req
                     .request
                     .customer
@@ -689,13 +685,11 @@ impl
                 {
                     id
                 } else {
-                    CustomerId::try_from(std::borrow::Cow::from(format!(
-                        "payout_{transaction_id}"
-                    )))
-                    .change_context(IntegrationError::InvalidDataFormat {
-                        field_name: "customer_id",
-                        context: Default::default(),
-                    })?
+                    CustomerId::try_from(std::borrow::Cow::from(format!("payout_{transaction_id}")))
+                        .change_context(IntegrationError::InvalidDataFormat {
+                            field_name: "customer_id",
+                            context: Default::default(),
+                        })?
                 };
 
                 Ok(Self {
