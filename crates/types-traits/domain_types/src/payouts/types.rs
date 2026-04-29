@@ -1102,31 +1102,25 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceStageRequest>
         let email = value
             .customer
             .as_ref()
-            .and_then(|c| c.email.clone())
-            .and_then(|e| common_utils::pii::Email::try_from(e.expose()).ok());
+            .and_then(|customer| customer.email.clone())
+            .and_then(|email| common_utils::pii::Email::try_from(email.expose()).ok());
         let name = value
             .customer
             .as_ref()
-            .and_then(|c| c.name.clone())
+            .and_then(|customer| customer.name.clone())
             .map(hyperswitch_masking::Secret::new);
-        let phone = value.customer.as_ref().and_then(|c| {
-            c.phone_number.as_ref().map(|phone| {
-                let country_code = c.phone_country_code.as_deref().unwrap_or("+1");
+        let phone = value.customer.as_ref().and_then(|customer| {
+            customer.phone_number.as_ref().map(|phone| {
+                let country_code = customer.phone_country_code.as_deref().unwrap_or("+1");
                 let country_code_clean = country_code.trim_start_matches('+');
                 let formatted_mobile = format!("{}{}", country_code_clean, phone);
-                tracing::info!(
-                    "GIGADAT DEBUG: raw_country_code={}, raw_phone={}, formatted_mobile={}",
-                    country_code,
-                    phone,
-                    formatted_mobile
-                );
                 hyperswitch_masking::Secret::new(formatted_mobile)
             })
         });
         let user_ip = value
             .browser_info
             .as_ref()
-            .and_then(|b| b.ip_address.clone())
+            .and_then(|browser_info| browser_info.ip_address.clone())
             .map(hyperswitch_masking::Secret::new);
 
         Ok(Self {

@@ -51,9 +51,83 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as gigadat, GigadatPaymentsRequest, GigadatPaymentsResponse, GigadatRefundRequest,
-    GigadatRefundResponse, GigadatSyncResponse,
+    self as gigadat, GigadatPayoutMeta, GigadatPaymentsRequest, GigadatPaymentsResponse,
+    GigadatRefundRequest, GigadatRefundResponse, GigadatSyncResponse,
 };
+
+// ===== PAYOUT UTILITY FUNCTIONS =====
+/// Extracts connector_payout_id from payout request
+fn get_connector_payout_id(
+    connector_payout_id: &Option<String>,
+) -> CustomResult<String, IntegrationError> {
+    connector_payout_id.as_ref().cloned().ok_or_else(|| {
+        IntegrationError::MissingRequiredField {
+            field_name: "connector_payout_id",
+            context: Default::default(),
+        }
+        .into()
+    })
+}
+
+/// Extracts connector_payout_id or connector_quote_id from payout create request
+fn get_connector_payout_or_quote_id(
+    connector_payout_id: &Option<String>,
+    connector_quote_id: &Option<String>,
+) -> CustomResult<String, IntegrationError> {
+    connector_payout_id
+        .as_ref()
+        .or(connector_quote_id.as_ref())
+        .cloned()
+        .ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
+                field_name: "connector_payout_id or connector_quote_id",
+                context: Default::default(),
+            }
+            .into()
+        })
+}
+
+/// Extracts psp_token from payout_method_data passthrough
+fn get_psp_token_from_payout_method_data(
+    payout_method_data: &Option<domain_types::payouts::payout_method_data::PayoutMethodData>,
+) -> CustomResult<Secret<String>, IntegrationError> {
+    payout_method_data
+        .as_ref()
+        .and_then(|pmd| {
+            if let domain_types::payouts::payout_method_data::PayoutMethodData::Passthrough(pt) =
+                pmd
+            {
+                Some(pt.psp_token.clone())
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
+                field_name: "psp_token (from payout_method_data.passthrough)",
+                context: Default::default(),
+            }
+            .into()
+        })
+}
+
+/// Extracts psp_token from raw_connector_response JSON by deserializing into GigadatPayoutMeta
+fn get_psp_token_from_raw_response(
+    raw_connector_response: &Option<Secret<String>>,
+) -> CustomResult<Secret<String>, IntegrationError> {
+    raw_connector_response
+        .as_ref()
+        .map(|s| s.peek().clone())
+        .and_then(|s| serde_json::from_str::<GigadatPayoutMeta>(&s).ok())
+        .map(|meta| meta.token)
+        .ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
+                field_name: "psp_token (from raw_connector_response)",
+                context: Default::default(),
+            }
+            .into()
+        })
+}
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -280,91 +354,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PayoutStage, PayoutFlowData, PayoutStageRequest, PayoutStageResponse>,
     ) -> CustomResult<Option<RequestContent>, IntegrationError> {
-        let auth = gigadat::GigadatAuthType::try_from(&req.connector_config).change_context(
-            IntegrationError::FailedToObtainAuthType {
-                context: Default::default(),
-            },
-        )?;
-
-        let site = auth
-            .site
-            .ok_or_else(|| IntegrationError::InvalidConnectorConfig {
-                config: "missing 'site' in connector config",
-                context: Default::default(),
-            })?;
-
-        let email = req
-            .request
-            .email
-            .clone()
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "email",
-                context: Default::default(),
-            })?;
-        let name = req
-            .request
-            .name
-            .clone()
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "name",
-                context: Default::default(),
-            })?;
-        let mobile = req
-            .request
-            .mobile
-            .clone()
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "mobile",
-                context: Default::default(),
-            })?;
-        tracing::info!(
-            "GIGADAT PAYOUT STAGE: mobile being sent = {}",
-            mobile.peek()
-        );
-        let user_ip =
-            req.request
-                .user_ip
-                .clone()
-                .ok_or(IntegrationError::MissingRequiredField {
-                    field_name: "user_ip",
-                    context: Default::default(),
-                })?;
-
-        let customer_id = common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(
-            req.resource_common_data.merchant_id.get_string_repr(),
-        ))
-        .change_context(IntegrationError::InvalidDataFormat {
-            field_name: "customer_id",
-            context: Default::default(),
-        })?;
-
-        let sandbox = auth.test_mode.unwrap_or(true);
-
-        let amount = self
-            .amount_converter
-            .convert(req.request.amount, req.request.destination_currency)
-            .change_context(IntegrationError::AmountConversionFailed {
-                context: Default::default(),
-            })?;
-
-        let connector_req = gigadat::GigadatPayoutStageRequest {
-            amount,
-            campaign: auth.campaign_id,
-            currency: req.request.destination_currency,
-            email,
-            mobile,
-            name,
-            site,
-            transaction_id: req
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            transaction_type: gigadat::GigadatTransactionType::Eto,
-            user_id: customer_id,
-            user_ip,
-            sandbox,
+        let input_data = GigadatRouterData {
+            connector: self.clone(),
+            router_data: req.clone(),
         };
-
+        let connector_req = gigadat::GigadatPayoutStageRequest::try_from(&input_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
@@ -515,32 +509,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PayoutTransferResponse,
         >,
     ) -> CustomResult<String, IntegrationError> {
-        let transfer_id = req.request.connector_payout_id.to_owned().ok_or(
-            IntegrationError::MissingRequiredField {
-                field_name: "connector_payout_id",
-                context: Default::default(),
-            },
-        )?;
+        let transfer_id = get_connector_payout_id(&req.request.connector_payout_id)?;
 
-        let token = req.request.payout_method_data.as_ref()
-            .and_then(|pmd| {
-                if let domain_types::payouts::payout_method_data::PayoutMethodData::Passthrough(pt) = pmd {
-                    Some(pt.psp_token.clone())
-                } else {
-                    None
-                }
-            })
-            .or_else(|| {
-                req.resource_common_data.raw_connector_response.as_ref()
-                    .map(|s| s.peek().clone())
-                    .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-                    .and_then(|m| m.get("token").cloned())
-                    .and_then(|t| serde_json::from_value::<Secret<String>>(t).ok())
-            })
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "token (from payout_method_data.passthrough.psp_token or raw_connector_response)",
-                context: Default::default(),
-            })?;
+        let token = get_psp_token_from_payout_method_data(&req.request.payout_method_data)
+            .or_else(|_| get_psp_token_from_raw_response(&req.resource_common_data.raw_connector_response))?;
 
         Ok(format!(
             "{}webflow/deposit?transaction={}&token={}",
@@ -636,35 +608,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>,
     ) -> CustomResult<String, IntegrationError> {
-        let transfer_id = req
-            .request
-            .connector_payout_id
-            .as_ref()
-            .or(req.request.connector_quote_id.as_ref())
-            .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "connector_payout_id or connector_quote_id",
-                context: Default::default(),
-            })?;
+        let transfer_id = get_connector_payout_or_quote_id(
+            &req.request.connector_payout_id,
+            &req.request.connector_quote_id,
+        )?;
 
-        let token = req.request.payout_method_data.as_ref()
-            .and_then(|pmd| {
-                if let domain_types::payouts::payout_method_data::PayoutMethodData::Passthrough(pt) = pmd {
-                    Some(pt.psp_token.clone())
-                } else {
-                    None
-                }
-            })
-            .or_else(|| {
-                req.resource_common_data.raw_connector_response.as_ref()
-                    .map(|s| s.peek().clone())
-                    .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-                    .and_then(|m| serde_json::from_value::<transformers::GigadatPayoutMeta>(m).ok())
-                    .map(|meta| meta.token)
-            })
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "token (from payout_method_data.passthrough.psp_token or raw_connector_response)",
-                context: Default::default(),
-            })?;
+        let token = get_psp_token_from_payout_method_data(&req.request.payout_method_data)
+            .or_else(|_| get_psp_token_from_raw_response(&req.resource_common_data.raw_connector_response))?;
 
         Ok(format!(
             "{}webflow?transaction={}&token={}",

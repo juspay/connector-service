@@ -1,5 +1,8 @@
 use common_enums::{AttemptStatus, Currency, PayoutStatus, RefundStatus};
-use common_utils::{id_type, request::Method, types::FloatMajorUnit};
+use common_utils::{
+    ext_traits::OptionExt,
+    id_type, request::Method, types::FloatMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Authorize, PSync, PayoutCreate, PayoutGet, PayoutStage, PayoutTransfer, Refund,
@@ -764,30 +767,46 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 context: Default::default(),
             })?;
 
-        let email = item.router_data.request.email.clone().ok_or(
-            IntegrationError::MissingRequiredField {
+        let email = item
+            .router_data
+            .request
+            .email
+            .clone()
+            .get_required_value("email")
+            .change_context(IntegrationError::MissingRequiredField {
                 field_name: "email",
                 context: Default::default(),
-            },
-        )?;
-        let name = item.router_data.request.name.clone().ok_or(
-            IntegrationError::MissingRequiredField {
+            })?;
+        let name = item
+            .router_data
+            .request
+            .name
+            .clone()
+            .get_required_value("name")
+            .change_context(IntegrationError::MissingRequiredField {
                 field_name: "name",
                 context: Default::default(),
-            },
-        )?;
-        let mobile = item.router_data.request.mobile.clone().ok_or(
-            IntegrationError::MissingRequiredField {
+            })?;
+        let mobile = item
+            .router_data
+            .request
+            .mobile
+            .clone()
+            .get_required_value("mobile")
+            .change_context(IntegrationError::MissingRequiredField {
                 field_name: "mobile",
                 context: Default::default(),
-            },
-        )?;
-        let user_ip = item.router_data.request.user_ip.clone().ok_or(
-            IntegrationError::MissingRequiredField {
+            })?;
+        let user_ip = item
+            .router_data
+            .request
+            .user_ip
+            .clone()
+            .get_required_value("user_ip")
+            .change_context(IntegrationError::MissingRequiredField {
                 field_name: "user_ip",
                 context: Default::default(),
-            },
-        )?;
+            })?;
 
         let customer_id = id_type::CustomerId::try_from(std::borrow::Cow::from(
             item.router_data
@@ -841,6 +860,11 @@ impl TryFrom<ResponseRouterData<GigadatPayoutStageResponse, Self>>
         });
         let connector_metadata_string = connector_metadata.to_string();
 
+        // NOTE: Gigadat PayoutStage API does not return a status field.
+        // This endpoint only initializes/stages the payout and returns a token.
+        // The actual status will be determined after the PayoutTransfer call.
+        // Using RequiresCreation to indicate the payout is staged but needs
+        // the subsequent transfer step to be completed.
         Ok(Self {
             response: Ok(PayoutStageResponse {
                 merchant_payout_id: None,
