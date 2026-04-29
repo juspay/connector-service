@@ -42,6 +42,8 @@ pub struct Config {
     pub webhook_source_verification_call: WebhookSourceVerificationCall,
     #[serde(default)]
     pub connector_request_kafka: ConnectorRequestKafkaConfig,
+    #[serde(default = "default_true")]
+    pub return_raw_connector_data: bool,
     /// Superposition configuration for connector URL resolution
     /// This is loaded at startup from config/superposition.toml
     #[serde(skip)]
@@ -67,6 +69,10 @@ fn default_lineage_header() -> String {
 
 fn default_lineage_prefix() -> String {
     consts::LINEAGE_FIELD_PREFIX.to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// Test mode configuration for mock server integration
