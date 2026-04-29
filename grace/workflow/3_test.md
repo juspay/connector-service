@@ -90,10 +90,17 @@ test-prism --connector {CONNECTOR} --suite authorize
    - Connector implementation has actual bugs
    - API behavior changed on connector side
    - Missing required connector setup (merchant config, etc.)
+   - **→ STOP, report to master, do NOT fix connector code**
+
+4. **UCS Code Bug (NOT your job to fix):**
+   - Bug requires change to connector implementation code
+   - Requires change to testing framework core (harness, global_suites)
+   - **→ STOP, report to master, do NOT modify codebase**
 
 **For POSITIVE Override Test Bugs** → Proceed to Phase 3  
 **For NEGATIVE Override** → Result: **FAILED** (report, don't fix)  
-**For Real Bugs** → Result: **FAILED** (report, don't fix connector)
+**For Real Bugs** → Result: **FAILED** (report, don't fix connector)  
+**For UCS Code Bugs** → Result: **REPORT_TO_MASTER** (stop, notify)
 
 ---
 
@@ -102,8 +109,10 @@ test-prism --connector {CONNECTOR} --suite authorize
 **GUARDRAILS (STRICT):**
 - ✅ DO: Fix test data, assertions, field names (positive overrides)
 - ❌ DO NOT: Touch UCS core code (`crates/connector-integration/`)
-- ❌ DO NOT: Touch testing framework core code
+- ❌ DO NOT: Touch testing framework core code ( harness, global_suites)
 - ❌ DO NOT: Create negative overrides (assert failure to pass)
+- ❌ DO NOT: Fix bugs in connector implementation code
+- **If bug is in UCS code or requires testing framework core change → STOP, report to master, do NOT modify**
 
 **Create a fix branch:**
 
@@ -145,7 +154,7 @@ test-prism --connector {CONNECTOR} --report
 | Field      | Value                       |
 | ---------- | --------------------------- |
 | CONNECTOR  | {connector}                 |
-| STATUS     | HARDENED | FAILED | SKIPPED |
+| STATUS     | HARDENED | FAILED | SKIPPED | REPORT_TO_MASTER |
 | REASON     | {explanation}               |
 | FIX_COMMIT | {commit hash if applicable} |
 
