@@ -2,8 +2,8 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, CardNetwork, RefundStatus};
 use common_utils::consts;
 use domain_types::errors::{ConnectorError, IntegrationError};
-use domain_types::payment_method_data::RawCardNumber;
 use domain_types::payment_method_data::Card as DomainCard;
+use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},
     connector_types::{
