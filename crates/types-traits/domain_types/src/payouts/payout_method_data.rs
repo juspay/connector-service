@@ -114,6 +114,9 @@ pub struct PixBankTransfer {
 
     /// Individual taxpayer identification number
     pub tax_id: Option<Secret<String>>,
+
+    /// An 8-digit routing code that uniquely identifies the specific bank, fintech, or payment institution
+    pub ispb: Option<Secret<String>>,
 }
 
 #[derive(Default, Eq, PartialEq, Clone, Debug)]

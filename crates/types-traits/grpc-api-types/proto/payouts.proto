@@ -127,6 +127,8 @@ message PixBankTransferPayout {
   SecretString bank_account_number = 3;
   // The tax identification number (CPF for individuals, CNPJ for companies)
   optional SecretString tax_id = 4;
+  // ISPB of the bank
+  optional SecretString ispb = 5;
 }
 
 message PixKeyBankTransferPayout {

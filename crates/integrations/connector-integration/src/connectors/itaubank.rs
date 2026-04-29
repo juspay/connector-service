@@ -74,6 +74,28 @@ macros::macro_connector_payout_implementation!(
     ]
 );
 
+fn construct_itaubank_error_message(error_res: &ItaubankErrorResponse) -> String {
+    let campos_msg = if error_res.campos.is_empty() {
+        None
+    } else {
+        Some(
+            error_res
+                .campos
+                .iter()
+                .map(|c| format!("{}: {}", c.campo, c.mensagem))
+                .collect::<Vec<String>>()
+                .join(", "),
+        )
+    };
+
+    match (error_res.mensagem.clone(), campos_msg) {
+        (Some(msg), Some(campos)) => format!("{} | {}", msg, campos),
+        (Some(msg), None) => msg,
+        (None, Some(campos)) => campos,
+        (None, None) => "Unknown error".to_string(),
+    }
+}
+
 // ===== CONNECTOR COMMON IMPL =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Itaubank<T>
@@ -112,11 +134,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         match response {
             Ok(error_res) => {
                 event_builder.map(|i| i.set_connector_response(&error_res));
+
+                let message = construct_itaubank_error_message(&error_res);
+
                 Ok(ErrorResponse {
                     status_code: res.status_code,
-                    code: error_res.code.unwrap_or_else(|| "UNKNOWN".to_string()),
-                    message: error_res.message.clone().unwrap_or_default(),
-                    reason: error_res.message,
+                    code: error_res.codigo,
+                    message,
+                    reason: error_res.mensagem,
                     attempt_status: None,
                     connector_transaction_id: None,
                     network_decline_code: None,

@@ -109,6 +109,17 @@ pub struct PayoutTransferRequest {
     pub webhook_url: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
     pub source_bank_data: Option<Bank>,
+    pub customer: Option<PayoutCustomer>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PayoutCustomer {
+    pub name: Option<String>,
+    pub email: Option<common_utils::pii::Email>,
+    pub id: Option<String>,
+    pub connector_customer_id: Option<String>,
+    pub phone_number: Option<String>,
+    pub phone_country_code: Option<String>,
 }
 
 #[derive(Debug, Clone)]

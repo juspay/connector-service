@@ -2,8 +2,12 @@ use domain_types::{
     connector_flow::*,
     connector_types::*,
     errors::{ConnectorError, IntegrationError},
-    payouts::payout_method_data::{Bank, PayoutMethodData, PixBankTransfer, PixEmvBankTransfer},
-    payouts::payouts_types::*,
+    payouts::{
+        payout_method_data::{
+            Bank, PayoutMethodData, PixBankTransfer, PixEmvBankTransfer, PixKeyBankTransfer,
+        },
+        payouts_types::*,
+    },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
@@ -54,10 +58,15 @@ impl TryFrom<&ConnectorSpecificConfig> for ItaubankAuthType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItaubankErrorResponse {
-    pub code: Option<String>,
-    pub message: Option<String>,
-    #[serde(rename = "statusCode")]
-    pub status_code: Option<u16>,
+    pub codigo: String,
+    pub mensagem: Option<String>,
+    pub campos: Vec<ItauErrorFields>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ItauErrorFields {
+    pub campo: String,
+    pub mensagem: String,
 }
 
 // ===== ACCESS TOKEN REQUEST/RESPONSE =====
@@ -114,7 +123,8 @@ pub struct ItaubankTransferRequest {
     pub chave: Option<Secret<String>>,
     pub referencia_empresa: Option<String>,
     pub identificacao_comprovante: Option<Secret<String>>,
-    pub informacoes_entre_usuarios: Option<Secret<String>>,
+    pub tipo_de_identificacao_do_recebedor: Option<ItaubankRecipientType>,
+    pub pagador: Option<ItaubankPagador>,
     pub recebedor: Option<ItaubankRecebedor>,
     pub emv: Option<Secret<String>>,
 }
@@ -130,21 +140,39 @@ pub enum ItaubankAccountType {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-pub enum ItaubankPersonType {
+pub enum ItaubankRecipientType {
     #[serde(rename = "F")]
     Individual,
     #[serde(rename = "J")]
-    Company,
+    LegalEntity,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ItaubankRecebedor {
+    pub ispb: Option<Secret<String>>,
     pub banco: Option<String>,
     pub tipo_conta: Option<ItaubankAccountType>,
-    pub agencia: Option<i64>,
+    pub agencia: Option<String>,
     pub conta: Option<Secret<String>>,
-    pub tipo_pessoa: Option<ItaubankPersonType>,
+    pub tipo_pessoa: Option<ItaubankRecipientType>,
     pub documento: Option<Secret<String>>,
+    pub nome: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ItaubankPagador {
+    pub tipo_conta: Option<ItaubankAccountType>,
+    pub agencia: Option<String>,
+    pub conta: Option<Secret<String>>,
+    pub tipo_pessoa: Option<ItaubankRecipientType>,
+    pub documento: Option<Secret<String>>,
+    pub modulo_sispag: Option<ItauModuloSispag>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum ItauModuloSispag {
+    Fornecedores,
+    Diversos,
 }
 
 impl
@@ -179,58 +207,84 @@ impl
                 context: Default::default(),
             })?;
 
-        let (recebedor, emv) = match req.request.payout_method_data.clone() {
+        let pagador = match req.request.source_bank_data.clone() {
+            Some(Bank::Pix(PixBankTransfer {
+                tax_id,
+                bank_branch,
+                bank_account_number,
+                ..
+            })) => {
+                let tipo_pessoa = tax_id.clone().expose_option().map(|id| {
+                    if id.len() == 11 {
+                        ItaubankRecipientType::Individual
+                    } else {
+                        ItaubankRecipientType::LegalEntity
+                    }
+                });
+                Some(ItaubankPagador {
+                    tipo_conta: Some(ItaubankAccountType::Checking),
+                    agencia: bank_branch,
+                    conta: Some(bank_account_number),
+                    tipo_pessoa,
+                    documento: tax_id,
+                    modulo_sispag: Some(ItauModuloSispag::Fornecedores),
+                })
+            }
+            _ => None,
+        };
+
+        let (recebedor, emv, chave) = match req.request.payout_method_data.clone() {
             Some(PayoutMethodData::Bank(Bank::Pix(PixBankTransfer {
                 tax_id,
                 bank_branch,
                 bank_account_number,
                 bank_name,
+                ispb,
             }))) => {
                 let tipo_pessoa = tax_id.clone().expose_option().map(|id| {
                     if id.len() == 11 {
-                        ItaubankPersonType::Individual
+                        ItaubankRecipientType::Individual
                     } else {
-                        ItaubankPersonType::Company
+                        ItaubankRecipientType::LegalEntity
                     }
                 });
 
-                let agencia = bank_branch
-                    .map(|b| {
-                        b.parse::<i64>()
-                            .change_context(IntegrationError::InvalidDataFormat {
-                                field_name: "bank_branch",
-                                context: Default::default(),
-                            })
-                    })
-                    .transpose()?;
-
                 (
                     Some(ItaubankRecebedor {
+                        ispb,
                         banco: bank_name.map(|bank| bank.to_string()),
                         tipo_conta: Some(ItaubankAccountType::Checking),
-                        agencia,
+                        agencia: bank_branch,
                         conta: Some(bank_account_number),
                         tipo_pessoa,
                         documento: tax_id,
+                        nome: req.request.customer.as_ref().and_then(|c| c.name.clone()),
                     }),
+                    None,
                     None,
                 )
             }
             Some(PayoutMethodData::Bank(Bank::PixEmv(PixEmvBankTransfer { emv }))) => {
-                (None, Some(emv))
+                (None, Some(emv), None)
             }
-            _ => (None, None),
+            Some(PayoutMethodData::Bank(Bank::PixKey(PixKeyBankTransfer { pix_key }))) => {
+                (None, None, Some(pix_key))
+            }
+            _ => (None, None, None),
         };
 
         Ok(Self {
             valor_pagamento,
             data_pagamento,
-            chave: req.request.connector_payout_id.clone().map(Secret::new),
+            tipo_de_identificacao_do_recebedor: recebedor
+                .as_ref()
+                .and_then(|data| data.tipo_pessoa),
             referencia_empresa: req.request.merchant_payout_id.clone(),
             identificacao_comprovante: req.request.merchant_payout_id.clone().map(Secret::new),
-            informacoes_entre_usuarios: Some(Secret::new("Payout".to_string())),
             recebedor,
             emv,
+            chave,
+            pagador,
         })
     }
 }
@@ -252,7 +306,11 @@ pub enum ItaubankPayoutStatus {
     Rejeitado,
     #[serde(alias = "Cancelado", alias = "CANCELADO")]
     Cancelado,
-    #[serde(alias = "Sucesso", alias = "SUCESSO")]
+    #[serde(
+        alias = "Sucesso",
+        alias = "SUCESSO",
+        alias = "Sucesso (pre-autorizado)"
+    )]
     Sucesso,
     #[serde(alias = "Nao incluido", alias = "NAO_INCLUIDO")]
     NaoIncluido,

@@ -4,7 +4,7 @@ use crate::types::Connectors;
 use crate::utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom};
 use common_utils::metadata::MaskedMetadata;
 use error_stack::ResultExt;
-use hyperswitch_masking::PeekInterface;
+use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use payouts::payouts_types::PayoutFlowData;
 
 impl
@@ -590,6 +590,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
                 })
             })?,
             tax_id: pix.tax_id,
+            ispb: pix.ispb,
         })
     }
 }
@@ -1102,6 +1103,20 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
                 .source_bank_data
                 .map(payouts::payout_method_data::Bank::foreign_try_from)
                 .transpose()?,
+            customer: value.customer.map(|customer| {
+                let email = customer.email.and_then(|email_str| {
+                    common_utils::pii::Email::try_from(email_str.expose()).ok()
+                });
+
+                payouts::payouts_types::PayoutCustomer {
+                    name: customer.name,
+                    email,
+                    id: customer.id,
+                    connector_customer_id: customer.connector_customer_id,
+                    phone_number: customer.phone_number,
+                    phone_country_code: customer.phone_country_code,
+                }
+            }),
         })
     }
 }
