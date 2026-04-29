@@ -26,23 +26,27 @@ readonly SCRIPT_VERSION="2.0.0"
 readonly SCRIPT_NAME="Hyperswitch Connector Generator"
 
 # Paths configuration
-readonly ROOT_DIR="$(pwd)"
-readonly TEMPLATE_DIR="$ROOT_DIR/grace/rulesbook/codegen/template-generation"
-readonly BACKEND_DIR="$ROOT_DIR/backend"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+readonly TEMPLATE_DIR="$SCRIPT_DIR/template-generation"
+readonly CRATES_TRAITS="$ROOT_DIR/crates/types-traits"
+readonly CRATES_INTEGRATIONS="$ROOT_DIR/crates/integrations"
+readonly CRATES_INTERNAL="$ROOT_DIR/crates/internal"
 readonly CONFIG_DIR="$ROOT_DIR/config"
 
 # File paths
-readonly CONNECTOR_TYPES_FILE="$BACKEND_DIR/interfaces/src/connector_types.rs"
-readonly DOMAIN_TYPES_FILE="$BACKEND_DIR/domain_types/src/connector_types.rs"
-readonly DOMAIN_TYPES_TYPES_FILE="$BACKEND_DIR/domain_types/src/types.rs"
-readonly INTEGRATION_TYPES_FILE="$BACKEND_DIR/connector-integration/src/types.rs"
-readonly CONNECTORS_MODULE_FILE="$BACKEND_DIR/connector-integration/src/connectors.rs"
-readonly PROTO_FILE="$BACKEND_DIR/grpc-api-types/proto/payment.proto"
-readonly ROUTER_DATA_FILE="$BACKEND_DIR/domain_types/src/router_data.rs"
+readonly CONNECTOR_TYPES_FILE="$CRATES_TRAITS/interfaces/src/connector_types.rs"
+readonly DOMAIN_TYPES_FILE="$CRATES_TRAITS/domain_types/src/connector_types.rs"
+readonly DOMAIN_TYPES_TYPES_FILE="$CRATES_TRAITS/domain_types/src/types.rs"
+readonly INTEGRATION_TYPES_FILE="$CRATES_INTEGRATIONS/connector-integration/src/types.rs"
+readonly DEFAULT_IMPL_FILE="$CRATES_INTEGRATIONS/connector-integration/src/default_implementations.rs"
+readonly CONNECTORS_MODULE_FILE="$CRATES_INTEGRATIONS/connector-integration/src/connectors.rs"
+readonly PROTO_FILE="$CRATES_TRAITS/grpc-api-types/proto/payment.proto"
+readonly ROUTER_DATA_FILE="$CRATES_TRAITS/domain_types/src/router_data.rs"
 readonly CONFIG_FILE="$CONFIG_DIR/development.toml"
 readonly SANDBOX_CONFIG_FILE="$CONFIG_DIR/sandbox.toml"
 readonly PRODUCTION_CONFIG_FILE="$CONFIG_DIR/production.toml"
-readonly FIELD_PROBE_FILE="$BACKEND_DIR/field-probe/src/main.rs"
+readonly FIELD_PROBE_FILE="$CRATES_INTERNAL/field-probe/src/auth.rs"
 
 # Template files
 readonly CONNECTOR_TEMPLATE="$TEMPLATE_DIR/connector.rs.template"
@@ -73,7 +77,11 @@ detect_flows_from_connector_service_trait() {
     # Extract all trait names from ConnectorServiceTrait definition
     # This looks for lines like "+ PaymentAuthorizeV2<T>" or "+ PaymentSyncV2"
     local detected_flows
-    detected_flows=$(grep -A 50 "pub trait ConnectorServiceTrait" "$connector_types_file" | \
+    detected_flows=$(awk '
+        /pub trait ConnectorServiceTrait/ { in_trait = 1 }
+        in_trait { print }
+        in_trait && /^[[:space:]]*\{/ { exit }
+    ' "$connector_types_file" | \
                     grep -E "^[[:space:]]*\+[[:space:]]*[A-Z][A-Za-z0-9]*" | \
                     sed -E 's/^[[:space:]]*\+[[:space:]]*([A-Z][A-Za-z0-9]*).*/\1/' | \
                     grep -v "ConnectorCommon" | \
@@ -551,9 +559,10 @@ parse_arguments() {
 validate_environment() {
     log_step "Validating environment"
 
-    # Check if we're in the correct directory
     validate_directory_exists "$TEMPLATE_DIR" "Template directory"
-    validate_directory_exists "$BACKEND_DIR" "Backend directory"
+    validate_directory_exists "$CRATES_TRAITS" "types-traits crate directory"
+    validate_directory_exists "$CRATES_INTEGRATIONS" "integrations crate directory"
+    validate_directory_exists "$CRATES_INTERNAL" "internal crate directory"
 
     # Check required template files
     validate_file_exists "$CONNECTOR_TEMPLATE" "Connector template"
@@ -563,6 +572,7 @@ validate_environment() {
     validate_file_exists "$CONNECTOR_TYPES_FILE" "Connector types file"
     validate_file_exists "$DOMAIN_TYPES_FILE" "Domain types file"
     validate_file_exists "$INTEGRATION_TYPES_FILE" "Integration types file"
+    validate_file_exists "$DEFAULT_IMPL_FILE" "Default implementations file"
     validate_file_exists "$CONNECTORS_MODULE_FILE" "Connectors module file"
     validate_file_exists "$PROTO_FILE" "Protocol buffer file"
     validate_file_exists "$FIELD_PROBE_FILE" "Field probe file"
@@ -611,8 +621,8 @@ check_naming_conflicts() {
     log_step "Checking for naming conflicts"
 
     # Check if connector files already exist
-    local connector_file="$BACKEND_DIR/connector-integration/src/connectors/$NAME_SNAKE.rs"
-    local connector_dir="$BACKEND_DIR/connector-integration/src/connectors/$NAME_SNAKE"
+    local connector_file="$CRATES_INTEGRATIONS/connector-integration/src/connectors/$NAME_SNAKE.rs"
+    local connector_dir="$CRATES_INTEGRATIONS/connector-integration/src/connectors/$NAME_SNAKE"
 
     if [[ -f "$connector_file" ]] || [[ -d "$connector_dir" ]]; then
         if [[ "$FORCE_MODE" == "false" ]]; then
@@ -679,7 +689,9 @@ create_backup() {
         "$DOMAIN_TYPES_TYPES_FILE"
         "$CONNECTORS_MODULE_FILE"
         "$INTEGRATION_TYPES_FILE"
+        "$DEFAULT_IMPL_FILE"
         "$ROUTER_DATA_FILE"
+        "$FIELD_PROBE_FILE"
         "$CONFIG_FILE"
         "$SANDBOX_CONFIG_FILE"
         "$PRODUCTION_CONFIG_FILE"
@@ -695,9 +707,15 @@ create_backup() {
             elif [[ "$file" == "$INTEGRATION_TYPES_FILE" ]]; then
                 cp "$file" "$BACKUP_DIR/integration_types.rs"
                 log_debug "Backed up: connector-integration/types.rs"
+            elif [[ "$file" == "$DEFAULT_IMPL_FILE" ]]; then
+                cp "$file" "$BACKUP_DIR/default_implementations.rs"
+                log_debug "Backed up: connector-integration/default_implementations.rs"
             elif [[ "$file" == "$ROUTER_DATA_FILE" ]]; then
                 cp "$file" "$BACKUP_DIR/router_data.rs"
                 log_debug "Backed up: domain_types/router_data.rs"
+            elif [[ "$file" == "$FIELD_PROBE_FILE" ]]; then
+                cp "$file" "$BACKUP_DIR/field_probe_auth.rs"
+                log_debug "Backed up: field-probe/auth.rs"
             else
                 cp "$file" "$BACKUP_DIR/$(basename "$file")"
                 log_debug "Backed up: $(basename "$file")"
@@ -724,7 +742,7 @@ substitute_template_variables() {
 create_connector_files() {
     log_step "Creating connector files"
 
-    local connectors_dir="$BACKEND_DIR/connector-integration/src/connectors"
+    local connectors_dir="$CRATES_INTEGRATIONS/connector-integration/src/connectors"
     local connector_subdir="$connectors_dir/$NAME_SNAKE"
 
     # Create main connector file from template
@@ -773,22 +791,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== FLOW TRAIT IMPLEMENTATIONS =====
 EOF
-    
+
     # Substitute connector name in the header
     sed -i.tmp "s/{{CONNECTOR_NAME_PASCAL}}/$NAME_PASCAL/g" "$temp_file"
     rm -f "${temp_file}.tmp"
-    
+
+    cat >> "$temp_file" <<EOF
+
+// Payout traits and default no-op ConnectorIntegrationV2 impls.
+crate::connectors::macros::macro_connector_payout_implementation!(
+    connector: ${NAME_PASCAL},
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
+);
+
+EOF
+
     # Generate trait implementations for each flow
     local flow
     for flow in "${AVAILABLE_FLOWS[@]}"; do
-        # Skip special traits that don't need standard implementation
-        if [[ "$flow" == "ConnectorCommon" ]]; then
-            continue
-        fi
-        
+        case "$flow" in
+            ConnectorCommon|VerifyWebhookSourceV2|\
+            PayoutCreateV2|PayoutTransferV2|PayoutGetV2|PayoutVoidV2|\
+            PayoutStageV2|PayoutCreateLinkV2|PayoutCreateRecipientV2|PayoutEnrollDisburseAccountV2)
+                continue
+                ;;
+        esac
+
         generate_trait_impl "$flow" >> "$temp_file"
     done
-    
+
     # Add section for ConnectorIntegrationV2 implementations
     cat >> "$temp_file" <<EOF
 
@@ -797,10 +829,14 @@ EOF
     
     # Generate ConnectorIntegrationV2 implementations
     for flow in "${AVAILABLE_FLOWS[@]}"; do
-        if [[ "$flow" == "ConnectorCommon" ]] || [[ "$flow" == "IncomingWebhook" ]] || [[ "$flow" == "ValidationTrait" ]] || [[ "$flow" == "VerifyRedirectResponse" ]]; then
-            continue
-        fi
-        
+        case "$flow" in
+            ConnectorCommon|IncomingWebhook|ValidationTrait|VerifyRedirectResponse|VerifyWebhookSourceV2|\
+            PayoutCreateV2|PayoutTransferV2|PayoutGetV2|PayoutVoidV2|\
+            PayoutStageV2|PayoutCreateLinkV2|PayoutCreateRecipientV2|PayoutEnrollDisburseAccountV2)
+                continue
+                ;;
+        esac
+
         generate_connector_integration_impl "$flow" >> "$temp_file"
     done
     
@@ -840,9 +876,19 @@ update_protobuf() {
         return 0
     fi
 
-    # Add new connector to enum before closing brace
-    sed -i.bak "/enum Connector {/,/}/ s/}/  $NAME_UPPER = $ENUM_ORDINAL;\n}/" "$PROTO_FILE"
-    rm -f "$PROTO_FILE.bak"
+    python3 - "$NAME_UPPER" "$ENUM_ORDINAL" "$PROTO_FILE" <<'PYEOF'
+import sys
+
+name = sys.argv[1]
+ordinal = sys.argv[2]
+path = sys.argv[3]
+content = open(path).read()
+start = content.index("enum Connector {")
+end = content.index("\n}", start)
+entry = f"  {name} = {ordinal};\n"
+content = content[:end] + "\n" + entry + content[end + 1:]
+open(path, "w").write(content)
+PYEOF
 
     log_success "Updated protobuf with $NAME_UPPER = $ENUM_ORDINAL"
 }
@@ -856,19 +902,44 @@ update_domain_types() {
         return 0
     fi
 
-    # Add to ConnectorEnum
-    sed -i.bak "/pub enum ConnectorEnum {/,/}/ s/}/    $NAME_PASCAL,\\n}/" "$DOMAIN_TYPES_FILE"
+    python3 - "$NAME_PASCAL" "$DOMAIN_TYPES_FILE" <<'PYEOF'
+import sys
 
-    # Add to gRPC mapping - find the line with "Unspecified =>" and add before it
-    sed -i.bak "/grpc_api_types::payments::Connector::Unspecified =>/ i\\
-            grpc_api_types::payments::Connector::$NAME_PASCAL => Ok(Self::$NAME_PASCAL)," "$DOMAIN_TYPES_FILE"
+name = sys.argv[1]
+path = sys.argv[2]
+content = open(path).read()
 
-    # Add to gRPC Config -> ConnectorEnum mapping (ForeignTryFrom<Config> for ConnectorEnum)
-    # Insert after the last AuthType match arm (Authorizedotnet)
-    sed -i.bak "/AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),/ a\\
-            AuthType::${NAME_PASCAL}(_) => Ok(Self::${NAME_PASCAL})," "$DOMAIN_TYPES_FILE"
+def find_matching_brace(text: str, open_idx: int) -> int:
+    depth = 0
+    for idx in range(open_idx, len(text)):
+        ch = text[idx]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return idx
+    raise SystemExit("matching brace not found")
 
-    rm -f "$DOMAIN_TYPES_FILE.bak"
+enum_start = content.index("pub enum ConnectorEnum {")
+enum_open = content.index("{", enum_start)
+enum_close = find_matching_brace(content, enum_open)
+content = content[:enum_close] + f"    {name},\n" + content[enum_close:]
+
+grpc_anchor = "            grpc_api_types::payments::Connector::Unspecified =>"
+grpc_entry = f"            grpc_api_types::payments::Connector::{name} => Ok(Self::{name}),\n"
+if grpc_anchor not in content:
+    raise SystemExit("Connector enum gRPC mapping anchor not found")
+content = content.replace(grpc_anchor, grpc_entry + grpc_anchor, 1)
+
+auth_anchor = "            AuthType::Imerchantsolutions(_) => Ok(Self::Imerchantsolutions),"
+auth_entry = f"            AuthType::{name}(_) => Ok(Self::{name}),\n"
+if auth_anchor not in content:
+    raise SystemExit("AuthType to ConnectorEnum mapping anchor not found")
+content = content.replace(auth_anchor, auth_entry + auth_anchor, 1)
+
+open(path, "w").write(content)
+PYEOF
 
     log_success "Updated domain types with $NAME_PASCAL"
 }
@@ -876,11 +947,23 @@ update_domain_types() {
 update_domain_types_file() {
     log_step "Updating domain types types.rs file"
 
-    # Add connector field to Connectors struct
-    # Insert before the closing brace of the struct
-    sed -i.bak "/^pub struct Connectors {/,/^}/ s/^}/    pub $NAME_SNAKE: ConnectorParams,\\n}/" "$DOMAIN_TYPES_TYPES_FILE"
+    if grep -q "^[[:space:]]*pub $NAME_SNAKE: ConnectorParams," "$DOMAIN_TYPES_TYPES_FILE" 2>/dev/null; then
+        log_warning "Skipping types.rs update - $NAME_SNAKE already exists"
+        return 0
+    fi
 
-    rm -f "$DOMAIN_TYPES_TYPES_FILE.bak"
+    python3 - "$NAME_SNAKE" "$DOMAIN_TYPES_TYPES_FILE" <<'PYEOF'
+import sys
+
+name = sys.argv[1]
+path = sys.argv[2]
+content = open(path).read()
+start = content.index("pub struct Connectors {")
+end = content.index("\n}", start)
+entry = f"    pub {name}: ConnectorParams,\n"
+content = content[:end] + "\n" + entry + content[end + 1:]
+open(path, "w").write(content)
+PYEOF
 
     log_success "Added $NAME_SNAKE to Connectors struct in types.rs"
 }
@@ -894,38 +977,70 @@ update_router_data() {
         return 0
     fi
 
-    # 1. Add ConnectorSpecificConfig enum variant (default: HeaderKey with api_key + base_url)
-    #    Insert before the closing brace of the enum
-    sed -i.bak "/^pub enum ConnectorSpecificConfig {/,/^}/ s/^}/    $NAME_PASCAL {\n        api_key: Secret<String>,\n        base_url: Option<String>,\n    },\n}/" "$ROUTER_DATA_FILE"
-    rm -f "$ROUTER_DATA_FILE.bak"
+    python3 - "$NAME_PASCAL" "$NAME_SNAKE" "$ROUTER_DATA_FILE" <<'PYEOF'
+import sys
 
-    # 2. Add match arm in the ConnectorEnum match for ConnectorAuthType conversion
-    #    Insert before the closing brace of the match statement in
-    #    ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
-    #    We find the last match arm (Revolv3) and add after it
-    sed -i.bak "/ConnectorEnum::Revolv3 => match auth {/,/},/ {
-        /},/ a\\
-\\            ConnectorEnum::$NAME_PASCAL => match auth {\\
-                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::$NAME_PASCAL {\\
-                    api_key: api_key.clone(),\\
-                    base_url: None,\\
-                }),\\
-                _ => Err(err().into()),\\
-            },
-    }" "$ROUTER_DATA_FILE"
-    rm -f "$ROUTER_DATA_FILE.bak"
+name = sys.argv[1]
+auth_var = sys.argv[2]
+path = sys.argv[3]
+content = open(path).read()
 
-    # 3. Add to extract_base_url! macro (12 spaces indentation)
-    #    Insert after the Revolv3 entry in the extract_base_url! macro
-    sed -i.bak '/^            Revolv3 { api_key },$/a\
-\            '"$NAME_PASCAL"' { api_key },' "$ROUTER_DATA_FILE"
-    rm -f "$ROUTER_DATA_FILE.bak"
+def find_matching_brace(text: str, open_idx: int) -> int:
+    depth = 0
+    for idx in range(open_idx, len(text)):
+        ch = text[idx]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return idx
+    raise SystemExit("matching brace not found")
 
-    # 4. Add to connector_key! macro (16 spaces indentation)
-    #    Insert after the Revolv3 entry in the connector_key! macro
-    sed -i.bak '/^                Revolv3 { api_key },$/a\
-\                '"$NAME_PASCAL"' { api_key },' "$ROUTER_DATA_FILE"
-    rm -f "$ROUTER_DATA_FILE.bak"
+enum_start = content.index("pub enum ConnectorSpecificConfig {")
+enum_open = content.index("{", enum_start)
+enum_close = find_matching_brace(content, enum_open)
+enum_entry = (
+    f"    {name} {{\n"
+    f"        api_key: Secret<String>,\n"
+    f"        base_url: Option<String>,\n"
+    f"    }},\n"
+)
+content = content[:enum_close] + enum_entry + content[enum_close:]
+
+macro_anchor = "            Imerchantsolutions { api_key },"
+macro_entry = f"            {name} {{ api_key }},\n"
+if content.count(macro_anchor) < 2:
+    raise SystemExit("base_url_override/connector_key macro anchor not found twice")
+content = content.replace(macro_anchor, macro_entry + macro_anchor, 2)
+
+auth_type_anchor = "            AuthType::Imerchantsolutions(imerchantsolutions) => Ok(Self::Imerchantsolutions {"
+auth_type_entry = (
+    f"            AuthType::{name}({auth_var}) => Ok(Self::{name} {{\n"
+    f"                api_key: {auth_var}.api_key.ok_or_else(err)?,\n"
+    f"                base_url: {auth_var}.base_url,\n"
+    f"            }}),\n"
+)
+if auth_type_anchor not in content:
+    raise SystemExit("ConnectorSpecificConfig gRPC AuthType anchor not found")
+content = content.replace(auth_type_anchor, auth_type_entry + auth_type_anchor, 1)
+
+connector_anchor = "            ConnectorEnum::PinelabsOnline => match auth {"
+connector_entry = (
+    f"            ConnectorEnum::{name} => match auth {{\n"
+    f"                ConnectorAuthType::HeaderKey {{ api_key }} => Ok(Self::{name} {{\n"
+    f"                    api_key: api_key.clone(),\n"
+    f"                    base_url: None,\n"
+    f"                }}),\n"
+    f"                _ => Err(err().into()),\n"
+    f"            }},\n"
+)
+if connector_anchor not in content:
+    raise SystemExit("ConnectorEnum auth conversion anchor not found")
+content = content.replace(connector_anchor, connector_entry + connector_anchor, 1)
+
+open(path, "w").write(content)
+PYEOF
 
     log_success "Updated router_data.rs with $NAME_PASCAL auth variant and match arm"
 }
@@ -939,30 +1054,35 @@ update_protobuf_auth() {
         return 0
     fi
 
-    # 1. Add config message before the ConnectorSpecificConfig message
-    sed -i.bak "/^\/\/ ConnectorSpecificConfig message/i\\
-message ${NAME_PASCAL}Config {\\
-  SecretString api_key = 1;\\
-  optional string base_url = 50;\\
-}\\
-" "$PROTO_FILE"
-    rm -f "$PROTO_FILE.bak"
+    python3 - "$NAME_PASCAL" "$NAME_SNAKE" "$NAME_UPPER" "$ENUM_ORDINAL" "$PROTO_FILE" <<'PYEOF'
+import re
+import sys
 
-    # 2. Get the next oneof field number by finding the highest existing one
-    local max_field_num
-    max_field_num=$(grep -oE "Config [a-z_]+ = [0-9]+;" "$PROTO_FILE" | \
-                    sed -E 's/.*= ([0-9]+);/\1/' | \
-                    sort -n | tail -1)
-    local next_field_num=$((max_field_num + 1))
+name_pascal = sys.argv[1]
+name_snake = sys.argv[2]
+name_upper = sys.argv[3]
+ordinal = sys.argv[4]
+path = sys.argv[5]
+content = open(path).read()
 
-    # Use the lowercase name for the oneof field
-    local name_lower
-    name_lower=$(echo "$NAME_SNAKE" | tr '[:upper:]' '[:lower:]')
+message = (
+    f"message {name_pascal}Config {{\n"
+    f"  SecretString api_key = 1;\n"
+    f"  optional string base_url = 50;\n"
+    f"}}\n\n"
+)
+comment = "// ConnectorSpecificConfig message"
+if comment not in content:
+    raise SystemExit("ConnectorSpecificConfig comment anchor not found")
+content = content.replace(comment, message + comment, 1)
 
-    # 3. Add oneof entry before the closing brace of ConnectorSpecificConfig
-    #    Insert after the last entry in the oneof config block
-    sed -i.bak "/^  oneof config {/,/^  }/ s|^  }|    // $NAME_UPPER = $ENUM_ORDINAL\n    ${NAME_PASCAL}Config $name_lower = $next_field_num;\n  }|" "$PROTO_FILE"
-    rm -f "$PROTO_FILE.bak"
+field_numbers = [int(num) for num in re.findall(r"Config\s+[a-z0-9_]+\s+=\s+(\d+);", content)]
+next_field_num = max(field_numbers, default=0) + 1
+oneof_close = content.index("\n  }\n}", content.index("message ConnectorSpecificConfig {"))
+entry = f"\n    // {name_upper} = {ordinal}\n    {name_pascal}Config {name_snake} = {next_field_num};"
+content = content[:oneof_close] + entry + content[oneof_close:]
+open(path, "w").write(content)
+PYEOF
 
     log_success "Updated protobuf with ${NAME_PASCAL}Config message and oneof entry"
 }
@@ -976,34 +1096,36 @@ update_router_data_grpc_auth() {
         return 0
     fi
 
-    # Find the last AuthType match arm and add after it
-    # We insert before the closing brace of the match statement in
-    # ForeignTryFrom<grpc_api_types::payments::ConnectorAuth>
-    local last_auth_type
-    last_auth_type=$(grep -E "AuthType::[A-Z][A-Za-z0-9]*\(" "$ROUTER_DATA_FILE" | tail -1 | sed -E 's/.*AuthType::([A-Za-z0-9]+)\(.*/\1/')
+    python3 - "$NAME_PASCAL" "$NAME_SNAKE" "$ROUTER_DATA_FILE" <<'PYEOF'
+import sys
 
-    # Compute the lowercase variable binding name used in the existing code
-    local last_auth_lower
-    last_auth_lower=$(echo "$last_auth_type" | tr '[:upper:]' '[:lower:]')
-
-    # Use the lowercase name for the new variable binding
-    local name_lower
-    name_lower=$(echo "$NAME_SNAKE" | tr '[:upper:]' '[:lower:]')
-
-    sed -i.bak "/AuthType::${last_auth_type}(${last_auth_lower})/,/}),/ {
-        /}),/ a\\
-\\            AuthType::$NAME_PASCAL($name_lower) => Ok(Self::$NAME_PASCAL {\\
-                api_key: $name_lower.api_key.ok_or_else(err)?,\\
-                base_url: $name_lower.base_url,\\
-            }),
-    }" "$ROUTER_DATA_FILE"
-    rm -f "$ROUTER_DATA_FILE.bak"
+name = sys.argv[1]
+var = sys.argv[2]
+path = sys.argv[3]
+content = open(path).read()
+anchor = "            AuthType::Imerchantsolutions(imerchantsolutions) => Ok(Self::Imerchantsolutions {"
+entry = (
+    f"            AuthType::{name}({var}) => Ok(Self::{name} {{\n"
+    f"                api_key: {var}.api_key.ok_or_else(err)?,\n"
+    f"                base_url: {var}.base_url,\n"
+    f"            }}),\n"
+)
+if anchor not in content:
+    raise SystemExit("ConnectorSpecificConfig gRPC AuthType anchor not found")
+content = content.replace(anchor, entry + anchor, 1)
+open(path, "w").write(content)
+PYEOF
 
     log_success "Updated router_data.rs with gRPC AuthType::$NAME_PASCAL mapping"
 }
 
 update_connectors_module() {
     log_step "Updating connectors module"
+
+    if grep -q "^pub mod $NAME_SNAKE;" "$CONNECTORS_MODULE_FILE" 2>/dev/null; then
+        log_warning "Skipping connectors module update - $NAME_SNAKE already exists"
+        return 0
+    fi
 
     # Add module declaration and use statement
     cat >> "$CONNECTORS_MODULE_FILE" << EOF
@@ -1018,14 +1140,54 @@ EOF
 update_integration_types() {
     log_step "Updating integration types"
 
-    # Add enum mapping to the convert_connector match statement
-    # Insert before the closing brace of the match statement
-    sed -i.bak "/ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),/a\\
-            ConnectorEnum::$NAME_PASCAL => Box::new(connectors::$NAME_PASCAL::new())," "$INTEGRATION_TYPES_FILE"
+    if grep -q "ConnectorEnum::$NAME_PASCAL =>" "$INTEGRATION_TYPES_FILE" 2>/dev/null; then
+        log_warning "Skipping integration types update - $NAME_PASCAL already exists"
+        return 0
+    fi
 
-    rm -f "$INTEGRATION_TYPES_FILE.bak"
+    python3 - "$NAME_PASCAL" "$INTEGRATION_TYPES_FILE" <<'PYEOF'
+import sys
+
+name = sys.argv[1]
+path = sys.argv[2]
+content = open(path).read()
+entry = f"            ConnectorEnum::{name} => Box::new(connectors::{name}::<T>::new()),\n"
+anchor = "        }\n    }\n}\n\npub struct ResponseRouterData"
+if anchor not in content:
+    raise SystemExit("convert_connector match closing anchor not found")
+content = content.replace(anchor, entry + anchor, 1)
+open(path, "w").write(content)
+PYEOF
 
     log_success "Updated integration types with $NAME_PASCAL mapping"
+}
+
+update_default_implementations() {
+    log_step "Updating default_implementations.rs"
+
+    if grep -q "[[:space:]]$NAME_PASCAL[[:space:],]" "$DEFAULT_IMPL_FILE" 2>/dev/null || grep -q "[[:space:]]$NAME_PASCAL$" "$DEFAULT_IMPL_FILE" 2>/dev/null; then
+        log_warning "Skipping default_implementations update - $NAME_PASCAL already exists"
+        return 0
+    fi
+
+    python3 - "$NAME_PASCAL" "$DEFAULT_IMPL_FILE" <<'PYEOF'
+import sys
+
+name = sys.argv[1]
+path = sys.argv[2]
+content = open(path).read()
+marker = "\n);"
+idx = content.rfind(marker)
+if idx == -1:
+    raise SystemExit("default_impl_verify_webhook_source_v2! closing marker not found")
+before = content[:idx].rstrip()
+suffix = content[idx:]
+separator = "," if not before.endswith(",") else ""
+content = before + f"{separator}\n    {name}" + suffix
+open(path, "w").write(content)
+PYEOF
+
+    log_success "Registered $NAME_PASCAL in default_impl_verify_webhook_source_v2!"
 }
 
 update_config_file() {
@@ -1033,13 +1195,28 @@ update_config_file() {
     local config_name="$2"
 
     if [[ -f "$config_file" ]]; then
+        if grep -q "^$NAME_SNAKE\\.base_url[[:space:]]*=" "$config_file"; then
+            log_warning "Skipping $config_name update - $NAME_SNAKE already exists"
+            return 0
+        fi
+
         # Check if [connectors] section exists
         if grep -q "^\[connectors\]" "$config_file"; then
-            # Insert after [connectors] section header
-            sed -i.bak "/^\[connectors\]/a\\
-$NAME_SNAKE.base_url = \"$BASE_URL\"
-" "$config_file"
-            rm -f "$config_file.bak"
+            python3 - "$NAME_SNAKE" "$BASE_URL" "$config_file" <<'PYEOF'
+import sys
+
+name = sys.argv[1]
+base_url = sys.argv[2]
+path = sys.argv[3]
+lines = open(path).read().splitlines(keepends=True)
+for idx, line in enumerate(lines):
+    if line.strip() == "[connectors]":
+        lines.insert(idx + 1, f'{name}.base_url = "{base_url}"\n')
+        break
+else:
+    raise SystemExit("[connectors] section not found")
+open(path, "w").write("".join(lines))
+PYEOF
             log_success "Updated $config_name in [connectors] section"
         else
             # Create [connectors] section at the end
@@ -1066,7 +1243,7 @@ update_config() {
 }
 
 update_field_probe() {
-    log_step "Updating field-probe (ConnectorEnum match arm)"
+    log_step "Updating field-probe auth.rs (ConnectorEnum match arm)"
 
     # Check if already exists
     if grep -q "ConnectorEnum::$NAME_PASCAL =>" "$FIELD_PROBE_FILE" 2>/dev/null; then
@@ -1074,17 +1251,26 @@ update_field_probe() {
         return 0
     fi
 
-    # Add match arm after the last entry (Finix) in the ConnectorEnum -> ConnectorSpecificConfig match
-    sed -i.bak "/ConnectorEnum::Finix => ConnectorSpecificConfig::Finix/,/},/ {
-        /},/ a\\
-\\        ConnectorEnum::$NAME_PASCAL => ConnectorSpecificConfig::$NAME_PASCAL {\\
-            api_key: k(),\\
-            base_url: None,\\
-        },
-    }" "$FIELD_PROBE_FILE"
-    rm -f "$FIELD_PROBE_FILE.bak"
+    python3 - "$NAME_PASCAL" "$FIELD_PROBE_FILE" <<'PYEOF'
+import re
+import sys
 
-    log_success "Updated field-probe with $NAME_PASCAL match arm"
+name = sys.argv[1]
+path = sys.argv[2]
+content = open(path).read()
+arm = (
+    f"        ConnectorEnum::{name} => ConnectorSpecificConfig::{name} {{\n"
+    f"            api_key: k(),\n"
+    f"            base_url: None,\n"
+    f"        }},\n"
+)
+content, count = re.subn(r"(\n    \}\n\}\s*)$", "\n" + arm + r"\1", content, count=1)
+if count != 1:
+    raise SystemExit("dummy_auth match closing anchor not found")
+open(path, "w").write(content)
+PYEOF
+
+    log_success "Updated field-probe auth.rs with $NAME_PASCAL match arm"
 }
 
 # =============================================================================
@@ -1095,9 +1281,9 @@ format_code() {
     log_step "Formatting code"
 
     if command -v cargo >/dev/null 2>&1; then
-        if cargo +nightly fmt --all >/dev/null 2>&1; then
+        if (cd "$ROOT_DIR" && cargo +nightly fmt --all >/dev/null 2>&1); then
             log_success "Code formatted with nightly rustfmt"
-        elif cargo fmt --all >/dev/null 2>&1; then
+        elif (cd "$ROOT_DIR" && cargo fmt --all >/dev/null 2>&1); then
             log_success "Code formatted with stable rustfmt"
         else
             log_warning "Code formatting failed"
@@ -1113,7 +1299,7 @@ validate_compilation() {
     if command -v cargo >/dev/null 2>&1; then
         log_info "Running cargo check..."
 
-        if (cd "$BACKEND_DIR" && cargo check 2>&1); then
+        if (cd "$ROOT_DIR" && cargo check --package connector-integration 2>&1); then
             log_success "Compilation validation passed"
             return 0
         else
@@ -1138,8 +1324,8 @@ emergency_rollback() {
 
     if [[ -n "$BACKUP_DIR" ]] && [[ -d "$BACKUP_DIR" ]]; then
         # Remove created files
-        rm -f "$BACKEND_DIR/connector-integration/src/connectors/$NAME_SNAKE.rs"
-        rm -rf "$BACKEND_DIR/connector-integration/src/connectors/$NAME_SNAKE"
+        rm -f "$CRATES_INTEGRATIONS/connector-integration/src/connectors/$NAME_SNAKE.rs"
+        rm -rf "$CRATES_INTEGRATIONS/connector-integration/src/connectors/$NAME_SNAKE"
 
         # Restore backed up files
         local backup_file
@@ -1160,8 +1346,14 @@ emergency_rollback() {
                     "integration_types.rs")
                         cp "$backup_file" "$INTEGRATION_TYPES_FILE"
                         ;;
+                    "default_implementations.rs")
+                        cp "$backup_file" "$DEFAULT_IMPL_FILE"
+                        ;;
                     "router_data.rs")
                         cp "$backup_file" "$ROUTER_DATA_FILE"
+                        ;;
+                    "field_probe_auth.rs")
+                        cp "$backup_file" "$FIELD_PROBE_FILE"
                         ;;
                     "connectors.rs")
                         cp "$backup_file" "$CONNECTORS_MODULE_FILE"
@@ -1292,6 +1484,7 @@ main() {
     update_router_data_grpc_auth
     update_connectors_module
     update_integration_types
+    update_default_implementations
     update_config
     update_field_probe
 
