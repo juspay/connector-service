@@ -333,6 +333,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         state: None,
         connector_feature_data: None,
         payment_method_type: None,
+        refund_amount: None,
     }
 }
 
