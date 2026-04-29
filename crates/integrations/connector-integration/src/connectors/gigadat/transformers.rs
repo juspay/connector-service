@@ -1,6 +1,6 @@
 use common_enums::{AttemptStatus, Currency, PayoutStatus, RefundStatus};
 use common_utils::{
-    ext_traits::OptionExt,
+    collect_missing_value_keys,
     id_type, request::Method, types::FloatMajorUnit,
 };
 use domain_types::{
@@ -767,46 +767,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 context: Default::default(),
             })?;
 
-        let email = item
-            .router_data
-            .request
-            .email
-            .clone()
-            .get_required_value("email")
-            .change_context(IntegrationError::MissingRequiredField {
-                field_name: "email",
+        let missing_fields = collect_missing_value_keys!(
+            ("email", item.router_data.request.email.as_ref()),
+            ("name", item.router_data.request.name.as_ref()),
+            ("mobile", item.router_data.request.mobile.as_ref()),
+            ("user_ip", item.router_data.request.user_ip.as_ref())
+        );
+
+        if !missing_fields.is_empty() {
+            return Err(IntegrationError::MissingRequiredFields {
+                field_names: missing_fields,
                 context: Default::default(),
-            })?;
-        let name = item
-            .router_data
-            .request
-            .name
-            .clone()
-            .get_required_value("name")
-            .change_context(IntegrationError::MissingRequiredField {
-                field_name: "name",
-                context: Default::default(),
-            })?;
-        let mobile = item
-            .router_data
-            .request
-            .mobile
-            .clone()
-            .get_required_value("mobile")
-            .change_context(IntegrationError::MissingRequiredField {
-                field_name: "mobile",
-                context: Default::default(),
-            })?;
-        let user_ip = item
-            .router_data
-            .request
-            .user_ip
-            .clone()
-            .get_required_value("user_ip")
-            .change_context(IntegrationError::MissingRequiredField {
-                field_name: "user_ip",
-                context: Default::default(),
-            })?;
+            }
+            .into());
+        }
+
+        let email = item.router_data.request.email.clone().unwrap();
+        let name = item.router_data.request.name.clone().unwrap();
+        let mobile = item.router_data.request.mobile.clone().unwrap();
+        let user_ip = item.router_data.request.user_ip.clone().unwrap();
 
         let customer_id = id_type::CustomerId::try_from(std::borrow::Cow::from(
             item.router_data
