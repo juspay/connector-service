@@ -564,6 +564,7 @@ pub enum ImerchantsolutionsWebhookEventType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ImerchantsolutionsWebhookStatus {
+    Authorized,
     PartiallyCaptured,
     Captured,
     PartiallyRefunded,
@@ -1163,6 +1164,8 @@ impl ForeignTryFrom<(ImerchantsolutionsWebhookStatus, Option<CaptureMethod>)> fo
         (item, capture_method): (ImerchantsolutionsWebhookStatus, Option<CaptureMethod>),
     ) -> Result<Self, Self::Error> {
         match item {
+            ImerchantsolutionsWebhookStatus::Authorized => Ok(Self::Authorized),
+
             ImerchantsolutionsWebhookStatus::PartiallyCaptured => match capture_method {
                 Some(CaptureMethod::ManualMultiple) => Ok(Self::PartialChargedAndChargeable),
                 Some(CaptureMethod::Manual) => Ok(Self::PartialCharged),
@@ -1262,7 +1265,8 @@ impl TryFrom<ImerchantsolutionsWebhookStatus> for RefundStatus {
                 Ok(Self::Failure)
             }
 
-            ImerchantsolutionsWebhookStatus::Cancelled
+            ImerchantsolutionsWebhookStatus::Authorized
+            | ImerchantsolutionsWebhookStatus::Cancelled
             | ImerchantsolutionsWebhookStatus::PartiallyCaptured
             | ImerchantsolutionsWebhookStatus::Captured => {
                 Err(errors::WebhookError::WebhookBodyDecodingFailed.into())
@@ -1287,6 +1291,9 @@ impl
     ) -> Result<Self, Self::Error> {
         match event_type {
             ImerchantsolutionsWebhookEventType::PaymentCompleted => match status {
+                ImerchantsolutionsWebhookStatus::Authorized => {
+                    Ok(Self::PaymentIntentAuthorizationSuccess)
+                }
                 ImerchantsolutionsWebhookStatus::PartiallyCaptured => {
                     Ok(Self::PaymentIntentPartiallyFunded)
                 }
