@@ -19,6 +19,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.29.0
+
+### Features
+
+- **connector:**
+  - Implement MIT for trustpayments ([#919](https://github.com/juspay/connector-service/pull/919)) ([`f1df89f`](https://github.com/juspay/connector-service/commit/f1df89f9f148c3285acf0b9aab68ab6f75fc4cf7))
+  - Implement BankDebit for nuvei (review fixes) ([#1192](https://github.com/juspay/connector-service/pull/1192)) ([`db4b679`](https://github.com/juspay/connector-service/commit/db4b67987fce94e8aa4b19c30d7ce056f44aa423))
+- **core:** GRPC error responses with structured proto error details ([#1163](https://github.com/juspay/connector-service/pull/1163)) ([`e7ea66b`](https://github.com/juspay/connector-service/commit/e7ea66bab157e1a575b61ca5889b1a5771e98efa))
+- **phonepe:** Implement all payment flows with UPI, wallet, and webhook support ([#1094](https://github.com/juspay/connector-service/pull/1094)) ([`0ff19ef`](https://github.com/juspay/connector-service/commit/0ff19ef7052aee20793aa943fddb8e9361605170))
+
+### Documentation
+
+- **readme:** Fix broken hyperlink to connector coverage ([#1189](https://github.com/juspay/connector-service/pull/1189)) ([`04113ac`](https://github.com/juspay/connector-service/commit/04113acf50309e558d813bca04fb9f49040b5ccc))
+
+**Full Changelog:** [`2026.04.28.0...2026.04.29.0`](https://github.com/juspay/connector-service/compare/2026.04.28.0...2026.04.29.0)
+
+- - -
+
+## 2026.04.28.0
+
+### Features
+
+- **connector:**
+  - Implement MIT for peachpayments ([#912](https://github.com/juspay/connector-service/pull/912)) ([`4a14e4f`](https://github.com/juspay/connector-service/commit/4a14e4fd91001d84c06aac1040f1f9649e61e627))
+  - Implement MIT for paybox ([#909](https://github.com/juspay/connector-service/pull/909)) ([`b5aec2b`](https://github.com/juspay/connector-service/commit/b5aec2b55737a0ab4d3d1553682261316cf670bf))
+  - Implement SetupRecurring for stax ([#1065](https://github.com/juspay/connector-service/pull/1065)) ([`c3119de`](https://github.com/juspay/connector-service/commit/c3119def15ee84cab81ff8350741cef9c43a5433))
+
+**Full Changelog:** [`2026.04.27.1...2026.04.28.0`](https://github.com/juspay/connector-service/compare/2026.04.27.1...2026.04.28.0)
+
+- - -
+
+## 2026.04.27.1
+
+### Features
+
+- **connector:**
+  - Implement MIT for barclaycard ([#900](https://github.com/juspay/connector-service/pull/900)) ([`19f2317`](https://github.com/juspay/connector-service/commit/19f2317c14ee9a63af0fb8e577f9bd32acf7b9bc))
+  - Implement MIT for Rapyd ([#880](https://github.com/juspay/connector-service/pull/880)) ([`36cfbeb`](https://github.com/juspay/connector-service/commit/36cfbeb3b69566037fae565328da7b843ea5ea6e))
+- **wallets:** Add more wallets in field probe ([#1182](https://github.com/juspay/connector-service/pull/1182)) ([`1019373`](https://github.com/juspay/connector-service/commit/10193731058e20c6ac054838d868398291c5543d))
+
+### Bug Fixes
+
+- **connector:** [globalpay] pass permissions in clientauth flow ([#1090](https://github.com/juspay/connector-service/pull/1090)) ([`bdc981d`](https://github.com/juspay/connector-service/commit/bdc981d8123632258baff4ccaac2e109f1f9a35f))
+- **events:** Stringify post-transformation CKH field names ([#1183](https://github.com/juspay/connector-service/pull/1183)) ([`c57fcb5`](https://github.com/juspay/connector-service/commit/c57fcb52d83ee95a81779c1d2c3c7defb0c62086))
+
+### Refactors
+
+- **connector:** Ppro webhooks fix. ([#1178](https://github.com/juspay/connector-service/pull/1178)) ([`5a8e20c`](https://github.com/juspay/connector-service/commit/5a8e20c28745a6ac60e96ec011321985c7bce421))
+- Rename test suite identifiers from snake_case to ServiceName/FlowName format ([#999](https://github.com/juspay/connector-service/pull/999)) ([`bd36f59`](https://github.com/juspay/connector-service/commit/bd36f596b57676d0e41986827b8610f178956565))
+
+### Documentation
+
+- Sync README updates and add FAQs ([#1171](https://github.com/juspay/connector-service/pull/1171)) ([`0776694`](https://github.com/juspay/connector-service/commit/07766943a934ab58ae4e0a0973f13ae4a7cb2905))
+
+**Full Changelog:** [`2026.04.27.0...2026.04.27.1`](https://github.com/juspay/connector-service/compare/2026.04.27.0...2026.04.27.1)
+
+- - -
+
 ## 2026.04.27.0
 
 ### Features
