@@ -162,7 +162,7 @@ where
     Resp: Clone + 'static + std::fmt::Debug,
     ResourceCommonData: Clone + RawConnectorRequestResponse + ConnectorResponseHeaders,
 {
-    let return_raw = event_params.map_or(true, |p| p.return_raw_connector_data);
+    let return_raw = event_params.is_none_or(|p| p.return_raw_connector_data);
     match response {
         Ok(body) => {
             let response = match body {

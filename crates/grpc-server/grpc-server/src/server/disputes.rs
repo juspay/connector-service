@@ -160,7 +160,7 @@ impl DisputeService for Disputes {
                         resource_id: &resource_id,
                         shadow_mode,
                         tenant_id: &tenant_id,
-                        return_raw_connector_data: config.return_raw_connector_data,
+                        return_raw_connector_data: config.common.return_raw_connector_data,
                     };
 
                     let response = Box::pin(
@@ -381,7 +381,7 @@ impl DisputeService for Disputes {
                         resource_id: &resource_id,
                         shadow_mode,
                         tenant_id: &tenant_id,
-                        return_raw_connector_data: config.return_raw_connector_data,
+                        return_raw_connector_data: config.common.return_raw_connector_data,
                     };
 
                     let response = Box::pin(

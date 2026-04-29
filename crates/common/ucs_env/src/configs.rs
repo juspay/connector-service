@@ -42,8 +42,6 @@ pub struct Config {
     pub webhook_source_verification_call: WebhookSourceVerificationCall,
     #[serde(default)]
     pub connector_request_kafka: ConnectorRequestKafkaConfig,
-    #[serde(default = "default_true")]
-    pub return_raw_connector_data: bool,
     /// Superposition configuration for connector URL resolution
     /// This is loaded at startup from config/superposition.toml
     #[serde(skip)]
@@ -174,19 +172,22 @@ impl ApiTagConfig {
 #[derive(Clone, Deserialize, Debug, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct Common {
     pub environment: consts::Env,
+    #[serde(default = "default_true")]
+    pub return_raw_connector_data: bool,
 }
 
 impl Default for Common {
     fn default() -> Self {
         Self {
             environment: consts::Env::Development,
+            return_raw_connector_data: true,
         }
     }
 }
 
 impl Common {
     pub fn validate(&self) -> Result<(), config::ConfigError> {
-        let Self { environment } = self;
+        let environment = &self.environment;
         match environment {
             consts::Env::Development | consts::Env::Production | consts::Env::Sandbox => Ok(()),
         }

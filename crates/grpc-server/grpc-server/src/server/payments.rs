@@ -419,7 +419,7 @@ impl CustomerService for Customer {
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                         tenant_id: &metadata_payload.tenant_id,
-                        return_raw_connector_data: config.return_raw_connector_data,
+                        return_raw_connector_data: config.common.return_raw_connector_data,
                     };
 
                     let response = Box::pin(
@@ -547,7 +547,7 @@ impl Payments {
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
             tenant_id: &metadata_payload.tenant_id,
-            return_raw_connector_data: config.return_raw_connector_data,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         // Execute connector processing - ONLY the authorize call
@@ -667,7 +667,7 @@ impl Payments {
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
             tenant_id: &metadata_payload.tenant_id,
-            return_raw_connector_data: config.return_raw_connector_data,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         let response = Box::pin(
@@ -1052,7 +1052,7 @@ impl PaymentService for Payments {
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                         tenant_id: &metadata_payload.tenant_id,
-                        return_raw_connector_data: config.return_raw_connector_data,
+                        return_raw_connector_data: config.common.return_raw_connector_data,
                     };
 
                     // handle_response field removed from proto (field 5 reserved)
@@ -2180,7 +2180,7 @@ impl PaymentMethod {
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
             tenant_id: &metadata_payload.tenant_id,
-            return_raw_connector_data: config.return_raw_connector_data,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         let response = Box::pin(
@@ -2288,7 +2288,7 @@ impl MerchantAuthentication {
             resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
             tenant_id: event_params.tenant_id,
-            return_raw_connector_data: config.return_raw_connector_data,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         // Execute connector processing
@@ -2402,7 +2402,7 @@ impl MerchantAuthentication {
             resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
             tenant_id: event_params.tenant_id,
-            return_raw_connector_data: config.return_raw_connector_data,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         let response = Box::pin(
@@ -2878,7 +2878,7 @@ impl RecurringPaymentService for RecurringPayments {
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                         tenant_id: &metadata_payload.tenant_id,
-                        return_raw_connector_data: config.return_raw_connector_data,
+                        return_raw_connector_data: config.common.return_raw_connector_data,
                     };
 
                     let response = Box::pin(
