@@ -19,6 +19,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.29.0
+
+### Features
+
+- **connector:**
+  - Implement MIT for trustpayments ([#919](https://github.com/juspay/connector-service/pull/919)) ([`f1df89f`](https://github.com/juspay/connector-service/commit/f1df89f9f148c3285acf0b9aab68ab6f75fc4cf7))
+  - Implement BankDebit for nuvei (review fixes) ([#1192](https://github.com/juspay/connector-service/pull/1192)) ([`db4b679`](https://github.com/juspay/connector-service/commit/db4b67987fce94e8aa4b19c30d7ce056f44aa423))
+- **core:** GRPC error responses with structured proto error details ([#1163](https://github.com/juspay/connector-service/pull/1163)) ([`e7ea66b`](https://github.com/juspay/connector-service/commit/e7ea66bab157e1a575b61ca5889b1a5771e98efa))
+- **phonepe:** Implement all payment flows with UPI, wallet, and webhook support ([#1094](https://github.com/juspay/connector-service/pull/1094)) ([`0ff19ef`](https://github.com/juspay/connector-service/commit/0ff19ef7052aee20793aa943fddb8e9361605170))
+
+### Documentation
+
+- **readme:** Fix broken hyperlink to connector coverage ([#1189](https://github.com/juspay/connector-service/pull/1189)) ([`04113ac`](https://github.com/juspay/connector-service/commit/04113acf50309e558d813bca04fb9f49040b5ccc))
+
+**Full Changelog:** [`2026.04.28.0...2026.04.29.0`](https://github.com/juspay/connector-service/compare/2026.04.28.0...2026.04.29.0)
+
+- - -
+
 ## 2026.04.28.0
 
 ### Features

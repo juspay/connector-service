@@ -392,6 +392,7 @@ pub struct Connectors {
     pub pinelabs_online: ConnectorParams,
     pub easebuzz: ConnectorParams,
     pub imerchantsolutions: ConnectorParams,
+    pub axisbank: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -3120,6 +3121,19 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::Money> for common_utils::types::Money {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::Money,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+        })
+    }
+}
+
 impl<
         T: PaymentMethodDataTypes
             + Default
@@ -4163,7 +4177,7 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             minor_amount_capturable: None,
             amount: None,
             access_token: None,
-            session_token: None,
+            session_token: value.session_token,
             reference_id: None,
             connector_order_id: None,
             preprocessing_id: None,
@@ -6370,6 +6384,10 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
+            refund_money: value
+                .refund_amount
+                .map(common_utils::types::Money::foreign_try_from)
                 .transpose()?,
         })
     }

@@ -62,6 +62,14 @@ payment_methods: Ach, Card
 flows: authorize, capture, create_customer, get, handle_event, parse_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, void
 examples_python: examples/authorizedotnet/authorizedotnet.py
 
+## Axisbank
+connector_id: axisbank
+doc: docs/connectors/axisbank.md
+scenarios: none
+payment_methods: none
+flows: 
+examples_python: none
+
 ## Bambora
 connector_id: bambora
 doc: docs/connectors/bambora.md
@@ -410,7 +418,7 @@ examples_python: examples/novalnet/novalnet.py
 connector_id: nuvei
 doc: docs/connectors/nuvei.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
-payment_methods: Card
+payment_methods: Ach, Card, Eps, Giropay, Ideal, Sofort
 flows: authorize, capture, create_client_authentication_token, create_order, create_server_session_authentication_token, get, refund, refund_get, void
 examples_python: examples/nuvei/nuvei.py
 
