@@ -16,6 +16,7 @@ use domain_types::{
     router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
 };
+use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
@@ -432,6 +433,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 context: Default::default(),
             }
         })?;
+        let auth = ItaubankAuthType::try_from(&req.connector_config)?;
 
         Ok(vec![
             (
@@ -449,7 +451,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ),
             (
                 headers::X_ITAU_API_KEY.to_string(),
-                format!("Bearer {access_token}").into_masked(),
+                auth.client_id.expose().into_masked(),
             ),
         ])
     }
@@ -547,6 +549,7 @@ macros::macro_connector_implementation!(
                     context: Default::default(),
                 }
             })?;
+            let auth = ItaubankAuthType::try_from(&req.connector_config)?;
 
             Ok(vec![
                 (
@@ -564,7 +567,7 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::X_ITAU_API_KEY.to_string(),
-                    format!("Bearer {access_token}").into_masked(),
+                    auth.client_id.expose().into_masked(),
                 )
             ])
         }
