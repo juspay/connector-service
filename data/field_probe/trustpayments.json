@@ -193,6 +193,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
@@ -225,6 +229,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
@@ -232,6 +240,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
       },
       "GooglePay": {
         "status": "error",
@@ -314,6 +326,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
@@ -347,6 +363,14 @@
         "error": "This feature is not implemented: Payment method not supported"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
@@ -422,6 +446,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -486,11 +514,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
@@ -503,6 +547,10 @@
         "error": "This feature is not implemented: Payment method not supported"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not supported"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not supported"
       },
@@ -692,12 +740,77 @@
     },
     "proxy_setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_proxy_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "card_proxy": {
+            "card_number": "4111111111111111",
+            "card_exp_month": "03",
+            "card_exp_year": "2030",
+            "card_cvc": "123",
+            "card_holder_name": "John Doe"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "customer_acceptance": {
+            "acceptance_type": "OFFLINE",
+            "accepted_at": 0
+          },
+          "auth_type": "NO_THREE_DS",
+          "setup_future_usage": "OFF_SESSION"
+        },
+        "sample": {
+          "url": "https://webservices.securetrading.net/json/",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"accounttypedescription\":\"ECOM\",\"baseamount\":\"0\",\"credentialsonfile\":\"1\",\"currencyiso3a\":\"USD\",\"orderreference\":\"probe_proxy_mandate_001\",\"requesttypedescriptions\":[\"AUTH\"],\"sitereference\":\"probe_site_ref\",\"settlestatus\":\"0\",\"pan\":\"4111111111111111\",\"expirydate\":\"03/30\",\"securitycode\":\"123\"}]}"
+        }
       }
     },
     "recurring_charge": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "connector_recurring_payment_id": {
+            "mandate_id_type": {
+              "connector_mandate_id": {
+                "connector_mandate_id": "probe-mandate-123"
+              }
+            }
+          },
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "token": {
+              "token": "probe_pm_token"
+            }
+          },
+          "return_url": "https://example.com/recurring-return",
+          "connector_customer_id": "cust_probe_123",
+          "payment_method_type": "PAY_PAL",
+          "off_session": true
+        },
+        "sample": {
+          "url": "https://webservices.securetrading.net/json/",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"accounttypedescription\":\"ECOM\",\"baseamount\":\"1000\",\"credentialsonfile\":\"2\",\"currencyiso3a\":\"USD\",\"parenttransactionreference\":\"probe-mandate-123\",\"requesttypedescriptions\":[\"AUTH\"],\"sitereference\":\"probe_site_ref\",\"initiationreason\":\"C\",\"settlestatus\":\"0\"}]}"
+        }
       }
     },
     "recurring_revoke": {
@@ -757,7 +870,45 @@
     },
     "setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "enrolled_for_3ds": false,
+          "return_url": "https://example.com/mandate-return",
+          "setup_future_usage": "OFF_SESSION",
+          "request_incremental_authorization": false,
+          "customer_acceptance": {
+            "acceptance_type": "OFFLINE",
+            "accepted_at": 0
+          }
+        },
+        "sample": {
+          "url": "https://webservices.securetrading.net/json/",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"accounttypedescription\":\"ECOM\",\"baseamount\":\"0\",\"credentialsonfile\":\"1\",\"currencyiso3a\":\"USD\",\"orderreference\":\"probe_mandate_001\",\"requesttypedescriptions\":[\"AUTH\"],\"sitereference\":\"probe_site_ref\",\"settlestatus\":\"0\",\"pan\":\"4111111111111111\",\"expirydate\":\"03/30\",\"securitycode\":\"737\"}]}"
+        }
       }
     },
     "token_authorize": {
@@ -768,7 +919,8 @@
     },
     "token_setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "Payment method not supported for SetupMandate is not supported by trustpayments"
       }
     },
     "tokenize": {
