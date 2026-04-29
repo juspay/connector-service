@@ -27,6 +27,7 @@ use serde::{Deserialize, Serialize};
 use super::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
 use domain_types::errors::{ConnectorError, IntegrationError, IntegrationErrorContext};
+use domain_types::utils::is_payment_failure;
 
 type Error = error_stack::Report<IntegrationError>;
 type ResponseError = error_stack::Report<ConnectorError>;
@@ -795,9 +796,9 @@ fn build_payments_response_result(
     http_code: u16,
     status: AttemptStatus,
 ) -> Result<Result<PaymentsResponseData, ErrorResponse>, ResponseError> {
-    if status == AttemptStatus::Failure {
+    if is_payment_failure(status) {
         Ok(Err(ErrorResponse {
-            attempt_status: Some(AttemptStatus::Failure),
+            attempt_status: Some(status),
             code: response.response_code.clone(),
             message: response
                 .response_message
