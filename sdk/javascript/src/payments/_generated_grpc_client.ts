@@ -275,7 +275,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   AchBankTransferPayout: ["bankAccountNumber", "bankRoutingNumber"],
   BacsBankTransferPayout: ["bankAccountNumber", "bankSortCode"],
   SepaBankTransferPayout: ["iban", "bic"],
-  PixBankTransferPayout: ["bankAccountNumber", "taxId"],
+  PixBankTransferPayout: ["bankAccountNumber", "taxId", "ispb"],
   PixKeyBankTransferPayout: ["pixKey"],
   PixEmvBankTransferPayout: ["emv"],
   ApplePayDecrypt: ["dpan", "expiryMonth", "expiryYear", "cardHolderName"],
