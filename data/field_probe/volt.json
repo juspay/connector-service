@@ -119,6 +119,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
@@ -151,6 +155,10 @@
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
@@ -158,6 +166,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -199,6 +211,10 @@
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
@@ -232,6 +248,14 @@
         "error": "Selected payment method through Volt is not supported by Volt"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
       },
@@ -389,6 +413,10 @@
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -453,11 +481,27 @@
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
       },
@@ -470,6 +514,10 @@
         "error": "Selected payment method through Volt is not supported by Volt"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method through Volt is not supported by Volt"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method through Volt is not supported by Volt"
       },
