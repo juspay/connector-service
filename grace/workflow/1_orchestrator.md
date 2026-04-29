@@ -187,17 +187,15 @@ Store as `CONNECTOR_LIST`.
 
 ---
 
-### STEP 1: PRE-FLIGHT (Full Setup + Verification)
+### STEP 1: PRE-FLIGHT (Setup Check + Verification)
 
-**FIRST: Run full setup (one-time, installs dependencies):**
-
+**Check if setup already done:**
 ```bash
-# Full setup - installs Playwright, grpcurl, test-prism
-make setup-connector-tests
-
-# Verify setup succeeded
-test-prism --help
+test-prism --help && echo "SKIP_SETUP" || make setup-connector-tests
 ```
+
+- If `SKIP_SETUP` echoed → Setup already done, skip
+- Otherwise → Run full setup (one-time)
 
 **THEN: Verify environment:**
 
