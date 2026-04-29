@@ -142,6 +142,7 @@ pub enum ConnectorEnum {
     Sanlam,
     PinelabsOnline,
     Axisbank,
+    Aubank,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -232,6 +233,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::PinelabsOnline => Ok(Self::PinelabsOnline),
             grpc_api_types::payments::Connector::Imerchantsolutions => Ok(Self::Imerchantsolutions),
             grpc_api_types::payments::Connector::Axisbank => Ok(Self::Axisbank),
+            grpc_api_types::payments::Connector::Aubank => Ok(Self::Aubank),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -4182,6 +4184,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Fiservcommercehub(_) => Ok(Self::Fiservcommercehub),
             AuthType::Itaubank(_) => Ok(Self::Itaubank),
             AuthType::Axisbank(_) => Ok(Self::Axisbank),
+            AuthType::Aubank(_) => Ok(Self::Aubank),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 IntegrationError::InvalidDataFormat {
                     field_name: "connector",
