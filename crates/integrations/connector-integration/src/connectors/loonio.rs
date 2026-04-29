@@ -234,7 +234,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Exclude PayoutTransfer and PayoutGet since we implement them manually
 macros::macro_connector_payout_implementation!(
     connector: Loonio,
     generic_type: T,

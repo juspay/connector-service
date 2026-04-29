@@ -630,7 +630,6 @@ impl
                     .connector_request_reference_id
                     .clone();
 
-                // Helper closure for missing required field errors
                 let missing_field = |field_name: &'static str| {
                     error_stack::report!(IntegrationError::MissingRequiredField {
                         field_name,
@@ -638,7 +637,6 @@ impl
                     })
                 };
 
-                // Extract customer name from the customer field - NO FALLBACK
                 let customer = req
                     .request
                     .customer
@@ -650,7 +648,6 @@ impl
                     .as_ref()
                     .ok_or_else(|| missing_field("customer.name"))?;
 
-                // Split the name into first and last name
                 let name_str = name.peek();
                 let mut name_parts = name_str.split_whitespace();
 
@@ -684,7 +681,6 @@ impl
                     country: None,
                 };
 
-                // Convert amount using FloatMajorUnitForConnector
                 let converter = common_utils::types::FloatMajorUnitForConnector;
                 let amount = converter
                     .convert(req.request.amount, req.request.source_currency)
@@ -721,7 +717,6 @@ impl
     }
 }
 
-/// Payout Transfer response structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoonioPayoutTransferResponse {
     pub id: i64,
