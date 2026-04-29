@@ -76,6 +76,13 @@ pub struct IntegrationErrorContext {
     pub additional_context: Option<String>,
 }
 
+/// Default context used for errors that don't have their own context field.
+const DEFAULT_INTEGRATION_ERROR_CONTEXT: IntegrationErrorContext = IntegrationErrorContext {
+    suggested_action: None,
+    doc_url: None,
+    additional_context: None,
+};
+
 /// Fields used when mapping response-phase connector errors to
 /// `ConnectorError`.
 ///
@@ -220,6 +227,10 @@ pub enum IntegrationError {
         message: String,
         context: IntegrationErrorContext,
     },
+    /// An invariant was violated - indicates a programming error where a value
+    /// that was validated earlier is unexpectedly missing.
+    #[error("Invariant violated: {0}")]
+    InvariantViolation(&'static str),
 }
 
 impl IntegrationError {
@@ -277,6 +288,7 @@ impl IntegrationError {
             | Self::MaxFieldLengthViolated { context, .. }
             | Self::SourceVerificationFailed { context }
             | Self::ConfigurationError { context, .. } => context,
+            Self::InvariantViolation(_) => &DEFAULT_INTEGRATION_ERROR_CONTEXT,
         }
     }
 

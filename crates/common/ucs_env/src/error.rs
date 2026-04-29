@@ -136,7 +136,8 @@ impl IntoGrpcStatus for error_stack::Report<IntegrationError> {
             | IntegrationError::HeaderMapConstructionFailed { .. }
             | IntegrationError::BodySerializationFailed { .. }
             | IntegrationError::UrlParsingFailed { .. }
-            | IntegrationError::UrlEncodingFailed { .. } => Status::internal(msg),
+            | IntegrationError::UrlEncodingFailed { .. }
+            | IntegrationError::InvariantViolation(_) => Status::internal(msg),
         }
     }
 }

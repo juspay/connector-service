@@ -779,10 +779,33 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .into());
         }
 
-        let email = item.router_data.request.email.clone().unwrap();
-        let name = item.router_data.request.name.clone().unwrap();
-        let mobile = item.router_data.request.mobile.clone().unwrap();
-        let user_ip = item.router_data.request.user_ip.clone().unwrap();
+        let email =
+            item.router_data
+                .request
+                .email
+                .clone()
+                .ok_or(IntegrationError::InvariantViolation(
+                    "email should be present after validation",
+                ))?;
+        let name =
+            item.router_data
+                .request
+                .name
+                .clone()
+                .ok_or(IntegrationError::InvariantViolation(
+                    "name should be present after validation",
+                ))?;
+        let mobile =
+            item.router_data
+                .request
+                .mobile
+                .clone()
+                .ok_or(IntegrationError::InvariantViolation(
+                    "mobile should be present after validation",
+                ))?;
+        let user_ip = item.router_data.request.user_ip.clone().ok_or(
+            IntegrationError::InvariantViolation("user_ip should be present after validation"),
+        )?;
 
         let customer_id = id_type::CustomerId::try_from(std::borrow::Cow::from(
             item.router_data
