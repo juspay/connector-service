@@ -1488,8 +1488,7 @@ fn apply_vault_config_to_injector(
             injector_request.connection_config.ca_cert = Some(vgs.certificate);
         }
         ExternalVaultProxyMetadata::HyperswitchVaultMetadata(hsv) => {
-            injector_request.connection_config.vault_endpoint =
-                Some(hsv.vault_endpoint);
+            injector_request.connection_config.vault_endpoint = Some(hsv.vault_endpoint);
             injector_request.connection_config.vault_auth_data =
                 Some(injector::VaultConnectorAuth {
                     api_key: hsv.vault_auth_data.api_key,
