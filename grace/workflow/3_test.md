@@ -11,7 +11,7 @@ You are the **sole owner** of running integration tests for ONE connector — mo
 | `{CONNECTOR}` | Connector name (lowercase for files, original for display) |
 | `{TEST_MODE}` | `grpc` (default) or `sdk`                                  |
 | `{BRANCH}`    | Git branch for test fixes                                  |
-| `{TIMEOUT}`   | Timeout per connector (default: 10 minutes)               |
+| `{TIMEOUT}`   | Timeout per connector (default: 10 minutes)                |
 
 ---
 
@@ -34,6 +34,7 @@ cat creds.json | jq '.${CONNECTOR}'
 ```
 
 **If NO credentials:**
+
 - Result: **SKIPPED**
 - Reason: "No credentials in creds.json"
 - Stop here — do NOT run tests
@@ -53,6 +54,7 @@ test-prism --connector {CONNECTOR} --interface {TEST_MODE} --report
 ```
 
 **Or for a specific suite:**
+
 ```bash
 test-prism --connector {CONNECTOR} --suite authorize
 ```
@@ -60,6 +62,7 @@ test-prism --connector {CONNECTOR} --suite authorize
 **Capture the full output** — save test results for analysis.
 
 **View results in UI:**
+
 - Web: https://hyperswitch-prism-testing.netlify.app/
 - Latest JSON: https://integ.hyperswitch.io/connector-service/reports/grpc/report_latest.json
 
@@ -68,12 +71,14 @@ test-prism --connector {CONNECTOR} --suite authorize
 ## Phase 2: Analyze Results
 
 ### If ALL tests pass:
+
 - Result: **HARDENED**
 - The connector is now fully tested and can move to "Tested" status in docs
 
 ### If tests FAIL:
 
 **FORCE FIX — NEVER ASK:**
+
 - If test fails due to test data (positive override) → FIX IT NOW, don't ask
 - If test fails due to connector code bug → FAILED (report)
 - If test fails due to framework bug → REPORT_TO_MASTER (stop)
@@ -115,11 +120,11 @@ test-prism --connector {CONNECTOR} --suite authorize
    - Requires change to testing framework core (harness, global_suites)
    - **→ STOP, report to master, do NOT modify codebase**
 
-**For POSITIVE Override Test Bugs** → Proceed to Phase 3  
-**For Credentials Issues** → Fix creds.json, rerun tests  
-**For NEGATIVE Override** → Result: **FAILED** (report, don't fix)  
-**For Real Bugs** → Result: **FAILED** (report, don't fix connector)  
-**For Payment Method Not Supported** → Result: **REPORT_TO_MASTER** (notify not implemented)  
+**For POSITIVE Override Test Bugs** → Proceed to Phase 3
+**For Credentials Issues** → Fix creds.json, rerun tests
+**For NEGATIVE Override** → Result: **FAILED** (report, don't fix)
+**For Real Bugs** → Result: **FAILED** (report, don't fix connector)
+**For Payment Method Not Supported** → Result: **REPORT_TO_MASTER** (notify not implemented)
 **For UCS Code Bugs** → Result: **REPORT_TO_MASTER** (stop, notify)
 
 ---
@@ -127,6 +132,7 @@ test-prism --connector {CONNECTOR} --suite authorize
 ## Phase 3: Fix Positive Override Issues
 
 **GUARDRAILS (STRICT):**
+
 - ✅ DO: Fix test data, assertions, field names (positive overrides)
 - ❌ DO NOT: Touch UCS core code (`crates/connector-integration/`)
 - ❌ DO NOT: Touch testing framework core code ( harness, global_suites)
@@ -171,12 +177,12 @@ test-prism --connector {CONNECTOR} --report
 
 **Return result:**
 
-| Field      | Value                                                                      |
-| ---------- | -------------------------------------------------------------------------- |
-| CONNECTOR  | {connector}                                                                 |
-| STATUS     | HARDENED | FAILED | SKIPPED | REPORT_TO_MASTER | CREDENTIALS_FIXED |
-| REASON     | {explanation}                                                             |
-| FIX_COMMIT | {commit hash if applicable}                                              |
+| Field      | Value                       |
+| ---------- | --------------------------- | ------ | ------- | ---------------- | ----------------- |
+| CONNECTOR  | {connector}                 |
+| STATUS     | HARDENED                    | FAILED | SKIPPED | REPORT_TO_MASTER | CREDENTIALS_FIXED |
+| REASON     | {explanation}               |
+| FIX_COMMIT | {commit hash if applicable} |
 
 ---
 

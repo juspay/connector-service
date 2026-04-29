@@ -190,6 +190,7 @@ Store as `CONNECTOR_LIST`.
 ### STEP 1: PRE-FLIGHT (Setup Check + Verification)
 
 **Check if setup already done:**
+
 ```bash
 test-prism --help && echo "SKIP_SETUP" || make setup-connector-tests
 ```
@@ -208,14 +209,17 @@ cat creds.json | head -20
 ```
 
 **Credentials Check (REQUIRED per connector):**
+
 - Before running tests for each connector, verify creds exist
 - If no creds → SKIP connector
 
 **Timeout:**
+
 - Set `UCS_TEST_TIMEOUT=600` (10 minutes per connector)
 - Tests typically take 5-10 minutes
 
 **View test results:**
+
 - Web: https://hyperswitch-prism-testing.netlify.app/
 - Latest JSON: https://integ.hyperswitch.io/connector-service/reports/grpc/report_latest.json
 
@@ -263,7 +267,7 @@ Failed connectors (need manual review):
 
 ## Subagent Reference
 
-| Agent            | File                        | Purpose                                                              |
-| ---------------- | --------------------------- | -------------------------------------------------------------------- |
-| Connector Agent  | `2_connector.md`            | Implements payment flows for one connector                           |
-| Test Suite Agent | `3_test.md` | Runs integration tests, fixes test bugs, validates for one connector |
+| Agent            | File             | Purpose                                                              |
+| ---------------- | ---------------- | -------------------------------------------------------------------- |
+| Connector Agent  | `2_connector.md` | Implements payment flows for one connector                           |
+| Test Suite Agent | `3_test.md`      | Runs integration tests, fixes test bugs, validates for one connector |
