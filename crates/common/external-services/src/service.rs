@@ -58,8 +58,8 @@ pub enum VaultConnectorType {
 pub struct VaultConnectorAuth {
     /// API key for authenticating with the vault connector
     pub api_key: Secret<String>,
-    /// API secret for authenticating with the vault connector
-    pub api_secret: Secret<String>,
+    /// profile ID for authenticating with the vault connector
+    pub profile_id: Secret<String>,
 }
 
 /// External Vault Proxy Related Metadata
@@ -542,7 +542,11 @@ where
                             .or(proxy.http_url.as_ref())
                             .map(|url| Secret::new(url.clone()));
                         let injector_request = build_injector_request(
-                            request.url.clone(),
+                            Url::parse(&request.url).change_context(ConnectorFlowError::from(
+                                IntegrationError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                },
+                            ))?,
                             request.method.to_http_method(),
                             template,
                             token_data,
@@ -1485,11 +1489,11 @@ fn apply_vault_config_to_injector(
         }
         ExternalVaultProxyMetadata::HyperswitchVaultMetadata(hsv) => {
             injector_request.connection_config.vault_endpoint =
-                Some(hsv.vault_endpoint.to_string());
+                Some(hsv.vault_endpoint);
             injector_request.connection_config.vault_auth_data =
                 Some(injector::VaultConnectorAuth {
                     api_key: hsv.vault_auth_data.api_key,
-                    api_secret: hsv.vault_auth_data.api_secret,
+                    profile_id: hsv.vault_auth_data.profile_id,
                 });
         }
     }
@@ -1502,7 +1506,7 @@ fn apply_vault_config_to_injector(
 /// `x-external-vault-metadata` header is present in vault headers.
 #[cfg(feature = "injector-client")]
 fn build_injector_request(
-    endpoint: String,
+    endpoint: Url,
     http_method: HttpMethod,
     template: String,
     token_data: TokenData,
