@@ -149,6 +149,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
@@ -181,6 +185,10 @@
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
@@ -188,6 +196,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -229,6 +241,10 @@
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
@@ -262,6 +278,14 @@
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
@@ -337,6 +361,10 @@
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -401,11 +429,27 @@
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
@@ -418,6 +462,10 @@
         "error": "Payment method not supported is not supported by Bamboraapac"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Bamboraapac"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Payment method not supported is not supported by Bamboraapac"
       },

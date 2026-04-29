@@ -181,6 +181,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
@@ -241,6 +245,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
+      },
       "Giropay": {
         "status": "supported",
         "proto_request": {
@@ -276,6 +284,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "GooglePay": {
         "status": "supported",
@@ -430,6 +442,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
@@ -463,6 +479,14 @@
         "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
@@ -568,6 +592,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -663,6 +691,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "supported",
         "proto_request": {
@@ -694,6 +726,14 @@
           },
           "body": "{\"type\":\"redirect\",\"order_id\":\"probe_txn_001\",\"gateway\":\"SOFORT\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_txn_001\",\"email\":\"test@example.com\"},\"delivery\":{},\"days_active\":30,\"seconds_active\":259200}"
         }
+      },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "Trustly": {
         "status": "supported",
@@ -727,6 +767,10 @@
           "body": "{\"type\":\"redirect\",\"order_id\":\"probe_txn_001\",\"gateway\":\"TRUSTLY\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_txn_001\",\"email\":\"test@example.com\"},\"delivery\":{},\"days_active\":30,\"seconds_active\":259200}"
         }
       },
+      "Twint": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
+      },
       "UpiCollect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
@@ -736,6 +780,10 @@
         "error": "This feature is not implemented: Selected payment method through multisafepay"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Selected payment method through multisafepay"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through multisafepay"
       },

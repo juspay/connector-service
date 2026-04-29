@@ -272,6 +272,12 @@ pub enum ConnectorSpecificConfig {
         merchant_id: Secret<String>,
         base_url: Option<String>,
     },
+    Easebuzz {
+        api_key: Secret<String>,
+        api_salt: Secret<String>,
+        base_url: Option<String>,
+        secondary_base_url: Option<String>,
+    },
 
     // --- Two-field connectors ---
     Razorpay {
@@ -725,6 +731,13 @@ pub enum ConnectorSpecificConfig {
         client_secret: Secret<String>,
         base_url: Option<String>,
     },
+    Axisbank {
+        merchant_kid: Secret<String>,
+        juspay_kid: Secret<String>,
+        merchant_private_key: Secret<String>,
+        juspay_public_key: Secret<String>,
+        base_url: Option<String>,
+    },
 }
 
 impl ConnectorSpecificConfig {
@@ -1011,6 +1024,7 @@ impl ConnectorSpecificConfig {
                 api_key,
                 merchant_id
             },
+            Easebuzz { api_key, api_salt },
             Fiservcommercehub {
                 api_key,
                 secret,
@@ -1025,6 +1039,12 @@ impl ConnectorSpecificConfig {
             Itaubank {
                 client_id,
                 client_secret
+            },
+            Axisbank {
+                merchant_kid,
+                juspay_kid,
+                merchant_private_key,
+                juspay_public_key
             },
             PinelabsOnline {
                 client_id,
@@ -1078,6 +1098,9 @@ impl ConnectorSpecificConfig {
                 secondary_base_url, ..
             }
             | Self::Worldpayvantiv {
+                secondary_base_url, ..
+            }
+            | Self::Easebuzz {
                 secondary_base_url, ..
             } => {
                 if let Some(secondary_base_url) = secondary_base_url {
@@ -1405,6 +1428,7 @@ impl ConnectorSpecificConfig {
                     api_key,
                     merchant_id
                 },
+                Easebuzz { api_key, api_salt },
                 Fiservcommercehub {
                     api_key,
                     secret,
@@ -1419,6 +1443,13 @@ impl ConnectorSpecificConfig {
                 Itaubank {
                     client_id,
                     client_secret
+                },
+                Axisbank {
+                    merchant_kid,
+                    juspay_kid,
+                    merchant_private_key,
+                    juspay_public_key,
+                    base_url
                 },
                 PinelabsOnline {
                     client_id,
@@ -1906,6 +1937,13 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 private_key: trustly.private_key.ok_or_else(err)?,
                 base_url: trustly.base_url,
             }),
+            AuthType::Axisbank(axisbank) => Ok(Self::Axisbank {
+                merchant_kid: axisbank.merchant_kid.ok_or_else(err)?,
+                juspay_kid: axisbank.juspay_kid.ok_or_else(err)?,
+                merchant_private_key: axisbank.merchant_private_key.ok_or_else(err)?,
+                juspay_public_key: axisbank.juspay_public_key.ok_or_else(err)?,
+                base_url: axisbank.base_url,
+            }),
             AuthType::Truelayer(truelayer) => Ok(Self::Truelayer {
                 client_id: truelayer.client_id.ok_or_else(err)?,
                 client_secret: truelayer.client_secret.ok_or_else(err)?,
@@ -1937,6 +1975,12 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 client_id: pinelabs_online.client_id.ok_or_else(err)?,
                 client_secret: pinelabs_online.client_secret.ok_or_else(err)?,
                 base_url: pinelabs_online.base_url,
+            }),
+            AuthType::Easebuzz(easebuzz) => Ok(Self::Easebuzz {
+                api_key: easebuzz.api_key.ok_or_else(err)?,
+                api_salt: easebuzz.api_salt.ok_or_else(err)?,
+                base_url: easebuzz.base_url,
+                secondary_base_url: easebuzz.secondary_base_url,
             }),
             AuthType::Imerchantsolutions(imerchantsolutions) => Ok(Self::Imerchantsolutions {
                 api_key: imerchantsolutions.api_key.ok_or_else(err)?,
@@ -2929,6 +2973,17 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
+            ConnectorEnum::Easebuzz => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => {
+                    Ok(ConnectorSpecificConfig::Easebuzz {
+                        api_key: api_key.clone(),
+                        api_salt: key1.clone(),
+                        base_url: None,
+                        secondary_base_url: None,
+                    })
+                }
+                _ => Err(err().into()),
+            },
             ConnectorEnum::Fiservcommercehub => match auth {
                 ConnectorAuthType::MultiAuthKey {
                     api_key,
@@ -2956,6 +3011,21 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::PinelabsOnline {
                     client_id: api_key.clone(),
                     client_secret: key1.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Axisbank => match auth {
+                ConnectorAuthType::MultiAuthKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                    key2,
+                } => Ok(Self::Axisbank {
+                    merchant_kid: api_key.clone(),
+                    juspay_kid: key1.clone(),
+                    merchant_private_key: api_secret.clone(),
+                    juspay_public_key: key2.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

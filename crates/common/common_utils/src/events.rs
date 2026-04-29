@@ -530,7 +530,7 @@ pub(crate) fn process_event_with_config(
     }
 
     // Stringify JSON object fields that CKH expects as String columns
-    for field in &["request_data", "response_data", "error"] {
+    for field in &["request", "masked_response", "error"] {
         if let Some(obj) = result.as_object_mut() {
             if let Some(val) = obj.get(*field) {
                 if val.is_object() || val.is_array() {

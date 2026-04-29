@@ -149,6 +149,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
@@ -181,6 +185,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
@@ -188,6 +196,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -229,6 +241,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
@@ -262,6 +278,14 @@
         "error": "This feature is not implemented: Payment method not implemented"
       },
       "MiniStop": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
       },
@@ -337,6 +361,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -401,11 +429,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
       },
@@ -418,6 +462,10 @@
         "error": "This feature is not implemented: Payment method not implemented"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Payment method not implemented"
       },
@@ -585,12 +633,45 @@
     },
     "proxy_setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_proxy_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "card_proxy": {
+            "card_number": "4111111111111111",
+            "card_exp_month": "03",
+            "card_exp_year": "2030",
+            "card_cvc": "123",
+            "card_holder_name": "John Doe"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "customer_acceptance": {
+            "acceptance_type": "OFFLINE",
+            "accepted_at": 0
+          },
+          "auth_type": "NO_THREE_DS",
+          "setup_future_usage": "OFF_SESSION"
+        },
+        "sample": {
+          "url": "https://stagegw.transnox.com/servlets/transnox_api_server",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"Auth\":{\"deviceID\":\"probe_id\",\"transactionKey\":\"probe_key\",\"cardDataSource\":\"INTERNET\",\"transactionAmount\":\"0\",\"currencyCode\":\"USD\",\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"03/30\",\"cvv2\":\"123\",\"orderNumber\":\"probe_proxy_mandate_001\",\"terminalCapability\":\"NO_TERMINAL_MANUAL\",\"terminalOperatingEnvironment\":\"NO_TERMINAL\",\"cardholderAuthenticationMethod\":\"NOT_AUTHENTICATED\",\"developerID\":\"probe_dev_id\"}}"
+        }
       }
     },
     "recurring_charge": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented for Tsys RepeatPayment"
       }
     },
     "recurring_revoke": {
@@ -648,7 +729,44 @@
     },
     "setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "enrolled_for_3ds": false,
+          "return_url": "https://example.com/mandate-return",
+          "setup_future_usage": "OFF_SESSION",
+          "request_incremental_authorization": false,
+          "customer_acceptance": {
+            "acceptance_type": "OFFLINE",
+            "accepted_at": 0
+          }
+        },
+        "sample": {
+          "url": "https://stagegw.transnox.com/servlets/transnox_api_server",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"Auth\":{\"deviceID\":\"probe_id\",\"transactionKey\":\"probe_key\",\"cardDataSource\":\"INTERNET\",\"transactionAmount\":\"0\",\"currencyCode\":\"USD\",\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"03/30\",\"cvv2\":\"737\",\"orderNumber\":\"probe_mandate_001\",\"terminalCapability\":\"NO_TERMINAL_MANUAL\",\"terminalOperatingEnvironment\":\"NO_TERMINAL\",\"cardholderAuthenticationMethod\":\"NOT_AUTHENTICATED\",\"developerID\":\"probe_dev_id\"}}"
+        }
       }
     },
     "token_authorize": {
@@ -659,7 +777,8 @@
     },
     "token_setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Payment method not implemented for Tsys SetupMandate"
       }
     },
     "tokenize": {

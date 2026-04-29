@@ -148,6 +148,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
@@ -180,6 +184,10 @@
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
@@ -187,6 +195,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -228,6 +240,10 @@
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
@@ -261,6 +277,14 @@
         "error": "Payment method is not supported by worldpayvantiv"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
       },
@@ -336,6 +360,10 @@
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -400,11 +428,27 @@
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
       },
@@ -417,6 +461,10 @@
         "error": "Payment method is not supported by worldpayvantiv"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Payment method is not supported by worldpayvantiv"
       },
