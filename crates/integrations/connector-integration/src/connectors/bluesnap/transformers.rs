@@ -15,7 +15,7 @@ use domain_types::{
         RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificConfig,
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils,
 };
@@ -200,6 +200,22 @@ fn get_attempt_status_from_bluesnap_status(
             AttemptStatus::Pending
         }
         BluesnapProcessingStatus::Fail => AttemptStatus::Failure,
+    }
+}
+
+// Map a card BIN classification to BlueSnap's `cardType` string. Values match
+// what BlueSnap returns in its own responses (e.g. `"cardType":"VISA"`).
+fn bluesnap_card_type_from_issuer(issuer: utils::CardIssuer) -> &'static str {
+    match issuer {
+        utils::CardIssuer::Visa => "VISA",
+        utils::CardIssuer::Master => "MASTERCARD",
+        utils::CardIssuer::AmericanExpress => "AMEX",
+        utils::CardIssuer::Discover => "DISCOVER",
+        utils::CardIssuer::DinersClub | utils::CardIssuer::CarteBlanche => "DINERS",
+        utils::CardIssuer::JCB => "JCB",
+        utils::CardIssuer::Maestro => "MAESTRO",
+        utils::CardIssuer::CartesBancaires => "CB",
+        utils::CardIssuer::UnionPay => "CHINA_UNION_PAY",
     }
 }
 
@@ -1154,6 +1170,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // dual use is confined to the SetupMandate response only.
         let connector_mandate_id = response.vaulted_shopper_id.to_string();
 
+        // 4xx/5xx responses from BlueSnap deserialize via `build_error_response`.
+        // Defensively validate the 2xx body as well: a vaulted-shoppers response
+        // with a non-positive id or no stored credit card cannot back a downstream
+        // MIT charge, so surface it as a Failure instead of silently emitting
+        // `Charged`.
+        let vault_populated = response
+            .payment_sources
+            .as_ref()
+            .and_then(|ps| ps.credit_card_info.as_ref())
+            .map(|cards| !cards.is_empty())
+            .unwrap_or(false);
+
+        if response.vaulted_shopper_id <= 0 || !vault_populated {
+            return Ok(Self {
+                response: Err(ErrorResponse {
+                    status_code: item.http_code,
+                    code: "BLUESNAP_VAULT_NOT_POPULATED".to_string(),
+                    message:
+                        "BlueSnap vaulted-shoppers response did not return a stored credit card; \
+                         the vault profile cannot back downstream MIT charges."
+                            .to_string(),
+                    reason: None,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Failure,
+                    ..item.router_data.resource_common_data
+                },
+                ..item.router_data
+            });
+        }
+
         let mandate_reference = Some(Box::new(MandateReference {
             connector_mandate_id: Some(connector_mandate_id.clone()),
             payment_method_id: None,
@@ -1245,10 +1297,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        let vaulted_shopper_id: u64 = vaulted_shopper_id_str.parse::<u64>().map_err(|_| {
+        let vaulted_shopper_id: u64 = vaulted_shopper_id_str.parse::<u64>().map_err(|err| {
             IntegrationError::InvalidDataFormat {
                 field_name: "mandate_reference.connector_mandate_id",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(format!(
+                        "BlueSnap vaultedShopperId must be a non-negative integer; received {vaulted_shopper_id_str:?} (parse error: {err})"
+                    )),
+                    ..Default::default()
+                },
             }
         })?;
 
@@ -1265,21 +1322,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // `creditCard` { cardLastFourDigits, cardType } is optional; BlueSnap
         // only needs it when a vaulted shopper has multiple stored payment
-        // sources and you want to disambiguate. If the caller also passes a
-        // full Card payload in this flow we expose last-four as a hint so the
-        // subsequent charge is unambiguous.
+        // sources and you want to disambiguate. If the caller passes a full
+        // Card payload here we expose last-four + cardType (BlueSnap rejects
+        // the fragment with HTTP 400 `MISSING_CARD_TYPE` if cardType is
+        // missing). When the BIN can't be classified we omit the fragment
+        // entirely — BlueSnap will charge the only stored card on the
+        // vaulted shopper.
         let credit_card = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 let pan = card_data.card_number.peek().to_string();
-                let last_four = if pan.len() >= 4 {
-                    Some(pan[pan.len() - 4..].to_string())
-                } else {
-                    None
-                };
-                Some(BluesnapRepeatCreditCard {
-                    card_last_four_digits: last_four,
-                    card_type: None,
-                })
+                match utils::get_card_issuer(&pan) {
+                    Ok(issuer) => {
+                        let last_four = if pan.len() >= 4 {
+                            Some(pan[pan.len() - 4..].to_string())
+                        } else {
+                            None
+                        };
+                        Some(BluesnapRepeatCreditCard {
+                            card_last_four_digits: last_four,
+                            card_type: Some(bluesnap_card_type_from_issuer(issuer).to_string()),
+                        })
+                    }
+                    Err(_) => None,
+                }
             }
             _ => None,
         };
