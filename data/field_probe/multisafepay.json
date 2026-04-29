@@ -932,7 +932,8 @@
             "card_exp_month": "03",
             "card_exp_year": "2030",
             "card_cvc": "123",
-            "card_holder_name": "John Doe"
+            "card_holder_name": "John Doe",
+            "card_network": "VISA"
           },
           "customer": {
             "email": "test@example.com"
@@ -952,7 +953,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"type\":\"direct\",\"order_id\":\"probe_proxy_txn_001\",\"gateway\":\"CREDITCARD\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_proxy_txn_001\",\"email\":\"test@example.com\"},\"gateway_info\":{\"card_number\":\"{{$card_number}}\",\"card_expiry_date\":\"{{$card_exp_year}}{{$card_exp_month}}\",\"card_cvc\":\"{{$card_cvc}}\",\"card_holder_name\":null,\"flexible_3d\":null,\"moto\":null,\"term_url\":null},\"delivery\":{},\"days_active\":30,\"seconds_active\":259200}"
+          "body": "{\"type\":\"direct\",\"order_id\":\"probe_proxy_txn_001\",\"gateway\":\"VISA\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_proxy_txn_001\",\"email\":\"test@example.com\"},\"gateway_info\":{\"card_number\":\"{{$card_number}}\",\"card_expiry_date\":\"{{$card_exp_year}}{{$card_exp_month}}\",\"card_cvc\":\"{{$card_cvc}}\",\"card_holder_name\":null,\"flexible_3d\":null,\"moto\":null,\"term_url\":null},\"delivery\":{},\"days_active\":30,\"seconds_active\":259200}"
         }
       }
     },

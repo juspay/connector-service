@@ -2914,13 +2914,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ProxyCardDetails>
         // NOTE: card.card_number is a vault token (e.g. "token_123456"), NOT a real card BIN,
         // so BIN-based issuer detection is not possible here. The caller must populate the card_network proto field
 
-        let card_network = card
-            .card_network
-            .and_then(|n| {
-                grpc_api_types::payments::CardNetwork::try_from(n)
-                    .ok()
-                    .and_then(|cn| CardNetwork::foreign_try_from(cn).ok())
-            });
+        let card_network = card.card_network.and_then(|n| {
+            grpc_api_types::payments::CardNetwork::try_from(n)
+                .ok()
+                .and_then(|cn| CardNetwork::foreign_try_from(cn).ok())
+        });
 
         Ok(payment_method_data::Card {
             card_number: RawCardNumber(
