@@ -1,8 +1,5 @@
 use common_enums::{AttemptStatus, Currency, PayoutStatus, RefundStatus};
-use common_utils::{
-    collect_missing_value_keys,
-    id_type, request::Method, types::FloatMajorUnit,
-};
+use common_utils::{collect_missing_value_keys, id_type, request::Method, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
         Authorize, PSync, PayoutCreate, PayoutGet, PayoutStage, PayoutTransfer, Refund,

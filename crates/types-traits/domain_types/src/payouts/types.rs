@@ -1792,9 +1792,9 @@ pub fn generate_payout_stage_response(
 > {
     match router_data_v2.response {
         Ok(response) => {
-            let payout_status = response
-                .payout_status
-                .map(|status| grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(status) as i32);
+            let payout_status = response.payout_status.map(|status| {
+                grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(status) as i32
+            });
             Ok(grpc_api_types::payouts::PayoutServiceStageResponse {
                 merchant_payout_id: response.merchant_payout_id,
                 payout_status,

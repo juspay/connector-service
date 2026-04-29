@@ -51,7 +51,7 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as gigadat, GigadatPayoutMeta, GigadatPaymentsRequest, GigadatPaymentsResponse,
+    self as gigadat, GigadatPaymentsRequest, GigadatPaymentsResponse, GigadatPayoutMeta,
     GigadatRefundRequest, GigadatRefundResponse, GigadatSyncResponse,
 };
 
@@ -508,7 +508,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let transfer_id = get_connector_payout_id(&req.request.connector_payout_id)?;
 
         let token = get_psp_token_from_payout_method_data(&req.request.payout_method_data)
-            .or_else(|_| get_psp_token_from_raw_response(&req.resource_common_data.raw_connector_response))?;
+            .or_else(|_| {
+                get_psp_token_from_raw_response(&req.resource_common_data.raw_connector_response)
+            })?;
 
         Ok(format!(
             "{}webflow/deposit?transaction={}&token={}",
@@ -610,7 +612,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         )?;
 
         let token = get_psp_token_from_payout_method_data(&req.request.payout_method_data)
-            .or_else(|_| get_psp_token_from_raw_response(&req.resource_common_data.raw_connector_response))?;
+            .or_else(|_| {
+                get_psp_token_from_raw_response(&req.resource_common_data.raw_connector_response)
+            })?;
 
         Ok(format!(
             "{}webflow?transaction={}&token={}",
