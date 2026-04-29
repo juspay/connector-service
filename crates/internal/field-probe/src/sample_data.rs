@@ -377,6 +377,92 @@ pub(crate) fn wero_method() -> PaymentMethod {
     }
 }
 
+pub(crate) fn gopay_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::GoPayRedirect(
+            proto::GoPayRedirectWallet::default(),
+        )),
+    }
+}
+
+pub(crate) fn gcash_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::GcashRedirect(
+            proto::GcashRedirectWallet::default(),
+        )),
+    }
+}
+
+pub(crate) fn momo_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::MomoRedirect(proto::MomoRedirectWallet::default())),
+    }
+}
+
+pub(crate) fn dana_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::DanaRedirect(proto::DanaRedirectWallet::default())),
+    }
+}
+
+pub(crate) fn kakaopay_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::KakaoPayRedirect(
+            proto::KakaoPayRedirectWallet::default(),
+        )),
+    }
+}
+
+pub(crate) fn touchn_go_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::TouchNGoRedirect(
+            proto::TouchNGoRedirectWallet::default(),
+        )),
+    }
+}
+
+pub(crate) fn twint_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::TwintRedirect(
+            proto::TwintRedirectWallet::default(),
+        )),
+    }
+}
+
+pub(crate) fn vipps_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::VippsRedirect(
+            proto::VippsRedirectWallet::default(),
+        )),
+    }
+}
+
+pub(crate) fn swish_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::SwishQr(proto::SwishQrWallet::default())),
+    }
+}
+
+pub(crate) fn mobile_pay_redirect_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::MobilePayRedirect(
+            proto::MobilePayRedirectWallet::default(),
+        )),
+    }
+}
+
+pub(crate) fn skrill_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::Skrill(proto::SkrillWallet::default())),
+    }
+}
+
+pub(crate) fn paysera_method() -> PaymentMethod {
+    PaymentMethod {
+        payment_method: Some(PmVariant::Paysera(proto::PayseraWallet::default())),
+    }
+}
+
 pub(crate) fn lazypay_redirect_method() -> PaymentMethod {
     PaymentMethod {
         payment_method: Some(PmVariant::LazypayRedirect(

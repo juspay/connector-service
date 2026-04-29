@@ -147,6 +147,10 @@
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
@@ -179,6 +183,10 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
@@ -186,6 +194,10 @@
       "Givex": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -255,6 +267,10 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
@@ -288,6 +304,14 @@
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "MiniStop": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
@@ -391,6 +415,10 @@
           "body": "{\"query\":\"mutation ChargePaypal($input: ChargePaymentMethodInput!) { chargePaymentMethod(input: $input) { transaction { id status amount { value currencyCode } } } }\",\"variables\":{\"input\":{\"paymentMethodId\":\"probe_paypal_sdk_token\",\"transaction\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"orderId\":\"probe_txn_001\"}}}}"
         }
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
@@ -455,11 +483,27 @@
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
@@ -472,6 +516,10 @@
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method through braintree is not supported by Braintree"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method through braintree is not supported by Braintree"
       },
