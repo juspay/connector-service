@@ -1796,7 +1796,7 @@ pub struct WellsfargoClientAuthRequest {
     pub fields: serde_json::Value,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WellsFargoRouterData<
             RouterDataV2<
@@ -1809,7 +1809,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for WellsfargoClientAuthRequest
 {
-    type Error = error_stack::Report<IntegrationError>;
+    type Error = Report<IntegrationError>;
     fn try_from(
         item: WellsFargoRouterData<
             RouterDataV2<
@@ -1923,7 +1923,7 @@ impl TryFrom<ResponseRouterData<WellsfargoClientAuthResponse, Self>>
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<WellsfargoClientAuthResponse, Self>,
     ) -> Result<Self, Self::Error> {
