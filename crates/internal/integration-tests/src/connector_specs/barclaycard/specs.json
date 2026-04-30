@@ -8,7 +8,7 @@
     "RefundService/Get",
     "PaymentService/Get",
     "PaymentService/SetupRecurring",
-    "RecurringPaymentService/Charge"
-
+    "RecurringPaymentService/Charge",
+    "MerchantAuthenticationService/CreateClientAuthenticationToken"
   ]
 }
