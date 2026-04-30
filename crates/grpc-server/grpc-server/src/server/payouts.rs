@@ -43,8 +43,54 @@ use ucs_env::error::ResultExtGrpc;
 use crate::{
     implement_connector_operation,
     request::RequestData,
-    utils::{get_config_from_request, grpc_logging_wrapper},
+    utils::{get_config_from_request, grpc_logging_wrapper, ExtractedRequestMetadata},
 };
+
+/// Trait for request types that have an access_token field.
+pub trait HasAccessToken {
+    /// Sets the access token on the request.
+    fn set_access_token(&mut self, token: hyperswitch_masking::Secret<String>);
+}
+
+impl HasAccessToken for PayoutServiceTransferRequest {
+    fn set_access_token(&mut self, token: hyperswitch_masking::Secret<String>) {
+        self.access_token = Some(token);
+    }
+}
+
+impl HasAccessToken for PayoutServiceGetRequest {
+    fn set_access_token(&mut self, token: hyperswitch_masking::Secret<String>) {
+        self.access_token = Some(token);
+    }
+}
+
+/// Helper function to fetch and inject OAuth access token into a request.
+async fn inject_oauth_token<T>(
+    request: &mut tonic::Request<T>,
+    metadata_payload: &ExtractedRequestMetadata,
+    config: &std::sync::Arc<ucs_env::configs::Config>,
+    service_name: &str,
+    log_prefix: &str,
+) -> Result<(), tonic::Status>
+where
+    T: HasAccessToken,
+{
+    let access_token = Box::pin(fetch_oauth_access_token(
+        &metadata_payload.connector,
+        &metadata_payload.connector_config,
+        config,
+        &metadata_payload.masked_metadata,
+        service_name,
+        log_prefix,
+    ))
+    .await?;
+
+    if let Some(token) = access_token {
+        request.get_mut().set_access_token(token.access_token);
+    }
+
+    Ok(())
+}
 
 async fn fetch_oauth_access_token(
     connector: &ConnectorEnum,
@@ -193,19 +239,14 @@ impl PayoutService for Payouts {
 
         let metadata_payload = crate::utils::extract_metadata_from_request(&request)?;
 
-        let access_token = Box::pin(fetch_oauth_access_token(
-            &metadata_payload.connector,
-            &metadata_payload.connector_config,
+        inject_oauth_token(
+            &mut request,
+            &metadata_payload,
             &config,
-            &metadata_payload.masked_metadata,
             &service_name,
             "PAYOUT_TRANSFER",
-        ))
+        )
         .await?;
-
-        if let Some(token) = access_token {
-            request.get_mut().access_token = Some(token.access_token);
-        }
 
         grpc_logging_wrapper(
             request,
@@ -230,19 +271,14 @@ impl PayoutService for Payouts {
 
         let metadata_payload = crate::utils::extract_metadata_from_request(&request)?;
 
-        let access_token = Box::pin(fetch_oauth_access_token(
-            &metadata_payload.connector,
-            &metadata_payload.connector_config,
+        inject_oauth_token(
+            &mut request,
+            &metadata_payload,
             &config,
-            &metadata_payload.masked_metadata,
             &service_name,
             "PAYOUT_GET",
-        ))
+        )
         .await?;
-
-        if let Some(token) = access_token {
-            request.get_mut().access_token = Some(token.access_token);
-        }
 
         grpc_logging_wrapper(
             request,

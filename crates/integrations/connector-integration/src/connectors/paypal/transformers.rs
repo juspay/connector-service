@@ -3875,41 +3875,21 @@ pub struct PaypalPayoutBatchHeader {
     sender_batch_id: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct PaypalPayoutItem {
     amount: PayoutAmount,
+    #[serde(skip_serializing_if = "Option::is_none")]
     note: Option<String>,
     notification_language: String,
     #[serde(flatten)]
     payout_method_data: PaypalPayoutMethodData,
 }
 
-impl std::fmt::Debug for PaypalPayoutItem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PaypalPayoutItem")
-            .field("amount", &self.amount)
-            .field("note", &self.note.as_ref().map(|_| "<redacted>"))
-            .field("notification_language", &self.notification_language)
-            .field("payout_method_data", &"<redacted>")
-            .finish()
-    }
-}
-
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct PaypalPayoutMethodData {
     recipient_type: PayoutRecipientType,
     recipient_wallet: PayoutWalletType,
     receiver: PaypalPayoutDataType,
-}
-
-impl std::fmt::Debug for PaypalPayoutMethodData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PaypalPayoutMethodData")
-            .field("recipient_type", &self.recipient_type)
-            .field("recipient_wallet", &self.recipient_wallet)
-            .field("receiver", &"<redacted>")
-            .finish()
-    }
 }
 
 #[derive(Debug, Serialize)]
@@ -3927,20 +3907,11 @@ pub enum PayoutWalletType {
     Venmo,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum PaypalPayoutDataType {
     EmailType(common_utils::Email),
     OtherType(Secret<String>),
-}
-
-impl std::fmt::Debug for PaypalPayoutDataType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::EmailType(_) => f.debug_tuple("EmailType").field(&"<redacted>").finish(),
-            Self::OtherType(_) => f.debug_tuple("OtherType").field(&"<redacted>").finish(),
-        }
-    }
 }
 
 #[derive(Debug, Serialize)]

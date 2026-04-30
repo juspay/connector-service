@@ -219,27 +219,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PayoutTransferResponse,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-        let access_token = req.resource_common_data.get_access_token().map_err(|_| {
-            IntegrationError::FailedToObtainAuthType {
-                context: IntegrationErrorContext {
-                    additional_context: Some(
-                        "PayPal Payout Transfer - Failed to obtain OAuth access token".to_string(),
-                    ),
-                    ..Default::default()
-                },
-            }
-        })?;
-
-        let connector_metadata = req
-            .resource_common_data
-            .test_mode
-            .map(|test_mode| serde_json::json!({ "test_mode": test_mode }));
-
-        self.build_headers(
-            &access_token,
-            &req.resource_common_data.connector_request_reference_id,
+        self.get_payout_headers(
+            &req.resource_common_data,
             &req.connector_config,
-            connector_metadata.as_ref(),
+            "Payout Transfer",
         )
     }
 
@@ -348,27 +331,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PayoutGet, PayoutFlowData, PayoutGetRequest, PayoutGetResponse>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-        let access_token = req.resource_common_data.get_access_token().map_err(|_| {
-            IntegrationError::FailedToObtainAuthType {
-                context: IntegrationErrorContext {
-                    additional_context: Some(
-                        "PayPal Payout Get - Failed to obtain OAuth access token".to_string(),
-                    ),
-                    ..Default::default()
-                },
-            }
-        })?;
-
-        let connector_metadata = req
-            .resource_common_data
-            .test_mode
-            .map(|test_mode| serde_json::json!({ "test_mode": test_mode }));
-
-        self.build_headers(
-            &access_token,
-            &req.resource_common_data.connector_request_reference_id,
+        self.get_payout_headers(
+            &req.resource_common_data,
             &req.connector_config,
-            connector_metadata.as_ref(),
+            "Payout Get",
         )
     }
 
@@ -912,6 +878,36 @@ macros::create_all_prerequisites!(
                 )])
             }
             Ok(headers)
+        }
+
+        fn get_payout_headers(
+            &self,
+            resource_common_data: &PayoutFlowData,
+            connector_config: &ConnectorSpecificConfig,
+            flow_name: &str,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            let access_token = resource_common_data
+                .get_access_token()
+                .map_err(|_| IntegrationError::FailedToObtainAuthType {
+                    context: IntegrationErrorContext {
+                        additional_context: Some(format!(
+                            "PayPal {} - Failed to obtain OAuth access token",
+                            flow_name
+                        )),
+                        ..Default::default()
+                    },
+                })?;
+
+            let connector_metadata = resource_common_data
+                .test_mode
+                .map(|test_mode| serde_json::json!({ "test_mode": test_mode }));
+
+            self.build_headers(
+                &access_token,
+                &resource_common_data.connector_request_reference_id,
+                connector_config,
+                connector_metadata.as_ref(),
+            )
         }
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
