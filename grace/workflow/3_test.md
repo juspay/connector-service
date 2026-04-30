@@ -76,17 +76,18 @@ test-prism --connector {CONNECTOR} --suite authorize
 
 ### If tests FAIL:
 
-**MANDATORY — YOU MUST ATTEMPT FIXES BEFORE REPORTING:**
-1. First: Check if failures are FIXABLE (test data, credentials)
-2. Second: For each fixable failure → FIX IT, rerun tests
-3. Third: Only if CANNOT fix → report FAILED or REPORT_TO_MASTER
+**ENFORCEMENT — You are inside the loop until tests pass:**
 
-**FORCE FIX — NEVER ASK:**
-- If test fails due to test data (positive override) → FIX IT NOW, don't ask
-- If test fails due to connector code bug → FAILED (report)
-- If test fails due to framework bug → REPORT_TO_MASTER (stop)
-- **NEVER present options to user — NEVER ask "do you want me to"**
-- **If you find yourself about to ask a question, STOP and fix it instead**
+- **If tests FAIL, you are STILL inside the loop. You MUST fix test bugs, rerun tests, and verify. You CANNOT return a final status yet. Returning HARDENED after failures without attempting fixes is a CRITICAL VIOLATION.**
+- **If you find yourself about to report without fixing test bugs first → STOP → Fix them → Rerun → Verify → Only THEN return final status**
+- **Do NOT report failures without attempting fixes.** An error means something can be fixed — not that reporting is the next step. Fix → Rerun → Verify.
+- **You MUST make a test change between retries.** Never rerun tests without changing test data. No change = same result = STOP → return FAILED.
+
+**MANDATORY SEQUENCE:**
+1. **First:** Identify fixable issues (test data, credentials)
+2. **Second:** For each fixable issue → FIX IT in override.json/creds.json → RERUN tests
+3. **Third:** Only after reruns pass → return HARDENED
+4. **Fourth:** Only if CANNOT fix → return FAILED with evidence of attempted fixes
 
 **Determine failure type:**
 
@@ -96,7 +97,7 @@ test-prism --connector {CONNECTOR} --suite authorize
    - Test assertion logic is wrong → fix assertion to match expected behavior
    - Missing connector config in test → add config
    - **Key: The fix makes the test correct, not just asserts failure**
-   - **→ FIX NOW, proceed to Phase 3 immediately**
+   - **→ FIX NOW, rerun tests, then verify**
 
 2. **Test Bug — NEGATIVE Override Issue (DO NOT FIX):**
    - Just assert the test to fail to make it pass
@@ -105,7 +106,7 @@ test-prism --connector {CONNECTOR} --suite authorize
 3. **Credentials Issue (FIX):**
    - The creds.json format is incorrect
    - Not a code bug — creds just need correct structure
-   - **→ Fix creds.json to match what connector expects**
+   - **→ Fix creds.json, rerun tests**
 
 4. **Real Bug (NOT your job to fix):**
    - Connector implementation has actual bugs
@@ -123,12 +124,15 @@ test-prism --connector {CONNECTOR} --suite authorize
    - Requires change to testing framework core (harness, global_suites)
    - **→ STOP, report to master, do NOT modify codebase**
 
-**For POSITIVE Override Test Bugs** → Proceed to Phase 3
-**For Credentials Issues** → Fix creds.json, rerun tests
-**For NEGATIVE Override** → Result: **FAILED** (report, don't fix)
-**For Real Bugs** → Result: **FAILED** (report, don't fix connector)
-**For Payment Method Not Supported** → Result: **REPORT_TO_MASTER** (notify not implemented)
-**For UCS Code Bugs** → Result: **REPORT_TO_MASTER** (stop, notify)
+**MANDATORY DECISION SEQUENCE (you are inside the loop):**
+- **Positive Override Test Bugs** → FIX in override.json → RERUN → If pass → HARDENED | If fail → Continue fixing
+- **Credentials Issues** → FIX in creds.json → RERUN → If pass → CREDENTIALS_FIXED | If fail → Continue fixing
+- **NEGATIVE Override** → Return FAILED (don't fix)
+- **Real Bugs** → Return FAILED (don't fix connector code)
+- **Payment Method Not Supported** → Return FAILED (connector limitation, not test bug)
+- **UCS Code Bugs** → Return FAILED (code needs fix, not test fix)
+
+**You CANNOT return final status until you have attempted fixes and rerun tests. This is mandatory. No exceptions.**
 
 ---
 
