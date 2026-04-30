@@ -1,0 +1,17 @@
+{
+  "name": "byne",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "predev": "pnpm build",
+    "dev": "concurrently -n core,cli,dashboard,engine -c cyan,magenta,green,yellow \"pnpm -C packages/core dev\" \"pnpm -C packages/cli dev\" \"pnpm -C packages/dashboard dev\" \"node --watch packages/cli/dist/index.js run\"",
+    "engine": "node --watch packages/cli/dist/index.js run",
+    "clear": "rm -f ~/.byne/pipeline.sqlite ~/.byne/pipeline.sqlite-wal ~/.byne/pipeline.sqlite-shm ~/.byne/resume.json && touch packages/cli/dist/index.js 2>/dev/null && echo '✓ Cleared local DB and bounced engine. Refresh the dashboard to see empty Past runs.'",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
