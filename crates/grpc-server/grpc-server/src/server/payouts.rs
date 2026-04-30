@@ -1,9 +1,14 @@
 use common_utils::events::FlowName;
+use common_utils::lineage::LineageIds;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
         PayoutCreate, PayoutCreateLink, PayoutCreateRecipient, PayoutEnrollDisburseAccount,
-        PayoutGet, PayoutStage, PayoutTransfer, PayoutVoid,
+        PayoutGet, PayoutStage, PayoutTransfer, PayoutVoid, ServerAuthenticationToken,
+    },
+    connector_types::{
+        ConnectorEnum, PaymentFlowData, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
     },
     payouts::payouts_types::{
         PayoutCreateLinkRequest, PayoutCreateLinkResponse, PayoutCreateRecipientRequest,
@@ -18,8 +23,12 @@ use domain_types::{
         generate_payout_get_response, generate_payout_stage_response,
         generate_payout_transfer_response, generate_payout_void_response,
     },
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
+    router_data_v2::RouterDataV2,
     utils::ForeignTryFrom,
 };
+use external_services::service::EventProcessingParams;
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use grpc_api_types::payouts::{
     payout_service_server::PayoutService, PayoutServiceCreateLinkRequest,
     PayoutServiceCreateLinkResponse, PayoutServiceCreateRecipientRequest,
@@ -36,6 +45,117 @@ use crate::{
     request::RequestData,
     utils::{get_config_from_request, grpc_logging_wrapper},
 };
+
+async fn fetch_oauth_access_token(
+    connector: &ConnectorEnum,
+    connector_config: &ConnectorSpecificConfig,
+    config: &std::sync::Arc<ucs_env::configs::Config>,
+    masked_metadata: &common_utils::metadata::MaskedMetadata,
+    service_name: &str,
+    log_prefix: &str,
+) -> Result<Option<ServerAuthenticationTokenResponseData>, tonic::Status> {
+    let connector_data: ConnectorData<
+        domain_types::payment_method_data::DefaultPCIHolder,
+    > = ConnectorData::get_connector_by_name(connector);
+
+    let should_do_access_token = connector_data.connector.should_do_access_token(None);
+
+    if !should_do_access_token {
+        return Ok(None);
+    }
+
+    tracing::info!("{}: Fetching OAuth access token...", log_prefix);
+    let connectors = crate::utils::connectors_with_connector_config_overrides(
+        connector_config,
+        config,
+    )
+    .into_grpc_status()?;
+
+    let auth_flow_data = PaymentFlowData::foreign_try_from((connectors, masked_metadata))
+        .into_grpc_status()?;
+
+    let access_token_request_data =
+        ServerAuthenticationTokenRequestData::foreign_try_from(connector_config)
+            .into_grpc_status()?;
+
+    let connector_integration: BoxedConnectorIntegrationV2<
+        '_,
+        ServerAuthenticationToken,
+        PaymentFlowData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
+    > = connector_data.connector.get_connector_integration_v2();
+
+    let access_token_router_data = RouterDataV2::<
+        ServerAuthenticationToken,
+        PaymentFlowData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
+    > {
+        flow: std::marker::PhantomData,
+        resource_common_data: auth_flow_data,
+        connector_config: connector_config.clone(),
+        request: access_token_request_data,
+        response: Err(ErrorResponse::default()),
+    };
+
+    let event_params = EventProcessingParams {
+        connector_name: &connector.to_string(),
+        service_name,
+        service_type: crate::utils::service_type_str(&config.server.type_),
+        flow_name: FlowName::ServerAuthenticationToken,
+        event_config: &config.events,
+        request_id: &format!("{}_token", log_prefix),
+        lineage_ids: &LineageIds::empty(""),
+        reference_id: &None,
+        resource_id: &None,
+        shadow_mode: false,
+        tenant_id: "default",
+    };
+
+    let access_token_result = external_services::service::execute_connector_processing_step(
+        &config.proxy,
+        connector_integration,
+        access_token_router_data,
+        None,
+        event_params,
+        None,
+        common_enums::CallConnectorAction::Trigger,
+        None,
+        None,
+    )
+    .await;
+
+    match access_token_result {
+        Ok(result) => match result.response {
+            Ok(token_response) => Ok(Some(token_response)),
+            Err(err) => {
+                tracing::error!(
+                    error = ?err,
+                    flow = log_prefix,
+                    stage = "access_token_fetch",
+                    "Access token fetch failed"
+                );
+                Err(tonic::Status::internal(format!(
+                    "Access token fetch failed: {}",
+                    err.message
+                )))
+            }
+        },
+        Err(err) => {
+            tracing::error!(
+                error = ?err,
+                flow = log_prefix,
+                stage = "access_token_execution",
+                "Access token execution failed"
+            );
+            Err(tonic::Status::internal(format!(
+                "Access token execution failed: {}",
+                err
+            )))
+        }
+    }
+}
 
 pub struct Payouts;
 
@@ -63,7 +183,7 @@ impl PayoutService for Payouts {
 
     async fn transfer(
         &self,
-        request: tonic::Request<PayoutServiceTransferRequest>,
+        mut request: tonic::Request<PayoutServiceTransferRequest>,
     ) -> Result<tonic::Response<PayoutServiceTransferResponse>, tonic::Status> {
         let config = get_config_from_request(&request)?;
         let service_name = request
@@ -71,6 +191,23 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
+
+        let metadata_payload = crate::utils::extract_metadata_from_request(&request)?;
+
+        let access_token = fetch_oauth_access_token(
+            &metadata_payload.connector,
+            &metadata_payload.connector_config,
+            &config,
+            &metadata_payload.masked_metadata,
+            &service_name,
+            "PAYOUT_TRANSFER",
+        )
+        .await?;
+
+        if let Some(token) = access_token {
+            request.get_mut().access_token = Some(token.access_token);
+        }
+
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -83,7 +220,7 @@ impl PayoutService for Payouts {
 
     async fn get(
         &self,
-        request: tonic::Request<PayoutServiceGetRequest>,
+        mut request: tonic::Request<PayoutServiceGetRequest>,
     ) -> Result<tonic::Response<PayoutServiceGetResponse>, tonic::Status> {
         let config = get_config_from_request(&request)?;
         let service_name = request
@@ -91,6 +228,23 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
+
+        let metadata_payload = crate::utils::extract_metadata_from_request(&request)?;
+
+        let access_token = fetch_oauth_access_token(
+            &metadata_payload.connector,
+            &metadata_payload.connector_config,
+            &config,
+            &metadata_payload.masked_metadata,
+            &service_name,
+            "PAYOUT_GET",
+        )
+        .await?;
+
+        if let Some(token) = access_token {
+            request.get_mut().access_token = Some(token.access_token);
+        }
+
         grpc_logging_wrapper(
             request,
             &service_name,

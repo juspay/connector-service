@@ -4528,6 +4528,62 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
     }
 }
 
+impl ForeignTryFrom<(Connectors, &MaskedMetadata)> for PaymentFlowData {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        (connectors, metadata): (Connectors, &MaskedMetadata),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        let address = PaymentAddress::new(
+            None,        // shipping
+            None,        // billing
+            None,        // payment_method_billing
+            Some(false), // should_unify_address
+        );
+
+        Ok(Self {
+            merchant_id,
+            payment_id: String::new(),       // Access token flow doesn't have a payment yet
+            attempt_id: String::new(),       // Access token flow doesn't have an attempt yet
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: PaymentMethod::Card, // Default, will be updated later if needed
+            address,
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: String::new(),
+            customer_id: None,
+            connector_customer: None,
+            description: None,
+            return_url: None,
+            connector_feature_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            minor_amount_capturable: None,
+            amount: None,
+            access_token: None, // Will be populated separately if available
+            session_token: None,
+            reference_id: None,
+            connector_order_id: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+            l2_l3_data: None,
+        })
+    }
+}
+
 impl ForeignTryFrom<ResponseId> for Option<String> {
     type Error = ConnectorError;
     fn foreign_try_from(

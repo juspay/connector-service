@@ -394,6 +394,53 @@ fn create_and_emit_grpc_event<R>(
     common_utils::emit_event_with_config(grpc_event, &config.events);
 }
 
+#[derive(Clone, Debug)]
+pub struct ExtractedRequestMetadata {
+    pub tenant_id: String,
+    pub request_id: String,
+    pub merchant_id: String,
+    pub connector: connector_types::ConnectorEnum,
+    pub lineage_ids: LineageIds<'static>,
+    pub connector_config: ConnectorSpecificConfig,
+    pub reference_id: Option<String>,
+    pub shadow_mode: bool,
+    pub resource_id: Option<String>,
+    pub environment: Option<String>,
+    pub masked_metadata: common_utils::metadata::MaskedMetadata,
+}
+
+#[allow(clippy::result_large_err)]
+pub fn extract_metadata_from_request<T>(
+    request: &tonic::Request<T>,
+) -> Result<ExtractedRequestMetadata, tonic::Status>
+where
+    T: serde::Serialize,
+{
+    use ucs_interface_common::metadata::get_metadata_payload;
+
+    let config = get_config_from_request(request)?;
+    let metadata = request.metadata();
+
+    let metadata_payload = get_metadata_payload(metadata, config.clone()).into_grpc_status()?;
+
+    let masked_metadata =
+        common_utils::metadata::MaskedMetadata::new(metadata.clone(), config.unmasked_headers.clone());
+
+    Ok(ExtractedRequestMetadata {
+        tenant_id: metadata_payload.tenant_id,
+        request_id: metadata_payload.request_id,
+        merchant_id: metadata_payload.merchant_id,
+        connector: metadata_payload.connector,
+        lineage_ids: metadata_payload.lineage_ids,
+        connector_config: metadata_payload.connector_config,
+        reference_id: metadata_payload.reference_id,
+        shadow_mode: metadata_payload.shadow_mode,
+        resource_id: metadata_payload.resource_id,
+        environment: metadata_payload.environment,
+        masked_metadata,
+    })
+}
+
 #[allow(clippy::result_large_err)]
 pub fn get_config_from_request<T>(
     request: &tonic::Request<T>,
