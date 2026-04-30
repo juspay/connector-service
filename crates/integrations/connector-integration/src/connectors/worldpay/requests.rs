@@ -178,8 +178,8 @@ pub enum PaymentType {
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ExpiryDate {
-    pub month: Secret<String>,
-    pub year: Secret<String>,
+    pub month: Secret<i8>,
+    pub year: Secret<i32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]

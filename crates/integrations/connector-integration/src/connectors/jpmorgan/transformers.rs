@@ -1,5 +1,5 @@
 use common_enums::{AttemptStatus, CaptureMethod};
-use common_utils::pii::SecretSerdeValue;
+use common_utils::{fp_utils::when, pii::SecretSerdeValue};
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, Refund, ServerAuthenticationToken, Void,
@@ -279,9 +279,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         },
                     };
 
+                let exp_month_str = card_data.card_exp_month.peek().to_string();
+                let exp_year_str = card_data.get_expiry_year_4_digit().peek().to_string();
+
+                // Vault token placeholders (e.g. "{{$card_exp_month}}") cannot be parsed as i32.
+                // JPMorgan requires numeric expiry values, so proxy flows are not supported.
+                when(
+                    exp_month_str.contains("{{") || exp_year_str.contains("{{"),
+                    || {
+                        Err(error_stack::report!(IntegrationError::NotSupported {
+                            message: "JPMorgan requires numeric expiry values; vault token placeholders are not supported for proxy flows".to_string(),
+                            connector: "Jpmorgan",
+                            context: Default::default(),
+                        }))
+                    },
+                )?;
+
                 let expiry = requests::Expiry {
-                    month: Secret::new(card_data.card_exp_month.peek().to_string()),
-                    year: Secret::new(card_data.get_expiry_year_4_digit().peek().to_string()),
+                    month: Secret::new(
+                        exp_month_str
+                            .parse::<i32>()
+                            .change_context(IntegrationError::RequestEncodingFailed {
+                                context: Default::default(),
+                            })?,
+                    ),
+                    year: Secret::new(
+                        exp_year_str
+                            .parse::<i32>()
+                            .change_context(IntegrationError::RequestEncodingFailed {
+                                context: Default::default(),
+                            })?,
+                    ),
                 };
 
                 let card = requests::JpmorganCard {
