@@ -3629,6 +3629,7 @@ message FiservemeaConfig {
   SecretString api_key = 1;
   SecretString api_secret = 2;
   optional string base_url = 50;
+  optional string apple_pay_merchant_id = 51;
 }
 
 message GlobalpayConfig {

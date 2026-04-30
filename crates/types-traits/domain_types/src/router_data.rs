@@ -383,6 +383,7 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         api_secret: Secret<String>,
         base_url: Option<String>,
+        apple_pay_merchant_id: Option<String>,
     },
     Mollie {
         api_key: Secret<String>,
@@ -798,7 +799,8 @@ impl ConnectorSpecificConfig {
             },
             Fiservemea {
                 api_key,
-                api_secret
+                api_secret,
+                apple_pay_merchant_id
             },
             Mollie { api_key },
             Nmi { api_key },
@@ -1186,7 +1188,8 @@ impl ConnectorSpecificConfig {
                 },
                 Fiservemea {
                     api_key,
-                    api_secret
+                    api_secret,
+                    apple_pay_merchant_id
                 },
                 Mollie { api_key },
                 Nmi { api_key },
@@ -1527,6 +1530,7 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: fiservemea.api_key.ok_or_else(err)?,
                 api_secret: fiservemea.api_secret.ok_or_else(err)?,
                 base_url: fiservemea.base_url,
+                apple_pay_merchant_id: fiservemea.apple_pay_merchant_id,
             }),
             AuthType::Forte(forte) => Ok(Self::Forte {
                 api_access_id: forte.api_access_id.ok_or_else(err)?,
@@ -2244,6 +2248,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     api_key: api_key.clone(),
                     api_secret: key1.clone(),
                     base_url: None,
+                    apple_pay_merchant_id: None,
                 }),
                 ConnectorAuthType::SignatureKey {
                     api_key,
@@ -2253,6 +2258,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     api_key: api_key.clone(),
                     api_secret: api_secret.clone(),
                     base_url: None,
+                    apple_pay_merchant_id: None,
                 }),
                 _ => Err(err().into()),
             },

@@ -28,6 +28,7 @@ use uuid::Uuid;
 pub struct FiservemeaAuthType {
     pub api_key: Secret<String>,
     pub api_secret: Secret<String>,
+    pub apple_pay_merchant_id: Option<String>,
 }
 
 impl FiservemeaAuthType {
@@ -76,10 +77,12 @@ impl TryFrom<&ConnectorSpecificConfig> for FiservemeaAuthType {
             ConnectorSpecificConfig::Fiservemea {
                 api_key,
                 api_secret,
+                apple_pay_merchant_id,
                 ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
+                apple_pay_merchant_id: apple_pay_merchant_id.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 IntegrationError::FailedToObtainAuthType {
@@ -117,13 +120,86 @@ impl Default for FiservemeaErrorResponse {
     }
 }
 
+const TRANSACTION_ORIGIN_ECOM: &str = "ECOM";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FiservemeaRequestType {
     PaymentCardSaleTransaction,
     PaymentCardPreAuthTransaction,
+    WalletSaleTransaction,
+    WalletPreAuthTransaction,
     PostAuthTransaction,
     VoidPreAuthTransactions,
     ReturnTransaction,
+}
+
+/// Parsed representation of the raw Apple Pay encrypted token JSON.
+/// Apple Pay delivers the token as a base64-encoded JSON string; after
+/// decoding we deserialise it into this struct to extract the individual
+/// fields required by the Fiserv EMEA `encryptedApplePay` object.
+#[derive(Debug, Deserialize)]
+pub struct ApplePayTokenPayload {
+    pub data: String,
+    pub header: ApplePayTokenHeader,
+    pub signature: String,
+    pub version: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayTokenHeader {
+    pub ephemeral_public_key: String,
+    pub public_key_hash: String,
+    pub transaction_id: String,
+}
+
+/// Top-level wallet payment method wrapper sent to Fiserv EMEA.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WalletPaymentMethod {
+    pub wallet_type: WalletType,
+    pub encrypted_apple_pay: EncryptedApplePay,
+}
+
+#[derive(Debug, Serialize)]
+pub enum WalletType {
+    EncryptedApplePayWalletPaymentMethod,
+}
+
+/// The `encryptedApplePay` object — raw fields passed through from Apple.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EncryptedApplePay {
+    pub data: String,
+    pub header: ApplePayHeader,
+    pub signature: String,
+    pub version: String,
+    pub merchant_id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplePayHeader {
+    pub ephemeral_public_key: String,
+    pub public_key_hash: String,
+    pub transaction_id: String,
+}
+
+/// Enum used to hold either a card or a wallet payment method inside
+/// `FiservemeaPaymentsRequest`. The `#[serde(untagged)]` attribute means
+/// the variant fields are inlined into the parent JSON object, which gives
+/// us `"paymentMethod": {...}` for cards and `"walletPaymentMethod": {...}`
+/// for wallet transactions without any extra nesting.
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum FiservemeaPaymentMethodRequest<T: PaymentMethodDataTypes> {
+    Card {
+        payment_method: PaymentMethod<T>,
+    },
+    Wallet {
+        #[serde(rename = "walletPaymentMethod")]
+        wallet_payment_method: WalletPaymentMethod,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -132,8 +208,10 @@ pub struct FiservemeaPaymentsRequest<T: PaymentMethodDataTypes> {
     pub request_type: FiservemeaRequestType,
     pub merchant_transaction_id: String,
     pub transaction_amount: TransactionAmount,
+    pub transaction_origin: String,
     pub order: OrderDetails,
-    pub payment_method: PaymentMethod<T>,
+    #[serde(flatten)]
+    pub payment: FiservemeaPaymentMethodRequest<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -337,6 +415,8 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
+        let auth_type = FiservemeaAuthType::try_from(&item.connector_config)?;
+
         // Use StringMajorUnitForConnector to properly convert minor to major unit
         let converter = StringMajorUnitForConnector;
         let amount_major = converter
@@ -350,19 +430,31 @@ impl<T: PaymentMethodDataTypes>
             currency: item.request.currency,
         };
 
-        // Extract payment method data
-        let payment_method = match &item.request.payment_method_data {
+        let is_manual_capture = item
+            .request
+            .capture_method
+            .map(|cm| matches!(cm, common_enums::CaptureMethod::Manual))
+            .unwrap_or(false);
+
+        let merchant_transaction_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let order = OrderDetails {
+            order_id: merchant_transaction_id.clone(),
+        };
+
+        // Branch on payment method: encrypted Apple Pay → WalletTransaction,
+        // card or decrypted Apple Pay → PaymentCardTransaction.
+        let (request_type, payment) = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                // Convert year to YY format (last 2 digits)
                 let year_str = card_data.card_exp_year.peek();
                 let year_yy = if year_str.len() == 4 {
-                    // YYYY format - take last 2 digits
                     Secret::new(year_str[2..].to_string())
                 } else {
-                    // Already YY format
                     card_data.card_exp_year.clone()
                 };
-
                 let payment_card = PaymentCard {
                     number: card_data.card_number.clone(),
                     expiry_date: ExpiryDate {
@@ -372,46 +464,111 @@ impl<T: PaymentMethodDataTypes>
                     security_code: Some(card_data.card_cvc.clone()),
                     holder: item.request.customer_name.clone().map(Secret::new),
                 };
-                PaymentMethod { payment_card }
+                let request_type = if is_manual_capture {
+                    FiservemeaRequestType::PaymentCardPreAuthTransaction
+                } else {
+                    FiservemeaRequestType::PaymentCardSaleTransaction
+                };
+                (
+                    request_type,
+                    FiservemeaPaymentMethodRequest::Card {
+                        payment_method: PaymentMethod { payment_card },
+                    },
+                )
             }
-            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
-                WalletData::ApplePay(apple_pay_data) => {
-                    // Fiserv EMEA has no native encrypted Apple Pay endpoint; the
-                    // integration pattern is to submit the decrypted DPAN through the
-                    // standard card transaction (PaymentCardSale/PreAuth).
-                    let apple_pay_decrypted_data = apple_pay_data
-                        .payment_data
-                        .get_decrypted_apple_pay_payment_data_optional()
-                        .ok_or_else(|| {
-                            error_stack::report!(IntegrationError::MissingRequiredField {
-                                field_name: "apple_pay_decrypted_data",
+            PaymentMethodData::Wallet(WalletData::ApplePay(apple_pay_data)) => {
+                match apple_pay_data
+                    .payment_data
+                    .get_encrypted_apple_pay_payment_data_optional()
+                {
+                    // ── Encrypted path: pass raw token blob to Fiserv (preferred) ──
+                    Some(encoded) => {
+                        // The encrypted token is base64-encoded JSON; decode then parse.
+                        let decoded_bytes = general_purpose::STANDARD
+                            .decode(encoded)
+                            .change_context(IntegrationError::InvalidWalletToken {
+                                wallet_name: "Apple Pay".to_string(),
+                                context: Default::default(),
+                            })?;
+
+                        let decoded = String::from_utf8(decoded_bytes).map_err(|e| {
+                            error_stack::report!(IntegrationError::InvalidWalletToken {
+                                wallet_name: "Apple Pay".to_string(),
                                 context: Default::default(),
                             })
-                            .attach_printable(
-                                "Fiserv EMEA requires pre-decrypted Apple Pay data; \
-                                 encrypted Apple Pay tokens are not supported.",
-                            )
+                            .attach_printable(format!(
+                                "Apple Pay token bytes are not valid UTF-8: {e}"
+                            ))
                         })?;
 
-                    let exp_month_raw = apple_pay_decrypted_data.get_expiry_month().expose();
-                    let formatted_exp_month = format!("{exp_month_raw:0>2}");
-                    let exp_year_full = apple_pay_decrypted_data
-                        .get_four_digit_expiry_year()
-                        .expose();
-                    let formatted_exp_year = if exp_year_full.len() == 4 {
-                        exp_year_full[2..].to_string()
-                    } else {
-                        exp_year_full.clone()
-                    };
+                        let token: ApplePayTokenPayload = serde_json::from_str(&decoded)
+                            .change_context(IntegrationError::InvalidWalletToken {
+                                wallet_name: "Apple Pay".to_string(),
+                                context: Default::default(),
+                            })?;
 
-                    let card_number_string = apple_pay_decrypted_data
-                        .application_primary_account_number
-                        .get_card_no();
-                    // Convert String -> T::Inner via serde round-trip
-                    // (T::Inner is DeserializeOwned per PaymentMethodDataTypes).
-                    let inner: T::Inner =
-                        serde_json::from_value(serde_json::Value::String(card_number_string))
-                            .map_err(|e| {
+                        let merchant_id =
+                            auth_type.apple_pay_merchant_id.clone().ok_or_else(|| {
+                                error_stack::report!(IntegrationError::MissingRequiredField {
+                                    field_name: "apple_pay_merchant_id",
+                                    context: Default::default(),
+                                })
+                            })?;
+
+                        let wallet_payment_method = WalletPaymentMethod {
+                            wallet_type: WalletType::EncryptedApplePayWalletPaymentMethod,
+                            encrypted_apple_pay: EncryptedApplePay {
+                                data: token.data,
+                                header: ApplePayHeader {
+                                    ephemeral_public_key: token.header.ephemeral_public_key,
+                                    public_key_hash: token.header.public_key_hash,
+                                    transaction_id: token.header.transaction_id,
+                                },
+                                signature: token.signature,
+                                version: token.version,
+                                merchant_id,
+                            },
+                        };
+
+                        let request_type = if is_manual_capture {
+                            FiservemeaRequestType::WalletPreAuthTransaction
+                        } else {
+                            FiservemeaRequestType::WalletSaleTransaction
+                        };
+                        (
+                            request_type,
+                            FiservemeaPaymentMethodRequest::Wallet {
+                                wallet_payment_method,
+                            },
+                        )
+                    }
+                    // ── Decrypted path: fall back to DPAN-as-card ──
+                    None => {
+                        let apple_pay_decrypted_data = apple_pay_data
+                            .payment_data
+                            .get_decrypted_apple_pay_payment_data_mandatory()
+                            .change_context(IntegrationError::MissingRequiredField {
+                                field_name: "apple_pay_decrypted_data",
+                                context: Default::default(),
+                            })?;
+
+                        let exp_month_raw = apple_pay_decrypted_data.get_expiry_month().expose();
+                        let formatted_exp_month = format!("{exp_month_raw:0>2}");
+                        let exp_year_full = apple_pay_decrypted_data
+                            .get_four_digit_expiry_year()
+                            .expose();
+                        let formatted_exp_year = if exp_year_full.len() == 4 {
+                            exp_year_full[2..].to_string()
+                        } else {
+                            exp_year_full.clone()
+                        };
+
+                        let card_number_string = apple_pay_decrypted_data
+                            .application_primary_account_number
+                            .get_card_no();
+                        let inner: T::Inner =
+                            serde_json::from_value(serde_json::Value::String(card_number_string))
+                                .map_err(|e| {
                                 error_stack::report!(IntegrationError::InvalidDataFormat {
                                     field_name: "apple_pay.application_primary_account_number",
                                     context: Default::default(),
@@ -420,28 +577,32 @@ impl<T: PaymentMethodDataTypes>
                                     "Failed to convert Apple Pay PAN to card number type: {e}"
                                 ))
                             })?;
-                    let raw_card_number: RawCardNumber<T> = RawCardNumber(inner);
+                        let raw_card_number: RawCardNumber<T> = RawCardNumber(inner);
 
-                    let payment_card = PaymentCard {
-                        number: raw_card_number,
-                        expiry_date: ExpiryDate {
-                            month: Secret::new(formatted_exp_month),
-                            year: Secret::new(formatted_exp_year),
-                        },
-                        // Apple Pay decrypted data does not include CVV.
-                        security_code: None,
-                        holder: item.request.customer_name.clone().map(Secret::new),
-                    };
-                    PaymentMethod { payment_card }
+                        let payment_card = PaymentCard {
+                            number: raw_card_number,
+                            expiry_date: ExpiryDate {
+                                month: Secret::new(formatted_exp_month),
+                                year: Secret::new(formatted_exp_year),
+                            },
+                            security_code: None,
+                            holder: item.request.customer_name.clone().map(Secret::new),
+                        };
+
+                        let request_type = if is_manual_capture {
+                            FiservemeaRequestType::PaymentCardPreAuthTransaction
+                        } else {
+                            FiservemeaRequestType::PaymentCardSaleTransaction
+                        };
+                        (
+                            request_type,
+                            FiservemeaPaymentMethodRequest::Card {
+                                payment_method: PaymentMethod { payment_card },
+                            },
+                        )
+                    }
                 }
-                _ => {
-                    return Err(error_stack::report!(IntegrationError::not_implemented(
-                        "Only Apple Pay (with decrypted token) wallet payments are supported \
-                         for Fiserv EMEA"
-                            .to_string()
-                    )))
-                }
-            },
+            }
             _ => {
                 return Err(error_stack::report!(IntegrationError::not_implemented(
                     "Only card and Apple Pay payments are supported for Fiserv EMEA".to_string()
@@ -449,42 +610,14 @@ impl<T: PaymentMethodDataTypes>
             }
         };
 
-        // Determine transaction type based on capture_method
-        let is_manual_capture = item
-            .request
-            .capture_method
-            .map(|cm| matches!(cm, common_enums::CaptureMethod::Manual))
-            .unwrap_or(false);
-
-        // Generate unique merchant transaction ID using connector request reference ID
-        // This provides a meaningful, unique identifier for each transaction
-        let merchant_transaction_id = item
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-
-        // Create order details with same ID
-        let order = OrderDetails {
-            order_id: merchant_transaction_id.clone(),
-        };
-
-        if is_manual_capture {
-            Ok(Self {
-                request_type: FiservemeaRequestType::PaymentCardPreAuthTransaction,
-                merchant_transaction_id,
-                transaction_amount,
-                order,
-                payment_method,
-            })
-        } else {
-            Ok(Self {
-                request_type: FiservemeaRequestType::PaymentCardSaleTransaction,
-                merchant_transaction_id,
-                transaction_amount,
-                order,
-                payment_method,
-            })
-        }
+        Ok(Self {
+            request_type,
+            merchant_transaction_id,
+            transaction_amount,
+            transaction_origin: TRANSACTION_ORIGIN_ECOM.to_string(),
+            order,
+            payment,
+        })
     }
 }
 

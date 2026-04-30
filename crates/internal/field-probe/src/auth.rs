@@ -272,6 +272,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             api_key: k(),
             api_secret: s(),
             base_url: None,
+            apple_pay_merchant_id: None,
         },
         ConnectorEnum::Mollie => ConnectorSpecificConfig::Mollie {
             api_key: k(),
