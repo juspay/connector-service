@@ -110,17 +110,19 @@ async fn fetch_oauth_access_token(
         tenant_id: "default",
     };
 
-    let access_token_result = Box::pin(external_services::service::execute_connector_processing_step(
-        &config.proxy,
-        connector_integration,
-        access_token_router_data,
-        None,
-        event_params,
-        None,
-        common_enums::CallConnectorAction::Trigger,
-        None,
-        None,
-    ))
+    let access_token_result = Box::pin(
+        external_services::service::execute_connector_processing_step(
+            &config.proxy,
+            connector_integration,
+            access_token_router_data,
+            None,
+            event_params,
+            None,
+            common_enums::CallConnectorAction::Trigger,
+            None,
+            None,
+        ),
+    )
     .await;
 
     match access_token_result {
