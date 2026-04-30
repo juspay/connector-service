@@ -16,12 +16,12 @@ Your tasks:
 
 Use read_file tool to read these files BEFORE starting:
 
-1. READ /Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.1_links.md
+1. READ /Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.1_links.md
    - This teaches you HOW to find connector documentation
    - Contains the 10-point verification methodology
    - Follow the Links Agent workflow exactly
 
-2. READ /Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.2_techspec.md
+2. READ /Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.2_techspec.md
    - This teaches you HOW to write the technical specification
    - Contains the 8-section spec format and structure
    - Follow the Tech Spec Agent workflow exactly

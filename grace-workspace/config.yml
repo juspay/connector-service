@@ -1,7 +1,7 @@
 # Byne pipeline configuration
 # Fill in llm.baseUrl and llm.apiKey below, then start the engine with `pnpm dev`.
 
-projectRoot: /Users/jeeva.ramachandran/Workspace/hyperswitch-prism # target repo (relative to byne dir or absolute)
+projectRoot: /Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service # target repo (relative to byne dir or absolute)
 devServerUrl: http://localhost:9000 # hyperswitch webpack-dev-server default
 designMatchThreshold: 0.90
 maxRetries: 3
@@ -13,20 +13,19 @@ opencode:
   # so that the model can use tools (web_search, read_file, grep, write).
   # Model is left empty to use opencode default (kimi-latest)
   model: "" # Use opencode default model
-  attachUrl: "http://127.0.0.1:63207" # running `opencode serve` instance
+  attachUrl: "http://127.0.0.1:4096" # running `opencode serve` instance
   timeoutMs: 900000 # per-call hard timeout (15 min)
   implementationConcurrency: 4
 
 llm:
   # === FILL THESE IN ===
   baseUrl: "https://grid.ai.juspay.net/v1/chat/completions" # e.g. https://llm.yourhost.internal
-  apiKey: "" # your hosted model API key
+  apiKey: "sk-EDeQ_EPCrVRlBwznvWYmAQ" # your hosted model API key
   model: "kimi-latest" # default model for all checkpoints
 
   # Per-checkpoint model overrides. Falls back to `model` when unset.
   # Use stronger models for steps that need repo reasoning or bulk code generation.
-  models:
-    {}
+  models: {}
     # l3_gen: "claude-sonnet-4-6"
     # l4_gen: "claude-sonnet-4-6"
     # implementation: "claude-sonnet-4-6"
@@ -42,8 +41,7 @@ llm:
   # Auth header customization. Defaults work for most hosted gateways.
   authHeader: "Authorization" # header name
   authScheme: "Bearer" # prefix; set to "" to send raw key
-  extraHeaders:
-    {} # any custom headers your gateway requires
+  extraHeaders: {} # any custom headers your gateway requires
     # x-tenant-id: juspay
     # x-client:    byne
 
