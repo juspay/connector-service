@@ -71,14 +71,17 @@ test-prism --connector {CONNECTOR} --suite authorize
 ## Phase 2: Analyze Results
 
 ### If ALL tests pass:
-
 - Result: **HARDENED**
 - The connector is now fully tested and can move to "Tested" status in docs
 
 ### If tests FAIL:
 
-**FORCE FIX — NEVER ASK:**
+**MANDATORY — YOU MUST ATTEMPT FIXES BEFORE REPORTING:**
+1. First: Check if failures are FIXABLE (test data, credentials)
+2. Second: For each fixable failure → FIX IT, rerun tests
+3. Third: Only if CANNOT fix → report FAILED or REPORT_TO_MASTER
 
+**FORCE FIX — NEVER ASK:**
 - If test fails due to test data (positive override) → FIX IT NOW, don't ask
 - If test fails due to connector code bug → FAILED (report)
 - If test fails due to framework bug → REPORT_TO_MASTER (stop)
