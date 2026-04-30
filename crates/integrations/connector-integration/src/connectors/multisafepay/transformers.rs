@@ -429,11 +429,11 @@ fn build_gateway_info<T: PaymentMethodDataTypes>(
                 }))
             })?;
 
-            let card_expiry_date = card_expiry_str
-                .parse::<i64>()
-                .change_context(IntegrationError::RequestEncodingFailed {
+            let card_expiry_date = card_expiry_str.parse::<i64>().change_context(
+                IntegrationError::RequestEncodingFailed {
                     context: Default::default(),
-                })?;
+                },
+            )?;
 
             Ok(Some(MultisafepayGatewayInfo::Card(GatewayInfo {
                 card_number: card_data.card_number.clone(),
