@@ -389,7 +389,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         )?;
 
         let base = self.base_url(&req.resource_common_data.connectors);
-        let url = url::Url::parse(&base)
+        let url = url::Url::parse(base)
             .map_err(|_| IntegrationError::InvalidDataFormat {
                 field_name: "base_url",
                 context: IntegrationErrorContext {
