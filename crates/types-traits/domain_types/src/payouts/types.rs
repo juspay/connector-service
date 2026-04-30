@@ -1111,7 +1111,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
                 payouts::payouts_types::PayoutCustomer {
                     name: customer.name,
                     email,
-                    id: customer.id,
+                    merchant_customer_id: customer.id,
                     connector_customer_id: customer.connector_customer_id,
                     phone_number: customer.phone_number,
                     phone_country_code: customer.phone_country_code,

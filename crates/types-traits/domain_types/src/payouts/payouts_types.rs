@@ -116,7 +116,7 @@ pub struct PayoutTransferRequest {
 pub struct PayoutCustomer {
     pub name: Option<String>,
     pub email: Option<common_utils::pii::Email>,
-    pub id: Option<String>,
+    pub merchant_customer_id: Option<String>,
     pub connector_customer_id: Option<String>,
     pub phone_number: Option<String>,
     pub phone_country_code: Option<String>,
