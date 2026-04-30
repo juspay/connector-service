@@ -1088,6 +1088,38 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             .map(common_enums::PayoutPriority::foreign_try_from)
             .transpose()?;
 
+        let customer = value
+            .customer
+            .map(
+                |customer| -> Result<_, error_stack::Report<IntegrationError>> {
+                    let email = customer
+                        .email
+                        .map(|email_str| {
+                            common_utils::pii::Email::try_from(email_str.expose()).map_err(|e| {
+                                error_stack::Report::new(IntegrationError::InvalidDataFormat {
+                                    field_name: "email",
+                                    context: IntegrationErrorContext {
+                                        additional_context: Some("Invalid email".to_owned()),
+                                        ..Default::default()
+                                    },
+                                })
+                                .attach_printable(format!("{e:?}"))
+                            })
+                        })
+                        .transpose()?;
+
+                    Ok(payouts::payouts_types::PayoutCustomer {
+                        name: customer.name,
+                        email,
+                        merchant_customer_id: customer.id,
+                        connector_customer_id: customer.connector_customer_id,
+                        phone_number: customer.phone_number,
+                        phone_country_code: customer.phone_country_code,
+                    })
+                },
+            )
+            .transpose()?;
+
         Ok(Self {
             merchant_payout_id: value.merchant_payout_id.clone(),
             connector_quote_id: value.connector_quote_id.clone(),
@@ -1103,20 +1135,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
                 .source_bank_data
                 .map(payouts::payout_method_data::Bank::foreign_try_from)
                 .transpose()?,
-            customer: value.customer.map(|customer| {
-                let email = customer.email.and_then(|email_str| {
-                    common_utils::pii::Email::try_from(email_str.expose()).ok()
-                });
-
-                payouts::payouts_types::PayoutCustomer {
-                    name: customer.name,
-                    email,
-                    merchant_customer_id: customer.id,
-                    connector_customer_id: customer.connector_customer_id,
-                    phone_number: customer.phone_number,
-                    phone_country_code: customer.phone_country_code,
-                }
-            }),
+            customer,
         })
     }
 }
