@@ -292,7 +292,7 @@ where
 /// Generic gRPC logging wrapper that accepts a custom parser function.
 /// This allows different parsing strategies for different flow types
 /// (e.g., authenticated flows vs unauthenticated webhook flows).
-pub async fn grpc_logging_wrapper_with_parser<T, P, F, R>(
+pub async fn grpc_logging_wrapper_with_unauthenticated<T, P, F, R>(
     request: tonic::Request<T>,
     service_name: &str,
     config: Arc<configs::Config>,

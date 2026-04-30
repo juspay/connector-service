@@ -6,9 +6,9 @@ use domain_types::{
 };
 use error_stack::Report;
 use tonic::metadata;
+use ucs_env::{configs, error::ResultExtGrpc};
 
 use crate::utils::MetadataPayload;
-use ucs_env::configs;
 
 /// Structured request data with secure metadata access.
 /// This is the gRPC-specific wrapper around `InterfaceRequestData` that
@@ -54,9 +54,7 @@ impl<T> RequestData<T> {
         // Extract routing metadata only (connector, request_id, etc.)
         // without requiring connector_config/auth credentials
         let routing_metadata =
-            extract_routing_metadata_only(&metadata, config.clone()).map_err(|e| {
-                tonic::Status::internal(format!("Failed to extract routing metadata: {}", e))
-            })?;
+            extract_routing_metadata_only(&metadata, config.clone()).into_grpc_status()?;
 
         let masked_metadata = MaskedMetadata::new(metadata, config.unmasked_headers.clone());
 
@@ -129,14 +127,9 @@ fn extract_routing_metadata_only(
     let tenant_id = tenant_id_from_metadata(metadata).unwrap_or_default();
     let request_id = request_id_from_metadata(metadata).unwrap_or_default();
 
-    // For webhooks, we use a placeholder connector config initially.
-    // The actual config can be loaded later when needed via the payload's webhook_secrets
-    // or other mechanism. We use Stripe as a placeholder since it's a commonly used connector.
-    // This is a temporary workaround until a proper default is defined.
-    let connector_config = ConnectorSpecificConfig::Stripe {
-        api_key: hyperswitch_masking::Secret::new("placeholder".to_string()),
-        base_url: None,
-    };
+    // For webhooks, we use NoKey variant initially.
+    // The actual config can be loaded later when needed via the payload's webhook_secrets.
+    let connector_config = ConnectorSpecificConfig::NoKey;
 
     // Extract optional fields
     let reference_id = metadata
