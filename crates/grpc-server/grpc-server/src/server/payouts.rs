@@ -110,7 +110,7 @@ async fn fetch_oauth_access_token(
         tenant_id: "default",
     };
 
-    let access_token_result = external_services::service::execute_connector_processing_step(
+    let access_token_result = Box::pin(external_services::service::execute_connector_processing_step(
         &config.proxy,
         connector_integration,
         access_token_router_data,
@@ -120,7 +120,7 @@ async fn fetch_oauth_access_token(
         common_enums::CallConnectorAction::Trigger,
         None,
         None,
-    )
+    ))
     .await;
 
     match access_token_result {
@@ -191,14 +191,14 @@ impl PayoutService for Payouts {
 
         let metadata_payload = crate::utils::extract_metadata_from_request(&request)?;
 
-        let access_token = fetch_oauth_access_token(
+        let access_token = Box::pin(fetch_oauth_access_token(
             &metadata_payload.connector,
             &metadata_payload.connector_config,
             &config,
             &metadata_payload.masked_metadata,
             &service_name,
             "PAYOUT_TRANSFER",
-        )
+        ))
         .await?;
 
         if let Some(token) = access_token {
@@ -228,14 +228,14 @@ impl PayoutService for Payouts {
 
         let metadata_payload = crate::utils::extract_metadata_from_request(&request)?;
 
-        let access_token = fetch_oauth_access_token(
+        let access_token = Box::pin(fetch_oauth_access_token(
             &metadata_payload.connector,
             &metadata_payload.connector_config,
             &config,
             &metadata_payload.masked_metadata,
             &service_name,
             "PAYOUT_GET",
-        )
+        ))
         .await?;
 
         if let Some(token) = access_token {
