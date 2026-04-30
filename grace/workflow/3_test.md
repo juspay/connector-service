@@ -71,14 +71,17 @@ test-prism --connector {CONNECTOR} --suite authorize
 ## Phase 2: Analyze Results
 
 ### If ALL tests pass:
-
 - Result: **HARDENED**
 - The connector is now fully tested and can move to "Tested" status in docs
 
 ### If tests FAIL:
 
-**FORCE FIX — NEVER ASK:**
+**MANDATORY — YOU MUST ATTEMPT FIXES BEFORE REPORTING:**
+1. First: Check if failures are FIXABLE (test data, credentials)
+2. Second: For each fixable failure → FIX IT, rerun tests
+3. Third: Only if CANNOT fix → report FAILED or REPORT_TO_MASTER
 
+**FORCE FIX — NEVER ASK:**
 - If test fails due to test data (positive override) → FIX IT NOW, don't ask
 - If test fails due to connector code bug → FAILED (report)
 - If test fails due to framework bug → REPORT_TO_MASTER (stop)
@@ -120,12 +123,19 @@ test-prism --connector {CONNECTOR} --suite authorize
    - Requires change to testing framework core (harness, global_suites)
    - **→ STOP, report to master, do NOT modify codebase**
 
-**For POSITIVE Override Test Bugs** → Proceed to Phase 3
-**For Credentials Issues** → Fix creds.json, rerun tests
-**For NEGATIVE Override** → Result: **FAILED** (report, don't fix)
-**For Real Bugs** → Result: **FAILED** (report, don't fix connector)
-**For Payment Method Not Supported** → Result: **REPORT_TO_MASTER** (notify not implemented)
-**For UCS Code Bugs** → Result: **REPORT_TO_MASTER** (stop, notify)
+**DECISION ORDER (MANDATORY):**
+
+1. **Attempt fixes FIRST** (positive overrides, credentials)
+2. **Rerun tests** after each fix
+3. **Only if still failing after fixes** → determine final status
+
+**Mapping:**
+- Positive Override Test Bugs → Proceed to Phase 3 (fix → rerun → HARDENED)
+- Credentials Issues → Fix creds.json → rerun → HARDENED or CREDENTIALS_FIXED
+- NEGATIVE Override → Result: **FAILED** (report, don't fix)
+- Real Bugs → Result: **FAILED** (report, don't fix connector)
+- Payment Method Not Supported → Result: **REPORT_TO_MASTER** (notify not implemented)
+- UCS Code Bugs → Result: **REPORT_TO_MASTER** (stop, notify)
 
 ---
 
