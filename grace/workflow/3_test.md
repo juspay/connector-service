@@ -76,12 +76,18 @@ test-prism --connector {CONNECTOR} --suite authorize
 
 ### If tests FAIL:
 
-**MANDATORY — YOU MUST ATTEMPT FIXES BEFORE REPORTING:**
-1. First: Check if failures are FIXABLE (test data, credentials)
-2. Second: For each fixable failure → FIX IT, rerun tests
-3. Third: Only if CANNOT fix → report FAILED or REPORT_TO_MASTER
+**ENFORCEMENT — You are inside the loop until tests pass:**
 
-**FORCE FIX — NEVER ASK:**
+- **If tests FAIL, you are STILL inside the loop. You MUST fix test bugs, rerun tests, and verify. You CANNOT return a final status yet. Returning HARDENED after failures without attempting fixes is a CRITICAL VIOLATION.**
+- **If you find yourself about to report without fixing test bugs first → STOP → Fix them → Rerun → Verify → Only THEN return final status**
+- **Do NOT report failures without attempting fixes.** An error means something can be fixed — not that reporting is the next step. Fix → Rerun → Verify.
+- **You MUST make a test change between retries.** Never rerun tests without changing test data. No change = same result = STOP → return FAILED.
+
+**MANDATORY SEQUENCE:**
+1. **First:** Identify fixable issues (test data, credentials)
+2. **Second:** For each fixable issue → FIX IT in override.json/creds.json → RERUN tests
+3. **Third:** Only after reruns pass → return HARDENED
+4. **Fourth:** Only if CANNOT fix → return FAILED with evidence of attempted fixes
 - If test fails due to test data (positive override) → FIX IT NOW, don't ask
 - If test fails due to connector code bug → FAILED (report)
 - If test fails due to framework bug → REPORT_TO_MASTER (stop)
