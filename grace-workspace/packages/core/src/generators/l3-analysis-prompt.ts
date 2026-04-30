@@ -279,7 +279,7 @@ Return ONLY valid JSON:
   "riskAssessment": ["Connector uses custom auth pattern"],
   "executionLog": {
     "filesRead": [
-      "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.3_codegen.md",
+      "/Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.3_codegen.md",
       "{TECHSPEC_PATH}",
       "grace/rulesbook/codegen/guides/patterns/pattern_{FLOW}_flow.md"
     ],

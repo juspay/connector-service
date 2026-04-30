@@ -63,7 +63,7 @@ async function ensureTechSpecFile(
   projectRoot: string,
   connector: string,
   flow: string,
-  specContent: string | undefined
+  specContent: string | undefined,
 ): Promise<string> {
   const techSpecsDir = path.join(projectRoot, "techspecs");
   const specPath = path.join(techSpecsDir, `${connector}_${flow}_spec.md`);
@@ -83,7 +83,9 @@ async function ensureTechSpecFile(
     return specPath;
   } catch {
     // File doesn't exist and no content provided
-    throw new Error(`Tech spec not found at ${specPath} and no specContent provided`);
+    throw new Error(
+      `Tech spec not found at ${specPath} and no specContent provided`,
+    );
   }
 }
 
@@ -111,9 +113,18 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     const flow = task.paymentMethod || "Unknown";
     const projectRoot = task.projectRoot;
 
-    ctx.log("[l3_analysis] ╔═══════════════════════════════════════════════════════════╗", "info");
-    ctx.log("[l3_analysis] ║  L3 Analysis (2.3_codegen.md Phase 4)                    ║", "info");
-    ctx.log("[l3_analysis] ╚═══════════════════════════════════════════════════════════╝", "info");
+    ctx.log(
+      "[l3_analysis] ╔═══════════════════════════════════════════════════════════╗",
+      "info",
+    );
+    ctx.log(
+      "[l3_analysis] ║  L3 Analysis (2.3_codegen.md Phase 4)                    ║",
+      "info",
+    );
+    ctx.log(
+      "[l3_analysis] ╚═══════════════════════════════════════════════════════════╝",
+      "info",
+    );
     ctx.log(`[l3_analysis] Connector: ${connector}`, "info");
     ctx.log(`[l3_analysis] Flow: ${flow}`, "info");
 
@@ -124,7 +135,7 @@ export const l3AnalysisCheckpoint: Checkpoint = {
         projectRoot,
         connector,
         flow,
-        l2?.specContent
+        l2?.specContent,
       );
       ctx.log(`[l3_analysis] Tech spec: ${techSpecPath}`, "info");
     } catch (err) {
@@ -142,11 +153,13 @@ export const l3AnalysisCheckpoint: Checkpoint = {
       flow,
       techSpecPath,
       projectRoot,
-      "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.3_codegen.md",
-      l2
+      "/Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.3_codegen.md",
     );
 
-    ctx.log("[l3_analysis] Starting Phase 4 analysis (reading 6 files)...", "warn");
+    ctx.log(
+      "[l3_analysis] Starting Phase 4 analysis (reading 6 files)...",
+      "warn",
+    );
     ctx.log("[l3_analysis]   1. Tech Spec", "info");
     ctx.log("[l3_analysis]   2. Pattern Guide", "info");
     ctx.log("[l3_analysis]   3. Macro Reference", "info");
@@ -166,13 +179,20 @@ export const l3AnalysisCheckpoint: Checkpoint = {
       result = rawResult;
 
       // Save L3 spec to file for downstream checkpoints
-      const l3SpecPath = path.join(projectRoot, "techspecs", `${connector}_${flow}_l3.json`);
+      const l3SpecPath = path.join(
+        projectRoot,
+        "techspecs",
+        `${connector}_${flow}_l3.json`,
+      );
       try {
         await fs.mkdir(path.dirname(l3SpecPath), { recursive: true });
         await fs.writeFile(l3SpecPath, JSON.stringify(result, null, 2));
         ctx.log(`[l3_analysis] L3 spec saved to: ${l3SpecPath}`, "info");
       } catch (writeErr) {
-        ctx.log(`[l3_analysis] Warning: Failed to save L3 spec: ${writeErr}`, "warn");
+        ctx.log(
+          `[l3_analysis] Warning: Failed to save L3 spec: ${writeErr}`,
+          "warn",
+        );
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -207,7 +227,7 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     if (result.analysis.prerequisitesStatus === "incomplete") {
       ctx.log(
         `[l3_analysis] ✗ Prerequisites incomplete: ${result.analysis.missingPrerequisites?.join(", ")}`,
-        "error"
+        "error",
       );
       return {
         passed: false,
@@ -229,7 +249,10 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     }
 
     // Check files changed preview
-    if (!result.specification.filesChangedPreview || result.specification.filesChangedPreview.length === 0) {
+    if (
+      !result.specification.filesChangedPreview ||
+      result.specification.filesChangedPreview.length === 0
+    ) {
       ctx.log("[l3_analysis] ✗ Missing files changed preview", "error");
       return {
         passed: false,
@@ -239,51 +262,96 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     }
 
     // Log ambiguities if any
-    if (result.specification.ambiguities && result.specification.ambiguities.length > 0) {
-      ctx.log(`[l3_analysis] ⚠ ${result.specification.ambiguities.length} ambiguous specification(s)`, "warn");
+    if (
+      result.specification.ambiguities &&
+      result.specification.ambiguities.length > 0
+    ) {
+      ctx.log(
+        `[l3_analysis] ⚠ ${result.specification.ambiguities.length} ambiguous specification(s)`,
+        "warn",
+      );
       for (const ambiguity of result.specification.ambiguities) {
-        ctx.log(`[l3_analysis]   • ${ambiguity.field}: ${ambiguity.issue}`, "warn");
+        ctx.log(
+          `[l3_analysis]   • ${ambiguity.field}: ${ambiguity.issue}`,
+          "warn",
+        );
       }
     }
 
     // Log results
-    ctx.log(`[l3_analysis] ✓ Patterns identified: ${result.analysis.patternsIdentified.length}`, "success");
+    ctx.log(
+      `[l3_analysis] ✓ Patterns identified: ${result.analysis.patternsIdentified.length}`,
+      "success",
+    );
     for (const pattern of result.analysis.patternsIdentified) {
       ctx.log(`[l3_analysis]   • ${pattern}`, "info");
     }
 
-    ctx.log(`[l3_analysis] ✓ Files to modify: ${result.analysis.filesToModify.length}`, "success");
+    ctx.log(
+      `[l3_analysis] ✓ Files to modify: ${result.analysis.filesToModify.length}`,
+      "success",
+    );
     for (const file of result.analysis.filesToModify) {
       ctx.log(`[l3_analysis]   • ${file}`, "info");
     }
 
-    ctx.log(`[l3_analysis] ✓ Existing flows: ${result.analysis.existingFlows.join(", ") || "None"}`, "info");
+    ctx.log(
+      `[l3_analysis] ✓ Existing flows: ${result.analysis.existingFlows.join(", ") || "None"}`,
+      "info",
+    );
 
     // Log files changed preview
     const preview = result.specification.filesChangedPreview;
     const totalAdditions = preview.reduce((sum, f) => sum + f.linesAdded, 0);
     const totalDeletions = preview.reduce((sum, f) => sum + f.linesRemoved, 0);
-    ctx.log(`[l3_analysis] ✓ Files to change: ${preview.length} (+${totalAdditions}/-${totalDeletions})`, "success");
+    ctx.log(
+      `[l3_analysis] ✓ Files to change: ${preview.length} (+${totalAdditions}/-${totalDeletions})`,
+      "success",
+    );
     for (const file of preview) {
-      const icon = file.changeType === "created" ? "+" : file.changeType === "deleted" ? "−" : "•";
-      ctx.log(`[l3_analysis]   ${icon} ${file.path} (+${file.linesAdded}/-${file.linesRemoved})`, "info");
+      const icon =
+        file.changeType === "created"
+          ? "+"
+          : file.changeType === "deleted"
+            ? "−"
+            : "•";
+      ctx.log(
+        `[l3_analysis]   ${icon} ${file.path} (+${file.linesAdded}/-${file.linesRemoved})`,
+        "info",
+      );
     }
 
     if (result.riskAssessment && result.riskAssessment.length > 0) {
-      ctx.log(`[l3_analysis] ⚠ Risks identified: ${result.riskAssessment.length}`, "warn");
+      ctx.log(
+        `[l3_analysis] ⚠ Risks identified: ${result.riskAssessment.length}`,
+        "warn",
+      );
       for (const risk of result.riskAssessment) {
         ctx.log(`[l3_analysis]   • ${risk}`, "warn");
       }
     }
 
-    ctx.log("[l3_analysis] ╔═══════════════════════════════════════════════════════════╗", "success");
-    ctx.log("[l3_analysis] ║  ✓ Phase 4 Analysis Complete                             ║", "success");
-    ctx.log("[l3_analysis] ╚═══════════════════════════════════════════════════════════╝", "success");
+    ctx.log(
+      "[l3_analysis] ╔═══════════════════════════════════════════════════════════╗",
+      "success",
+    );
+    ctx.log(
+      "[l3_analysis] ║  ✓ Phase 4 Analysis Complete                             ║",
+      "success",
+    );
+    ctx.log(
+      "[l3_analysis] ╚═══════════════════════════════════════════════════════════╝",
+      "success",
+    );
 
     delete ctx.artifacts.l3RegeneratePrompt;
 
     // Get the l3SpecPath we saved earlier
-    const l3SpecPath = path.join(projectRoot, "techspecs", `${connector}_${flow}_l3.json`);
+    const l3SpecPath = path.join(
+      projectRoot,
+      "techspecs",
+      `${connector}_${flow}_l3.json`,
+    );
 
     return {
       passed: true,

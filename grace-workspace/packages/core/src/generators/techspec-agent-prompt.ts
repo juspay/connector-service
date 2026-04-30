@@ -14,7 +14,7 @@ Your task is to generate a technical specification by following the official Gra
 ## Instructions
 
 1. Use read_file to read:
-   /Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.2_techspec.md
+   /Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.2_techspec.md
 
 2. Follow the instructions in that file EXACTLY as written, with ONE EXCEPTION:
 
@@ -110,7 +110,8 @@ export function buildTechspecAgentUserPayload(
     connector_lc: connector.toLowerCase(),
     paymentMethod,
     flow: paymentMethod,
-    workflowFile: "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.2_techspec.md",
+    workflowFile:
+      "/Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.2_techspec.md",
     skipPhase: "1c",
     generateInsteadOfCLI: true,
     // Full task context - all fields from task creation

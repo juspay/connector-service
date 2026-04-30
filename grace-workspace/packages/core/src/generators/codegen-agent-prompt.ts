@@ -21,7 +21,7 @@ Implement the {FLOW} flow for {CONNECTOR} by following the detailed specificatio
 ## Phase 1: Read Implementation Instructions
 
 Read the implementation methodology from:
-/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.3_codegen.md
+/Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.3_codegen.md
 
 Read ONLY "Phase 5: Implement" and "Phase 6-7: Build & Test Loop". Do NOT re-read Phase 4.
 
@@ -219,7 +219,7 @@ export function buildCodegenPayload(
   flow: string,
   projectRoot: string,
   techSpecPath: string,
-  l3Analysis: L3Analysis
+  l3Analysis: L3Analysis,
 ): Record<string, unknown> {
   return {
     CONNECTOR: connector,
