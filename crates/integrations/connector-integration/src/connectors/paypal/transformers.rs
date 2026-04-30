@@ -13,8 +13,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, ClientAuthenticationToken, CreateOrder, PayoutGet, PayoutTransfer,
-        PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
+        Authorize, Capture, ClientAuthenticationToken, CreateOrder, PSync, PayoutGet,
+        PayoutTransfer, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
     },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, MandateReference,
@@ -3993,7 +3993,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let item_data = PaypalPayoutItem::try_from(item)?;
         Ok(Self {
             sender_batch_header: PaypalPayoutBatchHeader {
-                sender_batch_id: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                sender_batch_id: item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
             },
             items: vec![item_data],
         })
@@ -4031,19 +4035,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             return Err(IntegrationError::InvalidDataFormat {
                 field_name: "amount",
                 context: IntegrationErrorContext {
-                    additional_context: Some("PayPal Payout Transfer - Payout amount must be greater than zero".to_string()),
+                    additional_context: Some(
+                        "PayPal Payout Transfer - Payout amount must be greater than zero"
+                            .to_string(),
+                    ),
                     ..Default::default()
                 },
-            }.into());
+            }
+            .into());
         }
 
         let amount = PayoutAmount {
-            value: item.connector.amount_converter.convert(
-                minor_amount,
-                item.router_data.request.destination_currency,
-            ).change_context(IntegrationError::AmountConversionFailed {
-                context: Default::default(),
-            })?,
+            value: item
+                .connector
+                .amount_converter
+                .convert(minor_amount, item.router_data.request.destination_currency)
+                .change_context(IntegrationError::AmountConversionFailed {
+                    context: Default::default(),
+                })?,
             currency: item.router_data.request.destination_currency,
         };
 
@@ -4080,14 +4089,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 }
                 PayoutWallet::Venmo(data) => {
-                    let receiver = PaypalPayoutDataType::OtherType(
-                        data.telephone_number.clone().ok_or(
+                    let receiver =
+                        PaypalPayoutDataType::OtherType(data.telephone_number.clone().ok_or(
                             IntegrationError::MissingRequiredField {
                                 field_name: "telephone_number",
                                 context: Default::default(),
                             },
-                        )?,
-                    );
+                        )?);
                     PaypalPayoutMethodData {
                         recipient_type: PayoutRecipientType::Phone,
                         recipient_wallet: PayoutWalletType::Venmo,
@@ -4117,12 +4125,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl TryFrom<ResponseRouterData<PaypalFulfillResponse, Self>>
-    for RouterDataV2<
-        PayoutTransfer,
-        PayoutFlowData,
-        PayoutTransferRequest,
-        PayoutTransferResponse,
-    >
+    for RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>
 {
     type Error = Report<ConnectorError>;
 

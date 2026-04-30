@@ -28,7 +28,6 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 use external_services::service::EventProcessingParams;
-use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use grpc_api_types::payouts::{
     payout_service_server::PayoutService, PayoutServiceCreateLinkRequest,
     PayoutServiceCreateLinkResponse, PayoutServiceCreateRecipientRequest,
@@ -38,6 +37,7 @@ use grpc_api_types::payouts::{
     PayoutServiceStageResponse, PayoutServiceTransferRequest, PayoutServiceTransferResponse,
     PayoutServiceVoidRequest, PayoutServiceVoidResponse,
 };
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use ucs_env::error::ResultExtGrpc;
 
 use crate::{
@@ -54,9 +54,8 @@ async fn fetch_oauth_access_token(
     service_name: &str,
     log_prefix: &str,
 ) -> Result<Option<ServerAuthenticationTokenResponseData>, tonic::Status> {
-    let connector_data: ConnectorData<
-        domain_types::payment_method_data::DefaultPCIHolder,
-    > = ConnectorData::get_connector_by_name(connector);
+    let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> =
+        ConnectorData::get_connector_by_name(connector);
 
     let should_do_access_token = connector_data.connector.should_do_access_token(None);
 
@@ -65,14 +64,12 @@ async fn fetch_oauth_access_token(
     }
 
     tracing::info!("{}: Fetching OAuth access token...", log_prefix);
-    let connectors = crate::utils::connectors_with_connector_config_overrides(
-        connector_config,
-        config,
-    )
-    .into_grpc_status()?;
+    let connectors =
+        crate::utils::connectors_with_connector_config_overrides(connector_config, config)
+            .into_grpc_status()?;
 
-    let auth_flow_data = PaymentFlowData::foreign_try_from((connectors, masked_metadata))
-        .into_grpc_status()?;
+    let auth_flow_data =
+        PaymentFlowData::foreign_try_from((connectors, masked_metadata)).into_grpc_status()?;
 
     let access_token_request_data =
         ServerAuthenticationTokenRequestData::foreign_try_from(connector_config)

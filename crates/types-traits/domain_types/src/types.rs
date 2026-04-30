@@ -4545,8 +4545,8 @@ impl ForeignTryFrom<(Connectors, &MaskedMetadata)> for PaymentFlowData {
 
         Ok(Self {
             merchant_id,
-            payment_id: String::new(),       // Access token flow doesn't have a payment yet
-            attempt_id: String::new(),       // Access token flow doesn't have an attempt yet
+            payment_id: String::new(), // Access token flow doesn't have a payment yet
+            attempt_id: String::new(), // Access token flow doesn't have an attempt yet
             status: common_enums::AttemptStatus::Pending,
             payment_method: PaymentMethod::Card, // Default, will be updated later if needed
             address,

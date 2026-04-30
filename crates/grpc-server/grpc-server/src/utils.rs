@@ -423,8 +423,10 @@ where
 
     let metadata_payload = get_metadata_payload(metadata, config.clone()).into_grpc_status()?;
 
-    let masked_metadata =
-        common_utils::metadata::MaskedMetadata::new(metadata.clone(), config.unmasked_headers.clone());
+    let masked_metadata = common_utils::metadata::MaskedMetadata::new(
+        metadata.clone(),
+        config.unmasked_headers.clone(),
+    );
 
     Ok(ExtractedRequestMetadata {
         tenant_id: metadata_payload.tenant_id,

@@ -13,8 +13,8 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
         CreateConnectorCustomer, CreateOrder, DefendDispute, IncrementalAuthorization,
-        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, PayoutGet,
-        PayoutTransfer, RSync, Refund, RepeatPayment, ServerAuthenticationToken,
+        MandateRevoke, PSync, PaymentMethodToken, PayoutGet, PayoutTransfer, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, ServerAuthenticationToken,
         ServerSessionAuthenticationToken, SetupMandate, SubmitEvidence, VerifyWebhookSource, Void,
         VoidPC,
     },
@@ -32,7 +32,6 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
     },
-    router_request_types::VerifyWebhookSourceRequestData,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     payouts::payouts_types::{
         PayoutFlowData, PayoutGetRequest, PayoutGetResponse, PayoutTransferRequest,
@@ -40,6 +39,7 @@ use domain_types::{
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
 };
@@ -67,7 +67,9 @@ use crate::{
     utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping},
     with_error_response_body,
 };
-use domain_types::errors::{ConnectorError, IntegrationError, IntegrationErrorContext, WebhookError};
+use domain_types::errors::{
+    ConnectorError, IntegrationError, IntegrationErrorContext, WebhookError,
+};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -217,15 +219,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PayoutTransferResponse,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-        let access_token = req
-            .resource_common_data
-            .get_access_token()
-            .map_err(|_| IntegrationError::FailedToObtainAuthType {
+        let access_token = req.resource_common_data.get_access_token().map_err(|_| {
+            IntegrationError::FailedToObtainAuthType {
                 context: IntegrationErrorContext {
-                    additional_context: Some("PayPal Payout Transfer - Failed to obtain OAuth access token".to_string()),
+                    additional_context: Some(
+                        "PayPal Payout Transfer - Failed to obtain OAuth access token".to_string(),
+                    ),
                     ..Default::default()
                 },
-            })?;
+            }
+        })?;
 
         let connector_metadata = req
             .resource_common_data
@@ -285,12 +288,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
-        RouterDataV2<
-            PayoutTransfer,
-            PayoutFlowData,
-            PayoutTransferRequest,
-            PayoutTransferResponse,
-        >,
+        RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>,
         ConnectorError,
     > {
         let response: paypal::PaypalFulfillResponse = res
@@ -350,15 +348,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PayoutGet, PayoutFlowData, PayoutGetRequest, PayoutGetResponse>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-        let access_token = req
-            .resource_common_data
-            .get_access_token()
-            .map_err(|_| IntegrationError::FailedToObtainAuthType {
+        let access_token = req.resource_common_data.get_access_token().map_err(|_| {
+            IntegrationError::FailedToObtainAuthType {
                 context: IntegrationErrorContext {
-                    additional_context: Some("PayPal Payout Get - Failed to obtain OAuth access token".to_string()),
+                    additional_context: Some(
+                        "PayPal Payout Get - Failed to obtain OAuth access token".to_string(),
+                    ),
                     ..Default::default()
                 },
-            })?;
+            }
+        })?;
 
         let connector_metadata = req
             .resource_common_data
@@ -377,17 +376,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<PayoutGet, PayoutFlowData, PayoutGetRequest, PayoutGetResponse>,
     ) -> CustomResult<String, IntegrationError> {
-        let connector_payout_id = req
-            .request
-            .connector_payout_id
-            .as_ref()
-            .ok_or(IntegrationError::MissingRequiredField {
+        let connector_payout_id = req.request.connector_payout_id.as_ref().ok_or(
+            IntegrationError::MissingRequiredField {
                 field_name: "connector_payout_id",
                 context: IntegrationErrorContext {
-                    additional_context: Some("PayPal Payout Get - Missing connector payout ID".to_string()),
+                    additional_context: Some(
+                        "PayPal Payout Get - Missing connector payout ID".to_string(),
+                    ),
                     ..Default::default()
                 },
-            })?;
+            },
+        )?;
 
         let base = self.base_url(&req.resource_common_data.connectors);
         let url = url::Url::parse(&base)
@@ -402,7 +401,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .map_err(|_| IntegrationError::InvalidDataFormat {
                 field_name: "connector_payout_id",
                 context: IntegrationErrorContext {
-                    additional_context: Some("PayPal Payout Get - Invalid connector payout ID for URL".to_string()),
+                    additional_context: Some(
+                        "PayPal Payout Get - Invalid connector payout ID for URL".to_string(),
+                    ),
                     ..Default::default()
                 },
             })?;
