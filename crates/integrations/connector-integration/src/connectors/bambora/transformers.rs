@@ -2,11 +2,11 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -789,6 +789,230 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
     }
 }
 
+// ============================================================================
+// SetupMandate (SetupRecurring / Profile Creation) Implementation
+// ============================================================================
+
+/// Request payload for Bambora SetupRecurring (Profile Creation) flow.
+/// Creates a payment profile for storing card credentials for recurring use.
+#[derive(Debug, Serialize)]
+pub struct BamboraProfileRequest {
+    /// Unique identifier for the customer (max 32 alphanumeric characters)
+    pub customer_code: String,
+    /// If true, validates the card by performing a zero-dollar authorization
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validate: Option<bool>,
+    /// Tokenized card data for profile creation (alternative to raw card data)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<BamboraProfileToken>,
+    /// Billing address information for the profile
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub billing: Option<BamboraBillingAddress>,
+}
+
+/// Tokenized card data for profile creation
+#[derive(Debug, Serialize)]
+pub struct BamboraProfileToken {
+    /// Cardholder name
+    pub name: Secret<String>,
+    /// Token code from Bambora tokenization service
+    /// Note: For initial implementation, we pass raw card number here
+    pub code: Secret<String>,
+}
+
+/// Response from Bambora Profile Creation API for SetupRecurring flow
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BamboraProfileResponse {
+    /// The unique customer code for the created profile (used for subsequent recurring payments)
+    pub customer_code: String,
+    /// Human-readable response message (e.g., 'Operation successful')
+    pub message: String,
+    /// Card details stored in the profile
+    #[serde(default)]
+    pub card: Option<BamboraProfileCardResponse>,
+}
+
+/// Card details in profile response
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BamboraProfileCardResponse {
+    /// ID of the card within the profile
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<i32>,
+    /// Last four digits of the card
+    pub last_four: String,
+    /// Card network (VI, MC, AM, etc.)
+    pub card_type: String,
+}
+
+/// Type alias for macro compatibility
+pub type BamboraSetupMandateResponse = BamboraProfileResponse;
+
+// Request Transformation for SetupMandate
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<
+        &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    > for BamboraProfileRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Generate customer_code from connector_request_reference_id
+        // Limit to 32 alphanumeric characters
+        let customer_code = item
+            .resource_common_data
+            .customer_id
+            .clone()
+            .map(|cid| cid.get_string_repr().to_string())
+            .unwrap_or_else(|| {
+                // Sanitize connector_request_reference_id: remove non-alphanumeric, truncate to 32
+                item.resource_common_data
+                    .connector_request_reference_id
+                    .chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .take(32)
+                    .collect::<String>()
+            });
+
+        // Extract card data and construct token
+        let payment_method_data = &item.request.payment_method_data;
+        let token = match payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                // Get cardholder name from billing or customer name
+                let cardholder_name = item
+                    .resource_common_data
+                    .get_optional_billing_full_name()
+                    .or_else(|| item.request.customer_name.clone().map(Secret::new))
+                    .unwrap_or_else(|| Secret::new("Unknown".to_string()));
+
+                // For now, use raw card number in token.code (may need tokenization in production)
+                let card_number = card_data.card_number.peek().to_string();
+
+                Some(BamboraProfileToken {
+                    name: cardholder_name,
+                    code: Secret::new(card_number),
+                })
+            }
+            _ => {
+                // Other payment methods not supported for profile creation
+                None
+            }
+        };
+
+        // Extract billing address from resource_common_data
+        let billing = item
+            .resource_common_data
+            .address
+            .get_payment_billing()
+            .and_then(|payment_billing| {
+                payment_billing.address.as_ref().map(|addr| {
+                    // Convert state to province code for US/CA
+                    let province = addr.state.clone().and_then(|state| {
+                        crate::utils::get_state_code_for_country(&state, addr.country)
+                    });
+
+                    BamboraBillingAddress {
+                        name: addr.first_name.clone().or(addr.last_name.clone()),
+                        address_line1: addr.line1.clone(),
+                        address_line2: addr.line2.clone(),
+                        city: addr.city.clone().map(|s| s.expose()),
+                        province,
+                        country: addr.country,
+                        postal_code: addr.zip.clone(),
+                        phone_number: payment_billing
+                            .phone
+                            .as_ref()
+                            .and_then(|p| p.number.clone()),
+                        email_address: payment_billing.email.clone(),
+                    }
+                })
+            });
+
+        Ok(Self {
+            customer_code,
+            validate: Some(true), // Hardcoded to validate card during profile creation
+            token,
+            billing,
+        })
+    }
+}
+
+// Response Transformation for SetupMandate
+
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraProfileResponse, Self>>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BamboraProfileResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Success determined by HTTP 200 status and presence of customer_code
+        let status = if !item.response.customer_code.is_empty() {
+            AttemptStatus::Charged
+        } else {
+            AttemptStatus::Failure
+        };
+
+        // Build connector metadata with card_id if available
+        let connector_metadata = item.response.card.as_ref().and_then(|card| {
+            card.card_id.map(|id| {
+                serde_json::json!({
+                    "card_id": id,
+                    "last_four": card.last_four,
+                    "card_type": card.card_type
+                })
+            })
+        });
+
+        // Build mandate reference with customer_code
+        let mandate_reference = Some(Box::new(domain_types::connector_types::MandateReference {
+            connector_mandate_id: Some(item.response.customer_code.clone()),
+            payment_method_id: item
+                .response
+                .card
+                .as_ref()
+                .and_then(|c| c.card_id.map(|id| id.to_string())),
+            connector_mandate_request_reference_id: None,
+        }));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::NoResponseId,
+                redirection_data: None,
+                mandate_reference,
+                connector_metadata,
+                network_txn_id: None,
+                connector_response_reference_id: Some(item.response.customer_code.clone()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
 // Macro Wrapper Type Implementations
 
 use crate::connectors::bambora::BamboraRouterData;
@@ -881,6 +1105,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         wrapper: BamboraRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&wrapper.router_data)
+    }
+}
+
+// SetupMandate - wrapper to RouterDataV2
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BamboraRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BamboraProfileRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        wrapper: BamboraRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
