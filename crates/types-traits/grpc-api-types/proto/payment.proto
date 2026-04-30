@@ -752,6 +752,7 @@ enum Connector {
   PINELABS_ONLINE = 117;
   IMERCHANTSOLUTIONS = 118;
   AXISBANK = 119;
+  EASEBUZZ = 120;
 }
 
 // Payment method types
@@ -4155,6 +4156,13 @@ message TrustlyConfig {
   optional string base_url = 50;
 }
 
+message EasebuzzConfig {
+  SecretString api_key = 1;
+  SecretString api_salt = 2;
+  optional string base_url = 50;
+  optional string secondary_base_url = 51;
+}
+
 message TruelayerConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
@@ -4436,8 +4444,11 @@ message ConnectorSpecificConfig {
     // IMERCHANTSOLUTIONS = 118
     ImerchantsolutionsConfig imerchantsolutions = 118;
 
-    // AXISBANK = 117
+    // AXISBANK = 119
     AxisbankConfig axisbank = 119;
+
+    // EASEBUZZ = 120
+    EasebuzzConfig easebuzz = 120;
   }
 }
 

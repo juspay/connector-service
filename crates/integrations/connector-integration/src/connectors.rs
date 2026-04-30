@@ -245,6 +245,9 @@ pub use self::itaubank::Itaubank;
 pub mod pinelabs_online;
 pub use self::pinelabs_online::PinelabsOnline;
 
+pub mod easebuzz;
+pub use self::easebuzz::Easebuzz;
+
 pub mod imerchantsolutions;
 pub use self::imerchantsolutions::Imerchantsolutions;
 
