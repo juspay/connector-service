@@ -19,6 +19,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.30.0
+
+### Features
+
+- **connector:**
+  - [nuvei] introduce bank redirect payment method ([#662](https://github.com/juspay/connector-service/pull/662)) ([`57fecb7`](https://github.com/juspay/connector-service/commit/57fecb78b3ca5e33d7a71116e4f99308b86170c0))
+  - [AXIS_BANK] integrate juspay upi stack payin flows ([#1162](https://github.com/juspay/connector-service/pull/1162)) ([`2a01185`](https://github.com/juspay/connector-service/commit/2a01185bf5bfcea88f67986bf57117e455d12b42))
+  - Wire easebuzz with two-step seamless flow ([#1095](https://github.com/juspay/connector-service/pull/1095)) ([`bb70908`](https://github.com/juspay/connector-service/commit/bb70908055c7fe6a5da3eab37d71b76f286fa27e))
+
+### Bug Fixes
+
+- **connector:** [tsys] wire SetupRecurring -> Charge MIT chain ([#1071](https://github.com/juspay/connector-service/pull/1071)) ([`af55fe6`](https://github.com/juspay/connector-service/commit/af55fe64d98745b0484165b95e50bfbe195ecf58))
+
+### Documentation
+
+- **grace:** Fix rulesbook gaps - add missing flows, patterns, and codegen improvements ([#861](https://github.com/juspay/connector-service/pull/861)) ([`b37cec4`](https://github.com/juspay/connector-service/commit/b37cec45b24d3b8740287573786a6025c5d90418))
+
+**Full Changelog:** [`2026.04.29.0...2026.04.30.0`](https://github.com/juspay/connector-service/compare/2026.04.29.0...2026.04.30.0)
+
+- - -
+
 ## 2026.04.29.0
 
 ### Features
