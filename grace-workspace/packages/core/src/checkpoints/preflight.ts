@@ -32,17 +32,9 @@ export const preflightCheckpoint: Checkpoint = {
         return { passed: false, errors: ["Not a git repository"] };
       }
 
-      // Fetch latest main (optional - continue if it fails)
-      ctx.log("[preflight] Fetching latest main...", "info");
-      try {
-        execSync("git fetch origin main", { cwd: projectRoot, stdio: "pipe" });
-      } catch {
-        ctx.log("[preflight] Warning: Could not fetch from origin/main, continuing without fetch", "warn");
-      }
-
-      // Create and checkout new branch from main
-      ctx.log("[preflight] Creating branch from origin/main...", "info");
-      execSync(`git checkout -b ${branchName} origin/main`, { cwd: projectRoot, stdio: "pipe" });
+      // Checkout add-grace-app branch
+      ctx.log("[preflight] Checking out add-grace-app branch...", "info");
+      execSync("git checkout add-grace-app", { cwd: projectRoot, stdio: "pipe" });
 
       // Verify creds.json exists
       const credsPath = path.join(projectRoot, "creds.json");
