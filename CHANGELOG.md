@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.01.0
+
+### Features
+
+- **connector:** Implement MIT for jpmorgan ([#908](https://github.com/juspay/connector-service/pull/908)) ([`d72421d`](https://github.com/juspay/connector-service/commit/d72421df1db2fba23c3bf992506b6b09e9ea587f))
+
+**Full Changelog:** [`2026.04.30.0...2026.05.01.0`](https://github.com/juspay/connector-service/compare/2026.04.30.0...2026.05.01.0)
+
+- - -
+
 ## 2026.04.30.0
 
 ### Features
