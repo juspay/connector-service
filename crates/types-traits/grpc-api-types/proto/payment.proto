@@ -102,6 +102,7 @@ message ConnectorErrorDetails {
   optional string code = 1;    // Connector-specific error code
   optional string message = 2; // Human-readable error message
   optional string reason = 3;  // Detailed explanation
+  optional string connector_transaction_id = 4; // Connector's unique transaction ID for debugging and support reference
 }
 
 // Metadata consolidates all metadata types
@@ -750,6 +751,8 @@ enum Connector {
   SANLAM = 116;
   PINELABS_ONLINE = 117;
   IMERCHANTSOLUTIONS = 118;
+  AXISBANK = 119;
+  EASEBUZZ = 120;
 }
 
 // Payment method types
@@ -3280,6 +3283,9 @@ message RefundServiceGetRequest {
   optional PaymentMethodType payment_method_type = 9;
 
   optional SecretString connector_feature_data = 10;
+
+  // Amount Information
+  optional Money refund_amount = 15;
 }
 
 // ============================================================================
@@ -4150,6 +4156,13 @@ message TrustlyConfig {
   optional string base_url = 50;
 }
 
+message EasebuzzConfig {
+  SecretString api_key = 1;
+  SecretString api_salt = 2;
+  optional string base_url = 50;
+  optional string secondary_base_url = 51;
+}
+
 message TruelayerConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
@@ -4170,6 +4183,14 @@ message PinelabsOnlineConfig {
 message ImerchantsolutionsConfig {
   SecretString api_key = 1;
   optional string base_url = 2;
+}
+
+message AxisbankConfig {
+  SecretString merchant_kid = 3;
+  SecretString juspay_kid = 4;
+  SecretString merchant_private_key = 5;
+  SecretString juspay_public_key = 6;
+  optional string base_url = 50;
 }
 
 // ConnectorSpecificConfig message with oneof containing all connector
@@ -4422,6 +4443,12 @@ message ConnectorSpecificConfig {
 
     // IMERCHANTSOLUTIONS = 118
     ImerchantsolutionsConfig imerchantsolutions = 118;
+
+    // AXISBANK = 119
+    AxisbankConfig axisbank = 119;
+
+    // EASEBUZZ = 120
+    EasebuzzConfig easebuzz = 120;
   }
 }
 

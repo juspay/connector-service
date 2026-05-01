@@ -1189,7 +1189,7 @@ dependencies = [
  "grpc-api-types",
  "hyperswitch_masking",
  "prost 0.14.3",
- "prost-types 0.14.3",
+ "prost-types",
  "tonic 0.14.5",
  "ucs_common_enums",
  "ucs_common_utils",
@@ -2281,7 +2281,7 @@ dependencies = [
  "proc-macro2",
  "prost 0.14.3",
  "prost-build",
- "prost-types 0.14.3",
+ "prost-types",
  "quote",
  "thiserror 2.0.18",
  "tonic-prost-build",
@@ -3219,6 +3219,7 @@ name = "grpc-api-types"
 version = "0.1.0"
 dependencies = [
  "axum 0.8.8",
+ "bytes",
  "error-stack 0.5.0",
  "g2h",
  "heck 0.5.0",
@@ -3226,7 +3227,7 @@ dependencies = [
  "hyperswitch_masking",
  "prost 0.14.3",
  "prost-build",
- "prost-types 0.13.5",
+ "prost-types",
  "serde",
  "tonic 0.14.5",
  "tonic-build",
@@ -3262,6 +3263,7 @@ dependencies = [
  "log_utils",
  "once_cell",
  "prometheus",
+ "prost-types",
  "rand 0.8.5",
  "reqwest 0.12.28",
  "rustc-hash 2.1.1",
@@ -5654,7 +5656,7 @@ dependencies = [
  "petgraph",
  "prettyplease",
  "prost 0.14.3",
- "prost-types 0.14.3",
+ "prost-types",
  "pulldown-cmark",
  "pulldown-cmark-to-cmark",
  "regex",
@@ -5686,15 +5688,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "prost-types"
-version = "0.13.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52c2c1bf36ddb1a1c396b3601a3cec27c2462e45f07c386894ec3ccf5332bd16"
-dependencies = [
- "prost 0.13.5",
 ]
 
 [[package]]
@@ -7852,7 +7845,7 @@ dependencies = [
  "prettyplease",
  "proc-macro2",
  "prost-build",
- "prost-types 0.14.3",
+ "prost-types",
  "quote",
  "syn 2.0.117",
  "tempfile",
@@ -7866,7 +7859,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aaf0685a51e6d02b502ba0764002e766b7f3042aed13d9234925b6ffbfa3fca7"
 dependencies = [
  "prost 0.14.3",
- "prost-types 0.14.3",
+ "prost-types",
  "tokio",
  "tokio-stream",
  "tonic 0.14.5",
@@ -8225,6 +8218,7 @@ dependencies = [
  "hyperswitch_masking",
  "interfaces",
  "log_utils",
+ "prost 0.14.3",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -8253,6 +8247,7 @@ dependencies = [
  "grpc-api-types",
  "http 1.4.0",
  "hyperswitch_masking",
+ "prost 0.14.3",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
