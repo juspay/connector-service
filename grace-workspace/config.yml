@@ -13,7 +13,7 @@ opencode:
   # so that the model can use tools (web_search, read_file, grep, write).
   # Model is left empty to use opencode default (kimi-latest)
   model: "" # Use opencode default model
-  attachUrl: "http://127.0.0.1:63207" # running `opencode serve` instance
+  attachUrl: "http://127.0.0.1:4096" # running `opencode serve` instance
   timeoutMs: 900000 # per-call hard timeout (15 min)
   implementationConcurrency: 4
 

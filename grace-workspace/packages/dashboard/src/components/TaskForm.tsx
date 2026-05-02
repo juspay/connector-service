@@ -13,7 +13,7 @@ export interface SubmittedTask {
   title: string;
   description: string;
   acceptanceCriteria: string[];
-  figmaUrl?: string;
+  connectorDocUrls?: string[];
   targetFiles?: string[];
   projectRoot?: string;
   attachments?: SubmittedAttachment[];
@@ -101,7 +101,7 @@ export function TaskForm({
   const [description, setDescription] = useState("");
   const [criteria, setCriteria] = useState("");
   const [advanced, setAdvanced] = useState(false);
-  const [figmaUrl, setFigmaUrl] = useState("");
+  const [connectorDocUrls, setConnectorDocUrls] = useState("");
   const [targetFiles, setTargetFiles] = useState("");
   const [projectRoot, setProjectRoot] = useState("");
   const [attachments, setAttachments] = useState<SubmittedAttachment[]>([]);
@@ -179,7 +179,9 @@ export function TaskForm({
       title: title.trim(),
       description: description.trim(),
       acceptanceCriteria: criteriaList,
-      figmaUrl: figmaUrl.trim() || undefined,
+      connectorDocUrls: connectorDocUrls
+        ? connectorDocUrls.split("\n").map((s) => s.trim()).filter(Boolean)
+        : undefined,
       targetFiles: targetFiles
         ? targetFiles.split(",").map((s) => s.trim()).filter(Boolean)
         : undefined,
@@ -459,12 +461,12 @@ export function TaskForm({
       {advanced && (
         <>
           <div style={{ marginBottom: 10 }}>
-            <label style={label}>Figma URL</label>
-            <input
-              style={field}
-              value={figmaUrl}
-              onChange={(e) => setFigmaUrl(e.target.value)}
-              placeholder="https://www.figma.com/design/…"
+            <label style={label}>Connector Reference Document URLs (one per line)</label>
+            <textarea
+              style={{ ...field, minHeight: 80 }}
+              value={connectorDocUrls}
+              onChange={(e) => setConnectorDocUrls(e.target.value)}
+              placeholder="https://docs.stripe.com/api/payment_intents&#10;https://docs.stripe.com/guides/payments"
               disabled={disabled}
             />
           </div>
