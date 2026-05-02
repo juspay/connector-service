@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { Checkpoint, TaskDefinition } from "../types.js";
 import { ask, askMultiline } from "../prompts/cli-prompts.js";
-import { getConfig } from "../config.js";
+import { getConfig, setConfig } from "../config.js";
 
 function validTask(t: unknown): t is TaskDefinition {
   if (!t || typeof t !== "object") return false;
@@ -74,6 +74,8 @@ export const taskCheckpoint: Checkpoint = {
             ? payload.prerequisites
             : undefined,
           estimatedComplexity: payload.estimatedComplexity,
+          runner: payload.runner,
+          runnerModel: payload.runnerModel,
         };
         if (!validTask(candidate)) {
           ctx.bus.emit("task:rejected", "task", {
@@ -82,6 +84,22 @@ export const taskCheckpoint: Checkpoint = {
           ctx.log("[task] Submitted task rejected — waiting for another.", "warn");
           continue;
         }
+
+        // Apply runner configuration from the task
+        if (candidate.runner) {
+          const cfg = getConfig();
+          cfg.runner = candidate.runner;
+          if (candidate.runnerModel) {
+            if (candidate.runner === "claude-code") {
+              cfg.claudeCode.model = candidate.runnerModel;
+            } else {
+              cfg.opencode.model = candidate.runnerModel;
+            }
+          }
+          setConfig(cfg);
+          ctx.log(`[task] Using AI runner: ${candidate.runner}${candidate.runnerModel ? ` (${candidate.runnerModel})` : ""}`, "info");
+        }
+
         ctx.task = candidate;
         ctx.bus.emit("task:accepted", "task", { task: candidate });
         ctx.log(`[task] ✓ Received task from UI: "${candidate.title}"`, "success");

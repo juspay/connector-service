@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { runOpencode } from "../tools/opencode-runner.js";
+import { runAI } from "../tools/runner-factory.js";
 import { atomicWrite } from "../utils.js";
 import type { PipelineContext } from "../types.js";
 
@@ -94,11 +94,11 @@ export async function repairCode(
     return;
   }
 
-  ctx.log("[code-repair] Requesting fixes for " + fileContents.length + " file(s) via opencode", "info");
-  
+  ctx.log("[code-repair] Requesting fixes for " + fileContents.length + " file(s) via AI runner", "info");
+
   let repairs: RepairsResult;
   try {
-    repairs = await runOpencode<RepairsResult>({
+    repairs = await runAI<RepairsResult>({
       skillBody: REPAIR_SYSTEM,
       userPayload: {
         files: fileContents,
@@ -110,14 +110,14 @@ export async function repairCode(
     });
   } catch (err) {
     ctx.log(
-      "[code-repair] opencode call failed: " + (err instanceof Error ? err.message : String(err)),
+      "[code-repair] AI runner call failed: " + (err instanceof Error ? err.message : String(err)),
       "error"
     );
     return;
   }
 
   if (!repairs?.fixes || !Array.isArray(repairs.fixes)) {
-    ctx.log("[code-repair] Invalid response from opencode - expected { fixes: [...] }", "error");
+    ctx.log("[code-repair] Invalid response from AI runner - expected { fixes: [...] }", "error");
     return;
   }
 

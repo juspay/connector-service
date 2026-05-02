@@ -1,5 +1,5 @@
 import type { Checkpoint, L3Analysis } from "../types.js";
-import { runOpencode } from "../tools/opencode-runner.js";
+import { runAI } from "../tools/runner-factory.js";
 import {
   L3_ANALYSIS_SYSTEM,
   buildL3AnalysisPayload,
@@ -142,7 +142,8 @@ export const l3AnalysisCheckpoint: Checkpoint = {
       flow,
       techSpecPath,
       projectRoot,
-      "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.3_codegen.md"
+      "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.3_codegen.md",
+      l2
     );
 
     ctx.log("[l3_analysis] Starting Phase 4 analysis (reading 6 files)...", "warn");
@@ -155,7 +156,7 @@ export const l3AnalysisCheckpoint: Checkpoint = {
 
     let result: L3Analysis;
     try {
-      const rawResult = await runOpencode<L3Analysis>({
+      const rawResult = await runAI<L3Analysis>({
         skillBody: L3_ANALYSIS_SYSTEM,
         userPayload: payload,
         cwd: projectRoot,

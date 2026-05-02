@@ -1,5 +1,5 @@
 import type { Checkpoint, FeatureResearchReport } from "../types.js";
-import { runOpencode } from "../tools/opencode-runner.js";
+import { runAI } from "../tools/runner-factory.js";
 
 // ─── Agent 1: Existing Structure ──────────────────────────────────────
 // Explores the target repo and returns a markdown report of what's already
@@ -148,7 +148,7 @@ export const featureResearchCheckpoint: Checkpoint = {
 
     try {
       const [repoReport, webReport] = await Promise.all([
-        runOpencode<string>({
+        runAI<string>({
           skillBody: EXISTING_STRUCTURE_SYSTEM,
           userPayload: {
             ...taskPayload,
@@ -158,7 +158,7 @@ export const featureResearchCheckpoint: Checkpoint = {
           label: "feature_research:agent1-existing",
           rawText: true,
         }),
-        runOpencode<string>({
+        runAI<string>({
           skillBody: IDEAL_FLOW_SYSTEM,
           userPayload: {
             ...taskPayload,
@@ -199,7 +199,7 @@ export const featureResearchCheckpoint: Checkpoint = {
     let actionItems: string[] | undefined;
 
     try {
-      const decision = await runOpencode<{
+      const decision = await runAI<{
         finalDecision?: string;
         actionItems?: unknown;
       }>({

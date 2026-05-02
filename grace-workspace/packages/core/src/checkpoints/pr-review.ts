@@ -1,7 +1,7 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import type { Checkpoint, PRReviewResult } from "../types.js";
-import { runOpencode } from "../tools/opencode-runner.js";
+import { runAI } from "../tools/runner-factory.js";
 import { safeParseJson } from "../utils.js";
 import { getConfig } from "../config.js";
 import { askYesNo } from "../prompts/cli-prompts.js";
@@ -91,7 +91,7 @@ export const prReviewCheckpoint: Checkpoint = {
 
     let parsed: PRReviewResult;
     try {
-      parsed = await runOpencode<PRReviewResult>({
+      parsed = await runAI<PRReviewResult>({
         skillBody: SYSTEM,
         userPayload: {
           l2: ctx.artifacts.l2,
@@ -107,10 +107,10 @@ export const prReviewCheckpoint: Checkpoint = {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      ctx.log(`[pr_review] opencode failed: ${msg}`, "error");
+      ctx.log(`[pr_review] AI runner failed: ${msg}`, "error");
       return {
         passed: false,
-        errors: [`PR review opencode call failed: ${msg}`],
+        errors: [`PR review AI call failed: ${msg}`],
       };
     }
 

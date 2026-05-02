@@ -4,6 +4,11 @@ import YAML from "yaml";
 
 export type LlmProtocol = "openai" | "anthropic";
 
+/**
+ * AI runner type - determines which CLI tool to use for AI execution
+ */
+export type RunnerType = "opencode" | "claude-code";
+
 export interface LlmConfig {
   baseUrl: string;
   apiKey: string;
@@ -37,6 +42,22 @@ export interface OpencodeConfig {
   implementationConcurrency: number;
 }
 
+export interface ClaudeCodeConfig {
+  /** Model slug passed to `claude` CLI, e.g. "claude-sonnet-4-6". */
+  model: string;
+  /** Per-call hard timeout in ms. */
+  timeoutMs: number;
+  /**
+   * How many per-file implementation calls to run in parallel. Default 4.
+   * Higher = faster but more load on the system.
+   */
+  implementationConcurrency: number;
+  /** Whether to use global ~/.claude/settings.json configuration. */
+  useGlobalConfig: boolean;
+  /** Additional CLI arguments to pass to claude. */
+  extraArgs: string[];
+}
+
 export interface CsddConfig {
   projectRoot: string;
   devServerUrl: string;
@@ -45,7 +66,12 @@ export interface CsddConfig {
   dashboardPort: number;
   wsPort: number;
   llm: LlmConfig;
+  /** AI runner to use - "opencode" or "claude-code". Defaults to "opencode" for backward compatibility. */
+  runner: RunnerType;
+  /** OpenCode configuration (used when runner is "opencode"). */
   opencode: OpencodeConfig;
+  /** Claude Code configuration (used when runner is "claude-code"). */
+  claudeCode: ClaudeCodeConfig;
   checkpoints: {
     compiler: { command: string; args: string[]; enabled?: boolean };
     cypress: { command: string; args: string[]; enabled?: boolean };
@@ -76,11 +102,19 @@ const DEFAULTS: CsddConfig = {
     extraHeaders: {},
     models: {},
   },
+  runner: "opencode",
   opencode: {
     model: "litellm/open-large",
     attachUrl: "http://127.0.0.1:4096",
     timeoutMs: 600_000,
     implementationConcurrency: 4,
+  },
+  claudeCode: {
+    model: "claude-sonnet-4-6",
+    timeoutMs: 600_000,
+    implementationConcurrency: 4,
+    useGlobalConfig: true,
+    extraArgs: [],
   },
   checkpoints: {
     compiler: { command: "npm", args: ["run", "re:build"] },

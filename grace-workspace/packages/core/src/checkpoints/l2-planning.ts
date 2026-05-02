@@ -1,5 +1,5 @@
 import type { Checkpoint, L2Plan, L2GenerationLog } from "../types.js";
-import { runOpencode } from "../tools/opencode-runner.js";
+import { runAI } from "../tools/runner-factory.js";
 import { L2_SYSTEM, buildL2User } from "../generators/l2-prompt.js";
 import {
   LINKS_AGENT_SYSTEM,
@@ -114,7 +114,7 @@ export const l2PlanningCheckpoint: Checkpoint = {
     let linksResult: LinksAgentResult;
 
     try {
-      const rawResult = await runOpencode<LinksAgentResult>({
+      const rawResult = await runAI<LinksAgentResult>({
         skillBody: LINKS_AGENT_SYSTEM,
         userPayload: linksPayload,
         cwd: projectRoot,
@@ -196,7 +196,7 @@ export const l2PlanningCheckpoint: Checkpoint = {
     let techspecResult: TechspecAgentResult;
 
     try {
-      const rawResult = await runOpencode<TechspecAgentResult>({
+      const rawResult = await runAI<TechspecAgentResult>({
         skillBody: TECHSPEC_AGENT_SYSTEM,
         userPayload: techspecPayload,
         cwd: projectRoot,

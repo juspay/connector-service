@@ -1,3 +1,5 @@
+import type { L2Plan } from "../types.js";
+
 export const L3_ANALYSIS_SYSTEM = `You are the L3 Analysis Agent.
 
 ## Your Role
@@ -9,6 +11,29 @@ Analyze the L2 technical specification and existing codebase to produce a DETAIL
 - L2 Tech Spec: {TECHSPEC_PATH}
 - Project Root: {PROJECT_ROOT}
 - Codegen Workflow: {CODEGEN_WORKFLOW_PATH}
+
+## Additional Context from L2 Analysis
+
+The following structured data was collected during L2 Planning and is provided to help inform your analysis:
+
+### Research Findings (JSON)
+{RESEARCH_FINDINGS}
+
+### Generation Log (JSON)
+{GENERATION_LOG}
+
+### L2 Planning Summary
+- **Summary**: {L2_SUMMARY}
+- **Scope**: {L2_SCOPE}
+- **Out of Scope**: {L2_OUT_OF_SCOPE}
+- **Technical Constraints**: {L2_TECHNICAL_CONSTRAINTS}
+- **Estimated Complexity**: {L2_ESTIMATED_COMPLEXITY}
+
+Use this context to inform your analysis. Pay special attention to:
+- Documentation verification scores in research findings (valid/problematic/insufficient)
+- Documentation gaps noted in research findings
+- Previously identified implementation patterns
+- Technical constraints that may affect implementation
 
 ## Phase 1: Read Instructions
 
@@ -291,7 +316,8 @@ export function buildL3AnalysisPayload(
   flow: string,
   techSpecPath: string,
   projectRoot: string,
-  codegenWorkflowPath: string
+  codegenWorkflowPath: string,
+  l2?: L2Plan
 ): Record<string, unknown> {
   return {
     CONNECTOR: connector,
@@ -300,5 +326,17 @@ export function buildL3AnalysisPayload(
     TECHSPEC_PATH: techSpecPath,
     PROJECT_ROOT: projectRoot,
     CODEGEN_WORKFLOW_PATH: codegenWorkflowPath,
+    // L2 analysis data for richer context
+    RESEARCH_FINDINGS: l2?.researchFindings
+      ? JSON.stringify(l2.researchFindings, null, 2)
+      : "No research findings available",
+    GENERATION_LOG: l2?.generationLog
+      ? JSON.stringify(l2.generationLog, null, 2)
+      : "No generation log available",
+    L2_SUMMARY: l2?.summary || "No summary available",
+    L2_SCOPE: l2?.scope || "No scope defined",
+    L2_OUT_OF_SCOPE: l2?.outOfScope || "No out-of-scope items defined",
+    L2_TECHNICAL_CONSTRAINTS: l2?.technicalConstraints?.join("\n") || "No technical constraints defined",
+    L2_ESTIMATED_COMPLEXITY: l2?.estimatedComplexity || "unknown",
   };
 }

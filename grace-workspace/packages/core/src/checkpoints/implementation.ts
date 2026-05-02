@@ -1,7 +1,7 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import type { Checkpoint, CodegenResult, L3Analysis } from "../types.js";
-import { runOpencode } from "../tools/opencode-runner.js";
+import { runAI } from "../tools/runner-factory.js";
 import {
   CODEGEN_AGENT_SYSTEM,
   buildCodegenPayload,
@@ -122,7 +122,7 @@ export const implementationCheckpoint: Checkpoint = {
 
     let result: CodegenResult;
     try {
-      const rawResult = await runOpencode<CodegenResult>({
+      const rawResult = await runAI<CodegenResult>({
         skillBody: CODEGEN_AGENT_SYSTEM,
         userPayload: payload,
         cwd: projectRoot,

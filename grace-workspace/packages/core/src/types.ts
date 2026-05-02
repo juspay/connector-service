@@ -94,6 +94,13 @@ export interface TaskDefinition {
   /** Files uploaded with the task */
   attachments?: TaskAttachment[];
 
+  // ========== AI RUNNER CONFIGURATION ==========
+
+  /** AI runner to use for this task - "opencode" or "claude-code" */
+  runner?: "opencode" | "claude-code";
+  /** Optional model override for the selected runner */
+  runnerModel?: string;
+
   // ========== GRACE/Byne WORKFLOW FIELDS ==========
 
   /**

@@ -17,6 +17,10 @@ export interface SubmittedTask {
   targetFiles?: string[];
   projectRoot?: string;
   attachments?: SubmittedAttachment[];
+  /** AI runner to use for this task */
+  runner?: "opencode" | "claude-code";
+  /** Optional model override for the selected runner */
+  runnerModel?: string;
   /** Grace/Byne workflow: Payment method to implement (e.g., "Card", "Wallet", "BankTransfer") */
   paymentMethod?: string;
   /** Grace/Byne workflow: Target connector names to implement for */
@@ -102,6 +106,10 @@ export function TaskForm({
   const [projectRoot, setProjectRoot] = useState("");
   const [attachments, setAttachments] = useState<SubmittedAttachment[]>([]);
 
+  // AI Runner selection
+  const [runner, setRunner] = useState<"opencode" | "claude-code">("opencode");
+  const [runnerModel, setRunnerModel] = useState("");
+
   // Grace/Byne workflow: Payment method fields
   const [paymentMethod, setPaymentMethod] = useState("");
   const [targetConnectors, setTargetConnectors] = useState("");
@@ -177,6 +185,9 @@ export function TaskForm({
         : undefined,
       projectRoot: projectRoot.trim() || undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
+      // AI Runner fields
+      runner,
+      runnerModel: runnerModel.trim() || undefined,
       // Grace/Byne workflow fields
       paymentMethod: paymentMethod.trim() || undefined,
       targetConnectors: targetConnectors
@@ -238,6 +249,69 @@ export function TaskForm({
           submitting.
         </div>
       )}
+
+      {/* AI Runner Selection */}
+      <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${T.border}` }}>
+        <label style={{...label, fontSize: 12, color: T.accent}}>AI Runner</label>
+        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+          <button
+            type="button"
+            onClick={() => setRunner("opencode")}
+            disabled={disabled}
+            style={{
+              flex: 1,
+              padding: "12px 16px",
+              borderRadius: 8,
+              border: `2px solid ${runner === "opencode" ? T.accent : T.border}`,
+              background: runner === "opencode" ? T.accentSoft : T.bg,
+              cursor: disabled ? "not-allowed" : "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              opacity: disabled ? 0.6 : 1,
+            }}
+          >
+            <span style={{ fontWeight: 600, color: T.text }}>OpenCode</span>
+            <span style={{ fontSize: 11, color: T.textMuted }}>Local LLM gateway</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRunner("claude-code")}
+            disabled={disabled}
+            style={{
+              flex: 1,
+              padding: "12px 16px",
+              borderRadius: 8,
+              border: `2px solid ${runner === "claude-code" ? T.accent : T.border}`,
+              background: runner === "claude-code" ? T.accentSoft : T.bg,
+              cursor: disabled ? "not-allowed" : "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              opacity: disabled ? 0.6 : 1,
+            }}
+          >
+            <span style={{ fontWeight: 600, color: T.text }}>Claude Code</span>
+            <span style={{ fontSize: 11, color: T.textMuted }}>Anthropic&apos;s CLI</span>
+          </button>
+        </div>
+
+        {/* Runner-specific options */}
+        {runner === "claude-code" && (
+          <div style={{ marginTop: 12 }}>
+            <label style={label}>Model (optional)</label>
+            <input
+              style={field}
+              value={runnerModel}
+              onChange={(e) => setRunnerModel(e.target.value)}
+              placeholder="claude-sonnet-4-6"
+              disabled={disabled}
+            />
+          </div>
+        )}
+      </div>
 
       <div style={{ marginBottom: 10 }}>
         <label style={label}>Title</label>

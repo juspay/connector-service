@@ -9,7 +9,7 @@ import {
   loadConfig,
   newRunId,
   setConfig,
-  checkOpencodeHealth,
+  checkAIHealth,
   type CheckpointId,
   type CheckpointStatus,
   type PipelineContext,
@@ -441,25 +441,33 @@ export async function runCommand(opts: RunOpts): Promise<void> {
   // eslint-disable-next-line no-console
   console.log(`\x1b[90m[byne] built from ${new Date().toISOString()} runtime load\x1b[0m`);
 
-  // Pre-flight: check opencode server connectivity
-  const ocHealth = await checkOpencodeHealth();
-  if (ocHealth.connected) {
+  // Pre-flight: check AI runner connectivity
+  const aiHealth = await checkAIHealth();
+  const runnerLabel = aiHealth.runner === "claude-code" ? "Claude Code" : "OpenCode";
+  if (aiHealth.connected) {
     // eslint-disable-next-line no-console
     console.log(
-      `\x1b[32m[byne] ✓ opencode connected at ${ocHealth.url} (${ocHealth.latencyMs}ms)\x1b[0m`
+      `\x1b[32m[byne] ✓ ${runnerLabel} connected (${aiHealth.connectionInfo}${aiHealth.latencyMs ? `, ${aiHealth.latencyMs}ms` : ""})\x1b[0m`
     );
   } else {
     // eslint-disable-next-line no-console
     console.log(
-      `\x1b[31m[byne] ✕ opencode NOT connected at ${ocHealth.url} — ${ocHealth.error}\x1b[0m`
+      `\x1b[31m[byne] ✕ ${runnerLabel} NOT connected — ${aiHealth.error}\x1b[0m`
     );
-    // eslint-disable-next-line no-console
-    console.log(
-      `\x1b[33m[byne]   Implementation steps will fail. Start opencode with: opencode serve\x1b[0m`
-    );
+    if (aiHealth.runner === "opencode") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\x1b[33m[byne]   Implementation steps may fail. Start opencode with: opencode serve\x1b[0m`
+      );
+    } else {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\x1b[33m[byne]   Implementation steps may fail. Ensure 'claude' CLI is installed.\x1b[0m`
+      );
+    }
   }
   if (bus) {
-    bus.emit("opencode:health", undefined, ocHealth);
+    bus.emit("ai:health", undefined, aiHealth);
   }
 
   const engine = new PipelineEngine(ALL_CHECKPOINTS, state, bus);

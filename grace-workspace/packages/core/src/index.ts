@@ -6,5 +6,15 @@ export * from "./config.js";
 export * from "./utils.js";
 export * from "./llm.js";
 export * from "./checkpoints/index.js";
+
+// OpenCode runner exports (original - maintained for backward compatibility)
 export { checkOpencodeHealth } from "./tools/opencode-runner.js";
 export type { OpencodeHealthResult } from "./tools/opencode-runner.js";
+
+// Claude Code runner exports
+export { runClaudeCode, checkClaudeCodeHealth } from "./tools/claude-code-runner.js";
+export type { ClaudeCodeRunOptions, ClaudeCodeHealthResult } from "./tools/claude-code-runner.js";
+
+// Unified runner factory exports (preferred for new code)
+export { runAI, checkAIHealth, getConfiguredRunner, withRunner } from "./tools/runner-factory.js";
+export type { AIRunOptions, AIHealthResult, RunnerInterface } from "./tools/runner-factory.js";
