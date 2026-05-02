@@ -498,7 +498,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"pspReference\":\"probe_connector_txn_001\",\"amount\":1000,\"currency\":\"USD\"}"
+          "body": "{\"pspReference\":\"probe_connector_txn_001\",\"amount\":1000,\"currency\":\"USD\",\"final\":false}"
         }
       }
     },
