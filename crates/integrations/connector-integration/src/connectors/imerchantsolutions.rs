@@ -55,7 +55,7 @@ use transformers::{
     ImerchantsolutionsRefundRequestData, ImerchantsolutionsRefundResponseData,
     ImerchantsolutionsRefundSyncResponse, ImerchantsolutionsVoidRequestData,
     ImerchantsolutionsVoidResponseData, ImerchantsolutionsWebhookData,
-    ImerchantsolutionsWebhookEventType, ImerchantsolutionsWebhookStatus,
+    ImerchantsolutionsWebhookEventType,
 };
 
 use super::macros;
@@ -700,46 +700,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-        event_context: Option<EventContext>,
+        _event_context: Option<EventContext>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::WebhookError>> {
         let webhook_body: ImerchantsolutionsWebhookData = request
             .body
             .parse_struct("ImerchantsolutionsWebhookData")
             .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
 
-        let status = webhook_body.status;
+        let status: AttemptStatus = webhook_body.status.into();
 
-        let capture_method = event_context
-            .as_ref()
-            .and_then(|context| context.capture_method);
-
-        if status == ImerchantsolutionsWebhookStatus::PartiallyCaptured && capture_method.is_none()
-        {
-            return Err(errors::WebhookError::WebhookMissingRequiredContext {
-                field: "capture_method",
-                origin: "payment authorize",
-            })
-            .attach_printable(
-                "iMerchant Solutions webhook status 'PartiallyCaptured' requires `capture_method` for correct interpretation. \
-                Manual` indicates a partially charged, terminal payment, while `ManualMultiple` indicates a partially charged payment that remains chargeable. \
-                Provide `EventContext.payment.capture_method` from the original authorize request.",
-            );
-        }
-
-        let attempt_status = AttemptStatus::foreign_try_from((status, capture_method))?;
-
-        let (error_code, error_message, error_reason) = if attempt_status == AttemptStatus::Failure
-        {
+        let (error_code, error_message, error_reason) = if status == AttemptStatus::Failure {
             (None, webhook_body.error, webhook_body.reason)
         } else {
             (None, None, None)
+        };
+
+        let minor_amount_captured = match status {
+            AttemptStatus::Charged => webhook_body.amount,
+            AttemptStatus::PartialCharged => webhook_body.total_captured,
+            _ => None,
         };
 
         Ok(WebhookDetailsResponse {
             resource_id: Some(ResponseId::ConnectorTransactionId(
                 webhook_body.psp_reference,
             )),
-            status: attempt_status,
+            status,
             connector_response_reference_id: Some(webhook_body.payment_id),
             mandate_reference: None,
             error_code,
@@ -748,8 +734,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
             status_code: 200,
             response_headers: None,
-            amount_captured: None,
-            minor_amount_captured: None,
+            amount_captured: minor_amount_captured
+                .map(|minor_amount| minor_amount.get_amount_as_i64()),
+            minor_amount_captured,
             network_txn_id: None,
             payment_method_update: None,
         })
