@@ -357,6 +357,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             authorization_options,
             commerce_indicator: String::from("internet"),
             payment_solution: solution.map(String::from),
+            bank_transfer_options: None,
         };
         Ok(Self {
             processing_information,
@@ -400,6 +401,9 @@ pub struct ProcessingInformation {
     capture: Option<bool>,
     capture_options: Option<CaptureOptions>,
     payment_solution: Option<String>,
+    /// Optional ACH-only options (e.g. SEC code). Only set when the payment type is `check`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bank_transfer_options: Option<BankTransferOptions>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -809,6 +813,43 @@ pub struct MessageExtensionAttribute {
     pub data: serde_json::Value,
 }
 
+/// Cybersource ACH bank-account payload. The `account.type` value is a single
+/// character mapped from `BankType` + `BankHolderType`:
+/// `C` = consumer-checking, `S` = consumer-savings, `X` = business-checking/savings.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankAccount {
+    number: Secret<String>,
+    #[serde(rename = "type")]
+    account_type: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankInfo {
+    routing_number: Secret<String>,
+    account: BankAccount,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentTypeName {
+    name: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankPaymentInformation {
+    bank: BankInfo,
+    payment_type: PaymentTypeName,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankTransferOptions {
+    sec_code: String,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum PaymentInformation<
@@ -822,6 +863,8 @@ pub enum PaymentInformation<
     MandatePayment(Box<MandatePaymentInformation>),
     SamsungPay(Box<SamsungPayPaymentInformation>),
     NetworkToken(Box<NetworkTokenPaymentInformation>),
+    /// Used for ACH/eCheck (`paymentInformation.bank` + `paymentInformation.paymentType`)
+    Bank(Box<BankPaymentInformation>),
     /// Used when payment info comes from tokenInformation.transientTokenJwt
     CardToken(Box<CardTokenPaymentInformation>),
 }
@@ -1175,6 +1218,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             capture_options: None,
             commerce_indicator: commerce_indicator_for_external_authentication
                 .unwrap_or(commerce_indicator),
+            bank_transfer_options: None,
         })
     }
 }
@@ -1433,6 +1477,143 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }));
 
         let processing_information = ProcessingInformation::try_from((item, None, card_type))?;
+        let client_reference_information = ClientReferenceInformation::from(item);
+        let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+            item.router_data
+                .request
+                .metadata
+                .clone()
+                .map(|metadata| metadata.expose()),
+            item.router_data.request.merchant_order_id.clone(),
+        );
+
+        Ok(Self {
+            processing_information,
+            payment_information,
+            order_information,
+            client_reference_information,
+            consumer_authentication_information: None,
+            merchant_defined_information,
+            token_information: None,
+        })
+    }
+}
+
+/// Map BankType + BankHolderType to Cybersource's single-character `account.type` value.
+///
+/// `C` = consumer-checking, `S` = consumer-savings, `X` = business-checking/savings.
+/// Default (when bank_type is `None`) is `C` to match the most common ACH WEB-debit case.
+fn map_cybersource_bank_account_type(
+    bank_type: Option<common_enums::BankType>,
+    bank_holder_type: Option<common_enums::BankHolderType>,
+) -> String {
+    match (bank_type, bank_holder_type) {
+        (_, Some(common_enums::BankHolderType::Business)) => "X".to_string(),
+        (Some(common_enums::BankType::Savings), _) => "S".to_string(),
+        // Checking, Personal, or unspecified → consumer checking
+        _ => "C".to_string(),
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &CybersourceRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        payment_method_data::BankDebitData,
+    )> for CybersourcePaymentsRequest<T>
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        (item, bank_debit_data): (
+            &CybersourceRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            payment_method_data::BankDebitData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        // Cybersource only supports US ACH eCheck via the `pts/v2/payments` REST endpoint.
+        // Other BankDebit variants (Sepa, Bacs, Becs, Eft, SepaGuaranteed) require either the
+        // SEPA Direct Debit Simple Order API or are not offered by Cybersource — reject them.
+        let (account_number, routing_number, bank_type, bank_holder_type) = match bank_debit_data {
+            payment_method_data::BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_type,
+                bank_holder_type,
+                ..
+            } => (account_number, routing_number, bank_type, bank_holder_type),
+            payment_method_data::BankDebitData::SepaBankDebit { .. }
+            | payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. }
+            | payment_method_data::BankDebitData::BacsBankDebit { .. }
+            | payment_method_data::BankDebitData::BecsBankDebit { .. }
+            | payment_method_data::BankDebitData::EftBankDebit { .. } => {
+                return Err(error_stack::report!(IntegrationError::NotSupported {
+                    message:
+                        domain_types::utils::get_unimplemented_payment_method_error_message(
+                            "Cybersource",
+                        ),
+                    connector: "Cybersource",
+                    context: Default::default(),
+                }));
+            }
+        };
+
+        let email = item
+            .router_data
+            .resource_common_data
+            .get_billing_email()
+            .or(item.router_data.request.get_email())?;
+        let bill_to = build_bill_to(
+            item.router_data.resource_common_data.get_optional_billing(),
+            email,
+        )?;
+        let order_information = OrderInformationWithBill::try_from((item, Some(bill_to)))?;
+
+        let payment_information = PaymentInformation::Bank(Box::new(BankPaymentInformation {
+            bank: BankInfo {
+                routing_number,
+                account: BankAccount {
+                    number: account_number,
+                    account_type: map_cybersource_bank_account_type(bank_type, bank_holder_type),
+                },
+            },
+            payment_type: PaymentTypeName {
+                name: "check".to_string(),
+            },
+        }));
+
+        // ACH eCheck uses a minimal processingInformation (no card-auth fields like
+        // authorizationOptions / actionList / actionTokenTypes / capture). Cybersource's
+        // sandbox returns SERVER_ERROR if those card-only fields are present alongside a
+        // `paymentType.name = check` payload.
+        let processing_information = ProcessingInformation {
+            action_list: None,
+            action_token_types: None,
+            authorization_options: None,
+            commerce_indicator: "internet".to_string(),
+            capture: None,
+            capture_options: None,
+            payment_solution: None,
+            // Default SEC code is WEB (online consumer-initiated debit — the most common
+            // hosted/in-app eCheck collection scenario).
+            bank_transfer_options: Some(BankTransferOptions {
+                sec_code: "WEB".to_string(),
+            }),
+        };
+
         let client_reference_information = ClientReferenceInformation::from(item);
         let merchant_defined_information = convert_metadata_to_merchant_defined_info(
             item.router_data
@@ -2264,12 +2445,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }),
                 })
             }
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                Self::try_from((&item, bank_debit_data))
+            }
             PaymentMethodData::MandatePayment
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
             | PaymentMethodData::BankTransfer(_)
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::Reward
@@ -2470,6 +2653,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 capture: None,
                 commerce_indicator: String::from("internet"),
                 payment_solution: None,
+                bank_transfer_options: None,
             },
             order_information: OrderInformationWithBill {
                 amount_details: Amount {
@@ -2825,6 +3009,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             capture: None,
             capture_options: None,
             payment_solution: None,
+            bank_transfer_options: None,
         };
 
         let order_information = OrderInformationIncrementalAuthorization {
@@ -5177,6 +5362,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             capture_options: None,
             commerce_indicator: commerce_indicator_for_external_authentication
                 .unwrap_or(commerce_indicator),
+            bank_transfer_options: None,
         })
     }
 }
