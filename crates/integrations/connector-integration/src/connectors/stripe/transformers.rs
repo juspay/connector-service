@@ -11,17 +11,20 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
-        IncrementalAuthorization, PaymentMethodToken, RepeatPayment, SetupMandate, Void,
+        Accept, Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
+        DefendDispute, IncrementalAuthorization, PaymentMethodToken, RepeatPayment, SetupMandate,
+        Void, VoidPC,
     },
     connector_types::{
-        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecificClientAuthenticationResponse, MandateReference,
-        MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        AcceptDisputeData, ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorCustomerData, ConnectorCustomerResponse,
+        ConnectorSpecificClientAuthenticationResponse, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
         StripeClientAuthenticationResponse as StripeClientAuthenticationResponseDomain,
     },
     errors::{ConnectorError, IntegrationError},
@@ -84,6 +87,12 @@ impl GetRequestIncrementalAuthorization for PaymentsCaptureData {
 }
 
 impl GetRequestIncrementalAuthorization for PaymentVoidData {
+    fn get_request_incremental_authorization(&self) -> Option<bool> {
+        None
+    }
+}
+
+impl GetRequestIncrementalAuthorization for PaymentsCancelPostCaptureData {
     fn get_request_incremental_authorization(&self) -> Option<bool> {
         None
     }
@@ -4186,6 +4195,60 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct ReverseRequest {
+    cancellation_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaymentsReverseResponse(PaymentIntentResponse);
+
+impl TryFrom<ResponseRouterData<PaymentsReverseResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PaymentsReverseResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for ReverseRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            cancellation_reason: item.router_data.request.cancellation_reason.clone(),
+        })
+    }
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
@@ -5424,6 +5487,171 @@ impl TryFrom<ResponseRouterData<StripeClientAuthResponse, Self>>
                 status_code: item.http_code,
             }),
             ..item.router_data
+        })
+    }
+}
+
+// ============================================================================
+// Dispute Accept (DisputeService.Accept) — POST /v1/disputes/{dispute}/close
+// ============================================================================
+
+#[derive(Debug, Default, Serialize)]
+pub struct StripeDisputeAcceptRequest {}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+            T,
+        >,
+    > for StripeDisputeAcceptRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        _item: StripeRouterData<
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {})
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StripeDisputeAcceptResponse {
+    pub id: String,
+    pub status: String,
+}
+
+impl TryFrom<ResponseRouterData<StripeDisputeAcceptResponse, Self>>
+    for RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<StripeDisputeAcceptResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let dispute_status = match response.status.as_str() {
+            // Accepting a Stripe dispute closes it; the API returns status = "lost".
+            // Per techspec, "lost" maps to DisputeAccepted (the merchant accepted the loss).
+            "lost" => common_enums::DisputeStatus::DisputeAccepted,
+            "won" => common_enums::DisputeStatus::DisputeWon,
+            "warning_needs_response" | "needs_response" => {
+                common_enums::DisputeStatus::DisputeOpened
+            }
+            "warning_under_review" | "under_review" => {
+                common_enums::DisputeStatus::DisputeChallenged
+            }
+            "warning_closed" | "charge_refunded" => common_enums::DisputeStatus::DisputeCancelled,
+            _ => common_enums::DisputeStatus::DisputeOpened,
+        };
+
+        let dispute_response_data = DisputeResponseData {
+            connector_dispute_id: response.id,
+            dispute_status,
+            connector_dispute_status: Some(response.status),
+            status_code: http_code,
+        };
+
+        Ok(Self {
+            response: Ok(dispute_response_data),
+            ..router_data
+        })
+    }
+}
+
+// ============================================================================
+// Dispute Defend (DisputeService.Defend) — POST /v1/disputes/{dispute}
+// ============================================================================
+//
+// Stripe uses the same dispute endpoint to update evidence and to finalize
+// submission to the network. This implementation submits the merchant's
+// `defense_reason_code` as `evidence[uncategorized_text]` and finalizes via
+// `submit=true` so the dispute transitions from `needs_response` to
+// `under_review`. The wire format is `application/x-www-form-urlencoded`,
+// which matches the `FormUrlEncoded(...)` macro wiring on the connector side.
+
+#[derive(Debug, Serialize)]
+pub struct StripeDisputeDefendRequest {
+    #[serde(rename = "evidence[uncategorized_text]")]
+    pub evidence_uncategorized_text: String,
+    pub submit: bool,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+            T,
+        >,
+    > for StripeDisputeDefendRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            evidence_uncategorized_text: item.router_data.request.defense_reason_code.clone(),
+            submit: true,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StripeDisputeDefendResponse {
+    pub id: String,
+    pub status: String,
+}
+
+impl TryFrom<ResponseRouterData<StripeDisputeDefendResponse, Self>>
+    for RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<StripeDisputeDefendResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        // Map Stripe's dispute `status` enum onto the UCS `DisputeStatus` enum.
+        // The local enum has no `DisputeChallengeRequired` variant; the
+        // techspec's `*_needs_response` values fall back to `DisputeOpened`,
+        // matching the conservative behaviour used by the Accept flow.
+        let dispute_status = match response.status.as_str() {
+            "won" | "warning_closed" | "charge_refunded" => {
+                common_enums::DisputeStatus::DisputeWon
+            }
+            "lost" => common_enums::DisputeStatus::DisputeLost,
+            "warning_under_review" | "under_review" => {
+                common_enums::DisputeStatus::DisputeChallenged
+            }
+            "warning_needs_response" | "needs_response" => {
+                common_enums::DisputeStatus::DisputeOpened
+            }
+            _ => common_enums::DisputeStatus::DisputeOpened,
+        };
+
+        let dispute_response_data = DisputeResponseData {
+            connector_dispute_id: response.id,
+            dispute_status,
+            connector_dispute_status: Some(response.status),
+            status_code: http_code,
+        };
+
+        Ok(Self {
+            response: Ok(dispute_response_data),
+            ..router_data
         })
     }
 }

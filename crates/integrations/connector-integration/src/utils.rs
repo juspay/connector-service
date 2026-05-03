@@ -15,8 +15,9 @@ use common_utils::{
 };
 use domain_types::{
     connector_types::{
-        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsSyncData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsSyncData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -322,6 +323,14 @@ impl SplitPaymentData for PaymentsSyncData {
 }
 
 impl SplitPaymentData for PaymentVoidData {
+    fn get_split_payment_data(
+        &self,
+    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+        None
+    }
+}
+
+impl SplitPaymentData for PaymentsCancelPostCaptureData {
     fn get_split_payment_data(
         &self,
     ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
