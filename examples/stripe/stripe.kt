@@ -12,6 +12,7 @@ import types.PaymentMethods.*
 import payments.PaymentClient
 import payments.MerchantAuthenticationClient
 import payments.CustomerClient
+import payments.DisputeClient
 import payments.RecurringPaymentClient
 import payments.RefundClient
 import payments.PaymentMethodClient
@@ -28,7 +29,7 @@ import payments.ConnectorSpecificConfig
 import types.Payment.StripeConfig
 import payments.SecretString
 
-val SUPPORTED_FLOWS = listOf<String>("authorize", "capture", "create_client_authentication_token", "create_customer", "get", "incremental_authorization", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "tokenize", "void")
+val SUPPORTED_FLOWS = listOf<String>("authorize", "capture", "create_client_authentication_token", "create_customer", "dispute_accept", "dispute_defend", "get", "incremental_authorization", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "reverse", "setup_recurring", "token_authorize", "tokenize", "void")
 
 val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     .setOptions(SdkOptions.newBuilder().setEnvironment(Environment.SANDBOX).build())
@@ -102,6 +103,13 @@ private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServic
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
         reason = "customer_request"  // Reason for the refund.
+    }.build()
+}
+
+private fun buildReverseRequest(connectorTransactionIdStr: String): PaymentServiceReverseRequest {
+    return PaymentServiceReverseRequest.newBuilder().apply {
+        merchantReverseId = "probe_reverse_001"  // Identification.
+        connectorTransactionId = connectorTransactionIdStr
     }.build()
 }
 
@@ -261,6 +269,31 @@ fun createCustomer(txnId: String, config: ConnectorConfig = _defaultConfig) {
     println("Customer: ${response.connectorCustomerId}")
 }
 
+// Flow: DisputeService.Accept
+fun disputeAccept(txnId: String, config: ConnectorConfig = _defaultConfig) {
+    val client = DisputeClient(config)
+    val request = DisputeServiceAcceptRequest.newBuilder().apply {
+        merchantDisputeId = "probe_dispute_001"  // Identification.
+        connectorTransactionId = "probe_txn_001"
+        disputeId = "probe_dispute_id_001"
+    }.build()
+    val response = client.accept(request)
+    println("Dispute status: ${response.disputeStatus.name}")
+}
+
+// Flow: DisputeService.Defend
+fun disputeDefend(txnId: String, config: ConnectorConfig = _defaultConfig) {
+    val client = DisputeClient(config)
+    val request = DisputeServiceDefendRequest.newBuilder().apply {
+        merchantDisputeId = "probe_dispute_001"  // Identification.
+        connectorTransactionId = "probe_txn_001"
+        disputeId = "probe_dispute_id_001"
+        reasonCode = "probe_reason"  // Defend Details.
+    }.build()
+    val response = client.defend(request)
+    println("Dispute status: ${response.disputeStatus.name}")
+}
+
 // Flow: PaymentService.Get
 fun get(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = PaymentClient(config)
@@ -397,6 +430,14 @@ fun refundGet(txnId: String, config: ConnectorConfig = _defaultConfig) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentService.Reverse
+fun reverse(txnId: String, config: ConnectorConfig = _defaultConfig) {
+    val client = PaymentClient(config)
+    val request = buildReverseRequest("probe_connector_txn_001")
+    val response = client.reverse(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: PaymentService.SetupRecurring
 fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = PaymentClient(config)
@@ -507,6 +548,8 @@ fun main(args: Array<String>) {
         "capture" -> capture(txnId)
         "createClientAuthenticationToken" -> createClientAuthenticationToken(txnId)
         "createCustomer" -> createCustomer(txnId)
+        "disputeAccept" -> disputeAccept(txnId)
+        "disputeDefend" -> disputeDefend(txnId)
         "get" -> get(txnId)
         "incrementalAuthorization" -> incrementalAuthorization(txnId)
         "proxyAuthorize" -> proxyAuthorize(txnId)
@@ -514,10 +557,11 @@ fun main(args: Array<String>) {
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
         "refundGet" -> refundGet(txnId)
+        "reverse" -> reverse(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "tokenAuthorize" -> tokenAuthorize(txnId)
         "tokenize" -> tokenize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenAuthorize, tokenize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, disputeAccept, disputeDefend, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, reverse, setupRecurring, tokenAuthorize, tokenize, void")
     }
 }

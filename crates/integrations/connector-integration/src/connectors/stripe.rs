@@ -54,10 +54,10 @@ use transformers::{
     PaymentIntentResponse as PaymentIncrementalAuthResponse, PaymentSyncResponse,
     PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,
     PaymentsCaptureResponse, PaymentsReverseResponse, PaymentsVoidResponse, RefundResponse,
-    RefundResponse as RefundSyncResponse, ReverseRequest, SetupMandateRequest, SetupMandateResponse,
-    StripeClientAuthRequest, StripeClientAuthResponse, StripeDisputeAcceptRequest,
-    StripeDisputeAcceptResponse, StripeDisputeDefendRequest, StripeDisputeDefendResponse,
-    StripeRefundRequest, StripeTokenResponse, TokenRequest,
+    RefundResponse as RefundSyncResponse, ReverseRequest, SetupMandateRequest,
+    SetupMandateResponse, StripeClientAuthRequest, StripeClientAuthResponse,
+    StripeDisputeAcceptRequest, StripeDisputeAcceptResponse, StripeDisputeDefendRequest,
+    StripeDisputeDefendResponse, StripeRefundRequest, StripeTokenResponse, TokenRequest,
 };
 
 use super::macros;

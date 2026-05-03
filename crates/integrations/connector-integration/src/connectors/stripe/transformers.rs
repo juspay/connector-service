@@ -19,12 +19,12 @@ use domain_types::{
         AcceptDisputeData, ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorCustomerData, ConnectorCustomerResponse,
         ConnectorSpecificClientAuthenticationResponse, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData,
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        DisputeResponseData, MandateReference, MandateReferenceId, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData,
         StripeClientAuthenticationResponse as StripeClientAuthenticationResponseDomain,
     },
     errors::{ConnectorError, IntegrationError},
@@ -5629,9 +5629,7 @@ impl TryFrom<ResponseRouterData<StripeDisputeDefendResponse, Self>>
         // techspec's `*_needs_response` values fall back to `DisputeOpened`,
         // matching the conservative behaviour used by the Accept flow.
         let dispute_status = match response.status.as_str() {
-            "won" | "warning_closed" | "charge_refunded" => {
-                common_enums::DisputeStatus::DisputeWon
-            }
+            "won" | "warning_closed" | "charge_refunded" => common_enums::DisputeStatus::DisputeWon,
             "lost" => common_enums::DisputeStatus::DisputeLost,
             "warning_under_review" | "under_review" => {
                 common_enums::DisputeStatus::DisputeChallenged
