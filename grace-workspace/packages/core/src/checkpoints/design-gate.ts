@@ -4,14 +4,14 @@ import { autoDesignGate } from "../agents/auto-reviewer.js";
 
 interface DesignGateResponse {
   designRequired: boolean;
-  figmaUrl?: string;
+  connectorDocUrls?: string[];
   skipReason?: string;
 }
 
 export const designGateCheckpoint: Checkpoint = {
   id: "design_gate",
   name: "Design gate",
-  description: "Ask whether UI design is needed and capture a Figma URL if so.",
+  description: "Ask whether UI design is needed and capture connector reference document URLs if so.",
   retryFrom: "design_gate",
   timeout: 24 * 60 * 60 * 1000,
   async run(ctx) {
@@ -22,12 +22,12 @@ export const designGateCheckpoint: Checkpoint = {
         const gate: DesignGateResult = decision.designRequired
           ? {
               designRequired: true,
-              figmaReady: !!decision.figmaUrl,
-              figmaUrl: decision.figmaUrl,
+              docUrlsReady: !!(decision.connectorDocUrls && decision.connectorDocUrls.length > 0),
+              connectorDocUrls: decision.connectorDocUrls,
             }
           : {
               designRequired: false,
-              figmaReady: false,
+              docUrlsReady: false,
               skipReason: decision.skipReason,
             };
         return { passed: true, artifacts: { designGate: gate } };
@@ -41,13 +41,13 @@ export const designGateCheckpoint: Checkpoint = {
 
     // CI mode: infer from the task definition and pass through.
     if (ctx.options.autoApproveReviews) {
-      const url = ctx.artifacts.task?.figmaUrl;
-      const gate: DesignGateResult = url
-        ? { designRequired: true, figmaReady: true, figmaUrl: url }
+      const urls = ctx.artifacts.task?.connectorDocUrls;
+      const gate: DesignGateResult = urls && urls.length > 0
+        ? { designRequired: true, docUrlsReady: true, connectorDocUrls: urls }
         : {
             designRequired: false,
-            figmaReady: false,
-            skipReason: "auto-approved — no figmaUrl in task",
+            docUrlsReady: false,
+            skipReason: "auto-approved — no connectorDocUrls in task",
           };
       return { passed: true, artifacts: { designGate: gate } };
     }
@@ -60,7 +60,7 @@ export const designGateCheckpoint: Checkpoint = {
       );
       ctx.bus.emitHumanWaiting("design_gate", {
         question: "Does this task require UI design?",
-        currentFigmaUrl: ctx.artifacts.task?.figmaUrl,
+        currentConnectorDocUrls: ctx.artifacts.task?.connectorDocUrls,
       });
 
       while (true) {
@@ -74,19 +74,19 @@ export const designGateCheckpoint: Checkpoint = {
           continue;
         }
         if (response.designRequired) {
-          const url = response.figmaUrl?.trim();
-          if (!url || !/^https?:\/\/(www\.)?figma\.com\//.test(url)) {
+          const urls = response.connectorDocUrls?.filter(u => u.trim()).map(u => u.trim()) ?? [];
+          if (urls.length === 0) {
             ctx.bus.emit("human:rejected", "design_gate", {
-              reason: "A valid figma.com URL is required when design is needed",
+              reason: "At least one connector reference document URL is required when design is needed",
             });
             continue;
           }
           const gate: DesignGateResult = {
             designRequired: true,
-            figmaReady: true,
-            figmaUrl: url,
+            docUrlsReady: true,
+            connectorDocUrls: urls,
           };
-          ctx.log(`[design_gate] ✓ Design required (figma: ${url})`, "success");
+          ctx.log(`[design_gate] ✓ Design required (${urls.length} doc URLs)`, "success");
           ctx.bus.emit("human:resolved", "design_gate", {
             decision: "design_required",
           });
@@ -94,7 +94,7 @@ export const designGateCheckpoint: Checkpoint = {
         }
         const gate: DesignGateResult = {
           designRequired: false,
-          figmaReady: false,
+          docUrlsReady: false,
           skipReason: response.skipReason?.trim() || "Reviewer said no design needed",
         };
         ctx.log(
@@ -117,24 +117,30 @@ export const designGateCheckpoint: Checkpoint = {
         artifacts: {
           designGate: {
             designRequired: false,
-            figmaReady: false,
+            docUrlsReady: false,
             skipReason: reason || "not required",
           } satisfies DesignGateResult,
         },
       };
     }
-    let url = ctx.artifacts.task?.figmaUrl;
-    if (!url) url = await ask("Figma URL: ");
-    if (!/^https?:\/\/(www\.)?figma\.com\//.test(url)) {
-      return { passed: false, errors: [`Invalid Figma URL: ${url}`] };
+    const urlsFromTask = ctx.artifacts.task?.connectorDocUrls;
+    let urls: string[];
+    if (urlsFromTask && urlsFromTask.length > 0) {
+      urls = urlsFromTask;
+    } else {
+      const raw = await ask("Connector reference document URLs (comma-separated): ");
+      urls = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    if (urls.length === 0) {
+      return { passed: false, errors: ["At least one connector reference document URL is required"] };
     }
     return {
       passed: true,
       artifacts: {
         designGate: {
           designRequired: true,
-          figmaReady: true,
-          figmaUrl: url,
+          docUrlsReady: true,
+          connectorDocUrls: urls,
         } satisfies DesignGateResult,
       },
     };

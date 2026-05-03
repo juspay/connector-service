@@ -140,19 +140,19 @@ const SYSTEM_DESIGN_GATE = `You are a stand-in reviewer deciding whether a front
 Return ONLY JSON:
 {
   "designRequired": boolean,
-  "figmaUrl": "string or empty — only if task.figmaUrl was provided",
+  "connectorDocUrls": ["array of connector reference document URLs - pass through from task if provided"],
   "skipReason": "string — why design isn't needed, only when designRequired=false"
 }
 
 Heuristics:
 - If the task mentions visual components, new screens, forms, modals, or layout changes → designRequired=true
 - If it's a backend wiring, data change, or pure logic task → designRequired=false
-- If the task already has a figmaUrl, pass it through
-- If no figmaUrl and design is required but no reference image → still return true with empty figmaUrl; downstream will handle`;
+- If the task already has connectorDocUrls, pass them through
+- If no connectorDocUrls and design is required but no reference docs → still return true with empty connectorDocUrls; downstream will handle`;
 
 export async function autoDesignGate(
   ctx: PipelineContext
-): Promise<{ designRequired: boolean; figmaUrl?: string; skipReason?: string }> {
+): Promise<{ designRequired: boolean; connectorDocUrls?: string[]; skipReason?: string }> {
   const task = ctx.artifacts.task;
   const raw = await callLlm({
     system: SYSTEM_DESIGN_GATE,
@@ -161,19 +161,19 @@ export async function autoDesignGate(
   });
   const parsed = safeParseJson<{
     designRequired: boolean;
-    figmaUrl?: string;
+    connectorDocUrls?: string[];
     skipReason?: string;
   }>(raw);
   if (!parsed || typeof parsed.designRequired !== "boolean") {
-    // Fallback: infer from presence of figmaUrl.
-    const url = task?.figmaUrl;
+    // Fallback: infer from presence of connectorDocUrls.
+    const urls = task?.connectorDocUrls;
     ctx.log(
       `${name(ctx)} couldn't parse design-gate response — inferring from task`,
       "warn"
     );
-    return url
-      ? { designRequired: true, figmaUrl: url }
-      : { designRequired: false, skipReason: `${name(ctx)}: no figma url in task` };
+    return urls && urls.length > 0
+      ? { designRequired: true, connectorDocUrls: urls }
+      : { designRequired: false, skipReason: `${name(ctx)}: no connector doc urls in task` };
   }
   ctx.log(
     parsed.designRequired
@@ -183,8 +183,8 @@ export async function autoDesignGate(
   );
   return {
     designRequired: parsed.designRequired,
-    figmaUrl:
-      parsed.figmaUrl?.trim() || task?.figmaUrl || undefined,
+    connectorDocUrls:
+      parsed.connectorDocUrls?.length ? parsed.connectorDocUrls : task?.connectorDocUrls || undefined,
     skipReason: parsed.skipReason,
   };
 }

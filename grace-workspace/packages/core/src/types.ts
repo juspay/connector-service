@@ -85,8 +85,8 @@ export interface TaskDefinition {
   description: string;
   /** Acceptance criteria */
   acceptanceCriteria: string[];
-  /** Figma URL */
-  figmaUrl?: string;
+  /** Connector reference document URLs */
+  connectorDocUrls?: string[];
   /** Target file paths */
   targetFiles?: string[];
   /** Project root */
@@ -631,8 +631,8 @@ export interface ProductAlignmentDoc {
 
 export interface DesignGateResult {
   designRequired: boolean;
-  figmaReady: boolean;
-  figmaUrl?: string;
+  docUrlsReady: boolean;
+  connectorDocUrls?: string[];
   skipReason?: string;
 }
 

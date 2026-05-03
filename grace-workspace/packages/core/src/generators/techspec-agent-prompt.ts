@@ -1,3 +1,5 @@
+import type { TaskDefinition } from "../types.js";
+
 /**
  * Tech Spec Agent Prompt
  *
@@ -99,7 +101,8 @@ CRITICAL RULES:
  */
 export function buildTechspecAgentUserPayload(
   connector: string,
-  paymentMethod: string
+  paymentMethod: string,
+  task?: TaskDefinition
 ): Record<string, unknown> {
   return {
     connector,
@@ -110,6 +113,22 @@ export function buildTechspecAgentUserPayload(
     workflowFile: "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.2_techspec.md",
     skipPhase: "1c",
     generateInsteadOfCLI: true,
+    // Full task context - all fields from task creation
+    task: task ? {
+      title: task.title,
+      description: task.description,
+      acceptanceCriteria: task.acceptanceCriteria,
+      connectorDocUrls: task.connectorDocUrls,
+      targetFiles: task.targetFiles,
+      projectRoot: task.projectRoot,
+      // Grace/Byne workflow fields
+      paymentMethod: task.paymentMethod,
+      targetConnectors: task.targetConnectors,
+      paymentMethodCategory: task.paymentMethodCategory,
+      priority: task.priority,
+      prerequisites: task.prerequisites,
+      estimatedComplexity: task.estimatedComplexity,
+    } : undefined,
   };
 }
 

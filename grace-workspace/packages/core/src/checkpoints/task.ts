@@ -52,7 +52,9 @@ export const taskCheckpoint: Checkpoint = {
           acceptanceCriteria: Array.isArray(payload.acceptanceCriteria)
             ? payload.acceptanceCriteria
             : [],
-          figmaUrl: payload.figmaUrl,
+          connectorDocUrls: Array.isArray(payload.connectorDocUrls)
+            ? payload.connectorDocUrls
+            : undefined,
           targetFiles: payload.targetFiles,
           projectRoot: path.isAbsolute(payload.projectRoot ?? "")
             ? (payload.projectRoot as string)
@@ -128,7 +130,10 @@ export const taskCheckpoint: Checkpoint = {
       };
     }
 
-    const figmaUrl = (await ask("Figma URL (optional, enter to skip): ")) || undefined;
+    const connectorDocUrlsRaw = await ask("Connector reference document URLs (comma-separated, optional): ");
+    const connectorDocUrls = connectorDocUrlsRaw
+      ? connectorDocUrlsRaw.split(",").map((s) => s.trim()).filter(Boolean)
+      : undefined;
     const targetRaw = await ask("Target file paths (comma-separated, optional): ");
     const targetFiles = targetRaw
       ? targetRaw.split(",").map((s) => s.trim()).filter(Boolean)
@@ -143,7 +148,7 @@ export const taskCheckpoint: Checkpoint = {
       title,
       description,
       acceptanceCriteria,
-      figmaUrl,
+      connectorDocUrls,
       targetFiles,
       projectRoot,
     };

@@ -110,7 +110,7 @@ export const l2PlanningCheckpoint: Checkpoint = {
     ctx.log("[l2_planning] ╚═══════════════════════════════════════════════════════╝", "info");
     ctx.log("[l2_planning] 📖 Reading workflow: grace/workflow/2.1_links.md", "info");
 
-    const linksPayload = buildLinksAgentUserPayload(connector, paymentMethod);
+    const linksPayload = buildLinksAgentUserPayload(connector, paymentMethod, task);
     let linksResult: LinksAgentResult;
 
     try {
@@ -192,7 +192,7 @@ export const l2PlanningCheckpoint: Checkpoint = {
     ctx.log(`[l2_planning] ⚙️  Running grace techspec for ${connector}...`, "info");
     ctx.log("[l2_planning]    (This may take 15-25 minutes)", "warn");
 
-    const techspecPayload = buildTechspecAgentUserPayload(connector, paymentMethod);
+    const techspecPayload = buildTechspecAgentUserPayload(connector, paymentMethod, task);
     let techspecResult: TechspecAgentResult;
 
     try {
