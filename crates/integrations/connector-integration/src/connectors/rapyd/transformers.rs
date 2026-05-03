@@ -148,6 +148,7 @@ impl<F, T> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                                     .merchant_reference_id
                                     .to_owned(),
                                 incremental_authorization_allowed: None,
+                                charges: None,
                                 status_code: item.http_code,
                             }),
                         )
@@ -1300,6 +1301,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                             .clone(),
                                         incremental_authorization_allowed: None,
                                         status_code: item.http_code,
+                                        charges: None,
                                     }),
                                 )
                             }
@@ -1540,6 +1542,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             connector_response_reference_id: data.merchant_reference_id.to_owned(),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
+                            charges: None,
                         }),
                     ),
                 }

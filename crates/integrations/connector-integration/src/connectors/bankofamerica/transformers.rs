@@ -523,6 +523,7 @@ fn get_payment_response(
                         .unwrap_or(info_response.id.clone()),
                 ),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             })
         }
@@ -2073,6 +2074,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaSetupMandatesResponse, Self>>
                                     .unwrap_or(info_response.id),
                             ),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                     },
@@ -2270,6 +2272,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
                                 .map(|cref| cref.code)
                                 .unwrap_or(Some(item.response.id)),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                         ..item.router_data
@@ -2285,6 +2288,7 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: Some(item.response.id),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data

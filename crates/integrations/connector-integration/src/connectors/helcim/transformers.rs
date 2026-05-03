@@ -310,6 +310,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 connector_response_reference_id: item.response.invoice_number.clone(),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -343,6 +344,7 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
                         connector_response_reference_id: item.response.invoice_number.clone(),
                         incremental_authorization_allowed: None,
                         mandate_reference: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     resource_common_data: PaymentFlowData {
@@ -445,6 +447,7 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
                 connector_response_reference_id: item.response.invoice_number.clone(),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -519,6 +522,7 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
                 connector_response_reference_id: item.response.invoice_number.clone(),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -685,6 +689,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 connector_response_reference_id: item.response.invoice_number.clone(),
                 incremental_authorization_allowed: None,
                 mandate_reference: Some(Box::new(mandate_reference)),
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

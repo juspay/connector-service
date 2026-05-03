@@ -924,6 +924,7 @@ impl<F, Req>
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
+                    charges: None,
                     status_code: _http_code,
                 };
                 let error = None;
@@ -963,6 +964,7 @@ impl<F, Req>
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
+                    charges: None,
                     status_code: _http_code,
                 };
                 let error = None;
@@ -1428,6 +1430,7 @@ impl<F, Req> ForeignTryFrom<(RazorpayCaptureResponse, Self, u16)>
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
+                charges: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -2012,6 +2015,7 @@ impl<F, Req>
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: _status_code,
         };
 

@@ -1684,6 +1684,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.response.reference.unwrap_or(item.response.id),
             ),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -1797,6 +1798,7 @@ impl<
                         item.response.reference.unwrap_or(item.response.id),
                     ),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 };
 
@@ -1912,6 +1914,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.response.reference.unwrap_or(item.response.id),
             ),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
         Ok(Self {
@@ -2012,6 +2015,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentsResponse, Self>>
                 item.response.reference.unwrap_or(item.response.id),
             ),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
         Ok(Self {
@@ -2086,6 +2090,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentVoidResponse, Self>>
                 network_txn_id: item.response.scheme_id.clone(),
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -2222,6 +2227,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
                 network_txn_id: item.response.scheme_id.clone(),
                 connector_response_reference_id: item.response.reference,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

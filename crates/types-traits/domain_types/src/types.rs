@@ -4950,6 +4950,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
+                charges: _,
                 status_code,
             } => {
                 let mandate_reference_grpc =
@@ -5764,6 +5765,7 @@ pub fn generate_payment_void_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
+                charges: _,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
@@ -5888,6 +5890,7 @@ pub fn generate_payment_void_post_capture_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
+                charges: _,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
@@ -6105,6 +6108,7 @@ pub fn generate_payment_sync_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
+                charges: _,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
@@ -8255,6 +8259,7 @@ pub fn generate_payment_capture_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
+                charges: _,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
@@ -9226,6 +9231,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
+                charges: _,
                 status_code,
             } => {
                 let mandate_reference_grpc =
@@ -10770,6 +10776,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 connector_metadata,
                 mandate_reference,
+                charges: _,
                 status_code,
                 incremental_authorization_allowed,
                 ..

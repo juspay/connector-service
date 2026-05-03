@@ -1976,6 +1976,7 @@ impl<
                             transaction_response.transaction_id.clone(),
                         ),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: http_code,
                     }),
                 }
@@ -2103,6 +2104,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: Some(transaction.transaction_id.clone()),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: http_code,
                 });
 
@@ -2477,6 +2479,7 @@ pub fn convert_to_payments_response_data_or_error(
                     .map(|s| s.peek().clone()),
                 connector_response_reference_id: Some(trans_res.transaction_id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_status_code,
             })
         }
@@ -2512,6 +2515,7 @@ pub fn convert_to_payments_response_data_or_error(
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_status_code,
             })
         }
@@ -2894,6 +2898,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             });
         } else {

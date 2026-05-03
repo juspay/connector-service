@@ -1216,6 +1216,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: response.client_request_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -1407,6 +1408,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: transaction_details.client_unique_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -1491,6 +1493,7 @@ impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -1958,6 +1961,7 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -2729,6 +2733,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: response.client_request_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -3044,6 +3049,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: response.client_request_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 

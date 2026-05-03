@@ -3043,6 +3043,7 @@ fn get_payment_response(
                         .unwrap_or(info_response.id.clone()),
                 ),
                 incremental_authorization_allowed,
+                charges: None,
                 status_code: http_code,
             })
         }
@@ -4012,6 +4013,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     incremental_authorization_allowed: Some(
                         mandate_status == common_enums::AttemptStatus::Authorized,
                     ),
+                    charges: None,
                     status_code: item.http_code,
                 }),
             },
@@ -4088,6 +4090,7 @@ impl<F> TryFrom<ResponseRouterData<CybersourceTransactionResponse, Self>>
                                 .map(|cref| cref.code)
                                 .unwrap_or(Some(item.response.id)),
                             incremental_authorization_allowed,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                         ..item.router_data
@@ -4107,6 +4110,7 @@ impl<F> TryFrom<ResponseRouterData<CybersourceTransactionResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: Some(item.response.id),
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data

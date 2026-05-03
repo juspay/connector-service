@@ -331,6 +331,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         network_txn_id: None,
                         connector_response_reference_id: Some(trace_id),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     resource_common_data: PaymentFlowData {
@@ -349,6 +350,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
@@ -421,6 +423,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                                 network_txn_id: None,
                                 connector_response_reference_id: None,
                                 incremental_authorization_allowed: None,
+                                charges: None,
                                 status_code: item.http_code,
                             }),
                             resource_common_data: PaymentFlowData {
@@ -439,6 +442,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                             network_txn_id: None,
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         }),
                         resource_common_data: PaymentFlowData {
@@ -458,6 +462,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {

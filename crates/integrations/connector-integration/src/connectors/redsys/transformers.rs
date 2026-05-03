@@ -735,6 +735,7 @@ fn get_payments_response(
                 network_txn_id: None,
                 connector_response_reference_id: Some(redsys_payments_response.ds_order.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             })
         } else {
@@ -767,6 +768,7 @@ fn get_payments_response(
                 network_txn_id: None,
                 connector_response_reference_id: Some(redsys_payments_response.ds_order.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: http_code,
             })
         } else {
@@ -1562,6 +1564,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: Some(response_data.ds_order),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1680,6 +1683,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: Some(response_data.ds_order),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1836,6 +1840,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                             network_txn_id: None,
                             connector_response_reference_id: Some(latest_response.ds_order.clone()),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         });
                         (attempt_status, payment_response)
@@ -1873,6 +1878,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                             network_txn_id: None,
                             connector_response_reference_id: Some(latest_response.ds_order.clone()),
                             incremental_authorization_allowed: None,
+                            charges: None,
                             status_code: item.http_code,
                         });
                         (status, payment_response)

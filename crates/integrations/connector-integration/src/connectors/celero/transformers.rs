@@ -445,6 +445,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<CeleroPaymentsRespons
                                     network_txn_id: None,
                                     connector_response_reference_id: response.auth_code.clone(),
                                     incremental_authorization_allowed: None,
+                                    charges: None,
                                     status_code: item.http_code,
                                 }),
                                 resource_common_data: PaymentFlowData {
@@ -668,6 +669,7 @@ impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
             network_txn_id: card_response.and_then(|c| c.auth_code.clone()),
             connector_response_reference_id: transaction_data.order_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -812,6 +814,7 @@ impl TryFrom<ResponseRouterData<CeleroCaptureResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 
@@ -1113,6 +1116,7 @@ impl TryFrom<ResponseRouterData<CeleroVoidResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         };
 

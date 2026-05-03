@@ -294,5 +294,197 @@
         }
       }
     }
+  },
+  "PaymentService/IncrementalAuthorization": {
+    "incremental_auth_basic": {
+      "assert": {
+        "status": {
+          "one_of": [
+            "AUTHORIZATION_SUCCESS"
+          ]
+        }
+      }
+    },
+    "incremental_auth_with_tip": {
+      "assert": {
+        "status": {
+          "one_of": [
+            "AUTHORIZATION_SUCCESS"
+          ]
+        }
+      }
+    },
+    "incremental_auth_multiple_increase": {
+      "assert": {
+        "status": {
+          "one_of": [
+            "AUTHORIZATION_SUCCESS",
+            "AUTHORIZATION_FAILURE"
+          ]
+        }
+      }
+    },
+    "incremental_auth_fail_invalid_transaction_id": {
+      "assert": {
+        "status": {
+          "one_of": [
+            "AUTHORIZATION_SUCCESS",
+            "AUTHORIZATION_FAILURE",
+            "AUTHORIZATION_PROCESSING"
+          ]
+        },
+        "error": null
+      }
+    }
+  },
+  "PaymentService/ProxyAuthorize": {
+    "proxy_auto_capture_card": {
+      "grpc_req": {
+        "address": {
+          "shipping_address": {
+            "first_name": {
+              "value": "auto_generate"
+            },
+            "last_name": {
+              "value": "auto_generate"
+            },
+            "line1": {
+              "value": "auto_generate"
+            },
+            "city": {
+              "value": "auto_generate"
+            },
+            "state": {
+              "value": "CA"
+            },
+            "zip_code": {
+              "value": "94025"
+            },
+            "country_alpha2_code": "US",
+            "email": {
+              "value": "auto_generate"
+            },
+            "phone_number": {
+              "value": "auto_generate"
+            },
+            "phone_country_code": "+1"
+          },
+          "billing_address": {
+            "first_name": {
+              "value": "auto_generate"
+            },
+            "last_name": {
+              "value": "auto_generate"
+            },
+            "line1": {
+              "value": "auto_generate"
+            },
+            "city": {
+              "value": "auto_generate"
+            },
+            "state": {
+              "value": "CA"
+            },
+            "zip_code": {
+              "value": "94025"
+            },
+            "country_alpha2_code": "US",
+            "email": {
+              "value": "auto_generate"
+            },
+            "phone_number": {
+              "value": "auto_generate"
+            },
+            "phone_country_code": "+1"
+          }
+        },
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    }
+  },
+  "PaymentService/ProxySetupRecurring": {
+    "proxy_setup_mandate": {
+      "grpc_req": {
+        "address": {
+          "shipping_address": {
+            "first_name": {
+              "value": "auto_generate"
+            },
+            "last_name": {
+              "value": "auto_generate"
+            },
+            "line1": {
+              "value": "auto_generate"
+            },
+            "city": {
+              "value": "auto_generate"
+            },
+            "state": {
+              "value": "CA"
+            },
+            "zip_code": {
+              "value": "94025"
+            },
+            "country_alpha2_code": "US",
+            "email": {
+              "value": "auto_generate"
+            },
+            "phone_number": {
+              "value": "auto_generate"
+            },
+            "phone_country_code": "+1"
+          },
+          "billing_address": {
+            "first_name": {
+              "value": "auto_generate"
+            },
+            "last_name": {
+              "value": "auto_generate"
+            },
+            "line1": {
+              "value": "auto_generate"
+            },
+            "city": {
+              "value": "auto_generate"
+            },
+            "state": {
+              "value": "CA"
+            },
+            "zip_code": {
+              "value": "94025"
+            },
+            "country_alpha2_code": "US",
+            "email": {
+              "value": "auto_generate"
+            },
+            "phone_number": {
+              "value": "auto_generate"
+            },
+            "phone_country_code": "+1"
+          }
+        },
+        "return_url": "https://google.com",
+        "browser_info": {
+          "language": "en-US"
+        }
+      }
+    }
+  },
+  "PaymentService/Get": {
+    "sync_payment": {
+      "assert": {
+        "status": null,
+        "error": null
+      }
+    },
+    "sync_payment_with_handle_response": {
+      "assert": {
+        "status": null,
+        "error": null,
+        "connector_transaction_id": null
+      }
+    }
   }
 }

@@ -774,6 +774,7 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for PaymentsResponseData {
             network_txn_id,
             connector_response_reference_id: Some(item.request_id.clone()),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.response_code.parse::<u16>().unwrap_or(0),
         })
     }

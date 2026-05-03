@@ -28,6 +28,7 @@ pub const SUPPORTED_FLOWS: &[&str] = &[
     "proxy_setup_recurring",
     "recurring_charge",
     "refund",
+    "refund_get",
     "setup_recurring",
     "token_authorize",
     "void",
@@ -281,7 +282,6 @@ pub fn build_proxy_setup_recurring_request() -> PaymentServiceProxySetupRecurrin
             }),
             ..Default::default()
         }),
-        return_url: Some("https://example.com/return".to_string()),
         customer_acceptance: Some(CustomerAcceptance {
             acceptance_type: AcceptanceType::Offline.into(), // Type of acceptance (e.g., online, offline).
             accepted_at: 0, // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
@@ -346,6 +346,15 @@ pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRef
             currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
         }),
         reason: Some("customer_request".to_string()), // Reason for the refund.
+        ..Default::default()
+    }
+}
+
+pub fn build_refund_get_request() -> RefundServiceGetRequest {
+    RefundServiceGetRequest {
+        merchant_refund_id: Some("probe_refund_001".to_string()), // Identification.
+        connector_transaction_id: "probe_connector_txn_001".to_string(),
+        refund_id: "probe_refund_id_001".to_string(), // Deprecated.
         ..Default::default()
     }
 }
@@ -762,6 +771,18 @@ pub async fn process_recurring_charge(
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: RefundService.Get
+#[allow(dead_code)]
+pub async fn process_refund_get(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .refund_get(build_refund_get_request(), &HashMap::new(), None)
+        .await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: PaymentService.SetupRecurring
 #[allow(dead_code)]
 pub async fn process_setup_recurring(
@@ -841,11 +862,12 @@ async fn main() {
         "process_proxy_authorize" => process_proxy_authorize(&client, "txn_001").await,
         "process_proxy_setup_recurring" => process_proxy_setup_recurring(&client, "txn_001").await,
         "process_recurring_charge" => process_recurring_charge(&client, "txn_001").await,
+        "process_refund_get" => process_refund_get(&client, "txn_001").await,
         "process_setup_recurring" => process_setup_recurring(&client, "txn_001").await,
         "process_token_authorize" => process_token_authorize(&client, "txn_001").await,
         "process_void" => process_void(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_authorize, process_capture, process_create_client_authentication_token, process_create_order, process_dispute_accept, process_dispute_defend, process_dispute_submit_evidence, process_incremental_authorization, process_parse_event, process_proxy_authorize, process_proxy_setup_recurring, process_recurring_charge, process_setup_recurring, process_token_authorize, process_void", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_authorize, process_capture, process_create_client_authentication_token, process_create_order, process_dispute_accept, process_dispute_defend, process_dispute_submit_evidence, process_incremental_authorization, process_parse_event, process_proxy_authorize, process_proxy_setup_recurring, process_recurring_charge, process_refund_get, process_setup_recurring, process_token_authorize, process_void", flow);
             return;
         }
     };

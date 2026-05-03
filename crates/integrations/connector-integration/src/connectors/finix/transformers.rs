@@ -465,6 +465,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    charges: None,
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
@@ -510,6 +511,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         network_txn_id: None,
                         connector_response_reference_id: Some(response.id.clone()),
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     resource_common_data: PaymentFlowData {
@@ -578,6 +580,7 @@ impl TryFrom<ResponseRouterData<FinixPSyncResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -646,6 +649,7 @@ impl TryFrom<ResponseRouterData<FinixCaptureResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -760,6 +764,7 @@ impl TryFrom<ResponseRouterData<FinixVoidResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -1349,6 +1354,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         network_txn_id: None,
                         connector_response_reference_id: echoed,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1523,6 +1529,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.id.clone()),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             ..item.router_data

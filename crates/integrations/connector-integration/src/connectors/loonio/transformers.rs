@@ -294,6 +294,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<LoonioAuthorizeRespon
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -403,6 +404,7 @@ impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -435,6 +437,7 @@ impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        charges: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data

@@ -409,6 +409,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 connector_metadata: Some(connector_metadata),
                 network_txn_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -440,6 +441,7 @@ impl TryFrom<ResponseRouterData<HyperpgSyncResponse, Self>>
                 connector_metadata: None,
                 network_txn_id: None,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {

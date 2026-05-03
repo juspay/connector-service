@@ -943,6 +943,7 @@ impl<F, T>
                 network_txn_id: network_txn_id.map(|id| id.expose()),
                 connector_response_reference_id: optional_correlation_id.clone(),
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: router_data.http_code,
             }),
             (Some(reason), _) => Err(ErrorResponse {
@@ -1037,6 +1038,7 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         });
 
@@ -1107,6 +1109,7 @@ impl<F> TryFrom<ResponseRouterData<WorldpayEventResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         });
 
@@ -1238,6 +1241,7 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: item.http_code,
         });
 

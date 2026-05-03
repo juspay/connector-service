@@ -613,6 +613,7 @@ impl
                 network_txn_id: None,
                 connector_response_reference_id: payment_response.order_id,
                 incremental_authorization_allowed: None,
+                charges: None,
                 status_code: _status_code,
             }),
             RazorpayStatus::Failed => Err(ErrorResponse {
@@ -699,6 +700,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.connector_order_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: _status_code,
         };
 
@@ -740,6 +742,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.connector_order_id.clone(),
             incremental_authorization_allowed: None,
+            charges: None,
             status_code: _status_code,
         };
 
