@@ -32,6 +32,8 @@ You coordinate by **spawning subagents via the Task tool** for the heavy phases 
 5. **Phases run in order**: 0 → 1 → 1.5 → 2 → 3 → 4 → 5 → 6. Do not skip or reorder.
 6. **One results file**: All phases append to `grace/workflow/v2/work/{CONNECTOR}_results.json`. The orchestrator reads this file.
 7. **Issue creation is non-fatal**: if `gh` auth fails or network blips, set `ISSUE_NUMBER`/`ISSUE_URL` empty and continue. Phases 2/3 detect empty values and skip their comment-posting sub-phases cleanly.
+8. **Time-budgeted runs are permitted (with carry-over)**: a single Worker session has a wall-clock budget that may be exceeded by large `KEPT_ITEMS` arrays (47 items × ~3 min each ≈ 2.5h is realistic; ≥100 items routinely exceed any reasonable session window). When the Worker detects budget exhaustion mid-Phase-3, it MUST mark the un-attempted items with `codegen_status: "SKIPPED"` and `reason: "carry_over_time_budget"` (NOT `"session_time_budget_exceeded"`, which earlier ad-hoc runs invented and is hereby retired). The orchestrator treats `carry_over_time_budget` items as eligible for re-pickup on the next run (see Phase 6 reporting). Aborting Phase 3 on a single FAILED item is still forbidden; aborting on time exhaustion is permitted iff carry-over is recorded.
+9. **Worker status reporting must mirror the per-item gate**: the Worker's stdout-summary boolean / `success` flag MUST be derived from the per-item results, not asserted independently. Definition: `success = (N_success > 0 AND N_failed == 0 AND N_carry_over == 0)`. If any item is FAILED or carried over, the connector status is `PARTIAL` (or `FAILED` if all attempted items failed), and the Worker's summary boolean MUST be `false`. PR titles MUST embed the same `(N_success, N_failed, N_carry_over)` triple — no run may report `success: true` while the PR title contradicts it.
 
 ---
 
@@ -225,6 +227,14 @@ Each agent returns one of:
 
 Record each item's status to the in-memory results structure including `plan_comment_url` (may be empty). **Do not abort the phase on a single FAILED**; continue with the next item.
 
+**Time-budget exit (per RULE 8)**: at the start of each item's iteration the Worker checks its remaining wall-clock budget (`session_deadline - now()`). If less than the worst-case per-item codegen budget (~10 min) remains, stop spawning new codegen agents and mark every remaining item as:
+
+```json
+{ "codegen_status": "SKIPPED", "status": "SKIPPED", "reason": "carry_over_time_budget" }
+```
+
+These items MUST appear in the results JSON and MUST be listed in the umbrella issue under a new `### Carry-over (next run)` section so the next Worker invocation can pick them up. They MUST NOT be silently dropped, and the reason string MUST be exactly `"carry_over_time_budget"` (NOT `"session_time_budget_exceeded"` — that legacy string is retired and the orchestrator/reviewer will treat it as an error).
+
 After all items: `IMPLEMENTED_ITEMS` = items with `STATUS: SUCCESS`.
 
 ---
@@ -325,13 +335,21 @@ Write the final results JSON. The schema must be:
 **status definitions** (per item):
 - `SUCCESS` — codegen + cargo build + grpcurl all SUCCESS.
 - `FAILED` — any phase failed after attempting it.
-- `SKIPPED` — pre-empted (low confidence, already implemented, techspec missing, no creds).
+- `SKIPPED` — pre-empted (low confidence, already implemented, techspec missing, no creds, **or** carry-over per RULE 8 with `reason: "carry_over_time_budget"`).
 
 **connector status**:
 - `SUCCESS` — all kept items SUCCESS.
-- `PARTIAL` — some SUCCESS, some FAILED/SKIPPED.
-- `FAILED` — every kept item FAILED.
+- `PARTIAL` — some SUCCESS, some FAILED/SKIPPED (including carry-over).
+- `FAILED` — every attempted item FAILED **and** no carry-over (a 0/all-failed batch with carry-over is still PARTIAL because the carry-over may succeed next run).
 - `SKIPPED` — Phase 0 or 1 short-circuited.
+
+**Worker-summary `success` boolean** (mandated by RULE 9): derived strictly as
+
+```
+success = (N_success > 0) AND (N_failed == 0) AND (N_carry_over == 0)
+```
+
+The summary boolean is NEVER asserted independently of the items array. If the PR title is `"…— 0 success, 3 failed"` the summary boolean MUST be `false`. The reviewer treats a `success: true` summary that contradicts the per-item gate as a **revise-blocking** misreport.
 
 Print the summary to stdout (the OpenSwarm Worker captures this for the Reviewer):
 
@@ -339,8 +357,9 @@ Print the summary to stdout (the OpenSwarm Worker captures this for the Reviewer
 === {CONNECTOR} ===
 Status: {status}
 Issue: {ISSUE_URL or "none"}
-Items: implement={N_kept}, success={N_success}, failed={N_failed}, skipped={N_skipped}
+Items: implement={N_kept}, success={N_success}, failed={N_failed}, skipped={N_skipped}, carry_over={N_carry_over}
 PR: {PR_URL or "none"}
+Worker-success: {true|false}   # MUST satisfy: true iff N_success>0 AND N_failed==0 AND N_carry_over==0
 ```
 
 ---
