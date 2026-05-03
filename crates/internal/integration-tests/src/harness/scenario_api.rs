@@ -23,9 +23,9 @@ use uuid::Uuid;
 use crate::harness::{
     auto_gen::resolve_auto_generate,
     connector_override::{
-        apply_connector_overrides, connector_pre_request_http_hook,
+        apply_connector_overrides, connector_pre_request_http_hook, load_scenario_config,
         normalize_tonic_request_for_connector, transform_response_for_connector,
-        PreRequestHttpHook,
+        PreRequestHttpHook, SuiteConfig,
     },
     credentials::{creds_file_path, load_connector_config},
     metadata::add_connector_metadata,
@@ -3375,7 +3375,7 @@ pub fn run_scenario_test_with_options(
         });
     };
 
-    match execute_single_scenario_with_context(
+    match execute_scenario_with_retry(
         suite,
         scenario,
         connector,
@@ -3598,7 +3598,7 @@ pub fn run_suite_test_with_options(
             };
 
             for scenario in scenarios.keys() {
-                match execute_single_scenario_with_context(
+                match execute_scenario_with_retry(
                     suite,
                     scenario,
                     connector,
@@ -3730,7 +3730,7 @@ pub fn run_suite_test_with_options(
                     });
                 };
 
-                match execute_single_scenario_with_context(
+                match execute_scenario_with_retry(
                     suite,
                     scenario,
                     connector,
@@ -4452,7 +4452,258 @@ fn maybe_sync_complete_authorize_pending(
     Ok(())
 }
 
-#[allow(clippy::print_stdout, clippy::print_stderr)]
+/// Determines if a gRPC execution error is retriable.
+///
+/// Checks the gRPC error string for retriable patterns like:
+/// - grpc-status=NotFound (transaction not indexed yet)
+/// - grpc-status=Unavailable (service temporarily down)
+/// - HTTP 404, 5xx status codes in error details
+fn is_grpc_error_retriable(error_str: &str) -> bool {
+    let error_lower = error_str.to_lowercase();
+
+    // Check for retriable gRPC status codes
+    if error_lower.contains("grpc-status=notfound")
+        || error_lower.contains("grpc-status=unavailable")
+        || error_lower.contains("grpc-status=deadlineexceeded")
+        || error_lower.contains("grpc-status=resourceexhausted")
+    {
+        return true;
+    }
+
+    // Check for HTTP status codes indicating retriable errors
+    if error_lower.contains("404")
+        || error_lower.contains("503")
+        || error_lower.contains("502")
+        || error_lower.contains("500")
+        || error_lower.contains("504")
+    {
+        return true;
+    }
+
+    // Check for common retriable error messages
+    if error_lower.contains("not found")
+        || error_lower.contains("does not exist")
+        || error_lower.contains("unavailable")
+        || error_lower.contains("timeout")
+        || error_lower.contains("try again")
+        || error_lower.contains("temporary")
+    {
+        return true;
+    }
+
+    false
+}
+
+/// Determines if an error response is retriable.
+///
+/// Retriable errors include:
+/// - Transaction not found (common during indexing delays for Get operations)
+/// - Timeout errors
+/// - Service unavailable / infrastructure errors
+/// - 5xx server errors
+///
+/// Terminal errors (non-retriable) include:
+/// - Invalid request parameters
+/// - Authentication/authorization failures
+/// - Business logic errors (insufficient funds, invalid card, etc.)
+fn is_error_retriable(response: &Value) -> bool {
+    // No error = not retriable (success case)
+    let Some(error) = response.get("error") else {
+        return false;
+    };
+
+    // Check unified error details for retriable error codes
+    if let Some(unified) = error.get("unified_details") {
+        if let Some(code) = unified.get("code").and_then(|c| c.as_str()) {
+            // Retriable unified error codes
+            return matches!(
+                code,
+                "NOT_FOUND" | // Transaction not indexed yet
+                "TIMEOUT" | // Network timeout
+                "SERVICE_UNAVAILABLE" | // Temporary service issue
+                "INTERNAL_ERROR" | // Server error that might be transient
+                "GATEWAY_TIMEOUT" | // Gateway timeout
+                "TOO_MANY_REQUESTS" // Rate limit - can retry after delay
+            );
+        }
+    }
+
+    // Check connector-specific error details for common retriable patterns
+    if let Some(connector_details) = error.get("connector_details") {
+        if let Some(message) = connector_details.get("message").and_then(|m| m.as_str()) {
+            let message_lower = message.to_lowercase();
+            // Common patterns in connector error messages indicating retriable errors
+            // HTTP 404 often means transaction not indexed yet (especially for Get/PSync)
+            // HTTP 5xx errors are server errors that may be transient
+            if message_lower.contains("not found")
+                || message_lower.contains("404")
+                || message_lower.contains("status 404")
+                || message_lower.contains("timeout")
+                || message_lower.contains("unavailable")
+                || message_lower.contains("503")
+                || message_lower.contains("502")
+                || message_lower.contains("500")
+                || message_lower.contains("try again")
+                || message_lower.contains("temporary")
+            {
+                return true;
+            }
+        }
+
+        // Check for HTTP status code in connector_details.code field
+        if let Some(code) = connector_details.get("code").and_then(|c| c.as_str()) {
+            // HTTP 404 for Get operations = transaction not indexed yet
+            // HTTP 5xx = server errors that may be transient
+            if code == "404" || code.starts_with('5') {
+                return true;
+            }
+        }
+    }
+
+    // Default: treat as terminal error to avoid unnecessary retries
+    false
+}
+
+/// Executes a scenario with optional retry logic based on configuration.
+///
+/// Configuration is read from override.json:
+/// - Suite-level `__config__` applies to all scenarios in the suite
+/// - Scenario-level `__config__` overrides suite-level settings
+///
+/// Configuration options:
+/// - `delay_ms`: Sleep time before/during scenario execution
+/// - `polling_config.max_retries`: Maximum number of retry attempts
+/// - `polling_config.retry_delay_ms`: Delay between retry attempts
+///
+/// If no configuration is provided, defaults to legacy behavior:
+/// - PaymentService/Get retries on retriable errors only (idempotent operation)
+fn execute_scenario_with_retry(
+    suite: &str,
+    scenario: &str,
+    connector: &str,
+    options: SuiteRunOptions<'_>,
+    dependency_reqs: &[Value],
+    dependency_res: &[Value],
+    explicit_context_entries: &[ExplicitContextEntry],
+    dependency_entries: &[ExecutedDependency],
+) -> Result<ExecutedScenario, ScenarioError> {
+    // Load configuration from override.json (suite + scenario merged)
+    let config = load_scenario_config(connector, suite, scenario)?;
+
+    // Apply delay if configured
+    if let Some(delay_ms) = config.delay_ms {
+        thread::sleep(Duration::from_millis(delay_ms));
+    }
+
+    // Determine retry parameters
+    let retry_params = resolve_retry_params(&config, suite);
+
+    // If no retries, execute once and return
+    if retry_params.max_retries == 0 {
+        return execute_single_scenario_with_context(
+            suite,
+            scenario,
+            connector,
+            options,
+            dependency_reqs,
+            dependency_res,
+            explicit_context_entries,
+            dependency_entries,
+        );
+    }
+
+    // Execute with retry logic
+    for attempt in 0..=retry_params.max_retries {
+        let result = execute_single_scenario_with_context(
+            suite,
+            scenario,
+            connector,
+            options,
+            dependency_reqs,
+            dependency_res,
+            explicit_context_entries,
+            dependency_entries,
+        )?;
+
+        // Check if response contains a retriable error
+        // Check both response_json.error (application errors) and execution_error (gRPC errors)
+        let is_retriable_json_error = is_error_retriable(&result.response_json);
+        let is_retriable_grpc_error = result
+            .execution_error
+            .as_ref()
+            .map(|err| is_grpc_error_retriable(err))
+            .unwrap_or(false);
+
+        let is_retriable_error = is_retriable_json_error || is_retriable_grpc_error;
+
+        // Success or last attempt or terminal error - return the result
+        if !is_retriable_error || attempt == retry_params.max_retries {
+            return Ok(result);
+        }
+
+        // Log retry attempt for debugging
+        tracing::debug!(
+            "Attempt {}/{}: Retriable error encountered, retrying after {}ms",
+            attempt + 1,
+            retry_params.max_retries,
+            retry_params.retry_delay_ms
+        );
+
+        // Wait before retry
+        thread::sleep(Duration::from_millis(retry_params.retry_delay_ms));
+    }
+
+    // Safety: Loop always returns on last iteration (attempt == max_retries)
+    // This path is unreachable but required for type checking
+    execute_single_scenario_with_context(
+        suite,
+        scenario,
+        connector,
+        options,
+        dependency_reqs,
+        dependency_res,
+        explicit_context_entries,
+        dependency_entries,
+    )
+}
+
+/// Retry parameters for scenario execution.
+struct RetryParams {
+    max_retries: u32,
+    retry_delay_ms: u64,
+}
+
+/// Resolves retry parameters from configuration, with legacy defaults.
+fn resolve_retry_params(config: &SuiteConfig, suite: &str) -> RetryParams {
+    const DEFAULT_RETRY_DELAY_MS: u64 = 500;
+    const LEGACY_GET_MAX_RETRIES: u32 = 10;
+
+    if let Some(ref polling_config) = config.polling_config {
+        return RetryParams {
+            max_retries: polling_config.max_retries.unwrap_or(0),
+            retry_delay_ms: polling_config
+                .retry_delay_ms
+                .unwrap_or(DEFAULT_RETRY_DELAY_MS),
+        };
+    }
+
+    // Legacy defaults: only retry for PaymentService/Get
+    if suite == "PaymentService/Get" {
+        RetryParams {
+            max_retries: LEGACY_GET_MAX_RETRIES,
+            retry_delay_ms: DEFAULT_RETRY_DELAY_MS,
+        }
+    } else {
+        RetryParams {
+            max_retries: 0,
+            // Always default to safe delay even when retries disabled
+            // to prevent hot loops if configuration is later enabled
+            retry_delay_ms: DEFAULT_RETRY_DELAY_MS,
+        }
+    }
+}
+
+#[allow(clippy::print_stdout)]
 fn execute_single_scenario_with_context(
     suite: &str,
     scenario: &str,
@@ -4523,13 +4774,20 @@ fn execute_single_scenario_with_context(
             // and does NOT need prost-style oneof double-nesting.
             let grpcurl_payload =
                 normalize_grpcurl_request_json(connector, suite, scenario, effective_req.clone());
-            if std::env::var("UCS_DEBUG_GRPCURL_PAYLOAD").as_deref() == Ok("1") {
+
+            // Debug logging for grpcurl payload (enable with RUST_LOG=debug)
+            if tracing::enabled!(tracing::Level::DEBUG) {
                 if let Ok(dbg_json) = serde_json::to_string_pretty(&grpcurl_payload) {
-                    eprintln!(
-                        "[DEBUG] grpcurl_payload suite={suite} scenario={scenario}:\n{dbg_json}"
+                    tracing::debug!(
+                        suite = suite,
+                        scenario = scenario,
+                        connector = connector,
+                        "grpcurl payload:\n{}",
+                        dbg_json
                     );
                 }
             }
+
             let trace = execute_grpcurl_request_from_payload_with_trace(
                 suite,
                 scenario,
@@ -6088,6 +6346,11 @@ grpc-status: 0
                 };
 
                 for scenario in scenario_obj.keys() {
+                    // Skip special __config__ key (suite-level configuration)
+                    if scenario == "__config__" {
+                        continue;
+                    }
+
                     if !suite_scenarios.contains_key(scenario) {
                         failures.push(format!(
                             "{connector}/{suite}/{scenario}: override references missing scenario in suite file"

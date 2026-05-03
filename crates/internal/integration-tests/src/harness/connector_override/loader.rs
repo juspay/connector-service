@@ -1,9 +1,71 @@
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs,
+    path::PathBuf,
+    sync::Mutex,
+};
 
 use serde::Deserialize;
 use serde_json::Value;
 
 use crate::harness::{scenario_loader::connector_specs_root, scenario_types::ScenarioError};
+
+/// Cache for parsed connector override files to avoid repeated I/O.
+/// Key: connector name, Value: parsed override file.
+static OVERRIDE_FILE_CACHE: Mutex<Option<HashMap<String, ConnectorOverrideFile>>> =
+    Mutex::new(None);
+
+/// Clears the override file cache. Used for testing.
+#[cfg(test)]
+fn clear_override_cache() {
+    #[allow(clippy::expect_used)]
+    let mut cache_guard = OVERRIDE_FILE_CACHE
+        .lock()
+        .expect("override file cache lock should not be poisoned");
+    *cache_guard = Some(HashMap::new());
+}
+
+/// Polling configuration for retry logic.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct PollingConfig {
+    /// Maximum number of retries for polling operations.
+    pub max_retries: Option<u32>,
+    /// Delay in milliseconds between retry attempts.
+    pub retry_delay_ms: Option<u64>,
+}
+
+impl PollingConfig {
+    /// Merges this config with another, where the other takes precedence.
+    fn merge_with(self, override_config: Self) -> Self {
+        Self {
+            max_retries: override_config.max_retries.or(self.max_retries),
+            retry_delay_ms: override_config.retry_delay_ms.or(self.retry_delay_ms),
+        }
+    }
+}
+
+/// Suite or scenario configuration options.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct SuiteConfig {
+    /// Delay in milliseconds to wait before/during suite execution.
+    pub delay_ms: Option<u64>,
+    /// Polling configuration for retry operations.
+    pub polling_config: Option<PollingConfig>,
+}
+
+impl SuiteConfig {
+    /// Merges this config with another, where the other takes precedence.
+    fn merge_with(self, override_config: Self) -> Self {
+        Self {
+            delay_ms: override_config.delay_ms.or(self.delay_ms),
+            polling_config: match (self.polling_config, override_config.polling_config) {
+                (Some(base), Some(override_cfg)) => Some(base.merge_with(override_cfg)),
+                (config @ Some(_), None) | (None, config @ Some(_)) => config,
+                (None, None) => None,
+            },
+        }
+    }
+}
 
 /// Override patch payload for one specific `(suite, scenario)` pair.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -19,6 +81,9 @@ pub struct ScenarioOverridePatch {
     /// sync returns `CHARGED` without browser automation.
     #[serde(default)]
     pub pre_request_http: Option<PreRequestHttpHook>,
+    /// Configuration options using __config__ key.
+    #[serde(rename = "__config__", default)]
+    pub config: Option<SuiteConfig>,
 }
 
 /// Fire-and-forget HTTP call issued before the scenario's gRPC request.
@@ -60,6 +125,66 @@ fn connector_override_root() -> PathBuf {
     std::env::var("UCS_CONNECTOR_OVERRIDE_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|_| connector_specs_root())
+}
+
+/// Loads suite-level configuration from the `__config__` key in override.json.
+///
+/// This provides default configuration for all scenarios in the suite.
+/// Individual scenarios can override this with their own `__config__` key.
+pub fn load_suite_config(
+    connector: &str,
+    suite: &str,
+) -> Result<Option<SuiteConfig>, ScenarioError> {
+    // We need to load the raw JSON because suite-level __config__ is stored
+    // as a raw config object, not wrapped in ScenarioOverridePatch
+    let path = connector_override_file_path(connector);
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let content =
+        fs::read_to_string(&path).map_err(|source| ScenarioError::ConnectorOverrideRead {
+            path: path.clone(),
+            source,
+        })?;
+
+    let parsed: Value =
+        serde_json::from_str(&content).map_err(|source| ScenarioError::ConnectorOverrideParse {
+            path: path.clone(),
+            source,
+        })?;
+
+    // Navigate to suite -> __config__
+    let suite_config_value = parsed
+        .get(suite)
+        .and_then(|suite_obj| suite_obj.get("__config__"));
+
+    if let Some(config_value) = suite_config_value {
+        let config =
+            serde_json::from_value::<SuiteConfig>(config_value.clone()).map_err(|source| {
+                ScenarioError::ConnectorOverrideParse {
+                    path: path.clone(),
+                    source,
+                }
+            })?;
+        return Ok(Some(config));
+    }
+
+    Ok(None)
+}
+
+pub fn load_scenario_config(
+    connector: &str,
+    suite: &str,
+    scenario: &str,
+) -> Result<SuiteConfig, ScenarioError> {
+    let suite_config = load_suite_config(connector, suite)?.unwrap_or_default();
+    let scenario_config = load_scenario_override_patch(connector, suite, scenario)?
+        .and_then(|patch| patch.config)
+        .unwrap_or_default();
+
+    // Merge configs: scenario-level overrides suite-level
+    Ok(suite_config.merge_with(scenario_config))
 }
 
 /// Legacy path used by older suite-level override file layouts.
@@ -163,6 +288,28 @@ pub fn load_webhook_payload_patch(
 fn load_connector_override_file(
     connector: &str,
 ) -> Result<Option<ConnectorOverrideFile>, ScenarioError> {
+    // Check cache first
+    {
+        #[allow(clippy::expect_used)]
+        let mut cache_guard = OVERRIDE_FILE_CACHE
+            .lock()
+            .expect("override file cache lock should not be poisoned");
+
+        // Initialize cache on first access
+        if cache_guard.is_none() {
+            *cache_guard = Some(HashMap::new());
+        }
+
+        #[allow(clippy::expect_used)]
+        let cache = cache_guard.as_ref().expect("cache should be initialized");
+
+        // Return cached value if present
+        if let Some(cached) = cache.get(connector) {
+            return Ok(Some(cached.clone()));
+        }
+    }
+
+    // Cache miss - load from disk
     let path = connector_override_file_path(connector);
     if !path.exists() {
         return Ok(None);
@@ -180,6 +327,19 @@ fn load_connector_override_file(
             source,
         }
     })?;
+
+    // Store in cache
+    {
+        #[allow(clippy::expect_used)]
+        let mut cache_guard = OVERRIDE_FILE_CACHE
+            .lock()
+            .expect("override file cache lock should not be poisoned");
+
+        #[allow(clippy::expect_used)]
+        let cache = cache_guard.as_mut().expect("cache should be initialized");
+
+        cache.insert(connector.to_string(), parsed.clone());
+    }
 
     Ok(Some(parsed))
 }
@@ -221,10 +381,35 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        connector_override_file_path, load_scenario_override_patch, ScenarioOverridePatch,
+        clear_override_cache, connector_override_file_path, load_scenario_override_patch,
+        ScenarioOverridePatch,
     };
 
     static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// RAII guard that restores an environment variable to its previous value on drop.
+    /// Prevents test pollution and ensures cleanup even if the test panics.
+    struct EnvVarGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvVarGuard {
+        fn new(key: &'static str, new_value: impl AsRef<std::ffi::OsStr>) -> Self {
+            let previous = std::env::var(key).ok();
+            std::env::set_var(key, new_value);
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvVarGuard {
+        fn drop(&mut self) {
+            match &self.previous {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
 
     fn unique_temp_dir() -> PathBuf {
         let nanos = SystemTime::now()
@@ -236,12 +421,13 @@ mod tests {
 
     #[test]
     fn missing_override_file_returns_none() {
-        let env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        let _env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        clear_override_cache(); // Clear cache to ensure test isolation
+
         let temp_root = unique_temp_dir();
         fs::create_dir_all(&temp_root).expect("temp root should be created");
 
-        let previous = std::env::var("UCS_CONNECTOR_OVERRIDE_ROOT").ok();
-        std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
+        let _env_guard = EnvVarGuard::new("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
 
         let loaded = load_scenario_override_patch(
             "stripe",
@@ -251,17 +437,15 @@ mod tests {
         .expect("loading missing override should not fail");
         assert!(loaded.is_none());
 
-        match previous {
-            Some(value) => std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", value),
-            None => std::env::remove_var("UCS_CONNECTOR_OVERRIDE_ROOT"),
-        }
-        drop(env_lock);
         let _ = fs::remove_dir_all(temp_root);
+        // _env_guard and _env_lock are automatically dropped here, ensuring cleanup
     }
 
     #[test]
     fn loads_scenario_override_patch_from_connector_file() {
-        let env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        let _env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        clear_override_cache(); // Clear cache to ensure test isolation
+
         let temp_root = unique_temp_dir();
         let connector_dir = temp_root.join("stripe");
         fs::create_dir_all(&connector_dir).expect("connector directory should be created");
@@ -293,8 +477,7 @@ mod tests {
         )
         .expect("override file should be written");
 
-        let previous = std::env::var("UCS_CONNECTOR_OVERRIDE_ROOT").ok();
-        std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
+        let _env_guard = EnvVarGuard::new("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
 
         let loaded = load_scenario_override_patch(
             "stripe",
@@ -321,11 +504,61 @@ mod tests {
         let computed_path = connector_override_file_path("stripe");
         assert_eq!(computed_path, override_path);
 
-        match previous {
-            Some(value) => std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", value),
-            None => std::env::remove_var("UCS_CONNECTOR_OVERRIDE_ROOT"),
-        }
-        drop(env_lock);
         let _ = fs::remove_dir_all(temp_root);
+        // _env_guard and _env_lock are automatically dropped here, ensuring cleanup
+    }
+
+    #[test]
+    fn loads_suite_and_scenario_config_with_merge() {
+        use super::load_scenario_config;
+
+        let _env_lock = ENV_LOCK.lock().expect("env lock should acquire");
+        clear_override_cache(); // Clear cache to ensure test isolation
+
+        let temp_root = unique_temp_dir();
+        let connector_dir = temp_root.join("testconnector");
+        fs::create_dir_all(&connector_dir).expect("connector directory should be created");
+
+        let override_path = connector_dir.join("override.json");
+        let file_content = json!({
+            "PaymentService/Get": {
+                "__config__": {
+                    "delay_ms": 1000,
+                    "polling_config": {
+                        "max_retries": 10,
+                        "retry_delay_ms": 500
+                    }
+                },
+                "get_payment": {
+                    "__config__": {
+                        "polling_config": {
+                            "max_retries": 20
+                        }
+                    },
+                    "grpc_req": {}
+                }
+            }
+        });
+        fs::write(
+            &override_path,
+            serde_json::to_string_pretty(&file_content).expect("override content should serialize"),
+        )
+        .expect("override file should be written");
+
+        let _env_guard = EnvVarGuard::new("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
+
+        // Load scenario config - should merge suite and scenario levels
+        let config = load_scenario_config("testconnector", "PaymentService/Get", "get_payment")
+            .expect("loading config should succeed");
+
+        // Verify merged config
+        assert_eq!(config.delay_ms, Some(1000)); // From suite level
+        assert!(config.polling_config.is_some());
+        let polling = config.polling_config.unwrap();
+        assert_eq!(polling.max_retries, Some(20)); // Overridden by scenario level
+        assert_eq!(polling.retry_delay_ms, Some(500)); // From suite level (not overridden)
+
+        let _ = fs::remove_dir_all(temp_root);
+        // _env_guard and _env_lock are automatically dropped here, ensuring cleanup
     }
 }

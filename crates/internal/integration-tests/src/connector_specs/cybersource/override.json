@@ -1,4 +1,13 @@
-{
+
+  {
+  "PaymentService/Get": {
+    "__config__": {
+      "polling_config": {
+        "max_retries": 20,
+        "retry_delay_ms": 1000
+      }
+    }
+  },
   "PaymentMethodAuthenticationService/PreAuthenticate": {
     "threeds_card_pre_authenticate": {
       "grpc_req": {
