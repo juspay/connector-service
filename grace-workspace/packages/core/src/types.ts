@@ -678,6 +678,12 @@ export interface PipelineArtifacts {
   l3SpecPath?: string;
   implementation?: ImplementationResult;
   compiledFiles?: string[];
+  /** Compilation errors from previous build attempt for retry */
+  compilationErrors?: string[];
+  /** gRPC test errors from previous test attempt for retry */
+  grpcTestErrors?: string[];
+  /** Raw grpcurl output from test attempts */
+  grpcurlOutput?: string;
   designDiff?: DesignDiffResult;
   cypressReport?: TestReport;
   playwrightReport?: TestReport;

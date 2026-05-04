@@ -141,12 +141,18 @@ ${workflowContent}
         ctx.log("[grpc_test] ║  ✗ gRPC Test Failed                                      ║", "error");
         ctx.log("[grpc_test] ╚═══════════════════════════════════════════════════════════╝", "error");
 
+        const errorMsg = result.reason || "gRPC test failed";
+        const grpcOutput = result.grpcurl_output || result.output || "";
+        // Store errors for implementation retry
+        ctx.artifacts.grpcTestErrors = [errorMsg, grpcOutput].filter(Boolean);
+        ctx.artifacts.grpcurlOutput = grpcOutput;
+
         return {
           passed: false,
-          errors: [result.reason || "gRPC test failed"],
+          errors: [errorMsg],
           artifacts: {
             grpcTest: result,
-            grpcurlOutput: result.grpcurl_output || result.output,
+            grpcurlOutput: grpcOutput,
           },
         };
       }

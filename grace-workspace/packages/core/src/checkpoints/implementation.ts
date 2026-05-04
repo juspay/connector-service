@@ -266,7 +266,18 @@ ${workflowContent}
 `;
 
     // Build payload for Codegen Agent
-    const payload = buildCodegenPayload(connector, flow, projectRoot, techSpecPath, l3);
+    // Pass errors from previous attempts if this is a retry
+    const compilationErrors = ctx.artifacts.compilationErrors;
+    const grpcTestErrors = ctx.artifacts.grpcTestErrors;
+
+    if (compilationErrors && compilationErrors.length > 0) {
+      ctx.log(`[implementation] Passing ${compilationErrors.length} compilation errors from previous attempt`, "warn");
+    }
+    if (grpcTestErrors && grpcTestErrors.length > 0) {
+      ctx.log(`[implementation] Passing ${grpcTestErrors.length} gRPC test errors from previous attempt`, "warn");
+    }
+
+    const payload = buildCodegenPayload(connector, flow, projectRoot, techSpecPath, l3, compilationErrors, grpcTestErrors);
 
     ctx.log("[implementation] Starting Codegen Agent (Phase 5 ONLY)...", "warn");
     ctx.log("[implementation]   Phase 4: Read & Analyze", "info");

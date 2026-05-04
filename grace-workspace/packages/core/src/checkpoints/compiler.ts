@@ -33,7 +33,9 @@ export const compilerCheckpoint: Checkpoint = {
         .split("\n")
         .filter((l) => /error|Error|ERR|ReScript/.test(l))
         .slice(0, 50);
-      return { passed: false, errors: errors.length ? errors : [output.slice(0, 2000)] };
+      // Store errors in artifacts for implementation retry
+      ctx.artifacts.compilationErrors = errors.length ? errors : [output.slice(0, 2000)];
+      return { passed: false, errors: ctx.artifacts.compilationErrors };
     } catch (err) {
       return {
         passed: false,

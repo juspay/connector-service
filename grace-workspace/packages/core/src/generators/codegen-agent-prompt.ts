@@ -17,6 +17,8 @@ Implement the {FLOW} flow for {CONNECTOR} by following the detailed specificatio
 - L3 Specification: {SPECIFICATION_JSON}
 - Project Root: {PROJECT_ROOT}
 - Tech Spec Path: {TECHSPEC_PATH}
+- Previous Compilation Errors: {COMPILATION_ERRORS}
+- Previous gRPC Test Errors: {GRPC_TEST_ERRORS}
 
 ## Phase 1: Read Implementation Instructions
 
@@ -35,6 +37,38 @@ Parse {SPECIFICATION_JSON} and verify it contains:
 - statusMapping
 
 If any are missing, return FAILED with details.
+
+## Phase 2a: Check for Previous Errors (CRITICAL FOR RETRIES)
+
+If {COMPILATION_ERRORS} or {GRPC_TEST_ERRORS} contain error messages, this is a RETRY. You MUST fix these errors.
+
+### Compilation Errors to Fix:
+{COMPILATION_ERRORS}
+
+### gRPC Test Errors to Fix:
+{GRPC_TEST_ERRORS}
+
+### How to Fix Different Error Types:
+
+**Compilation Errors:**
+- use of undeclared type X → Import X or define it
+- missing field X → Add field to struct
+- mismatched types → Fix type conversion
+- non-exhaustive patterns → Add missing match arms
+- cannot find value X → Check variable name or import
+
+**gRPC Test Errors:**
+- Error invoking method → Fix request structure or gRPC method path
+- status_code: 4xx → Fix authentication or request validation
+- status_code: 5xx → Fix server-side error (serialization, missing handler)
+- status: failure → Fix business logic error
+- PAYMENT_FLOW_ERROR → Fix connector integration error
+- Missing/incorrect fields in response → Fix response struct deserialization
+
+**Fix Process:**
+1. Analyze each error - understand the root cause
+2. Make targeted code changes - don't guess
+3. Ensure your changes directly address the specific error
 
 ## Phase 3: Implement Per Specification
 
@@ -219,7 +253,9 @@ export function buildCodegenPayload(
   flow: string,
   projectRoot: string,
   techSpecPath: string,
-  l3Analysis: L3Analysis
+  l3Analysis: L3Analysis,
+  compilationErrors?: string[],
+  grpcTestErrors?: string[]
 ): Record<string, unknown> {
   return {
     CONNECTOR: connector,
@@ -228,6 +264,12 @@ export function buildCodegenPayload(
     PROJECT_ROOT: projectRoot,
     TECHSPEC_PATH: techSpecPath,
     SPECIFICATION_JSON: JSON.stringify(l3Analysis.specification, null, 2),
+    COMPILATION_ERRORS: compilationErrors?.length
+      ? compilationErrors.join("\n")
+      : "None - this is the first implementation attempt",
+    GRPC_TEST_ERRORS: grpcTestErrors?.length
+      ? grpcTestErrors.join("\n")
+      : "None - gRPC test not run yet or passed",
   };
 }
 
