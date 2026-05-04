@@ -58,14 +58,19 @@ impl TryFrom<&ConnectorSpecificConfig> for ItaubankAuthType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItaubankErrorResponse {
+    // código = code (error code)
     pub codigo: String,
+    // mensagem = message
     pub mensagem: Option<String>,
+    // campos = fields
     pub campos: Vec<ItauErrorFields>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItauErrorFields {
+    // campo = field (field name that failed validation)
     pub campo: String,
+    // mensagem = message (validation error message for the field)
     pub mensagem: String,
 }
 
@@ -118,13 +123,21 @@ pub struct ItaubankAccessTokenResponse {
 
 #[derive(Debug, Serialize)]
 pub struct ItaubankTransferRequest {
+    // valor_pagamento = payment value / amount
     pub valor_pagamento: StringMajorUnit,
+    // data_pagamento = payment date
     pub data_pagamento: String,
+    // chave = key (Pix key: CPF, CNPJ, phone, email, or random key)
     pub chave: Option<Secret<String>>,
+    // referencia_empresa = company reference (merchant-side reference ID)
     pub referencia_empresa: Option<String>,
+    // identificacao_comprovante = receipt / proof identification
     pub identificacao_comprovante: Option<Secret<String>>,
+    // tipo_de_identificacao_do_recebedor = recipient identification type (Individual or Legal Entity)
     pub tipo_de_identificacao_do_recebedor: Option<ItaubankRecipientType>,
+    // pagador = payer (source account details)
     pub pagador: Option<ItaubankPagador>,
+    // recebedor = recipient / receiver (destination account details)
     pub recebedor: Option<ItaubankRecebedor>,
     pub emv: Option<Secret<String>>,
 }
@@ -150,28 +163,43 @@ pub enum ItaubankRecipientType {
 #[derive(Debug, Serialize)]
 pub struct ItaubankRecebedor {
     pub ispb: Option<Secret<String>>,
+    // banco = bank
     pub banco: Option<String>,
+    // tipo_conta = account type (Checking, Savings, or Payment)
     pub tipo_conta: Option<ItaubankAccountType>,
+    // agencia = branch / agency number
     pub agencia: Option<String>,
+    // conta = account number
     pub conta: Option<Secret<String>>,
+    // tipo_pessoa = person type (Individual or Legal Entity)
     pub tipo_pessoa: Option<ItaubankRecipientType>,
+    // documento = document (CPF for individuals / CNPJ for legal entities — tax ID)
     pub documento: Option<Secret<String>>,
+    // nome = name (recipient's full name)
     pub nome: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ItaubankPagador {
+    // tipo_conta = account type (Checking, Savings, or Payment)
     pub tipo_conta: Option<ItaubankAccountType>,
+    // agencia = branch / agency number
     pub agencia: Option<String>,
+    // conta = account number
     pub conta: Option<Secret<String>>,
+    // tipo_pessoa = person type (Individual or Legal Entity)
     pub tipo_pessoa: Option<ItaubankRecipientType>,
+    // documento = document (CPF for individuals / CNPJ for legal entities — tax ID)
     pub documento: Option<Secret<String>>,
+    // modulo_sispag = SisPag module (selects the Itaú payment routing module)
     pub modulo_sispag: Option<ItauModuloSispag>,
 }
 
 #[derive(Debug, Serialize)]
 pub enum ItauModuloSispag {
+    // Fornecedores = Suppliers (used for supplier / vendor payments)
     Fornecedores,
+    // Diversos = Various / Miscellaneous (used for other payment types)
     Diversos,
 }
 
@@ -292,26 +320,35 @@ impl
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ItaubankPayoutStatus {
+    // Aprovado = Approved
     #[serde(alias = "Aprovado", alias = "APROVADO")]
     Aprovado,
+    // Confirmado = Confirmed
     #[serde(alias = "Confirmado", alias = "CONFIRMADO")]
     Confirmado,
+    // Efetivado = Settled / Executed
     #[serde(alias = "Efetivado", alias = "EFETIVADO", alias = "Efetuado")]
     Efetivado,
+    // Pendente = Pending
     #[serde(alias = "Pendente", alias = "PENDENTE")]
     Pendente,
+    // EmProcessamento = In Processing
     #[serde(alias = "EmProcessamento", alias = "EM_PROCESSAMENTO")]
     EmProcessamento,
+    // Rejeitado = Rejected
     #[serde(alias = "Rejeitado", alias = "REJEITADO")]
     Rejeitado,
+    // Cancelado = Cancelled
     #[serde(alias = "Cancelado", alias = "CANCELADO")]
     Cancelado,
+    // Sucesso = Success (including pre-authorised)
     #[serde(
         alias = "Sucesso",
         alias = "SUCESSO",
         alias = "Sucesso (pre-autorizado)"
     )]
     Sucesso,
+    // NaoIncluido = Not Included (payment was not accepted / registered)
     #[serde(alias = "Nao incluido", alias = "NAO_INCLUIDO")]
     NaoIncluido,
     #[serde(other)]

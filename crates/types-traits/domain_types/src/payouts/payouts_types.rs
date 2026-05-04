@@ -118,7 +118,7 @@ pub struct PayoutCustomer {
     pub email: Option<common_utils::pii::Email>,
     pub merchant_customer_id: Option<String>,
     pub connector_customer_id: Option<String>,
-    pub phone_number: Option<String>,
+    pub phone_number: Option<Secret<String>>,
     pub phone_country_code: Option<String>,
 }
 

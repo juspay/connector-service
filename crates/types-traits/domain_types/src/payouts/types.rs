@@ -585,7 +585,10 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
                         additional_context: Some(
                             "Bank account number is required for Pix bank transfer".to_owned()
                         ),
-                        ..Default::default()
+                        suggested_action: Some(
+                            "Provide the recipient's bank account number in the `bank_account_number` field of the Pix payout method data".to_owned()
+                        ),
+                        doc_url: None,
                     },
                 })
             })?,
@@ -610,7 +613,10 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixKeyBankTransferPayout>
                         additional_context: Some(
                             "Pix key is required for Pix key bank transfer".to_owned()
                         ),
-                        ..Default::default()
+                        suggested_action: Some(
+                            "Provide the recipient's Pix key (CPF, CNPJ, phone, email, or random key) in the `pix_key` field of the Pix key payout method data".to_owned()
+                        ),
+                        doc_url: None,
                     },
                 })
             })?,
@@ -633,7 +639,10 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixEmvBankTransferPayout>
                         additional_context: Some(
                             "EMV is required for Pix EMV bank transfer".to_owned()
                         ),
-                        ..Default::default()
+                        suggested_action: Some(
+                            "Provide the EMV QR code payload in the `emv` field of the Pix EMV payout method data".to_owned()
+                        ),
+                        doc_url: None,
                     },
                 })
             })?,
@@ -988,7 +997,10 @@ impl ForeignTryFrom<grpc_api_types::payouts::SourceBankData> for payouts::payout
                 field_name: "source_bank_data",
                 context: IntegrationErrorContext {
                     additional_context: Some("Source bank data is required".to_owned()),
-                    ..Default::default()
+                    suggested_action: Some(
+                        "Provide the source bank details (ACH, BACS, SEPA, Pix, etc.) in the `source_bank_data` field of the payout request".to_owned()
+                    ),
+                    doc_url: None,
                 },
             })
         })?;
@@ -1113,7 +1125,9 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
                         email,
                         merchant_customer_id: customer.id,
                         connector_customer_id: customer.connector_customer_id,
-                        phone_number: customer.phone_number,
+                        phone_number: customer
+                            .phone_number
+                            .map(::hyperswitch_masking::Secret::new),
                         phone_country_code: customer.phone_country_code,
                     })
                 },
