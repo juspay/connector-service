@@ -184,7 +184,19 @@ test-prism --connector {CONNECTOR} --report
 
 - Result: **HARDENED**
 - Commit fix: `git add -A && git commit -m "fix({CONNECTOR}): fix positive override test bug in {description}"`
-- Push: `git push -u origin fix/test-{connector}-{issue}"`
+- Push: `git push -u origin fix/test-{connector}-{issue}`
+
+**MANDATORY: After pushing, CREATE PR:**
+```
+# Create PR after pushing
+gh pr create --title "fix({CONNECTOR}): positive override test fixes" --body "- Test fixes applied for {connector}" --repo juspay/hyperswitch-prism
+
+# If outcome is unsure → Create DRAFT PR
+gh pr create --draft --title "fix({CONNECTOR}): test fixes [WIP]" --repo juspay/hyperswitch-prism
+
+# Add label
+gh pr label add "grace" --repo juspay/hyperswitch-prism
+```
 
 **If still failing:**
 
