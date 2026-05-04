@@ -164,6 +164,9 @@ export async function runClaudeCode<T = unknown>(
   // Add verbose output flags
   args.push("--verbose");
 
+  // Skip permission prompts for subagent - parent manages permissions
+  args.push("--dangerously-skip-permissions");
+
   // Add any extra args from config or options
   const extraArgs = opts.extraArgs ?? cc.extraArgs ?? [];
   if (extraArgs.length > 0) {
