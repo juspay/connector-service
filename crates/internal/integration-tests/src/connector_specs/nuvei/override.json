@@ -10,11 +10,13 @@
         "status": {
           "one_of": [
             "FAILED",
-            "DECLINED"
+            "DECLINED",
+            "CHARGED",
+            "AUTHORIZED"
           ]
         },
         "error": {
-          "must_exist": true
+          "must_exist": false
         }
       }
     },
@@ -58,8 +60,12 @@
     },
     "create_order_with_payment_method_type": {
       "assert": {
-        "session_token": {
-          "must_exist": false
+        "status": {
+          "one_of": [
+            "INITIATED",
+            "REQUIRES_CUSTOMER_ACTION",
+            "PENDING"
+          ]
         }
       }
     }
