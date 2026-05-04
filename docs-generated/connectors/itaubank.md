@@ -29,6 +29,7 @@ config = sdk_config_pb2.ConnectorConfig(
             certificates=payment_methods_pb2.SecretString(value="YOUR_CERTIFICATES"),
             private_key=payment_methods_pb2.SecretString(value="YOUR_PRIVATE_KEY"),
             base_url="YOUR_BASE_URL",
+            secondary_base_url="YOUR_SECONDARY_BASE_URL",
         ),
     ),
 )
@@ -56,6 +57,7 @@ const config = ConnectorConfig.create({
             certificates: { value: 'YOUR_CERTIFICATES' },
             privateKey: { value: 'YOUR_PRIVATE_KEY' },
             baseUrl: 'YOUR_BASE_URL',
+            secondaryBaseUrl: 'YOUR_SECONDARY_BASE_URL',
         }
     },
 });
@@ -79,6 +81,7 @@ val config = ConnectorConfig.newBuilder()
                 .setCertificates(SecretString.newBuilder().setValue("YOUR_CERTIFICATES").build())
                 .setPrivateKey(SecretString.newBuilder().setValue("YOUR_PRIVATE_KEY").build())
                 .setBaseUrl("YOUR_BASE_URL")
+                .setSecondaryBaseUrl("YOUR_SECONDARY_BASE_URL")
                 .build())
             .build()
     )
@@ -104,6 +107,7 @@ let config = ConnectorConfig {
                 certificates: Some(hyperswitch_masking::Secret::new("YOUR_CERTIFICATES".to_string())),  // Authentication credential
                 private_key: Some(hyperswitch_masking::Secret::new("YOUR_PRIVATE_KEY".to_string())),  // Authentication credential
                 base_url: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
+                secondary_base_url: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
                 ..Default::default()
             })),
         }),
@@ -136,4 +140,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse` |
 
-**Examples:** [Python](../../examples/itaubank/itaubank.py) · [TypeScript](../../examples/itaubank/itaubank.ts#L36) · [Kotlin](../../examples/itaubank/itaubank.kt#L39) · [Rust](../../examples/itaubank/itaubank.rs)
+**Examples:** [Python](../../examples/itaubank/itaubank.py) · [TypeScript](../../examples/itaubank/itaubank.ts#L37) · [Kotlin](../../examples/itaubank/itaubank.kt#L40) · [Rust](../../examples/itaubank/itaubank.rs)

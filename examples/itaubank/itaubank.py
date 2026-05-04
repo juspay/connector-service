@@ -21,6 +21,7 @@ _default_config = sdk_config_pb2.ConnectorConfig(
             certificates=payment_methods_pb2.SecretString(value="YOUR_CERTIFICATES"),
             private_key=payment_methods_pb2.SecretString(value="YOUR_PRIVATE_KEY"),
             base_url="YOUR_BASE_URL",
+            secondary_base_url="YOUR_SECONDARY_BASE_URL",
         ),
     ),
 )

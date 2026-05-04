@@ -20,6 +20,7 @@ const _defaultConfig: types.IConnectorConfig = {
             certificates: { value: 'YOUR_CERTIFICATES' },
             privateKey: { value: 'YOUR_PRIVATE_KEY' },
             baseUrl: 'YOUR_BASE_URL',
+            secondaryBaseUrl: 'YOUR_SECONDARY_BASE_URL',
         }
     },
 };

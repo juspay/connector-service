@@ -32,6 +32,7 @@ fn build_client() -> ConnectorClient {
                         "YOUR_PRIVATE_KEY".to_string(),
                     )), // Authentication credential
                     base_url: Some("https://sandbox.example.com".to_string()), // Base URL for API calls
+                    secondary_base_url: Some("https://sandbox.example.com".to_string()), // Base URL for API calls
                     ..Default::default()
                 },
             )),
