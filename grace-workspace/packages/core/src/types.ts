@@ -11,6 +11,8 @@ export type CheckpointId =
   | "l3_review"
   | "implementation"
   | "compiler"
+  | "compiler_check"
+  | "grpc_test"
   | "design_match"
   | "cypress"
   | "playwright"
@@ -659,6 +661,8 @@ export interface PipelineArtifacts {
   designGate?: DesignGateResult;
   l2?: L2Plan;
   l3?: L3Analysis;
+  /** Path to the saved L3 spec JSON file for downstream checkpoints */
+  l3SpecPath?: string;
   implementation?: ImplementationResult;
   compiledFiles?: string[];
   designDiff?: DesignDiffResult;

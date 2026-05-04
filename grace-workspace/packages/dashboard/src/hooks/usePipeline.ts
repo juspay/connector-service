@@ -41,8 +41,8 @@ export interface JourneyEvent {
   ts: string;
 }
 
-// Grace 2.3_codegen.md workflow: task → preflight → L2_planning → L3_analysis → implementation
-// Removed: product_alignment, feature_research, design_gate, requirements, l4_gen, l4_review
+// Grace 2.3_codegen.md workflow: task → preflight → L2_planning → L3_analysis → implementation → compiler_check → grpc_test
+// Removed: product_alignment, feature_research, design_gate, requirements, l4_gen, l4_review, design_match, cypress, playwright
 export const PIPELINE: Array<{ id: string; name: string; type: "auto" | "human" }> = [
   { id: "task", name: "Task definition", type: "auto" },
   { id: "preflight", name: "Preflight setup", type: "auto" },
@@ -52,9 +52,8 @@ export const PIPELINE: Array<{ id: string; name: string; type: "auto" | "human" 
   { id: "l3_review", name: "Human review: L3 analysis", type: "human" },
   { id: "implementation", name: "Implementation", type: "auto" },
   { id: "compiler", name: "Compiler check", type: "auto" },
-  { id: "design_match", name: "Design match", type: "auto" },
-  { id: "cypress", name: "Cypress E2E tests", type: "auto" },
-  { id: "playwright", name: "Playwright tests", type: "auto" },
+  { id: "compiler_check", name: "Compiler Check (Rust)", type: "auto" },
+  { id: "grpc_test", name: "gRPC Test", type: "auto" },
   { id: "pr_review", name: "PR review", type: "human" },
   { id: "regression", name: "Regression testing", type: "auto" },
 ];

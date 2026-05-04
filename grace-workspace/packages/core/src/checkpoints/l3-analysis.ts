@@ -164,6 +164,16 @@ export const l3AnalysisCheckpoint: Checkpoint = {
         timeoutMs: 25 * 60 * 1000, // 25 min (leaving buffer for checkpoint overhead)
       });
       result = rawResult;
+
+      // Save L3 spec to file for downstream checkpoints
+      const l3SpecPath = path.join(projectRoot, "techspecs", `${connector}_${flow}_l3.json`);
+      try {
+        await fs.mkdir(path.dirname(l3SpecPath), { recursive: true });
+        await fs.writeFile(l3SpecPath, JSON.stringify(result, null, 2));
+        ctx.log(`[l3_analysis] L3 spec saved to: ${l3SpecPath}`, "info");
+      } catch (writeErr) {
+        ctx.log(`[l3_analysis] Warning: Failed to save L3 spec: ${writeErr}`, "warn");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       ctx.log(`[l3_analysis] L3 Analysis Agent failed: ${msg}`, "error");
@@ -272,10 +282,14 @@ export const l3AnalysisCheckpoint: Checkpoint = {
 
     delete ctx.artifacts.l3RegeneratePrompt;
 
+    // Get the l3SpecPath we saved earlier
+    const l3SpecPath = path.join(projectRoot, "techspecs", `${connector}_${flow}_l3.json`);
+
     return {
       passed: true,
       artifacts: {
         l3: result,
+        l3SpecPath: l3SpecPath,
       },
     };
   },

@@ -2,14 +2,14 @@ import type { CheckpointState } from "../hooks/usePipeline";
 import { PIPELINE } from "../hooks/usePipeline";
 import { T } from "../theme";
 
-// Grace 2.3_codegen.md workflow: task → preflight → L2_planning → L3_analysis → implementation
+// Grace 2.3_codegen.md workflow: task → preflight → L2_planning → L3_analysis → implementation → compiler_check → grpc_test
 const PHASES: Array<{ label: string; ids: string[] }> = [
   { label: "Intake", ids: ["task", "preflight"] },
   { label: "Planning", ids: ["l2_planning", "l2_review", "l3_analysis", "l3_review"] },
   { label: "Implementation", ids: ["implementation"] },
   {
     label: "Verification",
-    ids: ["compiler", "design_match", "cypress", "playwright", "pr_review", "regression"],
+    ids: ["compiler", "compiler_check", "grpc_test", "pr_review", "regression"],
   },
 ];
 
@@ -452,7 +452,7 @@ function Header({
             Byne
           </div>
           <div style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>
-            spec-driven dev · 13 checkpoints
+            spec-driven dev · 12 checkpoints
           </div>
         </div>
       </div>

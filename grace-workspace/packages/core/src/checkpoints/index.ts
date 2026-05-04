@@ -7,13 +7,15 @@ import { l3AnalysisCheckpoint } from "./l3-analysis.js";
 import { l3ReviewCheckpoint } from "./l3-review.js";
 import { implementationCheckpoint } from "./implementation.js";
 import { compilerCheckpoint } from "./compiler.js";
-import { designMatchCheckpoint } from "./design-match.js";
-import { cypressCheckpoint } from "./cypress.js";
-import { playwrightCheckpoint } from "./playwright.js";
+// REMOVED: import { designMatchCheckpoint } from "./design-match.js";
+// REMOVED: import { cypressCheckpoint } from "./cypress.js";
+// REMOVED: import { playwrightCheckpoint } from "./playwright.js";
+import { compilerCheckCheckpoint } from "./compiler-check.js";
+import { grpcTestCheckpoint } from "./grpc-test.js";
 import { prReviewCheckpoint } from "./pr-review.js";
 import { regressionCheckpoint } from "./regression.js";
 
-// Grace 2.3_codegen.md workflow: task → preflight → L2_planning → L3_analysis → implementation
+// Grace 2.3_codegen.md workflow: task → preflight → L2_planning → L3_analysis → implementation → compiler_check → grpc_test
 export const ALL_CHECKPOINTS: Checkpoint[] = [
   taskCheckpoint,
   preflightCheckpoint,
@@ -23,9 +25,11 @@ export const ALL_CHECKPOINTS: Checkpoint[] = [
   l3ReviewCheckpoint,
   implementationCheckpoint,
   compilerCheckpoint,
-  designMatchCheckpoint,
-  cypressCheckpoint,
-  playwrightCheckpoint,
+  // REMOVED: designMatchCheckpoint,
+  // REMOVED: cypressCheckpoint,
+  // REMOVED: playwrightCheckpoint,
+  compilerCheckCheckpoint,
+  grpcTestCheckpoint,
   prReviewCheckpoint,
   regressionCheckpoint,
 ];
