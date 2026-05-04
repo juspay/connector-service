@@ -76,6 +76,16 @@ test-prism --connector {CONNECTOR} --suite authorize
 
 ### If tests FAIL:
 
+**AUTOMATIC FIX TRIGGER — NO EXCEPTIONS:**
+
+> **If you identify ANY test bug, you MUST FIX IT IMMEDIATELY. NO EXCEPTIONS. No reporting until all fixable bugs are fixed and tests rerun.**
+>
+> - Found = "FIX" → IMMEDIATELY fix → RERUN → Verify → Then proceed
+> - Do not list the bug and leave it. Do not "note for later." DO IT NOW.
+> - If you find test bugs and DONT immediately fix them, you FAILED.
+> - **Finding a test bug without fixing it = CRITICAL FAILURE. Report only after fixing.**
+> - There is no "later" or "after thinking about it." FIX. NOW.
+
 **ENFORCEMENT — You are inside the loop until tests pass:**
 
 - **If tests FAIL, you are STILL inside the loop. You MUST fix test bugs, rerun tests, and verify. You CANNOT return a final status yet. Returning HARDENED after failures without attempting fixes is a CRITICAL VIOLATION.**
@@ -102,6 +112,7 @@ test-prism --connector {CONNECTOR} --suite authorize
    - Test assertion logic is wrong → fix assertion to match expected behavior
    - Missing connector config in test → add config
    - **Key: The fix makes the test correct, not just asserts failure**
+   - **→ FIX IMMEDIATELY, DO NOT WAIT → RERUN → THEN proceed**
    - **→ FIX NOW, proceed to Phase 3 immediately**
 
 2. **Test Bug — NEGATIVE Override Issue (DO NOT FIX):**
