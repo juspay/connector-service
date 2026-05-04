@@ -51,9 +51,10 @@ pub(crate) mod headers {
 }
 
 use transformers::{
-    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse, BamboraClientAuthRequest,
-    BamboraClientAuthResponse, BamboraPSyncResponse, BamboraPaymentsRequest, BamboraRSyncResponse,
-    BamboraRefundRequest, BamboraRefundResponse, BamboraVoidRequest, BamboraVoidResponse,
+    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse,
+    BamboraClientAuthRequest, BamboraClientAuthResponse, BamboraPSyncResponse,
+    BamboraPaymentsRequest, BamboraRSyncResponse, BamboraRefundRequest, BamboraRefundResponse,
+    BamboraVoidRequest, BamboraVoidResponse,
 };
 
 macros::create_all_prerequisites!(
