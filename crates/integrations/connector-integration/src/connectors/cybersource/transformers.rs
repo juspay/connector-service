@@ -357,6 +357,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             authorization_options,
             commerce_indicator: String::from("internet"),
             payment_solution: solution.map(String::from),
+            bank_transfer_options: None,
         };
         Ok(Self {
             processing_information,
@@ -400,6 +401,14 @@ pub struct ProcessingInformation {
     capture: Option<bool>,
     capture_options: Option<CaptureOptions>,
     payment_solution: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bank_transfer_options: Option<BankTransferOptions>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankTransferOptions {
+    sec_code: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1212,6 +1221,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             capture_options: None,
             commerce_indicator: commerce_indicator_for_external_authentication
                 .unwrap_or(commerce_indicator),
+            bank_transfer_options: None,
         })
     }
 }
@@ -2087,7 +2097,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         },
                     }));
 
-                let processing_information = ProcessingInformation::try_from((item, None, None))?;
+                // ACH eCheck uses a minimal processingInformation; Cybersource's
+                // pts/v2/payments returns SERVER_ERROR if card-only fields
+                // (authorizationOptions / actionList / actionTokenTypes / capture)
+                // are sent alongside paymentType.name = "check". secCode "WEB" is
+                // the standard online-consumer-initiated SEC code for ACH debits.
+                let processing_information = ProcessingInformation {
+                    action_list: None,
+                    action_token_types: None,
+                    authorization_options: None,
+                    commerce_indicator: String::from("internet"),
+                    capture: None,
+                    capture_options: None,
+                    payment_solution: None,
+                    bank_transfer_options: Some(BankTransferOptions {
+                        sec_code: String::from("WEB"),
+                    }),
+                };
 
                 let client_reference_information = ClientReferenceInformation::from(item);
                 let merchant_defined_information = convert_metadata_to_merchant_defined_info(
@@ -2629,6 +2655,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 capture: None,
                 commerce_indicator: String::from("internet"),
                 payment_solution: None,
+                bank_transfer_options: None,
             },
             order_information: OrderInformationWithBill {
                 amount_details: Amount {
@@ -2984,6 +3011,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             capture: None,
             capture_options: None,
             payment_solution: None,
+            bank_transfer_options: None,
         };
 
         let order_information = OrderInformationIncrementalAuthorization {
@@ -5336,6 +5364,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             capture_options: None,
             commerce_indicator: commerce_indicator_for_external_authentication
                 .unwrap_or(commerce_indicator),
+            bank_transfer_options: None,
         })
     }
 }
