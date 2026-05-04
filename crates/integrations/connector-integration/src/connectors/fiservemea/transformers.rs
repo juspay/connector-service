@@ -542,64 +542,13 @@ impl<T: PaymentMethodDataTypes>
                             },
                         )
                     }
-                    // ── Decrypted path: fall back to DPAN-as-card ──
+                    // Fiserv EMEA requires the encrypted Apple Pay token to be passed
+                    // through as-is for the connector to decrypt. Handling decrypted
+                    // Apple Pay data is not integrated.
                     None => {
-                        let apple_pay_decrypted_data = apple_pay_data
-                            .payment_data
-                            .get_decrypted_apple_pay_payment_data_mandatory()
-                            .change_context(IntegrationError::MissingRequiredField {
-                                field_name: "apple_pay_decrypted_data",
-                                context: Default::default(),
-                            })?;
-
-                        let exp_month_raw = apple_pay_decrypted_data.get_expiry_month().expose();
-                        let formatted_exp_month = format!("{exp_month_raw:0>2}");
-                        let exp_year_full = apple_pay_decrypted_data
-                            .get_four_digit_expiry_year()
-                            .expose();
-                        let formatted_exp_year = if exp_year_full.len() == 4 {
-                            exp_year_full[2..].to_string()
-                        } else {
-                            exp_year_full.clone()
-                        };
-
-                        let card_number_string = apple_pay_decrypted_data
-                            .application_primary_account_number
-                            .get_card_no();
-                        let inner: T::Inner =
-                            serde_json::from_value(serde_json::Value::String(card_number_string))
-                                .map_err(|e| {
-                                error_stack::report!(IntegrationError::InvalidDataFormat {
-                                    field_name: "apple_pay.application_primary_account_number",
-                                    context: Default::default(),
-                                })
-                                .attach_printable(format!(
-                                    "Failed to convert Apple Pay PAN to card number type: {e}"
-                                ))
-                            })?;
-                        let raw_card_number: RawCardNumber<T> = RawCardNumber(inner);
-
-                        let payment_card = PaymentCard {
-                            number: raw_card_number,
-                            expiry_date: ExpiryDate {
-                                month: Secret::new(formatted_exp_month),
-                                year: Secret::new(formatted_exp_year),
-                            },
-                            security_code: None,
-                            holder: item.request.customer_name.clone().map(Secret::new),
-                        };
-
-                        let request_type = if is_manual_capture {
-                            FiservemeaRequestType::PaymentCardPreAuthTransaction
-                        } else {
-                            FiservemeaRequestType::PaymentCardSaleTransaction
-                        };
-                        (
-                            request_type,
-                            FiservemeaPaymentMethodRequest::Card {
-                                payment_method: PaymentMethod { payment_card },
-                            },
-                        )
+                        return Err(error_stack::report!(IntegrationError::not_implemented(
+                            "Fiserv EMEA requires an encrypted Apple Pay token. Decrypted Apple Pay data is not integrated.".to_string()
+                        )))
                     }
                 }
             }
