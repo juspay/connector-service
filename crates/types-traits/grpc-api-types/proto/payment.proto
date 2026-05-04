@@ -4013,7 +4013,10 @@ message SanlamConfig {
 message ItaubankConfig {
   SecretString client_secret = 1;
   SecretString client_id = 2;
+  optional SecretString certificates = 3;
+  optional SecretString private_key = 4;
   optional string base_url = 50;
+  optional string secondary_base_url = 51;
 }
 
 message GigadatConfig {
