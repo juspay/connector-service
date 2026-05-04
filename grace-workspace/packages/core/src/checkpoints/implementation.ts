@@ -200,6 +200,21 @@ ${workflowContent}
       };
     }
 
+    // Normalize result keys from UPPERCASE to camelCase (agent may return either format)
+    const normalizedResult: CodegenResult = {
+      success: result.success ?? (result as unknown as Record<string, unknown>).STATUS === "SUCCESS",
+      connector: result.connector ?? (result as unknown as Record<string, unknown>).CONNECTOR as string,
+      flow: result.flow ?? (result as unknown as Record<string, unknown>).FLOW as string,
+      buildIterations: result.buildIterations ?? 0,
+      grpcurlResult: result.grpcurlResult ?? "NOT_RUN",
+      filesModified: result.filesModified ?? (result as unknown as Record<string, string[]>).FILES_MODIFIED ?? [],
+      fixLog: result.fixLog ?? [],
+      grpcurlOutput: result.grpcurlOutput ?? "",
+      executionLog: result.executionLog ?? { phasesCompleted: [], commandsExecuted: [], serverLogsChecked: false },
+      reason: result.reason ?? (result as unknown as Record<string, string>).REASON,
+    };
+    result = normalizedResult;
+
     // Log results
     if (result.filesModified && result.filesModified.length > 0) {
       ctx.log(`[implementation] Files modified: ${result.filesModified.length}`, "info");

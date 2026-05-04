@@ -53,6 +53,9 @@ function valid(analysis: unknown): analysis is L3Analysis {
   // Check filesChangedPreview (required)
   if (!Array.isArray(spec.filesChangedPreview)) return false;
 
+  // Check supportingTypes (required for payment method additions with extra structs)
+  if (!Array.isArray(spec.supportingTypes)) return false;
+
   return true;
 }
 
