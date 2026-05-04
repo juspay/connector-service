@@ -2,11 +2,13 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        BamboraClientAuthenticationResponse as BamboraClientAuthenticationResponseDomain,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -885,5 +887,109 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&wrapper.router_data)
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+/// Bambora Single-Use Token (Legato) tokenization request.
+/// POST /scripts/tokenization/tokens is a public endpoint (no Passcode header).
+/// Card data is normally supplied client-side by the merchant frontend; the
+/// shared `ClientAuthenticationTokenRequestData` does not expose card data, so
+/// only the optional cardholder `name` is forwarded.
+#[derive(Debug, Serialize)]
+pub struct BamboraClientAuthRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<Secret<String>>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BamboraRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BamboraClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        wrapper: BamboraRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: wrapper.router_data.request.customer_name,
+        })
+    }
+}
+
+/// Bambora tokenization response.
+/// Returns an opaque single-use `token`, a numeric status `code`
+/// (1 = success), and a human-readable `message`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BamboraClientAuthResponse {
+    pub token: Secret<String>,
+    pub code: i32,
+    pub message: String,
+    #[serde(default)]
+    pub version: i32,
+}
+
+impl TryFrom<ResponseRouterData<BamboraClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BamboraClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        if response.code == 1 {
+            let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+                ConnectorSpecificClientAuthenticationResponse::Bambora(
+                    BamboraClientAuthenticationResponseDomain {
+                        token: response.token,
+                    },
+                ),
+            ));
+            Ok(Self {
+                response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                    session_data,
+                    status_code: item.http_code,
+                }),
+                ..item.router_data
+            })
+        } else {
+            let mut router_data = item.router_data;
+            router_data.resource_common_data.status = AttemptStatus::Failure;
+            router_data.response = Err(domain_types::router_data::ErrorResponse {
+                status_code: item.http_code,
+                code: response.code.to_string(),
+                message: response.message.clone(),
+                reason: Some(response.message),
+                attempt_status: Some(AttemptStatus::Failure),
+                connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            });
+            Ok(router_data)
+        }
     }
 }

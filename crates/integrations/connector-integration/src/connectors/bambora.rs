@@ -51,9 +51,9 @@ pub(crate) mod headers {
 }
 
 use transformers::{
-    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse, BamboraPSyncResponse,
-    BamboraPaymentsRequest, BamboraRSyncResponse, BamboraRefundRequest, BamboraRefundResponse,
-    BamboraVoidRequest, BamboraVoidResponse,
+    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse, BamboraClientAuthRequest,
+    BamboraClientAuthResponse, BamboraPSyncResponse, BamboraPaymentsRequest, BamboraRSyncResponse,
+    BamboraRefundRequest, BamboraRefundResponse, BamboraVoidRequest, BamboraVoidResponse,
 };
 
 macros::create_all_prerequisites!(
@@ -93,6 +93,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: BamboraRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: BamboraClientAuthRequest,
+            response_body: BamboraClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [amount_converter: FloatMajorUnit],
@@ -594,6 +600,42 @@ macros::macro_connector_implementation!(
     }
 );
 
+// ClientAuthenticationToken Flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Bambora,
+    curl_request: Json(BamboraClientAuthRequest),
+    curl_response: BamboraClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            // Tokenization endpoint is public — only Content-Type, no Passcode
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                self.common_get_content_type().to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            // Bambora's tokenization (Custom Checkout) endpoint lives on a separate
+            // public host (web.na.bambora.com), distinct from the payments API host.
+            Ok("https://web.na.bambora.com/scripts/tokenization/tokens".to_string())
+        }
+    }
+);
+
 // ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -642,16 +684,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         ServerSessionAuthenticationTokenRequestData,
         ServerSessionAuthenticationTokenResponseData,
-    > for Bambora<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
     > for Bambora<T>
 {
 }
