@@ -24,7 +24,8 @@ export type CheckpointStatus =
   | "running"
   | "passed"
   | "failed"
-  | "skipped";
+  | "skipped"
+  | "waiting_for_retry";
 
 export interface CheckpointResult {
   passed: boolean;

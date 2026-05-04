@@ -313,9 +313,9 @@ export async function runClaudeCode<T = unknown>(
     parsed = JSON.parse(cleaned);
   } catch {
     // The model may have output raw file contents instead of wrapping in
-    // {"contents": "..."}. If the label looks like an implementation step
+    // {"contents": "..."}. If the label looks like an implementation or analysis step
     // and the content looks like source code, auto-wrap it.
-    if (opts.label.startsWith("implementation:") && cleaned.length > 20) {
+    if ((opts.label.startsWith("implementation:") || opts.label === "l3:analysis") && cleaned.length > 20) {
       dbg(
         `${opts.label}: JSON parse failed — auto-wrapping as {contents} (${cleaned.length}ch)`
       );

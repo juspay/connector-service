@@ -168,6 +168,26 @@ export const l3AnalysisCheckpoint: Checkpoint = {
       });
       result = rawResult;
 
+      // Handle auto-wrapped results (when JSON parsing failed in runner)
+      if ((result as unknown as Record<string, unknown>).contents && !(result as unknown as Record<string, unknown>).analysis) {
+        ctx.log("[l3_analysis] Result was auto-wrapped, attempting to extract JSON from contents", "warn");
+        const wrapped = result as unknown as { contents: string; notes?: string };
+        try {
+          // Try to extract JSON from the contents string
+          let extracted = wrapped.contents;
+          // Remove markdown fences if present
+          extracted = extracted.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+          // Find the JSON object
+          const match = extracted.match(/\{[\s\S]*\}/);
+          if (match) {
+            result = JSON.parse(match[0]) as L3Analysis;
+            ctx.log("[l3_analysis] Successfully extracted L3 analysis from wrapped contents", "info");
+          }
+        } catch (extractErr) {
+          ctx.log(`[l3_analysis] Failed to extract from wrapped contents: ${extractErr}`, "error");
+        }
+      }
+
       // Save L3 spec to file for downstream checkpoints
       const l3SpecPath = path.join(projectRoot, "techspecs", `${connector}_${flow}_l3.json`);
       try {
