@@ -158,6 +158,40 @@ The gRPC Test checkpoint will handle testing.
 
 You MUST stop after writing code. Do not attempt to build or test.
 
+## OUTPUT FORMAT - STRICT JSON ONLY
+
+After completing the implementation, return ONLY a valid JSON object. NO prose, NO markdown, NO explanations before or after the JSON.
+
+The FIRST character of your response must be \\\{ and the LAST character must be \\\}.
+
+Required JSON structure:
+\\\`\\\`\\\`json
+{
+  "success": true,
+  "connector": "${connector}",
+  "flow": "${flow}",
+  "buildIterations": 0,
+  "grpcurlResult": "NOT_RUN",
+  "filesModified": [
+    "crates/integrations/connector-integration/src/connectors/${connector.toLowerCase()}/transformers.rs"
+  ],
+  "fixLog": [],
+  "grpcurlOutput": "",
+  "executionLog": {
+    "phasesCompleted": ["5"],
+    "commandsExecuted": [],
+    "serverLogsChecked": false
+  },
+  "reason": "Implementation complete (Phase 5 only)"
+}
+\\\`\\\`\\\`
+
+CRITICAL:
+- Use EXACT field names shown above (camelCase)
+- filesModified MUST include all files you edited
+- success MUST be true if code was written successfully
+- Return ONLY the JSON object - no other text
+
 ## L3 Analysis Data
 ${l3SpecContent ? `\n\`\`\`json\n${l3SpecContent}\n\`\`\`\n` : 'L3 spec not available'}
 
