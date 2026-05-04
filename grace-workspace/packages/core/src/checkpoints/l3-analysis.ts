@@ -3,6 +3,7 @@ import { runAI } from "../tools/runner-factory.js";
 import {
   L3_ANALYSIS_SYSTEM,
   buildL3AnalysisPayload,
+  type L3AnalysisOptions,
 } from "../generators/l3-analysis-prompt.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -18,6 +19,24 @@ function valid(analysis: unknown): analysis is L3Analysis {
     typeof a.implementationNotes !== "string"
   ) {
     return false;
+  }
+
+  // Check implementationType if provided (new field)
+  if (a.implementationType) {
+    const validTypes = ["new_flow", "payment_method_addition", "flow_completion"];
+    if (!validTypes.includes(a.implementationType as string)) {
+      return false;
+    }
+  }
+
+  // For payment_method_addition, validate required fields
+  if (a.implementationType === "payment_method_addition") {
+    if (!a.parentFlow || typeof a.parentFlow !== "string") {
+      return false;
+    }
+    if (!a.paymentMethod || typeof a.paymentMethod !== "string") {
+      return false;
+    }
   }
 
   // Check analysis object
@@ -45,9 +64,13 @@ function valid(analysis: unknown): analysis is L3Analysis {
   const spec = a.specification as Record<string, unknown>;
   if (!spec || typeof spec !== "object") return false;
 
-  // Check required specification fields
-  if (!spec.requestStruct || !spec.responseStruct || !spec.connectorChanges) {
-    return false;
+  // For payment_method_addition, requestStruct/responseStruct may be omitted
+  // For new_flow/flow_completion, they are required
+  const implType = a.implementationType as string | undefined;
+  if (implType !== "payment_method_addition") {
+    if (!spec.requestStruct || !spec.responseStruct || !spec.connectorChanges) {
+      return false;
+    }
   }
 
   // Check filesChangedPreview (required)
@@ -57,6 +80,61 @@ function valid(analysis: unknown): analysis is L3Analysis {
   if (!Array.isArray(spec.supportingTypes)) return false;
 
   return true;
+}
+
+/**
+ * Check if a file contains a specific string
+ */
+async function checkFileContains(filePath: string, pattern: string): Promise<boolean> {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    return content.includes(pattern);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Cross-connector validation to detect misclassified flows
+ */
+async function validateAgainstReferenceConnectors(
+  projectRoot: string,
+  flow: string,
+  ctx: { log: (msg: string, level?: string) => void }
+): Promise<{ isLikelyPaymentMethod: boolean; flowCount: number; pmCount: number }> {
+  const refConnectors = ["adyen", "stripe", "checkout"];
+  let flowCount = 0;
+  let pmCount = 0;
+
+  for (const ref of refConnectors) {
+    const refFile = path.join(
+      projectRoot,
+      `crates/integrations/connector-integration/src/connectors/${ref}.rs`
+    );
+    const transformersFile = path.join(
+      projectRoot,
+      `crates/integrations/connector-integration/src/connectors/${ref}/transformers.rs`
+    );
+
+    const hasFlow = await checkFileContains(refFile, `flow: ${flow}`);
+    const hasPm = await checkFileContains(transformersFile, flow);
+
+    if (hasFlow) flowCount++;
+    if (hasPm) pmCount++;
+  }
+
+  // If most connectors have it as PM but not as Flow, it's likely a payment method
+  const isLikelyPaymentMethod = pmCount >= 2 && flowCount === 0;
+
+  if (isLikelyPaymentMethod) {
+    ctx.log(
+      `[l3_analysis] WARNING: '${flow}' appears to be a payment method in ${pmCount} connectors, ` +
+        `but not a flow in any. Consider using PAYMENT_METHOD=${flow} with FLOW=Authorize`,
+      "warn"
+    );
+  }
+
+  return { isLikelyPaymentMethod, flowCount, pmCount };
 }
 
 /**
@@ -112,6 +190,8 @@ export const l3AnalysisCheckpoint: Checkpoint = {
 
     const connector = task.targetConnectors[0];
     const flow = task.paymentMethod || "Unknown";
+    const paymentMethod = task.paymentMethod;
+    const isPaymentMethodAddition = !!paymentMethod;
     const projectRoot = task.projectRoot;
 
     ctx.log("[l3_analysis] ╔═══════════════════════════════════════════════════════════╗", "info");
@@ -119,6 +199,21 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     ctx.log("[l3_analysis] ╚═══════════════════════════════════════════════════════════╝", "info");
     ctx.log(`[l3_analysis] Connector: ${connector}`, "info");
     ctx.log(`[l3_analysis] Flow: ${flow}`, "info");
+    if (paymentMethod) {
+      ctx.log(`[l3_analysis] Payment Method: ${paymentMethod}`, "info");
+      ctx.log(`[l3_analysis] Type: payment_method_addition`, "info");
+    }
+
+    // Cross-connector validation for potential misclassification
+    if (!isPaymentMethodAddition && flow !== "Unknown") {
+      const validation = await validateAgainstReferenceConnectors(projectRoot, flow, ctx);
+      if (validation.isLikelyPaymentMethod) {
+        ctx.log(
+          `[l3_analysis] RECOMMENDATION: Set task.paymentMethod="${flow}" and use FLOW="Authorize"`,
+          "warn"
+        );
+      }
+    }
 
     // Ensure tech spec is available on disk
     let techSpecPath: string;
@@ -140,13 +235,18 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     }
 
     // Build payload for L3 Analysis Agent
+    const options: L3AnalysisOptions = {
+      paymentMethod,
+      isPaymentMethodAddition,
+    };
     const payload = buildL3AnalysisPayload(
       connector,
       flow,
       techSpecPath,
       projectRoot,
       "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.3_codegen.md",
-      l2
+      l2,
+      options
     );
 
     ctx.log("[l3_analysis] Starting Phase 4 analysis (reading 6 files)...", "warn");
@@ -217,13 +317,35 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     }
 
     // Check if flow already exists
-    if (result.analysis.flowAlreadyExists) {
+    // For payment_method_addition, the parent flow SHOULD exist - don't skip
+    if (result.analysis.flowAlreadyExists && result.implementationType !== "payment_method_addition") {
       ctx.log("[l3_analysis] ⚠ Flow already implemented - SKIPPING", "warn");
       return {
         passed: false,
         errors: ["Flow already implemented - SKIPPED"],
         artifacts: { l3: result },
       };
+    }
+
+    // For payment_method_addition, verify parent flow exists
+    if (result.implementationType === "payment_method_addition") {
+      if (!result.analysis.flowAlreadyExists) {
+        ctx.log(
+          `[l3_analysis] ✗ Parent flow '${result.parentFlow}' does not exist. Cannot add payment method to non-existent flow.`,
+          "error"
+        );
+        return {
+          passed: false,
+          errors: [
+            `Parent flow '${result.parentFlow}' does not exist. Create the flow first or check FLOW parameter.`,
+          ],
+          artifacts: { l3: result },
+        };
+      }
+      ctx.log(
+        `[l3_analysis] ℹ Payment method addition: extending '${result.parentFlow}' with '${result.paymentMethod}'`,
+        "info"
+      );
     }
 
     // Check prerequisites status

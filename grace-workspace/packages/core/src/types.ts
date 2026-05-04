@@ -470,12 +470,24 @@ export interface ImplementationSpecification {
 }
 
 /**
+ * Implementation type classification for GRACE workflow
+ * Distinguishes between new flows and payment method additions
+ */
+export type ImplementationType =
+  | "new_flow"
+  | "payment_method_addition"
+  | "flow_completion";
+
+/**
  * GRACE WORKFLOW: L3 Analysis Result (Phase 4 from 2.3_codegen.md)
  * Analyzes patterns, files, and prerequisites for implementation
  */
 export interface L3Analysis {
   connector: string;
   flow: string;
+  paymentMethod?: string;
+  implementationType: ImplementationType;
+  parentFlow?: string;
   analysis: {
     l2SpecVersion?: string;
     patternsIdentified: string[];

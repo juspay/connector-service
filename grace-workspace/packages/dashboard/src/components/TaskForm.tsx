@@ -344,9 +344,26 @@ export function TaskForm({
           style={field}
           value={paymentMethod}
           onChange={(e) => setPaymentMethod(e.target.value)}
-          placeholder="ApplePay"
+          placeholder="ApplePay, BankDebit, GooglePay, etc."
           disabled={disabled}
         />
+        {/* Warning for potential misclassification */}
+        {paymentMethod && ["BankDebit", "Wallet", "PayLater", "Card", "BankTransfer", "Crypto"].includes(paymentMethod.trim()) && !targetConnectors && (
+          <div
+            style={{
+              marginTop: 6,
+              padding: "6px 10px",
+              background: T.warnSoft,
+              border: `1px solid ${T.warn}`,
+              borderRadius: 4,
+              fontSize: 11,
+              color: T.warn,
+            }}
+          >
+            <strong>Note:</strong> &quot;{paymentMethod.trim()}&quot; is typically a payment method, not a standalone flow.
+            This will add the payment method to existing connector flows.
+          </div>
+        )}
       </div>
 
       <div style={{ marginBottom: 10 }}>

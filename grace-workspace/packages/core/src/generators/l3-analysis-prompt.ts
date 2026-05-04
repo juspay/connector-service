@@ -288,14 +288,72 @@ Return ONLY valid JSON:
 }
 \`\`\`
 
+## CRITICAL: Detect Implementation Type
+
+Before analyzing, determine if this is a **new flow** or **payment method addition**:
+
+### Checklist
+
+Run these checks against the codebase:
+
+| Check | Command |
+|-------|---------|
+| Does FLOW exist in connector.rs? | grep -i "flow:.*{FLOW}" crates/integrations/connector-integration/src/connectors/{CONNECTOR_LC}.rs |
+| Does PaymentInformation enum exist? | grep -i "PaymentInformation" crates/integrations/connector-integration/src/connectors/{CONNECTOR_LC}/transformers.rs |
+| Do reference connectors have this as a flow? | grep -i "flow:.*{FLOW}" crates/integrations/connector-integration/src/connectors/adyen.rs crates/integrations/connector-integration/src/connectors/stripe.rs |
+
+### Decision Table
+
+| FLOW in create_all_prerequisites | PAYMENT_METHOD provided | Other connectors have as flow? | Result |
+|----------------------------------|-------------------------|-------------------------------|--------|
+| No | No | N/A | **new_flow** - Create {Connector}{FLOW}Request/Response |
+| No | Yes | N/A | **new_flow** - Create flow with payment method support |
+| Yes | No | Yes | **flow_completion** - Fill gaps in existing flow |
+| Yes | No | No (Adyen/Stripe don't have BankDebit flow) | **payment_method_addition** - Extend PaymentInformation enum |
+| Yes | Yes | No | **payment_method_addition** - Add variant to PaymentInformation |
+
+### For Payment Method Additions
+
+**DO NOT:**
+- Create {Connector}{PAYMENT_METHOD}Request struct
+- Create {Connector}{PAYMENT_METHOD}Response struct
+- Add new flow variant to create_all_prerequisites!
+
+**DO:**
+1. Find `PaymentInformation` enum in transformers.rs
+2. Add variant: `{PAYMENT_METHOD}(Box<{PAYMENT_METHOD}PaymentInformation>)`
+3. Create `{PAYMENT_METHOD}PaymentInformation` struct with fields from spec
+4. Find existing `{FLOW}` TryFrom (e.g., Authorize)
+5. Add match arm for `PaymentMethodData::{PAYMENT_METHOD}`
+6. Map payment method fields to PaymentInformation variant
+
+### Implementation Type in Output
+
+Set `implementationType` field in output:
+```json
+{
+  "implementationType": "new_flow" | "payment_method_addition" | "flow_completion",
+  "parentFlow": "Authorize",
+  "paymentMethod": "BankDebit"
+}
+```
+
+### WARNING Signs (flag in ambiguities if seen)
+
+- FLOW is BankDebit, Wallet, PayLater, Card, Crypto
+- Adyen/Stripe don't have this FLOW in create_all_prerequisites!
+- PaymentInformation enum has similar-named variant
+- FLOW name appears in payment_method_data.rs but not connector_flow.rs
+
 ## CRITICAL RULES
 
 1. **NO CODE GENERATION** - You are ANALYSIS only. Do not write Rust code.
 2. **L2 Spec is PRIMARY** - All specifications derive from the tech spec
 3. **Be EXACT** - Field names, types, mappings must be precise
-4. **Check flow existence** - If {FLOW} already in create_all_prerequisites!, return SKIPPED
+4. **Check flow existence** - If {FLOW} already in create_all_prerequisites!, note in analysis (may be SKIPPED or payment_method_addition)
 5. **Include filesChangedPreview** - Required for human review
 6. **Validate completeness** - Every field in spec must have mapping specified
+7. **Detect implementation type** - Use decision table above to set implementationType correctly
 
 If you cannot determine a specification (e.g., spec is ambiguous), mark it:
 \`\`\`json
@@ -311,18 +369,26 @@ If you cannot determine a specification (e.g., spec is ambiguous), mark it:
 \`\`\`
 `;
 
+export interface L3AnalysisOptions {
+  paymentMethod?: string;
+  isPaymentMethodAddition?: boolean;
+}
+
 export function buildL3AnalysisPayload(
   connector: string,
   flow: string,
   techSpecPath: string,
   projectRoot: string,
   codegenWorkflowPath: string,
-  l2?: L2Plan
+  l2?: L2Plan,
+  options?: L3AnalysisOptions
 ): Record<string, unknown> {
   return {
     CONNECTOR: connector,
     CONNECTOR_LC: connector.toLowerCase(),
     FLOW: flow,
+    PAYMENT_METHOD: options?.paymentMethod || "",
+    IS_PAYMENT_METHOD_ADDITION: options?.isPaymentMethodAddition || false,
     TECHSPEC_PATH: techSpecPath,
     PROJECT_ROOT: projectRoot,
     CODEGEN_WORKFLOW_PATH: codegenWorkflowPath,

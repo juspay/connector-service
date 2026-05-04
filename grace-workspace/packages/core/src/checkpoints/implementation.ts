@@ -98,6 +98,23 @@ export const implementationCheckpoint: Checkpoint = {
     ctx.log(`[implementation] Analysis: ${l3.analysis.patternsIdentified.length} patterns identified`, "info");
     ctx.log(`[implementation] Files to modify: ${l3.analysis.filesToModify.length}`, "info");
 
+    // Log implementation type for clarity
+    const implementationType = l3.implementationType || "new_flow";
+    const parentFlow = l3.parentFlow;
+    const paymentMethod = l3.paymentMethod;
+
+    ctx.log(`[implementation] Implementation Type: ${implementationType}`, "info");
+
+    if (implementationType === "payment_method_addition") {
+      ctx.log(`[implementation]   Parent Flow: ${parentFlow}`, "info");
+      ctx.log(`[implementation]   Payment Method: ${paymentMethod}`, "info");
+      ctx.log(`[implementation]   Action: Extending PaymentInformation enum`, "info");
+    } else if (implementationType === "new_flow") {
+      ctx.log(`[implementation]   Action: Creating new flow structs`, "info");
+    } else if (implementationType === "flow_completion") {
+      ctx.log(`[implementation]   Action: Completing existing flow`, "info");
+    }
+
     // Read L3 spec content if available
     let l3SpecContent = "";
     if (l3SpecPath) {
@@ -136,6 +153,13 @@ export const implementationCheckpoint: Checkpoint = {
       ctx.log("[implementation] Loaded workflow file", "info");
     } catch (err) {
       ctx.log(`[implementation] Warning: Could not read workflow: ${err}`, "warn");
+    }
+
+    // Determine which implementation guidance to use
+    const isPaymentMethodAddition = implementationType === "payment_method_addition";
+
+    if (isPaymentMethodAddition) {
+      ctx.log("[implementation] Using PAYMENT METHOD ADDITION system prompt", "info");
     }
 
     // Build custom system prompt with Phase 5 restriction
@@ -196,13 +220,46 @@ CRITICAL:
 ${l3SpecContent ? `\n\`\`\`json\n${l3SpecContent}\n\`\`\`\n` : 'L3 spec not available'}
 
 ## Implementation Type Guidance
-- If L3 shows "implementationType": "payment_method_addition":
-  - Do NOT add to create_all_prerequisites!
-  - Extend existing request struct with payment method variant
-  - Parent flow is specified in L3 parentFlow field
-- If L3 shows "implementationType": "new_flow":
-  - Add to create_all_prerequisites!
-  - Create new request/response structs
+
+Current implementation type: ${implementationType}
+${isPaymentMethodAddition ? `
+## PAYMENT METHOD ADDITION - CRITICAL INSTRUCTIONS
+
+You are implementing a PAYMENT METHOD ADDITION (not a new flow).
+
+### What NOT to do:
+- Do NOT create ${connector}${paymentMethod}Request struct
+- Do NOT create ${connector}${paymentMethod}Response struct
+- Do NOT add to create_all_prerequisites! macro as a new flow
+- Do NOT add a new flow variant
+
+### What TO do:
+1. Find the PaymentInformation enum in transformers.rs
+2. Add a new variant: ${paymentMethod}(Box<${paymentMethod}PaymentInformation>)
+3. Create the ${paymentMethod}PaymentInformation struct with fields from the L3 spec
+4. Find the existing ${parentFlow} TryFrom implementation
+5. Add a match arm for PaymentMethodData::${paymentMethod}
+6. Map the payment method fields to the new PaymentInformation variant
+
+### Example Pattern:
+Before (existing card pattern):
+  PaymentMethodData::Card(card_data) => PaymentInformation::Card(...)
+
+After (adding your new payment method):
+  PaymentMethodData::${paymentMethod}(pm_data) => PaymentInformation::${paymentMethod}(Box::new(${paymentMethod}PaymentInformation { ... }))
+` : `
+## NEW FLOW IMPLEMENTATION - STANDARD INSTRUCTIONS
+
+You are implementing a NEW FLOW.
+
+### Steps:
+1. Add the flow to create_all_prerequisites! macro in ${connector}.rs
+2. Create ${connector}${flow}Request struct (Serialize)
+3. Create ${connector}${flow}Response struct (Deserialize)
+4. Implement TryFrom<RouterDataV2> for ${connector}${flow}Request
+5. Implement TryFrom<${connector}${flow}Response> for RouterDataV2
+6. Add macro_connector_implementation! invocation
+`}
 
 ## Workflow File
 ${workflowContent}
