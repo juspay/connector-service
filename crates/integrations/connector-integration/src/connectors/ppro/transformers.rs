@@ -1567,12 +1567,53 @@ where
 
 // ========== ClientAuthenticationToken (POST /v1/payment-charges) ==========
 
+/// PPRO payment method codes accepted by the `/v1/payment-charges` endpoint.
+/// Serialized as the SCREAMING_SNAKE_CASE string PPRO expects (e.g. `BANCONTACT`).
+#[derive(Debug, Clone, Copy, Serialize, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum PproPaymentMethod {
+    Bancontact,
+    Ideal,
+    Trustly,
+    Blik,
+    AliPay,
+    WeChatPay,
+    MbWay,
+    Satispay,
+    Wero,
+    Upi,
+}
+
+impl TryFrom<&common_enums::PaymentMethodType> for PproPaymentMethod {
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(item: &common_enums::PaymentMethodType) -> Result<Self, Self::Error> {
+        match item {
+            common_enums::PaymentMethodType::BancontactCard => Ok(Self::Bancontact),
+            common_enums::PaymentMethodType::Ideal => Ok(Self::Ideal),
+            common_enums::PaymentMethodType::Trustly => Ok(Self::Trustly),
+            common_enums::PaymentMethodType::Blik => Ok(Self::Blik),
+            common_enums::PaymentMethodType::AliPay => Ok(Self::AliPay),
+            common_enums::PaymentMethodType::WeChatPay => Ok(Self::WeChatPay),
+            common_enums::PaymentMethodType::MbWay => Ok(Self::MbWay),
+            common_enums::PaymentMethodType::Satispay => Ok(Self::Satispay),
+            common_enums::PaymentMethodType::Wero => Ok(Self::Wero),
+            common_enums::PaymentMethodType::UpiIntent => Ok(Self::Upi),
+            other => Err(IntegrationError::NotSupported {
+                message: format!("payment method {other} is not supported by PPRO"),
+                connector: "ppro",
+                context: Default::default(),
+            }
+            .into()),
+        }
+    }
+}
+
 /// Creates a payment charge for client-side authentication.
 /// The charge ID and redirect URL are returned for client-side payment completion.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PproClientAuthRequest {
-    pub payment_method: String,
+    pub payment_method: PproPaymentMethod,
     pub payment_medium: PproPaymentMedium,
     pub merchant_payment_charge_reference: String,
     pub amount: Amount,
@@ -1608,37 +1649,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
 
-        // Default to BANCONTACT as a generic APM for session creation;
-        // the actual payment method will be selected client-side.
-        let payment_method = router_data
-            .request
-            .payment_method_type
-            .as_ref()
-            .map(|pm| match pm {
-                common_enums::PaymentMethodType::BancontactCard => "BANCONTACT".to_string(),
-                common_enums::PaymentMethodType::Ideal => "IDEAL".to_string(),
-                common_enums::PaymentMethodType::Trustly => "TRUSTLY".to_string(),
-                common_enums::PaymentMethodType::Blik => "BLIK".to_string(),
-                common_enums::PaymentMethodType::AliPay => "ALIPAY".to_string(),
-                common_enums::PaymentMethodType::WeChatPay => "WECHATPAY".to_string(),
-                common_enums::PaymentMethodType::MbWay => "MBWAY".to_string(),
-                common_enums::PaymentMethodType::Satispay => "SATISPAY".to_string(),
-                common_enums::PaymentMethodType::Wero => "WERO".to_string(),
-                common_enums::PaymentMethodType::UpiIntent => "UPI".to_string(),
-                _ => "BANCONTACT".to_string(),
-            })
-            .unwrap_or_else(|| "BANCONTACT".to_string());
+        // Default to BANCONTACT as a generic APM for session creation when the
+        // caller hasn't picked a payment method yet; the actual one is selected
+        // client-side. Any explicitly-supplied PM is validated via TryFrom.
+        let payment_method = match router_data.request.payment_method_type.as_ref() {
+            Some(pm) => PproPaymentMethod::try_from(pm)?,
+            None => PproPaymentMethod::Bancontact,
+        };
 
         let amount = Amount {
             currency: router_data.request.currency.to_string(),
             value: router_data.request.amount,
         };
 
-        let return_url = router_data
-            .resource_common_data
-            .return_url
-            .clone()
-            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+        let return_url = router_data.resource_common_data.return_url.clone().ok_or(
+            IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: Default::default(),
+            },
+        )?;
 
         let authentication_settings = Some(vec![PproAuthenticationSettings {
             r#type: PproAuthenticationType::Redirect,
@@ -1647,11 +1676,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }),
         }]);
 
+        let merchant_consumer_reference = router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .map(|id| sanitize_merchant_consumer_reference(id.get_string_repr()));
+
         let consumer = Some(PproConsumer {
             name: router_data.request.customer_name.clone(),
             email: router_data.request.email.clone(),
             country: router_data.request.country.map(|c| c.to_string()),
-            merchant_consumer_reference: None,
+            merchant_consumer_reference,
         });
 
         Ok(Self {
