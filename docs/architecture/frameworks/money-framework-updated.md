@@ -13,7 +13,7 @@ When you're building a payment system that talks to dozens of different payment 
 - **Stripe** wants cents as an integer. `1000` means ten dollars. Their docs say: *"A positive integer representing how much to charge in the smallest currency unit."*
 - **Razorpay** also wants minor units as an integer — paise for INR. Their docs say: *"Payment amount in the smallest currency sub-unit. For ₹299, pass 29900."*
 - **PayPal** wants a string with decimals — `"10.00"`. The Orders v2 API uses a JSON string, not a number.
-- **Wells Fargo** (whose payment gateway runs on CyberSource under the hood) also wants a string with decimals — `"10.00"` — but with completely different field names and request structure.
+- **Wells Fargo** also wants a string with decimals — `"10.00"` — but with completely different field names and request structure.
 - **Stax** wants a float — `10.0`. Yes, an actual floating-point number. Their API field `total` is a JSON numeric type in major units.
 
 These aren't guesses — each format is documented in the processor's official API reference. The diversity is real, and it's the whole problem.
