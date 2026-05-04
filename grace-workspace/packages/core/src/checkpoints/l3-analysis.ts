@@ -100,7 +100,7 @@ async function checkFileContains(filePath: string, pattern: string): Promise<boo
 async function validateAgainstReferenceConnectors(
   projectRoot: string,
   flow: string,
-  ctx: { log: (msg: string, level?: string) => void }
+  logFn: (msg: string, level?: "info" | "warn" | "error" | "success" | "debug") => void
 ): Promise<{ isLikelyPaymentMethod: boolean; flowCount: number; pmCount: number }> {
   const refConnectors = ["adyen", "stripe", "checkout"];
   let flowCount = 0;
@@ -127,7 +127,7 @@ async function validateAgainstReferenceConnectors(
   const isLikelyPaymentMethod = pmCount >= 2 && flowCount === 0;
 
   if (isLikelyPaymentMethod) {
-    ctx.log(
+    logFn(
       `[l3_analysis] WARNING: '${flow}' appears to be a payment method in ${pmCount} connectors, ` +
         `but not a flow in any. Consider using PAYMENT_METHOD=${flow} with FLOW=Authorize`,
       "warn"
@@ -206,7 +206,7 @@ export const l3AnalysisCheckpoint: Checkpoint = {
 
     // Cross-connector validation for potential misclassification
     if (!isPaymentMethodAddition && flow !== "Unknown") {
-      const validation = await validateAgainstReferenceConnectors(projectRoot, flow, ctx);
+      const validation = await validateAgainstReferenceConnectors(projectRoot, flow, ctx.log);
       if (validation.isLikelyPaymentMethod) {
         ctx.log(
           `[l3_analysis] RECOMMENDATION: Set task.paymentMethod="${flow}" and use FLOW="Authorize"`,
