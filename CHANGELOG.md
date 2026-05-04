@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.15.0-hotfix1
+
+### Features
+
+- **connector:** [iMerchant Solutions] Implement Cards Non-3DS Flow ([#1223](https://github.com/juspay/connector-service/pull/1223)) ([`347733f`](https://github.com/juspay/connector-service/commit/347733ff278914296cf6b7cfc77364beaf3da402))
+
+**Full Changelog:** [`2026.04.15.0...2026.04.15.0-hotfix1`](https://github.com/juspay/connector-service/compare/2026.04.15.0...2026.04.15.0-hotfix1)
+
+- - -
+
 ## 2026.04.15.0
 
 ### Features
