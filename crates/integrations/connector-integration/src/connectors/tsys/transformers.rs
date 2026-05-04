@@ -417,26 +417,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TsysAuthorizeResponse
                 ),
             },
             TsysPaymentsResponse::SaleResponse(resp) => match resp {
-                TsysResponseTypes::SuccessResponse(sale_response) => {
-                    // Check if the status is actually PASS or FAIL
-                    match sale_response.status {
-                        TsysPaymentStatus::Pass => (
-                            Ok(get_payments_response(sale_response, item.http_code)),
-                            AttemptStatus::Charged,
-                        ),
-                        TsysPaymentStatus::Fail => {
-                            let error_resp = TsysErrorResponse {
-                                status: sale_response.status,
-                                response_code: sale_response.response_code,
-                                response_message: sale_response.response_message,
-                            };
-                            (
-                                Err(get_error_response(&error_resp, item.http_code)),
-                                AttemptStatus::Failure,
-                            )
-                        }
-                    }
-                }
+                TsysResponseTypes::SuccessResponse(sale_response) => (
+                    Ok(get_payments_response(sale_response, item.http_code)),
+                    AttemptStatus::Charged,
+                ),
                 TsysResponseTypes::ErrorResponse(error_response) => (
                     Err(get_error_response(&error_response, item.http_code)),
                     AttemptStatus::Failure,
