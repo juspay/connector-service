@@ -793,7 +793,10 @@ function ThinkingIndicator({ message }: { message: string }) {
 // ─── Codegen / Implementation Result Artifact ──────────────────────────
 
 function ImplementationResultArtifact({ result }: { result: any }) {
-  const passed = result?.success && result?.grpcurlResult === "PASS";
+  // Phase 5 only: success=true with grpcurlResult="NOT_RUN" is expected
+  // Phase 6+: success=true with grpcurlResult="PASS" indicates full success
+  const passed = result?.success === true;
+  const phase5Only = passed && result?.grpcurlResult === "NOT_RUN";
 
   return (
     <Card>
@@ -806,8 +809,8 @@ function ImplementationResultArtifact({ result }: { result: any }) {
             {result?.connector} · {result?.flow} · {result?.buildIterations ?? 0} iterations
           </div>
         </div>
-        <Tag tone={passed ? "ok" : result?.grpcurlResult === "NOT_RUN" ? "warn" : "error"}>
-          {result?.grpcurlResult ?? "UNKNOWN"}
+        <Tag tone={passed ? (phase5Only ? "neutral" : "ok") : "error"}>
+          {phase5Only ? "PHASE_5_COMPLETE" : (result?.grpcurlResult ?? "UNKNOWN")}
         </Tag>
       </div>
 
@@ -852,10 +855,18 @@ function ImplementationResultArtifact({ result }: { result: any }) {
         </div>
       )}
 
-      {/* Reason if failed */}
+      {/* Reason - shown for both success and failure */}
       {result?.reason && (
-        <div style={{ marginTop: 12, padding: 10, background: T.errorSoft, borderRadius: 6 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.error }}>Failure Reason</div>
+        <div style={{
+          marginTop: 12,
+          padding: 10,
+          background: passed ? T.successSoft : T.errorSoft,
+          borderRadius: 6,
+          borderLeft: `3px solid ${passed ? T.success : T.error}`
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: passed ? T.success : T.error }}>
+            {passed ? "Info" : "Failure Reason"}
+          </div>
           <div style={{ fontSize: 12, color: T.text, marginTop: 4 }}>{result.reason}</div>
         </div>
       )}
