@@ -32,9 +32,13 @@ export const preflightCheckpoint: Checkpoint = {
         return { passed: false, errors: ["Not a git repository"] };
       }
 
-      // Checkout add-grace-app branch
-      ctx.log("[preflight] Checking out add-grace-app branch...", "info");
-      execSync("git checkout add-grace-app", { cwd: projectRoot, stdio: "pipe" });
+      // Pull latest changes on current branch
+      // ctx.log("[preflight] Pulling latest changes...", "info");
+      // execSync("git pull", { cwd: projectRoot, stdio: "pipe" });
+
+      // Create and checkout the new feature branch
+      ctx.log(`[preflight] Creating and checking out branch: ${branchName}`, "info");
+      execSync(`git checkout -b ${branchName}`, { cwd: projectRoot, stdio: "pipe" });
 
       // Verify creds.json exists
       const credsPath = path.join(projectRoot, "creds.json");

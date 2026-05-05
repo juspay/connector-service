@@ -28,6 +28,18 @@ export class PipelineEngine {
       const maxRetries = checkpoint.maxRetries ?? ctx.options.maxRetries ?? 3;
 
       if (retries >= maxRetries) {
+        if (checkpoint.continueOnFailure) {
+          // Graceful degradation: accept failure and continue to next checkpoint
+          ctx.log(
+            `[${checkpoint.id}] Max retries (${maxRetries}) exceeded. Continuing to next checkpoint (continueOnFailure=true).`,
+            "warn"
+          );
+          await this.state.save(ctx, checkpoint.id, "failed");
+          this.bus?.emitStatus(checkpoint.id, "failed");
+          i++; // Continue to next checkpoint instead of aborting
+          continue;
+        }
+
         ctx.log(
           `[${checkpoint.id}] Max retries (${maxRetries}) exceeded. Pausing for manual retry.`,
           "error"

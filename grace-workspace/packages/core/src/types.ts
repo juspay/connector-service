@@ -43,6 +43,8 @@ export interface Checkpoint {
   onFail?: (ctx: PipelineContext, result: CheckpointResult) => Promise<void>;
   maxRetries?: number;
   timeout?: number;
+  /** If true, continue to next checkpoint when max retries exceeded instead of aborting */
+  continueOnFailure?: boolean;
 }
 
 export interface TaskAttachment {

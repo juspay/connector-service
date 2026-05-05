@@ -17,6 +17,7 @@ export const grpcTestCheckpoint: Checkpoint = {
   description: "Test connector via gRPC calls using grpcurl (replaces Design Match/Cypress/Playwright)",
   retryFrom: "grpc_test",
   timeout: 10 * 60 * 1000, // 10 min for testing
+  continueOnFailure: true, // Continue to PR review even if gRPC tests fail
 
   async run(ctx) {
     const task = ctx.artifacts.task;
