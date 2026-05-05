@@ -525,33 +525,8 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_client_session_id": "probe_sdk_session_001",
-          "domain_context": {
-            "payment": {
-              "amount": {
-                "minor_amount": 1000,
-                "currency": "USD"
-              }
-            }
-          }
-        },
-        "sample": {
-          "url": "https://api.smartpayfuse-test.barclaycard/flex/v2/sessions",
-          "method": "Post",
-          "headers": {
-            "accept": "application/hal+json;charset=utf-8",
-            "content-type": "application/json",
-            "date": "2020-01-01T00:00:00+00:00",
-            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "host": "api.smartpayfuse-test.barclaycard",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
-            "v-c-merchant-id": "probe_merchant",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"targetOrigins\":[\"https://hyperswitch.io\"],\"clientVersion\":\"0.11\",\"allowedCardNetworks\":[\"VISA\",\"MASTERCARD\",\"AMEX\",\"DISCOVER\"],\"fields\":{\"paymentInformation\":{\"card\":{\"number\":{},\"securityCode\":{}}}}}"
-        }
+        "status": "error",
+        "error": "Stuck on field: return_url — Missing required field: return_url"
       }
     },
     "create_customer": {
