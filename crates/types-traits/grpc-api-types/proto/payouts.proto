@@ -338,6 +338,8 @@ message PayoutServiceGetRequest {
   optional string connector_payout_id = 2;
   // access token
   optional SecretString access_token = 3;
+  // The Stripe account ID (for Stripe-Account header in Connect)
+  optional string connector_payout_method_id = 4;
 }
 
 // Response message for fetching a payout
@@ -444,6 +446,34 @@ message PayoutServiceCreateRecipientRequest {
   optional Customer customer = 6;
   // access token
   optional SecretString access_token = 7;
+  // Phone number for the recipient (required for Stripe Connect)
+  SecretString phone = 8;
+  // Last 4 digits of SSN (required for Stripe Connect in US)
+  SecretString ssn_last_4 = 9;
+  // Full SSN for Stripe (alternative to ssn_last_4 for identity verification)
+  SecretString id_number = 20;
+  // Account type for Stripe Connect (e.g., "custom", "express", "standard")
+  optional string account_type = 21;
+  // Required for Stripe Connect - Individual first name
+  SecretString first_name = 10;
+  // Required for Stripe Connect - Individual last name
+  SecretString last_name = 11;
+  // Required for Stripe Connect - DOB day (1-31)
+  SecretString dob_day = 12;
+  // Required for Stripe Connect - DOB month (1-12)
+  SecretString dob_month = 13;
+  // Required for Stripe Connect - DOB year (YYYY)
+  SecretString dob_year = 14;
+  // Required for Stripe Connect - Business profile MCC (4-digit code)
+  string business_profile_mcc = 15;
+  // Required for Stripe Connect - Business profile URL
+  SecretString business_profile_url = 16;
+  // Required for Stripe Connect - Business profile name
+  SecretString business_profile_name = 17;
+  // Required for Stripe Connect - Statement descriptor for payments
+  SecretString statement_descriptor = 18;
+  // Required for Stripe Connect - TOS acceptance IP address
+  SecretString tos_acceptance_ip = 19;
 }
 
 // Response message for creating recipient account
@@ -474,6 +504,8 @@ message PayoutServiceEnrollDisburseAccountRequest {
   optional Customer customer = 5;
   // access token
   optional SecretString access_token = 6;
+  // Connector Payout ID (e.g., Stripe account ID "acct_xxx")
+  optional string connector_payout_id = 7;
 }
 
 // Response message for enrolling disburse account

@@ -122,6 +122,7 @@ pub struct PayoutTransferResponse {
 pub struct PayoutGetRequest {
     pub merchant_payout_id: Option<String>,
     pub connector_payout_id: Option<String>,
+    pub connector_payout_method_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -191,6 +192,27 @@ pub struct PayoutCreateRecipientRequest {
     pub source_currency: common_enums::Currency,
     pub payout_method_data: Option<PayoutMethodData>,
     pub recipient_type: common_enums::PayoutRecipientType,
+    pub phone: Option<Secret<String>>,
+    pub ssn_last_4: Option<Secret<String>>,
+
+    pub id_number: Option<Secret<String>>,
+
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
+    pub dob_day: Option<Secret<String>>,
+    pub dob_month: Option<Secret<String>>,
+    pub dob_year: Option<Secret<String>>,
+    pub business_profile_mcc: Option<String>,
+    pub business_profile_url: Option<Secret<String>>,
+    pub business_profile_name: Option<Secret<String>>,
+    pub statement_descriptor: Option<Secret<String>>,
+    pub tos_acceptance_ip: Option<Secret<String>>,
+
+    pub address: Option<super::super::payment_address::Address>,
+
+    pub customer: Option<crate::connector_types::CustomerInfo>,
+
+    pub account_type: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -204,9 +226,12 @@ pub struct PayoutCreateRecipientResponse {
 #[derive(Debug, Clone)]
 pub struct PayoutEnrollDisburseAccountRequest {
     pub merchant_payout_id: Option<String>,
+    pub connector_payout_id: Option<String>,
     pub amount: common_utils::types::MinorUnit,
     pub source_currency: common_enums::Currency,
     pub payout_method_data: Option<PayoutMethodData>,
+
+    pub customer: Option<crate::connector_types::CustomerInfo>,
 }
 
 #[derive(Debug, Clone)]
