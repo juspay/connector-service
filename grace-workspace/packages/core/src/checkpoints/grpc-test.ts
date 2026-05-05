@@ -2,8 +2,10 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 import net from "node:net";
 import { spawn } from "node:child_process";
-import type { Checkpoint, RepairBrief } from "../types.js";
+import type { Checkpoint, PipelineContext, RepairBrief } from "../types.js";
 import { runAI } from "../tools/runner-factory.js";
+
+type CtxLogger = Pick<PipelineContext, "log">;
 
 /**
  * gRPC Test Checkpoint - Phase 6-7 gRPC testing from 2.3_codegen.md
@@ -42,15 +44,27 @@ export const grpcTestCheckpoint: Checkpoint = {
     ctx.log(`[grpc_test] Connector: ${connector}`, "info");
     ctx.log(`[grpc_test] Flow: ${flow}`, "info");
 
+    // ── Force-free ports 8000 and 8080 first ─────────────────────────────
+    // grpc-server runs that crash mid-startup leave orphan/half-dead processes
+    // holding one or both ports. Killing them up-front guarantees a clean slate
+    // and turns the pre-flight into "reset-and-spawn" instead of "diagnose-and-bail".
+    // Opt out with GRACE_GRPC_NO_KILL=1 for users running grpc-server intentionally.
+    if (process.env.GRACE_GRPC_NO_KILL === "1") {
+      ctx.log("[grpc_test] GRACE_GRPC_NO_KILL=1 — skipping port cleanup", "info");
+    } else {
+      await forceFreePorts([8000, 8080], ctx);
+    }
+
     // ── Pre-flight: make sure grpc-server is reachable on localhost:8000 ──
     // The grpc-server binds two ports per config/development.toml:
     //   - 8000  → gRPC (what grpcurl talks to)        ← what we actually need
     //   - 8080  → metrics
     // Probe BOTH so we can distinguish three states:
-    //   (a) gRPC up               → proceed
-    //   (b) both down             → optionally auto-spawn (cold cargo build can take 5-10 min)
-    //   (c) gRPC down, metrics up → orphan/half-dead server; auto-spawn would
-    //       fail with AddrInUse on 8080. Surface a clear instruction instead.
+    //   (a) gRPC up               → proceed (only reachable with GRACE_GRPC_NO_KILL=1)
+    //   (b) both down             → auto-spawn (cold cargo build can take 5-10 min)
+    //   (c) gRPC down, metrics up → orphan/half-dead server; defensive branch
+    //       (only reachable with GRACE_GRPC_NO_KILL=1 or if a new process binds
+    //       between kill and probe).
     const startTs = Date.now();
     let serverLogPath = ctx.artifacts.grpcServerLogPath;
     try {
@@ -344,6 +358,98 @@ function tcpProbe(host: string, port: number, timeoutMs: number): Promise<boolea
     socket.once("error", () => finish(false));
     socket.connect(port, host);
   });
+}
+
+/**
+ * Look up listening PIDs on a TCP port via `lsof`. Returns [{pid, command}].
+ * Uses lsof's -F output (one prefixed token per line) so we don't have to parse
+ * the human-readable column layout. Empty result on macOS/Linux means "nothing
+ * listening" (or lsof unavailable, in which case we silently skip — a missing
+ * lsof shouldn't break the pipeline).
+ */
+async function listenersOn(port: number): Promise<Array<{ pid: number; command: string }>> {
+  return new Promise((resolve) => {
+    const child = spawn("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-Fpcn"]);
+    let stdout = "";
+    child.stdout.on("data", (d: Buffer) => {
+      stdout += d.toString();
+    });
+    child.on("error", () => resolve([])); // lsof not installed → no-op
+    child.on("close", () => {
+      const out: Array<{ pid: number; command: string }> = [];
+      let curPid: number | undefined;
+      let curCmd = "";
+      for (const line of stdout.split("\n")) {
+        if (line.startsWith("p")) {
+          if (curPid !== undefined) out.push({ pid: curPid, command: curCmd || "?" });
+          curPid = Number(line.slice(1));
+          curCmd = "";
+        } else if (line.startsWith("c") && curPid !== undefined) {
+          curCmd = line.slice(1);
+        }
+      }
+      if (curPid !== undefined) out.push({ pid: curPid, command: curCmd || "?" });
+      resolve(out.filter((e) => Number.isFinite(e.pid) && e.pid > 0));
+    });
+  });
+}
+
+async function forceFreePorts(ports: number[], ctx: CtxLogger): Promise<void> {
+  // Round 1: SIGTERM everything we find listening on these ports.
+  const killed = new Set<number>();
+  for (const port of ports) {
+    const listeners = await listenersOn(port);
+    for (const { pid, command } of listeners) {
+      ctx.log(`[grpc_test] Killing PID ${pid} (${command}) on port ${port} (SIGTERM)`, "warn");
+      try {
+        process.kill(pid, "SIGTERM");
+        killed.add(pid);
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code !== "ESRCH") {
+          // ESRCH = already gone; EPERM = not ours, log it
+          ctx.log(`[grpc_test] kill(${pid}) failed: ${(err as Error).message}`, "warn");
+        }
+      }
+    }
+  }
+
+  if (killed.size === 0) {
+    return; // Nothing to wait for.
+  }
+
+  // Give graceful shutdowns a moment to release listening sockets.
+  await new Promise((r) => setTimeout(r, 500));
+
+  // Round 2: SIGKILL anything still listening.
+  for (const port of ports) {
+    const listeners = await listenersOn(port);
+    for (const { pid, command } of listeners) {
+      ctx.log(`[grpc_test] PID ${pid} (${command}) still on port ${port} after SIGTERM — sending SIGKILL`, "warn");
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code !== "ESRCH") {
+          ctx.log(`[grpc_test] kill -9 (${pid}) failed: ${(err as Error).message}`, "warn");
+        }
+      }
+    }
+  }
+
+  // Final settle: TCP listen sockets release immediately on close, but give
+  // the kernel a beat to update so the next probe sees a free port.
+  await new Promise((r) => setTimeout(r, 500));
+
+  // Diagnostic only: warn if anything is still bound (e.g. a brand-new process
+  // raced in). The existing pre-flight will handle that case downstream.
+  for (const port of ports) {
+    const remaining = await listenersOn(port);
+    if (remaining.length > 0) {
+      const summary = remaining.map((e) => `${e.pid}(${e.command})`).join(", ");
+      ctx.log(`[grpc_test] Port ${port} still has listener(s) after cleanup: ${summary}`, "warn");
+    }
+  }
 }
 
 async function waitForGrpcReadiness(host: string, port: number, totalMs: number): Promise<boolean> {
