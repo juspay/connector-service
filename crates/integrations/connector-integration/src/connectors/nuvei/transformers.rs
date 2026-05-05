@@ -1305,10 +1305,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             });
 
-        let connector_metadata = response
-            .session_token
-            .as_ref()
-            .and_then(|token| serde_json::to_value(NuveiMeta { session_token: token.clone() }).ok());
+        let connector_metadata = response.session_token.as_ref().and_then(|token| {
+            serde_json::to_value(NuveiMeta {
+                session_token: token.clone(),
+            })
+            .ok()
+        });
 
         let connector_response = build_connector_response_data(&response.payment_option);
 
