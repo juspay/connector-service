@@ -340,12 +340,66 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     // Check if flow already exists
     // For payment_method_addition, the parent flow SHOULD exist - don't skip
     if (result.analysis.flowAlreadyExists && result.implementationType !== "payment_method_addition") {
-      ctx.log("[l3_analysis] ⚠ Flow already implemented - SKIPPING", "warn");
-      return {
-        passed: false,
-        errors: ["Flow already implemented - SKIPPED"],
-        artifacts: { l3: result },
-      };
+      // The L3 LLM bases `flowAlreadyExists` on the presence of {FLOW} in
+      // `create_all_prerequisites!`. That macro line can be present without
+      // any of the actual transformer code (request struct, response struct,
+      // TryFrom impls) existing — a half-implemented flow looks "exists" by
+      // that test alone and gets falsely skipped. Verify against transformers.rs
+      // before honouring the SKIP. If the request struct named in the L3 spec
+      // is absent from transformers.rs, treat this as `flow_completion` (the
+      // macro entry exists, but the implementation is missing) and proceed.
+      const reqStructName = result.specification?.requestStruct?.name;
+      const respStructName = result.specification?.responseStruct?.name;
+      const transformersPath = path.join(
+        projectRoot,
+        "crates/integrations/connector-integration/src/connectors",
+        connector.toLowerCase(),
+        "transformers.rs",
+      );
+      let actuallyImplemented = true;
+      try {
+        const transformersContent = await fs.readFile(transformersPath, "utf-8");
+        // Consider the flow truly implemented only if BOTH the named request
+        // and response structs (or, when only one is named, that one) are
+        // present in transformers.rs. A bare struct definition would be
+        // searchable as `struct <Name>` but a simple substring match is enough
+        // because struct names are uniquely scoped.
+        const reqOk = reqStructName ? transformersContent.includes(reqStructName) : true;
+        const respOk = respStructName ? transformersContent.includes(respStructName) : true;
+        actuallyImplemented = reqOk && respOk;
+        if (!actuallyImplemented) {
+          ctx.log(
+            `[l3_analysis] flowAlreadyExists=true from L3, but transformers.rs is missing ${
+              !reqOk ? `request struct '${reqStructName}'` : ""
+            }${!reqOk && !respOk ? " and " : ""}${
+              !respOk ? `response struct '${respStructName}'` : ""
+            } — treating as flow_completion and proceeding.`,
+            "warn",
+          );
+        }
+      } catch (readErr) {
+        // transformers.rs missing entirely → definitely not implemented
+        ctx.log(
+          `[l3_analysis] Could not read transformers.rs (${(readErr as Error).message}); assuming flow not implemented and proceeding.`,
+          "warn",
+        );
+        actuallyImplemented = false;
+      }
+
+      if (actuallyImplemented) {
+        ctx.log("[l3_analysis] ⚠ Flow already implemented - SKIPPING", "warn");
+        return {
+          passed: false,
+          errors: ["Flow already implemented - SKIPPED"],
+          artifacts: { l3: result },
+        };
+      }
+
+      // Coerce implementationType so downstream checkpoints route correctly:
+      // implementation should NOT add to create_all_prerequisites! again, just
+      // fill in the missing transformer code.
+      (result as L3Analysis & { implementationType: string }).implementationType =
+        "flow_completion";
     }
 
     // For payment_method_addition, log the intent
