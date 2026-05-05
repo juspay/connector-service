@@ -683,11 +683,12 @@ impl
                     .as_ref()
                     .and_then(|c| c.merchant_customer_id.clone())
                 {
-                    CustomerId::try_from(std::borrow::Cow::from(id))
-                        .change_context(IntegrationError::InvalidDataFormat {
+                    CustomerId::try_from(std::borrow::Cow::from(id)).change_context(
+                        IntegrationError::InvalidDataFormat {
                             field_name: "customer_id",
                             context: Default::default(),
-                        })?
+                        },
+                    )?
                 } else {
                     CustomerId::try_from(std::borrow::Cow::from(format!("payout_{transaction_id}")))
                         .change_context(IntegrationError::InvalidDataFormat {

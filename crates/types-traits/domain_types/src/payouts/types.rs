@@ -1100,7 +1100,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             .map(common_enums::PayoutPriority::foreign_try_from)
             .transpose()?;
 
-let customer = value
+        let customer = value
             .customer
             .map(
                 |customer| -> Result<_, error_stack::Report<IntegrationError>> {
