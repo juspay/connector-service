@@ -67,6 +67,15 @@ pub struct BamboraErrorResponse {
     pub code: i32,
     pub category: i32,
     pub message: String,
+    /// Bambora's documented error envelope includes a `reference` string,
+    /// but in practice some upstream surfaces (proxy timeouts, Bambora's
+    /// own auth-layer 401s on token-payment endpoints) return error
+    /// bodies without it. Modelling the field as `Option<String>` lets
+    /// us deserialize those responses successfully and then fall back to
+    /// an empty string in the connector-level error mapping (see
+    /// `bambora.rs:get_error_response`), so the merchant gets the real
+    /// `code`/`message` instead of a deserialization failure that masks
+    /// the upstream error.
     #[serde(default)]
     pub reference: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -94,6 +103,9 @@ pub struct BamboraPaymentsRequest<T: PaymentMethodDataTypes> {
 #[serde(rename_all = "snake_case")]
 pub enum PaymentMethodType {
     Card,
+    /// Token-based MIT (used by RepeatPayment, where `token.code` carries
+    /// the prior Bambora transaction id as a reference-transaction token).
+    Token,
 }
 
 #[derive(Debug, Serialize)]
@@ -106,7 +118,7 @@ pub struct BamboraCard<T: PaymentMethodDataTypes> {
     pub complete: bool, // true for auto-capture, false for manual capture
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Default, Serialize)]
 pub struct BamboraBillingAddress {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<Secret<String>>,
@@ -971,8 +983,19 @@ impl<T: PaymentMethodDataTypes>
             }
         };
 
-        // Billing address (best-effort — Bambora requires billing for most
-        // transactions but we supply what is available).
+        // Billing address is opportunistic for SetupMandate because
+        // Bambora's `/v1/payments` accepts the call without one for
+        // first-recurring COF authorizations (the COF series is
+        // identified by the resulting transaction id, not by AVS data).
+        // We forward whatever the merchant supplied; when no billing
+        // address is on the request we send an empty `billing` block
+        // — every field uses `skip_serializing_if = Option::is_none`,
+        // so the serialized JSON degrades to `"billing": {}`, which
+        // Bambora accepts. We deliberately do not error here so that
+        // merchants who only have a card-on-file can still set up
+        // mandates; reviewers who want billing to be required for AVS
+        // should enforce it at the orchestration layer rather than at
+        // the connector boundary.
         let payment_billing = item.resource_common_data.address.get_payment_billing();
         let billing_address = payment_billing.and_then(|pb| pb.address.as_ref());
 
@@ -995,26 +1018,25 @@ impl<T: PaymentMethodDataTypes>
                 email_address: payment_billing.and_then(|pb| pb.email.clone()),
             }
         } else {
-            BamboraBillingAddress {
-                name: None,
-                address_line1: None,
-                address_line2: None,
-                city: None,
-                province: None,
-                country: None,
-                postal_code: None,
-                phone_number: None,
-                email_address: None,
-            }
+            BamboraBillingAddress::default()
         };
 
-        // Amount: use incoming amount if supplied, else fall back to 1 cent
-        // (Bambora rejects $0 auth-only attempts so we enforce a minimum).
+        // Bambora's NA SetupMandate is a real (non-zero) auth-only charge —
+        // the gateway rejects `$0` attempts on `/v1/payments`. Hyperswitch's
+        // SetupMandate flow surfaces the merchant-supplied verification
+        // amount in `request.minor_amount`; if it is absent we cannot
+        // silently substitute a value (`1¢` would charge the cardholder a
+        // real but undocumented amount), so we fail loudly. Merchants who
+        // need a true zero-dollar verification should use the
+        // `CreateClientAuthenticationToken` flow instead.
+        let minor_amount =
+            item.request
+                .minor_amount
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "minor_amount",
+                    context: Default::default(),
+                })?;
         let converter = FloatMajorUnitForConnector;
-        let minor_amount = item
-            .request
-            .minor_amount
-            .unwrap_or(common_utils::types::MinorUnit::new(1));
         let amount = converter
             .convert(minor_amount, item.request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1032,7 +1054,7 @@ impl<T: PaymentMethodDataTypes>
             card,
             billing,
             card_on_file: BamboraCardOnFile {
-                cof_type: "first_recurring",
+                cof_type: BamboraCardOnFileType::FirstRecurring,
             },
         })
     }
@@ -1151,7 +1173,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraSetupMandateRe
 pub struct BamboraRepeatPaymentRequest {
     pub order_number: String,
     pub amount: FloatMajorUnit,
-    pub payment_method: String,
+    pub payment_method: PaymentMethodType,
     pub token: BamboraRepeatPaymentToken,
     pub card_on_file: BamboraCardOnFile,
 }
@@ -1162,17 +1184,35 @@ pub struct BamboraRepeatPaymentToken {
     /// reference-transaction token for card-on-file merchant-initiated
     /// charges.
     pub code: String,
-    pub name: String,
+    /// Cardholder name. Bambora accepts but does not re-validate this
+    /// field on token-reference MITs (the cardholder identity is fixed
+    /// by the underlying token), so we forward whatever name is
+    /// available on the request — typically the billing first/last name
+    /// that the merchant supplied. Wrapped in `Secret` because the
+    /// underlying value is PII even when it is forwarded verbatim.
+    pub name: Secret<String>,
     pub complete: bool,
 }
 
 #[derive(Debug, Serialize)]
 pub struct BamboraCardOnFile {
-    /// Credential-on-file transaction type. "subsequent_recurring" tells
-    /// Bambora this is a follow-up merchant-initiated charge in a
-    /// recurring series anchored to a prior authorization.
     #[serde(rename = "type")]
-    pub cof_type: &'static str,
+    pub cof_type: BamboraCardOnFileType,
+}
+
+/// Bambora `card_on_file.type` — the recognised credential-on-file lifecycle
+/// states for a recurring series. Bambora rejects unrecognised values, so the
+/// enum is also a runtime contract check.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BamboraCardOnFileType {
+    /// Authorizing transaction in a card-on-file recurring series. The
+    /// resulting transaction id is usable as a token-reference for
+    /// subsequent MIT charges.
+    FirstRecurring,
+    /// Follow-up merchant-initiated charge in a recurring series anchored
+    /// to a prior `FirstRecurring`.
+    SubsequentRecurring,
 }
 
 pub type BamboraRepeatPaymentResponse = BamboraPaymentsResponse;
@@ -1217,20 +1257,34 @@ impl<T: PaymentMethodDataTypes>
             })
             .attach_printable("Failed to convert repeat-payment amount")?;
 
+        // Forward the cardholder name from the merchant-supplied billing
+        // address so Bambora's token-MIT payload carries a real value
+        // rather than a hardcoded placeholder. We do not try to derive
+        // it from the token itself — the cardholder identity is fixed
+        // by the underlying token, but Bambora still expects the
+        // `token.name` field to be present and non-empty on the request.
+        let name = item
+            .resource_common_data
+            .get_optional_billing_full_name()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "billing.name",
+                context: Default::default(),
+            })?;
+
         Ok(Self {
             order_number: item
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
             amount,
-            payment_method: "token".to_string(),
+            payment_method: PaymentMethodType::Token,
             token: BamboraRepeatPaymentToken {
                 code: mandate_ref_id.clone(),
-                name: "Cardholder".to_string(),
+                name,
                 complete: item.request.is_auto_capture(),
             },
             card_on_file: BamboraCardOnFile {
-                cof_type: "subsequent_recurring",
+                cof_type: BamboraCardOnFileType::SubsequentRecurring,
             },
         })
     }
