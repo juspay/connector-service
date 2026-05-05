@@ -27,21 +27,21 @@
     "create_order_basic": {
       "assert": {
         "status": {
-          "one_of": ["INITIATED", "REQUIRES_CUSTOMER_ACTION", "PENDING"]
+          "one_of": ["PENDING"]
         }
       }
     },
     "create_order_with_metadata": {
       "assert": {
         "status": {
-          "one_of": ["INITIATED", "REQUIRES_CUSTOMER_ACTION", "PENDING"]
+          "one_of": ["PENDING"]
         }
       }
     },
     "create_order_with_payment_method_type": {
       "assert": {
         "status": {
-          "one_of": ["INITIATED", "REQUIRES_CUSTOMER_ACTION", "PENDING"]
+          "one_of": ["PENDING"]
         },
         "session_token": null
       }
