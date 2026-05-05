@@ -1567,7 +1567,8 @@ message ConnectorSpecificClientAuthenticationResponse {
     MultisafepayClientAuthenticationResponse multisafepay = 23;
     NexinetsClientAuthenticationResponse nexinets = 24;
     NexixpayClientAuthenticationResponse nexixpay = 25;
-    BarclaycardClientAuthenticationResponse barclaycard = 26;
+    RevolutClientAuthenticationResponse revolut = 26;
+    BarclaycardClientAuthenticationResponse barclaycard = 27;
   }
 }
 
@@ -1706,6 +1707,14 @@ message NexixpayClientAuthenticationResponse {
 // Barclaycard SDK initialization data — capture_context JWT for Flex Microform SDK
 message BarclaycardClientAuthenticationResponse {
   SecretString capture_context = 1;
+}
+
+// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+message RevolutClientAuthenticationResponse {
+  // The order ID created on Revolut
+  string order_id = 1;
+  // The client authentication token for SDK initialization
+  SecretString token = 2;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
@@ -4010,7 +4019,10 @@ message SanlamConfig {
 message ItaubankConfig {
   SecretString client_secret = 1;
   SecretString client_id = 2;
+  optional SecretString certificates = 3;
+  optional SecretString private_key = 4;
   optional string base_url = 50;
+  optional string secondary_base_url = 51;
 }
 
 message GigadatConfig {
@@ -4188,7 +4200,8 @@ message PinelabsOnlineConfig {
 
 message ImerchantsolutionsConfig {
   SecretString api_key = 1;
-  optional string base_url = 2;
+  optional SecretString merchant_id = 2;
+  optional string base_url = 3;
 }
 
 message AxisbankConfig {

@@ -3583,6 +3583,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Nexixpay(NexixpayClientAuthenticationResponse),
     /// Barclaycard SDK initialization data — capture_context JWT for Flex Microform SDK
     Barclaycard(BarclaycardClientAuthenticationResponse),
+    /// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+    Revolut(RevolutClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3788,6 +3790,15 @@ pub struct NexixpayClientAuthenticationResponse {
 pub struct BarclaycardClientAuthenticationResponse {
     /// The capture context JWT token for client-side Flex Microform SDK
     pub capture_context: Secret<String>,
+}
+
+/// Revolut's order_id and token for client-side Revolut Pay widget initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RevolutClientAuthenticationResponse {
+    /// The order ID created on Revolut
+    pub order_id: String,
+    /// The client authentication token for SDK initialization
+    pub token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
