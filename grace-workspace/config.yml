@@ -47,8 +47,8 @@ llm:
 
 checkpoints:
   compiler:
-    command: npm
-    args: ["run", "re:start"] # ReScript build for hyperswitch-control-center
+    command: cargo
+    args: ["build", "--package", "connector-integration"] # Rust build for hyperswitch-prism
   cypress:
     command: npm
     args: ["run", "cy:run"] # control-center script: starts hyperswitch then runs cypress

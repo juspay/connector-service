@@ -240,62 +240,146 @@ For EACH file that will change:
 - description: What specifically will be added/changed (human-readable)
 - previewSnippet: Optional code snippet showing key change
 
-## Output Format
+## Output Format - CRITICAL
 
-Return ONLY valid JSON:
+Return ONLY valid JSON. NO markdown code blocks. NO prose before or after.
 
+STRICT REQUIREMENTS:
+1. First character MUST be an opening brace
+2. Last character MUST be a closing brace
+3. NO markdown code fences (triple backticks) around the output
+4. JSON must be syntactically VALID - check all brackets, quotes, and commas
+5. Common errors to AVOID:
+   - BAD: quote before closing bracket - Serialize]"
+   - GOOD: quote after closing bracket - Serialize"]
+   - BAD: mismatched braces - { key: value ]
+   - GOOD: matching braces - { key: value }
+
+Required JSON structure (output RAW JSON, NO markdown fences):
+- success: boolean
+- connector: string (the connector name)
+- flow: string (the flow being implemented)
+- implementationType: "new_flow" | "payment_method_addition" | "flow_completion"
+- parentFlow: string (for payment_method_addition, e.g., "Authorize")
+- paymentMethod: string (for payment_method_addition, e.g., "BankDebit")
+- analysis: object with l2SpecVersion, patternsIdentified[], filesToModify[], existingFlows[], flowAlreadyExists, prerequisitesStatus, missingPrerequisites[]
+- specification: object with requestStruct, responseStruct, tryFromImplementations[], connectorChanges{}, supportingTypes[], statusMapping{}, ambiguities[], filesChangedPreview[]
+- implementationNotes: string
+- riskAssessment: string[]
+- executionLog: object with filesRead[], analysisComplete
+
+EXAMPLE OUTPUT FORMAT:
+
+    {
+      "success": true,
+      "connector": "stripe",
+      "flow": "BankDebit",
+      "implementationType": "payment_method_addition",
+      "parentFlow": "Authorize",
+      "paymentMethod": "BankDebit",
+      "analysis": {
+        "l2SpecVersion": "hash",
+        "patternsIdentified": ["pattern1", "pattern2"],
+        "filesToModify": ["file1.rs", "file2.rs"],
+        "existingFlows": ["Authorize"],
+        "flowAlreadyExists": true,
+        "prerequisitesStatus": "complete",
+        "missingPrerequisites": []
+      },
+      "specification": {
+        "requestStruct": { "name": "{Connector}{Flow}Request", "derives": ["Serialize"], "fields": [{"name": "amount", "type": "i64", "required": true}] },
+        "responseStruct": { "name": "{Connector}{Flow}Response", "derives": ["Deserialize"], "fields": [{"name": "status", "type": "String", "required": true}] },
+        "tryFromImplementations": [{"implType": "request", "from": "RouterDataV2", "to": "{Connector}{Flow}Request", "mappings": []}],
+        "connectorChanges": {"flowEnumVariant": "{Flow}V2", "createAllPrerequisitesAddition": "{Flow}V2"},
+        "supportingTypes": [],
+        "statusMapping": {"connectorStatuses": ["AUTHORIZED", "DECLINED"], "mappings": {}, "fallback": "AttemptStatus::Failure"},
+        "ambiguities": [],
+        "filesChangedPreview": [{"path": "transformers.rs", "changeType": "modified", "linesAdded": 50, "linesRemoved": 0}]
+      },
+      "implementationNotes": "Brief summary of what was analyzed and the implementation approach",
+      "riskAssessment": [],
+      "executionLog": {
+        "filesRead": [],
+        "analysisComplete": true
+      }
+    }
+
+## CRITICAL: Detect Implementation Type
+
+Before analyzing, determine if this is a **new flow** or **payment method addition**:
+
+### Checklist
+
+Run these checks against the codebase:
+
+| Check | Command |
+|-------|---------|
+| Does FLOW exist in connector.rs? | grep -i "flow:.*{FLOW}" crates/integrations/connector-integration/src/connectors/{CONNECTOR_LC}.rs |
+| Does PaymentInformation enum exist? | grep -i "PaymentInformation" crates/integrations/connector-integration/src/connectors/{CONNECTOR_LC}/transformers.rs |
+| Do reference connectors have this as a flow? | grep -i "flow:.*{FLOW}" crates/integrations/connector-integration/src/connectors/adyen.rs crates/integrations/connector-integration/src/connectors/stripe.rs |
+
+### Decision Table
+
+| FLOW in create_all_prerequisites | PAYMENT_METHOD provided | Other connectors have as flow? | Result |
+|----------------------------------|-------------------------|-------------------------------|--------|
+| No | No | N/A | **new_flow** - Create {Connector}{FLOW}Request/Response |
+| No | Yes | N/A | **new_flow** - Create flow with payment method support |
+| Yes | No | Yes | **flow_completion** - Fill gaps in existing flow |
+| Yes | No | No (Adyen/Stripe don't have BankDebit flow) | **payment_method_addition** - Extend PaymentInformation enum |
+| Yes | Yes | No | **payment_method_addition** - Add variant to PaymentInformation |
+
+### For Payment Method Additions
+
+**DO NOT:**
+- Create {Connector}{PAYMENT_METHOD}Request struct
+- Create {Connector}{PAYMENT_METHOD}Response struct
+- Add new flow variant to create_all_prerequisites!
+
+**DO:**
+1. Find \`PaymentInformation\` enum in transformers.rs
+2. Add variant: \`{PAYMENT_METHOD}(Box<{PAYMENT_METHOD}PaymentInformation>)\`
+3. Create \`{PAYMENT_METHOD}PaymentInformation\` struct with fields from spec
+4. Find existing \`{FLOW}\` TryFrom (e.g., Authorize)
+5. Add match arm for \`PaymentMethodData::{PAYMENT_METHOD}\`
+6. Map payment method fields to PaymentInformation variant
+
+### Implementation Type in Output
+
+Set \`implementationType\` field in output:
 \`\`\`json
 {
-  "success": true,
-  "connector": "{CONNECTOR}",
-  "flow": "{FLOW}",
-  "analysis": {
-    "l2SpecVersion": "hash or timestamp",
-    "patternsIdentified": [
-      "Uses RouterDataV2 pattern",
-      "TryFrom trait for request/response conversion",
-      "macro_connector_implementation! for endpoint definition"
-    ],
-    "filesToModify": [
-      "crates/integrations/connector-integration/src/connectors/{connector}.rs",
-      "crates/integrations/connector-integration/src/connectors/{connector}/transformers.rs"
-    ],
-    "existingFlows": ["Authorize", "Capture", "Refund"],
-    "flowAlreadyExists": false,
-    "prerequisitesStatus": "complete",
-    "missingPrerequisites": []
-  },
-  "specification": {
-    "requestStruct": { "name": "...", "derives": [...], "fields": [...] },
-    "responseStruct": { "name": "...", "derives": [...], "fields": [...] },
-    "tryFromImplementations": [...],
-    "connectorChanges": { ... },
-    "supportingTypes": [...],
-    "statusMapping": { ... },
-    "ambiguities": [],
-    "filesChangedPreview": [...]
-  },
-  "implementationNotes": "Brief summary of implementation approach",
-  "riskAssessment": ["Connector uses custom auth pattern"],
-  "executionLog": {
-    "filesRead": [
-      "/Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.3_codegen.md",
-      "{TECHSPEC_PATH}",
-      "grace/rulesbook/codegen/guides/patterns/pattern_{FLOW}_flow.md"
-    ],
-    "analysisComplete": true
-  }
+  "implementationType": "new_flow" | "payment_method_addition" | "flow_completion",
+  "parentFlow": "Authorize",
+  "paymentMethod": "BankDebit"
 }
 \`\`\`
 
+### WARNING Signs (flag in ambiguities if seen)
+
+- FLOW is BankDebit, Wallet, PayLater, Card, Crypto
+- Adyen/Stripe don't have this FLOW in create_all_prerequisites!
+- PaymentInformation enum has similar-named variant
+- FLOW name appears in payment_method_data.rs but not connector_flow.rs
+
 ## CRITICAL RULES
 
-1. **NO CODE GENERATION** - You are ANALYSIS only. Do not write Rust code.
-2. **L2 Spec is PRIMARY** - All specifications derive from the tech spec
-3. **Be EXACT** - Field names, types, mappings must be precise
-4. **Check flow existence** - If {FLOW} already in create_all_prerequisites!, return SKIPPED
-5. **Include filesChangedPreview** - Required for human review
-6. **Validate completeness** - Every field in spec must have mapping specified
+1. **VALID JSON ONLY** - Output MUST be valid, parseable JSON. NO markdown fences. Check quotes, brackets, commas.
+2. **NO CODE GENERATION** - You are ANALYSIS only. Do not write Rust code.
+3. **L2 Spec is PRIMARY** - All specifications derive from the tech spec
+4. **Be EXACT** - Field names, types, mappings must be precise
+5. **Check flow existence** - If {FLOW} already in create_all_prerequisites!, note in analysis (may be SKIPPED or payment_method_addition)
+6. **Include filesChangedPreview** - Required for human review
+7. **Validate completeness** - Every field in spec must have mapping specified
+8. **Detect implementation type** - Use decision table above to set implementationType correctly
+
+## JSON VALIDATION CHECKLIST
+
+Before returning, verify:
+- [ ] All opening brackets [ have matching closing brackets ]
+- [ ] All opening braces { have matching closing braces }
+- [ ] All strings quoted with double quotes "..."
+- [ ] No trailing commas before closing brackets
+- [ ] JSON parses without errors (test mentally)
 
 If you cannot determine a specification (e.g., spec is ambiguous), mark it:
 \`\`\`json
@@ -311,18 +395,26 @@ If you cannot determine a specification (e.g., spec is ambiguous), mark it:
 \`\`\`
 `;
 
+export interface L3AnalysisOptions {
+  paymentMethod?: string;
+  isPaymentMethodAddition?: boolean;
+}
+
 export function buildL3AnalysisPayload(
   connector: string,
   flow: string,
   techSpecPath: string,
   projectRoot: string,
   codegenWorkflowPath: string,
-  l2?: L2Plan
+  l2?: L2Plan,
+  options?: L3AnalysisOptions,
 ): Record<string, unknown> {
   return {
     CONNECTOR: connector,
     CONNECTOR_LC: connector.toLowerCase(),
     FLOW: flow,
+    PAYMENT_METHOD: options?.paymentMethod || "",
+    IS_PAYMENT_METHOD_ADDITION: options?.isPaymentMethodAddition || false,
     TECHSPEC_PATH: techSpecPath,
     PROJECT_ROOT: projectRoot,
     CODEGEN_WORKFLOW_PATH: codegenWorkflowPath,
@@ -336,7 +428,9 @@ export function buildL3AnalysisPayload(
     L2_SUMMARY: l2?.summary || "No summary available",
     L2_SCOPE: l2?.scope || "No scope defined",
     L2_OUT_OF_SCOPE: l2?.outOfScope || "No out-of-scope items defined",
-    L2_TECHNICAL_CONSTRAINTS: l2?.technicalConstraints?.join("\n") || "No technical constraints defined",
+    L2_TECHNICAL_CONSTRAINTS:
+      l2?.technicalConstraints?.join("\n") ||
+      "No technical constraints defined",
     L2_ESTIMATED_COMPLEXITY: l2?.estimatedComplexity || "unknown",
   };
 }

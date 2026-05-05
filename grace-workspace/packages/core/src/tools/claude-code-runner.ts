@@ -273,7 +273,21 @@ export async function runClaudeCode<T = unknown>(
 
   // JSON mode: find the last complete JSON object in the output.
   // The model's chat reply may include tool-call chatter before the final JSON.
-  if (cleaned.startsWith("```")) {
+
+  // First, try to extract JSON from markdown code fences if present
+  // This handles cases where model wraps JSON in ```json ... ``` or ``` ... ```
+  const codeFenceRegex = /```(?:json)?\s*([\s\S]*?)```/gi;
+  const matches = [...cleaned.matchAll(codeFenceRegex)];
+  if (matches.length > 0) {
+    // Use the last code block (most likely the final answer)
+    const lastMatch = matches[matches.length - 1];
+    const potentialJson = lastMatch[1].trim();
+    // Verify it looks like JSON (starts with { or [)
+    if (potentialJson.startsWith("{") || potentialJson.startsWith("[")) {
+      cleaned = potentialJson;
+    }
+  } else if (cleaned.startsWith("```")) {
+    // Fallback for unclosed code fences
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
   }
 
@@ -299,9 +313,9 @@ export async function runClaudeCode<T = unknown>(
     parsed = JSON.parse(cleaned);
   } catch {
     // The model may have output raw file contents instead of wrapping in
-    // {"contents": "..."}. If the label looks like an implementation step
+    // {"contents": "..."}. If the label looks like an implementation or analysis step
     // and the content looks like source code, auto-wrap it.
-    if (opts.label.startsWith("implementation:") && cleaned.length > 20) {
+    if ((opts.label.startsWith("implementation:") || opts.label === "l3:analysis") && cleaned.length > 20) {
       dbg(
         `${opts.label}: JSON parse failed — auto-wrapping as {contents} (${cleaned.length}ch)`
       );

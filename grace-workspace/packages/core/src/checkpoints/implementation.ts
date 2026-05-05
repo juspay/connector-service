@@ -98,6 +98,23 @@ export const implementationCheckpoint: Checkpoint = {
     ctx.log(`[implementation] Analysis: ${l3.analysis.patternsIdentified.length} patterns identified`, "info");
     ctx.log(`[implementation] Files to modify: ${l3.analysis.filesToModify.length}`, "info");
 
+    // Log implementation type for clarity
+    const implementationType = l3.implementationType || "new_flow";
+    const parentFlow = l3.parentFlow;
+    const paymentMethod = l3.paymentMethod;
+
+    ctx.log(`[implementation] Implementation Type: ${implementationType}`, "info");
+
+    if (implementationType === "payment_method_addition") {
+      ctx.log(`[implementation]   Parent Flow: ${parentFlow}`, "info");
+      ctx.log(`[implementation]   Payment Method: ${paymentMethod}`, "info");
+      ctx.log(`[implementation]   Action: Extending PaymentInformation enum`, "info");
+    } else if (implementationType === "new_flow") {
+      ctx.log(`[implementation]   Action: Creating new flow structs`, "info");
+    } else if (implementationType === "flow_completion") {
+      ctx.log(`[implementation]   Action: Completing existing flow`, "info");
+    }
+
     // Read L3 spec content if available
     let l3SpecContent = "";
     if (l3SpecPath) {
@@ -138,6 +155,13 @@ export const implementationCheckpoint: Checkpoint = {
       ctx.log(`[implementation] Warning: Could not read workflow: ${err}`, "warn");
     }
 
+    // Determine which implementation guidance to use
+    const isPaymentMethodAddition = implementationType === "payment_method_addition";
+
+    if (isPaymentMethodAddition) {
+      ctx.log("[implementation] Using PAYMENT METHOD ADDITION system prompt", "info");
+    }
+
     // Build custom system prompt with Phase 5 restriction
     const systemPrompt = `You are the Code Generation Agent.
 
@@ -158,24 +182,102 @@ The gRPC Test checkpoint will handle testing.
 
 You MUST stop after writing code. Do not attempt to build or test.
 
+## OUTPUT FORMAT - STRICT JSON ONLY
+
+After completing the implementation, return ONLY a valid JSON object. NO prose, NO markdown, NO explanations before or after the JSON.
+
+The FIRST character of your response must be \\\{ and the LAST character must be \\\}.
+
+Required JSON structure:
+\\\`\\\`\\\`json
+{
+  "success": true,
+  "connector": "${connector}",
+  "flow": "${flow}",
+  "buildIterations": 0,
+  "grpcurlResult": "NOT_RUN",
+  "filesModified": [
+    "crates/integrations/connector-integration/src/connectors/${connector.toLowerCase()}/transformers.rs"
+  ],
+  "fixLog": [],
+  "grpcurlOutput": "",
+  "executionLog": {
+    "phasesCompleted": ["5"],
+    "commandsExecuted": [],
+    "serverLogsChecked": false
+  },
+  "reason": "Implementation complete (Phase 5 only)"
+}
+\\\`\\\`\\\`
+
+CRITICAL:
+- Use EXACT field names shown above (camelCase)
+- filesModified MUST include all files you edited
+- success MUST be true if code was written successfully
+- Return ONLY the JSON object - no other text
+
 ## L3 Analysis Data
 ${l3SpecContent ? `\n\`\`\`json\n${l3SpecContent}\n\`\`\`\n` : 'L3 spec not available'}
 
 ## Implementation Type Guidance
-- If L3 shows "implementationType": "payment_method_addition":
-  - Do NOT add to create_all_prerequisites!
-  - Extend existing request struct with payment method variant
-  - Parent flow is specified in L3 parentFlow field
-- If L3 shows "implementationType": "new_flow":
-  - Add to create_all_prerequisites!
-  - Create new request/response structs
+
+Current implementation type: ${implementationType}
+${isPaymentMethodAddition ? `
+## PAYMENT METHOD ADDITION - CRITICAL INSTRUCTIONS
+
+You are implementing a PAYMENT METHOD ADDITION (not a new flow).
+
+### What NOT to do:
+- Do NOT create ${connector}${paymentMethod}Request struct
+- Do NOT create ${connector}${paymentMethod}Response struct
+- Do NOT add to create_all_prerequisites! macro as a new flow
+- Do NOT add a new flow variant
+
+### What TO do:
+1. Find the PaymentInformation enum in transformers.rs
+2. Add a new variant: ${paymentMethod}(Box<${paymentMethod}PaymentInformation>)
+3. Create the ${paymentMethod}PaymentInformation struct with fields from the L3 spec
+4. Find the existing ${parentFlow} TryFrom implementation
+5. Add a match arm for PaymentMethodData::${paymentMethod}
+6. Map the payment method fields to the new PaymentInformation variant
+
+### Example Pattern:
+Before (existing card pattern):
+  PaymentMethodData::Card(card_data) => PaymentInformation::Card(...)
+
+After (adding your new payment method):
+  PaymentMethodData::${paymentMethod}(pm_data) => PaymentInformation::${paymentMethod}(Box::new(${paymentMethod}PaymentInformation { ... }))
+` : `
+## NEW FLOW IMPLEMENTATION - STANDARD INSTRUCTIONS
+
+You are implementing a NEW FLOW.
+
+### Steps:
+1. Add the flow to create_all_prerequisites! macro in ${connector}.rs
+2. Create ${connector}${flow}Request struct (Serialize)
+3. Create ${connector}${flow}Response struct (Deserialize)
+4. Implement TryFrom<RouterDataV2> for ${connector}${flow}Request
+5. Implement TryFrom<${connector}${flow}Response> for RouterDataV2
+6. Add macro_connector_implementation! invocation
+`}
 
 ## Workflow File
 ${workflowContent}
 `;
 
     // Build payload for Codegen Agent
-    const payload = buildCodegenPayload(connector, flow, projectRoot, techSpecPath, l3);
+    // Pass errors from previous attempts if this is a retry
+    const compilationErrors = ctx.artifacts.compilationErrors;
+    const grpcTestErrors = ctx.artifacts.grpcTestErrors;
+
+    if (compilationErrors && compilationErrors.length > 0) {
+      ctx.log(`[implementation] Passing ${compilationErrors.length} compilation errors from previous attempt`, "warn");
+    }
+    if (grpcTestErrors && grpcTestErrors.length > 0) {
+      ctx.log(`[implementation] Passing ${grpcTestErrors.length} gRPC test errors from previous attempt`, "warn");
+    }
+
+    const payload = buildCodegenPayload(connector, flow, projectRoot, techSpecPath, l3, compilationErrors, grpcTestErrors);
 
     ctx.log("[implementation] Starting Codegen Agent (Phase 5 ONLY)...", "warn");
     ctx.log("[implementation]   Phase 4: Read & Analyze", "info");
@@ -199,6 +301,21 @@ ${workflowContent}
         errors: [`Implementation failed: ${msg}`],
       };
     }
+
+    // Normalize result keys from UPPERCASE to camelCase (agent may return either format)
+    const normalizedResult: CodegenResult = {
+      success: result.success ?? (result as unknown as Record<string, unknown>).STATUS === "SUCCESS",
+      connector: result.connector ?? (result as unknown as Record<string, unknown>).CONNECTOR as string,
+      flow: result.flow ?? (result as unknown as Record<string, unknown>).FLOW as string,
+      buildIterations: result.buildIterations ?? 0,
+      grpcurlResult: result.grpcurlResult ?? "NOT_RUN",
+      filesModified: result.filesModified ?? (result as unknown as Record<string, string[]>).FILES_MODIFIED ?? [],
+      fixLog: result.fixLog ?? [],
+      grpcurlOutput: result.grpcurlOutput ?? "",
+      executionLog: result.executionLog ?? { phasesCompleted: [], commandsExecuted: [], serverLogsChecked: false },
+      reason: result.reason ?? (result as unknown as Record<string, string>).REASON,
+    };
+    result = normalizedResult;
 
     // Log results
     if (result.filesModified && result.filesModified.length > 0) {

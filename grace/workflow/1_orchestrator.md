@@ -11,9 +11,19 @@ You do not invoke link agent or techspec agent or codegen agent you only invoke 
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| `{FLOW}` | The payment flow to implement | `BankDebit`, `MIT`, `Wallet`, `PayLater` |
+| `{FLOW}` | The payment flow to implement | `Authorize`, `Capture`, `Refund`, `Void`, `PSync`, `RSync`, `SetupMandate`, `MIT`, `3DS` |
+| `{PAYMENT_METHOD}` | (Optional) Payment method to add to existing flow | `BankDebit`, `Wallet`, `PayLater`, `Card` |
 | `{CONNECTORS_FILE}` | JSON file with connector names (simple array) | `connectors.json` |
 | `{BRANCH}` | Git branch name for all work | `feat/mit` |
+
+**Flow vs Payment Method:**
+- **Flows** are operations: `Authorize`, `Capture`, `Refund`, `Void`, `PSync`, `RSync`, `SetupMandate`
+- **Payment Methods** are instruments: `BankDebit`, `Wallet`, `PayLater`, `Card`
+
+If `{PAYMENT_METHOD}` is provided:
+- `{FLOW}` must be an existing flow (typically `Authorize`)
+- The implementation will extend the existing flow to support the new payment method
+- Do NOT create new `{Connector}{PaymentMethod}Request` structs; extend `PaymentInformation` enum instead
 
 `{CONNECTORS_FILE}` is a **simple JSON array of connector names**, e.g.:
 ```json

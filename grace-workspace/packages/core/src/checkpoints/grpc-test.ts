@@ -78,14 +78,20 @@ You MUST:
 4. Wait for health check
 5. Run grpcurl tests against localhost:8000
 6. Validate response status is one of: authorized, PENDING, charged
-7. Report test results
+7. Report test results including FULL grpcurl command and FULL response
 8. Do NOT modify source files
 9. Do NOT rebuild
 
-## Success Criteria
-- status_code is 2xx (200-299)
-- status is "authorized", "PENDING", or "charged"
-- No error field in response
+## Output Format
+
+Return ONLY valid JSON:
+{
+  "status": "SUCCESS" | "FAILED",
+  "grpcurl_result": "PASS" | "FAIL",
+  "grpcurl_command": "the full grpcurl command used",
+  "grpcurl_output": "the full output including command and response",
+  "response_summary": "brief summary of the response received"
+}
 
 ## Workflow File (execute ONLY Phase 6-7 gRPC testing)
 ${workflowContent}
@@ -105,7 +111,9 @@ ${workflowContent}
     type GrpcTestResult = {
       status?: string;
       grpcurl_result?: string;
+      grpcurl_command?: string;
       grpcurl_output?: string;
+      response_summary?: string;
       output?: string;
       reason?: string;
     };
@@ -122,6 +130,24 @@ ${workflowContent}
       const testPassed = result.status === "SUCCESS" ||
                         (result.grpcurl_result === "PASS");
 
+      const grpcCommand = result.grpcurl_command || "";
+      const grpcOutput = result.grpcurl_output || result.output || "";
+      const responseSummary = result.response_summary || "";
+
+      // Build output for UI display
+      const uiOutput = `gRPC Test Results
+═══════════════════════════════════════════════════════════════
+
+COMMAND USED:
+${grpcCommand || "Not captured"}
+
+RESPONSE RECEIVED:
+${responseSummary || grpcOutput.slice(0, 2000)}
+
+FULL OUTPUT:
+${grpcOutput.slice(0, 3000)}
+`;
+
       if (testPassed) {
         ctx.log("[grpc_test] ✓ gRPC tests passed", "success");
         ctx.log("[grpc_test] ╔═══════════════════════════════════════════════════════════╗", "success");
@@ -130,23 +156,37 @@ ${workflowContent}
 
         return {
           passed: true,
+          output: uiOutput,
           artifacts: {
             grpcTest: result,
-            grpcurlOutput: result.grpcurl_output || result.output,
+            grpcurlOutput: grpcOutput,
+            grpcurlCommand: grpcCommand,
+            grpcResponse: responseSummary,
           },
         };
       } else {
-        ctx.log("[grpc_test] ✗ gRPC tests failed", "error");
-        ctx.log("[grpc_test] ╔═══════════════════════════════════════════════════════════╗", "error");
-        ctx.log("[grpc_test] ║  ✗ gRPC Test Failed                                      ║", "error");
-        ctx.log("[grpc_test] ╚═══════════════════════════════════════════════════════════╝", "error");
+        ctx.log("[grpc_test] ⚠ gRPC tests failed", "warn");
+        ctx.log("[grpc_test] ╔═══════════════════════════════════════════════════════════╗", "warn");
+        ctx.log("[grpc_test] ║  ⚠ gRPC Test Failed - Recording details                ║", "warn");
+        ctx.log("[grpc_test] ╚═══════════════════════════════════════════════════════════╝", "warn");
+
+        const errorMsg = result.reason || "gRPC test failed";
+
+        // Store errors for implementation retry
+        ctx.artifacts.grpcTestErrors = [errorMsg, grpcOutput].filter(Boolean);
+        ctx.artifacts.grpcurlOutput = grpcOutput;
 
         return {
           passed: false,
-          errors: [result.reason || "gRPC test failed"],
+          output: uiOutput,
+          errors: [errorMsg],
           artifacts: {
             grpcTest: result,
-            grpcurlOutput: result.grpcurl_output || result.output,
+            grpcurlOutput: grpcOutput,
+            grpcurlCommand: grpcCommand,
+            grpcResponse: responseSummary,
+            grpcTestFailed: true,
+            grpcTestError: errorMsg,
           },
         };
       }
@@ -155,6 +195,7 @@ ${workflowContent}
       ctx.log(`[grpc_test] gRPC test failed: ${msg}`, "error");
       return {
         passed: false,
+        output: `gRPC Test Error: ${msg}`,
         errors: [`gRPC test failed: ${msg}`],
       };
     }

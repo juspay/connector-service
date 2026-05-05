@@ -10,7 +10,7 @@ import { compilerCheckpoint } from "./compiler.js";
 // REMOVED: import { designMatchCheckpoint } from "./design-match.js";
 // REMOVED: import { cypressCheckpoint } from "./cypress.js";
 // REMOVED: import { playwrightCheckpoint } from "./playwright.js";
-import { compilerCheckCheckpoint } from "./compiler-check.js";
+// REMOVED: import { compilerCheckCheckpoint } from "./compiler-check.js";
 import { grpcTestCheckpoint } from "./grpc-test.js";
 import { prReviewCheckpoint } from "./pr-review.js";
 import { regressionCheckpoint } from "./regression.js";
@@ -28,7 +28,7 @@ export const ALL_CHECKPOINTS: Checkpoint[] = [
   // REMOVED: designMatchCheckpoint,
   // REMOVED: cypressCheckpoint,
   // REMOVED: playwrightCheckpoint,
-  compilerCheckCheckpoint,
+  // REMOVED: compilerCheckCheckpoint,
   grpcTestCheckpoint,
   prReviewCheckpoint,
   regressionCheckpoint,

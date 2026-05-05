@@ -3,6 +3,7 @@ import { runAI } from "../tools/runner-factory.js";
 import {
   L3_ANALYSIS_SYSTEM,
   buildL3AnalysisPayload,
+  type L3AnalysisOptions,
 } from "../generators/l3-analysis-prompt.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -18,6 +19,24 @@ function valid(analysis: unknown): analysis is L3Analysis {
     typeof a.implementationNotes !== "string"
   ) {
     return false;
+  }
+
+  // Check implementationType if provided (new field)
+  if (a.implementationType) {
+    const validTypes = ["new_flow", "payment_method_addition", "flow_completion"];
+    if (!validTypes.includes(a.implementationType as string)) {
+      return false;
+    }
+  }
+
+  // For payment_method_addition, validate required fields
+  if (a.implementationType === "payment_method_addition") {
+    if (!a.parentFlow || typeof a.parentFlow !== "string") {
+      return false;
+    }
+    if (!a.paymentMethod || typeof a.paymentMethod !== "string") {
+      return false;
+    }
   }
 
   // Check analysis object
@@ -45,15 +64,77 @@ function valid(analysis: unknown): analysis is L3Analysis {
   const spec = a.specification as Record<string, unknown>;
   if (!spec || typeof spec !== "object") return false;
 
-  // Check required specification fields
-  if (!spec.requestStruct || !spec.responseStruct || !spec.connectorChanges) {
-    return false;
+  // For payment_method_addition, requestStruct/responseStruct may be omitted
+  // For new_flow/flow_completion, they are required
+  const implType = a.implementationType as string | undefined;
+  if (implType !== "payment_method_addition") {
+    if (!spec.requestStruct || !spec.responseStruct || !spec.connectorChanges) {
+      return false;
+    }
   }
 
   // Check filesChangedPreview (required)
   if (!Array.isArray(spec.filesChangedPreview)) return false;
 
+  // Check supportingTypes (required for payment method additions with extra structs)
+  if (!Array.isArray(spec.supportingTypes)) return false;
+
   return true;
+}
+
+/**
+ * Check if a file contains a specific string
+ */
+async function checkFileContains(filePath: string, pattern: string): Promise<boolean> {
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    return content.includes(pattern);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Cross-connector validation to detect misclassified flows
+ */
+async function validateAgainstReferenceConnectors(
+  projectRoot: string,
+  flow: string,
+  logFn: (msg: string, level?: "info" | "warn" | "error" | "success" | "debug") => void
+): Promise<{ isLikelyPaymentMethod: boolean; flowCount: number; pmCount: number }> {
+  const refConnectors = ["adyen", "stripe", "checkout"];
+  let flowCount = 0;
+  let pmCount = 0;
+
+  for (const ref of refConnectors) {
+    const refFile = path.join(
+      projectRoot,
+      `crates/integrations/connector-integration/src/connectors/${ref}.rs`
+    );
+    const transformersFile = path.join(
+      projectRoot,
+      `crates/integrations/connector-integration/src/connectors/${ref}/transformers.rs`
+    );
+
+    const hasFlow = await checkFileContains(refFile, `flow: ${flow}`);
+    const hasPm = await checkFileContains(transformersFile, flow);
+
+    if (hasFlow) flowCount++;
+    if (hasPm) pmCount++;
+  }
+
+  // If most connectors have it as PM but not as Flow, it's likely a payment method
+  const isLikelyPaymentMethod = pmCount >= 2 && flowCount === 0;
+
+  if (isLikelyPaymentMethod) {
+    logFn(
+      `[l3_analysis] WARNING: '${flow}' appears to be a payment method in ${pmCount} connectors, ` +
+        `but not a flow in any. Consider using PAYMENT_METHOD=${flow} with FLOW=Authorize`,
+      "warn"
+    );
+  }
+
+  return { isLikelyPaymentMethod, flowCount, pmCount };
 }
 
 /**
@@ -111,6 +192,8 @@ export const l3AnalysisCheckpoint: Checkpoint = {
 
     const connector = task.targetConnectors[0];
     const flow = task.paymentMethod || "Unknown";
+    const paymentMethod = task.paymentMethod;
+    const isPaymentMethodAddition = !!paymentMethod;
     const projectRoot = task.projectRoot;
 
     ctx.log(
@@ -127,6 +210,21 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     );
     ctx.log(`[l3_analysis] Connector: ${connector}`, "info");
     ctx.log(`[l3_analysis] Flow: ${flow}`, "info");
+    if (paymentMethod) {
+      ctx.log(`[l3_analysis] Payment Method: ${paymentMethod}`, "info");
+      ctx.log(`[l3_analysis] Type: payment_method_addition`, "info");
+    }
+
+    // Cross-connector validation for potential misclassification
+    if (!isPaymentMethodAddition && flow !== "Unknown") {
+      const validation = await validateAgainstReferenceConnectors(projectRoot, flow, ctx.log);
+      if (validation.isLikelyPaymentMethod) {
+        ctx.log(
+          `[l3_analysis] RECOMMENDATION: Set task.paymentMethod="${flow}" and use FLOW="Authorize"`,
+          "warn"
+        );
+      }
+    }
 
     // Ensure tech spec is available on disk
     let techSpecPath: string;
@@ -148,12 +246,18 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     }
 
     // Build payload for L3 Analysis Agent
+    const options: L3AnalysisOptions = {
+      paymentMethod,
+      isPaymentMethodAddition,
+    };
     const payload = buildL3AnalysisPayload(
       connector,
       flow,
       techSpecPath,
       projectRoot,
       "/Users/tushar.shukla/Downloads/Work/UCS-dup/connector-service/grace/workflow/2.3_codegen.md",
+      l2,
+      options
     );
 
     ctx.log(
@@ -177,6 +281,26 @@ export const l3AnalysisCheckpoint: Checkpoint = {
         timeoutMs: 25 * 60 * 1000, // 25 min (leaving buffer for checkpoint overhead)
       });
       result = rawResult;
+
+      // Handle auto-wrapped results (when JSON parsing failed in runner)
+      if ((result as unknown as Record<string, unknown>).contents && !(result as unknown as Record<string, unknown>).analysis) {
+        ctx.log("[l3_analysis] Result was auto-wrapped, attempting to extract JSON from contents", "warn");
+        const wrapped = result as unknown as { contents: string; notes?: string };
+        try {
+          // Try to extract JSON from the contents string
+          let extracted = wrapped.contents;
+          // Remove markdown fences if present
+          extracted = extracted.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+          // Find the JSON object
+          const match = extracted.match(/\{[\s\S]*\}/);
+          if (match) {
+            result = JSON.parse(match[0]) as L3Analysis;
+            ctx.log("[l3_analysis] Successfully extracted L3 analysis from wrapped contents", "info");
+          }
+        } catch (extractErr) {
+          ctx.log(`[l3_analysis] Failed to extract from wrapped contents: ${extractErr}`, "error");
+        }
+      }
 
       // Save L3 spec to file for downstream checkpoints
       const l3SpecPath = path.join(
@@ -214,13 +338,22 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     }
 
     // Check if flow already exists
-    if (result.analysis.flowAlreadyExists) {
+    // For payment_method_addition, the parent flow SHOULD exist - don't skip
+    if (result.analysis.flowAlreadyExists && result.implementationType !== "payment_method_addition") {
       ctx.log("[l3_analysis] ⚠ Flow already implemented - SKIPPING", "warn");
       return {
         passed: false,
         errors: ["Flow already implemented - SKIPPED"],
         artifacts: { l3: result },
       };
+    }
+
+    // For payment_method_addition, log the intent
+    if (result.implementationType === "payment_method_addition") {
+      ctx.log(
+        `[l3_analysis] ℹ Payment method addition: extending '${result.parentFlow}' with '${result.paymentMethod}'`,
+        "info"
+      );
     }
 
     // Check prerequisites status

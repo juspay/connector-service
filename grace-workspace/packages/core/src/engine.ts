@@ -29,11 +29,16 @@ export class PipelineEngine {
 
       if (retries >= maxRetries) {
         ctx.log(
-          `[${checkpoint.id}] Max retries (${maxRetries}) exceeded. Aborting.`,
+          `[${checkpoint.id}] Max retries (${maxRetries}) exceeded. Pausing for manual retry.`,
           "error"
         );
-        await this.state.save(ctx, checkpoint.id, "failed");
-        throw new PipelineAbortError(checkpoint.id, "Max retries exceeded");
+        await this.state.save(ctx, checkpoint.id, "waiting_for_retry");
+        this.bus?.emitStatus(checkpoint.id, "waiting_for_retry");
+        this.bus?.emit("pipeline:waiting_for_retry", checkpoint.id, {
+          maxRetries,
+          lastError: "Max retries exceeded",
+        });
+        throw new PipelineAbortError(checkpoint.id, "Max retries exceeded - manual retry required");
       }
 
       ctx.log(`[${checkpoint.id}] Starting: ${checkpoint.name}`, "info");
