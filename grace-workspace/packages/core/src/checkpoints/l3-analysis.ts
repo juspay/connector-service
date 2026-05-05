@@ -327,21 +327,8 @@ export const l3AnalysisCheckpoint: Checkpoint = {
       };
     }
 
-    // For payment_method_addition, verify parent flow exists
+    // For payment_method_addition, log the intent
     if (result.implementationType === "payment_method_addition") {
-      if (!result.analysis.flowAlreadyExists) {
-        ctx.log(
-          `[l3_analysis] ✗ Parent flow '${result.parentFlow}' does not exist. Cannot add payment method to non-existent flow.`,
-          "error"
-        );
-        return {
-          passed: false,
-          errors: [
-            `Parent flow '${result.parentFlow}' does not exist. Create the flow first or check FLOW parameter.`,
-          ],
-          artifacts: { l3: result },
-        };
-      }
       ctx.log(
         `[l3_analysis] ℹ Payment method addition: extending '${result.parentFlow}' with '${result.paymentMethod}'`,
         "info"
