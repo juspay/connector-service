@@ -1531,13 +1531,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             context: Default::default(),
                         },
                     )?;
-                    let token_source = id
-                        .get_payment_method_id()
-                        .ok_or(errors::IntegrationError::MissingRequiredField {
-                            field_name: "payment_method_id",
-                            context: Default::default(),
-                        })?
-                        .to_string();
+                    let token_source = "TRANSARMOR".to_string(); // Assuming TRANSARMOR as token source for repeat payments;
                     let scheme_ref_id = id.get_connector_mandate_request_reference_id();
                     (connector_mandate_id, token_source, scheme_ref_id)
                 }
