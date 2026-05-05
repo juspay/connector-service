@@ -390,7 +390,9 @@ pub struct Connectors {
     pub itaubank: ConnectorParams,
     pub sanlam: ConnectorParams,
     pub pinelabs_online: ConnectorParams,
+    pub easebuzz: ConnectorParams,
     pub imerchantsolutions: ConnectorParams,
+    pub axisbank: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -3119,6 +3121,19 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::Money> for common_utils::types::Money {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::Money,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+        })
+    }
+}
+
 impl<
         T: PaymentMethodDataTypes
             + Default
@@ -4162,7 +4177,7 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             minor_amount_capturable: None,
             amount: None,
             access_token: None,
-            session_token: value.session_token.clone(),
+            session_token: value.session_token,
             reference_id: None,
             connector_order_id: None,
             preprocessing_id: None,
@@ -4216,6 +4231,13 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
 
         let order_details: Option<Vec<OrderDetailsWithAmount>> = None;
 
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(ServerAuthenticationTokenResponseData::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -4236,7 +4258,7 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             minor_amount_captured: None,
             minor_amount_capturable: None,
             amount: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             connector_order_id: None,
@@ -6369,6 +6391,10 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+                .transpose()?,
+            refund_money: value
+                .refund_amount
+                .map(common_utils::types::Money::foreign_try_from)
                 .transpose()?,
         })
     }
@@ -11192,6 +11218,18 @@ ConnectorSpecificClientAuthenticationResponse::Cybersource(cybersource_data) => 
                         grpc_api_types::payments::NexixpayClientAuthenticationResponse {
                             security_token: Some(nexixpay_data.security_token),
                             hosted_page: nexixpay_data.hosted_page,
+                        },
+                    ),
+                ),
+            }
+        }
+                ConnectorSpecificClientAuthenticationResponse::Revolut(revolut_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Revolut(
+                        grpc_api_types::payments::RevolutClientAuthenticationResponse {
+                            order_id: revolut_data.order_id,
+                            token: Some(revolut_data.token),
                         },
                     ),
                 ),

@@ -141,6 +141,8 @@ pub enum ConnectorEnum {
     Itaubank,
     Sanlam,
     PinelabsOnline,
+    Easebuzz,
+    Axisbank,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -229,7 +231,9 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Trustly => Ok(Self::Trustly),
             grpc_api_types::payments::Connector::Itaubank => Ok(Self::Itaubank),
             grpc_api_types::payments::Connector::PinelabsOnline => Ok(Self::PinelabsOnline),
+            grpc_api_types::payments::Connector::Easebuzz => Ok(Self::Easebuzz),
             grpc_api_types::payments::Connector::Imerchantsolutions => Ok(Self::Imerchantsolutions),
+            grpc_api_types::payments::Connector::Axisbank => Ok(Self::Axisbank),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -1753,6 +1757,7 @@ pub struct RefundSyncData {
     /// Charges associated with the payment
     pub split_refunds: Option<SplitRefundsRequest>,
     pub connector_feature_data: Option<SecretSerdeValue>,
+    pub refund_money: Option<common_utils::types::Money>,
 }
 
 impl RefundSyncData {
@@ -3576,6 +3581,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Nexinets(NexinetsClientAuthenticationResponse),
     /// Nexixpay SDK initialization data — security_token and hosted_page URL for HPP initialization
     Nexixpay(NexixpayClientAuthenticationResponse),
+    /// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+    Revolut(RevolutClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3774,6 +3781,15 @@ pub struct NexixpayClientAuthenticationResponse {
     pub security_token: Secret<String>,
     /// The hosted payment page URL for client-side redirect
     pub hosted_page: String,
+}
+
+/// Revolut's order_id and token for client-side Revolut Pay widget initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RevolutClientAuthenticationResponse {
+    /// The order ID created on Revolut
+    pub order_id: String,
+    /// The client authentication token for SDK initialization
+    pub token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4178,6 +4194,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Truelayer(_) => Ok(Self::Truelayer),
             AuthType::Fiservcommercehub(_) => Ok(Self::Fiservcommercehub),
             AuthType::Itaubank(_) => Ok(Self::Itaubank),
+            AuthType::Axisbank(_) => Ok(Self::Axisbank),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -4213,6 +4230,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),
             AuthType::Ppro(_) => Ok(Self::Ppro),
             AuthType::PinelabsOnline(_) => Ok(Self::PinelabsOnline),
+            AuthType::Easebuzz(_) => Ok(Self::Easebuzz),
             AuthType::Imerchantsolutions(_) => Ok(Self::Imerchantsolutions),
         }
     }

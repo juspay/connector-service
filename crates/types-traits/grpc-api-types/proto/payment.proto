@@ -751,6 +751,8 @@ enum Connector {
   SANLAM = 116;
   PINELABS_ONLINE = 117;
   IMERCHANTSOLUTIONS = 118;
+  AXISBANK = 119;
+  EASEBUZZ = 120;
 }
 
 // Payment method types
@@ -1565,6 +1567,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     MultisafepayClientAuthenticationResponse multisafepay = 23;
     NexinetsClientAuthenticationResponse nexinets = 24;
     NexixpayClientAuthenticationResponse nexixpay = 25;
+    RevolutClientAuthenticationResponse revolut = 26;
   }
 }
 
@@ -1698,6 +1701,14 @@ message NexinetsClientAuthenticationResponse {
 message NexixpayClientAuthenticationResponse {
   SecretString security_token = 1;
   string hosted_page = 2;
+}
+
+// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+message RevolutClientAuthenticationResponse {
+  // The order ID created on Revolut
+  string order_id = 1;
+  // The client authentication token for SDK initialization
+  SecretString token = 2;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
@@ -3281,6 +3292,9 @@ message RefundServiceGetRequest {
   optional PaymentMethodType payment_method_type = 9;
 
   optional SecretString connector_feature_data = 10;
+
+  // Amount Information
+  optional Money refund_amount = 15;
 }
 
 // ============================================================================
@@ -3999,7 +4013,10 @@ message SanlamConfig {
 message ItaubankConfig {
   SecretString client_secret = 1;
   SecretString client_id = 2;
+  optional SecretString certificates = 3;
+  optional SecretString private_key = 4;
   optional string base_url = 50;
+  optional string secondary_base_url = 51;
 }
 
 message GigadatConfig {
@@ -4151,6 +4168,13 @@ message TrustlyConfig {
   optional string base_url = 50;
 }
 
+message EasebuzzConfig {
+  SecretString api_key = 1;
+  SecretString api_salt = 2;
+  optional string base_url = 50;
+  optional string secondary_base_url = 51;
+}
+
 message TruelayerConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
@@ -4170,7 +4194,16 @@ message PinelabsOnlineConfig {
 
 message ImerchantsolutionsConfig {
   SecretString api_key = 1;
-  optional string base_url = 2;
+  optional SecretString merchant_id = 2;
+  optional string base_url = 3;
+}
+
+message AxisbankConfig {
+  SecretString merchant_kid = 3;
+  SecretString juspay_kid = 4;
+  SecretString merchant_private_key = 5;
+  SecretString juspay_public_key = 6;
+  optional string base_url = 50;
 }
 
 // ConnectorSpecificConfig message with oneof containing all connector
@@ -4423,6 +4456,12 @@ message ConnectorSpecificConfig {
 
     // IMERCHANTSOLUTIONS = 118
     ImerchantsolutionsConfig imerchantsolutions = 118;
+
+    // AXISBANK = 119
+    AxisbankConfig axisbank = 119;
+
+    // EASEBUZZ = 120
+    EasebuzzConfig easebuzz = 120;
   }
 }
 

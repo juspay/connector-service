@@ -1,7 +1,7 @@
-use super::payout_method_data::PayoutMethodData;
+use super::payout_method_data::{Bank, PayoutMethodData};
 use crate::{
     connector_types::{
-        ConnectorResponseHeaders, CustomerInfo, RawConnectorRequestResponse,
+        ConnectorResponseHeaders, RawConnectorRequestResponse,
         ServerAuthenticationTokenResponseData,
     },
     payment_address::Address,
@@ -86,7 +86,7 @@ pub struct PayoutCreateRequest {
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
-    // Add additional nested structures as needed
+    pub source_bank_data: Option<Bank>,
 }
 
 #[derive(Debug, Clone)]
@@ -115,8 +115,19 @@ pub struct PayoutTransferRequest {
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
-    pub customer: Option<CustomerInfo>,
     pub address: Option<PayoutAddress>,
+    pub source_bank_data: Option<Bank>,
+    pub customer: Option<PayoutCustomer>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PayoutCustomer {
+    pub name: Option<String>,
+    pub email: Option<common_utils::pii::Email>,
+    pub merchant_customer_id: Option<String>,
+    pub connector_customer_id: Option<String>,
+    pub phone_number: Option<Secret<String>>,
+    pub phone_country_code: Option<String>,
 }
 
 #[derive(Debug, Clone)]
