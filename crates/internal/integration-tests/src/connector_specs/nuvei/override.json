@@ -11,9 +11,18 @@
       }
     },
     "no3ds_fail_payment": {
+      "grpc_req": {
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4107652651950141"
+            }
+          }
+        }
+      },
       "assert": {
         "status": {
-          "one_of": ["CHARGED", "AUTHORIZED"]
+          "one_of": ["FAILURE"]
         },
         "connector_transaction_id": {
           "must_exist": true
