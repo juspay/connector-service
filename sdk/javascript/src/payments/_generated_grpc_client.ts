@@ -265,7 +265,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   EasebuzzConfig: ["apiKey", "apiSalt"],
   TruelayerConfig: ["clientId", "clientSecret", "merchantAccountId", "accountHolderName", "privateKey", "kid"],
   PinelabsOnlineConfig: ["clientId", "clientSecret"],
-  ImerchantsolutionsConfig: ["apiKey"],
+  ImerchantsolutionsConfig: ["apiKey", "merchantId"],
   AxisbankConfig: ["merchantKid", "juspayKid", "merchantPrivateKey", "juspayPublicKey"],
   PaymentServiceTokenAuthorizeRequest: ["connectorToken", "metadata", "connectorFeatureData"],
   PaymentServiceTokenSetupRecurringRequest: ["connectorToken", "metadata", "connectorFeatureData"],
