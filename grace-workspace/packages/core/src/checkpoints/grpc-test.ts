@@ -43,31 +43,70 @@ export const grpcTestCheckpoint: Checkpoint = {
     ctx.log(`[grpc_test] Flow: ${flow}`, "info");
 
     // ── Pre-flight: make sure grpc-server is reachable on localhost:8000 ──
+    // The grpc-server binds two ports per config/development.toml:
+    //   - 8000  → gRPC (what grpcurl talks to)        ← what we actually need
+    //   - 8080  → metrics
+    // Probe BOTH so we can distinguish three states:
+    //   (a) gRPC up               → proceed
+    //   (b) both down             → optionally auto-spawn (cold cargo build can take 5-10 min)
+    //   (c) gRPC down, metrics up → orphan/half-dead server; auto-spawn would
+    //       fail with AddrInUse on 8080. Surface a clear instruction instead.
     const startTs = Date.now();
     let serverLogPath = ctx.artifacts.grpcServerLogPath;
     try {
-      const reachable = await tcpProbe("127.0.0.1", 8000, 1000);
-      if (!reachable) {
-        ctx.log("[grpc_test] grpc-server not reachable on :8000 — starting it", "warn");
+      const grpcUp = await tcpProbe("127.0.0.1", 8000, 1000);
+      const metricsUp = await tcpProbe("127.0.0.1", 8080, 1000);
+
+      if (grpcUp) {
+        ctx.log("[grpc_test] grpc-server already running on :8000", "info");
+      } else if (metricsUp) {
+        // Half-dead server: a previous grpc-server crashed after binding 8080
+        // but before / instead of 8000. Auto-spawn here would build for
+        // minutes and then die with AddrInUse on 8080. Tell the user.
+        const msg =
+          "grpc-server appears half-dead: port 8000 (gRPC) is free but port 8080 (metrics) is held by another process. " +
+          "Find and kill it, then re-run.\n" +
+          "  Diagnose: lsof -nP -iTCP:8080 -sTCP:LISTEN\n" +
+          "  Kill:     kill <PID>            (or kill -9 if it ignores SIGTERM)\n" +
+          "  Then:     cargo run --bin grpc-server   (or let the pipeline auto-spawn)";
+        ctx.log(`[grpc_test] ${msg}`, "error");
+        return {
+          passed: false,
+          errors: [msg],
+          artifacts: {
+            repairBrief: {
+              source: "grpc_test",
+              flow,
+              errorKind: "infra",
+              serverLogTail: msg,
+            } satisfies RepairBrief,
+          },
+        };
+      } else {
+        ctx.log("[grpc_test] grpc-server not running — starting it (cold cargo build can take several minutes)", "warn");
         serverLogPath = await spawnGrpcServer(projectRoot);
         ctx.artifacts.grpcServerLogPath = serverLogPath;
-        const ready = await waitForGrpcReadiness("127.0.0.1", 8000, 60_000);
+        ctx.log(`[grpc_test] grpc-server log: ${serverLogPath}  (tail to watch progress)`, "info");
+        // 10 min budget covers cold build + bind. Configurable via env if needed.
+        const readinessMs = Number(process.env.GRACE_GRPC_READINESS_MS ?? 10 * 60 * 1000);
+        const ready = await waitForGrpcReadiness("127.0.0.1", 8000, readinessMs);
         if (!ready) {
+          const tail = await tailServerLog(serverLogPath, startTs);
+          const msg = `grpc-server failed to become ready within ${Math.round(readinessMs / 1000)}s. Last log lines:\n${tail.slice(-2000) || "(empty)"}\nFull log: ${serverLogPath}`;
           return {
             passed: false,
-            errors: ["grpc-server failed to become ready within 60s"],
+            errors: [msg],
             artifacts: {
               repairBrief: {
                 source: "grpc_test",
                 flow,
                 errorKind: "infra",
+                serverLogTail: tail,
               } satisfies RepairBrief,
             },
           };
         }
         ctx.log("[grpc_test] grpc-server is up", "success");
-      } else {
-        ctx.log("[grpc_test] grpc-server already running on :8000", "info");
       }
     } catch (err) {
       ctx.log(`[grpc_test] Pre-flight error: ${err instanceof Error ? err.message : String(err)}`, "warn");

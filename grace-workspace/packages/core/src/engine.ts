@@ -114,26 +114,27 @@ export class PipelineEngine {
         // it at the engine so an LLM-driven checkpoint cannot rationalise
         // its way past it. Two consecutive identical fingerprints from the
         // same checkpoint = the rollback target's fix did not address the
-        // failure — escalate or abort.
+        // failure — escalate or abort. The abort message adapts to the error
+        // kind so we don't claim "code repair failed" when nothing was tested
+        // (infra failures: server not up, network down, timeouts).
         ctx.errorFingerprints ??= {};
         const fp = fingerprintFailure(result);
         const history = ctx.errorFingerprints[checkpoint.id] ?? [];
         const lastFp = history[history.length - 1];
         if (fp && lastFp === fp) {
-          ctx.log(
-            `[${checkpoint.id}] Identical error repeated (fp=${fp.slice(0, 8)}). The previous rollback did not change the failure — aborting before burning more retries.`,
-            "error",
-          );
+          const errorKind = (result.artifacts as { repairBrief?: { errorKind?: string } } | undefined)?.repairBrief?.errorKind;
+          const isInfra = errorKind === "infra";
+          const summary = isInfra
+            ? `Infrastructure failure repeated (kind=infra, fp=${fp.slice(0, 8)}). The test never ran — fix the environment (e.g. start grpc-server, free the conflicting port) and retry. No code repair will help.`
+            : `Identical error repeated (kind=${errorKind ?? "unknown"}, fp=${fp.slice(0, 8)}). The previous rollback did not change the failure — aborting before burning more retries.`;
+          ctx.log(`[${checkpoint.id}] ${summary}`, "error");
           await this.state.save(ctx, checkpoint.id, "waiting_for_retry");
           this.bus?.emitStatus(checkpoint.id, "waiting_for_retry");
           this.bus?.emit("pipeline:waiting_for_retry", checkpoint.id, {
             maxRetries,
-            lastError: "Identical error repeated — manual intervention required",
+            lastError: summary,
           });
-          throw new PipelineAbortError(
-            checkpoint.id,
-            `Identical error fingerprint (${fp.slice(0, 8)}) on consecutive attempts — code repair did not address the failure. Manual intervention required.`,
-          );
+          throw new PipelineAbortError(checkpoint.id, summary);
         }
         if (fp) {
           ctx.errorFingerprints[checkpoint.id] = [...history, fp].slice(-3);
