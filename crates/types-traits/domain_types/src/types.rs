@@ -5569,10 +5569,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             )?),
         };
 
-        let payment_method_type =
-            <Option<common_enums::PaymentMethodType>>::foreign_try_from(
-                value.payment_method_type(),
-            )?;
+        let payment_method_type = <Option<common_enums::PaymentMethodType>>::foreign_try_from(
+            value.payment_method_type(),
+        )?;
 
         let connector_feature_data = value
             .connector_feature_data
