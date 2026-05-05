@@ -1243,39 +1243,41 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRecipientRequest
                 },
             })?;
 
-
         let address = value.address.map(|addr| {
             let billing = addr.billing_address;
-            let address_details = billing.as_ref().map(|b| {
-                super::super::payment_address::AddressDetails {
-                    city: b.city.clone(),
-                    country: b.country_alpha2_code.and_then(|c| {
-                        grpc_api_types::payments::CountryAlpha2::try_from(c)
-                            .ok()
-                            .and_then(|cc| common_enums::CountryAlpha2::try_from(cc.as_str_name()).ok())
-                    }),
-                    line1: b.line1.clone(),
-                    line2: b.line2.clone(),
-                    line3: b.line3.clone(),
-                    zip: b.zip_code.clone(),
-                    state: b.state.clone(),
-                    first_name: b.first_name.clone(),
-                    last_name: b.last_name.clone(),
-                    origin_zip: None,
-                }
-            });
+            let address_details =
+                billing
+                    .as_ref()
+                    .map(|b| super::super::payment_address::AddressDetails {
+                        city: b.city.clone(),
+                        country: b.country_alpha2_code.and_then(|c| {
+                            grpc_api_types::payments::CountryAlpha2::try_from(c)
+                                .ok()
+                                .and_then(|cc| {
+                                    common_enums::CountryAlpha2::try_from(cc.as_str_name()).ok()
+                                })
+                        }),
+                        line1: b.line1.clone(),
+                        line2: b.line2.clone(),
+                        line3: b.line3.clone(),
+                        zip: b.zip_code.clone(),
+                        state: b.state.clone(),
+                        first_name: b.first_name.clone(),
+                        last_name: b.last_name.clone(),
+                        origin_zip: None,
+                    });
             let phone_details = billing.as_ref().and_then(|b| {
-                b.phone_number.as_ref().map(|phone| {
-                    super::super::payment_address::PhoneDetails {
+                b.phone_number
+                    .as_ref()
+                    .map(|phone| super::super::payment_address::PhoneDetails {
                         number: Some(phone.clone()),
                         country_code: b.phone_country_code.clone(),
-                    }
-                })
+                    })
             });
             let email = billing.as_ref().and_then(|b| {
-                b.email.as_ref().and_then(|e| {
-                    common_utils::pii::Email::try_from(e.peek().clone()).ok()
-                })
+                b.email
+                    .as_ref()
+                    .and_then(|e| common_utils::pii::Email::try_from(e.peek().clone()).ok())
             });
             super::super::payment_address::Address {
                 address: address_details,
@@ -1284,18 +1286,20 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRecipientRequest
             }
         });
 
-
-        let customer = value.customer.map(|cust| crate::connector_types::CustomerInfo {
-            customer_id: cust.id.and_then(|id| {
-                common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id)).ok()
-            }),
-            customer_email: cust.email.as_ref().and_then(|e| {
-                common_utils::pii::Email::try_from(e.peek().clone()).ok()
-            }),
-            customer_name: cust.name.map(hyperswitch_masking::Secret::new),
-            customer_phone_number: cust.phone_number.map(hyperswitch_masking::Secret::new),
-            customer_phone_country_code: cust.phone_country_code.clone(),
-        });
+        let customer = value
+            .customer
+            .map(|cust| crate::connector_types::CustomerInfo {
+                customer_id: cust.id.and_then(|id| {
+                    common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id)).ok()
+                }),
+                customer_email: cust
+                    .email
+                    .as_ref()
+                    .and_then(|e| common_utils::pii::Email::try_from(e.peek().clone()).ok()),
+                customer_name: cust.name.map(hyperswitch_masking::Secret::new),
+                customer_phone_number: cust.phone_number.map(hyperswitch_masking::Secret::new),
+                customer_phone_country_code: cust.phone_country_code.clone(),
+            });
 
         Ok(Self {
             merchant_payout_id: value.merchant_payout_id.clone(),
@@ -1365,18 +1369,20 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountR
             .map(payouts::payout_method_data::PayoutMethodData::foreign_try_from)
             .transpose()?;
 
-
-        let customer = value.customer.map(|cust| crate::connector_types::CustomerInfo {
-            customer_id: cust.id.and_then(|id| {
-                common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id)).ok()
-            }),
-            customer_email: cust.email.as_ref().and_then(|e| {
-                common_utils::pii::Email::try_from(e.peek().clone()).ok()
-            }),
-            customer_name: cust.name.map(hyperswitch_masking::Secret::new),
-            customer_phone_number: cust.phone_number.map(hyperswitch_masking::Secret::new),
-            customer_phone_country_code: cust.phone_country_code.clone(),
-        });
+        let customer = value
+            .customer
+            .map(|cust| crate::connector_types::CustomerInfo {
+                customer_id: cust.id.and_then(|id| {
+                    common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id)).ok()
+                }),
+                customer_email: cust
+                    .email
+                    .as_ref()
+                    .and_then(|e| common_utils::pii::Email::try_from(e.peek().clone()).ok()),
+                customer_name: cust.name.map(hyperswitch_masking::Secret::new),
+                customer_phone_number: cust.phone_number.map(hyperswitch_masking::Secret::new),
+                customer_phone_country_code: cust.phone_country_code.clone(),
+            });
 
         Ok(Self {
             merchant_payout_id: value.merchant_payout_id.clone(),

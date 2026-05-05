@@ -12,9 +12,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
-        IncrementalAuthorization, PaymentMethodToken, RepeatPayment, SetupMandate, Void,
-        PayoutCreate, PayoutCreateRecipient, PayoutEnrollDisburseAccount, PayoutGet, PayoutTransfer,
-        PayoutVoid,
+        IncrementalAuthorization, PaymentMethodToken, PayoutCreate, PayoutCreateRecipient,
+        PayoutEnrollDisburseAccount, PayoutGet, PayoutTransfer, PayoutVoid, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
@@ -26,13 +26,6 @@ use domain_types::{
         ResponseId, SetupMandateRequestData,
         StripeClientAuthenticationResponse as StripeClientAuthenticationResponseDomain,
     },
-    payouts::payout_method_data::{Bank, PayoutMethodData},
-    payouts::payouts_types::{
-        PayoutCreateRecipientRequest, PayoutCreateRecipientResponse, PayoutCreateRequest,
-        PayoutCreateResponse, PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse,
-        PayoutFlowData, PayoutGetRequest, PayoutGetResponse, PayoutTransferRequest,
-        PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
-    },
     errors::{ConnectorError, IntegrationError},
     mandates::AcceptanceType,
     payment_method_data::{
@@ -40,6 +33,13 @@ use domain_types::{
         Card, CardRedirectData, GiftCardData, GooglePayWalletData, MultibancoTransferInstructions,
         PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
         WalletData,
+    },
+    payouts::payout_method_data::{Bank, PayoutMethodData},
+    payouts::payouts_types::{
+        PayoutCreateRecipientRequest, PayoutCreateRecipientResponse, PayoutCreateRequest,
+        PayoutCreateResponse, PayoutEnrollDisburseAccountRequest,
+        PayoutEnrollDisburseAccountResponse, PayoutFlowData, PayoutGetRequest, PayoutGetResponse,
+        PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
@@ -5467,10 +5467,8 @@ impl From<StripeConnectPayoutStatus> for common_enums::PayoutStatus {
 // PAYOUT CREATE (TRANSFER CREATE)
 // =============================================================================
 
-
 #[derive(Clone, Debug, Serialize)]
 pub struct StripeConnectPayoutCreateRequest {
-
     pub amount: MinorUnit,
 
     pub currency: String,
@@ -5481,8 +5479,12 @@ pub struct StripeConnectPayoutCreateRequest {
 }
 
 impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
-    TryFrom<StripeRouterData<RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>, T>>
-    for StripeConnectPayoutCreateRequest
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>,
+            T,
+        >,
+    > for StripeConnectPayoutCreateRequest
 {
     type Error = error_stack::Report<IntegrationError>;
 
@@ -5497,8 +5499,12 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
             item.router_data.request.source_currency,
         )?;
 
-        let currency = item.router_data.request.source_currency.to_string().to_lowercase();
-
+        let currency = item
+            .router_data
+            .request
+            .source_currency
+            .to_string()
+            .to_lowercase();
 
         let destination = item
             .router_data
@@ -5512,7 +5518,12 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
                 })
             })?;
 
-        let transfer_group = Some(item.router_data.resource_common_data.connector_request_reference_id.clone());
+        let transfer_group = Some(
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        );
 
         Ok(Self {
             amount,
@@ -5523,10 +5534,8 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
     }
 }
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StripeConnectPayoutCreateResponse {
-
     pub id: String,
 
     pub description: Option<String>,
@@ -5559,24 +5568,36 @@ impl TryFrom<ResponseRouterData<StripeConnectPayoutCreateResponse, Self>>
 // PAYOUT FULFILL (PAYOUT CREATE)
 // =============================================================================
 
-
 #[derive(Clone, Debug, Serialize)]
 pub struct StripeConnectPayoutFulfillRequest {
-
     pub amount: MinorUnit,
 
     pub currency: String,
 }
 
 impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
-    TryFrom<StripeRouterData<RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>, T>>
-    for StripeConnectPayoutFulfillRequest
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                PayoutTransfer,
+                PayoutFlowData,
+                PayoutTransferRequest,
+                PayoutTransferResponse,
+            >,
+            T,
+        >,
+    > for StripeConnectPayoutFulfillRequest
 {
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: StripeRouterData<
-            RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>,
+            RouterDataV2<
+                PayoutTransfer,
+                PayoutFlowData,
+                PayoutTransferRequest,
+                PayoutTransferResponse,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -5585,19 +5606,19 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
             item.router_data.request.source_currency,
         )?;
 
-        let currency = item.router_data.request.source_currency.to_string().to_lowercase();
+        let currency = item
+            .router_data
+            .request
+            .source_currency
+            .to_string()
+            .to_lowercase();
 
-        Ok(Self {
-            amount,
-            currency,
-        })
+        Ok(Self { amount, currency })
     }
 }
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StripeConnectPayoutFulfillResponse {
-
     pub id: String,
 
     pub currency: String,
@@ -5646,17 +5667,13 @@ impl TryFrom<ResponseRouterData<StripeConnectPayoutFulfillResponse, Self>>
 // PAYOUT VOID (TRANSFER REVERSAL)
 // =============================================================================
 
-
 #[derive(Clone, Debug, Serialize)]
 pub struct StripeConnectReversalRequest {
-
     pub amount: Option<MinorUnit>,
 }
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StripeConnectReversalResponse {
-
     pub id: String,
 
     #[serde(rename = "source_refund")]
@@ -5664,8 +5681,12 @@ pub struct StripeConnectReversalResponse {
 }
 
 impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
-    TryFrom<StripeRouterData<RouterDataV2<PayoutVoid, PayoutFlowData, PayoutVoidRequest, PayoutVoidResponse>, T>>
-    for StripeConnectReversalRequest
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<PayoutVoid, PayoutFlowData, PayoutVoidRequest, PayoutVoidResponse>,
+            T,
+        >,
+    > for StripeConnectReversalRequest
 {
     type Error = error_stack::Report<IntegrationError>;
 
@@ -5675,10 +5696,7 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
             T,
         >,
     ) -> Result<Self, Self::Error> {
-
-        Ok(Self {
-            amount: None,
-        })
+        Ok(Self { amount: None })
     }
 }
 
@@ -5706,10 +5724,8 @@ impl TryFrom<ResponseRouterData<StripeConnectReversalResponse, Self>>
 // PAYOUT GET (PAYOUT RETRIEVE)
 // =============================================================================
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StripeConnectPayoutRetrieveResponse {
-
     pub id: String,
 
     pub amount: MinorUnit,
@@ -5751,10 +5767,8 @@ impl TryFrom<ResponseRouterData<StripeConnectPayoutRetrieveResponse, Self>>
 // RECIPIENT CREATE (CONNECTED ACCOUNT)
 // =============================================================================
 
-
 #[derive(Clone, Debug, Serialize)]
 pub struct StripeConnectRecipientCreateRequest {
-
     #[serde(rename = "type")]
     pub account_type: String,
 
@@ -5859,10 +5873,8 @@ pub struct StripeConnectRecipientCreateRequest {
     pub statement_descriptor: Option<Secret<String>>,
 }
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StripeConnectRecipientCreateResponse {
-
     pub id: String,
 }
 
@@ -5870,20 +5882,16 @@ pub struct StripeConnectRecipientCreateResponse {
 // RECIPIENT ACCOUNT CREATE (EXTERNAL ACCOUNT)
 // =============================================================================
 
-
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum StripeConnectRecipientAccountCreateRequest {
-
     Bank(RecipientBankAccountRequest),
 
     Token(RecipientTokenRequest),
 }
 
-
 #[derive(Clone, Debug, Serialize)]
 pub struct RecipientBankAccountRequest {
-
     #[serde(rename = "external_account[object]")]
     pub external_account_object: String,
 
@@ -5906,30 +5914,40 @@ pub struct RecipientBankAccountRequest {
     pub external_account_routing_number: Secret<String>,
 }
 
-
 #[derive(Clone, Debug, Serialize)]
 pub struct RecipientTokenRequest {
-
     #[serde(rename = "external_account")]
     pub external_account: String,
 }
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StripeConnectRecipientAccountCreateResponse {
-
     pub id: String,
 }
 
 impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
-    TryFrom<StripeRouterData<RouterDataV2<PayoutCreateRecipient, PayoutFlowData, PayoutCreateRecipientRequest, PayoutCreateRecipientResponse>, T>>
-    for StripeConnectRecipientCreateRequest
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                PayoutCreateRecipient,
+                PayoutFlowData,
+                PayoutCreateRecipientRequest,
+                PayoutCreateRecipientResponse,
+            >,
+            T,
+        >,
+    > for StripeConnectRecipientCreateRequest
 {
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         _item: StripeRouterData<
-            RouterDataV2<PayoutCreateRecipient, PayoutFlowData, PayoutCreateRecipientRequest, PayoutCreateRecipientResponse>,
+            RouterDataV2<
+                PayoutCreateRecipient,
+                PayoutFlowData,
+                PayoutCreateRecipientRequest,
+                PayoutCreateRecipientResponse,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -5937,74 +5955,93 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
 
         let request = &_item.router_data.request;
 
+        let tos_acceptance_date = Some(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|_| IntegrationError::InvalidDataFormat {
+                    field_name: "system_time",
+                    context: IntegrationErrorContext::default(),
+                })?
+                .as_secs() as i64,
+        );
 
-        let tos_acceptance_date = Some(std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|_| IntegrationError::InvalidDataFormat {
-                field_name: "system_time",
-                context: IntegrationErrorContext::default(),
-            })?
-            .as_secs() as i64);
-
-
-        let tos_acceptance_ip = request.tos_acceptance_ip.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
+        let tos_acceptance_ip = request.tos_acceptance_ip.clone().ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
                 field_name: "tos_acceptance_ip",
                 context: IntegrationErrorContext::default(),
-            })?;
+            }
+        })?;
 
-        let individual_phone = request.phone.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "phone",
-                context: IntegrationErrorContext::default(),
-            })?;
-
-
+        let individual_phone =
+            request
+                .phone
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "phone",
+                    context: IntegrationErrorContext::default(),
+                })?;
 
         let (individual_id_number, individual_ssn_last_4) = match &request.id_number {
             Some(id_num) => (Some(id_num.clone()), None),
             None => {
-
-                let ssn_last_4 = request.ssn_last_4.clone()
-                    .ok_or_else(|| IntegrationError::MissingRequiredField {
+                let ssn_last_4 = request.ssn_last_4.clone().ok_or_else(|| {
+                    IntegrationError::MissingRequiredField {
                         field_name: "ssn_last_4 or id_number",
                         context: IntegrationErrorContext::default(),
-                    })?;
+                    }
+                })?;
                 (None, Some(ssn_last_4))
             }
         };
 
-        let individual_first_name = request.first_name.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "first_name",
-                context: IntegrationErrorContext::default(),
-            })?;
+        let individual_first_name =
+            request
+                .first_name
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "first_name",
+                    context: IntegrationErrorContext::default(),
+                })?;
 
-        let individual_last_name = request.last_name.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "last_name",
-                context: IntegrationErrorContext::default(),
-            })?;
+        let individual_last_name =
+            request
+                .last_name
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "last_name",
+                    context: IntegrationErrorContext::default(),
+                })?;
 
-        let individual_dob_day = request.dob_day.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "dob_day",
-                context: IntegrationErrorContext::default(),
-            })?;
+        let individual_dob_day =
+            request
+                .dob_day
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "dob_day",
+                    context: IntegrationErrorContext::default(),
+                })?;
 
-        let individual_dob_month = request.dob_month.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "dob_month",
-                context: IntegrationErrorContext::default(),
-            })?;
+        let individual_dob_month =
+            request
+                .dob_month
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "dob_month",
+                    context: IntegrationErrorContext::default(),
+                })?;
 
-        let individual_dob_year = request.dob_year.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "dob_year",
-                context: IntegrationErrorContext::default(),
-            })?;
+        let individual_dob_year =
+            request
+                .dob_year
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "dob_year",
+                    context: IntegrationErrorContext::default(),
+                })?;
 
-        let business_profile_mcc_i32: i32 = request.business_profile_mcc.as_deref()
+        let business_profile_mcc_i32: i32 = request
+            .business_profile_mcc
+            .as_deref()
             .ok_or_else(|| IntegrationError::MissingRequiredField {
                 field_name: "business_profile_mcc",
                 context: IntegrationErrorContext::default(),
@@ -6015,30 +6052,41 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
                 context: IntegrationErrorContext::default(),
             })?;
 
-        let business_profile_url = request.business_profile_url.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
+        let business_profile_url = request.business_profile_url.clone().ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
                 field_name: "business_profile_url",
                 context: IntegrationErrorContext::default(),
-            })?;
+            }
+        })?;
 
-        let business_profile_name = request.business_profile_name.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
+        let business_profile_name = request.business_profile_name.clone().ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
                 field_name: "business_profile_name",
                 context: IntegrationErrorContext::default(),
-            })?;
+            }
+        })?;
 
-        let statement_descriptor = request.statement_descriptor.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
+        let statement_descriptor = request.statement_descriptor.clone().ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
                 field_name: "statement_descriptor",
                 context: IntegrationErrorContext::default(),
-            })?;
+            }
+        })?;
 
-
-
-        let individual_email: Option<Secret<String>> = request.customer.as_ref()
-            .and_then(|c| c.customer_email.as_ref().map(|e| Secret::new(e.peek().to_string())))
-            .or_else(|| request.address.as_ref().and_then(|a| a.email.as_ref().map(|e| Secret::new(e.peek().to_string()))));
-
+        let individual_email: Option<Secret<String>> = request
+            .customer
+            .as_ref()
+            .and_then(|c| {
+                c.customer_email
+                    .as_ref()
+                    .map(|e| Secret::new(e.peek().to_string()))
+            })
+            .or_else(|| {
+                request
+                    .address
+                    .as_ref()
+                    .and_then(|a| a.email.as_ref().map(|e| Secret::new(e.peek().to_string())))
+            });
 
         let (
             individual_address_line1,
@@ -6047,37 +6095,39 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
             individual_address_city,
             individual_address_state,
             individual_address_country,
-        ) = request.address.as_ref()
+        ) = request
+            .address
+            .as_ref()
             .and_then(|a| a.address.as_ref())
-            .map_or(
-                (None, None, None, None, None, None),
-                |addr| {
-                    (
-                        addr.line1.clone(),
-                        addr.line2.clone(),
-                        addr.zip.clone(),
-                        addr.city.clone(),
-                        addr.state.clone(),
-                        addr.country.clone(),
-                    )
-                },
-            );
+            .map_or((None, None, None, None, None, None), |addr| {
+                (
+                    addr.line1.clone(),
+                    addr.line2.clone(),
+                    addr.zip.clone(),
+                    addr.city.clone(),
+                    addr.state.clone(),
+                    addr.country.clone(),
+                )
+            });
 
+        let account_type =
+            request
+                .account_type
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "account_type",
+                    context: IntegrationErrorContext::default(),
+                })?;
 
-        let account_type = request.account_type.clone()
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
-                field_name: "account_type",
-                context: IntegrationErrorContext::default(),
-            })?;
-
-
-        let is_company = matches!(request.recipient_type, common_enums::PayoutRecipientType::Company);
+        let is_company = matches!(
+            request.recipient_type,
+            common_enums::PayoutRecipientType::Company
+        );
         let business_type = if is_company {
             "company".to_string()
         } else {
             "individual".to_string()
         };
-
 
         let (
             company_name,
@@ -6100,7 +6150,6 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
         } else {
             (None, None, None, None, None, None, None)
         };
-
 
         let (
             individual_first_name_opt,
@@ -6131,7 +6180,9 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
                 individual_ssn_last_4.clone(),
             )
         } else {
-            (None, None, None, None, None, None, None, None, None, None, None, None)
+            (
+                None, None, None, None, None, None, None, None, None, None, None, None,
+            )
         };
 
         Ok(Self {
@@ -6152,7 +6203,11 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
             company_address_postal_code,
             company_address_city,
             company_address_state,
-            company_phone: if is_company { Some(individual_phone.clone()) } else { None },
+            company_phone: if is_company {
+                Some(individual_phone.clone())
+            } else {
+                None
+            },
             company_tax_id,
             company_owners_provided: None,
             individual_first_name: individual_first_name_opt,
@@ -6166,7 +6221,11 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
             individual_address_city: individual_address_city_opt,
             individual_address_state: individual_address_state_opt,
             individual_email,
-            individual_phone: if !is_company { Some(individual_phone) } else { None },
+            individual_phone: if !is_company {
+                Some(individual_phone)
+            } else {
+                None
+            },
             individual_id_number: individual_id_number_opt,
             individual_ssn_last_4: individual_ssn_last_4_opt,
             statement_descriptor: Some(statement_descriptor),
@@ -6175,7 +6234,12 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
 }
 
 impl TryFrom<ResponseRouterData<StripeConnectRecipientCreateResponse, Self>>
-    for RouterDataV2<PayoutCreateRecipient, PayoutFlowData, PayoutCreateRecipientRequest, PayoutCreateRecipientResponse>
+    for RouterDataV2<
+        PayoutCreateRecipient,
+        PayoutFlowData,
+        PayoutCreateRecipientRequest,
+        PayoutCreateRecipientResponse,
+    >
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -6195,35 +6259,58 @@ impl TryFrom<ResponseRouterData<StripeConnectRecipientCreateResponse, Self>>
 }
 
 impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
-    TryFrom<StripeRouterData<RouterDataV2<PayoutEnrollDisburseAccount, PayoutFlowData, PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse>, T>>
-    for StripeConnectRecipientAccountCreateRequest
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                PayoutEnrollDisburseAccount,
+                PayoutFlowData,
+                PayoutEnrollDisburseAccountRequest,
+                PayoutEnrollDisburseAccountResponse,
+            >,
+            T,
+        >,
+    > for StripeConnectRecipientAccountCreateRequest
 {
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: StripeRouterData<
-            RouterDataV2<PayoutEnrollDisburseAccount, PayoutFlowData, PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse>,
+            RouterDataV2<
+                PayoutEnrollDisburseAccount,
+                PayoutFlowData,
+                PayoutEnrollDisburseAccountRequest,
+                PayoutEnrollDisburseAccountResponse,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         use domain_types::errors::IntegrationErrorContext;
 
-
-        let payout_method_data = item.router_data.request.payout_method_data
-            .ok_or_else(|| IntegrationError::MissingRequiredField {
+        let payout_method_data = item.router_data.request.payout_method_data.ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
                 field_name: "payout_method_data",
                 context: IntegrationErrorContext::default(),
-            })?;
+            }
+        })?;
 
         match payout_method_data {
             PayoutMethodData::Bank(Bank::Ach(ach)) => {
-                let country = ach.bank_country_code
+                let country = ach
+                    .bank_country_code
                     .unwrap_or(common_enums::CountryAlpha2::US);
 
-                let currency = item.router_data.request.source_currency.to_string().to_lowercase();
+                let currency = item
+                    .router_data
+                    .request
+                    .source_currency
+                    .to_string()
+                    .to_lowercase();
 
-
-                let account_holder_name = item.router_data.request.customer.as_ref()
+                let account_holder_name = item
+                    .router_data
+                    .request
+                    .customer
+                    .as_ref()
                     .and_then(|c| c.customer_name.clone())
                     .unwrap_or_else(|| Secret::new("Account Holder".to_string()));
 
@@ -6240,13 +6327,19 @@ impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTyp
             _ => Err(IntegrationError::NotImplemented(
                 "Only ACH bank transfers are supported for external account enrollment".to_string(),
                 IntegrationErrorContext::default(),
-            ).into()),
+            )
+            .into()),
         }
     }
 }
 
 impl TryFrom<ResponseRouterData<StripeConnectRecipientAccountCreateResponse, Self>>
-    for RouterDataV2<PayoutEnrollDisburseAccount, PayoutFlowData, PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse>
+    for RouterDataV2<
+        PayoutEnrollDisburseAccount,
+        PayoutFlowData,
+        PayoutEnrollDisburseAccountRequest,
+        PayoutEnrollDisburseAccountResponse,
+    >
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -6269,17 +6362,13 @@ impl TryFrom<ResponseRouterData<StripeConnectRecipientAccountCreateResponse, Sel
 // ERROR RESPONSE
 // =============================================================================
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StripeConnectErrorResponse {
-
     pub error: StripeConnectError,
 }
 
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StripeConnectError {
-
     pub code: Option<String>,
 
     pub message: String,
