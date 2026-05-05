@@ -1784,6 +1784,59 @@ pub fn get_error_reason(
 
 // ---- ClientAuthenticationToken flow types ----
 
+/// Wellsfargo's Flex Microform v2 SDK version. Pinned because Wellsfargo
+/// (a CyberSource whitelabel) gates SDK feature compatibility on this
+/// value — bumping it requires verifying the corresponding hosted-fields
+/// behavior client-side.
+const WELLSFARGO_FLEX_CLIENT_VERSION: &str = "0.11";
+
+/// Card networks Wellsfargo's Flex Microform recognises in the
+/// `allowedCardNetworks` array. The wire values are the literals
+/// CyberSource accepts (`"VISA"`, `"MASTERCARD"`, `"AMEX"`, `"DISCOVER"`)
+/// — represented as an enum so unknown variants fail at compile time
+/// rather than silently passing through as strings.
+#[derive(Debug, Serialize)]
+pub enum WellsfargoFlexCardNetwork {
+    #[serde(rename = "VISA")]
+    Visa,
+    #[serde(rename = "MASTERCARD")]
+    Mastercard,
+    #[serde(rename = "AMEX")]
+    AmericanExpress,
+    #[serde(rename = "DISCOVER")]
+    Discover,
+}
+
+/// Declares the card payment fields that the Flex Microform SDK should
+/// render as hosted iframes (PAN + CVV). The empty inner descriptors are
+/// not placeholders — Flex's contract is "an empty object means tokenise
+/// this field client-side; the server never sees the value".
+#[derive(Debug, Serialize)]
+pub struct WellsfargoFlexFields {
+    #[serde(rename = "paymentInformation")]
+    pub payment_information: WellsfargoFlexPaymentInformation,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WellsfargoFlexPaymentInformation {
+    pub card: WellsfargoFlexCardFields,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WellsfargoFlexCardFields {
+    pub number: WellsfargoFlexFieldDescriptor,
+    #[serde(rename = "securityCode")]
+    pub security_code: WellsfargoFlexFieldDescriptor,
+}
+
+/// Empty marker the Flex API uses to declare a tokenisable field. Kept
+/// as its own zero-sized struct so call sites can express intent
+/// (`WellsfargoFlexFieldDescriptor {}`) instead of an opaque `{}` JSON
+/// blob, and so adding option flags later is a backwards-compatible
+/// struct addition.
+#[derive(Debug, Default, Serialize)]
+pub struct WellsfargoFlexFieldDescriptor {}
+
 /// Creates a Wellsfargo Flex Microform session for client-side tokenization.
 /// The capture_context JWT is returned to the frontend for Flex Microform SDK initialization.
 #[serde_with::skip_serializing_none]
@@ -1791,9 +1844,9 @@ pub fn get_error_reason(
 #[serde(rename_all = "camelCase")]
 pub struct WellsfargoClientAuthRequest {
     pub target_origins: Vec<String>,
-    pub client_version: String,
-    pub allowed_card_networks: Option<Vec<String>>,
-    pub fields: serde_json::Value,
+    pub client_version: &'static str,
+    pub allowed_card_networks: Option<Vec<WellsfargoFlexCardNetwork>>,
+    pub fields: WellsfargoFlexFields,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -1842,21 +1895,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         Ok(Self {
             target_origins: vec![target_origin],
-            client_version: "0.11".to_string(),
+            client_version: WELLSFARGO_FLEX_CLIENT_VERSION,
             allowed_card_networks: Some(vec![
-                "VISA".to_string(),
-                "MASTERCARD".to_string(),
-                "AMEX".to_string(),
-                "DISCOVER".to_string(),
+                WellsfargoFlexCardNetwork::Visa,
+                WellsfargoFlexCardNetwork::Mastercard,
+                WellsfargoFlexCardNetwork::AmericanExpress,
+                WellsfargoFlexCardNetwork::Discover,
             ]),
-            fields: serde_json::json!({
-                "paymentInformation": {
-                    "card": {
-                        "number": {},
-                        "securityCode": {}
-                    }
-                }
-            }),
+            fields: WellsfargoFlexFields {
+                payment_information: WellsfargoFlexPaymentInformation {
+                    card: WellsfargoFlexCardFields {
+                        number: WellsfargoFlexFieldDescriptor {},
+                        security_code: WellsfargoFlexFieldDescriptor {},
+                    },
+                },
+            },
         })
     }
 }
