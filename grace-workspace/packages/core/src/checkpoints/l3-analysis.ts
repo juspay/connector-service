@@ -400,6 +400,24 @@ export const l3AnalysisCheckpoint: Checkpoint = {
       // fill in the missing transformer code.
       (result as L3Analysis & { implementationType: string }).implementationType =
         "flow_completion";
+
+      // Bypass the prerequisites check below for flow_completion. The L3 LLM
+      // will (correctly) report flow-specific gaps like "macro entry missing"
+      // / "request struct missing" / "TryFrom missing" — but adding those is
+      // exactly what the implementation agent does in flow_completion mode.
+      // Connector-wide prereqs (ConnectorCommon, auth) genuinely missing will
+      // surface as a build failure in compiler_check and route back via the
+      // repairBrief path, so we don't need to gate on them here.
+      if (result.analysis.prerequisitesStatus === "incomplete") {
+        ctx.log(
+          `[l3_analysis] Bypassing prerequisites check for flow_completion (was: ${
+            (result.analysis.missingPrerequisites ?? []).join(" | ") || "<no detail>"
+          })`,
+          "warn",
+        );
+        result.analysis.prerequisitesStatus = "complete";
+        result.analysis.missingPrerequisites = [];
+      }
     }
 
     // For payment_method_addition, log the intent
