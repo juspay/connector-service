@@ -739,17 +739,10 @@ impl TryFrom<ResponseRouterData<TsysPSyncResponse, Self>>
                 Ok(get_payments_sync_response(&search_response, item.http_code)),
                 AttemptStatus::from(search_response.transaction_details),
             ),
-            SearchResponseTypes::ErrorResponse(error_response) => {
-                let status = if matches!(error_response.status, TsysPaymentStatus::Pass) {
-                    AttemptStatus::Authorized
-                } else {
-                    item.router_data.resource_common_data.status
-                };
-                (
-                    Err(get_error_response(&error_response, item.http_code)),
-                    status,
-                )
-            }
+            SearchResponseTypes::ErrorResponse(error_response) => (
+                Err(get_error_response(&error_response, item.http_code)),
+                item.router_data.resource_common_data.status,
+            ),
         };
 
         Ok(Self {
