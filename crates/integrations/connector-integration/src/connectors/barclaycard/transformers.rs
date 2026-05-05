@@ -980,22 +980,31 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
 
+        // Barclaycard's Flex Microform requires a target_origins value derived
+        // from the merchant's return_url so the SDK can be loaded into that origin.
+        // Both the return_url itself and a parseable origin are mandatory; we
+        // surface a clear error rather than substitute a placeholder host.
         let return_url = router_data
             .resource_common_data
             .return_url
-            .clone()
-            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+            .as_deref()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: Default::default(),
+            })?;
 
-        // Extract the origin from the return_url for target_origins
-        let target_origin = url::Url::parse(&return_url)
-            .map(|u| {
-                format!(
-                    "{}://{}",
-                    u.scheme(),
-                    u.host_str().unwrap_or("hyperswitch.io")
-                )
-            })
-            .unwrap_or_else(|_| "https://hyperswitch.io".to_string());
+        let parsed_url =
+            url::Url::parse(return_url).map_err(|_| IntegrationError::InvalidDataFormat {
+                field_name: "return_url",
+                context: Default::default(),
+            })?;
+        let host = parsed_url
+            .host_str()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "return_url.host",
+                context: Default::default(),
+            })?;
+        let target_origin = format!("{}://{}", parsed_url.scheme(), host);
 
         Ok(Self {
             target_origins: vec![target_origin],
@@ -1006,6 +1015,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 "AMEX".to_string(),
                 "DISCOVER".to_string(),
             ]),
+            // Empty objects under `paymentInformation.card.{number,securityCode}` are
+            // not placeholders — Barclaycard's Flex v2 contract uses an empty object
+            // to *declare* a tokenizable field. The SDK then collects the actual
+            // value client-side from a hosted Microform iframe; the server never
+            // sees raw PAN/CVV. Adding any value here would be rejected.
             fields: serde_json::json!({
                 "paymentInformation": {
                     "card": {
