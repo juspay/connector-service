@@ -665,6 +665,35 @@ export interface FeatureResearchReport {
   actionItems?: string[];
 }
 
+/**
+ * Structured failure handed from a downstream checkpoint (compiler_check,
+ * grpc_test) back to `implementation` so the writer agent can fix the bug
+ * with concrete diagnostic context instead of guessing.
+ */
+export interface RepairBrief {
+  source: "grpc_test" | "compiler_check";
+  flow: string;
+  /** Coarse classification used by the writer to pick a strategy. */
+  errorKind?:
+    | "missing_field"
+    | "transform_error"
+    | "status_mapping"
+    | "http_error"
+    | "build_error"
+    | "infra"
+    | "unknown";
+  rootCauseFile?: string;
+  rootCauseLine?: number;
+  /** grpc_test only */
+  grpcurlCommand?: string;
+  grpcurlOutput?: string;
+  responseSummary?: string;
+  serverLogTail?: string;
+  /** compiler_check only */
+  buildOutput?: string;
+  rustcErrors?: string[];
+}
+
 export interface PipelineArtifacts {
   task?: TaskDefinition;
   /** GRACE: Requirements discovery results */
@@ -684,6 +713,24 @@ export interface PipelineArtifacts {
   grpcTestErrors?: string[];
   /** Raw grpcurl output from test attempts */
   grpcurlOutput?: string;
+  /** Last grpcurl command line, captured by grpc_test for downstream visibility */
+  grpcurlCommand?: string;
+  /** Brief response summary captured by grpc_test */
+  grpcResponse?: string;
+  /** Full grpc_test result object (status, response_summary, etc.) */
+  grpcTest?: unknown;
+  /** Full compiler_check result object */
+  compilerCheck?: unknown;
+  /** Build output captured by compiler_check */
+  buildOutput?: string;
+  /** Path to the grpc-server stdout/stderr log file (set when grpc_test starts the server) */
+  grpcServerLogPath?: string;
+  /**
+   * Set by compiler_check or grpc_test on failure; consumed by the next run
+   * of `implementation` to drive a focused FIX-MODE pass. Cleared by
+   * implementation after consumption.
+   */
+  repairBrief?: RepairBrief;
   designDiff?: DesignDiffResult;
   cypressReport?: TestReport;
   playwrightReport?: TestReport;
@@ -707,6 +754,12 @@ export interface PipelineContext {
   task: TaskDefinition;
   artifacts: PipelineArtifacts;
   retryCount: Record<string, number>;
+  /**
+   * Per-checkpoint history of error fingerprints (sha1 of normalised
+   * error text). Used by the engine to detect identical-error loops and
+   * escalate or abort instead of retrying blindly.
+   */
+  errorFingerprints?: Record<string, string[]>;
   log: (
     msg: string,
     level?: "info" | "warn" | "error" | "success" | "debug"

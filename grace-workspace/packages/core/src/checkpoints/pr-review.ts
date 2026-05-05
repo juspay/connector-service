@@ -31,13 +31,25 @@ Key rules from the reference:
 
 ## Your Task
 
-You will receive: the L2/L3/L4 spec and the generated files (path + contents) plus test results.
+You will receive: the L2/L3/L4 spec, the generated files (path + contents),
+and test results from the codegen pipeline. The pipeline runs three separate
+checkpoints (\`implementation\` → \`compiler_check\` → \`grpc_test\`); their
+artifacts are passed in the user payload.
 
 SPAWN MULTIPLE SUB-AGENTS to review different aspects in parallel:
 1. One sub-agent to check spec compliance (do files match the L4 plan?)
 2. One sub-agent to verify acceptance criteria coverage
 3. One sub-agent to check code quality and patterns
-4. One sub-agent to review test coverage
+4. One sub-agent to review test coverage. Read these payload fields directly
+   and treat them as ground truth — do NOT invent values from absence:
+   - \`compilerCheck.status\` and \`buildOutput\`: build outcome
+   - \`grpcTest.grpcurl_result\` (\"PASS\" / \"FAIL\"): test outcome
+   - \`grpcTest.grpcurl_command\`, \`grpcTest.grpcurl_output\`,
+     \`grpcTest.response_summary\`: command + response
+   If \`grpcTest.grpcurl_result === "PASS"\` and \`compilerCheck.status === "SUCCESS"\`,
+   treat build/test as covered. Do NOT cite \`implementation.grpcurlResult\` or
+   \`implementation.buildIterations\` — that artifact only reports what the
+   writer agent did (which never runs grpcurl), not what was tested.
 
 Each sub-agent should use tools (read_file, glob, grep) to verify their assigned aspect.
 
@@ -105,6 +117,15 @@ export const prReviewCheckpoint: Checkpoint = {
           l3: ctx.artifacts.l3,
           implementation: ctx.artifacts.implementation,
           files,
+          // Codegen-pipeline test artifacts (ground truth for the
+          // test-coverage sub-agent — see SYSTEM prompt §4)
+          compilerCheck: ctx.artifacts.compilerCheck,
+          buildOutput: ctx.artifacts.buildOutput,
+          grpcTest: ctx.artifacts.grpcTest,
+          grpcurlCommand: ctx.artifacts.grpcurlCommand,
+          grpcurlOutput: ctx.artifacts.grpcurlOutput,
+          grpcResponse: ctx.artifacts.grpcResponse,
+          // Legacy frontend pipeline artifacts (unused in codegen mode)
           cypressReport: ctx.artifacts.cypressReport,
           playwrightReport: ctx.artifacts.playwrightReport,
         },

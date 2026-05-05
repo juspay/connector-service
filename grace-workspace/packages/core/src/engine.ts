@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   type Checkpoint,
   type CheckpointId,
@@ -8,6 +9,22 @@ import {
 import type { StateManager } from "./state.js";
 import { withTimeout } from "./utils.js";
 import type { PipelineEventBus } from "./logger.js";
+
+/**
+ * Fingerprint a checkpoint failure so the engine can detect identical-error
+ * loops. Normalised to ignore whitespace, timestamps, and pid noise so two
+ * structurally identical failures fingerprint the same.
+ */
+function fingerprintFailure(result: CheckpointResult): string | null {
+  if (!result.errors || result.errors.length === 0) return null;
+  const normalised = result.errors
+    .join("|")
+    .replace(/\s+/g, " ")
+    .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, "<ts>")
+    .replace(/\bpid[=:]?\s*\d+/gi, "pid=<n>")
+    .slice(0, 500);
+  return createHash("sha1").update(normalised).digest("hex");
+}
 
 export class PipelineEngine {
   constructor(
@@ -90,6 +107,36 @@ export class PipelineEngine {
           this.bus?.emit("artifact:update", checkpoint.id, {
             artifacts: result.artifacts,
           });
+        }
+
+        // ── Identical-error guard (engine-level 3-strike rule) ────────────
+        // GRACE 2.3.md mandates a 3-strike rule on identical errors. Enforce
+        // it at the engine so an LLM-driven checkpoint cannot rationalise
+        // its way past it. Two consecutive identical fingerprints from the
+        // same checkpoint = the rollback target's fix did not address the
+        // failure — escalate or abort.
+        ctx.errorFingerprints ??= {};
+        const fp = fingerprintFailure(result);
+        const history = ctx.errorFingerprints[checkpoint.id] ?? [];
+        const lastFp = history[history.length - 1];
+        if (fp && lastFp === fp) {
+          ctx.log(
+            `[${checkpoint.id}] Identical error repeated (fp=${fp.slice(0, 8)}). The previous rollback did not change the failure — aborting before burning more retries.`,
+            "error",
+          );
+          await this.state.save(ctx, checkpoint.id, "waiting_for_retry");
+          this.bus?.emitStatus(checkpoint.id, "waiting_for_retry");
+          this.bus?.emit("pipeline:waiting_for_retry", checkpoint.id, {
+            maxRetries,
+            lastError: "Identical error repeated — manual intervention required",
+          });
+          throw new PipelineAbortError(
+            checkpoint.id,
+            `Identical error fingerprint (${fp.slice(0, 8)}) on consecutive attempts — code repair did not address the failure. Manual intervention required.`,
+          );
+        }
+        if (fp) {
+          ctx.errorFingerprints[checkpoint.id] = [...history, fp].slice(-3);
         }
 
         await this.state.save(ctx, checkpoint.id, "failed");

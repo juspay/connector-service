@@ -1,11 +1,13 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
-import type { Checkpoint, CodegenResult, L3Analysis } from "../types.js";
+import type { Checkpoint, CodegenResult, L3Analysis, RepairBrief } from "../types.js";
 import { runAI } from "../tools/runner-factory.js";
 import {
   CODEGEN_AGENT_SYSTEM,
   buildCodegenPayload,
 } from "../generators/codegen-agent-prompt.js";
+
+void CODEGEN_AGENT_SYSTEM; // re-exported for downstream tooling; not used directly here
 
 /**
  * Ensure tech spec is saved to disk for the Codegen Agent to read
@@ -162,8 +164,81 @@ export const implementationCheckpoint: Checkpoint = {
       ctx.log("[implementation] Using PAYMENT METHOD ADDITION system prompt", "info");
     }
 
+    // ── FIX-MODE: a downstream checkpoint (compiler_check / grpc_test) failed
+    // last time and rolled back here with a structured repairBrief. Prepend a
+    // focused diagnosis block so the agent fixes the specific failure instead
+    // of regenerating the whole flow blindly. ──────────────────────────────
+    const repairBrief = ctx.artifacts.repairBrief as RepairBrief | undefined;
+    const isRepair = !!repairBrief;
+    if (isRepair) {
+      ctx.log(
+        `[implementation] FIX-MODE: source=${repairBrief.source} kind=${repairBrief.errorKind ?? "unknown"} file=${repairBrief.rootCauseFile ?? "?"}:${repairBrief.rootCauseLine ?? "?"}`,
+        "warn",
+      );
+      // Mirror the brief into the legacy compilation/test error arrays so
+      // buildCodegenPayload (unchanged below) still surfaces the failure.
+      if (repairBrief.source === "compiler_check") {
+        const errs = repairBrief.rustcErrors && repairBrief.rustcErrors.length > 0
+          ? repairBrief.rustcErrors
+          : (repairBrief.buildOutput ? [repairBrief.buildOutput.slice(0, 2000)] : []);
+        if (errs.length > 0) ctx.artifacts.compilationErrors = errs;
+      } else if (repairBrief.source === "grpc_test") {
+        const errs: string[] = [];
+        if (repairBrief.responseSummary) errs.push(repairBrief.responseSummary);
+        if (repairBrief.grpcurlOutput) errs.push(repairBrief.grpcurlOutput.slice(0, 2000));
+        if (repairBrief.serverLogTail) errs.push(`Server log tail:\n${repairBrief.serverLogTail.slice(0, 2000)}`);
+        if (errs.length > 0) ctx.artifacts.grpcTestErrors = errs;
+      }
+    }
+
+    const fixModeBlock = isRepair ? `
+## FIX-MODE — previous downstream checkpoint failed
+
+A subsequent checkpoint failed against the code you wrote on the previous
+attempt. You MUST edit the relevant files to fix the specific failure
+described below, then return updated implementation. The same Phase 5
+restrictions apply (write code, do NOT run cargo build, do NOT run grpcurl).
+
+- Source checkpoint: ${repairBrief.source}
+- Flow: ${repairBrief.flow}
+- Error kind: ${repairBrief.errorKind ?? "unknown"}
+- Root-cause file: ${repairBrief.rootCauseFile ?? "unknown"}
+- Root-cause line: ${repairBrief.rootCauseLine ?? "unknown"}
+
+${repairBrief.source === "grpc_test" ? `### grpcurl command
+\`\`\`
+${repairBrief.grpcurlCommand ?? "(not captured)"}
+\`\`\`
+
+### grpcurl output (response + error)
+\`\`\`
+${(repairBrief.grpcurlOutput ?? "").slice(0, 4000)}
+\`\`\`
+
+### Server log tail (most recent grpc-server stderr/stdout)
+\`\`\`
+${(repairBrief.serverLogTail ?? "").slice(0, 4000)}
+\`\`\`
+` : `### cargo build errors
+${(repairBrief.rustcErrors ?? []).slice(0, 8).map((e) => "```\n" + e + "\n```").join("\n")}
+
+### Full build output (truncated)
+\`\`\`
+${(repairBrief.buildOutput ?? "").slice(0, 4000)}
+\`\`\`
+`}
+
+### Required action
+1. Read the root-cause file at the indicated line.
+2. Make the minimum change necessary to fix the specific failure above.
+3. Do NOT rewrite unrelated code; do NOT regenerate the whole flow.
+4. Update fixLog with one entry: { iteration, error, fileChanged, changeDescription }.
+5. Return the same JSON shape as a normal Phase 5 result.
+
+` : "";
+
     // Build custom system prompt with Phase 5 restriction
-    const systemPrompt = `You are the Code Generation Agent.
+    const systemPrompt = `${fixModeBlock}You are the Code Generation Agent.
 
 ## CRITICAL RESTRICTION - PHASE 5 ONLY
 You are in IMPLEMENTATION-ONLY MODE.
@@ -339,7 +414,12 @@ ${workflowContent}
     }
 
     ctx.log("[implementation] ╔═══════════════════════════════════════════════════════════╗", "success");
-    ctx.log("[implementation] ║  ✓ Implementation Complete (Phase 5)                   ║", "success");
+    ctx.log(
+      isRepair
+        ? "[implementation] ║  ✓ Implementation Complete (FIX-MODE pass)             ║"
+        : "[implementation] ║  ✓ Implementation Complete (Phase 5)                   ║",
+      "success",
+    );
     ctx.log("[implementation] ╚═══════════════════════════════════════════════════════════╝", "success");
     ctx.log("[implementation] Code written. Build and test will be handled by subsequent checkpoints.", "success");
 
@@ -347,6 +427,11 @@ ${workflowContent}
       passed: true,
       artifacts: {
         implementation: result,
+        // Clear consumed repair brief so the next pass through downstream
+        // checkpoints starts from a clean slate.
+        repairBrief: undefined,
+        compilationErrors: undefined,
+        grpcTestErrors: undefined,
       },
     };
   },

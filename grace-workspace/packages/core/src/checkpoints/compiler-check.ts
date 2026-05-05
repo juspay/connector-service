@@ -1,20 +1,23 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
-import type { Checkpoint } from "../types.js";
+import type { Checkpoint, RepairBrief } from "../types.js";
 import { runAI } from "../tools/runner-factory.js";
 
 /**
  * Compiler Check Checkpoint - Phase 6 ONLY from 2.3_codegen.md
  *
  * Runs cargo build to verify the code compiles without errors.
- * Does NOT modify source files.
- * Does NOT run tests.
+ * Does NOT modify source files. On failure, the engine rolls back to
+ * `implementation` and a `repairBrief` artifact carries the rustc errors so
+ * the writer can fix the compilation problem.
  */
 export const compilerCheckCheckpoint: Checkpoint = {
   id: "compiler_check",
   name: "Compiler Check",
   description: "Verify code compiles without errors using cargo build (Phase 6 ONLY)",
-  retryFrom: "compiler_check",
+  // On failure, only `implementation` can fix the underlying source bug.
+  // Re-running cargo build against unchanged code never changes the outcome.
+  retryFrom: "implementation",
   timeout: 15 * 60 * 1000, // 15 min for build
 
   async run(ctx) {
@@ -112,6 +115,8 @@ ${workflowContent}
           artifacts: {
             compilerCheck: result,
             buildOutput: buildOutput,
+            // Clear any stale repairBrief on success.
+            repairBrief: undefined,
           },
         };
       } else {
@@ -120,22 +125,71 @@ ${workflowContent}
         ctx.log("[compiler_check] ║  ✗ Compiler Check Failed                                 ║", "error");
         ctx.log("[compiler_check] ╚═══════════════════════════════════════════════════════════╝", "error");
 
+        const rustcErrors = extractRustcErrors(buildOutput);
+        const rootCauseFile = extractRustcFile(buildOutput);
+        const rootCauseLine = extractRustcLine(buildOutput);
+
+        const repairBrief: RepairBrief = {
+          source: "compiler_check",
+          flow,
+          errorKind: "build_error",
+          buildOutput,
+          rustcErrors,
+          rootCauseFile,
+          rootCauseLine,
+        };
+
         return {
           passed: false,
           errors: ["Build failed", buildOutput.slice(0, 2000)],
           artifacts: {
             compilerCheck: result,
             buildOutput: buildOutput,
+            repairBrief,
           },
         };
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       ctx.log(`[compiler_check] Build check failed: ${msg}`, "error");
+      const repairBrief: RepairBrief = {
+        source: "compiler_check",
+        flow,
+        errorKind: msg.includes("timed out") ? "infra" : "build_error",
+        buildOutput: msg,
+      };
       return {
         passed: false,
         errors: [`Compiler check failed: ${msg}`],
+        artifacts: { repairBrief },
       };
     }
   },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function extractRustcErrors(buildOutput: string): string[] {
+  // Capture each `error[E####]: ...` block up to the next blank line.
+  const out: string[] = [];
+  const re = /error(?:\[E\d+\])?:[^\n]*(?:\n\s+[^\n]*)*/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(buildOutput)) !== null) {
+    out.push(match[0]);
+    if (out.length >= 10) break; // cap to keep prompts small
+  }
+  return out;
+}
+
+function extractRustcFile(buildOutput: string): string | undefined {
+  // rustc points at the offending file with `--> path/to/file.rs:LL:CC`
+  const m = buildOutput.match(/-->\s+([^\s:]+\.rs):\d+:\d+/);
+  return m?.[1];
+}
+
+function extractRustcLine(buildOutput: string): number | undefined {
+  const m = buildOutput.match(/-->\s+[^\s:]+\.rs:(\d+):\d+/);
+  return m ? Number(m[1]) : undefined;
+}
