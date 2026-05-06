@@ -356,6 +356,12 @@ pub struct StripeBoletoData {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeOxxoData {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct TokenRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(flatten)]
     pub token_data: StripePaymentMethodData<T>,
@@ -579,6 +585,7 @@ pub enum StripePaymentMethodData<
     BankDebit(StripeBankDebitData),
     BankTransfer(StripeBankTransferData),
     Voucher(StripeBoletoData),
+    VoucherOxxo(StripeOxxoData),
 }
 
 #[serde_with::skip_serializing_none]
@@ -806,6 +813,7 @@ pub enum StripePaymentMethodType {
     Cashapp,
     RevolutPay,
     Boleto,
+    Oxxo,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -845,6 +853,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             // Stripe expects PMT as Card for Recurring Mandates Payments
             common_enums::PaymentMethodType::GooglePay => Ok(Self::Card),
             common_enums::PaymentMethodType::Boleto => Ok(Self::Boleto),
+            common_enums::PaymentMethodType::Oxxo => Ok(Self::Oxxo),
             common_enums::PaymentMethodType::CardRedirect
             | common_enums::PaymentMethodType::CryptoCurrency
             | common_enums::PaymentMethodType::Multibanco
@@ -856,8 +865,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::UpiQr
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
-            | common_enums::PaymentMethodType::SepaGuaranteedDebit
-            | common_enums::PaymentMethodType::Oxxo => Err(IntegrationError::NotImplemented(
+            | common_enums::PaymentMethodType::SepaGuaranteedDebit => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
                 Default::default(),
             )
@@ -1547,11 +1555,13 @@ fn create_stripe_payment_method<
                     payment_request_details.billing_address,
                 ))
             }
-            VoucherData::Oxxo => Err(IntegrationError::NotImplemented(
-                get_unimplemented_payment_method_error_message("stripe"),
-                Default::default(),
-            )
-            .into()),
+            VoucherData::Oxxo => Ok((
+                StripePaymentMethodData::VoucherOxxo(StripeOxxoData {
+                    payment_method_data_type: StripePaymentMethodType::Oxxo,
+                }),
+                Some(StripePaymentMethodType::Oxxo),
+                payment_request_details.billing_address,
+            )),
             VoucherData::Alfamart(_)
             | VoucherData::Efecty
             | VoucherData::PagoEfectivo
@@ -2957,6 +2967,20 @@ pub fn get_connector_metadata(
                 };
                 Some(voucher_data.encode_to_value())
             }
+            StripeNextActionResponse::OxxoDisplayDetails(response) => {
+                let voucher_data = VoucherNextStepData {
+                    entry_date: None,
+                    expires_at: response.expires_after,
+                    expiry_date: None,
+                    reference: response.number.peek().to_string(),
+                    download_url: None,
+                    instructions_url: response.hosted_voucher_url.clone(),
+                    digitable_line: Some(response.number.clone()),
+                    barcode: None,
+                    qr_code_url: None,
+                };
+                Some(voucher_data.encode_to_value())
+            }
             _ => None,
         })
         .transpose()
@@ -3241,6 +3265,13 @@ pub struct StripeBoletoDisplayDetails {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripeOxxoDisplayDetails {
+    pub number: Secret<String>,
+    pub expires_after: Option<i64>,
+    pub hosted_voucher_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case", remote = "Self")]
 pub enum StripeNextActionResponse {
     CashappHandleRedirectOrDisplayQrCode(StripeCashappQrResponse),
@@ -3251,6 +3282,7 @@ pub enum StripeNextActionResponse {
     DisplayBankTransferInstructions(StripeBankTransferDetails),
     MultibancoDisplayDetails(MultibancoCreditTransferResponse),
     BoletoDisplayDetails(StripeBoletoDisplayDetails),
+    OxxoDisplayDetails(StripeOxxoDisplayDetails),
     NoNextActionBody,
 }
 
@@ -3268,6 +3300,7 @@ impl StripeNextActionResponse {
             Self::DisplayBankTransferInstructions(_) => None,
             Self::MultibancoDisplayDetails(_) => None,
             Self::BoletoDisplayDetails(_) => None,
+            Self::OxxoDisplayDetails(_) => None,
             Self::NoNextActionBody => None,
         }
     }
@@ -3319,6 +3352,7 @@ impl Serialize for StripeNextActionResponse {
             Self::DisplayBankTransferInstructions(ref i) => Serialize::serialize(i, serializer),
             Self::MultibancoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::BoletoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
+            Self::OxxoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::NoNextActionBody => Serialize::serialize("NoNextActionBody", serializer),
         }
     }

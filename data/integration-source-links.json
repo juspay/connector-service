@@ -68,6 +68,8 @@
   ],
   "Stripe": [
     "https://docs.stripe.com/payments/boleto/accept-a-payment",
+    "https://docs.stripe.com/payments/oxxo",
+    "https://docs.stripe.com/payments/oxxo/accept-a-payment",
     "https://docs.stripe.com/api/payment_intents/create",
     "https://docs.stripe.com/api/payment_intents/confirm",
     "https://docs.stripe.com/api/payment_methods/create",
