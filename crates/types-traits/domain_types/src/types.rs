@@ -4154,6 +4154,13 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
 
         let order_details: Option<Vec<OrderDetailsWithAmount>> = None;
 
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(ServerAuthenticationTokenResponseData::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -4169,14 +4176,14 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             connector_customer: value
                 .customer
                 .and_then(|customer| customer.connector_customer_id),
-            description: None,
+            description: value.description,
             return_url: value.return_url.clone(),
             connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
             amount: None,
-            access_token: None,
+            access_token,
             session_token: value.session_token,
             reference_id: None,
             connector_order_id: None,
@@ -4231,6 +4238,13 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
 
         let order_details: Option<Vec<OrderDetailsWithAmount>> = None;
 
+        let access_token = value
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.as_ref())
+            .map(ServerAuthenticationTokenResponseData::foreign_try_from)
+            .transpose()?;
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -4251,7 +4265,7 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             minor_amount_captured: None,
             minor_amount_capturable: None,
             amount: None,
-            access_token: None,
+            access_token,
             session_token: None,
             reference_id: None,
             connector_order_id: None,
@@ -11168,6 +11182,18 @@ ConnectorSpecificClientAuthenticationResponse::Cybersource(cybersource_data) => 
                         grpc_api_types::payments::NexixpayClientAuthenticationResponse {
                             security_token: Some(nexixpay_data.security_token),
                             hosted_page: nexixpay_data.hosted_page,
+                        },
+                    ),
+                ),
+            }
+        }
+                ConnectorSpecificClientAuthenticationResponse::Revolut(revolut_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Revolut(
+                        grpc_api_types::payments::RevolutClientAuthenticationResponse {
+                            order_id: revolut_data.order_id,
+                            token: Some(revolut_data.token),
                         },
                     ),
                 ),
