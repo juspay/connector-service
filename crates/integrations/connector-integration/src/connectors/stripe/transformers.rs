@@ -58,7 +58,7 @@ use crate::{
     types::ResponseRouterData,
     utils::{
         convert_uppercase, deserialize_zero_minor_amount_as_none, is_refund_failure,
-        SplitPaymentData,
+        qr_code::QrCodeInformation, SplitPaymentData,
     },
 };
 
@@ -688,6 +688,7 @@ pub enum StripeWallet {
     WechatpayPayment(WechatpayPayment),
     AlipayPayment(AlipayPayment),
     Cashapp(CashappPayment),
+    Swish(StripeSwishPayment),
     RevolutPay(RevolutpayPayment),
     ApplePayPredecryptToken(Box<StripeApplePayPredecrypt>),
 }
@@ -755,6 +756,15 @@ pub struct CashappPayment {
     pub payment_method_data_type: StripePaymentMethodType,
 }
 
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeSwishPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+    #[serde(rename = "payment_method_options[swish][reference]")]
+    pub reference: Option<String>,
+}
+
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct WechatpayPayment {
     #[serde(rename = "payment_method_data[type]")]
@@ -814,6 +824,7 @@ pub enum StripePaymentMethodType {
     RevolutPay,
     Boleto,
     Pix,
+    Swish,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -854,6 +865,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             common_enums::PaymentMethodType::GooglePay => Ok(Self::Card),
             common_enums::PaymentMethodType::Boleto => Ok(Self::Boleto),
             common_enums::PaymentMethodType::Pix => Ok(Self::Pix),
+            common_enums::PaymentMethodType::Swish => Ok(Self::Swish),
             common_enums::PaymentMethodType::CardRedirect
             | common_enums::PaymentMethodType::CryptoCurrency
             | common_enums::PaymentMethodType::Multibanco
@@ -903,7 +915,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::RedCompra
             | common_enums::PaymentMethodType::RedPagos
             | common_enums::PaymentMethodType::SamsungPay
-            | common_enums::PaymentMethodType::Swish
             | common_enums::PaymentMethodType::TouchNGo
             | common_enums::PaymentMethodType::Trustly
             | common_enums::PaymentMethodType::Twint
@@ -1217,6 +1228,7 @@ fn get_stripe_payment_method_type_from_wallet_data(
         WalletData::GooglePay(_) => Ok(Some(StripePaymentMethodType::Card)),
         WalletData::WeChatPayQr(_) => Ok(Some(StripePaymentMethodType::Wechatpay)),
         WalletData::CashappQr(_) => Ok(Some(StripePaymentMethodType::Cashapp)),
+        WalletData::SwishQr(_) => Ok(Some(StripePaymentMethodType::Swish)),
         WalletData::AmazonPayRedirect(_) => Ok(Some(StripePaymentMethodType::AmazonPay)),
         WalletData::RevolutPay(_) => Ok(Some(StripePaymentMethodType::RevolutPay)),
         WalletData::MobilePayRedirect(_) => Err(IntegrationError::NotImplemented(
@@ -1243,7 +1255,6 @@ fn get_stripe_payment_method_type_from_wallet_data(
         | WalletData::TwintRedirect {}
         | WalletData::VippsRedirect {}
         | WalletData::TouchNGoRedirect(_)
-        | WalletData::SwishQr(_)
         | WalletData::WeChatPayRedirect(_)
         | WalletData::Mifinity(_)
         | WalletData::MbWay(_)
@@ -1710,6 +1721,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             WalletData::CashappQr(_) => Ok(Self::Wallet(StripeWallet::Cashapp(CashappPayment {
                 payment_method_data_type: StripePaymentMethodType::Cashapp,
             }))),
+            WalletData::SwishQr(_) => Ok(Self::Wallet(StripeWallet::Swish(StripeSwishPayment {
+                payment_method_data_type: StripePaymentMethodType::Swish,
+                reference: None,
+            }))),
             WalletData::AmazonPayRedirect(_) => Ok(Self::Wallet(StripeWallet::AmazonpayPayment(
                 AmazonpayPayment {
                     payment_method_types: StripePaymentMethodType::AmazonPay,
@@ -1747,7 +1762,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             | WalletData::TwintRedirect {}
             | WalletData::VippsRedirect {}
             | WalletData::TouchNGoRedirect(_)
-            | WalletData::SwishQr(_)
             | WalletData::WeChatPayRedirect(_)
             | WalletData::Mifinity(_)
             | WalletData::MbWay(_)
@@ -2979,6 +2993,14 @@ pub fn get_connector_metadata(
                 };
                 Some(voucher_data.encode_to_value())
             }
+            StripeNextActionResponse::SwishHandleRedirectOrDisplayQrCode(response) => {
+                let qr_code_info = QrCodeInformation::QrCodeUrl {
+                    image_data_url: response.qr_code.image_url_png.to_owned(),
+                    qr_code_url: response.hosted_instructions_url.to_owned(),
+                    display_to_timestamp: None,
+                };
+                Some(qr_code_info.encode_to_value())
+            }
             _ => None,
         })
         .transpose()
@@ -3272,6 +3294,19 @@ pub struct StripePixDisplayQrCode {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripeSwishQrCode {
+    pub data: String,
+    pub image_url_png: Url,
+    pub image_url_svg: Url,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripeSwishHandleRedirectOrDisplayQrCode {
+    pub hosted_instructions_url: Url,
+    pub qr_code: StripeSwishQrCode,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case", remote = "Self")]
 pub enum StripeNextActionResponse {
     CashappHandleRedirectOrDisplayQrCode(StripeCashappQrResponse),
@@ -3283,6 +3318,7 @@ pub enum StripeNextActionResponse {
     MultibancoDisplayDetails(MultibancoCreditTransferResponse),
     BoletoDisplayDetails(StripeBoletoDisplayDetails),
     PixDisplayQrCode(StripePixDisplayQrCode),
+    SwishHandleRedirectOrDisplayQrCode(StripeSwishHandleRedirectOrDisplayQrCode),
     NoNextActionBody,
 }
 
@@ -3301,6 +3337,7 @@ impl StripeNextActionResponse {
             Self::MultibancoDisplayDetails(_) => None,
             Self::BoletoDisplayDetails(_) => None,
             Self::PixDisplayQrCode(_) => None,
+            Self::SwishHandleRedirectOrDisplayQrCode(_) => None,
             Self::NoNextActionBody => None,
         }
     }
@@ -3353,6 +3390,9 @@ impl Serialize for StripeNextActionResponse {
             Self::MultibancoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::BoletoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::PixDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
+            Self::SwishHandleRedirectOrDisplayQrCode(ref i) => {
+                Serialize::serialize(i, serializer)
+            }
             Self::NoNextActionBody => Serialize::serialize("NoNextActionBody", serializer),
         }
     }
