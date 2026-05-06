@@ -10,11 +10,11 @@ Turns out — very. A tiny mistake in how you represent a number can silently dr
 
 When you're building a payment system that talks to dozens of different payment processors, you quickly realize that every processor has its own opinion about what an "amount" looks like.
 
-- **Stripe** wants cents as an integer. `1000` means ten dollars. Their docs say: *"A positive integer representing how much to charge in the smallest currency unit."*
-- **Razorpay** also wants minor units as an integer — paise for INR. Their docs say: *"Payment amount in the smallest currency sub-unit. For ₹299, pass 29900."*
-- **PayPal** wants a string with decimals — `"10.00"`. The Orders v2 API uses a JSON string, not a number.
+- **[Stripe](https://docs.stripe.com/api/payment_intents/create)** wants cents as an integer. `1000` means ten dollars. Their docs say: *"A positive integer representing how much to charge in the smallest currency unit."*
+- **[Razorpay](https://razorpay.com/docs/api/orders/create/)** also wants minor units as an integer — paise for INR. Their docs say: *"Payment amount in the smallest currency sub-unit. For ₹299, pass 29900."*
+- **[PayPal](https://developer.paypal.com/docs/api/orders/v2/#orders_create)** wants a string with decimals — `"10.00"`. The Orders v2 API uses a JSON string, not a number.
 - **Wells Fargo** also wants a string with decimals — `"10.00"` — but with completely different field names and request structure.
-- **Stax** wants a float — `10.0`. Yes, an actual floating-point number. Their API field `total` is a JSON numeric type in major units.
+- **[Stax](https://docs.staxpayments.com/reference/charge)** wants a float — `10.0`. Yes, an actual floating-point number. Their API field `total` is a JSON numeric type in major units.
 
 These aren't guesses — each format is documented in the processor's official API reference. The diversity is real, and it's the whole problem.
 
@@ -80,7 +80,7 @@ Same struct. Radically different real-world values — because currency is alway
 
 ## Currency Isn't Uniform
 
-One thing that surprises people: different currencies have different numbers of decimal places, governed by ISO 4217 (the international standard for currency codes).
+One thing that surprises people: different currencies have different numbers of decimal places, governed by [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217) (the international standard for currency codes).
 
 Prism categorizes currencies into four groups:
 
@@ -127,20 +127,17 @@ pub trait AmountConvertor: Send {
 Two directions: outbound (internal → connector format for the request) and inbound (connector format → internal, for parsing responses and webhooks). Each connector picks the converter it needs once, at initialization. Here's what that looks like in practice:
 
 ```rust
-// Stripe: integer minor units
-macros::create_amount_converter_wrapper!(connector_name: Stripe, amount_type: MinorUnit);
-
-// Razorpay: also integer minor units
+// Stripe, Razorpay: integer minor units
 amount_converter: &MinorUnitForConnector
 
-// PayPal: string like "12.34"
+// PayPal, Wells Fargo: string like "12.34"
 amount_converter: &StringMajorUnitForConnector
 
 // Stax: float like 12.34
 amount_converter: &FloatMajorUnitForConnector
 ```
 
-When a payment is processed, the connector calls `convert_amount(...)` and gets back exactly the format it needs. When a response comes back, `convert_back_amount_to_minor_units(...)` normalizes it back into `Money` before it ever touches shared code.
+When a payment is processed, the connector calls `convert(amount, currency)` and gets back exactly the format it needs. When a response comes back, `convert_back(amount, currency)` normalizes it into `Money` before it ever touches shared code.
 
 ---
 
@@ -150,7 +147,7 @@ When a payment is processed, the connector calls `convert_amount(...)` and gets 
 
 The key is where the float lives. Inside Prism, everything is `MinorUnit` (an integer). The float only exists at the boundary — in the JSON body going to a connector that requires it. You convert from integer to float at the last possible moment, and convert back immediately when parsing the response.
 
-The conversion itself uses `rust_decimal::Decimal` as an intermediate — a fixed-precision decimal library, not native floating-point — so the arithmetic stays clean:
+The conversion itself uses [`rust_decimal::Decimal`](https://docs.rs/rust_decimal/latest/rust_decimal/) as an intermediate — a fixed-precision decimal library, not native floating-point — so the arithmetic stays clean:
 
 ```
 // Converting Money { amount: MinorUnit(1234), currency: USD }
