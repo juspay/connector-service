@@ -78,6 +78,7 @@ export class PipelineEngine {
           // Push each artifact key to the dashboard so it can render per-checkpoint results.
           this.bus?.emit("artifact:update", checkpoint.id, {
             artifacts: result.artifacts,
+            retryAttempt: retries,
           });
         }
         ctx.log(`[${checkpoint.id}] ✓ Passed`, "success");
@@ -101,6 +102,7 @@ export class PipelineEngine {
           Object.assign(ctx.artifacts, result.artifacts);
           this.bus?.emit("artifact:update", checkpoint.id, {
             artifacts: result.artifacts,
+            retryAttempt: retries,
           });
         }
 
@@ -118,21 +120,31 @@ export class PipelineEngine {
           }
         }
 
+        // Determine retry target - for grpc_test checkpoint with timeout errors,
+        // retry only the grpc_test checkpoint itself instead of rolling back to implementation
+        const isTimeoutError = result.errors?.some(
+          (e) => e.includes("timed out") || e.includes("timeout")
+        );
+        const effectiveRetryFrom =
+          checkpoint.id === "grpc_test" && isTimeoutError
+            ? "grpc_test" // Timeout: retry only grpc_test, don't rebuild
+            : checkpoint.retryFrom;
+
         const retryIdx = this.checkpoints.findIndex(
-          (c) => c.id === checkpoint.retryFrom
+          (c) => c.id === effectiveRetryFrom
         );
         if (retryIdx === -1) {
           throw new PipelineAbortError(
             checkpoint.id,
-            `Unknown retryFrom target: ${checkpoint.retryFrom}`
+            `Unknown retryFrom target: ${effectiveRetryFrom}`
           );
         }
         ctx.log(
-          `[${checkpoint.id}] Rolling back to: ${checkpoint.retryFrom} (retry ${retries + 1}/${maxRetries})`,
+          `[${checkpoint.id}] Rolling back to: ${effectiveRetryFrom} (retry ${retries + 1}/${maxRetries})`,
           "warn"
         );
         this.bus?.emitCheckpoint("checkpoint:retry", checkpoint.id, {
-          rollbackTo: checkpoint.retryFrom,
+          rollbackTo: effectiveRetryFrom,
           attempt: retries + 1,
         });
 

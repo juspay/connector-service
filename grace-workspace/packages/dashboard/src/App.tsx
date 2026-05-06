@@ -19,6 +19,7 @@ export function App() {
     retries,
     journey,
     artifacts,
+    artifactHistory,
     wsStatus,
     pipelineStatus,
     abortReason,
@@ -174,6 +175,7 @@ export function App() {
             checkpointId={selectedId}
             state={states[selectedId]}
             artifacts={artifacts}
+            artifactHistory={artifactHistory}
             onSubmitTask={submitTask}
             onHumanReviewRespond={respondToReview}
             onDesignGateRespond={respondToDesignGate}

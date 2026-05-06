@@ -233,6 +233,16 @@ export function usePipeline(wsUrl: string) {
             case "artifact:update":
               if (e.payload?.artifacts && typeof e.payload.artifacts === "object") {
                 setArtifacts((a) => ({ ...a, ...e.payload.artifacts }));
+                // Also store in artifact history keyed by checkpoint and retry attempt
+                if (e.checkpointId && e.payload?.retryAttempt !== undefined) {
+                  setArtifactHistory((h) => ({
+                    ...h,
+                    [e.checkpointId]: {
+                      ...(h[e.checkpointId] ?? {}),
+                      [e.payload.retryAttempt]: e.payload.artifacts,
+                    },
+                  }));
+                }
               }
               break;
             case "runs:list:response":
@@ -331,6 +341,7 @@ export function usePipeline(wsUrl: string) {
     retries,
     journey,
     artifacts,
+    artifactHistory,
     wsStatus,
     pipelineStatus,
     abortReason,

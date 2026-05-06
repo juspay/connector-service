@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { CheckpointState } from "../hooks/usePipeline";
 import { PIPELINE } from "../hooks/usePipeline";
 import { TaskForm, type SubmittedTask } from "./TaskForm";
@@ -53,6 +53,7 @@ export function CheckpointDetail({
   checkpointId,
   state,
   artifacts,
+  artifactHistory,
   onSubmitTask,
   onHumanReviewRespond,
   onDesignGateRespond,
@@ -65,6 +66,7 @@ export function CheckpointDetail({
   checkpointId: string;
   state: CheckpointState | undefined;
   artifacts: Record<string, unknown>;
+  artifactHistory?: Record<string, Record<number, unknown>>;
   onSubmitTask: (task: SubmittedTask) => void;
   onHumanReviewRespond: (
     checkpointId: string,
@@ -116,57 +118,25 @@ export function CheckpointDetail({
   const aKey = artifactKey[checkpointId];
   const artifact = aKey ? artifacts[aKey] : undefined;
 
-  // Retry history tracking
-  // Store artifacts per retry attempt for this checkpoint
-  const [retryArtifactHistory, setRetryArtifactHistory] = useState<Record<number, unknown>>({});
+  // Retry history tracking - use global artifactHistory if available
   const [selectedRetryAttempt, setSelectedRetryAttempt] = useState<number>(state.retries);
-  const prevRetryRef = useRef<number>(state.retries);
-  const lastArtifactForRetry = useRef<Record<number, unknown>>({});
 
-  // Track artifacts for each retry attempt
+  // Reset selected attempt when checkpoint changes or retries change externally
   useEffect(() => {
-    const currentRetry = state.retries;
+    setSelectedRetryAttempt(state.retries);
+  }, [checkpointId, state.retries]);
 
-    // Store artifact for current retry whenever we have one
-    if (artifact !== undefined) {
-      lastArtifactForRetry.current[currentRetry] = artifact;
-    }
-
-    // If retry increased, copy all previous artifacts to state
-    if (currentRetry > prevRetryRef.current) {
-      const newHistory: Record<number, unknown> = {};
-      for (let i = 0; i < currentRetry; i++) {
-        if (lastArtifactForRetry.current[i] !== undefined) {
-          newHistory[i] = lastArtifactForRetry.current[i];
-        }
-      }
-      setRetryArtifactHistory(newHistory);
-
-      // Update selected to current if it was on old current
-      if (selectedRetryAttempt >= currentRetry) {
-        setSelectedRetryAttempt(currentRetry);
-      }
-    }
-
-    prevRetryRef.current = currentRetry;
-  }, [state.retries, artifact, selectedRetryAttempt]);
-
-  // Clear history when checkpoint changes
-  useEffect(() => {
-    setRetryArtifactHistory({});
-    setSelectedRetryAttempt(0);
-    prevRetryRef.current = 0;
-    lastArtifactForRetry.current = {};
-  }, [checkpointId, runId]);
+  // Get artifact history for this checkpoint from global state
+  const checkpointHistory = artifactHistory?.[checkpointId] ?? {};
 
   // Build list of retry attempts for the dropdown
   const retryAttempts: RetryAttempt[] = (() => {
     const attempts: RetryAttempt[] = [];
     const currentRetry = state.retries;
 
-    // Add all historical attempts from our stored history
+    // Add all historical attempts from global history
     for (let i = 0; i < currentRetry; i++) {
-      if (retryArtifactHistory[i] !== undefined) {
+      if (checkpointHistory[i] !== undefined) {
         attempts.push({
           attempt: i,
           status: "failed", // Historical attempts are always failed (otherwise no retry would happen)
@@ -188,7 +158,7 @@ export function CheckpointDetail({
   // Get the artifact to display based on selected retry attempt
   const displayArtifact = selectedRetryAttempt === state.retries
     ? artifact
-    : retryArtifactHistory[selectedRetryAttempt];
+    : checkpointHistory[selectedRetryAttempt];
 
   const isTaskStep = checkpointId === "task";
   const isDesignGate = checkpointId === "design_gate";
@@ -309,7 +279,7 @@ export function CheckpointDetail({
       </div>
 
       {/* Retry History Selector - shown when there are retries */}
-      {(state.retries > 0 || Object.keys(retryArtifactHistory).length > 0) && (
+      {(state.retries > 0 || Object.keys(checkpointHistory).length > 0) && (
         <section style={{ marginBottom: 16 }}>
           <RetryHistory
             currentAttempt={state.retries}
