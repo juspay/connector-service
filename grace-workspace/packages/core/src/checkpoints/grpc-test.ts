@@ -287,6 +287,12 @@ ${structuralFailReason ? `\nSTRUCTURAL CHECK: ${structuralFailReason}\n` : ""}`;
         const fileLogTail = await tailServerLog(serverLogPath, startTs);
         const serverLogTail = result.server_log_tail || fileLogTail;
 
+        // Parse the structured diagnostics out of the server log so the writer
+        // agent gets actionable signals (URL it built, what came back) rather
+        // than a 6 KB tracing dump it has to re-parse itself.
+        const reqInfo = parseOutgoingRequest(serverLogTail);
+        const respInfo = decodeResponseBody(serverLogTail);
+
         const repairBrief: RepairBrief = {
           source: "grpc_test",
           flow,
@@ -296,8 +302,28 @@ ${structuralFailReason ? `\nSTRUCTURAL CHECK: ${structuralFailReason}\n` : ""}`;
           serverLogTail,
           rootCauseFile: extractRootCauseFile(grpcOutput, serverLogTail),
           rootCauseLine: extractRootCauseLine(grpcOutput, serverLogTail),
-          errorKind: classifyError(grpcOutput, serverLogTail, structuralFailReason),
+          errorKind: classifyError(
+            grpcOutput,
+            serverLogTail,
+            structuralFailReason,
+            respInfo.looksLike,
+            reqInfo.url,
+          ),
+          urlAttempted: reqInfo.url,
+          httpMethodAttempted: reqInfo.method,
+          outgoingBodyEcho: reqInfo.bodyEcho,
+          responseLooksLike: respInfo.looksLike,
+          responseFirstBytes: respInfo.firstBytes,
         };
+
+        // Surface the high-signal classification in the engine log too so the
+        // user can see what kind of failure we caught at a glance.
+        if (repairBrief.urlAttempted) {
+          ctx.log(
+            `[grpc_test] Diagnosed: kind=${repairBrief.errorKind} url=${repairBrief.urlAttempted} method=${repairBrief.httpMethodAttempted ?? "?"} response=${repairBrief.responseLooksLike ?? "?"}`,
+            "warn",
+          );
+        }
 
         // Store errors for implementation retry
         ctx.artifacts.grpcTestErrors = [errorMsg, grpcOutput].filter(Boolean) as string[];
@@ -543,14 +569,91 @@ function classifyError(
   grpcOutput: string,
   serverLogTail: string,
   structuralFailReason: string | null,
+  responseLooksLike?: RepairBrief["responseLooksLike"],
+  urlAttempted?: string,
 ): RepairBrief["errorKind"] {
   if (structuralFailReason) return "transform_error";
   const haystack = `${serverLogTail}\n${grpcOutput}`;
+
+  // High-signal: structured diagnostics from the server log.
+  // HTML/XML response usually means the upstream returned an error page (4xx/5xx).
+  if (responseLooksLike === "html" || responseLooksLike === "xml") {
+    // URL-typo heuristic: a digit immediately followed by a letter inside
+    // the path (e.g. "/v1profiles") is almost always a missing-slash bug,
+    // since real REST paths look like "/v1/profiles" with the version
+    // segment terminated by a slash.
+    if (urlAttempted && /\/v\d+[a-z]/i.test(new URL(urlAttempted).pathname)) {
+      return "wrong_url";
+    }
+    return "html_not_json";
+  }
+  if (/401|403|Unauthorized|Forbidden|invalid api key|invalid passcode/i.test(haystack)) return "auth_failure";
   if (/MissingRequiredField|Missing required field/i.test(haystack)) return "missing_field";
   if (/Transformation error|TryFrom|ConnectorRequest/i.test(haystack)) return "transform_error";
-  if (/InvalidArgument|status_code: \"Client specified an invalid argument\"/i.test(haystack)) return "transform_error";
+  if (/InvalidArgument|status_code: "Client specified an invalid argument"/i.test(haystack)) return "transform_error";
   if (/connection refused|Connection refused|tcp connect error/i.test(haystack)) return "infra";
   if (/HTTP\s+(4\d\d|5\d\d)/i.test(haystack)) return "http_error";
   if (/timed out|timeout/i.test(haystack)) return "infra";
   return "unknown";
+}
+
+/**
+ * Parse the most recent outgoing HTTP request the connector built, from
+ * grpc-server's `Golden Log Line (outgoing)` tracing line. Format example:
+ *   ... request.url: https://api.na.bambora.com/v1profiles, request.method: GET,
+ *   request.headers: {("Content-Type", "application/json"), …}, request.body: null
+ *
+ * Returns the *last* match in the log (most recent attempt) so we don't
+ * surface a stale request from an earlier checkpoint.
+ */
+function parseOutgoingRequest(serverLogTail: string): {
+  url?: string;
+  method?: string;
+  bodyEcho?: string;
+} {
+  const urlMatches = [...serverLogTail.matchAll(/request\.url:\s+(\S+?)(?=,|\s|$)/g)];
+  const methodMatches = [...serverLogTail.matchAll(/request\.method:\s+(\S+?)(?=,|\s|$)/g)];
+  // request.body can be `null`, `{...}`, or a JSON-string. Stop at the next
+  // structured-log key (`, request.…`, `, latency`, end of line).
+  const bodyMatches = [
+    ...serverLogTail.matchAll(/request\.body:\s+(.+?)(?=,\s+(?:request\.|latency)|$)/gm),
+  ];
+  const url = urlMatches.at(-1)?.[1];
+  const method = methodMatches.at(-1)?.[1];
+  const bodyEcho = bodyMatches.at(-1)?.[1]?.trim();
+  return {
+    url,
+    method,
+    bodyEcho: bodyEcho && bodyEcho.length < 1000 ? bodyEcho : bodyEcho?.slice(0, 1000),
+  };
+}
+
+/**
+ * Find a Rust byte-array literal in the log (e.g. `&[u8] [13, 10, 60, ...]`)
+ * — that's the raw response body the deserialiser tripped on. Decode it as
+ * UTF-8 and sniff the first non-whitespace bytes to figure out what kind of
+ * payload the upstream actually sent. This lets the repairBrief tell the
+ * writer agent "you got HTML back" without dumping 4 KB of byte numbers.
+ */
+function decodeResponseBody(serverLogTail: string): {
+  looksLike?: RepairBrief["responseLooksLike"];
+  firstBytes?: string;
+} {
+  const m = serverLogTail.match(/&\[u8\]\s*\[([\d,\s]+?)\]/);
+  if (!m) return {};
+  const nums = m[1]
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n >= 0 && n <= 255);
+  if (nums.length === 0) return { looksLike: "empty", firstBytes: "" };
+  const decoded = Buffer.from(nums).toString("utf-8");
+  const head = decoded.slice(0, 400);
+  const trimmed = head.trimStart().toLowerCase();
+  let looksLike: RepairBrief["responseLooksLike"];
+  if (trimmed.length === 0) looksLike = "empty";
+  else if (trimmed.startsWith("<!doctype html") || trimmed.startsWith("<html")) looksLike = "html";
+  else if (trimmed.startsWith("<?xml") || trimmed.startsWith("<")) looksLike = "xml";
+  else if (trimmed.startsWith("{") || trimmed.startsWith("[")) looksLike = "json";
+  else looksLike = "text";
+  return { looksLike, firstBytes: head };
 }

@@ -205,12 +205,26 @@ restrictions apply (write code, do NOT run cargo build, do NOT run grpcurl).
 - Root-cause file: ${repairBrief.rootCauseFile ?? "unknown"}
 - Root-cause line: ${repairBrief.rootCauseLine ?? "unknown"}
 
-${repairBrief.source === "grpc_test" ? `### grpcurl command
+${repairBrief.source === "grpc_test" ? `### grpcurl command (the gRPC test that failed)
 \`\`\`
 ${repairBrief.grpcurlCommand ?? "(not captured)"}
 \`\`\`
 
-### grpcurl output (response + error)
+${repairBrief.urlAttempted ? `### Outgoing HTTP request your connector built (this is what was actually sent to the upstream)
+- URL:     ${repairBrief.urlAttempted}
+- Method:  ${repairBrief.httpMethodAttempted ?? "?"}
+- Body:    ${repairBrief.outgoingBodyEcho ?? "?"}
+
+${repairBrief.responseLooksLike ? `### Upstream response looks like: \`${repairBrief.responseLooksLike}\`${
+  repairBrief.responseLooksLike === "html" || repairBrief.responseLooksLike === "xml"
+    ? "  ← STRONG SIGNAL: an HTML/XML response usually means the upstream returned a 4xx/5xx error page (often because the URL is wrong or the endpoint doesn't exist). Check that \`get_url\` builds a path the API actually exposes; in particular look for missing slashes between the version segment and the resource (e.g. \`/v1profiles\` instead of \`/v1/profiles\`)."
+    : ""
+}\n` : ""}${repairBrief.responseFirstBytes ? `### First bytes of the upstream response body (decoded UTF-8)
+\`\`\`
+${repairBrief.responseFirstBytes}
+\`\`\`
+
+` : ""}` : ""}### grpcurl output (response + error)
 \`\`\`
 ${(repairBrief.grpcurlOutput ?? "").slice(0, 4000)}
 \`\`\`

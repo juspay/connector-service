@@ -673,8 +673,23 @@ export interface FeatureResearchReport {
 export interface RepairBrief {
   source: "grpc_test" | "compiler_check";
   flow: string;
-  /** Coarse classification used by the writer to pick a strategy. */
+  /**
+   * Coarse classification used by the writer to pick a strategy.
+   *  - `wrong_url`        URL the connector built looks malformed (e.g. `/v1profiles` missing slash)
+   *  - `html_not_json`    Upstream returned HTML/XML where JSON was expected (typical 4xx/5xx error page)
+   *  - `auth_failure`     401/403 patterns
+   *  - `missing_field`    Rust transformer reported MissingRequiredField
+   *  - `transform_error`  TryFrom / serialization layer error
+   *  - `status_mapping`   Response code wasn't mapped to a status
+   *  - `http_error`       Upstream returned 4xx/5xx with parseable body
+   *  - `build_error`      cargo build failed (compiler_check)
+   *  - `infra`            Server not up, network down, timeouts
+   *  - `unknown`          Did not match any pattern
+   */
   errorKind?:
+    | "wrong_url"
+    | "html_not_json"
+    | "auth_failure"
     | "missing_field"
     | "transform_error"
     | "status_mapping"
@@ -684,11 +699,24 @@ export interface RepairBrief {
     | "unknown";
   rootCauseFile?: string;
   rootCauseLine?: number;
-  /** grpc_test only */
+  /** grpc_test only — raw artifacts */
   grpcurlCommand?: string;
   grpcurlOutput?: string;
   responseSummary?: string;
   serverLogTail?: string;
+  /**
+   * grpc_test only — structured diagnostics parsed from the server log.
+   * Lets the FIX-MODE prompt show the writer agent exactly what URL was hit
+   * and what kind of response came back, instead of forcing it to re-parse
+   * raw tracing output.
+   */
+  urlAttempted?: string;
+  httpMethodAttempted?: string;
+  outgoingBodyEcho?: string;
+  /** Coarse shape of the response body the upstream returned */
+  responseLooksLike?: "html" | "xml" | "json" | "text" | "empty";
+  /** First ~400 chars of the decoded response body for the writer's context */
+  responseFirstBytes?: string;
   /** compiler_check only */
   buildOutput?: string;
   rustcErrors?: string[];
