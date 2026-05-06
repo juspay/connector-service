@@ -138,13 +138,6 @@ jobs:
         with:
           config: ./.typos.toml
 
-  # ── Proto checks (lint + breaking) ───────────────────────────────────────
-  # Pull requests only (proto paths changed, non-draft). merge_group/push rely on PR gate.
-  #
-  # buf lint — MINIMAL preset + legacy-layout exceptions (see buf.yaml)
-  # buf breaking — vs PR base branch; git fetch ensures refs/heads/<base> exists for buf's local clone.
-  # --against-config aligns module root with protos under crates/types-traits/grpc-api-types/proto.
-  #
   clippy:
     name: Clippy check
     needs: changes
