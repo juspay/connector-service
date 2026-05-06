@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.15.0-hotfix2
+
+### Bug Fixes
+
+- **connector:** [Truelayer] Make phone details optional ([#1229](https://github.com/juspay/connector-service/pull/1229)) ([`9f972e7`](https://github.com/juspay/connector-service/commit/9f972e7906f33c1817598b9a5a5e04b2b8706fb8))
+
+**Full Changelog:** [`2026.04.15.0-hotfix1...2026.04.15.0-hotfix2`](https://github.com/juspay/connector-service/compare/2026.04.15.0-hotfix1...2026.04.15.0-hotfix2)
+
+- - -
+
 ## 2026.04.15.0-hotfix1
 
 ### Features
