@@ -3182,7 +3182,9 @@ impl<
                         field_name: "customer.email",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid customer email format".to_string()),
-                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -7876,8 +7878,13 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateClientAuthenticationToken
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
                         field_name: "payment_context.customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email format in payment context customer".to_string()),
-                            suggested_action: Some("Provide a valid email address in payment_context.customer.email".to_string()),
+                            additional_context: Some(
+                                "Invalid email format in payment context customer".to_string(),
+                            ),
+                            suggested_action: Some(
+                                "Provide a valid email address in payment_context.customer.email"
+                                    .to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -8626,7 +8633,9 @@ impl<
                         field_name: "customer.email",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid customer email format".to_string()),
-                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -8990,7 +8999,9 @@ impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
                         field_name: "customer.email",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid customer email format".to_string()),
-                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -9035,7 +9046,9 @@ impl ForeignTryFrom<&grpc_api_types::payouts::Customer> for CustomerInfo {
                         field_name: "customer.email",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid customer email format".to_string()),
-                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -10644,7 +10657,9 @@ impl<
                         field_name: "customer.email",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid customer email format".to_string()),
-                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -11935,7 +11950,9 @@ impl<
                         field_name: "customer.email",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid customer email format".to_string()),
-                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -12035,7 +12052,9 @@ impl<
                         field_name: "customer.email",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid customer email format".to_string()),
-                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -12151,7 +12170,9 @@ impl<
                         field_name: "customer.email",
                         context: IntegrationErrorContext {
                             additional_context: Some("Invalid customer email format".to_string()),
-                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
                             doc_url: None,
                         },
                     })

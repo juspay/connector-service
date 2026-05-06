@@ -165,8 +165,14 @@ impl PayoutTransferRequest {
                 error_stack::report!(IntegrationError::MissingRequiredField {
                     field_name: "customer.merchant_customer_id",
                     context: crate::errors::IntegrationErrorContext {
-                        additional_context: Some("Customer merchant_customer_id is required for Loonio payouts".to_string()),
-                        suggested_action: Some("Provide a valid merchant_customer_id in the customer object".to_string()),
+                        additional_context: Some(
+                            "Customer merchant_customer_id is required for Loonio payouts"
+                                .to_string()
+                        ),
+                        suggested_action: Some(
+                            "Provide a valid merchant_customer_id in the customer object"
+                                .to_string()
+                        ),
                         doc_url: None,
                     },
                 })
@@ -176,8 +182,14 @@ impl PayoutTransferRequest {
                     .change_context(IntegrationError::InvalidDataFormat {
                         field_name: "customer.merchant_customer_id",
                         context: crate::errors::IntegrationErrorContext {
-                            additional_context: Some("Failed to parse merchant_customer_id as a valid CustomerId".to_string()),
-                            suggested_action: Some("Ensure the merchant_customer_id is a valid non-empty string".to_string()),
+                            additional_context: Some(
+                                "Failed to parse merchant_customer_id as a valid CustomerId"
+                                    .to_string(),
+                            ),
+                            suggested_action: Some(
+                                "Ensure the merchant_customer_id is a valid non-empty string"
+                                    .to_string(),
+                            ),
                             doc_url: None,
                         },
                     })
@@ -186,18 +198,30 @@ impl PayoutTransferRequest {
 
     pub fn get_optional_customer_id(
         &self,
-    ) -> Result<Option<common_utils::id_type::CustomerId>, error_stack::Report<IntegrationError>> {
-        match self.customer.as_ref().and_then(|c| c.merchant_customer_id.clone()) {
+    ) -> Result<Option<common_utils::id_type::CustomerId>, error_stack::Report<IntegrationError>>
+    {
+        match self
+            .customer
+            .as_ref()
+            .and_then(|c| c.merchant_customer_id.clone())
+        {
             Some(id) => {
-                let customer_id = common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id))
-                    .change_context(IntegrationError::InvalidDataFormat {
-                        field_name: "customer.merchant_customer_id",
-                        context: crate::errors::IntegrationErrorContext {
-                            additional_context: Some("Failed to parse merchant_customer_id as a valid CustomerId".to_string()),
-                            suggested_action: Some("Ensure the merchant_customer_id is a valid non-empty string".to_string()),
-                            doc_url: None,
-                        },
-                    })?;
+                let customer_id =
+                    common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id))
+                        .change_context(IntegrationError::InvalidDataFormat {
+                            field_name: "customer.merchant_customer_id",
+                            context: crate::errors::IntegrationErrorContext {
+                                additional_context: Some(
+                                    "Failed to parse merchant_customer_id as a valid CustomerId"
+                                        .to_string(),
+                                ),
+                                suggested_action: Some(
+                                    "Ensure the merchant_customer_id is a valid non-empty string"
+                                        .to_string(),
+                                ),
+                                doc_url: None,
+                            },
+                        })?;
                 Ok(Some(customer_id))
             }
             None => Ok(None),

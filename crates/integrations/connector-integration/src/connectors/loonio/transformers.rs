@@ -638,7 +638,10 @@ impl
                     city: req.request.get_optional_billing_city(),
                     province: req.request.get_optional_billing_state(),
                     postal_code: req.request.get_optional_billing_zip(),
-                    country: req.request.get_optional_billing_country().map(|c| c.to_string()),
+                    country: req
+                        .request
+                        .get_optional_billing_country()
+                        .map(|c| c.to_string()),
                 };
 
                 let amount = utils::convert_amount(
