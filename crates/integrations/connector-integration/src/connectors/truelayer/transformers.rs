@@ -372,10 +372,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_payment_billing()
                     .map(|billing| billing.get_phone_with_country_code())
                     .transpose()
-                    .change_context(IntegrationError::MissingRequiredField {
-                        field_name: "billing.phone",
-                        context: Default::default(),
-                    })?;
+                    .ok()
+                    .flatten();
 
                 // Ensure at least one is present
                 if email.is_none() && phone.is_none() {
