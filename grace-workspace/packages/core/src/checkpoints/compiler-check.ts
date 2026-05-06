@@ -14,7 +14,7 @@ export const compilerCheckCheckpoint: Checkpoint = {
   id: "compiler_check",
   name: "Compiler Check",
   description: "Verify code compiles without errors using cargo build (Phase 6 ONLY)",
-  retryFrom: "compiler_check",
+  retryFrom: "implementation",
   timeout: 15 * 60 * 1000, // 15 min for build
 
   async run(ctx) {

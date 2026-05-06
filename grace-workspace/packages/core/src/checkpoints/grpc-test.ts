@@ -15,7 +15,7 @@ export const grpcTestCheckpoint: Checkpoint = {
   id: "grpc_test",
   name: "gRPC Test",
   description: "Test connector via gRPC calls using grpcurl (replaces Design Match/Cypress/Playwright)",
-  retryFrom: "grpc_test",
+  retryFrom: "implementation",
   timeout: 10 * 60 * 1000, // 10 min for testing
   continueOnFailure: true, // Continue to PR review even if gRPC tests fail
 
