@@ -30,7 +30,7 @@ use domain_types::{
         self, AchTransfer, BankRedirectData, BankTransferInstructions, BankTransferNextStepsData,
         Card, CardRedirectData, GiftCardData, GooglePayWalletData, MultibancoTransferInstructions,
         PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
-        WalletData,
+        VoucherNextStepData, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
@@ -346,6 +346,21 @@ pub struct StripePayLaterData {
     pub payment_method_data_type: StripePaymentMethodType,
 }
 
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeBoletoData {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+    #[serde(rename = "payment_method_data[boleto][tax_id]")]
+    pub boleto_tax_id: Secret<String>,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripePixData {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct TokenRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(flatten)]
@@ -569,6 +584,8 @@ pub enum StripePaymentMethodData<
     BankRedirect(StripeBankRedirectData),
     BankDebit(StripeBankDebitData),
     BankTransfer(StripeBankTransferData),
+    Voucher(StripeBoletoData),
+    BankTransferPix(StripePixData),
 }
 
 #[serde_with::skip_serializing_none]
@@ -795,6 +812,8 @@ pub enum StripePaymentMethodType {
     #[serde(rename = "cashapp")]
     Cashapp,
     RevolutPay,
+    Boleto,
+    Pix,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -833,13 +852,13 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             common_enums::PaymentMethodType::RevolutPay => Ok(Self::RevolutPay),
             // Stripe expects PMT as Card for Recurring Mandates Payments
             common_enums::PaymentMethodType::GooglePay => Ok(Self::Card),
-            common_enums::PaymentMethodType::Boleto
-            | common_enums::PaymentMethodType::CardRedirect
+            common_enums::PaymentMethodType::Boleto => Ok(Self::Boleto),
+            common_enums::PaymentMethodType::Pix => Ok(Self::Pix),
+            common_enums::PaymentMethodType::CardRedirect
             | common_enums::PaymentMethodType::CryptoCurrency
             | common_enums::PaymentMethodType::Multibanco
             | common_enums::PaymentMethodType::OnlineBankingFpx
             | common_enums::PaymentMethodType::Paypal
-            | common_enums::PaymentMethodType::Pix
             | common_enums::PaymentMethodType::UpiCollect
             | common_enums::PaymentMethodType::UpiIntent
             | common_enums::PaymentMethodType::UpiQr
@@ -1460,13 +1479,13 @@ fn create_stripe_payment_method<
                 Some(StripePaymentMethodType::CustomerBalance),
                 payment_request_details.billing_address,
             )),
-            payment_method_data::BankTransferData::Pix { .. } => {
-                Err(IntegrationError::NotImplemented(
-                    get_unimplemented_payment_method_error_message("stripe"),
-                    Default::default(),
-                )
-                .into())
-            }
+            payment_method_data::BankTransferData::Pix { .. } => Ok((
+                StripePaymentMethodData::BankTransferPix(StripePixData {
+                    payment_method_data_type: StripePaymentMethodType::Pix,
+                }),
+                Some(StripePaymentMethodType::Pix),
+                payment_request_details.billing_address,
+            )),
             payment_method_data::BankTransferData::Pse {}
             | payment_method_data::BankTransferData::LocalBankTransfer { .. }
             | payment_method_data::BankTransferData::InstantBankTransfer {}
@@ -1519,7 +1538,24 @@ fn create_stripe_payment_method<
         .into()),
 
         PaymentMethodData::Voucher(voucher_data) => match voucher_data {
-            VoucherData::Boleto(_) | VoucherData::Oxxo => Err(IntegrationError::NotImplemented(
+            VoucherData::Boleto(boleto_data) => {
+                let tax_id = boleto_data
+                    .social_security_number
+                    .clone()
+                    .ok_or(IntegrationError::MissingRequiredField {
+                        field_name: "voucher_data.boleto.social_security_number",
+                        context: Default::default(),
+                    })?;
+                Ok((
+                    StripePaymentMethodData::Voucher(StripeBoletoData {
+                        payment_method_data_type: StripePaymentMethodType::Boleto,
+                        boleto_tax_id: tax_id,
+                    }),
+                    Some(StripePaymentMethodType::Boleto),
+                    payment_request_details.billing_address,
+                ))
+            }
+            VoucherData::Oxxo => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
                 Default::default(),
             )
@@ -2915,6 +2951,34 @@ pub fn get_connector_metadata(
                 };
                 Some(multibanco_bank_transfer_instructions.encode_to_value())
             }
+            StripeNextActionResponse::BoletoDisplayDetails(response) => {
+                let voucher_data = VoucherNextStepData {
+                    entry_date: None,
+                    expires_at: response.expires_at,
+                    expiry_date: None,
+                    reference: response.number.peek().to_string(),
+                    download_url: response.pdf.clone(),
+                    instructions_url: response.hosted_voucher_url.clone(),
+                    digitable_line: Some(response.number.clone()),
+                    barcode: None,
+                    qr_code_url: None,
+                };
+                Some(voucher_data.encode_to_value())
+            }
+            StripeNextActionResponse::PixDisplayQrCode(response) => {
+                let voucher_data = VoucherNextStepData {
+                    entry_date: None,
+                    expires_at: response.expires_at,
+                    expiry_date: None,
+                    reference: response.data.clone(),
+                    download_url: None,
+                    instructions_url: response.hosted_instructions_url.clone(),
+                    digitable_line: None,
+                    barcode: None,
+                    qr_code_url: Some(response.image_url_png.clone()),
+                };
+                Some(voucher_data.encode_to_value())
+            }
             _ => None,
         })
         .transpose()
@@ -3191,6 +3255,23 @@ pub fn stripe_opt_latest_attempt_to_opt_string(
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripeBoletoDisplayDetails {
+    pub number: Secret<String>,
+    pub expires_at: Option<i64>,
+    pub pdf: Option<String>,
+    pub hosted_voucher_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripePixDisplayQrCode {
+    pub data: String,
+    pub image_url_png: String,
+    pub image_url_svg: String,
+    pub expires_at: Option<i64>,
+    pub hosted_instructions_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case", remote = "Self")]
 pub enum StripeNextActionResponse {
     CashappHandleRedirectOrDisplayQrCode(StripeCashappQrResponse),
@@ -3200,6 +3281,8 @@ pub enum StripeNextActionResponse {
     WechatPayDisplayQrCode(WechatPayRedirectToQr),
     DisplayBankTransferInstructions(StripeBankTransferDetails),
     MultibancoDisplayDetails(MultibancoCreditTransferResponse),
+    BoletoDisplayDetails(StripeBoletoDisplayDetails),
+    PixDisplayQrCode(StripePixDisplayQrCode),
     NoNextActionBody,
 }
 
@@ -3216,6 +3299,8 @@ impl StripeNextActionResponse {
             Self::CashappHandleRedirectOrDisplayQrCode(_) => None,
             Self::DisplayBankTransferInstructions(_) => None,
             Self::MultibancoDisplayDetails(_) => None,
+            Self::BoletoDisplayDetails(_) => None,
+            Self::PixDisplayQrCode(_) => None,
             Self::NoNextActionBody => None,
         }
     }
@@ -3266,6 +3351,8 @@ impl Serialize for StripeNextActionResponse {
             Self::WechatPayDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::DisplayBankTransferInstructions(ref i) => Serialize::serialize(i, serializer),
             Self::MultibancoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
+            Self::BoletoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
+            Self::PixDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::NoNextActionBody => Serialize::serialize("NoNextActionBody", serializer),
         }
     }
@@ -4610,8 +4697,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         })),
                     ))
                 }
-                payment_method_data::BankTransferData::Pix { .. }
-                | payment_method_data::BankTransferData::Pse {}
+                payment_method_data::BankTransferData::Pix { .. } => {
+                    Ok(Self::BankTransferPix(StripePixData {
+                        payment_method_data_type: StripePaymentMethodType::Pix,
+                    }))
+                }
+                payment_method_data::BankTransferData::Pse {}
                 | payment_method_data::BankTransferData::PermataBankTransfer { .. }
                 | payment_method_data::BankTransferData::BcaBankTransfer { .. }
                 | payment_method_data::BankTransferData::BniVaBankTransfer { .. }
