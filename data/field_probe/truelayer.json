@@ -293,7 +293,7 @@
       },
       "OpenBanking": {
         "status": "error",
-        "error": "Failed to encode connector request"
+        "error": "Stuck on field: either billing.email/customer_email or billing.phone — Missing required field: either billing.email/customer_email or billing.phone"
       },
       "OpenBankingPis": {
         "status": "not_supported",
