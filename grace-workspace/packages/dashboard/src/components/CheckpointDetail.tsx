@@ -103,6 +103,7 @@ export function CheckpointDetail({
     l3_review: "l3Review",
     implementation: "implementation",
     compiler: "compiledFiles",
+    grpc_test: "grpcTest",
     design_match: "designDiff",
     cypress: "cypressReport",
     playwright: "playwrightReport",

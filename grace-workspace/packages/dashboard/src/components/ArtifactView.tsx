@@ -874,6 +874,115 @@ function ImplementationResultArtifact({ result }: { result: any }) {
   );
 }
 
+// ─── gRPC Test Result Artifact ──────────────────────────────────────────
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      style={{
+        fontSize: 11,
+        padding: "4px 10px",
+        borderRadius: 4,
+        border: `1px solid ${T.border}`,
+        background: copied ? T.successSoft : T.bgElev,
+        color: copied ? T.success : T.text,
+        cursor: "pointer",
+        marginLeft: 8,
+      }}
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  );
+}
+
+function GrpcTestArtifact({ result }: { result: any }) {
+  const passed = result?.status === "SUCCESS" || result?.grpcurl_result === "PASS";
+  const failed = result?.grpcurl_result === "FAIL" || result?.status === "FAILED";
+
+  // Prefer copy_paste_command, fallback to grpcurl_command
+  const copyPasteCmd = result?.copy_paste_command || result?.copyPasteCommand;
+  const originalCmd = result?.grpcurl_command || result?.grpcCommand;
+  const commandToShow = copyPasteCmd || originalCmd;
+
+  return (
+    <Card>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>
+            gRPC Test Result
+          </div>
+          <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
+            {passed ? "Tests passed" : failed ? "Tests failed" : "Test status unknown"}
+          </div>
+        </div>
+        <Tag tone={passed ? "ok" : failed ? "error" : "neutral"}>
+          {result?.grpcurl_result ?? result?.status ?? "UNKNOWN"}
+        </Tag>
+      </div>
+
+      {/* Copy-Paste Command */}
+      {commandToShow && (
+        <Field label={copyPasteCmd ? "Copy-Paste Command" : "Command"}>
+          <div style={{ display: "flex", alignItems: "flex-start" }}>
+            <div style={{ flex: 1, overflow: "hidden" }}>
+              <Pre>{commandToShow}</Pre>
+            </div>
+            <CopyButton text={commandToShow} />
+          </div>
+        </Field>
+      )}
+
+      {/* Request Payload */}
+      {result?.request_payload && (
+        <Field label="Request Payload">
+          <Pre>{result.request_payload}</Pre>
+        </Field>
+      )}
+
+      {/* grpcurl Output */}
+      {(result?.grpcurl_output || result?.grpcOutput || result?.output) && (
+        <Field label="Output">
+          <Pre>{result.grpcurl_output || result.grpcOutput || result.output}</Pre>
+        </Field>
+      )}
+
+      {/* Response Summary */}
+      {result?.response_summary && (
+        <Field label="Response Summary">
+          <div style={{ fontSize: 13, color: T.text }}>{result.response_summary}</div>
+        </Field>
+      )}
+
+      {/* Error Reason */}
+      {result?.reason && (
+        <div style={{
+          marginTop: 12,
+          padding: 10,
+          background: T.errorSoft,
+          borderRadius: 6,
+          borderLeft: `3px solid ${T.error}`
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: T.error }}>
+            Error
+          </div>
+          <div style={{ fontSize: 12, color: T.text, marginTop: 4 }}>{result.reason}</div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function DiffView({ diff }: { diff: string }) {
   const lines = diff.split("\n");
   return (
@@ -1506,6 +1615,8 @@ export function ArtifactView({
       return <L3AnalysisArtifact analysis={artifact as any} />;
     case "implementation":
       return <ImplementationResultArtifact result={artifact as any} />;
+    case "grpc_test":
+      return <GrpcTestArtifact result={artifact as any} />;
     default:
       return (
         <Card>

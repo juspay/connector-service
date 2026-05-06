@@ -89,7 +89,9 @@ Return ONLY valid JSON:
 {
   "status": "SUCCESS" | "FAILED",
   "grpcurl_result": "PASS" | "FAIL",
-  "grpcurl_command": "the full grpcurl command used",
+  "grpcurl_command": "the full grpcurl command used (may use temp file)",
+  "copy_paste_command": "COMPLETE command with JSON payload embedded inline - user should be able to copy and run this directly without any temp files",
+  "request_payload": "the exact JSON payload sent in the request",
   "grpcurl_output": "the full output including command and response",
   "response_summary": "brief summary of the response received"
 }
@@ -113,14 +115,17 @@ ${workflowContent}
       status?: string;
       grpcurl_result?: string;
       grpcurl_command?: string;
+      copy_paste_command?: string;
+      request_payload?: string;
       grpcurl_output?: string;
       response_summary?: string;
       output?: string;
       reason?: string;
     };
 
+    let result: GrpcTestResult | undefined;
     try {
-      const result = await runAI<GrpcTestResult>({
+      result = await runAI<GrpcTestResult>({
         skillBody: systemPrompt,
         userPayload: payload,
         cwd: projectRoot,
@@ -193,11 +198,30 @@ ${grpcOutput.slice(0, 3000)}
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      // This output is what gets displayed in the dashboard UI
+      const errorOutput = `gRPC Test Error: ${msg}
+
+═══════════════════════════════════════════════════════════════
+COMMAND ATTEMPTED:
+═══════════════════════════════════════════════════════════════
+${result?.grpcurl_command || "Not captured - test timed out before execution"}
+
+═══════════════════════════════════════════════════════════════
+RESPONSE/OUTPUT:
+═══════════════════════════════════════════════════════════════
+${result?.grpcurl_output || result?.output || "No output captured"}`;
+
       ctx.log(`[grpc_test] gRPC test failed: ${msg}`, "error");
+
       return {
         passed: false,
-        output: `gRPC Test Error: ${msg}`,
+        output: errorOutput,
         errors: [`gRPC test failed: ${msg}`],
+        artifacts: {
+          grpcTestError: msg,
+          grpcurlCommand: result?.grpcurl_command,
+          grpcurlOutput: result?.grpcurl_output || result?.output,
+        },
       };
     }
   },

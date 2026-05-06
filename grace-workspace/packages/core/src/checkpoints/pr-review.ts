@@ -61,7 +61,7 @@ export const prReviewCheckpoint: Checkpoint = {
   id: "pr_review",
   name: "PR review (automated + human gate)",
   description: "LLM reviews for spec compliance; human confirms on non-approved output.",
-  retryFrom: "compiler",
+  retryFrom: "pr_review",
   async run(ctx) {
     const implementation = ctx.artifacts.implementation;
     if (!implementation) return { passed: false, errors: ["Missing implementation result"] };
