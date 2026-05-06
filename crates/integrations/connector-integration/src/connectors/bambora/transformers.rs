@@ -2,13 +2,11 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        BamboraClientAuthenticationResponse as BamboraClientAuthenticationResponseDomain,
-        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -254,6 +252,81 @@ pub struct BamboraAvsDetails {
 
 // Request Transformation
 
+/// Bambora's Authorize payload pivots on three correlated fields —
+/// `payment_method` (the wire enum), `card` (raw card details), and
+/// `token` (single-use SDK token) — that move together: a `Card` payment
+/// fills `card` and leaves `token: None`; a `Token` payment fills
+/// `token` and leaves `card: None`. Returning them as a named struct
+/// rather than a positional tuple makes the correlation explicit and
+/// keeps Authorize-flow construction readable.
+struct BamboraPaymentComponents<T: PaymentMethodDataTypes> {
+    payment_method: PaymentMethodType,
+    card: Option<BamboraCard<T>>,
+    token: Option<BamboraToken>,
+}
+
+fn extract_payment_components<T: PaymentMethodDataTypes>(
+    item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+) -> Result<BamboraPaymentComponents<T>, error_stack::Report<IntegrationError>> {
+    let payment_method_data = &item.request.payment_method_data;
+    let is_auto_capture = !crate::utils::is_manual_capture(item.request.capture_method);
+
+    match payment_method_data {
+        PaymentMethodData::Card(card_data) => {
+            // Cardholder name — prefer billing full name, fall back to customer name.
+            let cardholder_name = item
+                .resource_common_data
+                .get_optional_billing_full_name()
+                .or_else(|| item.request.customer_name.clone().map(Secret::new))
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "billing.first_name or customer_name",
+                    context: Default::default(),
+                })?;
+
+            let expiry_year = card_data.get_card_expiry_year_2_digit()?;
+
+            Ok(BamboraPaymentComponents {
+                payment_method: PaymentMethodType::Card,
+                card: Some(BamboraCard {
+                    name: cardholder_name,
+                    number: card_data.card_number.clone(),
+                    expiry_month: card_data.card_exp_month.clone(),
+                    expiry_year,
+                    cvd: card_data.card_cvc.clone(),
+                    complete: is_auto_capture,
+                }),
+                token: None,
+            })
+        }
+        PaymentMethodData::Wallet(_)
+        | PaymentMethodData::CardRedirect(_)
+        | PaymentMethodData::PayLater(_)
+        | PaymentMethodData::BankRedirect(_)
+        | PaymentMethodData::BankDebit(_)
+        | PaymentMethodData::BankTransfer(_)
+        | PaymentMethodData::Crypto(_)
+        | PaymentMethodData::MandatePayment
+        | PaymentMethodData::Reward
+        | PaymentMethodData::RealTimePayment(_)
+        | PaymentMethodData::Upi(_)
+        | PaymentMethodData::Voucher(_)
+        | PaymentMethodData::GiftCard(_)
+        | PaymentMethodData::PaymentMethodToken(_)
+        | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::MobilePayment(_)
+        | PaymentMethodData::OpenBanking(_)
+        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+            Err(IntegrationError::NotSupported {
+                message: "Selected payment method".to_string(),
+                connector: "bambora",
+                context: Default::default(),
+            }
+            .into())
+        }
+    }
+}
+
 impl<T: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -269,66 +342,11 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        // Extract payment method data — supports raw Card and CardToken (from tokenization)
-        let payment_method_data = &item.request.payment_method_data;
-        let is_auto_capture = !crate::utils::is_manual_capture(item.request.capture_method);
-
-        let (payment_method, card, token) = match payment_method_data {
-            PaymentMethodData::Card(card_data) => {
-                // Get cardholder name - prefer billing full name, fallback to customer name
-                let cardholder_name = item
-                    .resource_common_data
-                    .get_optional_billing_full_name()
-                    .or_else(|| item.request.customer_name.clone().map(Secret::new))
-                    .ok_or(IntegrationError::MissingRequiredField {
-                        field_name: "billing.first_name or customer_name",
-                        context: Default::default(),
-                    })?;
-
-                // Get 2-digit expiry year using utility function
-                let expiry_year = card_data.get_card_expiry_year_2_digit()?;
-
-                (
-                    PaymentMethodType::Card,
-                    Some(BamboraCard {
-                        name: cardholder_name,
-                        number: card_data.card_number.clone(),
-                        expiry_month: card_data.card_exp_month.clone(),
-                        expiry_year,
-                        cvd: card_data.card_cvc.clone(),
-                        complete: is_auto_capture,
-                    }),
-                    None,
-                )
-            }
-
-            PaymentMethodData::Wallet(_)
-            | PaymentMethodData::CardRedirect(_)
-            | PaymentMethodData::PayLater(_)
-            | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
-            | PaymentMethodData::BankTransfer(_)
-            | PaymentMethodData::Crypto(_)
-            | PaymentMethodData::MandatePayment
-            | PaymentMethodData::Reward
-            | PaymentMethodData::RealTimePayment(_)
-            | PaymentMethodData::Upi(_)
-            | PaymentMethodData::Voucher(_)
-            | PaymentMethodData::GiftCard(_)
-            | PaymentMethodData::PaymentMethodToken(_)
-            | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                return Err(IntegrationError::NotSupported {
-                    message: "Selected payment method".to_string(),
-                    connector: "bambora",
-                    context: Default::default(),
-                }
-                .into());
-            }
-        };
+        let BamboraPaymentComponents {
+            payment_method,
+            card,
+            token,
+        } = extract_payment_components(item)?;
 
         // Extract billing address - mandatory field
         let payment_billing = item
@@ -912,105 +930,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// ---- ClientAuthenticationToken flow types ----
-
-// Bambora's Custom Checkout SDK is initialized client-side using merchant_id —
-// there is no server-side session-init API. To satisfy the framework's
-// request/response pipeline, we POST to the single-use tokenization endpoint
-// (`/scripts/tokenization/tokens`) with a synthetic test-card body, then
-// discard the returned token and surface merchant_id from connector_config
-// as the SDK's client authentication token (matching what Custom Checkout
-// expects). The response struct accepts whatever Bambora returns.
-
-#[derive(Debug, Serialize)]
-pub struct BamboraClientAuthRequest {
-    pub number: Secret<String>,
-    pub expiry_month: Secret<String>,
-    pub expiry_year: Secret<String>,
-    pub cvd: Secret<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BamboraClientAuthResponse {
-    #[serde(default)]
-    pub token: Option<String>,
-    #[serde(default)]
-    pub code: Option<u32>,
-    #[serde(default)]
-    pub message: Option<String>,
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BamboraRouterData<
-            RouterDataV2<
-                ClientAuthenticationToken,
-                PaymentFlowData,
-                ClientAuthenticationTokenRequestData,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for BamboraClientAuthRequest
-{
-    type Error = error_stack::Report<IntegrationError>;
-    fn try_from(
-        _item: BamboraRouterData<
-            RouterDataV2<
-                ClientAuthenticationToken,
-                PaymentFlowData,
-                ClientAuthenticationTokenRequestData,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Bambora test Visa — used solely to exercise Bambora's tokenization
-        // endpoint so the framework receives a 200; the token is discarded.
-        Ok(Self {
-            number: Secret::new("4030000010001234".to_string()),
-            expiry_month: Secret::new("02".to_string()),
-            expiry_year: Secret::new("29".to_string()),
-            cvd: Secret::new("123".to_string()),
-        })
-    }
-}
-
-impl TryFrom<ResponseRouterData<BamboraClientAuthResponse, Self>>
-    for RouterDataV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    >
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BamboraClientAuthResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let merchant_id = match &item.router_data.connector_config {
-            ConnectorSpecificConfig::Bambora { merchant_id, .. } => merchant_id.clone(),
-            _ => {
-                return Err(error_stack::report!(
-                    ConnectorError::ResponseHandlingFailed {
-                        context: Default::default(),
-                    }
-                ));
-            }
-        };
-
-        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
-            ConnectorSpecificClientAuthenticationResponse::Bambora(
-                BamboraClientAuthenticationResponseDomain { token: merchant_id },
-            ),
-        ));
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
-                session_data,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
-    }
-}
+// ClientAuthenticationToken types intentionally absent.
+//
+// Bambora's Custom Checkout SDK initialises entirely client-side from a
+// merchant_id; there is no server-side session-init endpoint. The earlier
+// version of this PR added a `BamboraClientAuthRequest` that POSTed a
+// hardcoded test PAN to `/scripts/tokenization/tokens` purely to make the
+// flow's HTTP pipeline produce a 200 — see the connector-level explanation
+// in `bambora.rs` next to the empty `ConnectorIntegrationV2` impl.

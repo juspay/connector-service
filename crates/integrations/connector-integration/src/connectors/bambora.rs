@@ -51,8 +51,7 @@ pub(crate) mod headers {
 }
 
 use transformers::{
-    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse,
-    BamboraClientAuthRequest, BamboraClientAuthResponse, BamboraPSyncResponse,
+    BamboraAuthorizeResponse, BamboraCaptureRequest, BamboraCaptureResponse, BamboraPSyncResponse,
     BamboraPaymentsRequest, BamboraRSyncResponse, BamboraRefundRequest, BamboraRefundResponse,
     BamboraVoidRequest, BamboraVoidResponse,
 };
@@ -94,12 +93,6 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: BamboraRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
-            flow: ClientAuthenticationToken,
-            request_body: BamboraClientAuthRequest,
-            response_body: BamboraClientAuthResponse,
-            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [amount_converter: FloatMajorUnit],
@@ -601,47 +594,32 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ClientAuthenticationToken Flow
+// ClientAuthenticationToken — not supported by Bambora.
 //
-// Bambora's Custom Checkout SDK is initialized client-side using merchant_id —
-// there is no server-side session-init API. To satisfy the framework's
-// request/response pipeline, we POST to Bambora's single-use tokenization
-// endpoint with a synthetic body and then surface merchant_id (read from
-// connector_config in the response TryFrom impl) as the SDK's client auth
-// token. The token returned by Bambora is intentionally discarded.
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Bambora,
-    curl_request: Json(BamboraClientAuthRequest),
-    curl_response: BamboraClientAuthResponse,
-    flow_name: ClientAuthenticationToken,
-    resource_common_data: PaymentFlowData,
-    flow_request: ClientAuthenticationTokenRequestData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-            self.build_headers(req)
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
-        ) -> CustomResult<String, IntegrationError> {
-            // Tokenization API lives at the api host root, not under /v1.
-            let base = self
-                .connector_base_url_payments(req)
-                .trim_end_matches("/v1")
-                .trim_end_matches('/');
-            Ok(format!("{base}/scripts/tokenization/tokens"))
-        }
-    }
-);
+// Bambora's Custom Checkout SDK is initialised entirely client-side: the
+// merchant loads `https://customcheckout.com/js/customcheckout.js` and
+// constructs a checkout instance with the merchant_id. There is no
+// server-side "create session" / "init token" endpoint to call, so an
+// empty `ConnectorIntegrationV2` impl is the correct contract — the
+// framework will surface `flow not supported` to the gRPC layer when a
+// caller asks for a client authentication token from Bambora.
+//
+// An earlier version of this PR fabricated a session by POSTing a
+// hardcoded test PAN to `/scripts/tokenization/tokens` and returning
+// merchant_id as a fake `captureContext`. That created real-but-unusable
+// tokens at Bambora and sent test card data with live merchant
+// credentials, which is unsafe and dishonest about the contract. The
+// merchant_id-as-SDK-init-token belongs in connector configuration on
+// the SDK side, not in a synthetic server-to-server call.
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    > for Bambora<T>
+{
+}
 
 // ===== EMPTY IMPLEMENTATIONS FOR OTHER FLOWS =====
 
