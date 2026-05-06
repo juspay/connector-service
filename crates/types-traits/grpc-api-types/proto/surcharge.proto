@@ -38,7 +38,7 @@ enum SurchargeStrategy {
 // Request message for calculating surcharge fees
 message SurchargeServiceCalculateRequest {
   // Identification
-  optional string merchant_reference_id = 1;  // Merchant reference for this calculation
+  optional string merchant_surcharge_id = 1;  // Merchant reference for this calculation
 
   // Amount Information
   Money amount = 2;  // Amount to calculate surcharge for (minor units)
