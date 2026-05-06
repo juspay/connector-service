@@ -67,43 +67,6 @@ impl<T> RequestData<T> {
     }
 }
 
-/// Trait for parsing gRPC requests into structured request data.
-/// Allows different parsing strategies for different flow types.
-pub trait RequestParser<T>: Sized {
-    /// Parse a gRPC request into structured request data.
-    ///
-    /// # Arguments
-    /// * `request` - The incoming gRPC request
-    /// * `config` - Server configuration
-    ///
-    /// # Returns
-    /// * `Ok(Self)` - Parsed request data
-    /// * `Err(tonic::Status)` - Parsing error
-    fn parse_request(
-        request: tonic::Request<T>,
-        config: Arc<configs::Config>,
-    ) -> Result<Self, tonic::Status>;
-}
-
-impl<T> RequestParser<T> for RequestData<T> {
-    fn parse_request(
-        request: tonic::Request<T>,
-        config: Arc<configs::Config>,
-    ) -> Result<Self, tonic::Status> {
-        Self::from_grpc_request(request, config)
-    }
-}
-
-/// Metadata payload for unauthenticated requests (webhooks).
-/// Contains only routing metadata without connector credentials.
-#[derive(Debug, Clone)]
-pub struct RoutingMetadata {
-    pub connector: Option<connector_types::ConnectorEnum>,
-    pub request_id: Option<String>,
-    pub tenant_id: Option<String>,
-    pub merchant_id: Option<String>,
-}
-
 /// Extract only routing metadata without requiring authentication credentials.
 /// Used for webhook flows where connector_config is not needed for initial processing.
 fn extract_routing_metadata_only(

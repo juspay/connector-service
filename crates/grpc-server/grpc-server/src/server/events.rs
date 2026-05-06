@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::request::RequestData;
-use crate::utils::{self, get_config_from_request, grpc_logging_wrapper_with_unauthenticated};
+use crate::utils::{self, get_config_from_request, grpc_logging_wrapper_with_parser};
 use common_enums;
 use common_utils::events::FlowName;
 use connector_integration::types::ConnectorData;
@@ -64,7 +64,7 @@ impl EventService for EventServiceImpl {
             .cloned()
             .unwrap_or_else(|| "EventService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper_with_unauthenticated(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
@@ -137,7 +137,7 @@ impl EventService for EventServiceImpl {
             .cloned()
             .unwrap_or_else(|| "EventService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper_with_unauthenticated(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
