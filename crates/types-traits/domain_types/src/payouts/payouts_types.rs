@@ -4,11 +4,13 @@ use crate::{
         ConnectorResponseHeaders, RawConnectorRequestResponse,
         ServerAuthenticationTokenResponseData,
     },
+    errors::IntegrationError,
     payment_address::Address,
     types::Connectors,
     utils::{missing_field_err, Error},
 };
-use hyperswitch_masking::{ExposeInterface, Secret};
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 
 #[derive(Debug, Clone)]
 pub struct PayoutFlowData {
@@ -118,6 +120,121 @@ pub struct PayoutTransferRequest {
     pub address: Option<PayoutAddress>,
     pub source_bank_data: Option<Bank>,
     pub customer: Option<PayoutCustomer>,
+}
+
+impl PayoutTransferRequest {
+    pub fn get_billing(&self) -> Result<&Address, Error> {
+        self.address
+            .as_ref()
+            .and_then(|a| a.billing_address.as_ref())
+            .ok_or_else(missing_field_err("address.billing_address"))
+    }
+
+    pub fn get_billing_address(&self) -> Result<&crate::payment_address::AddressDetails, Error> {
+        self.get_billing()?
+            .address
+            .as_ref()
+            .ok_or_else(missing_field_err("address.billing_address.address"))
+    }
+
+    pub fn get_billing_first_name(&self) -> Result<Secret<String>, Error> {
+        self.get_billing_address()?
+            .first_name
+            .clone()
+            .ok_or_else(missing_field_err(
+                "address.billing_address.address.first_name",
+            ))
+    }
+
+    pub fn get_billing_last_name(&self) -> Result<Secret<String>, Error> {
+        self.get_billing_address()?
+            .last_name
+            .clone()
+            .ok_or_else(missing_field_err(
+                "address.billing_address.address.last_name",
+            ))
+    }
+
+    /// Get customer_id from the customer field
+    pub fn get_customer_id(&self) -> Result<common_utils::id_type::CustomerId, Error> {
+        self.customer
+            .as_ref()
+            .and_then(|c| c.merchant_customer_id.clone())
+            .ok_or_else(missing_field_err("customer.merchant_customer_id"))
+            .and_then(|id| {
+                common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id))
+                    .change_context(IntegrationError::InvalidDataFormat {
+                        field_name: "customer.merchant_customer_id",
+                        context: Default::default(),
+                    })
+                    .map_err(Error::from)
+            })
+    }
+
+    /// Alternative: Get customer_id as Option for cases where it might not be required
+    pub fn get_optional_customer_id(&self) -> Option<common_utils::id_type::CustomerId> {
+        self.customer
+            .as_ref()
+            .and_then(|c| c.merchant_customer_id.clone())
+            .and_then(|id| {
+                common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id)).ok()
+            })
+    }
+
+    /// Get billing phone number
+    pub fn get_billing_phone(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|a| a.billing_address.as_ref())
+            .and_then(|b| b.phone.as_ref())
+            .and_then(|p| p.number.clone())
+    }
+
+    /// Get billing address line 1
+    pub fn get_billing_line1(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|a| a.billing_address.as_ref())
+            .and_then(|b| b.address.as_ref())
+            .and_then(|addr| addr.line1.clone())
+    }
+
+    /// Get billing city
+    pub fn get_billing_city(&self) -> Option<String> {
+        self.address
+            .as_ref()
+            .and_then(|a| a.billing_address.as_ref())
+            .and_then(|b| b.address.as_ref())
+            .and_then(|addr| addr.city.as_ref())
+            .map(|c| c.peek().clone())
+    }
+
+    /// Get billing state
+    pub fn get_billing_state(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|a| a.billing_address.as_ref())
+            .and_then(|b| b.address.as_ref())
+            .and_then(|addr| addr.state.clone())
+    }
+
+    /// Get billing zip/postal code
+    pub fn get_billing_zip(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|a| a.billing_address.as_ref())
+            .and_then(|b| b.address.as_ref())
+            .and_then(|addr| addr.zip.clone())
+    }
+
+    /// Get billing country
+    pub fn get_billing_country(&self) -> Option<common_enums::CountryAlpha2> {
+        self.address
+            .as_ref()
+            .and_then(|a| a.billing_address.as_ref())
+            .and_then(|b| b.address.as_ref())
+            .and_then(|addr| addr.country)
+    }
 }
 
 #[derive(Debug, Clone)]

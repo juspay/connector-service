@@ -1,7 +1,6 @@
 use super::LoonioRouterData;
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, PayoutStatus};
-use common_utils::types::AmountConvertor;
 use common_utils::{id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method};
 use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
@@ -630,72 +629,25 @@ impl
                     .connector_request_reference_id
                     .clone();
 
-                let missing_field = |field_name: &'static str| {
-                    error_stack::report!(IntegrationError::MissingRequiredField {
-                        field_name,
-                        context: Default::default(),
-                    })
-                };
-
-                let billing = req
-                    .request
-                    .address
-                    .as_ref()
-                    .and_then(|a| a.billing_address.as_ref())
-                    .ok_or_else(|| missing_field("address.billing_address"))?;
-
-                let billing_address = billing
-                    .address
-                    .as_ref()
-                    .ok_or_else(|| missing_field("address.billing_address.address"))?;
-
-                let first_name = billing_address
-                    .first_name
-                    .clone()
-                    .ok_or_else(|| missing_field("address.billing_address.address.first_name"))?;
-                let last_name = billing_address
-                    .last_name
-                    .clone()
-                    .ok_or_else(|| missing_field("address.billing_address.address.last_name"))?;
-
                 let customer_profile = LoonioCustomerProfile {
-                    first_name,
-                    last_name,
+                    first_name: req.request.get_billing_first_name()?,
+                    last_name: req.request.get_billing_last_name()?,
                     email,
-                    phone: billing.phone.as_ref().and_then(|p| p.number.clone()),
-                    address_a: billing_address.line1.clone(),
-                    city: billing_address.city.as_ref().map(|s| s.peek().clone()),
-                    province: billing_address.state.clone(),
-                    postal_code: billing_address.zip.clone(),
-                    country: billing_address.country.map(|c| c.to_string()),
+                    phone: req.request.get_billing_phone(),
+                    address_a: req.request.get_billing_line1(),
+                    city: req.request.get_billing_city(),
+                    province: req.request.get_billing_state(),
+                    postal_code: req.request.get_billing_zip(),
+                    country: req.request.get_billing_country().map(|c| c.to_string()),
                 };
 
-                let converter = common_utils::types::FloatMajorUnitForConnector;
-                let amount = converter
-                    .convert(req.request.amount, req.request.source_currency)
-                    .change_context(IntegrationError::AmountConversionFailed {
-                        context: Default::default(),
-                    })?;
+                let amount = utils::convert_amount(
+                    &common_utils::types::FloatMajorUnitForConnector,
+                    req.request.amount,
+                    req.request.source_currency,
+                )?;
 
-                let customer_id = if let Some(id) = req
-                    .request
-                    .customer
-                    .as_ref()
-                    .and_then(|c| c.merchant_customer_id.clone())
-                {
-                    CustomerId::try_from(std::borrow::Cow::from(id)).change_context(
-                        IntegrationError::InvalidDataFormat {
-                            field_name: "customer_id",
-                            context: Default::default(),
-                        },
-                    )?
-                } else {
-                    CustomerId::try_from(std::borrow::Cow::from(format!("payout_{transaction_id}")))
-                        .change_context(IntegrationError::InvalidDataFormat {
-                            field_name: "customer_id",
-                            context: Default::default(),
-                        })?
-                };
+                let customer_id = req.request.get_customer_id()?;
 
                 Ok(Self {
                     currency_code: req.request.source_currency,
@@ -709,10 +661,10 @@ impl
             Some(PayoutMethodData::Card(_))
             | Some(PayoutMethodData::Bank(_))
             | Some(PayoutMethodData::Wallet(_))
-            | Some(PayoutMethodData::BankRedirect(BankRedirect::OpenBankingUk(_)))
+            | Some(PayoutMethodData::BankRedirect(_))
             | Some(PayoutMethodData::Passthrough(_))
             | None => Err(error_stack::report!(IntegrationError::NotSupported {
-                message: "Only Interac bank redirect is supported for Loonio payouts".to_string(),
+                message: "Payment Method Not Supported".to_string(),
                 connector: "Loonio",
                 context: Default::default(),
             })),
