@@ -152,46 +152,36 @@ pub fn connector_and_optional_config_from_metadata(
     ),
     IntegrationError,
 > {
-    match (
-        metadata.get(X_CONNECTOR_CONFIG),
-        metadata.get(X_CONNECTOR_AUTH_DEPRECATED),
-    ) {
-        // Typed X-Connector-Config header takes precedence (provides both connector and config)
-        (Some(header_value), _) => {
-            let (connector, config) = parse_connector_config_from_typed_header(header_value)?;
-            Ok((connector, Some(config)))
-        }
-
-        // Backward compat: accept the old header name with old JSON format
-        (None, Some(header_value)) => {
-            logger::warn!(
-                "x-connector-auth header is deprecated and will be removed in a future release. \
-                 Use x-connector-config with {{\"config\":{{...}}}} format instead."
-            );
-            let (connector, config) = parse_connector_config_from_deprecated_header(header_value)?;
-            Ok((connector, Some(config)))
-        }
-
-        // Fall back to legacy x-connector + x-auth headers
-        (None, None) => {
-            logger::debug!(
-                "Typed connector config headers not found, falling back to legacy headers"
-            );
-
-            // Connector name is always required
-            let connector = connector_from_metadata(metadata)?;
-
-            // Only attempt to build auth config if x-auth header is present;
-            // some flows (e.g., webhooks) may not provide it
-            let connector_config = if metadata.get(X_AUTH).is_some() {
-                Some(legacy_connector_config_from_metadata(metadata, &connector)?)
-            } else {
-                None
-            };
-
-            Ok((connector, connector_config))
-        }
+    // Try typed X-Connector-Config header first (provides both connector and config)
+    if let Some(header_value) = metadata.get(X_CONNECTOR_CONFIG) {
+        let (connector, config) = parse_connector_config_from_typed_header(header_value)?;
+        return Ok((connector, Some(config)));
     }
+
+    // Backward compat: accept the old header name with old JSON format
+    if let Some(header_value) = metadata.get(X_CONNECTOR_AUTH_DEPRECATED) {
+        logger::warn!(
+            "x-connector-auth header is deprecated and will be removed in a future release. \
+                 Use x-connector-config with {{\"config\":{{...}}}} format instead."
+        );
+        let (connector, config) = parse_connector_config_from_deprecated_header(header_value)?;
+        return Ok((connector, Some(config)));
+    }
+
+    logger::debug!("Typed connector config headers not found, falling back to legacy headers");
+
+    // Connector name is always required
+    let connector = connector_from_metadata(metadata)?;
+
+    // Legacy auth config is only parsed when x-auth header is present.
+    // Some flows (e.g., webhooks) may not provide auth headers, in which case config is None.
+    let connector_config = if metadata.get(X_AUTH).is_some() {
+        Some(legacy_connector_config_from_metadata(metadata, &connector)?)
+    } else {
+        None
+    };
+
+    Ok((connector, connector_config))
 }
 
 /// Builds `ConnectorSpecificConfig` from legacy auth headers.
