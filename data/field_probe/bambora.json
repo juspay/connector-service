@@ -506,28 +506,7 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_client_session_id": "probe_sdk_session_001",
-          "domain_context": {
-            "payment": {
-              "amount": {
-                "minor_amount": 1000,
-                "currency": "USD"
-              }
-            }
-          }
-        },
-        "sample": {
-          "url": "https://api.na.bambora.com/scripts/tokenization/tokens",
-          "method": "Post",
-          "headers": {
-            "authorization": "Passcode cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"number\":\"4030000010001234\",\"expiry_month\":\"02\",\"expiry_year\":\"29\",\"cvd\":\"123\"}"
-        }
+        "status": "not_implemented"
       }
     },
     "create_customer": {
