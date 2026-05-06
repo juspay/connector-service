@@ -26,8 +26,9 @@ option go_package = "github.com/juspay/connector-service/crates/types-traits/grp
 
 // Strategy for handling calculated surcharge
 enum SurchargeStrategy {
-  APPLY = 0;  // Apply the calculated surcharge to the payment
-  WAIVE = 1;  // Do not apply, just return the calculated amount
+  SURCHARGE_STRATEGY_UNSPECIFIED = 0;
+  APPLY = 1;  // Apply the calculated surcharge to the payment
+  WAIVE = 2;  // Do not apply, just return the calculated amount
 }
 
 // ============================================================================
@@ -61,7 +62,7 @@ message SurchargeServiceCalculateRequest {
 // Response message containing calculated surcharge details
 message SurchargeServiceCalculateResponse {
   // Identification (echoed back)
-  optional string merchant_reference_id = 1;  // Echo of merchant_reference_id from request
+  optional string merchant_surcharge_id = 1;  // Echo of merchant_reference_id from request
 
   // Calculation Results
   optional Money surcharge_amount = 2;        // Calculated surcharge fee in minor units (transactionFee)
