@@ -71,6 +71,6 @@ message SurchargeServiceCalculateResponse {
   optional string external_surcharge_transaction_id = 4;  // Unique ID from connector for referencing this calculation
 
   // Status Information 
-  uint32 status_code = 5;      // Success or Failure
+  uint32 status_code = 5; // HTTP status code from the connector
   optional ErrorInfo error = 6;         // Detailed error information (if status = FAILURE)
 }
