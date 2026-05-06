@@ -199,7 +199,6 @@ Same `Money` value in. The right format out. The caller never touches the conver
 
 ---
 
-
 ## This Problem Isn't Unique to Money
 
 The three principles at work here aren't payment-specific:
