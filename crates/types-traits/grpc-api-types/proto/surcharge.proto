@@ -66,7 +66,7 @@ message SurchargeServiceCalculateResponse {
 
   // Calculation Results
   optional Money surcharge_amount = 2;        // Calculated surcharge fee in minor units (transactionFee)
-  optional double surcharge_percent_fee = 3; // Surcharge rate as percentage (transactionFeePercent)
+  optional double surcharge_percentage = 3; // Surcharge rate as percentage (transactionFeePercent)
 
   // Connector Reference
   optional string external_surcharge_transaction_id = 4;  // Unique ID from connector for referencing this calculation
