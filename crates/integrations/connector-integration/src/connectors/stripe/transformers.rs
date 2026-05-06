@@ -273,6 +273,8 @@ pub struct SetupMandateRequest<
     pub expand: Option<ExpandableObjects>,
     #[serde(flatten)]
     pub browser_info: Option<StripeBrowserInformation>,
+    #[serde(flatten)]
+    pub billing: Option<StripeBillingAddress>,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -1479,13 +1481,18 @@ fn create_stripe_payment_method<
                 Some(StripePaymentMethodType::CustomerBalance),
                 payment_request_details.billing_address,
             )),
-            payment_method_data::BankTransferData::Pix { .. } => Ok((
-                StripePaymentMethodData::BankTransferPix(StripePixData {
-                    payment_method_data_type: StripePaymentMethodType::Pix,
-                }),
-                Some(StripePaymentMethodType::Pix),
-                payment_request_details.billing_address,
-            )),
+            payment_method_data::BankTransferData::Pix { cpf, cnpj, .. } => {
+                let tax_id = cpf.clone().or_else(|| cnpj.clone());
+                let mut billing = payment_request_details.billing_address;
+                billing.tax_id = tax_id;
+                Ok((
+                    StripePaymentMethodData::BankTransferPix(StripePixData {
+                        payment_method_data_type: StripePaymentMethodType::Pix,
+                    }),
+                    Some(StripePaymentMethodType::Pix),
+                    billing,
+                ))
+            }
             payment_method_data::BankTransferData::Pse {}
             | payment_method_data::BankTransferData::LocalBankTransfer { .. }
             | payment_method_data::BankTransferData::InstantBankTransfer {}
@@ -1962,6 +1969,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 phone: item
                     .resource_common_data
                     .get_optional_billing_phone_number(),
+                tax_id: None,
             })
         };
 
@@ -3584,6 +3592,11 @@ pub struct StripeBillingAddress {
     pub state: Option<Secret<String>>,
     #[serde(rename = "payment_method_data[billing_details][phone]")]
     pub phone: Option<Secret<String>>,
+    #[serde(
+        rename = "payment_method_data[billing_details][tax_id]",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub tax_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize, Eq, PartialEq)]
@@ -4556,6 +4569,38 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             pm_type,
         ))?;
 
+        let tax_id = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::BankTransfer(bank_transfer) => match bank_transfer.deref() {
+                payment_method_data::BankTransferData::Pix { cpf, cnpj, .. } => {
+                    cpf.clone().or_else(|| cnpj.clone())
+                }
+                _ => None,
+            },
+            _ => None,
+        };
+
+        let billing = if tax_id.is_some() {
+            let mut billing_address = StripeBillingAddress {
+                email: item.router_data.resource_common_data.get_optional_billing_email(),
+                country: item.router_data.resource_common_data.get_optional_billing_country(),
+                name: item.router_data.resource_common_data.get_optional_billing_full_name(),
+                city: item.router_data.resource_common_data.get_optional_billing_city(),
+                address_line1: item.router_data.resource_common_data.get_optional_billing_line1(),
+                address_line2: item.router_data.resource_common_data.get_optional_billing_line2(),
+                zip_code: item.router_data.resource_common_data.get_optional_billing_zip(),
+                state: item.router_data.resource_common_data.get_optional_billing_state(),
+                phone: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing_phone_number(),
+                tax_id: None,
+            };
+            billing_address.tax_id = tax_id;
+            Some(billing_address)
+        } else {
+            None
+        };
+
         let meta_data = Some(get_transaction_metadata(
             item.router_data.request.metadata.clone(),
             item.router_data
@@ -4588,6 +4633,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_method_types: Some(pm_type),
             expand: Some(ExpandableObjects::LatestAttempt),
             browser_info,
+            billing,
         })
     }
 }
@@ -4697,11 +4743,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         })),
                     ))
                 }
-                payment_method_data::BankTransferData::Pix { .. } => {
-                    Ok(Self::BankTransferPix(StripePixData {
+                payment_method_data::BankTransferData::Pix { .. } => Ok(
+                    Self::BankTransferPix(StripePixData {
                         payment_method_data_type: StripePaymentMethodType::Pix,
-                    }))
-                }
+                    }),
+                ),
                 payment_method_data::BankTransferData::Pse {}
                 | payment_method_data::BankTransferData::PermataBankTransfer { .. }
                 | payment_method_data::BankTransferData::BcaBankTransfer { .. }
@@ -5047,6 +5093,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 phone: item
                     .resource_common_data
                     .get_optional_billing_phone_number(),
+                tax_id: None,
             }),
         };
 
