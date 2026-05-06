@@ -8,11 +8,12 @@
 import asyncio
 import sys
 from payments import PaymentClient
+from payments import MerchantAuthenticationClient
 from payments import EventClient
 from payments import RefundClient
 from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
-SUPPORTED_FLOWS = ["authorize", "capture", "get", "proxy_authorize", "refund", "refund_get", "token_authorize"]
+SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "get", "parse_event", "proxy_authorize", "refund", "refund_get", "token_authorize"]
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -62,6 +63,17 @@ def _build_capture_request(connector_transaction_id: str):
         ),
     )
 
+def _build_create_client_authentication_token_request():
+    return payment_pb2.MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest(
+        merchant_client_session_id="probe_sdk_session_001",  # Infrastructure.
+        payment=payment_pb2.PaymentClientAuthenticationContext(  # FrmClientAuthenticationContext frm = 5; // future: device fingerprinting PayoutClientAuthenticationContext payout = 6; // future: payout verification widget.
+            amount=payment_pb2.Money(
+                minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
+                currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+            ),
+        ),
+    )
+
 def _build_get_request(connector_transaction_id: str):
     return payment_pb2.PaymentServiceGetRequest(
         merchant_transaction_id="probe_merchant_txn_001",  # Identification.
@@ -72,6 +84,16 @@ def _build_get_request(connector_transaction_id: str):
         ),
     )
 
+def _build_parse_event_request():
+    return payment_pb2.EventServiceParseRequest(
+        request_details=payment_pb2.RequestDetails(
+            method=payment_pb2.HttpMethod.Value("HTTP_METHOD_POST"),  # HTTP method of the request (e.g., GET, POST).
+            uri="https://example.com/webhook",  # URI of the request.
+            headers=payment_pb2.HeadersEntry(),  # Headers of the HTTP request.
+            body="{\"event\":\"ORDER_COMPLETED\",\"order_id\":\"probe_order_001\"}",  # Body of the HTTP request.
+        ),
+    )
+
 def _build_proxy_authorize_request():
     return payment_pb2.PaymentServiceProxyAuthorizeRequest(
         merchant_transaction_id="probe_proxy_txn_001",
@@ -79,8 +101,8 @@ def _build_proxy_authorize_request():
             minor_amount=1000,  # Amount in minor units (e.g., 1000 = $10.00).
             currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
         ),
-        card_proxy=payment_methods_pb2.CardDetails(  # Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
-            card_number=payment_methods_pb2.CardNumberType(value="4111111111111111"),  # Card Identification.
+        card_proxy=payment_methods_pb2.ProxyCardDetails(  # Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
+            card_number=payment_methods_pb2.SecretString(value="4111111111111111"),  # Card Identification.
             card_exp_month=payment_methods_pb2.SecretString(value="03"),
             card_exp_year=payment_methods_pb2.SecretString(value="2030"),
             card_cvc=payment_methods_pb2.SecretString(value="123"),
@@ -110,7 +132,7 @@ def _build_refund_get_request():
     return payment_pb2.RefundServiceGetRequest(
         merchant_refund_id="probe_refund_001",  # Identification.
         connector_transaction_id="probe_connector_txn_001",
-        refund_id="probe_refund_id_001",
+        refund_id="probe_refund_id_001",  # Deprecated.
     )
 
 def _build_token_authorize_request():
@@ -236,6 +258,15 @@ async def process_capture(merchant_transaction_id: str, config: sdk_config_pb2.C
     return {"status": capture_response.status}
 
 
+async def process_create_client_authentication_token(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: MerchantAuthenticationService.CreateClientAuthenticationToken"""
+    merchantauthentication_client = MerchantAuthenticationClient(config)
+
+    create_response = await merchantauthentication_client.create_client_authentication_token(_build_create_client_authentication_token_request())
+
+    return {"session_data": create_response.session_data}
+
+
 async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Get"""
     payment_client = PaymentClient(config)
@@ -243,6 +274,15 @@ async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.Conne
     get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
 
     return {"status": get_response.status}
+
+
+async def process_parse_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: EventService.ParseEvent"""
+    event_client = EventClient(config)
+
+    parse_response = await event_client.parse_event(_build_parse_event_request())
+
+    return {"status": parse_response.status}
 
 
 async def process_proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):

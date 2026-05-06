@@ -571,6 +571,7 @@ pub enum StripePaymentMethodData<
     BankTransfer(StripeBankTransferData),
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize)]
 pub struct StripeBillingAddressCardToken {
     #[serde(rename = "billing_details[name]")]
@@ -590,6 +591,7 @@ pub struct StripeBillingAddressCardToken {
 }
 
 // Struct to call the Stripe tokens API to create a PSP token for the card details provided.
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct StripeCardToken<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "type")]
@@ -844,8 +846,9 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
             | common_enums::PaymentMethodType::SepaGuaranteedDebit
-            | common_enums::PaymentMethodType::Oxxo => Err(IntegrationError::not_implemented(
+            | common_enums::PaymentMethodType::Oxxo => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )
             .into()),
             common_enums::PaymentMethodType::AliPayHk
@@ -928,12 +931,13 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::Cashfree
             | common_enums::PaymentMethodType::PayU
             | common_enums::PaymentMethodType::EaseBuzz
-            | common_enums::PaymentMethodType::Netbanking => {
-                Err(IntegrationError::not_implemented(
-                    get_unimplemented_payment_method_error_message("stripe"),
-                )
-                .into())
-            }
+            | common_enums::PaymentMethodType::Skrill
+            | common_enums::PaymentMethodType::Paysera
+            | common_enums::PaymentMethodType::Netbanking => Err(IntegrationError::NotImplemented(
+                get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
+            )
+            .into()),
         }
     }
 }
@@ -1090,8 +1094,9 @@ impl TryFrom<&common_enums::BankNames> for StripeBankNames {
             common_enums::BankNames::AliorBank => Self::AliorBank,
             common_enums::BankNames::Boz => Self::Boz,
 
-            _ => Err(IntegrationError::not_implemented(
+            _ => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             ))?,
         })
     }
@@ -1141,8 +1146,9 @@ impl TryFrom<&PayLaterData> for StripePaymentMethodType {
             | PayLaterData::PayBrightRedirect {}
             | PayLaterData::WalleyRedirect {}
             | PayLaterData::AlmaRedirect {}
-            | PayLaterData::AtomeRedirect {} => Err(IntegrationError::not_implemented(
+            | PayLaterData::AtomeRedirect {} => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )),
         }
     }
@@ -1159,8 +1165,9 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             BankRedirectData::Przelewy24 { .. } => Ok(Self::Przelewy24),
             BankRedirectData::Eps { .. } => Ok(Self::Eps),
             BankRedirectData::Blik { .. } => Ok(Self::Blik),
-            BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::not_implemented(
+            BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )),
             BankRedirectData::Bizum {}
             | BankRedirectData::Interac { .. }
@@ -1174,8 +1181,9 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::OpenBanking {}
-            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )),
         }
     }
@@ -1192,8 +1200,9 @@ fn get_stripe_payment_method_type_from_wallet_data(
         WalletData::CashappQr(_) => Ok(Some(StripePaymentMethodType::Cashapp)),
         WalletData::AmazonPayRedirect(_) => Ok(Some(StripePaymentMethodType::AmazonPay)),
         WalletData::RevolutPay(_) => Ok(Some(StripePaymentMethodType::RevolutPay)),
-        WalletData::MobilePayRedirect(_) => Err(IntegrationError::not_implemented(
+        WalletData::MobilePayRedirect(_) => Err(IntegrationError::NotImplemented(
             get_unimplemented_payment_method_error_message("stripe"),
+            Default::default(),
         )),
         WalletData::PaypalRedirect(_)
         | WalletData::AliPayQr(_)
@@ -1226,8 +1235,9 @@ fn get_stripe_payment_method_type_from_wallet_data(
         | WalletData::BillDeskRedirect(_)
         | WalletData::CashfreeRedirect(_)
         | WalletData::PayURedirect(_)
-        | WalletData::EaseBuzzRedirect(_) => Err(IntegrationError::not_implemented(
+        | WalletData::EaseBuzzRedirect(_) => Err(IntegrationError::NotImplemented(
             get_unimplemented_payment_method_error_message("stripe"),
+            Default::default(),
         )),
     }
 }
@@ -1242,8 +1252,9 @@ impl TryFrom<&payment_method_data::BankDebitData> for StripePaymentMethodType {
             payment_method_data::BankDebitData::BacsBankDebit { .. } => Ok(Self::Bacs),
             payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. }
             | payment_method_data::BankDebitData::EftBankDebit { .. } => {
-                Err(IntegrationError::not_implemented(
+                Err(IntegrationError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
+                    Default::default(),
                 ))
             }
         }
@@ -1296,8 +1307,9 @@ fn get_bank_debit_data(
         }
         payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. }
         | payment_method_data::BankDebitData::EftBankDebit { .. } => {
-            Err(IntegrationError::not_implemented(
+            Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             ))
         }
     }
@@ -1449,8 +1461,9 @@ fn create_stripe_payment_method<
                 payment_request_details.billing_address,
             )),
             payment_method_data::BankTransferData::Pix { .. } => {
-                Err(IntegrationError::not_implemented(
+                Err(IntegrationError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
+                    Default::default(),
                 )
                 .into())
             }
@@ -1467,21 +1480,24 @@ fn create_stripe_payment_method<
             | payment_method_data::BankTransferData::CimbVaBankTransfer { .. }
             | payment_method_data::BankTransferData::DanamonVaBankTransfer { .. }
             | payment_method_data::BankTransferData::MandiriVaBankTransfer { .. } => {
-                Err(IntegrationError::not_implemented(
+                Err(IntegrationError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
+                    Default::default(),
                 )
                 .into())
             }
         },
-        PaymentMethodData::Crypto(_) => Err(IntegrationError::not_implemented(
+        PaymentMethodData::Crypto(_) => Err(IntegrationError::NotImplemented(
             get_unimplemented_payment_method_error_message("stripe"),
+            Default::default(),
         )
         .into()),
 
         PaymentMethodData::GiftCard(giftcard_data) => match giftcard_data.deref() {
             GiftCardData::Givex(_) | GiftCardData::PaySafeCard {} => {
-                Err(IntegrationError::not_implemented(
+                Err(IntegrationError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
+                    Default::default(),
                 )
                 .into())
             }
@@ -1490,19 +1506,22 @@ fn create_stripe_payment_method<
             CardRedirectData::Knet {}
             | CardRedirectData::Benefit {}
             | CardRedirectData::MomoAtm {}
-            | CardRedirectData::CardRedirect {} => Err(IntegrationError::not_implemented(
+            | CardRedirectData::CardRedirect {} => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )
             .into()),
         },
-        PaymentMethodData::Reward => Err(IntegrationError::not_implemented(
+        PaymentMethodData::Reward => Err(IntegrationError::NotImplemented(
             get_unimplemented_payment_method_error_message("stripe"),
+            Default::default(),
         )
         .into()),
 
         PaymentMethodData::Voucher(voucher_data) => match voucher_data {
-            VoucherData::Boleto(_) | VoucherData::Oxxo => Err(IntegrationError::not_implemented(
+            VoucherData::Boleto(_) | VoucherData::Oxxo => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )
             .into()),
             VoucherData::Alfamart(_)
@@ -1516,8 +1535,9 @@ fn create_stripe_payment_method<
             | VoucherData::MiniStop(_)
             | VoucherData::FamilyMart(_)
             | VoucherData::Seicomart(_)
-            | VoucherData::PayEasy(_) => Err(IntegrationError::not_implemented(
+            | VoucherData::PayEasy(_) => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )
             .into()),
         },
@@ -1530,12 +1550,13 @@ fn create_stripe_payment_method<
         | PaymentMethodData::PaymentMethodToken(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
-            IntegrationError::not_implemented(get_unimplemented_payment_method_error_message(
-                "stripe",
-            ))
-            .into(),
-        ),
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+            Err(IntegrationError::NotImplemented(
+                get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
+            )
+            .into())
+        }
     }
 }
 
@@ -1665,8 +1686,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             }
             WalletData::GooglePay(gpay_data) => Ok(Self::try_from(gpay_data)?),
             WalletData::PaypalRedirect(_) | WalletData::MobilePayRedirect(_) => {
-                Err(IntegrationError::not_implemented(
+                Err(IntegrationError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
+                    Default::default(),
                 )
                 .into())
             }
@@ -1700,8 +1722,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             | WalletData::BillDeskRedirect(_)
             | WalletData::CashfreeRedirect(_)
             | WalletData::PayURedirect(_)
-            | WalletData::EaseBuzzRedirect(_) => Err(IntegrationError::not_implemented(
+            | WalletData::EaseBuzzRedirect(_) => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )
             .into()),
         }
@@ -1766,8 +1789,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     })),
                 ))
             }
-            BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::not_implemented(
+            BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )
             .into()),
             BankRedirectData::Bizum {}
@@ -1783,8 +1807,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::OpenBanking {}
-            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::not_implemented(
+            | BankRedirectData::Netbanking { .. } => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
+                Default::default(),
             )
             .into()),
         }
@@ -4599,8 +4624,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 | payment_method_data::BankTransferData::InstantBankTransferPoland {}
                 | payment_method_data::BankTransferData::IndonesianBankTransfer { .. }
                 | payment_method_data::BankTransferData::MandiriVaBankTransfer { .. } => {
-                    Err(IntegrationError::not_implemented(
+                    Err(IntegrationError::NotImplemented(
                         get_unimplemented_payment_method_error_message("stripe"),
+                        Default::default(),
                     )
                     .into())
                 }
@@ -4619,8 +4645,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(IntegrationError::not_implemented(
+                Err(IntegrationError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
+                    Default::default(),
                 ))?
             }
         }
@@ -4940,28 +4967,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             billing_address,
             payment_method_types,
             setup_future_usage,
-        ) =
-            if payment_method_token.is_some() {
-                (None, None, StripeBillingAddress::default(), None, None)
-            } else {
-                match &item.request.mandate_reference {
-                    MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => (
-                        None,
-                        connector_mandate_ids.get_connector_mandate_id(),
-                        StripeBillingAddress::default(),
-                        get_payment_method_type_for_saved_payment_method_payment(&item)?,
-                        None,
-                    ),
-                    MandateReferenceId::NetworkMandateId(network_transaction_id) => {
-                        payment_method_options = Some(StripePaymentMethodOptions::Card {
-                            mandate_options: None,
-                            network_transaction_id: None,
-                            mit_exemption: Some(MitExemption {
-                                network_transaction_id: Secret::new(network_transaction_id.clone()),
-                            }),
-                        });
+        ) = if payment_method_token.is_some() {
+            (None, None, StripeBillingAddress::default(), None, None)
+        } else {
+            match &item.request.mandate_reference {
+                MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => (
+                    None,
+                    connector_mandate_ids.get_connector_mandate_id(),
+                    StripeBillingAddress::default(),
+                    get_payment_method_type_for_saved_payment_method_payment(&item)?,
+                    None,
+                ),
+                MandateReferenceId::NetworkMandateId(network_transaction_id) => {
+                    payment_method_options = Some(StripePaymentMethodOptions::Card {
+                        mandate_options: None,
+                        network_transaction_id: None,
+                        mit_exemption: Some(MitExemption {
+                            network_transaction_id: Secret::new(network_transaction_id.clone()),
+                        }),
+                    });
 
-                        let payment_data = match item.request.payment_method_data {
+                    let payment_data = match item.request.payment_method_data {
                         PaymentMethodData::CardDetailsForNetworkTransactionId(
                             ref card_details_for_network_transaction_id,
                         ) => StripePaymentMethodData::CardNetworkTransactionId(
@@ -5004,56 +5030,57 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         | PaymentMethodData::OpenBanking(_)
                         | PaymentMethodData::PaymentMethodToken(_)
                         | PaymentMethodData::NetworkToken(_)
-                        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-                        | PaymentMethodData::Card(_) => Err(IntegrationError::NotSupported {
-                            message: "Network tokenization for payment method".to_string(),
-                            connector: "Stripe",
-                            context: Default::default(),
-                        })?,
+                        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(
+                            _,
+                        )
+                        | PaymentMethodData::Card(_) => Err(IntegrationError::NotImplemented(
+                            "Network tokenization for payment method".to_string(),
+                            Default::default(),
+                        ))?,
                     };
 
-                        (
-                            Some(payment_data),
-                            None,
-                            StripeBillingAddress::default(),
-                            None,
-                            None,
-                        )
-                    }
-                    MandateReferenceId::NetworkTokenWithNTI(_) => {
-                        let (payment_method_data, payment_method_type, billing_address) =
-                            create_stripe_payment_method(
-                                &item.request.payment_method_data,
-                                PaymentRequestDetails {
-                                    auth_type: item.resource_common_data.auth_type,
-                                    is_customer_initiated_mandate_payment: Some(false),
-                                    billing_address: billing_address.ok_or(
-                                        IntegrationError::MissingRequiredField {
-                                            field_name: "billing_address",
-                                            context: Default::default(),
-                                        },
-                                    )?,
-                                    request_incremental_authorization: false,
-                                    request_extended_authorization: None,
-                                    request_overcapture: None,
-                                },
-                            )?;
-
-                        validate_shipping_address_against_payment_method(
-                            &shipping_address,
-                            payment_method_type.as_ref(),
+                    (
+                        Some(payment_data),
+                        None,
+                        StripeBillingAddress::default(),
+                        None,
+                        None,
+                    )
+                }
+                MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    let (payment_method_data, payment_method_type, billing_address) =
+                        create_stripe_payment_method(
+                            &item.request.payment_method_data,
+                            PaymentRequestDetails {
+                                auth_type: item.resource_common_data.auth_type,
+                                is_customer_initiated_mandate_payment: Some(false),
+                                billing_address: billing_address.ok_or(
+                                    IntegrationError::MissingRequiredField {
+                                        field_name: "billing_address",
+                                        context: Default::default(),
+                                    },
+                                )?,
+                                request_incremental_authorization: false,
+                                request_extended_authorization: None,
+                                request_overcapture: None,
+                            },
                         )?;
 
-                        (
-                            Some(payment_method_data),
-                            None,
-                            billing_address,
-                            payment_method_type,
-                            None,
-                        )
-                    }
+                    validate_shipping_address_against_payment_method(
+                        &shipping_address,
+                        payment_method_type.as_ref(),
+                    )?;
+
+                    (
+                        Some(payment_method_data),
+                        None,
+                        billing_address,
+                        payment_method_type,
+                        None,
+                    )
                 }
-            };
+            }
+        };
 
         let meta_data = get_transaction_metadata(item.request.metadata.clone(), order_id);
 
@@ -5247,7 +5274,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         // Card flow for tokenization is handled separately because of API contact difference.
-        // /v1/tokens only accepts card[*] fields — do NOT include `type` or `billing_details[*]`.
+        // This path uses /v1/payment_methods, which requires `type` and accepts `billing_details[*]`.
         let request_payment_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_details) => {
                 StripePaymentMethodData::CardToken(StripeCardToken {

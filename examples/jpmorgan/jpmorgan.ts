@@ -5,9 +5,9 @@
 // Jpmorgan — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx jpmorgan.ts checkout_autocapture
 
-import { PaymentClient, MerchantAuthenticationClient, RefundClient, types } from 'hyperswitch-prism';
-const { Environment, AuthenticationType, CaptureMethod, Currency } = types;
-export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_server_authentication_token", "get", "proxy_authorize", "refund", "refund_get", "token_authorize", "void"];
+import { PaymentClient, MerchantAuthenticationClient, RecurringPaymentClient, RefundClient, types } from 'hyperswitch-prism';
+const { Environment, AcceptanceType, AuthenticationType, CaptureMethod, Currency, FutureUsage, PaymentMethodType } = types;
+export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_server_authentication_token", "get", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "void"];
 
 const _defaultConfig: types.IConnectorConfig = {
     options: {
@@ -145,6 +145,67 @@ function _buildProxyAuthorizeRequest(): types.IPaymentServiceProxyAuthorizeReque
     };
 }
 
+function _buildProxySetupRecurringRequest(): types.IPaymentServiceProxySetupRecurringRequest {
+    return {
+        "merchantRecurringPaymentId": "probe_proxy_mandate_001",
+        "amount": {
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "cardProxy": {  // Card proxy for vault-aliased payments.
+            "cardNumber": {"value": "4111111111111111"},  // Card Identification.
+            "cardExpMonth": {"value": "03"},
+            "cardExpYear": {"value": "2030"},
+            "cardCvc": {"value": "123"},
+            "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
+        },
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "state": {
+            "accessToken": {  // Access token obtained from connector.
+                "token": {"value": "probe_access_token"},  // The token string.
+                "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch).
+                "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        },
+        "customerAcceptance": {
+            "acceptanceType": AcceptanceType.OFFLINE,  // Type of acceptance (e.g., online, offline).
+            "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        },
+        "authType": AuthenticationType.NO_THREE_DS,
+        "setupFutureUsage": FutureUsage.OFF_SESSION
+    };
+}
+
+function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeRequest {
+    return {
+        "connectorRecurringPaymentId": {  // Reference to existing mandate.
+        },
+        "amount": {  // Amount Information.
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "paymentMethod": {  // Optional payment Method Information (for network transaction flows).
+            "token": {  // Payment tokens.
+                "token": {"value": "probe_pm_token"}  // The token string representing a payment method.
+            }
+        },
+        "returnUrl": "https://example.com/recurring-return",
+        "connectorCustomerId": "cust_probe_123",
+        "paymentMethodType": PaymentMethodType.PAY_PAL,
+        "offSession": true,  // Behavioral Flags and Preferences.
+        "state": {  // State Information.
+            "accessToken": {  // Access token obtained from connector.
+                "token": {"value": "probe_access_token"},  // The token string.
+                "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch).
+                "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        }
+    };
+}
+
 function _buildRefundRequest(connectorTransactionId: string): types.IPaymentServiceRefundRequest {
     return {
         "merchantRefundId": "probe_refund_001",  // Identification.
@@ -169,8 +230,47 @@ function _buildRefundGetRequest(): types.IRefundServiceGetRequest {
     return {
         "merchantRefundId": "probe_refund_001",  // Identification.
         "connectorTransactionId": "probe_connector_txn_001",
-        "refundId": "probe_refund_id_001",
+        "refundId": "probe_refund_id_001",  // Deprecated.
         "state": {  // State Information.
+            "accessToken": {  // Access token obtained from connector.
+                "token": {"value": "probe_access_token"},  // The token string.
+                "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch).
+                "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        }
+    };
+}
+
+function _buildSetupRecurringRequest(): types.IPaymentServiceSetupRecurringRequest {
+    return {
+        "merchantRecurringPaymentId": "probe_mandate_001",  // Identification.
+        "amount": {  // Mandate Details.
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00).
+            "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        },
+        "paymentMethod": {
+            "card": {  // Generic card payment.
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification.
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardCvc": {"value": "737"},
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
+            }
+        },
+        "address": {  // Address Information.
+            "billingAddress": {
+            }
+        },
+        "authType": AuthenticationType.NO_THREE_DS,  // Type of authentication to be used.
+        "enrolledFor_3ds": false,  // Indicates if the customer is enrolled for 3D Secure.
+        "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup.
+        "setupFutureUsage": FutureUsage.OFF_SESSION,  // Indicates future usage intention.
+        "requestIncrementalAuthorization": false,  // Indicates if incremental authorization is requested.
+        "customerAcceptance": {  // Details of customer acceptance.
+            "acceptanceType": AcceptanceType.OFFLINE,  // Type of acceptance (e.g., online, offline).
+            "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        },
+        "state": {  // State data for access token storage and.
             "accessToken": {  // Access token obtained from connector.
                 "token": {"value": "probe_access_token"},  // The token string.
                 "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch).
@@ -389,6 +489,24 @@ async function proxyAuthorize(merchantTransactionId: string, config: types.IConn
     return proxyResponse;
 }
 
+// Flow: PaymentService.ProxySetupRecurring
+async function proxySetupRecurring(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const proxyResponse = await paymentClient.proxySetupRecurring(_buildProxySetupRecurringRequest());
+
+    return proxyResponse;
+}
+
+// Flow: RecurringPaymentService.Charge
+async function recurringCharge(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const recurringPaymentClient = new RecurringPaymentClient(config);
+
+    const recurringResponse = await recurringPaymentClient.charge(_buildRecurringChargeRequest());
+
+    return recurringResponse;
+}
+
 // Flow: PaymentService.Refund
 async function refund(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -405,6 +523,15 @@ async function refundGet(merchantTransactionId: string, config: types.IConnector
     const refundResponse = await refundClient.refundGet(_buildRefundGetRequest());
 
     return refundResponse;
+}
+
+// Flow: PaymentService.SetupRecurring
+async function setupRecurring(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const setupResponse = await paymentClient.setupRecurring(_buildSetupRecurringRequest());
+
+    return setupResponse;
 }
 
 // Flow: PaymentService.TokenAuthorize
@@ -428,7 +555,7 @@ async function voidPayment(merchantTransactionId: string, config: types.IConnect
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createServerAuthenticationToken, get, proxyAuthorize, refund, refundGet, tokenAuthorize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateServerAuthenticationTokenRequest, _buildGetRequest, _buildProxyAuthorizeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenAuthorizeRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createServerAuthenticationToken, get, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenAuthorize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateServerAuthenticationTokenRequest, _buildGetRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildSetupRecurringRequest, _buildTokenAuthorizeRequest, _buildVoidRequest
 };
 
 // CLI runner

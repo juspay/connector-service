@@ -67,6 +67,10 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "BillDeskRedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "Bizum": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
@@ -132,6 +136,10 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "CashfreeRedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "CimbVaBankTransfer": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
@@ -142,7 +150,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
       },
       "DanamonVaBankTransfer": {
         "status": "not_supported",
@@ -150,9 +162,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
@@ -172,13 +188,21 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "GCash": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "Giropay": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
       },
       "GooglePay": {
         "status": "not_supported",
@@ -220,11 +244,19 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "KakaoPay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "Klarna": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
       "Lawson": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "LazyPayRedirect": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
@@ -252,7 +284,19 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Netbanking": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
@@ -286,7 +330,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_supported",
@@ -306,7 +350,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
       },
       "PaypalRedirect": {
         "status": "not_supported",
@@ -316,11 +364,19 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "PhonePeRedirect": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
@@ -376,11 +432,27 @@
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
+      "Swish": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "TouchNGo": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "Trustly": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Twint": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
@@ -393,6 +465,10 @@
         "error": "Selected payment method is not supported by bambora"
       },
       "UpiQr": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Vipps": {
         "status": "not_supported",
         "error": "Selected payment method is not supported by bambora"
       },
@@ -506,6 +582,11 @@
       }
     },
     "incremental_authorization": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "parse_event": {
       "default": {
         "status": "not_implemented"
       }

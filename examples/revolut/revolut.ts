@@ -5,9 +5,9 @@
 // Revolut — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx revolut.ts checkout_autocapture
 
-import { PaymentClient, EventClient, RefundClient, types } from 'hyperswitch-prism';
-const { Environment, AuthenticationType, CaptureMethod, Currency } = types;
-export const SUPPORTED_FLOWS = ["authorize", "capture", "get", "proxy_authorize", "refund", "refund_get", "token_authorize"];
+import { PaymentClient, MerchantAuthenticationClient, EventClient, RefundClient, types } from 'hyperswitch-prism';
+const { Environment, AuthenticationType, CaptureMethod, Currency, HttpMethod } = types;
+export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "get", "parse_event", "proxy_authorize", "refund", "refund_get", "token_authorize"];
 
 const _defaultConfig: types.IConnectorConfig = {
     options: {
@@ -60,6 +60,18 @@ function _buildCaptureRequest(connectorTransactionId: string): types.IPaymentSer
     };
 }
 
+function _buildCreateClientAuthenticationTokenRequest(): types.IMerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+    return {
+        "merchantClientSessionId": "probe_sdk_session_001",  // Infrastructure.
+        "payment": {  // FrmClientAuthenticationContext frm = 5; // future: device fingerprinting PayoutClientAuthenticationContext payout = 6; // future: payout verification widget.
+            "amount": {
+                "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+                "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+            }
+        }
+    };
+}
+
 function _buildGetRequest(connectorTransactionId: string): types.IPaymentServiceGetRequest {
     return {
         "merchantTransactionId": "probe_merchant_txn_001",  // Identification.
@@ -73,6 +85,26 @@ function _buildGetRequest(connectorTransactionId: string): types.IPaymentService
 
 function _buildHandleEventRequest(): types.IEventServiceHandleRequest {
     return {
+        "merchantEventId": "probe_event_001",  // Caller-supplied correlation key, echoed in the response. Not used by UCS for processing.
+        "requestDetails": {
+            "method": HttpMethod.HTTP_METHOD_POST,  // HTTP method of the request (e.g., GET, POST).
+            "uri": "https://example.com/webhook",  // URI of the request.
+            "headers": {  // Headers of the HTTP request.
+            },
+            "body": new Uint8Array(Buffer.from("{\"event\":\"ORDER_COMPLETED\",\"order_id\":\"probe_order_001\"}", "utf-8"))  // Body of the HTTP request.
+        }
+    };
+}
+
+function _buildParseEventRequest(): types.IEventServiceParseRequest {
+    return {
+        "requestDetails": {
+            "method": HttpMethod.HTTP_METHOD_POST,  // HTTP method of the request (e.g., GET, POST).
+            "uri": "https://example.com/webhook",  // URI of the request.
+            "headers": {  // Headers of the HTTP request.
+            },
+            "body": new Uint8Array(Buffer.from("{\"event\":\"ORDER_COMPLETED\",\"order_id\":\"probe_order_001\"}", "utf-8"))  // Body of the HTTP request.
+        }
     };
 }
 
@@ -117,7 +149,7 @@ function _buildRefundGetRequest(): types.IRefundServiceGetRequest {
     return {
         "merchantRefundId": "probe_refund_001",  // Identification.
         "connectorTransactionId": "probe_connector_txn_001",
-        "refundId": "probe_refund_id_001"
+        "refundId": "probe_refund_id_001"  // Deprecated.
     };
 }
 
@@ -256,6 +288,15 @@ async function capture(merchantTransactionId: string, config: types.IConnectorCo
     return captureResponse;
 }
 
+// Flow: MerchantAuthenticationService.CreateClientAuthenticationToken
+async function createClientAuthenticationToken(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const merchantAuthenticationClient = new MerchantAuthenticationClient(config);
+
+    const createResponse = await merchantAuthenticationClient.createClientAuthenticationToken(_buildCreateClientAuthenticationTokenRequest());
+
+    return createResponse;
+}
+
 // Flow: PaymentService.Get
 async function get(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -272,6 +313,15 @@ async function handleEvent(merchantTransactionId: string, config: types.IConnect
     const handleResponse = await eventClient.handleEvent(_buildHandleEventRequest());
 
     return handleResponse;
+}
+
+// Flow: EventService.ParseEvent
+async function parseEvent(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const eventClient = new EventClient(config);
+
+    const parseResponse = await eventClient.parseEvent(_buildParseEventRequest());
+
+    return parseResponse;
 }
 
 // Flow: PaymentService.ProxyAuthorize
@@ -322,7 +372,7 @@ async function verifyRedirect(merchantTransactionId: string, config: types.IConn
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processGetPayment, authorize, capture, get, handleEvent, proxyAuthorize, refund, refundGet, tokenAuthorize, verifyRedirect, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildHandleEventRequest, _buildProxyAuthorizeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenAuthorizeRequest, _buildVerifyRedirectRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processGetPayment, authorize, capture, createClientAuthenticationToken, get, handleEvent, parseEvent, proxyAuthorize, refund, refundGet, tokenAuthorize, verifyRedirect, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildGetRequest, _buildHandleEventRequest, _buildParseEventRequest, _buildProxyAuthorizeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildTokenAuthorizeRequest, _buildVerifyRedirectRequest
 };
 
 // CLI runner

@@ -44,7 +44,7 @@ message PaymentMethod {
     // CARD METHODS (1-9) - Direct variants
     CardDetails card = 3;                               // Generic card payment
     CardRedirect card_redirect = 4;                     // Card redirect flow
-    CardDetails card_proxy = 7;                         // Generic card proxy payment
+    ProxyCardDetails card_proxy = 7;                         // Generic card proxy payment
     TokenPaymentMethodType token = 8;                   // Payment tokens
     
     // DIGITAL WALLETS (10-29) - Direct variants
@@ -84,6 +84,10 @@ message PaymentMethod {
     GcashRedirectWallet gcash_redirect = 172;           // GCash Redirect
     GoPayRedirectWallet go_pay_redirect = 173;          // GoPay Redirect
     SwishQrWallet swish_qr = 174;                       // Swish QR
+    MobilePayRedirectWallet mobile_pay_redirect = 175;  // MobilePay Redirect
+    VenmoWallet venmo = 176;                            // Venmo
+    SkrillWallet skrill = 177;                          // Skrill
+    PayseraWallet paysera = 178;                        // Paysera
 
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -220,6 +224,26 @@ message TokenPaymentMethodType {
 message CardDetails {
   // Card Identification
   CardNumberType card_number = 1;
+  SecretString card_exp_month = 2;
+  SecretString card_exp_year = 3;
+  SecretString card_cvc = 4;
+  
+  // Cardholder Information
+  optional SecretString card_holder_name = 5;
+  
+  // Card Metadata
+  optional string card_issuer = 6;
+  optional CardNetwork card_network = 7;
+  optional string card_type = 8;
+  optional string card_issuing_country_alpha2 = 9;
+  optional string bank_code = 10;
+  optional string nick_name = 11;
+}
+
+// Details of a payment card.
+message ProxyCardDetails {
+  // Card Identification
+  SecretString card_number = 1;
   SecretString card_exp_month = 2;
   SecretString card_exp_year = 3;
   SecretString card_cvc = 4;
@@ -613,6 +637,21 @@ message VippsRedirectWallet {
 // Swish QR - Swedish mobile payment Swish QR code payment
 message SwishQrWallet {
   // Fields will be added as needed for Swish QR integration
+}
+
+// MobilePay Redirect - Danish mobile payment MobilePay redirect
+message MobilePayRedirectWallet {
+  // Fields will be added as needed for MobilePay redirect integration
+}
+
+// Skrill - Digital wallet for online payments
+message SkrillWallet {
+  // Fields will be added as needed for Skrill integration
+}
+
+// Paysera - European digital wallet and payment service
+message PayseraWallet {
+  // Fields will be added as needed for Paysera integration
 }
 
 // Apple Pay Third Party SDK - Apple Pay with token from third-party SDK

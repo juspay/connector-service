@@ -17,7 +17,9 @@ use std::str::FromStr;
 pub const SUPPORTED_FLOWS: &[&str] = &[
     "authorize",
     "capture",
+    "create_client_authentication_token",
     "get",
+    "parse_event",
     "proxy_authorize",
     "refund",
     "refund_get",
@@ -98,6 +100,15 @@ pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCa
     }
 }
 
+pub fn build_create_client_authentication_token_request(
+) -> MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+    MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
+        merchant_client_session_id: "probe_sdk_session_001".to_string(), // Infrastructure.
+        // domain_context: {"payment": {"amount": {"minor_amount": 1000, "currency": "USD"}}}
+        ..Default::default()
+    }
+}
+
 pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
         merchant_transaction_id: Some("probe_merchant_txn_001".to_string()), // Identification.
@@ -113,7 +124,27 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
 
 pub fn build_handle_event_request() -> EventServiceHandleRequest {
     EventServiceHandleRequest {
+        merchant_event_id: Some("probe_event_001".to_string()), // Caller-supplied correlation key, echoed in the response. Not used by UCS for processing.
+        request_details: Some(RequestDetails {
+            method: HttpMethod::HttpMethodPost.into(), // HTTP method of the request (e.g., GET, POST).
+            uri: Some("https://example.com/webhook".to_string()), // URI of the request.
+            headers: [].into_iter().collect::<HashMap<_, _>>(), // Headers of the HTTP request.
+            body: "{\"event\":\"ORDER_COMPLETED\",\"order_id\":\"probe_order_001\"}".to_string(), // Body of the HTTP request.
+            ..Default::default()
+        }),
         ..Default::default()
+    }
+}
+
+pub fn build_parse_event_request() -> EventServiceParseRequest {
+    EventServiceParseRequest {
+        request_details: Some(RequestDetails {
+            method: HttpMethod::HttpMethodPost.into(), // HTTP method of the request (e.g., GET, POST).
+            uri: Some("https://example.com/webhook".to_string()), // URI of the request.
+            headers: [].into_iter().collect::<HashMap<_, _>>(), // Headers of the HTTP request.
+            body: "{\"event\":\"ORDER_COMPLETED\",\"order_id\":\"probe_order_001\"}".to_string(), // Body of the HTTP request.
+            ..Default::default()
+        }),
     }
 }
 
@@ -124,9 +155,9 @@ pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
             minor_amount: 1000,             // Amount in minor units (e.g., 1000 = $10.00).
             currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
         }),
-        card_proxy: Some(CardDetails {
+        card_proxy: Some(ProxyCardDetails {
             // Card proxy for vault-aliased payments (VGS, Basis Theory, Spreedly). Real card values are substituted by the proxy before reaching the connector.
-            card_number: Some(CardNumber::from_str("4111111111111111").unwrap()), // Card Identification.
+            card_number: Some(Secret::new("4111111111111111".to_string())), // Card Identification.
             card_exp_month: Some(Secret::new("03".to_string())),
             card_exp_year: Some(Secret::new("2030".to_string())),
             card_cvc: Some(Secret::new("123".to_string())),
@@ -164,7 +195,7 @@ pub fn build_refund_get_request() -> RefundServiceGetRequest {
     RefundServiceGetRequest {
         merchant_refund_id: Some("probe_refund_001".to_string()), // Identification.
         connector_transaction_id: "probe_connector_txn_001".to_string(),
-        refund_id: "probe_refund_id_001".to_string(),
+        refund_id: "probe_refund_id_001".to_string(), // Deprecated.
         ..Default::default()
     }
 }
@@ -387,6 +418,22 @@ pub async fn process_capture(
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: MerchantAuthenticationService.CreateClientAuthenticationToken
+#[allow(dead_code)]
+pub async fn process_create_client_authentication_token(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .create_client_authentication_token(
+            build_create_client_authentication_token_request(),
+            &HashMap::new(),
+            None,
+        )
+        .await?;
+    Ok(format!("status: {:?}", response.status_code))
+}
+
 // Flow: PaymentService.Get
 #[allow(dead_code)]
 pub async fn process_get(
@@ -399,6 +446,18 @@ pub async fn process_get(
             &HashMap::new(),
             None,
         )
+        .await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: EventService.ParseEvent
+#[allow(dead_code)]
+pub async fn process_parse_event(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .parse_event(build_parse_event_request(), &HashMap::new(), None)
         .await?;
     Ok(format!("status: {:?}", response.status()))
 }
@@ -453,12 +512,16 @@ async fn main() {
         "process_get_payment" => process_get_payment(&client, "order_001").await,
         "process_authorize" => process_authorize(&client, "txn_001").await,
         "process_capture" => process_capture(&client, "txn_001").await,
+        "process_create_client_authentication_token" => {
+            process_create_client_authentication_token(&client, "txn_001").await
+        }
         "process_get" => process_get(&client, "txn_001").await,
+        "process_parse_event" => process_parse_event(&client, "txn_001").await,
         "process_proxy_authorize" => process_proxy_authorize(&client, "txn_001").await,
         "process_refund_get" => process_refund_get(&client, "txn_001").await,
         "process_token_authorize" => process_token_authorize(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_get_payment, process_authorize, process_capture, process_get, process_proxy_authorize, process_refund_get, process_token_authorize", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_get, process_parse_event, process_proxy_authorize, process_refund_get, process_token_authorize", flow);
             return;
         }
     };

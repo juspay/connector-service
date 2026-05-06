@@ -196,32 +196,41 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 |----------------|:---------:|
 | Card | ✓ |
 | Bancontact | x |
-| Apple Pay | x |
-| Apple Pay Dec | x |
-| Apple Pay SDK | x |
-| Google Pay | x |
-| Google Pay Dec | x |
-| Google Pay SDK | x |
-| PayPal SDK | x |
-| Amazon Pay | x |
-| Cash App | x |
-| PayPal | x |
-| WeChat Pay | x |
-| Alipay | x |
-| Revolut Pay | x |
-| MiFinity | x |
-| Bluecode | x |
+| Apple Pay | ⚠ |
+| Apple Pay Dec | ⚠ |
+| Apple Pay SDK | ⚠ |
+| Google Pay | ⚠ |
+| Google Pay Dec | ⚠ |
+| Google Pay SDK | ⚠ |
+| PayPal SDK | ⚠ |
+| Amazon Pay | ⚠ |
+| Cash App | ⚠ |
+| PayPal | ⚠ |
+| WeChat Pay | ⚠ |
+| Alipay | ⚠ |
+| Revolut Pay | ⚠ |
+| MiFinity | ⚠ |
+| Bluecode | ⚠ |
 | Paze | x |
-| Samsung Pay | x |
-| MB Way | x |
-| Satispay | x |
-| Wero | x |
-| Affirm | x |
-| Afterpay | x |
-| Klarna | x |
-| UPI Collect | x |
-| UPI Intent | x |
-| UPI QR | x |
+| Samsung Pay | ⚠ |
+| MB Way | ⚠ |
+| Satispay | ⚠ |
+| Wero | ⚠ |
+| GoPay | ⚠ |
+| GCash | ⚠ |
+| Momo | ⚠ |
+| Dana | ⚠ |
+| Kakao Pay | ⚠ |
+| Touch 'n Go | ⚠ |
+| Twint | ⚠ |
+| Vipps | ⚠ |
+| Swish | ⚠ |
+| Affirm | ⚠ |
+| Afterpay | ⚠ |
+| Klarna | ⚠ |
+| UPI Collect | ⚠ |
+| UPI Intent | ⚠ |
+| UPI QR | ⚠ |
 | Thailand | x |
 | Czech | x |
 | Finland | x |
@@ -232,11 +241,11 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | PIS | x |
 | Generic | x |
 | Local | x |
-| iDEAL | x |
-| Sofort | x |
+| iDEAL | ✓ |
+| Sofort | ✓ |
 | Trustly | x |
-| Giropay | x |
-| EPS | x |
+| Giropay | ✓ |
+| EPS | ✓ |
 | Przelewy24 | x |
 | PSE | x |
 | BLIK | x |
@@ -261,30 +270,30 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Mandiri VA | x |
 | Local | x |
 | Indonesian | x |
-| ACH | x |
+| ACH | ✓ |
 | SEPA | x |
 | BACS | x |
 | BECS | x |
 | SEPA Guaranteed | x |
 | Crypto | x |
-| Reward | x |
+| Reward | ⚠ |
 | Givex | x |
 | PaySafeCard | x |
-| E-Voucher | x |
-| Boleto | x |
-| Efecty | x |
-| Pago Efectivo | x |
-| Red Compra | x |
-| Red Pagos | x |
-| Alfamart | x |
-| Indomaret | x |
-| Oxxo | x |
-| 7-Eleven | x |
-| Lawson | x |
-| Mini Stop | x |
-| Family Mart | x |
-| Seicomart | x |
-| Pay Easy | x |
+| E-Voucher | ⚠ |
+| Boleto | ⚠ |
+| Efecty | ⚠ |
+| Pago Efectivo | ⚠ |
+| Red Compra | ⚠ |
+| Red Pagos | ⚠ |
+| Alfamart | ⚠ |
+| Indomaret | ⚠ |
+| Oxxo | ⚠ |
+| 7-Eleven | ⚠ |
+| Lawson | ⚠ |
+| Mini Stop | ⚠ |
+| Family Mart | ⚠ |
+| Seicomart | ⚠ |
+| Pay Easy | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -299,6 +308,26 @@ Authorize a payment amount on a payment method. This reserves funds without capt
     "card_cvc": "737",
     "card_holder_name": "John Doe"
   }
+}
+```
+
+##### ACH Direct Debit
+
+```python
+"payment_method": {
+  "ach": {
+    "account_number": "000123456789",
+    "routing_number": "110000000",
+    "bank_account_holder_name": "John Doe"
+  }
+}
+```
+
+##### iDEAL
+
+```python
+"payment_method": {
+  "ideal": {}
 }
 ```
 

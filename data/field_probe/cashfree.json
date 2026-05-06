@@ -67,6 +67,10 @@
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
+      "BillDeskRedirect": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
       "Bizum": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
@@ -99,6 +103,10 @@
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
+      "CashfreeRedirect": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
       "CimbVaBankTransfer": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
@@ -109,7 +117,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
       "DanamonVaBankTransfer": {
         "status": "error",
@@ -117,9 +129,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
+      "EaseBuzzRedirect": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
@@ -139,13 +155,21 @@
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
+      "GCash": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
       "Giropay": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
       "GooglePay": {
         "status": "error",
@@ -187,11 +211,19 @@
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
+      "KakaoPay": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
       "Klarna": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
       "Lawson": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
+      "LazyPayRedirect": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
@@ -219,7 +251,19 @@
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
       "MultibancoBankTransfer": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
+      "Netbanking": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
@@ -253,7 +297,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "error",
@@ -273,7 +317,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
       "PaypalRedirect": {
         "status": "error",
@@ -283,11 +331,19 @@
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
+      "PhonePeRedirect": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
@@ -343,11 +399,27 @@
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
+      "Swish": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
+      "TouchNGo": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
       "Trustly": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
+      "Twint": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
@@ -360,6 +432,10 @@
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
       "UpiQr": {
+        "status": "error",
+        "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
+      },
+      "Vipps": {
         "status": "error",
         "error": "Stuck on field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment — Missing required field: payment_session_id. Cashfree V3 requires a payment_session_id from the CreateOrder response to authorize a payment"
       },
@@ -498,6 +574,11 @@
       }
     },
     "incremental_authorization": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "parse_event": {
       "default": {
         "status": "not_implemented"
       }

@@ -9,13 +9,14 @@ You do not invoke link agent or techspec agent or codegen agent you only invoke 
 
 ## Inputs
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `{FLOW}` | The payment flow to implement | `BankDebit`, `MIT`, `Wallet`, `PayLater` |
-| `{CONNECTORS_FILE}` | JSON file with connector names (simple array) | `connectors.json` |
-| `{BRANCH}` | Git branch name for all work | `feat/mit` |
+| Parameter           | Description                                   | Example                                  |
+| ------------------- | --------------------------------------------- | ---------------------------------------- |
+| `{FLOW}`            | The payment flow to implement                 | `BankDebit`, `MIT`, `Wallet`, `PayLater` |
+| `{CONNECTORS_FILE}` | JSON file with connector names (simple array) | `connectors.json`                        |
+| `{BRANCH}`          | Git branch name for all work                  | `feat/mit`                               |
 
 `{CONNECTORS_FILE}` is a **simple JSON array of connector names**, e.g.:
+
 ```json
 ["Adyen", "Stripe", "Checkout", "Braintree"]
 ```
@@ -26,7 +27,7 @@ No URLs, no integration details — just names. The **Links Agent** (`2.1_links.
 
 ## RULES (read once, apply everywhere)
 
-1. **Working directory**: ALL commands (build, git, grpcurl, etc.) use the `connector-service` repo root. Never `cd`. The **only exception** is `grace` CLI commands — those MUST run from the `grace/` subdirectory with the virtualenv activated (`source .venv/bin/activate`).
+1. **Working directory**: ALL commands (build, git, grpcurl, etc.) use the `hyperswitch-prism` repo root. Never `cd`. The **only exception** is `grace` CLI commands — those MUST run from the `grace/` subdirectory with the virtualenv activated (`source .venv/bin/activate`).
 2. **HARD GUARDRAIL — STRICTLY SEQUENTIAL, NEVER PARALLEL**: You MUST process ONE connector at a time. Spawn ONE Task tool call per message. Wait for it to return. ONLY THEN spawn the next. NEVER send a single message with multiple Task tool calls for different connectors. NEVER say "let me process several in parallel to speed up." Parallel execution will corrupt the shared git branch — multiple agents committing, cherry-picking, and switching branches on `{BRANCH}` simultaneously causes merge conflicts, lost commits, and broken state. There is NO safe way to parallelize this. Sequential is not a suggestion — it is a hard architectural constraint.
 3. **No cargo test**: Testing is done exclusively via `grpcurl`. Never run `cargo test`. Never edit or create test files.
 4. **Build -> gRPC Test -> Validate -> Commit**: Never commit code that hasn't passed both `cargo build` AND `grpcurl` tests. This is a hard gate.
@@ -52,7 +53,7 @@ No URLs, no integration details — just names. The **Links Agent** (`2.1_links.
 Extract the connector names from the JSON array:
 
 ```bash
-# From connector-service root:
+# From hyperswitch-prism root:
 cat {CONNECTORS_FILE} | jq '.[]' -r
 ```
 
@@ -63,7 +64,7 @@ Store the returned list as `CONNECTOR_LIST`. This is the authoritative list of c
 ## STEP 1: PRE-FLIGHT (once, before any connector work)
 
 ```bash
-# From connector-service root:
+# From hyperswitch-prism root:
 # Verify directory
 pwd && ls Cargo.toml crates/ Makefile
 # Sync to latest main
@@ -116,6 +117,7 @@ Variables:
 **WAIT** for the Task to return a result. Do NOT proceed to the next connector until you have received the result. The next connector's Task call goes in a SEPARATE, SUBSEQUENT message.
 
 Collect the result — the Connector Agent will return one of:
+
 - `SUCCESS` — connector implemented, built, tested, and committed
 - `FAILED` — connector could not be completed (with reason)
 - `SKIPPED` — connector was skipped (with reason)
@@ -143,8 +145,129 @@ Per-connector results:
 
 ---
 
+## MODE B: Hardening (Test Suite Validation)
+
+**Use this mode when**: "Harden all PMs and APIs in testing-lib by adding to GRACE flow and remove grpc once done"
+
+**Your job**: Run integration tests via test-prism to move connectors from "Integrated" (blue) → "Hardened/Tested" (green) status.
+
+---
+
+### Inputs
+
+| Parameter     | Description               | Example                     |
+| ------------- | ------------------------- | --------------------------- |
+| `{TEST_MODE}` | Test runner mode          | `grpc` (default), `sdk`     |
+| `{BRANCH}`    | Git branch for test fixes | `hardening/connector-tests` |
+
+---
+
+### RULES
+
+1. **Working directory**: `connector_service_ucs` repo root (where `crates/internal/integration-tests/` exists)
+2. **STRICTLY SEQUENTIAL**: Process ONE connector at a time. Never parallelize. Do not go by flows.
+3. **Run tests FIRST**: Always run tests to identify failures. Only create fix branches when tests fail.
+4. **Fix ONLY tests**: If test fails due to test bug → create fix branch, fix test. If fails due to real connector bug → report FAILED (don't fix connector code).
+5. **Fully autonomous**: Never ask questions. Make decisions and proceed.
+6. **Your subagent**: The **Test Suite Agent** (`3_test.md`). You can deploy multiple subagents within the "Test Suite Agent" subagent based on the requirement.
+
+---
+
+### STEP 0: DISCOVER CONNECTORS
+
+Find all connectors in the test suite:
+
+```bash
+ls crates/internal/integration-tests/src/connector_specs/
+```
+
+**Identify targets**: Connectors with "Integrated" (blue badge) but WITHOUT "Tested" (green badge) in `docs-generated/connectors/README.md`.
+
+Store as `CONNECTOR_LIST`.
+
+---
+
+### STEP 1: PRE-FLIGHT (Setup Check + Verification)
+
+**Check if setup already done:**
+
+```bash
+test-prism --help && echo "SKIP_SETUP" || make setup-connector-tests
+```
+
+- If `SKIP_SETUP` echoed → Setup already done, skip
+- Otherwise → Run full setup (one-time)
+
+**THEN: Verify environment:**
+
+```bash
+pwd && ls crates/internal/integration-tests/README.md
+# Build test-prism if not available
+cargo build -p integration-tests
+# Check credentials exist
+cat creds.json | head -20
+```
+
+**Credentials Check (REQUIRED per connector):**
+
+- Before running tests for each connector, verify creds exist
+- If no creds → SKIP connector
+
+**Timeout:**
+
+- Set `UCS_TEST_TIMEOUT=600` (10 minutes per connector)
+- Tests typically take 5-10 minutes
+
+**View test results:**
+
+- Web: https://hyperswitch-prism-testing.netlify.app/
+- Latest JSON: https://integ.hyperswitch.io/connector-service/reports/grpc/report_latest.json
+
+---
+
+### STEP 2: PROCESS EACH CONNECTOR
+
+For each connector in `CONNECTOR_LIST`, spawn ONE Test Suite Agent:
+
+```
+delegate_task(
+  subagent_type="general",
+  description="Run test suite for {CONNECTOR}",
+  prompt="Read and follow the workflow defined in grace/workflow/3_test.md
+
+Variables:
+  CONNECTOR: <connector name>
+  TEST_MODE: grpc (or sdk)
+  BRANCH: <fix branch name>
+  TIMEOUT: 600 (10 minutes)"
+)
+```
+
+---
+
+### STEP 3: AGGREGATE RESULTS
+
+Report summary:
+
+```
+=== HARDENING SUMMARY ===
+Total connectors: N
+Successfully hardened: N
+Failed: N
+Skipped: N
+
+Hardened connectors (can move to "Tested" status):
+- <list>
+
+Failed connectors (need manual review):
+- <list>
+```
+
+---
+
 ## Subagent Reference
 
-| Agent | File | Purpose |
-|-------|------|---------|
-| Connector Agent | `2_connector.md` | Handles everything for one connector: links, tech spec, code, build, test, commit, and PR |
+| Agent            | File             | Purpose                                                              |
+| ---------------- | ---------------- | -------------------------------------------------------------------- |
+| Connector Agent  | `2_connector.md` | Implements payment flows for one connector                           |
+| Test Suite Agent | `3_test.md`      | Runs integration tests, fixes test bugs, validates for one connector |

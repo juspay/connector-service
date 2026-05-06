@@ -11,7 +11,9 @@ use common_utils::{
     ext_traits::{ByteSliceExt, StringExt},
 };
 use domain_types::{
-    connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{
+        self, Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::*,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -28,11 +30,12 @@ use interfaces::{
 };
 use requests::{
     PeachpaymentsAuthorizeRequest, PeachpaymentsCaptureRequest, PeachpaymentsRefundRequest,
-    PeachpaymentsVoidRequest,
+    PeachpaymentsRepeatPaymentRequest, PeachpaymentsSetupMandateRequest, PeachpaymentsVoidRequest,
 };
 use responses::{
     PeachpaymentsCaptureResponse, PeachpaymentsPaymentsResponse, PeachpaymentsRefundResponse,
-    PeachpaymentsRefundSyncResponse, PeachpaymentsSyncResponse, PeachpaymentsVoidResponse,
+    PeachpaymentsRefundSyncResponse, PeachpaymentsRepeatPaymentResponse,
+    PeachpaymentsSetupMandateResponse, PeachpaymentsSyncResponse, PeachpaymentsVoidResponse,
 };
 use serde::Serialize;
 
@@ -85,6 +88,18 @@ macros::create_all_prerequisites!(
             flow: PSync,
             response_body: PeachpaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: PeachpaymentsSetupMandateRequest<T>,
+            response_body: PeachpaymentsSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: PeachpaymentsRepeatPaymentRequest<T>,
+            response_body: PeachpaymentsRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -260,6 +275,56 @@ macros::macro_connector_implementation!(
         fn get_url(&self, req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>) -> CustomResult<String, IntegrationError> {
             let reference_id = req.resource_common_data.connector_request_reference_id.clone();
             Ok(format!("{}/transactions/by-reference/{}", self.connector_base_url_refunds(req), reference_id))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Peachpayments,
+    curl_request: Json(PeachpaymentsSetupMandateRequest),
+    curl_response: PeachpaymentsSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(&self, req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(&self, req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>) -> CustomResult<String, IntegrationError> {
+            Ok(format!(
+                "{}/transactions/create-and-confirm",
+                self.connector_base_url_payments(req)
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Peachpayments,
+    curl_request: Json(PeachpaymentsRepeatPaymentRequest),
+    curl_response: PeachpaymentsRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(&self, req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(&self, req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>) -> CustomResult<String, IntegrationError> {
+            Ok(format!(
+                "{}/transactions/create-and-confirm",
+                self.connector_base_url_payments(req)
+            ))
         }
     }
 );
@@ -607,15 +672,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        connector_flow::RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Peachpayments<T>
-{
-}
+// RepeatPayment ConnectorIntegrationV2 is provided by macro_connector_implementation! above
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -627,15 +684,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        connector_flow::SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Peachpayments<T>
-{
-}
+// SetupMandate ConnectorIntegrationV2 is provided by macro_connector_implementation! above
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -665,11 +714,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Peachpayments<T>
 {
+    fn sample_webhook_body(&self) -> &'static [u8] {
+        br#"{"webhookId":"probe_wh_001","webhookType":"PAYMENT","transaction":{"transactionId":"probe_txn_001","referenceId":"probe_ref_001","transactionResult":"ACK","transactionType":"DEBIT","paymentMethod":"probe_pm"}}"#
+    }
+
     fn get_event_type(
         &self,
         request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<WebhookError>> {
         let body = String::from_utf8(request.body.clone())
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
@@ -733,6 +784,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
+        _event_context: Option<EventContext>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
         let body = String::from_utf8(request.body.clone())
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
@@ -775,7 +827,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             raw_connector_response: None,
             status_code: 200,
             response_headers: None,
-            transformation_status: common_enums::WebhookTransformationStatus::Complete,
             amount_captured: None,
             minor_amount_captured: None,
             network_txn_id: None,
