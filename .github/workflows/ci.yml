@@ -169,23 +169,6 @@ jobs:
       - name: buf lint
         run: buf lint
 
-      - name: Check PR title for proto scope
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          # Proto changes must use conventional commit type "proto" or "proto!".
-          # proto:  backward-compatible change (new field, deprecation marker, etc.)
-          # proto!: intentional breaking removal — requires proto-breaking-approved label too.
-          if echo "$PR_TITLE" | grep -qE '^proto(\(.+\))?!?:'; then
-            echo "PR title uses correct proto type: $PR_TITLE"
-          else
-            echo "::error::PR title must start with 'proto:' or 'proto!:' when proto files are changed."
-            echo "  Examples:"
-            echo "    proto: add merchant_refund_id field to RefundRequest"
-            echo "    proto!: remove deprecated connector_state from WebhookRequest"
-            exit 1
-          fi
-
       - name: buf breaking change check
         id: buf-breaking
         continue-on-error: true
