@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import type { CheckpointState } from "../hooks/usePipeline";
 import { PIPELINE } from "../hooks/usePipeline";
 import { TaskForm, type SubmittedTask } from "./TaskForm";
@@ -6,6 +7,7 @@ import { HumanReview } from "./HumanReview";
 import { DesignGatePrompt } from "./DesignGatePrompt";
 import { ClarifyingQuestions } from "./ClarifyingQuestions";
 import { LoadingState } from "./LoadingState";
+import { RetryHistory, type RetryAttempt } from "./RetryHistory";
 import { T } from "../theme";
 
 const STATUS_BADGE: Record<string, { bg: string; fg: string; dot: string; label: string }> = {
@@ -102,7 +104,8 @@ export function CheckpointDetail({
     l3_analysis: "l3",
     l3_review: "l3Review",
     implementation: "implementation",
-    compiler: "compiledFiles",
+    compiler: "compilationErrors",
+    compiler_check: "compilerCheck",
     grpc_test: "grpcTest",
     design_match: "designDiff",
     cypress: "cypressReport",
@@ -112,6 +115,75 @@ export function CheckpointDetail({
   };
   const aKey = artifactKey[checkpointId];
   const artifact = aKey ? artifacts[aKey] : undefined;
+
+  // Retry history tracking
+  // Store artifacts per retry attempt for this checkpoint
+  const [retryArtifactHistory, setRetryArtifactHistory] = useState<Record<number, unknown>>({});
+  const [selectedRetryAttempt, setSelectedRetryAttempt] = useState<number>(state.retries);
+  const prevRetryRef = useRef<number>(state.retries);
+  const prevArtifactRef = useRef<unknown>(artifact);
+
+  // When artifact changes and retry count increases, store the previous artifact
+  useEffect(() => {
+    const currentRetry = state.retries;
+    const prevRetry = prevRetryRef.current;
+
+    // If retry increased and we have a previous artifact, store it
+    if (currentRetry > prevRetry && prevArtifactRef.current !== undefined) {
+      setRetryArtifactHistory((prev) => ({
+        ...prev,
+        [prevRetry]: prevArtifactRef.current,
+      }));
+    }
+
+    // Update refs
+    prevRetryRef.current = currentRetry;
+    prevArtifactRef.current = artifact;
+
+    // If retry changed, update selected to current
+    if (currentRetry !== selectedRetryAttempt && currentRetry > selectedRetryAttempt) {
+      setSelectedRetryAttempt(currentRetry);
+    }
+  }, [state.retries, artifact, selectedRetryAttempt]);
+
+  // Clear history when checkpoint changes
+  useEffect(() => {
+    setRetryArtifactHistory({});
+    setSelectedRetryAttempt(0);
+    prevRetryRef.current = 0;
+    prevArtifactRef.current = undefined;
+  }, [checkpointId, runId]);
+
+  // Build list of retry attempts for the dropdown
+  const retryAttempts: RetryAttempt[] = (() => {
+    const attempts: RetryAttempt[] = [];
+    const currentRetry = state.retries;
+
+    // Add all historical attempts from our stored history
+    for (let i = 0; i < currentRetry; i++) {
+      if (retryArtifactHistory[i] !== undefined) {
+        attempts.push({
+          attempt: i,
+          status: "failed", // Historical attempts are always failed (otherwise no retry would happen)
+          timestamp: new Date(Date.now() - (currentRetry - i) * 60000).toISOString(), // Estimate based on typical timing
+        });
+      }
+    }
+
+    // Add current attempt
+    attempts.push({
+      attempt: currentRetry,
+      status: state.status === "running" ? "running" : state.status === "passed" ? "passed" : "failed",
+      timestamp: new Date().toISOString(),
+    });
+
+    return attempts;
+  })();
+
+  // Get the artifact to display based on selected retry attempt
+  const displayArtifact = selectedRetryAttempt === state.retries
+    ? artifact
+    : retryArtifactHistory[selectedRetryAttempt];
 
   const isTaskStep = checkpointId === "task";
   const isDesignGate = checkpointId === "design_gate";
@@ -231,6 +303,19 @@ export function CheckpointDetail({
         )}
       </div>
 
+      {/* Retry History Selector - shown when there are retries */}
+      {(state.retries > 0 || Object.keys(retryArtifactHistory).length > 0) && (
+        <section style={{ marginBottom: 16 }}>
+          <RetryHistory
+            currentAttempt={state.retries}
+            attempts={retryAttempts}
+            selectedAttempt={selectedRetryAttempt}
+            onSelectAttempt={setSelectedRetryAttempt}
+            onBackToCurrent={() => setSelectedRetryAttempt(state.retries)}
+          />
+        </section>
+      )}
+
       {isTaskStep && !taskAlreadySubmitted && (
         <section style={{ marginBottom: 32 }}>
           <SectionTitle>Submit task</SectionTitle>
@@ -292,10 +377,10 @@ export function CheckpointDetail({
         </section>
       )}
 
-      {artifact !== undefined && !artifactIsPartial && (
+      {displayArtifact !== undefined && !artifactIsPartial && (
         <section style={{ marginBottom: 32 }}>
           <SectionTitle>Result</SectionTitle>
-          <ArtifactView checkpointId={checkpointId} artifact={artifact} isRunning={state.status === "running"} />
+          <ArtifactView checkpointId={checkpointId} artifact={displayArtifact} artifacts={artifacts} isRunning={state.status === "running"} />
         </section>
       )}
 

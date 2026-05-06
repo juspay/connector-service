@@ -1585,6 +1585,72 @@ function FeatureResearchArtifact({ report }: { report: any }) {
   );
 }
 
+// ─── Compiler Artifact ─────────────────────────────────────────────────
+
+function CompilerArtifact({ result }: { result: any }) {
+  // Handle compiler.ts format:
+  // - On failure: result is an array of error strings (from compilationErrors)
+  // - On success: result is { compiledFiles: [] }
+  const errors = Array.isArray(result) ? result : result?.compilationErrors;
+  const hasErrors = errors && errors.length > 0;
+  const compiledFiles = result?.compiledFiles || [];
+
+  return (
+    <Card>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>
+            Compiler Result
+          </div>
+          <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
+            {compiledFiles.length > 0 ? `${compiledFiles.length} files compiled` : "Build check"}
+          </div>
+        </div>
+        <Tag tone={hasErrors ? "error" : "ok"}>
+          {hasErrors ? "FAILED" : "PASSED"}
+        </Tag>
+      </div>
+
+      {hasErrors && (
+        <Field label="Compilation Errors">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {errors.map((error: string, i: number) => (
+              <div
+                key={i}
+                style={{
+                  padding: "10px 12px",
+                  background: T.errorSoft,
+                  border: `1px solid ${T.error}`,
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                  color: T.text,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                }}
+              >
+                {error}
+              </div>
+            ))}
+          </div>
+        </Field>
+      )}
+
+      {!hasErrors && compiledFiles.length > 0 && (
+        <Field label="Compiled Files">
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {compiledFiles.map((file: string, i: number) => (
+              <li key={i} style={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }}>
+                {file}
+              </li>
+            ))}
+          </ul>
+        </Field>
+      )}
+    </Card>
+  );
+}
+
 // ─── Codegen Artifact ──────────────────────────────────────────────────
 
 // ─── Dispatcher ────────────────────────────────────────────────────────
@@ -1592,10 +1658,12 @@ function FeatureResearchArtifact({ report }: { report: any }) {
 export function ArtifactView({
   checkpointId,
   artifact,
+  artifacts,
   isRunning,
 }: {
   checkpointId: string;
   artifact: unknown;
+  artifacts?: Record<string, unknown>;
   isRunning?: boolean;
 }) {
   if (artifact === undefined || artifact === null) return null;
@@ -1615,6 +1683,8 @@ export function ArtifactView({
       return <L3AnalysisArtifact analysis={artifact as any} />;
     case "implementation":
       return <ImplementationResultArtifact result={artifact as any} />;
+    case "compiler":
+      return <CompilerArtifact result={artifact} />;
     case "grpc_test":
       return <GrpcTestArtifact result={artifact as any} />;
     default:

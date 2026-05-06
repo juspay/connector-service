@@ -72,6 +72,9 @@ export function usePipeline(wsUrl: string) {
   const [retries, setRetries] = useState<RetryStep[]>([]);
   const [journey, setJourney] = useState<JourneyEvent[]>([]);
   const [artifacts, setArtifacts] = useState<Record<string, unknown>>({});
+  // Track artifact history per checkpoint per retry attempt
+  // Structure: { checkpointId: { retryAttempt: artifact } }
+  const [artifactHistory, setArtifactHistory] = useState<Record<string, Record<number, unknown>>>({});
   const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">(
     "connecting"
   );
