@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use common_utils::metadata::MaskedMetadata;
-use domain_types::{
-    connector_types, errors::IntegrationError, router_data::ConnectorSpecificConfig,
-};
+use common_utils::{consts, metadata::MaskedMetadata};
+use domain_types::{errors::IntegrationError, router_data::ConnectorSpecificConfig};
 use error_stack::Report;
 use tonic::metadata;
 use ucs_env::{configs, error::ResultExtGrpc};
 
-use crate::utils::MetadataPayload;
-
+use crate::utils::{connector_and_optional_config_from_metadata, MetadataPayload};
+use ucs_interface_common::metadata::{
+    merchant_id_from_metadata, request_id_from_metadata, tenant_id_from_metadata,
+};
 /// Structured request data with secure metadata access.
 /// This is the gRPC-specific wrapper around `InterfaceRequestData` that
 /// provides non-optional extensions for backward compatibility.
@@ -73,26 +73,17 @@ fn extract_routing_metadata_only(
     metadata: &metadata::MetadataMap,
     _config: Arc<configs::Config>,
 ) -> Result<MetadataPayload, Report<IntegrationError>> {
-    use common_utils::consts;
-    use std::str::FromStr;
-    use ucs_interface_common::metadata::{
-        merchant_id_from_metadata, request_id_from_metadata, tenant_id_from_metadata,
-    };
-
-    // Extract connector name - optional for webhooks during initial parsing
-    let connector = metadata
-        .get(consts::X_CONNECTOR_NAME)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| connector_types::ConnectorEnum::from_str(s).ok());
-
     // Extract other routing fields - use defaults where appropriate
     let merchant_id = merchant_id_from_metadata(metadata).unwrap_or_default();
     let tenant_id = tenant_id_from_metadata(metadata).unwrap_or_default();
     let request_id = request_id_from_metadata(metadata).unwrap_or_default();
 
-    // For webhooks, we use NoKey variant initially.
-    // The actual config can be loaded later when needed via the payload's webhook_secrets.
-    let connector_config = ConnectorSpecificConfig::NoKey;
+    // For webhooks, connector config is optional — some connectors embed webhook secrets
+    // inside the config (e.g. for external source verification). Use it when present,
+    // otherwise fall back to NoKey so callers can still proceed.
+    // The connector name is always required and will error if absent.
+    let (connector, optional_config) = connector_and_optional_config_from_metadata(metadata)?;
+    let connector_config = optional_config.unwrap_or(ConnectorSpecificConfig::NoKey);
 
     // Extract optional fields
     let reference_id = metadata
@@ -115,20 +106,6 @@ fn extract_routing_metadata_only(
         .get(consts::X_ENVIRONMENT)
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
-
-    // For unauthenticated flows, we need a connector to proceed
-    // Return error if connector is not provided
-    let connector = connector.ok_or_else(|| {
-        Report::new(IntegrationError::MissingRequiredField {
-            field_name: "x-connector",
-            context: domain_types::errors::IntegrationErrorContext {
-                additional_context: Some(
-                    "Connector name is required for webhook processing".to_string(),
-                ),
-                ..Default::default()
-            },
-        })
-    })?;
 
     Ok(MetadataPayload {
         tenant_id,

@@ -130,17 +130,32 @@ fn parse_connector_config_from_deprecated_header(
     Ok((connector, connector_config))
 }
 
-/// Resolves connector and config from the typed `X-Connector-Config` header first,
-/// parsing both the connector enum and the specific config in one go. If it is
-/// not present, it falls back to legacy `x-connector` and `x-auth` (+ keys) headers.
-/// Deprecated header name kept for backward compatibility.
+/// Resolves connector and optional config from metadata headers.
+///
+/// Tries the typed `X-Connector-Config` header first, parsing both the connector
+/// enum and the specific config in one go. If not present, falls back to the
+/// deprecated `x-connector-auth` header, then to legacy `x-connector` + `x-auth`
+/// (+ keys) headers.
+///
+/// The connector name is always required and will error if absent.
+/// The connector config is optional — when using legacy headers, if auth headers
+/// are missing, `None` is returned for the config. Callers decide whether to
+/// require the config (error) or use a default like `NoKey`.
 const X_CONNECTOR_AUTH_DEPRECATED: &str = "x-connector-auth";
 
-pub fn connector_and_config_from_metadata(
+pub fn connector_and_optional_config_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificConfig), IntegrationError> {
+) -> CustomResult<
+    (
+        connector_types::ConnectorEnum,
+        Option<ConnectorSpecificConfig>,
+    ),
+    IntegrationError,
+> {
+    // Try typed X-Connector-Config header first (provides both connector and config)
     if let Some(header_value) = metadata.get(X_CONNECTOR_CONFIG) {
-        return parse_connector_config_from_typed_header(header_value);
+        let (connector, config) = parse_connector_config_from_typed_header(header_value)?;
+        return Ok((connector, Some(config)));
     }
 
     // Backward compat: accept the old header name with old JSON format
@@ -149,13 +164,17 @@ pub fn connector_and_config_from_metadata(
             "x-connector-auth header is deprecated and will be removed in a future release. \
              Use x-connector-config with {{\"config\":{{...}}}} format instead."
         );
-        return parse_connector_config_from_deprecated_header(header_value);
+        let (connector, config) = parse_connector_config_from_deprecated_header(header_value)?;
+        return Ok((connector, Some(config)));
     }
 
     logger::debug!("Typed connector config headers not found, falling back to legacy headers");
 
+    // Connector name is always required
     let connector = connector_from_metadata(metadata)?;
-    let connector_config = legacy_connector_config_from_metadata(metadata, &connector)?;
+
+    // Legacy auth config is optional — some flows (e.g., webhooks) may not provide it
+    let connector_config = legacy_connector_config_from_metadata(metadata, &connector).ok();
 
     Ok((connector, connector_config))
 }
@@ -239,7 +258,7 @@ pub fn generic_auth_from_metadata(
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 mod tests {
-    use super::connector_and_config_from_metadata;
+    use super::connector_and_optional_config_from_metadata;
     use common_utils::consts;
     use domain_types::{connector_types, router_data::ConnectorSpecificConfig};
     use hyperswitch_masking::ExposeInterface;
@@ -283,10 +302,11 @@ mod tests {
     fn connector_config_resolves_from_typed_config_header() {
         let metadata = metadata_with_typed_config("typed-key-value");
 
-        let (connector, config) = connector_and_config_from_metadata(&metadata)
+        let (connector, config) = connector_and_optional_config_from_metadata(&metadata)
             .expect("typed header config should resolve");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
+        let config = config.expect("config should be present with typed header");
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "typed-key-value");
@@ -299,10 +319,11 @@ mod tests {
     fn connector_config_falls_back_to_legacy_headers() {
         let metadata = metadata_with_legacy_auth("legacy-key-value");
 
-        let (connector, config) = connector_and_config_from_metadata(&metadata)
+        let (connector, config) = connector_and_optional_config_from_metadata(&metadata)
             .expect("legacy header config should resolve");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
+        let config = config.expect("config should be present with legacy headers");
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "legacy-key-value");
@@ -320,10 +341,11 @@ mod tests {
             json.parse().expect("valid x-connector-config header"),
         );
 
-        let (connector, config) = connector_and_config_from_metadata(&metadata)
+        let (connector, config) = connector_and_optional_config_from_metadata(&metadata)
             .expect("typed header should take precedence");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
+        let config = config.expect("config should be present with typed header");
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "typed-key-value");
@@ -333,12 +355,33 @@ mod tests {
     }
 
     #[test]
-    fn connector_config_fails_when_no_auth_present() {
+    fn connector_config_fails_when_no_connector_present() {
         let metadata = MetadataMap::new();
 
-        let result = connector_and_config_from_metadata(&metadata);
+        let result = connector_and_optional_config_from_metadata(&metadata);
 
-        assert!(result.is_err());
+        assert!(
+            result.is_err(),
+            "should fail when no connector name is provided"
+        );
+    }
+
+    #[test]
+    fn connector_resolves_without_legacy_auth() {
+        let mut metadata = MetadataMap::new();
+        metadata.insert(
+            consts::X_CONNECTOR_NAME,
+            "stripe".parse().expect("valid x-connector header"),
+        );
+
+        let (connector, config) = connector_and_optional_config_from_metadata(&metadata)
+            .expect("connector name alone should resolve");
+
+        assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
+        assert!(
+            config.is_none(),
+            "config should be None when no auth headers are provided"
+        );
     }
 
     #[test]
@@ -354,10 +397,11 @@ mod tests {
             old_json.parse().expect("valid header"),
         );
 
-        let (connector, config) = connector_and_config_from_metadata(&metadata)
+        let (connector, config) = connector_and_optional_config_from_metadata(&metadata)
             .expect("deprecated x-connector-auth should still resolve");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
+        let config = config.expect("config should be present with deprecated header");
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "deprecated-key-value");
@@ -380,10 +424,11 @@ mod tests {
             old_json.parse().expect("valid header"),
         );
 
-        let (connector, config) = connector_and_config_from_metadata(&metadata)
+        let (connector, config) = connector_and_optional_config_from_metadata(&metadata)
             .expect("new header should take precedence");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
+        let config = config.expect("config should be present with typed header");
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "new-key");
