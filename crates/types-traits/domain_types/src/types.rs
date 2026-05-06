@@ -1530,7 +1530,14 @@ impl<
                         email: match interac.email {
                             Some(ref email_str) => Some(
                                 Email::try_from(email_str.clone().expose()).change_context(
-                                    IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Invalid email for Interac".to_string()), ..Default::default() } },
+                                    IntegrationError::InvalidDataFormat {
+                                        field_name: "payment_method.interac.email",
+                                        context: IntegrationErrorContext {
+                                            additional_context: Some("Invalid email format for Interac payment method".to_string()),
+                                            suggested_action: Some("Provide a valid email address for Interac".to_string()),
+                                            doc_url: None,
+                                        },
+                                    },
                                 )?,
                             ),
                             None => None,
@@ -1562,7 +1569,14 @@ impl<
                         email: match online_banking_finland.email {
                                 Some(ref email_str) => Some(
                                     Email::try_from(email_str.clone().expose()).change_context(
-                                        IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Invalid email".to_string()), ..Default::default() } },
+                                        IntegrationError::InvalidDataFormat {
+                                            field_name: "payment_method.online_banking_finland.email",
+                                            context: IntegrationErrorContext {
+                                                additional_context: Some("Invalid email format for Online Banking Finland".to_string()),
+                                                suggested_action: Some("Provide a valid email address for Online Banking Finland".to_string()),
+                                                doc_url: None,
+                                            },
+                                        },
                                     )?,
                                 ),
                                 None => None,
@@ -3165,10 +3179,11 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -3305,10 +3320,11 @@ impl<
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             request_incremental_authorization: value.request_incremental_authorization,
@@ -4083,10 +4099,11 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.connector_customer_id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid connector customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             connector_customer: value
@@ -7857,10 +7874,11 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateClientAuthenticationToken
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "payment_context.customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid email format in payment context customer".to_string()),
+                            suggested_action: Some("Provide a valid email address in payment_context.customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -8435,10 +8453,11 @@ impl
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             connector_customer: value
@@ -8541,10 +8560,11 @@ impl
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             connector_customer: value
@@ -8603,10 +8623,11 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -8713,10 +8734,11 @@ impl<
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             billing_descriptor,
@@ -8953,10 +8975,11 @@ impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
             .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
             .transpose()
             .change_context(IntegrationError::InvalidDataFormat {
-                field_name: "unknown",
+                field_name: "customer.id",
                 context: IntegrationErrorContext {
                     additional_context: Some("Failed to parse Customer Id".to_string()),
-                    ..Default::default()
+                    suggested_action: Some("Provide a valid customer ID".to_string()),
+                    doc_url: None,
                 },
             })?;
 
@@ -8964,10 +8987,11 @@ impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -8996,10 +9020,11 @@ impl ForeignTryFrom<&grpc_api_types::payouts::Customer> for CustomerInfo {
             .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
             .transpose()
             .change_context(IntegrationError::InvalidDataFormat {
-                field_name: "unknown",
+                field_name: "customer.id",
                 context: IntegrationErrorContext {
                     additional_context: Some("Failed to parse Customer Id".to_string()),
-                    ..Default::default()
+                    suggested_action: Some("Provide a valid customer ID".to_string()),
+                    doc_url: None,
                 },
             })?;
 
@@ -9007,10 +9032,11 @@ impl ForeignTryFrom<&grpc_api_types::payouts::Customer> for CustomerInfo {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -10339,10 +10365,11 @@ impl
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             connector_customer: value.customer.and_then(|c| c.id),
@@ -10614,10 +10641,11 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -11904,10 +11932,11 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -12003,10 +12032,11 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -12118,10 +12148,11 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some("Provide a valid email address in customer.email".to_string()),
+                            doc_url: None,
                         },
                     })
                 })?)

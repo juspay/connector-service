@@ -633,12 +633,12 @@ impl
                     first_name: req.request.get_billing_first_name()?,
                     last_name: req.request.get_billing_last_name()?,
                     email,
-                    phone: req.request.get_billing_phone(),
-                    address_a: req.request.get_billing_line1(),
-                    city: req.request.get_billing_city(),
-                    province: req.request.get_billing_state(),
-                    postal_code: req.request.get_billing_zip(),
-                    country: req.request.get_billing_country().map(|c| c.to_string()),
+                    phone: req.request.get_optional_billing_phone(),
+                    address_a: req.request.get_optional_billing_line1(),
+                    city: req.request.get_optional_billing_city(),
+                    province: req.request.get_optional_billing_state(),
+                    postal_code: req.request.get_optional_billing_zip(),
+                    country: req.request.get_optional_billing_country().map(|c| c.to_string()),
                 };
 
                 let amount = utils::convert_amount(
