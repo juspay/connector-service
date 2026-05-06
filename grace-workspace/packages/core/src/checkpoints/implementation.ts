@@ -72,8 +72,12 @@ export const implementationCheckpoint: Checkpoint = {
 
     // Log specification summary
     ctx.log(`[implementation] Specification:`, "info");
-    ctx.log(`  - Request struct: ${l3.specification.requestStruct.name}`, "info");
-    ctx.log(`  - Response struct: ${l3.specification.responseStruct.name}`, "info");
+    if (l3.specification.requestStruct) {
+      ctx.log(`  - Request struct: ${l3.specification.requestStruct.name}`, "info");
+    }
+    if (l3.specification.responseStruct) {
+      ctx.log(`  - Response struct: ${l3.specification.responseStruct.name}`, "info");
+    }
     ctx.log(`  - Files to change: ${l3.specification.filesChangedPreview.length}`, "info");
 
     const task = ctx.artifacts.task;
