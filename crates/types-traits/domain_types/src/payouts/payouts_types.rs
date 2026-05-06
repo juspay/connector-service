@@ -155,23 +155,27 @@ impl PayoutTransferRequest {
             ))
     }
 
-    /// Get customer_id from the customer field
-    pub fn get_customer_id(&self) -> Result<common_utils::id_type::CustomerId, Error> {
+    pub fn get_customer_id(
+        &self,
+    ) -> Result<common_utils::id_type::CustomerId, error_stack::Report<IntegrationError>> {
         self.customer
             .as_ref()
             .and_then(|c| c.merchant_customer_id.clone())
-            .ok_or_else(missing_field_err("customer.merchant_customer_id"))
+            .ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name: "customer.merchant_customer_id",
+                    context: Default::default(),
+                })
+            })
             .and_then(|id| {
                 common_utils::id_type::CustomerId::try_from(std::borrow::Cow::from(id))
                     .change_context(IntegrationError::InvalidDataFormat {
                         field_name: "customer.merchant_customer_id",
                         context: Default::default(),
                     })
-                    .map_err(Error::from)
             })
     }
 
-    /// Alternative: Get customer_id as Option for cases where it might not be required
     pub fn get_optional_customer_id(&self) -> Option<common_utils::id_type::CustomerId> {
         self.customer
             .as_ref()
@@ -181,7 +185,6 @@ impl PayoutTransferRequest {
             })
     }
 
-    /// Get billing phone number
     pub fn get_billing_phone(&self) -> Option<Secret<String>> {
         self.address
             .as_ref()
@@ -190,7 +193,6 @@ impl PayoutTransferRequest {
             .and_then(|p| p.number.clone())
     }
 
-    /// Get billing address line 1
     pub fn get_billing_line1(&self) -> Option<Secret<String>> {
         self.address
             .as_ref()
@@ -199,7 +201,6 @@ impl PayoutTransferRequest {
             .and_then(|addr| addr.line1.clone())
     }
 
-    /// Get billing city
     pub fn get_billing_city(&self) -> Option<String> {
         self.address
             .as_ref()
@@ -209,7 +210,6 @@ impl PayoutTransferRequest {
             .map(|c| c.peek().clone())
     }
 
-    /// Get billing state
     pub fn get_billing_state(&self) -> Option<Secret<String>> {
         self.address
             .as_ref()
@@ -218,7 +218,6 @@ impl PayoutTransferRequest {
             .and_then(|addr| addr.state.clone())
     }
 
-    /// Get billing zip/postal code
     pub fn get_billing_zip(&self) -> Option<Secret<String>> {
         self.address
             .as_ref()
@@ -227,7 +226,6 @@ impl PayoutTransferRequest {
             .and_then(|addr| addr.zip.clone())
     }
 
-    /// Get billing country
     pub fn get_billing_country(&self) -> Option<common_enums::CountryAlpha2> {
         self.address
             .as_ref()
