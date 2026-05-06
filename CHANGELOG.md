@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.05.0
+
+### Features
+
+- **grace:** Add hardening workflow for connector test suite ([#1196](https://github.com/juspay/connector-service/pull/1196)) ([`cf39d28`](https://github.com/juspay/connector-service/commit/cf39d288a5fc7aa92ceb7ebf7e1928ad8784ec01))
+- **payouts:** Audit Itaubank for Production ([#1053](https://github.com/juspay/connector-service/pull/1053)) ([`d47a8d0`](https://github.com/juspay/connector-service/commit/d47a8d04d0338bba0719efec3e7cff8220df3f96))
+
+**Full Changelog:** [`2026.05.01.0...2026.05.05.0`](https://github.com/juspay/connector-service/compare/2026.05.01.0...2026.05.05.0)
+
+- - -
+
 ## 2026.05.01.0
 
 ### Features

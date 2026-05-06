@@ -655,6 +655,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
         },
         ConnectorEnum::Imerchantsolutions => ConnectorSpecificConfig::Imerchantsolutions {
             api_key: k(),
+            merchant_id: Some(m()),
             base_url: None,
         },
         ConnectorEnum::Axisbank => ConnectorSpecificConfig::Axisbank {

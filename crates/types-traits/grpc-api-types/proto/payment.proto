@@ -1567,7 +1567,8 @@ message ConnectorSpecificClientAuthenticationResponse {
     MultisafepayClientAuthenticationResponse multisafepay = 23;
     NexinetsClientAuthenticationResponse nexinets = 24;
     NexixpayClientAuthenticationResponse nexixpay = 25;
-    PproClientAuthenticationResponse ppro = 26;
+    RevolutClientAuthenticationResponse revolut = 26;
+    PproClientAuthenticationResponse ppro = 27;
   }
 }
 
@@ -1709,6 +1710,14 @@ message PproClientAuthenticationResponse {
   string charge_id = 1;
   // The redirect URL for client-side payment authentication
   optional string redirect_url = 2;
+}
+
+// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+message RevolutClientAuthenticationResponse {
+  // The order ID created on Revolut
+  string order_id = 1;
+  // The client authentication token for SDK initialization
+  SecretString token = 2;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
@@ -4194,7 +4203,8 @@ message PinelabsOnlineConfig {
 
 message ImerchantsolutionsConfig {
   SecretString api_key = 1;
-  optional string base_url = 2;
+  optional SecretString merchant_id = 2;
+  optional string base_url = 3;
 }
 
 message AxisbankConfig {

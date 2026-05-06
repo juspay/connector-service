@@ -162,6 +162,7 @@ where
     Resp: Clone + 'static + std::fmt::Debug,
     ResourceCommonData: Clone + RawConnectorRequestResponse + ConnectorResponseHeaders,
 {
+    let return_raw = event_params.is_none_or(|p| p.return_raw_connector_data);
     match response {
         Ok(body) => {
             let response = match body {
@@ -170,7 +171,7 @@ where
                     tracing::Span::current()
                         .record("status_code", tracing::field::display(status_code));
 
-                    if all_keys_required.unwrap_or(true) {
+                    if all_keys_required.unwrap_or(true) && return_raw {
                         let raw_response_string = strip_bom_and_convert_to_string(&body.response);
                         updated_router_data
                             .resource_common_data
@@ -217,7 +218,7 @@ where
                             .inc();
                     }
 
-                    if all_keys_required.unwrap_or(true) {
+                    if all_keys_required.unwrap_or(true) && return_raw {
                         let raw_response_string = strip_bom_and_convert_to_string(&body.response);
                         updated_router_data
                             .resource_common_data
@@ -289,6 +290,7 @@ pub struct EventProcessingParams<'a> {
     pub resource_id: &'a Option<String>,
     pub shadow_mode: bool,
     pub tenant_id: &'a str,
+    pub return_raw_connector_data: bool,
 }
 
 #[cfg(feature = "injector-client")]
@@ -355,7 +357,7 @@ where
 
             let mut updated_router_data = router_data.clone();
             updated_router_data = match &connector_request {
-                Some(request) => {
+                Some(request) if event_params.return_raw_connector_data => {
                     updated_router_data
                         .resource_common_data
                         .set_raw_connector_request(Some(
@@ -363,7 +365,7 @@ where
                         ));
                     updated_router_data
                 }
-                None => updated_router_data,
+                _ => updated_router_data,
             };
             connector_request = connector_request.map(|mut req| {
                 if event_params.shadow_mode {
