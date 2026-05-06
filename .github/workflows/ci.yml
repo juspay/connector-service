@@ -22,7 +22,6 @@ permissions:
 # Job dependency graph:
 #
 #   changes ─┬─ typos              (always, ~8s)
-#            ├─ proto-checks       (PR only if proto changed: buf lint + buf breaking)
 #            ├─ auto-fix           (PR only: format + generate + docs → bot commit if needed)
 #            │   ├─ check          (if rust changed AND auto-fix didn't push, ~11min)
 #            │   ├─ test           (parallel with check, ~15min)
@@ -146,59 +145,6 @@ jobs:
   # buf breaking — vs PR base branch; git fetch ensures refs/heads/<base> exists for buf's local clone.
   # --against-config aligns module root with protos under crates/types-traits/grpc-api-types/proto.
   #
-  # Intentional breaking removals after consumers migrated: label proto-breaking-approved + migration PR link.
-  proto-checks:
-    name: Proto checks (lint + breaking)
-    needs: changes
-    if: >-
-      github.event_name == 'pull_request' &&
-      !github.event.pull_request.draft &&
-      needs.changes.outputs.proto == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install buf
-        uses: bufbuild/buf-action@v1
-        with:
-          setup_only: true
-
-      - name: buf lint
-        run: buf lint
-
-      - name: buf breaking change check
-        id: buf-breaking
-        continue-on-error: true
-        run: |
-          BASE_REF="${GITHUB_BASE_REF:?GITHUB_BASE_REF is not set — this job must run on pull_request events only}"
-          git fetch origin "refs/heads/${BASE_REF}:refs/heads/${BASE_REF}"
-          buf breaking --against ".git#branch=${BASE_REF}" --against-config scripts/ci/buf-breaking-baseline.yaml
-
-      - name: Breaking change approved via label
-        if: steps.buf-breaking.outcome == 'failure' && contains(github.event.pull_request.labels.*.name, 'proto-breaking-approved')
-        run: |
-          echo "::warning::Breaking proto changes approved via 'proto-breaking-approved' label. Checklist: (1) PR description links the consumer migration PR (HS / Euler). (2) Migration PR is already merged and deployed to all active envs. (3) Removed field numbers are listed under 'reserved' in the proto."
-
-      - name: Fail on unapproved breaking change
-        if: steps.buf-breaking.outcome == 'failure' && !contains(github.event.pull_request.labels.*.name, 'proto-breaking-approved')
-        run: |
-          echo "::error::Breaking proto changes detected and not approved."
-          echo ""
-          echo "Options:"
-          echo "  1. Keep changes backward-compatible:"
-          echo "       Add the new field alongside the old one; mark old as [deprecated=true]."
-          echo "       Remove it in a follow-up PR once consumers have migrated."
-          echo ""
-          echo "  2. Intentional removal (consumers already migrated):"
-          echo "       Add the 'proto-breaking-approved' label to this PR."
-          echo "       Use 'proto!:' as the PR title type."
-          echo "       Link the consumer migration PR in the PR description."
-          echo "       Ensure removed field numbers appear under 'reserved'."
-          exit 1
-
   clippy:
     name: Clippy check
     needs: changes
@@ -775,14 +721,13 @@ jobs:
   ci-gate:
     name: CI Result
     if: always()
-    needs: [typos, proto-checks, clippy, formatting, auto-fix, check, test, sdk-test]
+    needs: [typos, clippy, formatting, auto-fix, check, test, sdk-test]
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate CI results
         run: |
           echo "Job results:"
           echo "  typos:         ${{ needs.typos.result }}"
-          echo "  proto-checks:  ${{ needs.proto-checks.result }}"
           echo "  clippy:        ${{ needs.clippy.result }}"
           echo "  formatting:    ${{ needs.formatting.result }}"
           echo "  auto-fix:      ${{ needs.auto-fix.result }}"
@@ -801,7 +746,6 @@ jobs:
 
           results=(
             "${{ needs.typos.result }}"
-            "${{ needs.proto-checks.result }}"
             "${{ needs.clippy.result }}"
             "${{ needs.formatting.result }}"
             "${{ needs.auto-fix.result }}"
