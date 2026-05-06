@@ -682,6 +682,17 @@ export interface PipelineArtifacts {
   compiledFiles?: string[];
   /** Compilation errors from previous build attempt for retry */
   compilationErrors?: string[];
+  /** Full compiler build output for UI display */
+  compilerOutput?: string;
+  /** gRPC test result object */
+  grpcTest?: {
+    status?: string;
+    grpcurl_result?: string;
+    reason?: string;
+    grpcurl_command?: string;
+    grpcurl_output?: string;
+    output?: string;
+  };
   /** gRPC test errors from previous test attempt for retry */
   grpcTestErrors?: string[];
   /** Raw grpcurl output from test attempts */
