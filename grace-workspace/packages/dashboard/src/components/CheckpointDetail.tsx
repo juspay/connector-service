@@ -121,29 +121,34 @@ export function CheckpointDetail({
   const [retryArtifactHistory, setRetryArtifactHistory] = useState<Record<number, unknown>>({});
   const [selectedRetryAttempt, setSelectedRetryAttempt] = useState<number>(state.retries);
   const prevRetryRef = useRef<number>(state.retries);
-  const prevArtifactRef = useRef<unknown>(artifact);
+  const lastArtifactForRetry = useRef<Record<number, unknown>>({});
 
-  // When artifact changes and retry count increases, store the previous artifact
+  // Track artifacts for each retry attempt
   useEffect(() => {
     const currentRetry = state.retries;
-    const prevRetry = prevRetryRef.current;
 
-    // If retry increased and we have a previous artifact, store it
-    if (currentRetry > prevRetry && prevArtifactRef.current !== undefined) {
-      setRetryArtifactHistory((prev) => ({
-        ...prev,
-        [prevRetry]: prevArtifactRef.current,
-      }));
+    // Store artifact for current retry whenever we have one
+    if (artifact !== undefined) {
+      lastArtifactForRetry.current[currentRetry] = artifact;
     }
 
-    // Update refs
+    // If retry increased, copy all previous artifacts to state
+    if (currentRetry > prevRetryRef.current) {
+      const newHistory: Record<number, unknown> = {};
+      for (let i = 0; i < currentRetry; i++) {
+        if (lastArtifactForRetry.current[i] !== undefined) {
+          newHistory[i] = lastArtifactForRetry.current[i];
+        }
+      }
+      setRetryArtifactHistory(newHistory);
+
+      // Update selected to current if it was on old current
+      if (selectedRetryAttempt >= currentRetry) {
+        setSelectedRetryAttempt(currentRetry);
+      }
+    }
+
     prevRetryRef.current = currentRetry;
-    prevArtifactRef.current = artifact;
-
-    // If retry changed, update selected to current
-    if (currentRetry !== selectedRetryAttempt && currentRetry > selectedRetryAttempt) {
-      setSelectedRetryAttempt(currentRetry);
-    }
   }, [state.retries, artifact, selectedRetryAttempt]);
 
   // Clear history when checkpoint changes
@@ -151,7 +156,7 @@ export function CheckpointDetail({
     setRetryArtifactHistory({});
     setSelectedRetryAttempt(0);
     prevRetryRef.current = 0;
-    prevArtifactRef.current = undefined;
+    lastArtifactForRetry.current = {};
   }, [checkpointId, runId]);
 
   // Build list of retry attempts for the dropdown

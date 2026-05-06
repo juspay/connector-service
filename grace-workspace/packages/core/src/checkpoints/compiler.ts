@@ -35,7 +35,15 @@ export const compilerCheckpoint: Checkpoint = {
         .slice(0, 50);
       // Store errors in artifacts for implementation retry
       ctx.artifacts.compilationErrors = errors.length ? errors : [output.slice(0, 2000)];
-      return { passed: false, errors: ctx.artifacts.compilationErrors };
+      ctx.artifacts.compilerOutput = output.slice(0, 10000); // Store full output for UI display
+      return {
+        passed: false,
+        errors: ctx.artifacts.compilationErrors,
+        artifacts: {
+          compilationErrors: ctx.artifacts.compilationErrors,
+          compilerOutput: output.slice(0, 10000),
+        },
+      };
     } catch (err) {
       return {
         passed: false,

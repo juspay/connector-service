@@ -213,14 +213,24 @@ ${result?.grpcurl_output || result?.output || "No output captured"}`;
 
       ctx.log(`[grpc_test] gRPC test failed: ${msg}`, "error");
 
+      // Build a grpcTest result object for UI display (matches GrpcTestArtifact expectations)
+      const errorResult: GrpcTestResult = {
+        status: "FAILED",
+        grpcurl_result: "FAIL",
+        reason: `gRPC test failed: ${msg}`,
+        grpcurl_command: result?.grpcurl_command || "",
+        grpcurl_output: errorOutput,
+        output: errorOutput,
+      };
+
       return {
         passed: false,
         output: errorOutput,
         errors: [`gRPC test failed: ${msg}`],
         artifacts: {
-          grpcTestError: msg,
-          grpcurlCommand: result?.grpcurl_command,
-          grpcurlOutput: result?.grpcurl_output || result?.output,
+          grpcTest: errorResult,
+          grpcurlOutput: errorOutput,
+          grpcTestFailed: true,
         },
       };
     }
