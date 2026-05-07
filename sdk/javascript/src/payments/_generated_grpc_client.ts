@@ -762,6 +762,17 @@ export class GrpcRefundClient {
   }
 }
 
+// SurchargeService
+export class GrpcSurchargeClient {
+  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
+
+  /** SurchargeService.Calculate — Calculate surcharge fees for a payment amount before processing. */
+  async calculate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "surcharge/calculate",
+      req, types.SurchargeServiceCalculateRequest, types.SurchargeServiceCalculateResponse);
+  }
+}
+
 // ── Top-level GrpcClient ──────────────────────────────────────────────────────
 
 export class GrpcClient {
@@ -775,6 +786,7 @@ export class GrpcClient {
   public payout: GrpcPayoutClient;
   public recurringPayment: GrpcRecurringPaymentClient;
   public refund: GrpcRefundClient;
+  public surcharge: GrpcSurchargeClient;
 
   constructor(config: GrpcConfig, libPath?: string) {
     const ffi = loadGrpcFfi(libPath);
@@ -788,5 +800,6 @@ export class GrpcClient {
     this.payout = new GrpcPayoutClient(ffi, config);
     this.recurringPayment = new GrpcRecurringPaymentClient(ffi, config);
     this.refund = new GrpcRefundClient(ffi, config);
+    this.surcharge = new GrpcSurchargeClient(ffi, config);
   }
 }
