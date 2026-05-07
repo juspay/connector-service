@@ -11,6 +11,11 @@ on:
           - patch
           - minor
           - major
+      ref:
+        description: "Tag or branch to release from (e.g. 2026.05.07.0 or main)"
+        required: false
+        default: "main"
+        type: string
       dry_run:
         description: "Dry run — preview version and changelog without committing or publishing"
         required: false
@@ -27,7 +32,7 @@ permissions:
 
 jobs:
   create-semver-tag:
-    name: Bump versions, tag, and create GitHub release
+    name: Tag and create GitHub release
     runs-on: ubuntu-latest
 
     steps:
@@ -35,6 +40,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref }}
           token: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
 
       - name: Install cocogitto
@@ -70,12 +76,8 @@ jobs:
             esac
           fi
 
-          # Strip leading 'v' for version string used in manifest files
-          NEXT_VERSION="${NEXT_TAG#v}"
-
           echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
           echo "next_tag=${NEXT_TAG}"         >> "$GITHUB_OUTPUT"
-          echo "next_version=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
 
           echo "### Version Bump Preview" >> "$GITHUB_STEP_SUMMARY"
           echo "| | Value |" >> "$GITHUB_STEP_SUMMARY"
@@ -117,60 +119,6 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           head -60 release-notes.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Bump SDK manifest versions
-        if: ${{ inputs.dry_run == false }}
-        shell: bash
-        run: |
-          NEXT_VERSION="${{ steps.version.outputs.next_version }}"
-
-          # npm
-          node -e "
-            const fs = require('fs');
-            const p = 'sdk/javascript/package.json';
-            const pkg = JSON.parse(fs.readFileSync(p));
-            pkg.version = '${NEXT_VERSION}';
-            fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');
-          "
-
-          # PyPI
-          sed -i "s/^version = \".*\"/version = \"${NEXT_VERSION}\"/" sdk/python/pyproject.toml
-
-          # Maven — build.gradle.kts
-          sed -i "s/^version = \".*\"/version = \"${NEXT_VERSION}\"/" sdk/java/build.gradle.kts
-
-          # Maven — smoke-test dependency
-          sed -i "s/implementation(\"io.hyperswitch:prism:.*\")/implementation(\"io.hyperswitch:prism:${NEXT_VERSION}\")/" \
-            sdk/java/smoke-test/build.gradle.kts
-
-          # Maven — README badges and code snippets
-          sed -i "s/io.hyperswitch:prism:[0-9]*\.[0-9]*\.[0-9]*/io.hyperswitch:prism:${NEXT_VERSION}/g" \
-            sdk/java/README.md
-          sed -i "s/prism:[0-9]*\.[0-9]*\.[0-9]*/prism:${NEXT_VERSION}/g" \
-            sdk/java/README.md
-
-          echo "Bumped all SDK manifests to ${NEXT_VERSION}"
-          grep -n "version" sdk/javascript/package.json sdk/python/pyproject.toml sdk/java/build.gradle.kts | grep -v "//"
-
-      - name: Commit version bump
-        if: ${{ inputs.dry_run == false }}
-        shell: bash
-        run: |
-          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
-          NEXT_VERSION="${{ steps.version.outputs.next_version }}"
-
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add \
-            sdk/javascript/package.json \
-            sdk/python/pyproject.toml \
-            sdk/java/build.gradle.kts \
-            sdk/java/smoke-test/build.gradle.kts \
-            sdk/java/README.md
-
-          git commit -m "chore(release): bump SDK versions to ${NEXT_VERSION} [skip ci]"
-          git push origin HEAD:main
 
       - name: Create and push SemVer tag
         if: ${{ inputs.dry_run == false }}
