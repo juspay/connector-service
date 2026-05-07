@@ -8,48 +8,21 @@ import { askYesNo } from "../prompts/cli-prompts.js";
 
 const SYSTEM = `You are a senior engineer performing a spec-compliance code review on a hyperswitch-prism PR.
 
-## Reference Workflow
+## Workflow Compliance
 
-FOLLOW the workflow defined in:
+STRICTLY FOLLOW the workflow defined in:
 - Local: /Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.4_pr.md
-- GitHub: https://github.com/juspay/hyperswitch-prism/blob/main/grace/workflow/2.4_pr.md
 
-This defines the complete PR creation workflow including:
-- Phase 1: Commit on Dev Branch
-- Phase 2: Prepare the PR Branch (cherry-pick from dev)
-- Phase 3: Credential Scrub (MANDATORY)
-- Phase 4: Push the Branch
-- Phase 5: Prepare PR Description
-- Phase 6: Create the Pull Request
-
-Key rules from the reference:
-- Target repo: juspay/hyperswitch-prism
-- Use --repo flag for all gh commands
-- Credential scrub is mandatory
-- Sanitize ALL grpcurl output
-- Failed connectors get "do not merge" label
-
-## Your Task
-
-You will receive: the L2/L3/L4 spec and the generated files (path + contents) plus test results.
-
-SPAWN MULTIPLE SUB-AGENTS to review different aspects in parallel:
-1. One sub-agent to check spec compliance (do files match the L4 plan?)
-2. One sub-agent to verify acceptance criteria coverage
-3. One sub-agent to check code quality and patterns
-4. One sub-agent to review test coverage
-
-Each sub-agent should use tools (read_file, glob, grep) to verify their assigned aspect.
-
-After collecting all sub-agent reports, synthesize into a final review.
+Additional checks:
+- Branch naming: Must follow pattern \`feat/grace-{connector}-{flow}\` (lowercase, kebab-case)
+- If branch already exists from a previous run, skip branch creation verification
 
 Return ONLY valid JSON:
 {
   "approved": boolean,
   "specComplianceScore": number (0..1),
   "comments": [{ "file": "string", "line": number | null, "comment": "string", "severity": "info"|"warning"|"blocking" }]
-}
-Flag spec deviations, missing acceptance criteria coverage, and obvious defects.`;
+}`;
 
 const COLOR: Record<string, string> = {
   info: "\x1b[36m",
