@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
 import type {
+  AttemptRecord,
   CheckpointId,
   CheckpointStatus,
   PipelineContext,
@@ -14,6 +15,8 @@ export interface SavedState {
   artifacts: Record<string, unknown>;
   retryCount: Record<string, number>;
   checkpointStates: Record<string, CheckpointStatus>;
+  /** Per-attempt history rehydrated from the checkpoint_attempts table. */
+  attempts?: AttemptRecord[];
 }
 
 export interface RunSummary {
@@ -47,6 +50,20 @@ CREATE TABLE IF NOT EXISTS checkpoint_states (
   updated_at INTEGER NOT NULL,
   PRIMARY KEY (run_id, checkpoint_id)
 );
+CREATE TABLE IF NOT EXISTS checkpoint_attempts (
+  run_id TEXT NOT NULL,
+  checkpoint_id TEXT NOT NULL,
+  attempt_index INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  errors_json TEXT,
+  output TEXT,
+  artifacts_json TEXT,
+  started_at INTEGER,
+  completed_at INTEGER NOT NULL,
+  PRIMARY KEY (run_id, checkpoint_id, attempt_index)
+);
+CREATE INDEX IF NOT EXISTS idx_attempts_run_cp
+  ON checkpoint_attempts(run_id, checkpoint_id);
 `;
 
 export class StateManager {
@@ -96,6 +113,90 @@ export class StateManager {
     upsertCp.run(ctx.runId, checkpointId, status, now);
   }
 
+  /**
+   * Record a single checkpoint attempt. Called by the engine after every
+   * pass-or-fail completion, before any state mutation that would lose the
+   * data (the `Object.assign(ctx.artifacts, …)` merge on the next attempt).
+   *
+   * INSERT OR REPLACE on the (run_id, checkpoint_id, attempt_index) primary
+   * key, so re-emitting the same attempt is idempotent.
+   */
+  async saveAttempt(
+    runId: string,
+    checkpointId: CheckpointId,
+    attemptIndex: number,
+    status: "passed" | "failed",
+    errors: string[] | null,
+    output: string | null,
+    artifacts: Record<string, unknown> | null,
+    startedAt: number | null,
+    completedAt: number
+  ): Promise<void> {
+    const stmt = this.db.prepare(`
+      INSERT INTO checkpoint_attempts (
+        run_id, checkpoint_id, attempt_index, status,
+        errors_json, output, artifacts_json, started_at, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(run_id, checkpoint_id, attempt_index) DO UPDATE SET
+        status        = excluded.status,
+        errors_json   = excluded.errors_json,
+        output        = excluded.output,
+        artifacts_json = excluded.artifacts_json,
+        started_at    = excluded.started_at,
+        completed_at  = excluded.completed_at
+    `);
+    stmt.run(
+      runId,
+      checkpointId,
+      attemptIndex,
+      status,
+      errors && errors.length > 0 ? JSON.stringify(errors) : null,
+      output,
+      artifacts ? JSON.stringify(artifacts) : null,
+      startedAt,
+      completedAt
+    );
+  }
+
+  /**
+   * Return all attempts for a run, ordered by completion time. The dashboard
+   * calls this on connect via the `attempts:request` WS message so retry
+   * history survives browser reloads.
+   */
+  async listAttempts(runId: string): Promise<AttemptRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT checkpoint_id, attempt_index, status, errors_json, output,
+                artifacts_json, started_at, completed_at
+           FROM checkpoint_attempts
+          WHERE run_id = ?
+          ORDER BY completed_at ASC`
+      )
+      .all(runId) as {
+      checkpoint_id: CheckpointId;
+      attempt_index: number;
+      status: "passed" | "failed";
+      errors_json: string | null;
+      output: string | null;
+      artifacts_json: string | null;
+      started_at: number | null;
+      completed_at: number;
+    }[];
+    return rows.map((r) => ({
+      runId,
+      checkpointId: r.checkpoint_id,
+      attemptIndex: r.attempt_index,
+      status: r.status,
+      errors: r.errors_json ? (JSON.parse(r.errors_json) as string[]) : undefined,
+      output: r.output,
+      artifacts: r.artifacts_json
+        ? (JSON.parse(r.artifacts_json) as Record<string, unknown>)
+        : null,
+      startedAt: r.started_at ?? undefined,
+      completedAt: r.completed_at,
+    }));
+  }
+
   async load(runId: string): Promise<SavedState | null> {
     const row = this.db
       .prepare(`SELECT * FROM runs WHERE run_id = ?`)
@@ -117,12 +218,15 @@ export class StateManager {
     const checkpointStates: Record<string, CheckpointStatus> = {};
     for (const r of cpRows) checkpointStates[r.checkpoint_id] = r.status;
 
+    const attempts = await this.listAttempts(runId);
+
     return {
       runId: row.run_id,
       task: JSON.parse(row.task_json),
       artifacts: JSON.parse(row.artifacts_json),
       retryCount: JSON.parse(row.retry_json),
       checkpointStates,
+      attempts,
     };
   }
 
@@ -224,6 +328,9 @@ export class StateManager {
     const deleteStates = this.db.prepare(
       `DELETE FROM checkpoint_states WHERE run_id = ?`
     );
+    const deleteAttempts = this.db.prepare(
+      `DELETE FROM checkpoint_attempts WHERE run_id = ?`
+    );
     const anyPassed = this.db.prepare(
       `SELECT 1 FROM checkpoint_states WHERE run_id = ? AND status = 'passed' LIMIT 1`
     );
@@ -237,6 +344,7 @@ export class StateManager {
       }
       const hasPassed = anyPassed.get(r.run_id);
       if (!title && !hasPassed) {
+        deleteAttempts.run(r.run_id);
         deleteStates.run(r.run_id);
         deleteRun.run(r.run_id);
         removed++;

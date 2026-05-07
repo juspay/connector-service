@@ -285,6 +285,23 @@ export async function runCommand(opts: RunOpts): Promise<void> {
         return;
       }
 
+      if (msg.type === "attempts:request") {
+        // Dashboard sends this on connect (and after run-switch) to rehydrate
+        // per-attempt retry history that the WS replay buffer doesn't preserve.
+        const target = (msg.payload as { runId?: string })?.runId ?? runId;
+        try {
+          const attempts = await state.listAttempts(target);
+          bus.emit("attempts:response", undefined, { runId: target, attempts });
+        } catch (err) {
+          bus.emit("attempts:response", undefined, {
+            runId: target,
+            attempts: [],
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
+
       if (msg.type === "runs:new") {
         // Start a brand-new run: delete any pending resume marker so the
         // restarted engine doesn't auto-resume the current run, then bounce
@@ -418,6 +435,14 @@ export async function runCommand(opts: RunOpts): Promise<void> {
         bus.emit("checkpoint:status", cpId as CheckpointId, { status });
       }
       bus.emit("artifact:update", undefined, { artifacts });
+      // Push per-attempt history so the dashboard's RetryHistory renders
+      // immediately on resume instead of waiting for an attempts:request.
+      if (saved.attempts && saved.attempts.length > 0) {
+        bus.emit("attempts:response", undefined, {
+          runId: saved.runId,
+          attempts: saved.attempts,
+        });
+      }
       bus.emit("task:accepted", "task", { task });
     }
   }

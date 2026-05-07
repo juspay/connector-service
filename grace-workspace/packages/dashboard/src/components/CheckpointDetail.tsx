@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { CheckpointState } from "../hooks/usePipeline";
+import type { CheckpointState, AttemptRecord } from "../hooks/usePipeline";
 import { PIPELINE } from "../hooks/usePipeline";
 import { TaskForm, type SubmittedTask } from "./TaskForm";
 import { ArtifactView } from "./ArtifactView";
@@ -66,7 +66,7 @@ export function CheckpointDetail({
   checkpointId: string;
   state: CheckpointState | undefined;
   artifacts: Record<string, unknown>;
-  artifactHistory?: Record<string, Record<number, unknown>>;
+  artifactHistory?: Record<string, Record<number, AttemptRecord>>;
   onSubmitTask: (task: SubmittedTask) => void;
   onHumanReviewRespond: (
     checkpointId: string,
@@ -158,9 +158,21 @@ export function CheckpointDetail({
   // Get the artifact to display based on selected retry attempt
   // Convert 1-based display selection to 0-based internal lookup
   const internalAttemptIndex = selectedRetryAttempt - 1;
-  const displayArtifact = selectedRetryAttempt === (state.retries + 1)
-    ? artifact  // Current attempt uses current artifact
+  const isCurrentAttempt = selectedRetryAttempt === state.retries + 1;
+  const priorAttempt: AttemptRecord | undefined = isCurrentAttempt
+    ? undefined
     : checkpointHistory[internalAttemptIndex];
+  // For prior attempts, an empty `{}` artifacts record means "no artifact
+  // payload" — we want to render the placeholder, not a blank Result.
+  const priorHasArtifacts =
+    priorAttempt &&
+    priorAttempt.artifacts &&
+    Object.keys(priorAttempt.artifacts).length > 0;
+  const displayArtifact = isCurrentAttempt
+    ? artifact
+    : priorHasArtifacts
+      ? priorAttempt!.artifacts
+      : undefined;
 
   const isTaskStep = checkpointId === "task";
   const isDesignGate = checkpointId === "design_gate";
@@ -358,6 +370,80 @@ export function CheckpointDetail({
         <section style={{ marginBottom: 32 }}>
           <SectionTitle>Result</SectionTitle>
           <ArtifactView checkpointId={checkpointId} artifact={displayArtifact} artifacts={artifacts} isRunning={state.status === "running"} />
+        </section>
+      )}
+
+      {/* Empty-state placeholder for past attempts that produced no artifact
+          payload (e.g. checkpoints whose outer timeout fired before they
+          could return artifacts). Shows whatever metadata we DID capture —
+          status, errors, output — instead of a silently blank pane. */}
+      {!isCurrentAttempt && !priorHasArtifacts && (
+        <section style={{ marginBottom: 32 }}>
+          <SectionTitle>Attempt {selectedRetryAttempt}</SectionTitle>
+          <div
+            style={{
+              padding: "20px 22px",
+              border: `1px dashed ${T.border}`,
+              borderRadius: 10,
+              fontSize: 13,
+              color: T.textMuted,
+              background: T.codeBg,
+              maxWidth: 720,
+            }}
+          >
+            <div style={{ marginBottom: 10 }}>
+              <strong style={{ color: priorAttempt?.status === "failed" ? T.error : T.textMuted }}>
+                {priorAttempt?.status === "failed" ? "Failed" : "No artifact captured"}
+              </strong>
+              {priorAttempt === undefined && (
+                <span> — no record found for this attempt.</span>
+              )}
+            </div>
+            {priorAttempt?.errors && priorAttempt.errors.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontWeight: 600, color: T.text, marginBottom: 4 }}>
+                  Errors
+                </div>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: "8px 10px",
+                    background: T.errorSoft,
+                    color: T.error,
+                    borderRadius: 6,
+                    fontSize: 12,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {priorAttempt.errors.join("\n")}
+                </pre>
+              </div>
+            )}
+            {priorAttempt?.output && (
+              <div>
+                <div style={{ fontWeight: 600, color: T.text, marginBottom: 4 }}>
+                  Output
+                </div>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: "8px 10px",
+                    background: T.codeBg,
+                    color: T.text,
+                    borderRadius: 6,
+                    fontSize: 12,
+                    maxHeight: 280,
+                    overflow: "auto",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {priorAttempt.output.slice(0, 4000)}
+                </pre>
+              </div>
+            )}
+          </div>
         </section>
       )}
 

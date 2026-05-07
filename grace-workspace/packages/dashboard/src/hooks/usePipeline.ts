@@ -41,6 +41,18 @@ export interface JourneyEvent {
   ts: string;
 }
 
+/**
+ * Per-attempt record for retry history. Matches the core `AttemptRecord`
+ * shape but kept duplicated here because the dashboard package doesn't
+ * depend on @byne/core.
+ */
+export interface AttemptRecord {
+  artifacts: Record<string, unknown>;
+  status: "passed" | "failed";
+  errors?: string[];
+  output?: string | null;
+}
+
 // Grace 2.3_codegen.md workflow: task → preflight → L2_planning → L3_analysis → implementation → compiler_check → grpc_test
 // Removed: product_alignment, feature_research, design_gate, requirements, l4_gen, l4_review, design_match, cypress, playwright
 export const PIPELINE: Array<{ id: string; name: string; type: "auto" | "human" }> = [
@@ -72,9 +84,14 @@ export function usePipeline(wsUrl: string) {
   const [retries, setRetries] = useState<RetryStep[]>([]);
   const [journey, setJourney] = useState<JourneyEvent[]>([]);
   const [artifacts, setArtifacts] = useState<Record<string, unknown>>({});
-  // Track artifact history per checkpoint per retry attempt
-  // Structure: { checkpointId: { retryAttempt: artifact } }
-  const [artifactHistory, setArtifactHistory] = useState<Record<string, Record<number, unknown>>>({});
+  // Track per-attempt history per checkpoint for the RetryHistory selector.
+  // Structure: { checkpointId: { retryAttempt: AttemptRecord } }
+  // Populated from two sources:
+  //   1. live `artifact:update` events as the pipeline runs
+  //   2. `attempts:response` from the engine on connect/reload, replayed
+  //      from the SQLite checkpoint_attempts table (survives WS replay
+  //      buffer eviction and browser refresh)
+  const [artifactHistory, setArtifactHistory] = useState<Record<string, Record<number, AttemptRecord>>>({});
   const [wsStatus, setWsStatus] = useState<"connecting" | "open" | "closed">(
     "connecting"
   );
@@ -232,19 +249,57 @@ export function usePipeline(wsUrl: string) {
               break;
             case "artifact:update":
               if (e.payload?.artifacts && typeof e.payload.artifacts === "object") {
+                // Merge into the global current-artifacts view so the
+                // checkpoint-detail panel shows the latest result.
                 setArtifacts((a) => ({ ...a, ...e.payload.artifacts }));
-                // Also store in artifact history keyed by checkpoint and retry attempt
+                // And store the full per-attempt record so RetryHistory can
+                // navigate prior attempts. Engine always emits an envelope
+                // with status/errors/output now, even for failure-with-no-
+                // artifacts, so this branch fires for every completion.
                 if (e.checkpointId && e.payload?.retryAttempt !== undefined) {
                   setArtifactHistory((h) => ({
                     ...h,
                     [e.checkpointId]: {
                       ...(h[e.checkpointId] ?? {}),
-                      [e.payload.retryAttempt]: e.payload.artifacts,
+                      [e.payload.retryAttempt]: {
+                        artifacts: e.payload.artifacts ?? {},
+                        status: e.payload.status ?? "passed",
+                        errors: e.payload.errors,
+                        output: e.payload.output ?? null,
+                      },
                     },
                   }));
                 }
               }
               break;
+            case "attempts:response": {
+              const list = (e.payload?.attempts ?? []) as Array<{
+                checkpointId: string;
+                attemptIndex: number;
+                status: "passed" | "failed";
+                errors?: string[];
+                output?: string | null;
+                artifacts?: Record<string, unknown> | null;
+              }>;
+              if (list.length > 0) {
+                setArtifactHistory((h) => {
+                  const next: Record<string, Record<number, AttemptRecord>> = { ...h };
+                  for (const a of list) {
+                    next[a.checkpointId] = {
+                      ...(next[a.checkpointId] ?? {}),
+                      [a.attemptIndex]: {
+                        artifacts: a.artifacts ?? {},
+                        status: a.status,
+                        errors: a.errors,
+                        output: a.output ?? null,
+                      },
+                    };
+                  }
+                  return next;
+                });
+              }
+              break;
+            }
             case "runs:list:response":
               setSavedRuns(e.payload?.runs ?? []);
               break;
@@ -323,6 +378,22 @@ export function usePipeline(wsUrl: string) {
       wsRef.current?.close();
     };
   }, [wsUrl]);
+
+  // Whenever the WS reaches "open" with a known runId (initial connect, or
+  // reconnect after a drop), ask the engine to replay attempt history from
+  // SQLite. This is the path that survives browser reloads — the live
+  // artifact:update events sit in a 500-event replay buffer that fills up
+  // with log spam, so we can't rely on replay alone.
+  useEffect(() => {
+    if (wsStatus !== "open" || !runId) return;
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    try {
+      ws.send(JSON.stringify({ type: "attempts:request", payload: { runId } }));
+    } catch {
+      /* ignore — engine will keep streaming live events anyway */
+    }
+  }, [wsStatus, runId]);
 
   const send = (type: string, payload?: unknown) => {
     const ws = wsRef.current;

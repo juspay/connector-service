@@ -2,22 +2,95 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 import type { Checkpoint } from "../types.js";
 import { runAI } from "../tools/runner-factory.js";
+import {
+  killStaleProcesses,
+  startGrpcServer,
+  waitForHealthy,
+  tailLogFile,
+  type ServerHandle,
+} from "./grpc-server-lifecycle.js";
 
 /**
- * gRPC Test Checkpoint - Phase 6-7 gRPC testing from 2.3_codegen.md
+ * gRPC Test Checkpoint — Phase 6-7 of 2.3_codegen.md, but with the server
+ * lifecycle owned by the orchestrator (TypeScript) instead of the agent.
  *
- * Runs grpcurl tests to validate the connector implementation.
- * Replaces: Design Match, Cypress E2E Test, Playwright Tests
- * Does NOT modify source files.
- * Does NOT rebuild.
+ * Flow:
+ *   1. Pre-flight: kill any stale process holding ports 8000/8080.
+ *   2. Start grpc-server, redirecting stdout+stderr to a per-run log file.
+ *   3. Wait for TCP healthy on localhost:8000 (≤45s).
+ *   4. Hand the agent a slim prompt: "server is up at localhost:8000, run
+ *      grpcurl, validate, return JSON."
+ *   5. Always kill the server on exit (finally), regardless of agent outcome.
+ *
+ * Why: the prior version asked the agent to run `cargo run --bin grpc-server &`
+ * inline. Background `&` from a remote agent's bash tool is unreliable; the
+ * server often vanished between tool calls and the agent looped on grpcurl
+ * until the 480s runner timeout fired with empty stderr — the exact failure
+ * mode this rewrite eliminates.
  */
+
+const SLIM_PROMPT = `You are the gRPC Test Agent.
+
+## CRITICAL RESTRICTION — TEST-ONLY MODE
+The gRPC server is already running at SERVER_HOST. Do NOT start, kill, build,
+or modify code. Do NOT run cargo. Do NOT touch source files. Your single
+responsibility is: run grpcurl against the running server, validate the
+response, return JSON.
+
+## What to do
+
+1. Read CREDS_PATH (a JSON file at the project root) to obtain the connector
+   credentials. Pick the entry matching CONNECTOR.
+2. If HAS_FIELD_PROBE is true, read FIELD_PROBE_PATH and use the captured
+   payload structure as the source of truth for the request body. Field probe
+   is authoritative — prefer it over guessing field names.
+3. Discover the gRPC method to call. Useful commands:
+     grpcurl -plaintext SERVER_HOST list
+     grpcurl -plaintext SERVER_HOST describe <service>
+4. Construct the grpcurl request:
+   - Pass connector credentials via -H headers. Header names are
+     connector-specific; populate them from CREDS_PATH. Do not invent headers
+     that aren't in the credentials file.
+   - The request body must match what FLOW expects (Authorize, BankDebit,
+     etc.) for CONNECTOR. Use field_probe if available.
+   - Capture both the FULL command and FULL response.
+5. Run the grpcurl call.
+6. Validate the response:
+   - PASS if status is one of: authorized, PENDING, charged, requires_capture,
+     succeeded.
+   - FAIL if response contains "Error invoking method", "PAYMENT_FLOW_ERROR",
+     HTTP 4xx/5xx, or any explicit error/failure status.
+7. On FAIL: read the server log at SERVER_LOG_PATH (the grpc-server's
+   stdout+stderr for this run) to find the actual root cause — serialization
+   error, missing field, wrong URL, panic, auth rejection, etc. Include the
+   relevant log excerpt in response_summary.
+
+## Output format
+
+Return ONLY a single valid JSON object. No prose, no markdown fences. First
+character must be \`{\`, last must be \`}\`.
+
+{
+  "status": "SUCCESS" | "FAILED",
+  "grpcurl_result": "PASS" | "FAIL",
+  "grpcurl_command": "the full grpcurl command used",
+  "copy_paste_command": "complete command with JSON payload embedded inline",
+  "request_payload": "the exact JSON payload sent",
+  "grpcurl_output": "the full output including command and response",
+  "response_summary": "brief summary, plus relevant SERVER_LOG_PATH excerpt on FAIL"
+}
+`;
+
 export const grpcTestCheckpoint: Checkpoint = {
   id: "grpc_test",
   name: "gRPC Test",
-  description: "Test connector via gRPC calls using grpcurl (replaces Design Match/Cypress/Playwright)",
+  description:
+    "Test connector via gRPC calls using grpcurl (orchestrator-managed server)",
   retryFrom: "implementation",
-  timeout: 10 * 60 * 1000, // 10 min for testing
-  continueOnFailure: true, // Continue to PR review even if gRPC tests fail
+  // Outer budget covers preflight (~5s) + cargo relink+server start (~30s) +
+  // health wait (≤45s) + agent runAI (≤6min) + cleanup (~5s) with margin.
+  timeout: 12 * 60 * 1000,
+  continueOnFailure: true,
 
   async run(ctx) {
     const task = ctx.artifacts.task;
@@ -29,87 +102,47 @@ export const grpcTestCheckpoint: Checkpoint = {
       return { passed: false, errors: ["Missing project root"] };
     }
 
-    ctx.log("[grpc_test] ╔═══════════════════════════════════════════════════════════╗", "info");
-    ctx.log("[grpc_test] ║  gRPC Test (2.3_codegen.md Phase 6-7)                  ║", "info");
-    ctx.log("[grpc_test] ╚═══════════════════════════════════════════════════════════╝", "info");
+    ctx.log(
+      "[grpc_test] ╔═══════════════════════════════════════════════════════════╗",
+      "info"
+    );
+    ctx.log(
+      "[grpc_test] ║  gRPC Test (orchestrator-managed server)               ║",
+      "info"
+    );
+    ctx.log(
+      "[grpc_test] ╚═══════════════════════════════════════════════════════════╝",
+      "info"
+    );
     ctx.log(`[grpc_test] Connector: ${connector}`, "info");
     ctx.log(`[grpc_test] Flow: ${flow}`, "info");
 
-    // Read workflow file
-    let workflowContent = "";
-    try {
-      const workflowPath = path.join(projectRoot, "grace/workflow/2.3_codegen.md");
-      workflowContent = await fs.readFile(workflowPath, 'utf-8');
-      ctx.log("[grpc_test] Loaded workflow file", "info");
-    } catch (err) {
-      ctx.log(`[grpc_test] Warning: Could not read workflow: ${err}`, "warn");
-    }
+    const serverHost = "localhost:8000";
+    const credsPath = path.join(projectRoot, "creds.json");
+    const logFile = path.join(
+      projectRoot,
+      ".grace",
+      `grpc-server-${ctx.runId}.log`
+    );
 
-    // Check for field_probe data
+    // Field probe is optional — the agent uses it as authoritative payload
+    // structure when present, otherwise builds from spec.
     let fieldProbePath: string | null = null;
     let hasFieldProbe = false;
     try {
-      const probePath = path.join(projectRoot, "data", "field_probe", `${connector?.toLowerCase() || "unknown"}.json`);
+      const probePath = path.join(
+        projectRoot,
+        "data",
+        "field_probe",
+        `${connector?.toLowerCase() || "unknown"}.json`
+      );
       await fs.access(probePath);
       fieldProbePath = probePath;
       hasFieldProbe = true;
-      ctx.log(`[grpc_test] Field probe data found: ${probePath}`, "info");
+      ctx.log(`[grpc_test] Field probe: ${probePath}`, "info");
     } catch {
       ctx.log("[grpc_test] No field probe data available", "warn");
     }
-
-    // Build restricted system prompt
-    const systemPrompt = `You are the gRPC Test Agent.
-
-## CRITICAL RESTRICTION - TEST-ONLY MODE
-You are in TEST-ONLY MODE.
-
-**EXECUTE ONLY:**
-- Phase 6-7: gRPC testing (grpcurl)
-
-**DO NOT EXECUTE:**
-- Phase 4 (Read & Analyze) - already done
-- Phase 5 (Implement) - code already written
-- cargo build - already done by Compiler Check
-
-You MUST:
-1. Read the workflow below
-2. Find the gRPC testing steps in Phase 6-7
-3. Start service if needed (kill ports 8000/8080, cargo run --bin grpc-server)
-4. Wait for health check
-5. Run grpcurl tests against localhost:8000
-6. Validate response status is one of: authorized, PENDING, charged
-7. Report test results including FULL grpcurl command and FULL response
-8. Do NOT modify source files
-9. Do NOT rebuild
-
-## Output Format
-
-Return ONLY valid JSON:
-{
-  "status": "SUCCESS" | "FAILED",
-  "grpcurl_result": "PASS" | "FAIL",
-  "grpcurl_command": "the full grpcurl command used (may use temp file)",
-  "copy_paste_command": "COMPLETE command with JSON payload embedded inline - user should be able to copy and run this directly without any temp files",
-  "request_payload": "the exact JSON payload sent in the request",
-  "grpcurl_output": "the full output including command and response",
-  "response_summary": "brief summary of the response received"
-}
-
-## Workflow File (execute ONLY Phase 6-7 gRPC testing)
-${workflowContent}
-`;
-
-    const payload = {
-      CONNECTOR: connector,
-      FLOW: flow,
-      HAS_FIELD_PROBE: hasFieldProbe,
-      FIELD_PROBE_PATH: fieldProbePath || "",
-      SERVER_HOST: "localhost:8000",
-      CREDS_PATH: path.join(projectRoot, "creds.json"),
-    };
-
-    ctx.log("[grpc_test] Starting gRPC tests...", "warn");
 
     type GrpcTestResult = {
       status?: string;
@@ -124,23 +157,51 @@ ${workflowContent}
     };
 
     let result: GrpcTestResult | undefined;
+    let server: ServerHandle | undefined;
+
+    const tsLog = (msg: string, level: "info" | "warn" | "error" = "info") =>
+      ctx.log(`[grpc_test] ${msg}`, level);
+
     try {
+      tsLog("preflight: killing stale processes on :8000/:8080");
+      await killStaleProcesses(tsLog);
+
+      tsLog(`starting grpc-server, log → ${logFile}`);
+      server = await startGrpcServer({ projectRoot, logFile }, tsLog);
+
+      tsLog(`waiting for ${serverHost} to become healthy (≤45s)`);
+      await waitForHealthy(
+        { host: "localhost", port: 8000, timeoutMs: 45_000 },
+        tsLog
+      );
+
+      tsLog("server healthy — invoking agent for grpcurl test");
+
       result = await runAI<GrpcTestResult>({
-        skillBody: systemPrompt,
-        userPayload: payload,
+        skillBody: SLIM_PROMPT,
+        userPayload: {
+          CONNECTOR: connector,
+          FLOW: flow,
+          SERVER_HOST: serverHost,
+          CREDS_PATH: credsPath,
+          SERVER_LOG_PATH: logFile,
+          HAS_FIELD_PROBE: hasFieldProbe,
+          FIELD_PROBE_PATH: fieldProbePath || "",
+        },
         cwd: projectRoot,
         label: "grpc:test",
-        timeoutMs: 8 * 60 * 1000, // 8 min for testing
+        // Strictly less than the outer checkpoint timeout so the finally
+        // block has room to clean up after the agent.
+        timeoutMs: 6 * 60 * 1000,
       });
 
-      const testPassed = result.status === "SUCCESS" ||
-                        (result.grpcurl_result === "PASS");
+      const testPassed =
+        result.status === "SUCCESS" || result.grpcurl_result === "PASS";
 
       const grpcCommand = result.grpcurl_command || "";
       const grpcOutput = result.grpcurl_output || result.output || "";
       const responseSummary = result.response_summary || "";
 
-      // Build output for UI display
       const uiOutput = `gRPC Test Results
 ═══════════════════════════════════════════════════════════════
 
@@ -155,11 +216,7 @@ ${grpcOutput.slice(0, 3000)}
 `;
 
       if (testPassed) {
-        ctx.log("[grpc_test] ✓ gRPC tests passed", "success");
-        ctx.log("[grpc_test] ╔═══════════════════════════════════════════════════════════╗", "success");
-        ctx.log("[grpc_test] ║  ✓ gRPC Test Passed                                      ║", "success");
-        ctx.log("[grpc_test] ╚═══════════════════════════════════════════════════════════╝", "success");
-
+        tsLog("✓ gRPC tests passed", "info");
         return {
           passed: true,
           output: uiOutput,
@@ -170,35 +227,32 @@ ${grpcOutput.slice(0, 3000)}
             grpcResponse: responseSummary,
           },
         };
-      } else {
-        ctx.log("[grpc_test] ⚠ gRPC tests failed", "warn");
-        ctx.log("[grpc_test] ╔═══════════════════════════════════════════════════════════╗", "warn");
-        ctx.log("[grpc_test] ║  ⚠ gRPC Test Failed - Recording details                ║", "warn");
-        ctx.log("[grpc_test] ╚═══════════════════════════════════════════════════════════╝", "warn");
-
-        const errorMsg = result.reason || "gRPC test failed";
-
-        // Store errors for implementation retry
-        ctx.artifacts.grpcTestErrors = [errorMsg, grpcOutput].filter(Boolean);
-        ctx.artifacts.grpcurlOutput = grpcOutput;
-
-        return {
-          passed: false,
-          output: uiOutput,
-          errors: [errorMsg],
-          artifacts: {
-            grpcTest: result,
-            grpcurlOutput: grpcOutput,
-            grpcurlCommand: grpcCommand,
-            grpcResponse: responseSummary,
-            grpcTestFailed: true,
-            grpcTestError: errorMsg,
-          },
-        };
       }
+
+      tsLog("⚠ gRPC tests failed", "warn");
+      const errorMsg = result.reason || "gRPC test failed";
+      ctx.artifacts.grpcTestErrors = [errorMsg, grpcOutput].filter(Boolean);
+      ctx.artifacts.grpcurlOutput = grpcOutput;
+
+      return {
+        passed: false,
+        output: uiOutput,
+        errors: [errorMsg],
+        artifacts: {
+          grpcTest: result,
+          grpcurlOutput: grpcOutput,
+          grpcurlCommand: grpcCommand,
+          grpcResponse: responseSummary,
+          grpcTestFailed: true,
+          grpcTestError: errorMsg,
+        },
+      };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      // This output is what gets displayed in the dashboard UI
+      // Tail the server log so the dashboard shows real diagnostics instead of
+      // "No output captured" — this is the failure mode that motivated the
+      // whole refactor.
+      const logTail = await tailLogFile(logFile, 2048);
       const errorOutput = `gRPC Test Error: ${msg}
 
 ═══════════════════════════════════════════════════════════════
@@ -209,11 +263,15 @@ ${result?.grpcurl_command || "Not captured - test timed out before execution"}
 ═══════════════════════════════════════════════════════════════
 RESPONSE/OUTPUT:
 ═══════════════════════════════════════════════════════════════
-${result?.grpcurl_output || result?.output || "No output captured"}`;
+${result?.grpcurl_output || result?.output || "No output captured"}
 
-      ctx.log(`[grpc_test] gRPC test failed: ${msg}`, "error");
+═══════════════════════════════════════════════════════════════
+SERVER LOG TAIL (${logFile}):
+═══════════════════════════════════════════════════════════════
+${logTail || "(empty — server produced no output before timeout)"}`;
 
-      // Build a grpcTest result object for UI display (matches GrpcTestArtifact expectations)
+      tsLog(`gRPC test failed: ${msg}`, "error");
+
       const errorResult: GrpcTestResult = {
         status: "FAILED",
         grpcurl_result: "FAIL",
@@ -233,6 +291,18 @@ ${result?.grpcurl_output || result?.output || "No output captured"}`;
           grpcTestFailed: true,
         },
       };
+    } finally {
+      if (server) {
+        try {
+          await server.kill();
+          tsLog(`server pid=${server.pid} stopped`);
+        } catch (e) {
+          tsLog(
+            `warning: server cleanup failed: ${e instanceof Error ? e.message : String(e)}`,
+            "warn"
+          );
+        }
+      }
     }
   },
 };

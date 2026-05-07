@@ -58,6 +58,7 @@ export class PipelineEngine {
       this.bus?.emitStatus(checkpoint.id, "running");
       await this.state.save(ctx, checkpoint.id, "running");
 
+      const startedAt = Date.now();
       let result: CheckpointResult;
       try {
         result = await withTimeout(
@@ -72,19 +73,41 @@ export class PipelineEngine {
         };
       }
 
+      // Always emit a single, unified artifact:update on completion — even
+      // when the checkpoint produced no `result.artifacts`. The dashboard
+      // uses this as the per-attempt history record (status + errors +
+      // output, with artifacts when available); silently dropping the event
+      // for failure-with-no-artifacts cases is what made retry pages empty.
+      const emitAttemptUpdate = () => {
+        this.bus?.emit("artifact:update", checkpoint.id, {
+          artifacts: result.artifacts ?? {},
+          retryAttempt: retries,
+          status: result.passed ? "passed" : "failed",
+          errors: result.errors ?? [],
+          output: result.output ?? null,
+        });
+      };
+
       if (result.passed) {
         if (result.artifacts) {
           Object.assign(ctx.artifacts, result.artifacts);
-          // Push each artifact key to the dashboard so it can render per-checkpoint results.
-          this.bus?.emit("artifact:update", checkpoint.id, {
-            artifacts: result.artifacts,
-            retryAttempt: retries,
-          });
         }
+        emitAttemptUpdate();
         ctx.log(`[${checkpoint.id}] ✓ Passed`, "success");
         this.bus?.emitCheckpoint("checkpoint:pass", checkpoint.id);
         this.bus?.emitStatus(checkpoint.id, "passed");
         await this.state.save(ctx, checkpoint.id, "passed");
+        await this.state.saveAttempt(
+          ctx.runId,
+          checkpoint.id,
+          retries,
+          "passed",
+          null,
+          result.output ?? null,
+          result.artifacts ?? null,
+          startedAt,
+          Date.now()
+        );
         i++;
       } else {
         ctx.log(
@@ -100,13 +123,21 @@ export class PipelineEngine {
         // files that were written before the failure) so retries can resume.
         if (result.artifacts) {
           Object.assign(ctx.artifacts, result.artifacts);
-          this.bus?.emit("artifact:update", checkpoint.id, {
-            artifacts: result.artifacts,
-            retryAttempt: retries,
-          });
         }
+        emitAttemptUpdate();
 
         await this.state.save(ctx, checkpoint.id, "failed");
+        await this.state.saveAttempt(
+          ctx.runId,
+          checkpoint.id,
+          retries,
+          "failed",
+          result.errors ?? null,
+          result.output ?? null,
+          result.artifacts ?? null,
+          startedAt,
+          Date.now()
+        );
 
         if (checkpoint.onFail) {
           ctx.log(`[${checkpoint.id}] Running failure handler...`, "info");

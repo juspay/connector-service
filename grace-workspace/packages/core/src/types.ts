@@ -34,6 +34,26 @@ export interface CheckpointResult {
   errors?: string[];
 }
 
+/**
+ * One row per checkpoint attempt — recorded by the engine on every
+ * pass-or-fail completion, so the dashboard can replay retry history even
+ * after a browser refresh or for a completed run loaded from disk.
+ *
+ * `attemptIndex` matches the engine's `retries` counter at the moment the
+ * checkpoint executed: 0 for the first attempt, 1 for the first retry, etc.
+ */
+export interface AttemptRecord {
+  runId: string;
+  checkpointId: CheckpointId;
+  attemptIndex: number;
+  status: "passed" | "failed";
+  errors?: string[];
+  output?: string | null;
+  artifacts?: Record<string, unknown> | null;
+  startedAt?: number;
+  completedAt: number;
+}
+
 export interface Checkpoint {
   id: CheckpointId;
   name: string;
