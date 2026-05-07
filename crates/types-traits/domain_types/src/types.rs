@@ -606,10 +606,7 @@ impl Proxy {
     /// Shadow mode uses the mitm proxy; primary mode uses the direct squid proxy.
     pub fn effective_https_url(&self, shadow_mode: bool) -> Option<&str> {
         if shadow_mode {
-            self.mitm
-                .as_ref()
-                .and_then(|m| m.https_url.as_deref())
-                .or(self.https_url.as_deref())
+            self.mitm.as_ref().and_then(|m| m.https_url.as_deref())
         } else {
             self.https_url.as_deref()
         }
@@ -617,10 +614,7 @@ impl Proxy {
 
     pub fn effective_http_url(&self, shadow_mode: bool) -> Option<&str> {
         if shadow_mode {
-            self.mitm
-                .as_ref()
-                .and_then(|m| m.http_url.as_deref())
-                .or(self.http_url.as_deref())
+            self.mitm.as_ref().and_then(|m| m.http_url.as_deref())
         } else {
             self.http_url.as_deref()
         }
