@@ -6125,6 +6125,222 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &BankDebitData,
+    )> for SetupMandateRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    SetupMandate,
+                    PaymentFlowData,
+                    SetupMandateRequestData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &BankDebitData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, bank_debit_data) = value;
+        let amount = get_amount_data_for_setup_mandate(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let shopper_reference = match item
+            .router_data
+            .resource_common_data
+            .connector_customer
+            .clone()
+        {
+            Some(connector_customer_id) => Some(connector_customer_id),
+            None => match item.router_data.request.customer_id.clone() {
+                Some(customer_id) => Some(format!(
+                    "{}_{}",
+                    item.router_data
+                        .resource_common_data
+                        .merchant_id
+                        .get_string_repr(),
+                    customer_id.get_string_repr()
+                )),
+                None => None,
+            },
+        };
+        let (recurring_processing_model, store_payment_method, _) =
+            get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
+
+        let return_url = item.router_data.request.router_return_url.clone().ok_or(
+            IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: Default::default(),
+            },
+        )?;
+
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+
+        let testing_data = item
+            .router_data
+            .request
+            .get_connector_testing_data()
+            .map(AdyenTestingData::try_from)
+            .transpose()?;
+        let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
+
+        let payment_method: Result<AdyenPaymentMethod<T>, Error> = match bank_debit_data {
+            BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                ..
+            } => Ok(AdyenPaymentMethod::AchDirectDebit(Box::new(
+                AchDirectDebitData {
+                    bank_account_number: account_number.clone(),
+                    bank_location_id: routing_number.clone(),
+                    owner_name: test_holder_name
+                        .clone()
+                        .unwrap_or(item.router_data.resource_common_data.get_billing_full_name()?),
+                },
+            ))),
+            BankDebitData::SepaBankDebit { iban, .. } => {
+                Ok(AdyenPaymentMethod::SepaDirectDebit(Box::new(
+                    SepaDirectDebitData {
+                        owner_name: test_holder_name.clone().unwrap_or(
+                            item.router_data
+                                .resource_common_data
+                                .get_billing_full_name()?,
+                        ),
+                        iban_number: iban.clone(),
+                    },
+                )))
+            }
+            BankDebitData::BacsBankDebit {
+                account_number,
+                sort_code,
+                ..
+            } => Ok(AdyenPaymentMethod::BacsDirectDebit(Box::new(
+                BacsDirectDebitData {
+                    bank_account_number: account_number.clone(),
+                    bank_location_id: sort_code.clone(),
+                    holder_name: test_holder_name
+                        .clone()
+                        .unwrap_or(item.router_data.resource_common_data.get_billing_full_name()?),
+                },
+            ))),
+            BankDebitData::BecsBankDebit { .. }
+            | BankDebitData::SepaGuaranteedBankDebit { .. }
+            | BankDebitData::EftBankDebit { .. } => Err(IntegrationError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Adyen"),
+                Default::default(),
+            )
+            .into()),
+        };
+        let payment_method = payment_method?;
+
+        let billing_address = match bank_debit_data {
+            BankDebitData::AchBankDebit { .. } => billing_address.map(|mut addr| {
+                addr.state_or_province = item
+                    .router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing()
+                    .and_then(|b| b.address.as_ref())
+                    .and_then(|address| address.to_state_code_as_optional().ok().flatten())
+                    .or(addr.state_or_province);
+                addr
+            }),
+            BankDebitData::SepaBankDebit { .. }
+            | BankDebitData::BacsBankDebit { .. }
+            | BankDebitData::SepaGuaranteedBankDebit { .. }
+            | BankDebitData::BecsBankDebit { .. }
+            | BankDebitData::EftBankDebit { .. } => billing_address,
+        };
+
+        let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
+
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+
+        Ok(Self(AdyenPaymentRequest {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method: PaymentMethod::AdyenPaymentMethod(Box::new(payment_method)),
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: get_browser_info_for_setup_mandate(&item.router_data)?,
+            additional_data,
+            mpi_data: None,
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+            shopper_name: get_shopper_name(
+                item.router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number: None,
+            billing_address,
+            delivery_address: get_address_info(
+                item.router_data
+                    .resource_common_data
+                    .get_optional_shipping(),
+            )
+            .and_then(Result::ok),
+            country_code: get_country_code(
+                item.router_data.resource_common_data.get_optional_billing(),
+            ),
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: item
+                .router_data
+                .request
+                .billing_descriptor
+                .clone()
+                .and_then(|descriptor| descriptor.statement_descriptor),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
+            store: None,
+            splits: None,
+            device_fingerprint,
+            metadata: None,
+            platform_chargeback_logic,
+            session_validity: None,
+        }))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AdyenRouterData<
             RouterDataV2<
@@ -6163,10 +6379,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .into()),
             None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => Self::try_from((item, card)),
+                PaymentMethodData::BankDebit(ref bank_debit) => {
+                    Self::try_from((item, bank_debit))
+                }
                 PaymentMethodData::Wallet(_)
                 | PaymentMethodData::PayLater(_)
                 | PaymentMethodData::BankRedirect(_)
-                | PaymentMethodData::BankDebit(_)
                 | PaymentMethodData::BankTransfer(_)
                 | PaymentMethodData::CardRedirect(_)
                 | PaymentMethodData::Voucher(_)
