@@ -1,6 +1,7 @@
 pub mod transformers;
 
 use base64::Engine;
+use domain_types::router_data::ConnectorSpecificConfig;
 use common_enums::{self as enums, CurrencyUnit};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -306,6 +307,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: hyperpg::HyperpgErrorResponse = res
             .response

@@ -1,6 +1,7 @@
 pub mod transformers;
 
 use std::fmt::Debug;
+use domain_types::router_data::ConnectorSpecificConfig;
 
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, types::FloatMajorUnit};
@@ -356,6 +357,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         // Parse URL-encoded error response
         let response: StandardResponse = serde_urlencoded::from_bytes(&res.response)

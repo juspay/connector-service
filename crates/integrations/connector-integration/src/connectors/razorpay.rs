@@ -269,6 +269,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: razorpay::RazorpayErrorResponse =
             res.response.parse_struct("ErrorResponse").map_err(|_| {
@@ -527,16 +528,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 
@@ -637,16 +640,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 
@@ -765,16 +770,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 
@@ -846,16 +853,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 
@@ -1029,16 +1038,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 
@@ -1138,16 +1149,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 

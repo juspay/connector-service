@@ -410,8 +410,9 @@ macro_rules! expand_default_functions {
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
+            connector_config: &macro_types::ConnectorSpecificConfig,
         ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
-            self.build_error_response(res, event_builder)
+            self.build_error_response(res, event_builder, connector_config)
         }
     };
 }
@@ -1180,7 +1181,7 @@ macro_rules! expand_imports {
             pub(super) use common_utils::{errors::CustomResult, events, request::RequestContent};
             pub(super) use domain_types::{
                 errors::{ConnectorError, IntegrationError},
-                router_data::ErrorResponse,
+                router_data::{ConnectorSpecificConfig, ErrorResponse},
                 router_data_v2::RouterDataV2,
                 router_response_types::Response,
             };

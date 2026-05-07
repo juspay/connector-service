@@ -445,6 +445,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: truelayer::TruelayerErrorResponse = res
             .response
@@ -511,8 +512,9 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
-            self.build_error_response(res, event_builder)
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+            self.build_error_response(res, event_builder, _connector_config)
         }
     }
 );
@@ -553,7 +555,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             let response: truelayer::TruelayerAccessTokenErrorResponse = res
                 .response
                 .parse_struct("TruelayerAccessTokenErrorResponse")
@@ -622,8 +625,9 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
-            self.build_error_response(res, event_builder)
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+            self.build_error_response(res, event_builder, _connector_config)
         }
     }
 );
@@ -674,8 +678,9 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
-            self.build_error_response(res, event_builder)
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+            self.build_error_response(res, event_builder, _connector_config)
         }
     }
 );
@@ -735,8 +740,9 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
-            self.build_error_response(res, event_builder)
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+            self.build_error_response(res, event_builder, _connector_config)
         }
     }
 );
@@ -983,8 +989,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 

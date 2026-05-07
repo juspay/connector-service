@@ -394,6 +394,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         self.build_custom_error_response(res, event_builder)
     }
@@ -439,7 +440,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -508,7 +510,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -548,7 +551,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }

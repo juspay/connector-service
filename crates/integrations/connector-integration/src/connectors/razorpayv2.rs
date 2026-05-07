@@ -1,6 +1,7 @@
 pub mod test;
 pub mod transformers;
 use common_enums::AttemptStatus;
+use domain_types::router_data::ConnectorSpecificConfig;
 use common_utils::{
     errors::CustomResult,
     events,
@@ -95,7 +96,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn get_auth_header(
         &self,
-        auth_type: &domain_types::router_data::ConnectorSpecificConfig,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let auth = razorpayv2::RazorpayV2AuthType::try_from(auth_type).change_context(
             IntegrationError::FailedToObtainAuthType {
@@ -116,6 +117,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
@@ -285,14 +287,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
         let response: razorpayv2::RazorpayV2ErrorResponse = res
             .response
@@ -494,16 +498,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 
@@ -797,16 +803,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 
@@ -903,16 +911,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 
@@ -1004,16 +1014,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 }
 

@@ -1,6 +1,7 @@
 pub mod transformers;
 
 use std::fmt::Debug;
+use domain_types::router_data::ConnectorSpecificConfig;
 
 use common_enums::{AttemptStatus, CurrencyUnit};
 use common_utils::{consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::ByteSliceExt};
@@ -349,6 +350,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: volt::VoltErrorResponse = res
             .response
@@ -446,6 +448,7 @@ macros::macro_connector_implementation!(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         // auth error have different structure than common error
         let response: volt::VoltAuthErrorResponse = res

@@ -3,6 +3,7 @@ mod responses;
 pub mod transformers;
 
 use requests::{JpmorganClientAuthRequest, *};
+use domain_types::router_data::ConnectorSpecificConfig;
 use responses::{JpmorganClientAuthResponse, *};
 
 use std::fmt::Debug;
@@ -420,6 +421,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: JpmorganErrorResponse = res
             .response

@@ -891,6 +891,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         _event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         // Parse PhonePe error response (unified for both sync and payments)
         let (error_message, error_code, attempt_status) = if let Ok(error_response) =

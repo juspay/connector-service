@@ -35,6 +35,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
+use domain_types::router_data::ConnectorSpecificConfig;
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -337,6 +338,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: placetopay::PlacetopayErrorResponse = res
             .response

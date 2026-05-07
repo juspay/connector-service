@@ -189,8 +189,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_http_method(&self) -> common_utils::request::Method {
@@ -439,6 +440,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let xml_str = unwrap_json_wrapped_xml(&res.response, res.status_code)?;
 
@@ -688,8 +690,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_http_method(&self) -> common_utils::request::Method {
@@ -758,8 +761,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_http_method(&self) -> common_utils::request::Method {
@@ -852,8 +856,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_http_method(&self) -> common_utils::request::Method {
@@ -922,8 +927,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_http_method(&self) -> common_utils::request::Method {
@@ -1001,8 +1007,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        self.build_error_response(res, event_builder)
+        self.build_error_response(res, event_builder, _connector_config)
     }
 
     fn get_http_method(&self) -> common_utils::request::Method {

@@ -229,6 +229,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: PinelabsOnlineErrorResponse = res
             .response
@@ -385,7 +386,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             let response: PinelabsOnlineAccessTokenErrorResponse = res
                 .response
                 .parse_struct("PinelabsOnlineAccessTokenErrorResponse")

@@ -30,6 +30,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::Report;
+use domain_types::router_data::ConnectorSpecificConfig;
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -354,6 +355,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: Result<NuveiErrorResponse, Report<common_utils::errors::ParsingError>> =
             res.response.parse_struct("nuvei ErrorResponse");

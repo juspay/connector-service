@@ -397,7 +397,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             // PayU sync may return error responses in different formats
             let response: PayuSyncResponse = res
                 .response
@@ -476,7 +477,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             let response: PayuCaptureResponse = res
                 .response
                 .parse_struct("PayU Capture ErrorResponse")
@@ -541,7 +543,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             let response: PayuVoidResponse = res
                 .response
                 .parse_struct("PayU Void ErrorResponse")
@@ -605,7 +608,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             let response: PayuRefundResponse = res
                 .response
                 .parse_struct("PayU Refund ErrorResponse")
@@ -669,7 +673,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             let response: PayuRefundSyncResponse = res
                 .response
                 .parse_struct("PayU RSync ErrorResponse")
@@ -732,7 +737,8 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            _connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
             // PayU returns error responses in the same JSON format as success responses
             // We need to parse the response and check for error fields
             let response: PayuPaymentResponse = res

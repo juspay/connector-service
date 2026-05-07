@@ -1,5 +1,6 @@
 pub mod transformers;
 use super::macros;
+use domain_types::router_data::ConnectorSpecificConfig;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -377,6 +378,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         _event_builder: Option<&mut events::Event>,
+        _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: Result<
             BankofamericaErrorResponse,
