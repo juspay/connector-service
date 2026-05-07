@@ -19,13 +19,13 @@ use domain_types::{
         AcceptDisputeData, ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorCustomerData, ConnectorCustomerResponse,
         ConnectorSpecificClientAuthenticationResponse, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, MandateReference,
-        MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        DisputeResponseData, MandateReference, MandateReferenceId, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
         StripeClientAuthenticationResponse as StripeClientAuthenticationResponseDomain,
+        SubmitEvidenceData,
     },
     errors::{ConnectorError, IntegrationError},
     mandates::AcceptanceType,
@@ -960,11 +960,13 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::UpiQr
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
-            | common_enums::PaymentMethodType::SepaGuaranteedDebit => Err(IntegrationError::NotImplemented(
-                get_unimplemented_payment_method_error_message("stripe"),
-                Default::default(),
-            )
-            .into()),
+            | common_enums::PaymentMethodType::SepaGuaranteedDebit => {
+                Err(IntegrationError::NotImplemented(
+                    get_unimplemented_payment_method_error_message("stripe"),
+                    Default::default(),
+                )
+                .into())
+            }
             common_enums::PaymentMethodType::AliPayHk
             | common_enums::PaymentMethodType::Atome
             | common_enums::PaymentMethodType::Bizum
@@ -1624,13 +1626,12 @@ fn create_stripe_payment_method<
 
         PaymentMethodData::Voucher(voucher_data) => match voucher_data {
             VoucherData::Boleto(boleto_data) => {
-                let tax_id = boleto_data
-                    .social_security_number
-                    .clone()
-                    .ok_or(IntegrationError::MissingRequiredField {
+                let tax_id = boleto_data.social_security_number.clone().ok_or(
+                    IntegrationError::MissingRequiredField {
                         field_name: "voucher_data.boleto.social_security_number",
                         context: Default::default(),
-                    })?;
+                    },
+                )?;
                 Ok((
                     StripePaymentMethodData::Voucher(StripeBoletoData {
                         payment_method_data_type: StripePaymentMethodType::Boleto,
@@ -1843,26 +1844,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
                     payment_method_data_type: StripePaymentMethodType::Paypal,
                 })))
             }
-            WalletData::MobilePayRedirect(_) => {
-                Ok(Self::Wallet(StripeWallet::MobilepayPayment(MobilepayPayment {
+            WalletData::MobilePayRedirect(_) => Ok(Self::Wallet(StripeWallet::MobilepayPayment(
+                MobilepayPayment {
                     payment_method_data_type: StripePaymentMethodType::Mobilepay,
-                })))
-            }
+                },
+            ))),
             WalletData::TwintRedirect {} => {
                 Ok(Self::Wallet(StripeWallet::TwintPayment(TwintPayment {
                     payment_method_data_type: StripePaymentMethodType::Twint,
                 })))
             }
-            WalletData::Satispay(_) => {
-                Ok(Self::Wallet(StripeWallet::SatispayPayment(SatispayPayment {
+            WalletData::Satispay(_) => Ok(Self::Wallet(StripeWallet::SatispayPayment(
+                SatispayPayment {
                     payment_method_data_type: StripePaymentMethodType::Satispay,
-                })))
-            }
-            WalletData::Wero(_) => {
-                Ok(Self::Wallet(StripeWallet::WeroPayment(WeroPayment {
-                    payment_method_data_type: StripePaymentMethodType::Wero,
-                })))
-            }
+                },
+            ))),
+            WalletData::Wero(_) => Ok(Self::Wallet(StripeWallet::WeroPayment(WeroPayment {
+                payment_method_data_type: StripePaymentMethodType::Wero,
+            }))),
             WalletData::AliPayQr(_)
             | WalletData::BluecodeRedirect {}
             | WalletData::AliPayHkRedirect(_)
@@ -3585,9 +3584,7 @@ impl Serialize for StripeNextActionResponse {
             Self::KonbiniDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::PixDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::PromptpayDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
-            Self::SwishHandleRedirectOrDisplayQrCode(ref i) => {
-                Serialize::serialize(i, serializer)
-            }
+            Self::SwishHandleRedirectOrDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::NoNextActionBody => Serialize::serialize("NoNextActionBody", serializer),
         }
     }
@@ -5902,12 +5899,8 @@ pub fn get_dispute_stage_and_status(
             }
             _ => common_enums::DisputeStatus::DisputeExpired,
         },
-        WebhookEventType::ChargeDisputeFundsReinstated => {
-            common_enums::DisputeStatus::DisputeWon
-        }
-        WebhookEventType::ChargeDisputeFundsWithdrawn => {
-            common_enums::DisputeStatus::DisputeLost
-        }
+        WebhookEventType::ChargeDisputeFundsReinstated => common_enums::DisputeStatus::DisputeWon,
+        WebhookEventType::ChargeDisputeFundsWithdrawn => common_enums::DisputeStatus::DisputeLost,
         _ => common_enums::DisputeStatus::DisputeOpened,
     };
 
@@ -6106,12 +6099,7 @@ pub struct StripeSubmitEvidenceRequest {
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
-            RouterDataV2<
-                SubmitEvidence,
-                DisputeFlowData,
-                SubmitEvidenceData,
-                DisputeResponseData,
-            >,
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
             T,
         >,
     > for StripeSubmitEvidenceRequest
@@ -6119,12 +6107,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         item: StripeRouterData<
-            RouterDataV2<
-                SubmitEvidence,
-                DisputeFlowData,
-                SubmitEvidenceData,
-                DisputeResponseData,
-            >,
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -6167,12 +6150,7 @@ pub struct StripeDefendDisputeRequest {
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
-            RouterDataV2<
-                DefendDispute,
-                DisputeFlowData,
-                DisputeDefendData,
-                DisputeResponseData,
-            >,
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
             T,
         >,
     > for StripeDefendDisputeRequest
@@ -6180,12 +6158,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(
         _item: StripeRouterData<
-            RouterDataV2<
-                DefendDispute,
-                DisputeFlowData,
-                DisputeDefendData,
-                DisputeResponseData,
-            >,
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {

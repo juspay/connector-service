@@ -231,9 +231,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let now_secs = i64::try_from(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|_| {
-                    domain_types::errors::WebhookError::WebhookSourceVerificationFailed
-                })
+                .map_err(|_| domain_types::errors::WebhookError::WebhookSourceVerificationFailed)
                 .attach_printable("System clock is before UNIX epoch")?
                 .as_secs(),
         )
@@ -369,12 +367,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     },
                 ),
             )),
-            stripe::WebhookEventObjectType::Charge
-            | stripe::WebhookEventObjectType::Source => {
-                let connector_transaction_id = obj
-                    .payment_intent
-                    .clone()
-                    .unwrap_or_else(|| obj.id.clone());
+            stripe::WebhookEventObjectType::Charge | stripe::WebhookEventObjectType::Source => {
+                let connector_transaction_id =
+                    obj.payment_intent.clone().unwrap_or_else(|| obj.id.clone());
                 Ok(Some(
                     domain_types::connector_types::WebhookResourceReference::Payment(
                         domain_types::connector_types::PaymentWebhookReference {
@@ -420,9 +415,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let raw_body = String::from_utf8_lossy(&request.body).to_string();
         let event_type_body: stripe::WebhookEventTypeBody =
             serde_json::from_slice(&request.body)
-                .change_context(
-                    domain_types::errors::WebhookError::WebhookBodyDecodingFailed,
-                )?;
+                .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
         let event: stripe::WebhookEvent = serde_json::from_slice(&request.body)
             .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
 
@@ -436,16 +429,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let connector_transaction_id = match obj.object {
             stripe::WebhookEventObjectType::PaymentIntent => Some(obj.id.clone()),
-            stripe::WebhookEventObjectType::Charge
-            | stripe::WebhookEventObjectType::Source => {
+            stripe::WebhookEventObjectType::Charge | stripe::WebhookEventObjectType::Source => {
                 obj.payment_intent.clone().or_else(|| Some(obj.id.clone()))
             }
             _ => None,
         };
 
-        let resource_id = connector_transaction_id.map(
-            domain_types::connector_types::ResponseId::ConnectorTransactionId,
-        );
+        let resource_id = connector_transaction_id
+            .map(domain_types::connector_types::ResponseId::ConnectorTransactionId);
 
         let (error_code, error_message, error_reason) =
             if status == common_enums::AttemptStatus::Failure {
@@ -462,10 +453,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(domain_types::connector_types::WebhookDetailsResponse {
             resource_id,
             status,
-            connector_response_reference_id: obj
-                .metadata
-                .as_ref()
-                .and_then(|m| m.order_id.clone()),
+            connector_response_reference_id: obj.metadata.as_ref().and_then(|m| m.order_id.clone()),
             mandate_reference: None,
             error_code,
             error_message,
@@ -492,15 +480,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let raw_body = String::from_utf8_lossy(&request.body).to_string();
         let event_type_body: stripe::WebhookEventTypeBody =
             serde_json::from_slice(&request.body)
-                .change_context(
-                    domain_types::errors::WebhookError::WebhookBodyDecodingFailed,
-                )?;
+                .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
         let event: stripe::WebhookEvent = serde_json::from_slice(&request.body)
             .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
 
-        let status = stripe::get_refund_status_from_webhook(
-            &event_type_body.event_data.event_object.status,
-        );
+        let status =
+            stripe::get_refund_status_from_webhook(&event_type_body.event_data.event_object.status);
 
         Ok(
             domain_types::connector_types::RefundWebhookDetailsResponse {
@@ -528,9 +513,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let raw_body = String::from_utf8_lossy(&request.body).to_string();
         let event_type_body: stripe::WebhookEventTypeBody =
             serde_json::from_slice(&request.body)
-                .change_context(
-                    domain_types::errors::WebhookError::WebhookBodyDecodingFailed,
-                )?;
+                .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
         let event: stripe::WebhookEvent = serde_json::from_slice(&request.body)
             .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
 
@@ -580,11 +563,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
         error_stack::Report<domain_types::errors::WebhookError>,
     > {
-        let event: stripe::WebhookEventObjectResource =
-            serde_json::from_slice(&request.body)
-                .change_context(
-                    domain_types::errors::WebhookError::WebhookBodyDecodingFailed,
-                )?;
+        let event: stripe::WebhookEventObjectResource = serde_json::from_slice(&request.body)
+            .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
 
         Ok(Box::new(event.data.object))
     }

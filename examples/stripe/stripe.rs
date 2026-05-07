@@ -19,8 +19,12 @@ pub const SUPPORTED_FLOWS: &[&str] = &[
     "capture",
     "create_client_authentication_token",
     "create_customer",
+    "dispute_accept",
+    "dispute_defend",
+    "dispute_submit_evidence",
     "get",
     "incremental_authorization",
+    "parse_event",
     "proxy_authorize",
     "proxy_setup_recurring",
     "recurring_charge",
@@ -120,6 +124,33 @@ pub fn build_create_customer_request() -> CustomerServiceCreateRequest {
     }
 }
 
+pub fn build_dispute_accept_request() -> DisputeServiceAcceptRequest {
+    DisputeServiceAcceptRequest {
+        merchant_dispute_id: Some("probe_dispute_001".to_string()), // Identification.
+        connector_transaction_id: "probe_txn_001".to_string(),
+        dispute_id: "probe_dispute_id_001".to_string(),
+    }
+}
+
+pub fn build_dispute_defend_request() -> DisputeServiceDefendRequest {
+    DisputeServiceDefendRequest {
+        merchant_dispute_id: Some("probe_dispute_001".to_string()), // Identification.
+        connector_transaction_id: "probe_txn_001".to_string(),
+        dispute_id: "probe_dispute_id_001".to_string(),
+        reason_code: Some("probe_reason".to_string()), // Defend Details.
+    }
+}
+
+pub fn build_dispute_submit_evidence_request() -> DisputeServiceSubmitEvidenceRequest {
+    DisputeServiceSubmitEvidenceRequest {
+        merchant_dispute_id: Some("probe_dispute_001".to_string()), // Identification.
+        connector_transaction_id: Some("probe_txn_001".to_string()),
+        dispute_id: "probe_dispute_id_001".to_string(),
+        // evidence_documents: [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": "probe evidence content", "file_mime_type": "application/pdf"}]  // Collection of evidence documents.
+        ..Default::default()
+    }
+}
+
 pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
         merchant_transaction_id: Some("probe_merchant_txn_001".to_string()), // Identification.
@@ -128,6 +159,20 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
             // Amount Information.
             minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
             currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+        }),
+        ..Default::default()
+    }
+}
+
+pub fn build_handle_event_request() -> EventServiceHandleRequest {
+    EventServiceHandleRequest {
+        merchant_event_id: Some("probe_event_001".to_string()),  // Caller-supplied correlation key, echoed in the response. Not used by UCS for processing.
+        request_details: Some(RequestDetails {
+            method: HttpMethod::HttpMethodPost.into(),  // HTTP method of the request (e.g., GET, POST).
+            uri: Some("https://example.com/webhook".to_string()),  // URI of the request.
+            headers: [].into_iter().collect::<HashMap<_, _>>(),  // Headers of the HTTP request.
+            body: "{\"id\":\"evt_test_001\",\"object\":\"event\",\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_test_001\",\"object\":\"payment_intent\",\"amount\":2000,\"currency\":\"usd\",\"status\":\"succeeded\",\"created\":1686089970,\"metadata\":{}}},\"livemode\":false,\"created\":1686089970,\"pending_webhooks\":0}".to_string(),  // Body of the HTTP request.
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -144,6 +189,18 @@ pub fn build_incremental_authorization_request() -> PaymentServiceIncrementalAut
         }),
         reason: Some("incremental_auth_probe".to_string()), // Optional Fields.
         ..Default::default()
+    }
+}
+
+pub fn build_parse_event_request() -> EventServiceParseRequest {
+    EventServiceParseRequest {
+        request_details: Some(RequestDetails {
+            method: HttpMethod::HttpMethodPost.into(),  // HTTP method of the request (e.g., GET, POST).
+            uri: Some("https://example.com/webhook".to_string()),  // URI of the request.
+            headers: [].into_iter().collect::<HashMap<_, _>>(),  // Headers of the HTTP request.
+            body: "{\"id\":\"evt_test_001\",\"object\":\"event\",\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_test_001\",\"object\":\"payment_intent\",\"amount\":2000,\"currency\":\"usd\",\"status\":\"succeeded\",\"created\":1686089970,\"metadata\":{}}},\"livemode\":false,\"created\":1686089970,\"pending_webhooks\":0}".to_string(),  // Body of the HTTP request.
+            ..Default::default()
+        }),
     }
 }
 
@@ -616,6 +673,46 @@ pub async fn process_create_customer(
     Ok(format!("customer_id: {}", response.connector_customer_id))
 }
 
+// Flow: DisputeService.Accept
+#[allow(dead_code)]
+pub async fn process_dispute_accept(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .accept(build_dispute_accept_request(), &HashMap::new(), None)
+        .await?;
+    Ok(format!("dispute_status: {:?}", response.dispute_status()))
+}
+
+// Flow: DisputeService.Defend
+#[allow(dead_code)]
+pub async fn process_dispute_defend(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .defend(build_dispute_defend_request(), &HashMap::new(), None)
+        .await?;
+    Ok(format!("dispute_status: {:?}", response.dispute_status()))
+}
+
+// Flow: DisputeService.SubmitEvidence
+#[allow(dead_code)]
+pub async fn process_dispute_submit_evidence(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .submit_evidence(
+            build_dispute_submit_evidence_request(),
+            &HashMap::new(),
+            None,
+        )
+        .await?;
+    Ok(format!("dispute_status: {:?}", response.dispute_status()))
+}
+
 // Flow: PaymentService.Get
 #[allow(dead_code)]
 pub async fn process_get(
@@ -644,6 +741,18 @@ pub async fn process_incremental_authorization(
             &HashMap::new(),
             None,
         )
+        .await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
+// Flow: EventService.ParseEvent
+#[allow(dead_code)]
+pub async fn process_parse_event(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .parse_event(build_parse_event_request(), &HashMap::new(), None)
         .await?;
     Ok(format!("status: {:?}", response.status()))
 }
@@ -776,10 +885,16 @@ async fn main() {
             process_create_client_authentication_token(&client, "txn_001").await
         }
         "process_create_customer" => process_create_customer(&client, "txn_001").await,
+        "process_dispute_accept" => process_dispute_accept(&client, "txn_001").await,
+        "process_dispute_defend" => process_dispute_defend(&client, "txn_001").await,
+        "process_dispute_submit_evidence" => {
+            process_dispute_submit_evidence(&client, "txn_001").await
+        }
         "process_get" => process_get(&client, "txn_001").await,
         "process_incremental_authorization" => {
             process_incremental_authorization(&client, "txn_001").await
         }
+        "process_parse_event" => process_parse_event(&client, "txn_001").await,
         "process_proxy_authorize" => process_proxy_authorize(&client, "txn_001").await,
         "process_proxy_setup_recurring" => process_proxy_setup_recurring(&client, "txn_001").await,
         "process_recurring_charge" => process_recurring_charge(&client, "txn_001").await,
@@ -789,7 +904,7 @@ async fn main() {
         "process_tokenize" => process_tokenize(&client, "txn_001").await,
         "process_void" => process_void(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_create_customer, process_get, process_incremental_authorization, process_proxy_authorize, process_proxy_setup_recurring, process_recurring_charge, process_refund_get, process_setup_recurring, process_token_authorize, process_tokenize, process_void", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_create_customer, process_dispute_accept, process_dispute_defend, process_dispute_submit_evidence, process_get, process_incremental_authorization, process_parse_event, process_proxy_authorize, process_proxy_setup_recurring, process_recurring_charge, process_refund_get, process_setup_recurring, process_token_authorize, process_tokenize, process_void", flow);
             return;
         }
     };

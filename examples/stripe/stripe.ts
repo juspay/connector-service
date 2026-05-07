@@ -5,9 +5,9 @@
 // Stripe — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx stripe.ts checkout_autocapture
 
-import { PaymentClient, MerchantAuthenticationClient, CustomerClient, RecurringPaymentClient, RefundClient, PaymentMethodClient, types } from 'hyperswitch-prism';
-const { Environment, AcceptanceType, AuthenticationType, CaptureMethod, Currency, FutureUsage, PaymentMethodType } = types;
-export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_customer", "get", "incremental_authorization", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "tokenize", "void"];
+import { PaymentClient, MerchantAuthenticationClient, CustomerClient, DisputeClient, EventClient, RecurringPaymentClient, RefundClient, PaymentMethodClient, types } from 'hyperswitch-prism';
+const { Environment, AcceptanceType, AuthenticationType, CaptureMethod, Currency, EvidenceType, FutureUsage, HttpMethod, PaymentMethodType } = types;
+export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_customer", "dispute_accept", "dispute_defend", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "tokenize", "void"];
 
 const _defaultConfig: types.IConnectorConfig = {
     options: {
@@ -80,6 +80,38 @@ function _buildCreateCustomerRequest(): types.ICustomerServiceCreateRequest {
     };
 }
 
+function _buildDisputeAcceptRequest(): types.IDisputeServiceAcceptRequest {
+    return {
+        "merchantDisputeId": "probe_dispute_001",  // Identification.
+        "connectorTransactionId": "probe_txn_001",
+        "disputeId": "probe_dispute_id_001"
+    };
+}
+
+function _buildDisputeDefendRequest(): types.IDisputeServiceDefendRequest {
+    return {
+        "merchantDisputeId": "probe_dispute_001",  // Identification.
+        "connectorTransactionId": "probe_txn_001",
+        "disputeId": "probe_dispute_id_001",
+        "reasonCode": "probe_reason"  // Defend Details.
+    };
+}
+
+function _buildDisputeSubmitEvidenceRequest(): types.IDisputeServiceSubmitEvidenceRequest {
+    return {
+        "merchantDisputeId": "probe_dispute_001",  // Identification.
+        "connectorTransactionId": "probe_txn_001",
+        "disputeId": "probe_dispute_id_001",
+        "evidenceDocuments": [  // Collection of evidence documents.
+            {
+                "evidenceType": EvidenceType.SERVICE_DOCUMENTATION,  // Type of the evidence.
+                "fileContent": new Uint8Array(Buffer.from("probe evidence content", "utf-8")),  // Content Options Content of the document, if it's a file.
+                "fileMimeType": "application/pdf"  // MIME type of the file (e.g., "application/pdf", "image/png"), if file_content is provided.
+            }
+        ]
+    };
+}
+
 function _buildGetRequest(connectorTransactionId: string): types.IPaymentServiceGetRequest {
     return {
         "merchantTransactionId": "probe_merchant_txn_001",  // Identification.
@@ -87,6 +119,19 @@ function _buildGetRequest(connectorTransactionId: string): types.IPaymentService
         "amount": {  // Amount Information.
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
+        }
+    };
+}
+
+function _buildHandleEventRequest(): types.IEventServiceHandleRequest {
+    return {
+        "merchantEventId": "probe_event_001",  // Caller-supplied correlation key, echoed in the response. Not used by UCS for processing.
+        "requestDetails": {
+            "method": HttpMethod.HTTP_METHOD_POST,  // HTTP method of the request (e.g., GET, POST).
+            "uri": "https://example.com/webhook",  // URI of the request.
+            "headers": {  // Headers of the HTTP request.
+            },
+            "body": new Uint8Array(Buffer.from("{\"id\":\"evt_test_001\",\"object\":\"event\",\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_test_001\",\"object\":\"payment_intent\",\"amount\":2000,\"currency\":\"usd\",\"status\":\"succeeded\",\"created\":1686089970,\"metadata\":{}}},\"livemode\":false,\"created\":1686089970,\"pending_webhooks\":0}", "utf-8"))  // Body of the HTTP request.
         }
     };
 }
@@ -100,6 +145,18 @@ function _buildIncrementalAuthorizationRequest(): types.IPaymentServiceIncrement
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
         "reason": "incremental_auth_probe"  // Optional Fields.
+    };
+}
+
+function _buildParseEventRequest(): types.IEventServiceParseRequest {
+    return {
+        "requestDetails": {
+            "method": HttpMethod.HTTP_METHOD_POST,  // HTTP method of the request (e.g., GET, POST).
+            "uri": "https://example.com/webhook",  // URI of the request.
+            "headers": {  // Headers of the HTTP request.
+            },
+            "body": new Uint8Array(Buffer.from("{\"id\":\"evt_test_001\",\"object\":\"event\",\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_test_001\",\"object\":\"payment_intent\",\"amount\":2000,\"currency\":\"usd\",\"status\":\"succeeded\",\"created\":1686089970,\"metadata\":{}}},\"livemode\":false,\"created\":1686089970,\"pending_webhooks\":0}", "utf-8"))  // Body of the HTTP request.
+        }
     };
 }
 
@@ -426,6 +483,33 @@ async function createCustomer(merchantTransactionId: string, config: types.IConn
     return createResponse;
 }
 
+// Flow: DisputeService.Accept
+async function disputeAccept(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const disputeClient = new DisputeClient(config);
+
+    const disputeResponse = await disputeClient.accept(_buildDisputeAcceptRequest());
+
+    return disputeResponse;
+}
+
+// Flow: DisputeService.Defend
+async function disputeDefend(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const disputeClient = new DisputeClient(config);
+
+    const disputeResponse = await disputeClient.defend(_buildDisputeDefendRequest());
+
+    return disputeResponse;
+}
+
+// Flow: DisputeService.SubmitEvidence
+async function disputeSubmitEvidence(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const disputeClient = new DisputeClient(config);
+
+    const disputeResponse = await disputeClient.submitEvidence(_buildDisputeSubmitEvidenceRequest());
+
+    return disputeResponse;
+}
+
 // Flow: PaymentService.Get
 async function get(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -435,6 +519,15 @@ async function get(merchantTransactionId: string, config: types.IConnectorConfig
     return getResponse;
 }
 
+// Flow: EventService.HandleEvent
+async function handleEvent(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const eventClient = new EventClient(config);
+
+    const handleResponse = await eventClient.handleEvent(_buildHandleEventRequest());
+
+    return handleResponse;
+}
+
 // Flow: PaymentService.IncrementalAuthorization
 async function incrementalAuthorization(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -442,6 +535,15 @@ async function incrementalAuthorization(merchantTransactionId: string, config: t
     const incrementalResponse = await paymentClient.incrementalAuthorization(_buildIncrementalAuthorizationRequest());
 
     return incrementalResponse;
+}
+
+// Flow: EventService.ParseEvent
+async function parseEvent(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const eventClient = new EventClient(config);
+
+    const parseResponse = await eventClient.parseEvent(_buildParseEventRequest());
+
+    return parseResponse;
 }
 
 // Flow: PaymentService.ProxyAuthorize
@@ -528,7 +630,7 @@ async function voidPayment(merchantTransactionId: string, config: types.IConnect
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, get, incrementalAuthorization, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenAuthorize, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateCustomerRequest, _buildGetRequest, _buildIncrementalAuthorizationRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildSetupRecurringRequest, _buildTokenAuthorizeRequest, _buildTokenizeRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, createClientAuthenticationToken, createCustomer, disputeAccept, disputeDefend, disputeSubmitEvidence, get, handleEvent, incrementalAuthorization, parseEvent, proxyAuthorize, proxySetupRecurring, recurringCharge, refund, refundGet, setupRecurring, tokenAuthorize, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateClientAuthenticationTokenRequest, _buildCreateCustomerRequest, _buildDisputeAcceptRequest, _buildDisputeDefendRequest, _buildDisputeSubmitEvidenceRequest, _buildGetRequest, _buildHandleEventRequest, _buildIncrementalAuthorizationRequest, _buildParseEventRequest, _buildProxyAuthorizeRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildSetupRecurringRequest, _buildTokenAuthorizeRequest, _buildTokenizeRequest, _buildVoidRequest
 };
 
 // CLI runner

@@ -19,19 +19,17 @@ use common_utils::crypto::{HmacSha256, SignMessage};
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        dispute_service_client::DisputeServiceClient,
-        event_service_client::EventServiceClient, payment_method,
-        payment_service_client::PaymentServiceClient,
+        dispute_service_client::DisputeServiceClient, event_service_client::EventServiceClient,
+        payment_method, payment_service_client::PaymentServiceClient,
         refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
         Currency, DisputeServiceAcceptRequest, DisputeServiceDefendRequest,
-        DisputeServiceSubmitEvidenceRequest, DisputeStatus, EvidenceDocument, EvidenceType,
-        EventServiceHandleRequest, EventServiceHandleResponse, MobilePayRedirectWallet,
+        DisputeServiceSubmitEvidenceRequest, DisputeStatus, EventServiceHandleRequest,
+        EventServiceHandleResponse, EvidenceDocument, EvidenceType, MobilePayRedirectWallet,
         OpenBankingUk, Oxxo, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-        PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceVoidRequest,
-        PaymentStatus, PaypalRedirectWallet, PromptPay, RefundResponse, RefundServiceGetRequest,
-        RefundStatus, RequestDetails, Satispay, SevenEleven, TwintRedirectWallet, WebhookSecrets,
-        Wero,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus,
+        PaypalRedirectWallet, PromptPay, RefundResponse, RefundServiceGetRequest, RefundStatus,
+        RequestDetails, Satispay, SevenEleven, TwintRedirectWallet, WebhookSecrets, Wero,
     },
 };
 use serde_json::json;
@@ -1062,13 +1060,9 @@ async fn test_stripe_webhook_expired_timestamp() {
     grpc_test!(client, EventServiceClient<Channel>, {
         let body = stripe_sample_webhook_body();
         let body_bytes = serde_json::to_vec(&body).expect("serialize webhook body");
-        let expired_ts =
-            i64::try_from(get_timestamp()).expect("timestamp fits i64") - 600;
-        let signature = generate_stripe_webhook_signature(
-            &body_bytes,
-            STRIPE_TEST_WEBHOOK_SECRET,
-            expired_ts,
-        );
+        let expired_ts = i64::try_from(get_timestamp()).expect("timestamp fits i64") - 600;
+        let signature =
+            generate_stripe_webhook_signature(&body_bytes, STRIPE_TEST_WEBHOOK_SECRET, expired_ts);
 
         let result = process_stripe_webhook(
             &mut client,
@@ -1096,14 +1090,10 @@ async fn test_stripe_webhook_expired_timestamp() {
 async fn test_stripe_webhook_tampered_body() {
     grpc_test!(client, EventServiceClient<Channel>, {
         let original_body = stripe_sample_webhook_body();
-        let original_bytes =
-            serde_json::to_vec(&original_body).expect("serialize original body");
+        let original_bytes = serde_json::to_vec(&original_body).expect("serialize original body");
         let now = i64::try_from(get_timestamp()).expect("timestamp fits i64");
-        let signature = generate_stripe_webhook_signature(
-            &original_bytes,
-            STRIPE_TEST_WEBHOOK_SECRET,
-            now,
-        );
+        let signature =
+            generate_stripe_webhook_signature(&original_bytes, STRIPE_TEST_WEBHOOK_SECRET, now);
 
         let tampered_body = json!({
             "id": "evt_test_001",
@@ -1124,8 +1114,7 @@ async fn test_stripe_webhook_tampered_body() {
             "created": 1686089970,
             "pending_webhooks": 0
         });
-        let tampered_bytes =
-            serde_json::to_vec(&tampered_body).expect("serialize tampered body");
+        let tampered_bytes = serde_json::to_vec(&tampered_body).expect("serialize tampered body");
 
         let result = process_stripe_webhook(
             &mut client,

@@ -10,12 +10,14 @@ import sys
 from payments import PaymentClient
 from payments import MerchantAuthenticationClient
 from payments import CustomerClient
+from payments import DisputeClient
+from payments import EventClient
 from payments import RecurringPaymentClient
 from payments import RefundClient
 from payments import PaymentMethodClient
 from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
-SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_customer", "get", "incremental_authorization", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "tokenize", "void"]
+SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_customer", "dispute_accept", "dispute_defend", "dispute_submit_evidence", "get", "incremental_authorization", "parse_event", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "tokenize", "void"]
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -83,6 +85,29 @@ def _build_create_customer_request():
         phone_number="4155552671",  # Phone number of the customer.
     )
 
+def _build_dispute_accept_request():
+    return payment_pb2.DisputeServiceAcceptRequest(
+        merchant_dispute_id="probe_dispute_001",  # Identification.
+        connector_transaction_id="probe_txn_001",
+        dispute_id="probe_dispute_id_001",
+    )
+
+def _build_dispute_defend_request():
+    return payment_pb2.DisputeServiceDefendRequest(
+        merchant_dispute_id="probe_dispute_001",  # Identification.
+        connector_transaction_id="probe_txn_001",
+        dispute_id="probe_dispute_id_001",
+        reason_code="probe_reason",  # Defend Details.
+    )
+
+def _build_dispute_submit_evidence_request():
+    return payment_pb2.DisputeServiceSubmitEvidenceRequest(
+        merchant_dispute_id="probe_dispute_001",  # Identification.
+        connector_transaction_id="probe_txn_001",
+        dispute_id="probe_dispute_id_001",
+        # evidence_documents: [{"evidence_type": "SERVICE_DOCUMENTATION", "file_content": "probe evidence content", "file_mime_type": "application/pdf"}]  # Collection of evidence documents.
+    )
+
 def _build_get_request(connector_transaction_id: str):
     return payment_pb2.PaymentServiceGetRequest(
         merchant_transaction_id="probe_merchant_txn_001",  # Identification.
@@ -102,6 +127,16 @@ def _build_incremental_authorization_request():
             currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
         ),
         reason="incremental_auth_probe",  # Optional Fields.
+    )
+
+def _build_parse_event_request():
+    return payment_pb2.EventServiceParseRequest(
+        request_details=payment_pb2.RequestDetails(
+            method=payment_pb2.HttpMethod.Value("HTTP_METHOD_POST"),  # HTTP method of the request (e.g., GET, POST).
+            uri="https://example.com/webhook",  # URI of the request.
+            headers=payment_pb2.HeadersEntry(),  # Headers of the HTTP request.
+            body="{\"id\":\"evt_test_001\",\"object\":\"event\",\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_test_001\",\"object\":\"payment_intent\",\"amount\":2000,\"currency\":\"usd\",\"status\":\"succeeded\",\"created\":1686089970,\"metadata\":{}}},\"livemode\":false,\"created\":1686089970,\"pending_webhooks\":0}",  # Body of the HTTP request.
+        ),
     )
 
 def _build_proxy_authorize_request():
@@ -411,6 +446,33 @@ async def process_create_customer(merchant_transaction_id: str, config: sdk_conf
     return {"customer_id": create_response.connector_customer_id}
 
 
+async def process_dispute_accept(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: DisputeService.Accept"""
+    dispute_client = DisputeClient(config)
+
+    dispute_response = await dispute_client.accept(_build_dispute_accept_request())
+
+    return {"status": dispute_response.status}
+
+
+async def process_dispute_defend(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: DisputeService.Defend"""
+    dispute_client = DisputeClient(config)
+
+    dispute_response = await dispute_client.defend(_build_dispute_defend_request())
+
+    return {"status": dispute_response.status}
+
+
+async def process_dispute_submit_evidence(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: DisputeService.SubmitEvidence"""
+    dispute_client = DisputeClient(config)
+
+    dispute_response = await dispute_client.submit_evidence(_build_dispute_submit_evidence_request())
+
+    return {"status": dispute_response.status}
+
+
 async def process_get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Get"""
     payment_client = PaymentClient(config)
@@ -427,6 +489,15 @@ async def process_incremental_authorization(merchant_transaction_id: str, config
     incremental_response = await payment_client.incremental_authorization(_build_incremental_authorization_request())
 
     return {"status": incremental_response.status}
+
+
+async def process_parse_event(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: EventService.ParseEvent"""
+    event_client = EventClient(config)
+
+    parse_response = await event_client.parse_event(_build_parse_event_request())
+
+    return {"status": parse_response.status}
 
 
 async def process_proxy_authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):

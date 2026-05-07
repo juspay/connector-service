@@ -4,8 +4,7 @@ use grpc_api_types::{
     health_check::health_client::HealthClient,
     payments::{
         customer_service_client::CustomerServiceClient,
-        dispute_service_client::DisputeServiceClient,
-        event_service_client::EventServiceClient,
+        dispute_service_client::DisputeServiceClient, event_service_client::EventServiceClient,
         merchant_authentication_service_client::MerchantAuthenticationServiceClient,
         payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
         payment_method_service_client::PaymentMethodServiceClient,
