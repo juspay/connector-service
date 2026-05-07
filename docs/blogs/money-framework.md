@@ -127,7 +127,7 @@ pub trait AmountConvertor: Send {
 Two directions: outbound (internal → connector format for the request) and inbound (connector format → internal, for parsing responses and webhooks). Each connector picks the converter it needs once, at initialization. Here's what that looks like in practice:
 
 ```rust
-// Stripe: integer minor units
+// Stripe, Adyen: integer minor units
 amount_converter: &MinorUnitForConnector
 
 // PayPal, Wells Fargo: string like "12.34"
