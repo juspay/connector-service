@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.07.0
+
+### Bug Fixes
+
+- **connector:** [Truelayer] Make phone details optional ([#1228](https://github.com/juspay/connector-service/pull/1228)) ([`9fa70a6`](https://github.com/juspay/connector-service/commit/9fa70a6f8512f69ebeeb63a7d6e70a854ed777c6))
+
+### Miscellaneous Tasks
+
+- Add blog about ffi ([#1209](https://github.com/juspay/connector-service/pull/1209)) ([`8bb216d`](https://github.com/juspay/connector-service/commit/8bb216d125b48d694552fe96b72d59d7b4d43b40))
+
+**Full Changelog:** [`2026.05.06.0...2026.05.07.0`](https://github.com/juspay/connector-service/compare/2026.05.06.0...2026.05.07.0)
+
+- - -
+
 ## 2026.05.06.0
 
 ### Features
