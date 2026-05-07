@@ -222,8 +222,6 @@ The payment world learned these lessons through production incidents. But the pr
 - **Handle currency exponents explicitly.** Don't assume all currencies divide by 100 — they don't.
 - **Display formatting is a UI concern.** `$59.99` is for humans. `5999` is your data. Keep them separate.
 
----
-
 ## Closing
 
 Money is where bugs have real consequences. Not "the test failed" consequences — "we owe customers a refund" or "we undercharged for six months" consequences.
