@@ -19,6 +19,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.07.1
+
+### Features
+
+- **connector:** Add payout flows to loonio ([#1197](https://github.com/juspay/connector-service/pull/1197)) ([`bf16c14`](https://github.com/juspay/connector-service/commit/bf16c140fd90e74d892cd3bd579c4bc16621fd54))
+- **proto:** Add API contract for surcharge granular flow ([#1232](https://github.com/juspay/connector-service/pull/1232)) ([`1ef8761`](https://github.com/juspay/connector-service/commit/1ef876126c42e1ed216f61845cff508a90badcf5))
+
+### Bug Fixes
+
+- **connector:** [Trustly] Fix country handling in the request ([#1241](https://github.com/juspay/connector-service/pull/1241)) ([`93bb564`](https://github.com/juspay/connector-service/commit/93bb564cec1f8ba972907544f90eca66f6b733da))
+- **nuvei:** Fix positive override test bugs in CreateOrder status expectations ([#1208](https://github.com/juspay/connector-service/pull/1208)) ([`e5b3618`](https://github.com/juspay/connector-service/commit/e5b36180a0fb314bde8cb4e63ea23e37acf31e81))
+- Fix injector flow ([#1165](https://github.com/juspay/connector-service/pull/1165)) ([`f77e758`](https://github.com/juspay/connector-service/commit/f77e7583810dae11dcfb0ad7713bdd7d3066bc09))
+
+### Miscellaneous Tasks
+
+- Bump SDK versions — npm 0.0.9, PyPI 0.0.5, Maven 0.0.6 ([#1244](https://github.com/juspay/connector-service/pull/1244)) ([`3060f0e`](https://github.com/juspay/connector-service/commit/3060f0e421b3034b1cdb58154a7de1f01e2cc93a))
+
+**Full Changelog:** [`2026.05.07.0...2026.05.07.1`](https://github.com/juspay/connector-service/compare/2026.05.07.0...2026.05.07.1)
+
+- - -
+
 ## 2026.05.07.0
 
 ### Bug Fixes
