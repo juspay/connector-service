@@ -293,6 +293,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PayoutServiceCreateRecipientRequest: ["accessToken"],
   PayoutServiceEnrollDisburseAccountRequest: ["accessToken"],
   PayoutMethodEligibilityRequest: ["connectorFeatureData", "accessToken"],
+  SurchargeServiceCalculateRequest: ["postalCode"],
 };
 
 const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
@@ -445,6 +446,8 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   FfiConnectorHttpResponse: { "headers": "HeadersEntry" },
   ConnectorError: { "errorInfo": "ErrorInfo" },
   FfiResult: { "httpRequest": "FfiConnectorHttpRequest", "httpResponse": "FfiConnectorHttpResponse", "integrationError": "IntegrationError", "connectorError": "ConnectorError" },
+  SurchargeServiceCalculateRequest: { "amount": "Money" },
+  SurchargeServiceCalculateResponse: { "surchargeAmount": "Money", "error": "ErrorInfo" },
 };
 
 function _wrapSecretStrings(obj: unknown, msgName: string): unknown {
