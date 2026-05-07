@@ -2,7 +2,6 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 import type { Checkpoint, PRReviewResult } from "../types.js";
 import { runAI } from "../tools/runner-factory.js";
-import { safeParseJson } from "../utils.js";
 import { getConfig } from "../config.js";
 import { askYesNo } from "../prompts/cli-prompts.js";
 
@@ -51,6 +50,12 @@ export const prReviewCheckpoint: Checkpoint = {
   description:
     "LLM reviews for spec compliance; human confirms on non-approved output.",
   retryFrom: "pr_review",
+  // Outer budget MUST exceed the inner runAI timeoutMs (20 min) plus cleanup
+  // margin. Without this the engine's default 120_000ms fires first and the
+  // checkpoint "fails" while claude is still working — claude eventually
+  // finishes and creates the PR anyway, but the engine has already rolled
+  // back, retried, and confused the dashboard. Keep outer > inner, always.
+  timeout: 25 * 60 * 1000,
   async run(ctx) {
     const implementation = ctx.artifacts.implementation;
     if (!implementation)
