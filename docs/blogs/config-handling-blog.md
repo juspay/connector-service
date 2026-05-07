@@ -213,5 +213,3 @@ The pattern itself is not complicated. The discipline to maintain it, to not let
 That is the foundation [Prism](https://hyperswitch.io) is built on. And it applies to any system that talks to more than one external service.
 
 ---
-
-[System Design](https://medium.com/tag/system-design) · [Backend Engineering](https://medium.com/tag/backend-engineering) · [API Design](https://medium.com/tag/api-design) · [Software Architecture](https://medium.com/tag/software-architecture) · [Payment Infrastructure](https://medium.com/tag/payment-infrastructure)
