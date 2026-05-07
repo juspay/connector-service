@@ -1,4 +1,5 @@
 ---
+HI
 name: new-connector
 description: >
   Implements a new payment connector from scratch in the connector-service (UCS) Rust codebase.
