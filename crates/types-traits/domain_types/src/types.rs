@@ -1530,7 +1530,14 @@ impl<
                         email: match interac.email {
                             Some(ref email_str) => Some(
                                 Email::try_from(email_str.clone().expose()).change_context(
-                                    IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Invalid email for Interac".to_string()), ..Default::default() } },
+                                    IntegrationError::InvalidDataFormat {
+                                        field_name: "payment_method.interac.email",
+                                        context: IntegrationErrorContext {
+                                            additional_context: Some("Invalid email format for Interac payment method".to_string()),
+                                            suggested_action: Some("Provide a valid email address for Interac".to_string()),
+                                            doc_url: None,
+                                        },
+                                    },
                                 )?,
                             ),
                             None => None,
@@ -1562,7 +1569,14 @@ impl<
                         email: match online_banking_finland.email {
                                 Some(ref email_str) => Some(
                                     Email::try_from(email_str.clone().expose()).change_context(
-                                        IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Invalid email".to_string()), ..Default::default() } },
+                                        IntegrationError::InvalidDataFormat {
+                                            field_name: "payment_method.online_banking_finland.email",
+                                            context: IntegrationErrorContext {
+                                                additional_context: Some("Invalid email format for Online Banking Finland".to_string()),
+                                                suggested_action: Some("Provide a valid email address for Online Banking Finland".to_string()),
+                                                doc_url: None,
+                                            },
+                                        },
                                     )?,
                                 ),
                                 None => None,
@@ -2637,14 +2651,11 @@ pub struct SetupRecurringRequest {
     pub metadata: Option<Secret<String>>,
     pub connector_feature_data: Option<Secret<String>>,
     pub state: Option<grpc_payment_types::ConnectorState>,
-    pub session_token: Option<String>,
     pub setup_mandate_details: Option<grpc_payment_types::SetupMandateDetails>,
     pub customer_acceptance: Option<grpc_payment_types::CustomerAcceptance>,
     pub auth_type: AuthenticationType,
     pub authentication_data: Option<grpc_payment_types::AuthenticationData>,
     pub setup_future_usage: grpc_payment_types::FutureUsage,
-    pub request_incremental_authorization: bool,
-    pub enable_partial_authorization: Option<bool>,
     pub browser_info: Option<grpc_payment_types::BrowserInformation>,
     pub billing_descriptor: Option<grpc_payment_types::BillingDescriptor>,
     pub locale: Option<String>,
@@ -2654,9 +2665,7 @@ pub struct SetupRecurringRequest {
     pub order_category: Option<String>,
     pub order_id: Option<String>,
     pub order_tax_amount: Option<i64>,
-    pub shipping_cost: Option<i64>,
     pub merchant_order_id: Option<String>,
-    pub connector_testing_data: Option<Secret<String>>,
     pub l2_l3_data: Option<grpc_payment_types::L2l3Data>,
 }
 
@@ -2668,10 +2677,6 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
         let tokenization_strategy = req
             .tokenization_strategy
             .map(|_| req.tokenization_strategy());
-        let payment_experience = req.payment_experience.map(|_| req.payment_experience());
-        let threeds_completion_indicator = req
-            .threeds_completion_indicator
-            .map(|_| req.threeds_completion_indicator());
         Self {
             merchant_transaction_id: req.merchant_transaction_id.clone(),
             amount: req.amount,
@@ -2700,13 +2705,13 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
             customer_acceptance: req.customer_acceptance.clone(),
             browser_info: req.browser_info.clone(),
             billing_descriptor: req.billing_descriptor.clone(),
-            payment_experience,
+            payment_experience: Some(req.payment_experience()),
             description: req.description.clone(),
             payment_channel: req.payment_channel(),
             locale: req.locale.clone(),
             state: req.state.clone(),
             tokenization_strategy,
-            threeds_completion_indicator,
+            threeds_completion_indicator: Some(req.threeds_completion_indicator()),
             redirection_response: req.redirection_response,
             continue_redirection_url: req.continue_redirection_url,
             l2_l3_data: req.l2_l3_data,
@@ -2731,9 +2736,6 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
                         grpc_payment_types::payment_method::PaymentMethod::CardProxy(card_proxy),
                     ),
                 });
-        let threeds_completion_indicator = req
-            .threeds_completion_indicator
-            .map(|_| req.threeds_completion_indicator());
 
         Self {
             merchant_transaction_id: req.merchant_transaction_id.clone(),
@@ -2762,14 +2764,14 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
             enable_partial_authorization: None,
             customer_acceptance: req.customer_acceptance.clone(),
             browser_info: req.browser_info,
-            billing_descriptor: req.billing_descriptor,
+            billing_descriptor: None,
             payment_experience: None,
             description: req.description.clone(),
             payment_channel: grpc_payment_types::PaymentChannel::Unspecified,
             locale: None,
             state: req.state,
-            threeds_completion_indicator,
-            redirection_response: req.redirection_response,
+            threeds_completion_indicator: None,
+            redirection_response: None,
             continue_redirection_url: None,
             l2_l3_data: req.l2_l3_data,
             setup_mandate_details: req.setup_mandate_details,
@@ -2798,7 +2800,6 @@ impl From<grpc_payment_types::PaymentServiceSetupRecurringRequest> for SetupRecu
             metadata: req.metadata,
             connector_feature_data: req.connector_feature_data,
             state: req.state,
-            session_token: req.session_token,
             setup_mandate_details: req.setup_mandate_details,
             customer_acceptance: req.customer_acceptance,
             authentication_data: req.authentication_data,
@@ -2808,14 +2809,10 @@ impl From<grpc_payment_types::PaymentServiceSetupRecurringRequest> for SetupRecu
             payment_channel: req.payment_channel,
             complete_authorize_url: req.complete_authorize_url,
             off_session: req.off_session,
-            request_incremental_authorization: req.request_incremental_authorization,
-            enable_partial_authorization: req.enable_partial_authorization,
             order_category: req.order_category,
             order_id: req.order_id,
             order_tax_amount: req.order_tax_amount,
-            shipping_cost: req.shipping_cost,
             merchant_order_id: req.merchant_order_id,
-            connector_testing_data: req.connector_testing_data,
             l2_l3_data: req.l2_l3_data,
         }
     }
@@ -2846,24 +2843,19 @@ impl From<grpc_payment_types::PaymentServiceProxySetupRecurringRequest> for Setu
             metadata: req.metadata,
             connector_feature_data: None,
             state: req.state,
-            session_token: None,
             setup_mandate_details: req.setup_mandate_details,
             customer_acceptance: req.customer_acceptance,
             authentication_data: req.authentication_data,
-            request_incremental_authorization: false,
-            enable_partial_authorization: None,
             browser_info: req.browser_info,
             billing_descriptor: None,
             locale: None,
             payment_channel: None,
             complete_authorize_url: None,
             off_session: None,
-            order_category: req.order_category,
+            order_category: None,
             order_id: None,
             order_tax_amount: None,
-            shipping_cost: None,
             merchant_order_id: None,
-            connector_testing_data: None,
             l2_l3_data: None,
         }
     }
@@ -2934,43 +2926,26 @@ impl ForeignTryFrom<grpc_api_types::payments::ProxyCardDetails>
     fn foreign_try_from(
         card: grpc_api_types::payments::ProxyCardDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Derive card_network from the proto field only.
+        // NOTE: card.card_number is a vault token (e.g. "token_123456"), NOT a real card BIN,
+        // so BIN-based issuer detection is not possible here. The caller must populate the card_network proto field
+
+        let card_network = card.card_network.and_then(|n| {
+            grpc_api_types::payments::CardNetwork::try_from(n)
+                .ok()
+                .and_then(|cn| CardNetwork::foreign_try_from(cn).ok())
+        });
+
         Ok(payment_method_data::Card {
-            card_number: RawCardNumber(card.card_number.ok_or(
-                IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Missing card number".to_string()),
-                        ..Default::default()
-                    },
-                },
-            )?),
-            card_exp_month: card
-                .card_exp_month
-                .ok_or(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Missing Card Expiry Month".to_string()),
-                        ..Default::default()
-                    },
-                })?,
-            card_exp_year: card
-                .card_exp_year
-                .ok_or(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Missing Card Expiry Year".to_string()),
-                        ..Default::default()
-                    },
-                })?,
-            card_cvc: card.card_cvc.ok_or(IntegrationError::InvalidDataFormat {
-                field_name: "unknown",
-                context: IntegrationErrorContext {
-                    additional_context: Some("Missing CVC".to_string()),
-                    ..Default::default()
-                },
-            })?,
+            card_number: RawCardNumber(
+                //card number token is already stored in token_data , so we can update the value to internal transformation value.
+                "{{$card_number}}".to_string().into(),
+            ),
+            card_exp_month: "{{$card_exp_month}}".to_string().into(),
+            card_exp_year: "{{$card_exp_year}}".to_string().into(),
+            card_cvc: "{{$card_cvc}}".to_string().into(),
             card_issuer: card.card_issuer,
-            card_network: None,
+            card_network,
             card_type: card.card_type,
             card_issuing_country: card.card_issuing_country_alpha2,
             bank_code: card.bank_code,
@@ -3187,10 +3162,13 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -3313,29 +3291,25 @@ impl<
             mandate_id: None,
             off_session: value.off_session,
             order_category: value.order_category,
-            session_token: value.session_token,
+            session_token: None,
             access_token,
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
             enrolled_for_3ds: value.enrolled_for_3ds,
             related_transaction_id: None,
-            payment_experience: match value.payment_experience {
-                Some(grpc_payment_types::PaymentExperience::Unspecified) | None => None,
-                Some(payment_experience) => Some(
-                    common_enums::PaymentExperience::foreign_try_from(payment_experience)?,
-                ),
-            },
+            payment_experience: None,
             customer_id: value
                 .customer
                 .and_then(|customer| customer.id)
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             request_incremental_authorization: value.request_incremental_authorization,
@@ -3344,9 +3318,7 @@ impl<
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
                 .transpose()?,
             merchant_order_id: value.merchant_order_id,
-            order_tax_amount: value
-                .order_tax_amount
-                .map(common_utils::types::MinorUnit::new),
+            order_tax_amount: None,
             shipping_cost,
             merchant_account_id,
             integrity_object: None,
@@ -3442,21 +3414,6 @@ impl<
             .billing_descriptor
             .map(|descriptor| BillingDescriptor::from((&descriptor, None, None)));
 
-        let payment_channel = value
-            .payment_channel
-            .map(grpc_payment_types::PaymentChannel::try_from)
-            .transpose()
-            .ok()
-            .flatten()
-            .filter(|channel| !matches!(channel, grpc_payment_types::PaymentChannel::Unspecified))
-            .map(common_enums::PaymentChannel::foreign_try_from)
-            .transpose()?;
-
-        let connector_testing_data = value
-            .connector_testing_data
-            .map(|m| ForeignTryFrom::foreign_try_from((m, "connector_testing_data")))
-            .transpose()?;
-
         Ok(Self {
             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             payment_method_data,
@@ -3497,7 +3454,7 @@ impl<
                     })
                 })?,
             )?,
-            request_incremental_authorization: value.request_incremental_authorization,
+            request_incremental_authorization: false,
             metadata: value
                 .metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
@@ -3506,7 +3463,9 @@ impl<
             capture_method: None,
             merchant_order_id: value.merchant_order_id,
             minor_amount: Some(common_utils::types::MinorUnit::new(amount.minor_amount)),
-            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
+            shipping_cost: value
+                .order_tax_amount
+                .map(common_utils::types::MinorUnit::new),
             customer_id: value
                 .customer
                 .and_then(|customer| customer.connector_customer_id)
@@ -3520,10 +3479,10 @@ impl<
                     },
                 })?,
             integrity_object: None,
-            payment_channel,
-            enable_partial_authorization: value.enable_partial_authorization,
+            payment_channel: None,
+            enable_partial_authorization: None,
             locale: value.locale.clone(),
-            connector_testing_data,
+            connector_testing_data: None,
         })
     }
 }
@@ -4125,10 +4084,11 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.connector_customer_id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid connector customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             connector_customer: value
@@ -4208,27 +4168,13 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: common_enums::AttemptStatus::Pending,
-            payment_method: PaymentMethod::foreign_try_from(
-                value.payment_method.clone().unwrap_or_default(),
-            )?,
+            payment_method: PaymentMethod::Card,
             address,
-            auth_type: common_enums::AuthenticationType::foreign_try_from(value.auth_type)?,
+            auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.merchant_transaction_id,
             ),
-            customer_id: value
-                .customer
-                .clone()
-                .and_then(|customer| customer.id)
-                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
-                .transpose()
-                .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
-                    },
-                })?,
+            customer_id: None,
             connector_customer: value
                 .customer
                 .and_then(|customer| customer.connector_customer_id),
@@ -4241,11 +4187,11 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             amount: None,
             access_token,
             session_token: value.session_token,
-            reference_id: value.merchant_order_id.clone(),
+            reference_id: None,
             connector_order_id: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: value.test_mode,
+            test_mode: None,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -4308,26 +4254,12 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             status: common_enums::AttemptStatus::Pending,
             payment_method: PaymentMethod::Card,
             address,
-            auth_type: common_enums::AuthenticationType::foreign_try_from(value.auth_type)?,
+            auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: extract_connector_request_reference_id(&Some(
                 value.merchant_recurring_payment_id.clone(),
             )),
-            customer_id: value
-                .customer
-                .clone()
-                .and_then(|customer| customer.id)
-                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
-                .transpose()
-                .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
-                    },
-                })?,
-            connector_customer: value
-                .customer
-                .and_then(|customer| customer.connector_customer_id),
+            customer_id: None,
+            connector_customer: None,
             description: None,
             return_url: value.return_url.clone(),
             connector_feature_data,
@@ -4336,9 +4268,9 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             minor_amount_capturable: None,
             amount: None,
             access_token,
-            session_token: value.session_token,
-            reference_id: value.order_id.clone(),
-            connector_order_id: value.order_id,
+            session_token: None,
+            reference_id: None,
+            connector_order_id: None,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -7927,10 +7859,16 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateClientAuthenticationToken
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "payment_context.customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some(
+                                "Invalid email format in payment context customer".to_string(),
+                            ),
+                            suggested_action: Some(
+                                "Provide a valid email address in payment_context.customer.email"
+                                    .to_string(),
+                            ),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -8505,10 +8443,11 @@ impl
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             connector_customer: value
@@ -8602,10 +8541,7 @@ impl
             status: common_enums::AttemptStatus::Pending,
             payment_method: PaymentMethod::Card,
             address,
-            auth_type: common_enums::AuthenticationType::foreign_try_from(
-                grpc_api_types::payments::AuthenticationType::try_from(value.auth_type)
-                    .unwrap_or_default(),
-            )?,
+            auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: value.merchant_recurring_payment_id,
             customer_id: value
                 .customer
@@ -8614,10 +8550,11 @@ impl
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             connector_customer: value
@@ -8676,10 +8613,13 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -8709,21 +8649,13 @@ impl<
 
         let setup_future_usage = value.setup_future_usage();
 
-        let payment_channel = match value.payment_channel() {
-            grpc_payment_types::PaymentChannel::Unspecified => None,
-            _ => Some(common_enums::PaymentChannel::foreign_try_from(
-                value.payment_channel(),
+        let setup_mandate_details = MandateData {
+            update_mandate_id: None,
+            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
             )?),
+            mandate_type: None,
         };
-
-        let mut setup_mandate_details = value
-            .setup_mandate_details
-            .map(MandateData::foreign_try_from)
-            .transpose()?
-            .unwrap_or_default();
-        setup_mandate_details.customer_acceptance = Some(
-            mandates::CustomerAcceptance::foreign_try_from(customer_acceptance.clone())?,
-        );
 
         let billing_descriptor =
             value
@@ -8737,6 +8669,13 @@ impl<
                     statement_descriptor_suffix: descriptor.statement_descriptor_suffix.clone(),
                     reference: descriptor.reference.clone(),
                 });
+
+        let payment_channel = match value.payment_channel() {
+            grpc_payment_types::PaymentChannel::Unspecified => None,
+            _ => Some(common_enums::PaymentChannel::foreign_try_from(
+                value.payment_channel(),
+            )?),
+        };
 
         Ok(Self {
             currency: amount.currency,
@@ -8770,16 +8709,16 @@ impl<
                 .map(<Option<common_enums::PaymentMethodType>>::foreign_try_from)
                 .transpose()?
                 .flatten(),
-            request_incremental_authorization: value.request_incremental_authorization,
+            request_incremental_authorization: false,
             metadata: value
                 .metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
                 .transpose()?,
-            complete_authorize_url: value.complete_authorize_url.clone(),
+            complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
             minor_amount: Some(amount.amount),
-            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
+            shipping_cost: None,
             customer_id: value
                 .customer
                 .and_then(|customer| customer.id)
@@ -8787,10 +8726,11 @@ impl<
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             billing_descriptor,
@@ -9027,10 +8967,11 @@ impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
             .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
             .transpose()
             .change_context(IntegrationError::InvalidDataFormat {
-                field_name: "unknown",
+                field_name: "customer.id",
                 context: IntegrationErrorContext {
                     additional_context: Some("Failed to parse Customer Id".to_string()),
-                    ..Default::default()
+                    suggested_action: Some("Provide a valid customer ID".to_string()),
+                    doc_url: None,
                 },
             })?;
 
@@ -9038,10 +8979,60 @@ impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
+                            doc_url: None,
+                        },
+                    })
+                })?)
+            }
+            None => None,
+        };
+
+        Ok(Self {
+            customer_id,
+            customer_email,
+            customer_name: value.name.clone().map(Into::into),
+            customer_phone_number: value.phone_number.clone().map(Into::into),
+            customer_phone_country_code: value.phone_country_code.clone(),
+        })
+    }
+}
+
+impl ForeignTryFrom<&grpc_api_types::payouts::Customer> for CustomerInfo {
+    type Error = IntegrationError;
+    fn foreign_try_from(
+        value: &grpc_api_types::payouts::Customer,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let customer_id = value
+            .id
+            .clone()
+            .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+            .transpose()
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "customer.id",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Failed to parse Customer Id".to_string()),
+                    suggested_action: Some("Provide a valid customer ID".to_string()),
+                    doc_url: None,
+                },
+            })?;
+
+        let customer_email: Option<Email> = match value.email {
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(IntegrationError::InvalidDataFormat {
+                        field_name: "customer.email",
+                        context: IntegrationErrorContext {
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -10370,10 +10361,11 @@ impl
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
+                    field_name: "customer.id",
                     context: IntegrationErrorContext {
                         additional_context: Some("Failed to parse Customer Id".to_string()),
-                        ..Default::default()
+                        suggested_action: Some("Provide a valid customer ID".to_string()),
+                        doc_url: None,
                     },
                 })?,
             connector_customer: value.customer.and_then(|c| c.id),
@@ -10645,10 +10637,13 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -11935,10 +11930,13 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -12034,10 +12032,13 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -12149,10 +12150,13 @@ impl<
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                     error_stack::Report::new(IntegrationError::InvalidDataFormat {
-                        field_name: "unknown",
+                        field_name: "customer.email",
                         context: IntegrationErrorContext {
-                            additional_context: Some("Invalid email".to_string()),
-                            ..Default::default()
+                            additional_context: Some("Invalid customer email format".to_string()),
+                            suggested_action: Some(
+                                "Provide a valid email address in customer.email".to_string(),
+                            ),
+                            doc_url: None,
                         },
                     })
                 })?)
@@ -13227,16 +13231,16 @@ pub fn tokenized_setup_recurring_to_base(
         customer_acceptance: v.customer_acceptance,
         setup_mandate_details: v.setup_mandate_details,
         setup_future_usage: v.setup_future_usage,
-        billing_descriptor: v.billing_descriptor,
-        locale: v.locale,
-        // Fields absent from TokenSetupRecurringRequest - set to None/default
+        // Fields not in TokenSetupRecurringRequest - set to None/default
         auth_type: grpc_payment_types::AuthenticationType::NoThreeDs as i32,
         authentication_data: None,
+        billing_descriptor: None,
         browser_info: None,
         complete_authorize_url: None,
         connector_testing_data: None,
         enable_partial_authorization: None,
         enrolled_for_3ds: false,
+        locale: None,
         l2_l3_data: None,
         merchant_order_id: None,
         off_session: None,
@@ -13321,12 +13325,10 @@ pub fn proxied_authorize_to_base(
         threeds_completion_indicator: v.threeds_completion_indicator,
         redirection_response: v.redirection_response,
         billing_descriptor: v.billing_descriptor,
-        setup_mandate_details: v.setup_mandate_details,
-        test_mode: v.test_mode,
         complete_authorize_url: None,
         continue_redirection_url: None,
         description: v.description,
-        // Fields absent from PaymentServiceProxyAuthorizeRequest - set to None/default
+        // Fields not present in PaymentServiceProxyAuthorizeRequest - set to None/default
         enrolled_for_3ds: None,
         enable_partial_authorization: None,
         locale: None,
@@ -13338,11 +13340,13 @@ pub fn proxied_authorize_to_base(
         order_category: v.order_category,
         order_details: Vec::new(),
         session_token: None,
-        shipping_cost: v.shipping_cost,
+        shipping_cost: None,
         order_tax_amount: None,
         statement_descriptor_name: None,
         statement_descriptor_suffix: None,
         tokenization_strategy: None,
+        setup_mandate_details: None,
+        test_mode: None,
     })
 }
 
@@ -13434,10 +13438,9 @@ pub fn proxied_setup_recurring_to_base(
         setup_mandate_details: v.setup_mandate_details,
         setup_future_usage: v.setup_future_usage,
         browser_info: v.browser_info,
-        auth_type: v.auth_type,
-        authentication_data: v.authentication_data,
-        order_category: v.order_category,
-        // Fields absent from ProxySetupRecurringRequest - set to None/default
+        // Fields not in ProxySetupRecurringRequest - set to None/default
+        auth_type: grpc_payment_types::AuthenticationType::NoThreeDs as i32,
+        authentication_data: None,
         billing_descriptor: None,
         connector_feature_data: None,
         connector_testing_data: None,
@@ -13448,6 +13451,7 @@ pub fn proxied_setup_recurring_to_base(
         l2_l3_data: None,
         merchant_order_id: None,
         off_session: None,
+        order_category: None,
         order_id: None,
         order_tax_amount: None,
         payment_channel: None,
