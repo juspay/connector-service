@@ -591,6 +591,20 @@ pub struct MitmProxy {
     pub ca_cert: Option<String>,
 }
 
+impl MitmProxy {
+    /// Returns the CA cert PEM if MITM is enabled and a non-empty cert is configured.
+    pub fn active_ca_cert(&self) -> Option<&str> {
+        if self.enabled {
+            self.ca_cert
+                .as_deref()
+                .filter(|c| !c.trim().is_empty())
+                .map(str::trim)
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, config_patch_derive::Patch)]
 pub struct Proxy {
     pub http_url: Option<String>,

@@ -1198,20 +1198,12 @@ fn get_client_builder(
         return Ok(client_builder);
     }
 
-    // In shadow mode, attach the MITM CA cert so the client trusts the MITM proxy's TLS cert.
-    if shadow_mode {
-        if let Some(mitm) = &proxy_config.mitm {
-            if mitm.enabled {
-                if let Some(cert_content) = &mitm.ca_cert {
-                    if !cert_content.trim().is_empty() {
-                        client_builder = load_custom_ca_certificate_from_content(
-                            client_builder,
-                            cert_content.trim(),
-                        )?;
-                    }
-                }
-            }
-        }
+    if let Some(cert) = shadow_mode
+        .then_some(proxy_config.mitm.as_ref())
+        .flatten()
+        .and_then(|m| m.active_ca_cert())
+    {
+        client_builder = load_custom_ca_certificate_from_content(client_builder, cert)?;
     }
 
     if let Some(url) = proxy_config.effective_https_url(shadow_mode) {
