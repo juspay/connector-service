@@ -1,0 +1,210 @@
+name: Release a stable SDK version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: "Version bump type (semver)"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: "Dry run — preview version and changelog without committing or publishing"
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  create-semver-tag:
+    name: Bump versions, tag, and create GitHub release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
+
+      - name: Install cocogitto
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cocogitto@6.3.0
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Compute next version
+        id: version
+        shell: bash
+        run: |
+          # Get current SemVer (cocogitto tracks it via cog.toml or falls back to latest v* tag)
+          PREVIOUS_TAG="$(cog get-version 2>/dev/null || git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null || echo 'v0.0.0')"
+          # Strip leading 'v' if present
+          PREVIOUS_TAG="v${PREVIOUS_TAG#v}"
+
+          # Compute next version using cocogitto dry-run (returns just the tag e.g. "v0.1.0")
+          NEXT_TAG="$(cog bump --dry-run "--${{ inputs.bump_type }}" 2>/dev/null)"
+
+          # Fallback: manual bump if cog can't compute (e.g. no conventional commits baseline)
+          if [ -z "$NEXT_TAG" ]; then
+            CURRENT="${PREVIOUS_TAG#v}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+            case "${{ inputs.bump_type }}" in
+              major) NEXT_TAG="v$((MAJOR+1)).0.0" ;;
+              minor) NEXT_TAG="v${MAJOR}.$((MINOR+1)).0" ;;
+              patch) NEXT_TAG="v${MAJOR}.${MINOR}.$((PATCH+1))" ;;
+            esac
+          fi
+
+          # Strip leading 'v' for version string used in manifest files
+          NEXT_VERSION="${NEXT_TAG#v}"
+
+          echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
+          echo "next_tag=${NEXT_TAG}"         >> "$GITHUB_OUTPUT"
+          echo "next_version=${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
+
+          echo "### Version Bump Preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| bump_type | \`${{ inputs.bump_type }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| previous  | \`${PREVIOUS_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| next      | \`${NEXT_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| dry_run   | \`${{ inputs.dry_run }}\` |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate release notes
+        id: changelog
+        shell: bash
+        run: |
+          PREVIOUS_TAG="${{ steps.version.outputs.previous_tag }}"
+          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
+          NOTES_FILE=".github/releases/${NEXT_TAG}.md"
+
+          # Use SemVer tag pattern so CalVer nightly tags are excluded
+          export GIT_CLIFF__GIT__TAG_PATTERN='v[0-9]*\.[0-9]*\.[0-9]*'
+
+          # If a hand-crafted release notes file already exists, use it as-is
+          if [ -f "${NOTES_FILE}" ]; then
+            echo "Using existing release notes: ${NOTES_FILE}"
+            cp "${NOTES_FILE}" release-notes.md
+          else
+            # Auto-generate from conventional commits between previous and HEAD
+            git-cliff \
+              --config '.github/git-cliff-changelog.toml' \
+              --strip header \
+              --tag "${NEXT_TAG}" \
+              "${PREVIOUS_TAG}^.." \
+              | sed "/## ${PREVIOUS_TAG}\$/,\$d" > release-notes.md
+          fi
+
+          echo "notes_file=release-notes.md" >> "$GITHUB_OUTPUT"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Release Notes Preview" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          head -60 release-notes.md >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Bump SDK manifest versions
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        run: |
+          NEXT_VERSION="${{ steps.version.outputs.next_version }}"
+
+          # npm
+          node -e "
+            const fs = require('fs');
+            const p = 'sdk/javascript/package.json';
+            const pkg = JSON.parse(fs.readFileSync(p));
+            pkg.version = '${NEXT_VERSION}';
+            fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          # PyPI
+          sed -i "s/^version = \".*\"/version = \"${NEXT_VERSION}\"/" sdk/python/pyproject.toml
+
+          # Maven — build.gradle.kts
+          sed -i "s/^version = \".*\"/version = \"${NEXT_VERSION}\"/" sdk/java/build.gradle.kts
+
+          # Maven — smoke-test dependency
+          sed -i "s/implementation(\"io.hyperswitch:prism:.*\")/implementation(\"io.hyperswitch:prism:${NEXT_VERSION}\")/" \
+            sdk/java/smoke-test/build.gradle.kts
+
+          # Maven — README badges and code snippets
+          sed -i "s/io.hyperswitch:prism:[0-9]*\.[0-9]*\.[0-9]*/io.hyperswitch:prism:${NEXT_VERSION}/g" \
+            sdk/java/README.md
+          sed -i "s/prism:[0-9]*\.[0-9]*\.[0-9]*/prism:${NEXT_VERSION}/g" \
+            sdk/java/README.md
+
+          echo "Bumped all SDK manifests to ${NEXT_VERSION}"
+          grep -n "version" sdk/javascript/package.json sdk/python/pyproject.toml sdk/java/build.gradle.kts | grep -v "//"
+
+      - name: Commit version bump
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        run: |
+          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
+          NEXT_VERSION="${{ steps.version.outputs.next_version }}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            sdk/javascript/package.json \
+            sdk/python/pyproject.toml \
+            sdk/java/build.gradle.kts \
+            sdk/java/smoke-test/build.gradle.kts \
+            sdk/java/README.md
+
+          git commit -m "chore(release): bump SDK versions to ${NEXT_VERSION} [skip ci]"
+          git push origin HEAD:main
+
+      - name: Create and push SemVer tag
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        run: |
+          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
+
+          git tag -a "${NEXT_TAG}" -m "Release ${NEXT_TAG}"
+          git push origin "${NEXT_TAG}"
+
+      - name: Create GitHub release
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
+        run: |
+          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
+
+          gh release create "${NEXT_TAG}" \
+            --title "${NEXT_TAG}" \
+            --notes-file release-notes.md \
+            --latest
+
+      - name: Next steps
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        run: |
+          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Next: Publish SDKs" >> "$GITHUB_STEP_SUMMARY"
+          echo "Trigger the **Release** workflow manually on tag \`${NEXT_TAG}\` with the SDKs you want to publish." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release notes artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
