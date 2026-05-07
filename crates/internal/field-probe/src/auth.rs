@@ -665,5 +665,9 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             juspay_public_key: s(),
             base_url: None,
         },
+        ConnectorEnum::Fiatepev => ConnectorSpecificConfig::Fiatepev {
+            api_key: k(),
+            base_url: None,
+        },
     }
 }

@@ -741,6 +741,10 @@ pub enum ConnectorSpecificConfig {
         juspay_public_key: Secret<String>,
         base_url: Option<String>,
     },
+    Fiatepev {
+        api_key: Secret<String>,
+        base_url: Option<String>,
+    },
 }
 
 impl ConnectorSpecificConfig {
@@ -1053,6 +1057,7 @@ impl ConnectorSpecificConfig {
                 client_id,
                 client_secret
             },
+            Fiatepev { api_key },
             Imerchantsolutions { api_key },
         )
     }
@@ -1458,6 +1463,7 @@ impl ConnectorSpecificConfig {
                     client_id,
                     client_secret
                 },
+                Fiatepev { api_key },
                 Imerchantsolutions { api_key },
             ),
             serde_json::Value::Object(connector_patch),
@@ -1986,6 +1992,10 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_salt: easebuzz.api_salt.ok_or_else(err)?,
                 base_url: easebuzz.base_url,
                 secondary_base_url: easebuzz.secondary_base_url,
+            }),
+            AuthType::Fiatepev(fiatepev) => Ok(Self::Fiatepev {
+                api_key: fiatepev.api_key.ok_or_else(err)?,
+                base_url: fiatepev.base_url,
             }),
             AuthType::Imerchantsolutions(imerchantsolutions) => Ok(Self::Imerchantsolutions {
                 api_key: imerchantsolutions.api_key.ok_or_else(err)?,
@@ -3029,6 +3039,13 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     client_secret: key1.clone(),
                     certificates: Some(api_secret.clone()),
                     private_key: Some(key2.clone()),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Fiatepev => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Fiatepev {
+                    api_key: api_key.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

@@ -255,3 +255,6 @@ pub mod juspay_upi_stack;
 
 pub mod axisbank;
 pub use self::axisbank::Axisbank;
+
+pub mod fiatepev;
+pub use self::fiatepev::Fiatepev;
