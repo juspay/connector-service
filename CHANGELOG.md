@@ -19,6 +19,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.07.0
+
+### Bug Fixes
+
+- **connector:** [Truelayer] Make phone details optional ([#1228](https://github.com/juspay/connector-service/pull/1228)) ([`9fa70a6`](https://github.com/juspay/connector-service/commit/9fa70a6f8512f69ebeeb63a7d6e70a854ed777c6))
+
+### Miscellaneous Tasks
+
+- Add blog about ffi ([#1209](https://github.com/juspay/connector-service/pull/1209)) ([`8bb216d`](https://github.com/juspay/connector-service/commit/8bb216d125b48d694552fe96b72d59d7b4d43b40))
+
+**Full Changelog:** [`2026.05.06.0...2026.05.07.0`](https://github.com/juspay/connector-service/compare/2026.05.06.0...2026.05.07.0)
+
+- - -
+
+## 2026.05.06.0
+
+### Features
+
+- **connector:**
+  - [iMerchant Solutions] Implement Payment and Refund Webhooks ([#1185](https://github.com/juspay/connector-service/pull/1185)) ([`aa4bc5d`](https://github.com/juspay/connector-service/commit/aa4bc5dbbe236a65734d4bd8867831302c7986b4))
+  - Implement CreateClientAuthenticationToken for Revolut ([#993](https://github.com/juspay/connector-service/pull/993)) ([`86d3b5e`](https://github.com/juspay/connector-service/commit/86d3b5e13ae455ab6bc6b667d328caead700cb7d))
+- **server:** Add config toggle for raw connector request/response storage ([#1199](https://github.com/juspay/connector-service/pull/1199)) ([`3da02a9`](https://github.com/juspay/connector-service/commit/3da02a9fd5d40cd7f422995a2530665431ed8af8))
+
+**Full Changelog:** [`2026.05.05.0...2026.05.06.0`](https://github.com/juspay/connector-service/compare/2026.05.05.0...2026.05.06.0)
+
+- - -
+
+## 2026.05.05.0
+
+### Features
+
+- **grace:** Add hardening workflow for connector test suite ([#1196](https://github.com/juspay/connector-service/pull/1196)) ([`cf39d28`](https://github.com/juspay/connector-service/commit/cf39d288a5fc7aa92ceb7ebf7e1928ad8784ec01))
+- **payouts:** Audit Itaubank for Production ([#1053](https://github.com/juspay/connector-service/pull/1053)) ([`d47a8d0`](https://github.com/juspay/connector-service/commit/d47a8d04d0338bba0719efec3e7cff8220df3f96))
+
+**Full Changelog:** [`2026.05.01.0...2026.05.05.0`](https://github.com/juspay/connector-service/compare/2026.05.01.0...2026.05.05.0)
+
+- - -
+
 ## 2026.05.01.0
 
 ### Features
