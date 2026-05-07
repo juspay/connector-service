@@ -134,7 +134,7 @@ export const prReviewCheckpoint: Checkpoint = {
         },
         cwd: ctx.task.projectRoot,
         label: "pr_review",
-        timeoutMs: 10 * 60 * 1000,
+        timeoutMs: 20 * 60 * 1000,
         allowWrite: true, // Grant full tool access to PR review agent
       });
     } catch (err) {
