@@ -101,7 +101,7 @@ Why does this matter? Because when converting from `MinorUnit` to whatever a pay
 
 ## The Adapter Layer
 
-Prism isn't a one-to-one integration — it's a library that speaks to many payment processors. Your application decides which connector to use; Prism handles the actual communication. That means the same `Money` value needs to become a Stripe request today, a Razorpay request tomorrow, or a PayPal request next week — each expecting a completely different amount format. That's the problem this layer solves.
+Prism isn't a one-to-one integration — it's a library that speaks to many payment processors. Your application decides which connector to use; Prism handles the actual communication. That means the same `Money` value needs to become a Stripe request today, an Adyen request tomorrow, or a PayPal request next week — each expecting a completely different amount format. That's the problem this layer solves.
 
 Here's where the design gets elegant. Prism doesn't pick one format and force every connector to deal with it. Instead, it uses a converter pattern — each connector declares exactly what format it needs, and the framework handles the translation automatically. One unified input; the right format per connector.
 
@@ -127,7 +127,7 @@ pub trait AmountConvertor: Send {
 Two directions: outbound (internal → connector format for the request) and inbound (connector format → internal, for parsing responses and webhooks). Each connector picks the converter it needs once, at initialization. Here's what that looks like in practice:
 
 ```rust
-// Stripe, Razorpay: integer minor units
+// Stripe, Adyen: integer minor units
 amount_converter: &MinorUnitForConnector
 
 // PayPal, Wells Fargo: string like "12.34"
