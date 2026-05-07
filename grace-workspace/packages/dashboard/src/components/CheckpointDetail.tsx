@@ -119,35 +119,35 @@ export function CheckpointDetail({
   const artifact = aKey ? artifacts[aKey] : undefined;
 
   // Retry history tracking - use global artifactHistory if available
-  const [selectedRetryAttempt, setSelectedRetryAttempt] = useState<number>(state.retries);
+  // Display is 1-based (Attempt 1, Attempt 2), internal storage is 0-based
+  const [selectedRetryAttempt, setSelectedRetryAttempt] = useState<number>(state.retries + 1);
 
   // Reset selected attempt when checkpoint changes or retries change externally
   useEffect(() => {
-    setSelectedRetryAttempt(state.retries);
+    setSelectedRetryAttempt(state.retries + 1); // Set to 1-based current attempt
   }, [checkpointId, state.retries]);
 
   // Get artifact history for this checkpoint from global state
   const checkpointHistory = artifactHistory?.[checkpointId] ?? {};
 
-  // Build list of retry attempts for the dropdown
+  // Build list of retry attempts for the dropdown (1-based display)
+  // Internal state uses 0-based, UI displays 1-based (Attempt 1, Attempt 2, etc.)
   const retryAttempts: RetryAttempt[] = (() => {
     const attempts: RetryAttempt[] = [];
-    const currentRetry = state.retries;
+    const currentRetry = state.retries; // 0 = first attempt, 1 = first retry, etc.
 
-    // Add all historical attempts from global history
+    // Add ALL historical attempts (Attempt 1 to Attempt currentRetry)
     for (let i = 0; i < currentRetry; i++) {
-      if (checkpointHistory[i] !== undefined) {
-        attempts.push({
-          attempt: i,
-          status: "failed", // Historical attempts are always failed (otherwise no retry would happen)
-          timestamp: new Date(Date.now() - (currentRetry - i) * 60000).toISOString(), // Estimate based on typical timing
-        });
-      }
+      attempts.push({
+        attempt: i + 1, // Display as 1-based
+        status: "failed",
+        timestamp: new Date(Date.now() - (currentRetry - i) * 60000).toISOString(),
+      });
     }
 
-    // Add current attempt
+    // Add current attempt (1-based: currentRetry + 1)
     attempts.push({
-      attempt: currentRetry,
+      attempt: currentRetry + 1,
       status: state.status === "running" ? "running" : state.status === "passed" ? "passed" : "failed",
       timestamp: new Date().toISOString(),
     });
@@ -156,9 +156,11 @@ export function CheckpointDetail({
   })();
 
   // Get the artifact to display based on selected retry attempt
-  const displayArtifact = selectedRetryAttempt === state.retries
-    ? artifact
-    : checkpointHistory[selectedRetryAttempt];
+  // Convert 1-based display selection to 0-based internal lookup
+  const internalAttemptIndex = selectedRetryAttempt - 1;
+  const displayArtifact = selectedRetryAttempt === (state.retries + 1)
+    ? artifact  // Current attempt uses current artifact
+    : checkpointHistory[internalAttemptIndex];
 
   const isTaskStep = checkpointId === "task";
   const isDesignGate = checkpointId === "design_gate";
@@ -282,11 +284,11 @@ export function CheckpointDetail({
       {(state.retries > 0 || Object.keys(checkpointHistory).length > 0) && (
         <section style={{ marginBottom: 16 }}>
           <RetryHistory
-            currentAttempt={state.retries}
+            currentAttempt={state.retries + 1}  // 1-based
             attempts={retryAttempts}
             selectedAttempt={selectedRetryAttempt}
             onSelectAttempt={setSelectedRetryAttempt}
-            onBackToCurrent={() => setSelectedRetryAttempt(state.retries)}
+            onBackToCurrent={() => setSelectedRetryAttempt(state.retries + 1)}  // 1-based
           />
         </section>
       )}
