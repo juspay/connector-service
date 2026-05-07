@@ -15,11 +15,9 @@ export const preflightCheckpoint: Checkpoint = {
       return { passed: false, errors: ["Missing task artifact"] };
     }
 
-    const paymentMethod = task.paymentMethod || "unknown";
-    const now = new Date();
-    const date = now.toISOString().split("T")[0].replace(/-/g, "");
-    const time = now.toTimeString().split(" ")[0].replace(/:/g, ""); // HHMMSS
-    const branchName = `feat/byne-${paymentMethod.toLowerCase()}-${date}-${time}`;
+    const connector = task.targetConnectors?.[0] || "unknown";
+    const flow = task.paymentMethod || "unknown";
+    const branchName = `feat/grace-${connector.toLowerCase()}-${flow.toLowerCase()}`;
 
     ctx.log("[preflight] Following Grace workflow: 1_orchestrator.md", "info");
     ctx.log(`[preflight] Creating branch: ${branchName}`, "info");

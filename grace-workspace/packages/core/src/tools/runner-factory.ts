@@ -37,6 +37,11 @@ export interface AIRunOptions {
   rawText?: boolean;
   /** Additional CLI arguments to pass to the runner. */
   extraArgs?: string[];
+  /**
+   * If true, the agent is allowed to use all tools including write and edit.
+   * Default is false (read-only tools).
+   */
+  allowWrite?: boolean;
 }
 
 /**
@@ -113,6 +118,7 @@ export async function runAI<T = unknown>(opts: AIRunOptions): Promise<T> {
       timeoutMs: opts.timeoutMs,
       rawText: opts.rawText,
       extraArgs: opts.extraArgs,
+      allowWrite: opts.allowWrite,
     };
     return runClaudeCode<T>(ccOpts);
   } else {

@@ -36,6 +36,11 @@ export interface ClaudeCodeRunOptions {
   rawText?: boolean;
   /** Additional CLI arguments to pass to claude. */
   extraArgs?: string[];
+  /**
+   * If true, the agent is allowed to use all tools including write and edit.
+   * Default is false (read-only tools).
+   */
+  allowWrite?: boolean;
 }
 
 function dbg(...args: unknown[]) {
@@ -119,21 +124,31 @@ export async function runClaudeCode<T = unknown>(
 ): Promise<T> {
   const absCwdEarly = path.resolve(opts.cwd);
 
-  const answerInstructions = opts.rawText
+  const answerInstructions = opts.allowWrite
     ? [
         "## How to return your answer",
         "",
-        "IMPORTANT: Do NOT use your write or edit tools to create any files. Do NOT create answer.json or any other output files. Just reply in chat with your final report as plain text (markdown is fine).",
+        "You have FULL TOOL ACCESS including Write and Edit. Use any tools necessary to complete your task.",
         "",
-        "Use your read tools (Read, Grep, Glob, Bash) to gather evidence BEFORE replying. Then reply with the report directly in your message.",
+        opts.rawText
+          ? "Reply with your final report as plain text (markdown is fine)."
+          : "Reply with ONLY the raw JSON object in your chat message. No markdown fences, no thinking out loud, no preamble. The very first character of your reply must be `{` and the very last must be `}`.",
       ]
-    : [
-        "## How to return your answer",
-        "",
-        "IMPORTANT: Do NOT use your write or edit tools to create any files. Do NOT create answer.json or any other output files. Do NOT write prose or explanation — reply with ONLY the raw JSON object in your chat message. No markdown fences, no thinking out loud, no preamble. The very first character of your reply must be `{` and the very last must be `}`.",
-        "",
-        "Use your read tools (Read, Grep, Glob, Bash) to gather evidence BEFORE replying. Then reply with ONLY the JSON.",
-      ];
+    : opts.rawText
+      ? [
+          "## How to return your answer",
+          "",
+          "IMPORTANT: Do NOT use your write or edit tools to create any files. Do NOT create answer.json or any other output files. Just reply in chat with your final report as plain text (markdown is fine).",
+          "",
+          "Use your read tools (Read, Grep, Glob, Bash) to gather evidence BEFORE replying. Then reply with the report directly in your message.",
+        ]
+      : [
+          "## How to return your answer",
+          "",
+          "IMPORTANT: Do NOT use your write or edit tools to create any files. Do NOT create answer.json or any other output files. Do NOT write prose or explanation — reply with ONLY the raw JSON object in your chat message. No markdown fences, no thinking out loud, no preamble. The very first character of your reply must be `{` and the very last must be `}`.",
+          "",
+          "Use your read tools (Read, Grep, Glob, Bash) to gather evidence BEFORE replying. Then reply with ONLY the JSON.",
+        ];
 
   const prompt = [
     opts.skillBody.trim(),
