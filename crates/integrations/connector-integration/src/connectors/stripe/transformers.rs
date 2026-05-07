@@ -356,6 +356,18 @@ pub struct StripeBoletoData {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeOxxoData {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeKonbiniData {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct StripePixData {
     #[serde(rename = "payment_method_data[type]")]
     pub payment_method_data_type: StripePaymentMethodType,
@@ -591,6 +603,8 @@ pub enum StripePaymentMethodData<
     BankDebit(StripeBankDebitData),
     BankTransfer(StripeBankTransferData),
     Voucher(StripeBoletoData),
+    VoucherOxxo(StripeOxxoData),
+    VoucherKonbini(StripeKonbiniData),
     BankTransferPix(StripePixData),
     RealTimePaymentPromptPay(StripePromptPayData),
 }
@@ -697,6 +711,7 @@ pub enum StripeWallet {
     Cashapp(CashappPayment),
     Swish(StripeSwishPayment),
     RevolutPay(RevolutpayPayment),
+    PaypalPayment(PaypalPayment),
     ApplePayPredecryptToken(Box<StripeApplePayPredecrypt>),
 }
 
@@ -753,6 +768,12 @@ pub struct RevolutpayPayment {
 }
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct AlipayPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct PaypalPayment {
     #[serde(rename = "payment_method_data[type]")]
     pub payment_method_data_type: StripePaymentMethodType,
 }
@@ -830,10 +851,13 @@ pub enum StripePaymentMethodType {
     Cashapp,
     RevolutPay,
     Boleto,
+    Oxxo,
+    Konbini,
     Pix,
     #[serde(rename = "promptpay")]
     PromptPay,
     Swish,
+    Paypal,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -873,21 +897,21 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             // Stripe expects PMT as Card for Recurring Mandates Payments
             common_enums::PaymentMethodType::GooglePay => Ok(Self::Card),
             common_enums::PaymentMethodType::Boleto => Ok(Self::Boleto),
+            common_enums::PaymentMethodType::Oxxo => Ok(Self::Oxxo),
             common_enums::PaymentMethodType::Pix => Ok(Self::Pix),
             common_enums::PaymentMethodType::Swish => Ok(Self::Swish),
             common_enums::PaymentMethodType::PromptPay => Ok(Self::PromptPay),
+            common_enums::PaymentMethodType::Paypal => Ok(Self::Paypal),
             common_enums::PaymentMethodType::CardRedirect
             | common_enums::PaymentMethodType::CryptoCurrency
             | common_enums::PaymentMethodType::Multibanco
             | common_enums::PaymentMethodType::OnlineBankingFpx
-            | common_enums::PaymentMethodType::Paypal
             | common_enums::PaymentMethodType::UpiCollect
             | common_enums::PaymentMethodType::UpiIntent
             | common_enums::PaymentMethodType::UpiQr
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
-            | common_enums::PaymentMethodType::SepaGuaranteedDebit
-            | common_enums::PaymentMethodType::Oxxo => Err(IntegrationError::NotImplemented(
+            | common_enums::PaymentMethodType::SepaGuaranteedDebit => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
                 Default::default(),
             )
@@ -1240,12 +1264,12 @@ fn get_stripe_payment_method_type_from_wallet_data(
         WalletData::SwishQr(_) => Ok(Some(StripePaymentMethodType::Swish)),
         WalletData::AmazonPayRedirect(_) => Ok(Some(StripePaymentMethodType::AmazonPay)),
         WalletData::RevolutPay(_) => Ok(Some(StripePaymentMethodType::RevolutPay)),
+        WalletData::PaypalRedirect(_) => Ok(Some(StripePaymentMethodType::Paypal)),
         WalletData::MobilePayRedirect(_) => Err(IntegrationError::NotImplemented(
             get_unimplemented_payment_method_error_message("stripe"),
             Default::default(),
         )),
-        WalletData::PaypalRedirect(_)
-        | WalletData::AliPayQr(_)
+        WalletData::AliPayQr(_)
         | WalletData::BluecodeRedirect {}
         | WalletData::AliPayHkRedirect(_)
         | WalletData::MomoRedirect(_)
@@ -1575,23 +1599,31 @@ fn create_stripe_payment_method<
                     payment_request_details.billing_address,
                 ))
             }
-            VoucherData::Oxxo => Err(IntegrationError::NotImplemented(
-                get_unimplemented_payment_method_error_message("stripe"),
-                Default::default(),
-            )
-            .into()),
+            VoucherData::Oxxo => Ok((
+                StripePaymentMethodData::VoucherOxxo(StripeOxxoData {
+                    payment_method_data_type: StripePaymentMethodType::Oxxo,
+                }),
+                Some(StripePaymentMethodType::Oxxo),
+                payment_request_details.billing_address,
+            )),
+            VoucherData::SevenEleven(_)
+            | VoucherData::Lawson(_)
+            | VoucherData::MiniStop(_)
+            | VoucherData::FamilyMart(_)
+            | VoucherData::Seicomart(_)
+            | VoucherData::PayEasy(_) => Ok((
+                StripePaymentMethodData::VoucherKonbini(StripeKonbiniData {
+                    payment_method_data_type: StripePaymentMethodType::Konbini,
+                }),
+                Some(StripePaymentMethodType::Konbini),
+                payment_request_details.billing_address,
+            )),
             VoucherData::Alfamart(_)
             | VoucherData::Efecty
             | VoucherData::PagoEfectivo
             | VoucherData::RedCompra
             | VoucherData::RedPagos
-            | VoucherData::Indomaret(_)
-            | VoucherData::SevenEleven(_)
-            | VoucherData::Lawson(_)
-            | VoucherData::MiniStop(_)
-            | VoucherData::FamilyMart(_)
-            | VoucherData::Seicomart(_)
-            | VoucherData::PayEasy(_) => Err(IntegrationError::NotImplemented(
+            | VoucherData::Indomaret(_) => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
                 Default::default(),
             )
@@ -1765,7 +1797,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
                 })))
             }
             WalletData::GooglePay(gpay_data) => Ok(Self::try_from(gpay_data)?),
-            WalletData::PaypalRedirect(_) | WalletData::MobilePayRedirect(_) => {
+            WalletData::PaypalRedirect(_) => {
+                Ok(Self::Wallet(StripeWallet::PaypalPayment(PaypalPayment {
+                    payment_method_data_type: StripePaymentMethodType::Paypal,
+                })))
+            }
+            WalletData::MobilePayRedirect(_) => {
                 Err(IntegrationError::NotImplemented(
                     get_unimplemented_payment_method_error_message("stripe"),
                     Default::default(),
@@ -2570,6 +2607,7 @@ pub enum StripePaymentMethodDetailsResponse {
     #[serde(rename = "wechat_pay")]
     Wechatpay,
     Alipay,
+    Paypal,
     CustomerBalance,
     RevolutPay,
 }
@@ -2620,6 +2658,7 @@ impl StripePaymentMethodDetailsResponse {
             | Self::Bacs
             | Self::Wechatpay
             | Self::Alipay
+            | Self::Paypal
             | Self::CustomerBalance
             | Self::RevolutPay
             | Self::Cashapp { .. } => None,
@@ -3008,6 +3047,34 @@ pub fn get_connector_metadata(
                 };
                 Some(voucher_data.encode_to_value())
             }
+            StripeNextActionResponse::OxxoDisplayDetails(response) => {
+                let voucher_data = VoucherNextStepData {
+                    entry_date: None,
+                    expires_at: response.expires_after,
+                    expiry_date: None,
+                    reference: response.number.clone(),
+                    download_url: None,
+                    instructions_url: response.hosted_voucher_url.clone(),
+                    digitable_line: None,
+                    barcode: None,
+                    qr_code_url: None,
+                };
+                Some(voucher_data.encode_to_value())
+            }
+            StripeNextActionResponse::KonbiniDisplayDetails(response) => {
+                let voucher_data = VoucherNextStepData {
+                    entry_date: None,
+                    expires_at: response.expires_at,
+                    expiry_date: None,
+                    reference: String::new(),
+                    download_url: None,
+                    instructions_url: response.hosted_voucher_url.clone(),
+                    digitable_line: None,
+                    barcode: None,
+                    qr_code_url: None,
+                };
+                Some(voucher_data.encode_to_value())
+            }
             StripeNextActionResponse::PixDisplayQrCode(response) => {
                 let voucher_data = VoucherNextStepData {
                     entry_date: None,
@@ -3085,6 +3152,7 @@ pub fn get_payment_method_id(
             | Some(StripePaymentMethodDetailsResponse::Bacs)
             | Some(StripePaymentMethodDetailsResponse::Wechatpay)
             | Some(StripePaymentMethodDetailsResponse::Alipay)
+            | Some(StripePaymentMethodDetailsResponse::Paypal)
             | Some(StripePaymentMethodDetailsResponse::CustomerBalance)
             | Some(StripePaymentMethodDetailsResponse::Cashapp { .. })
             | Some(StripePaymentMethodDetailsResponse::RevolutPay)
@@ -3328,6 +3396,19 @@ pub struct StripeBoletoDisplayDetails {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripeOxxoDisplayDetails {
+    pub number: String,
+    pub expires_after: Option<i64>,
+    pub hosted_voucher_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripeKonbiniDisplayDetails {
+    pub expires_at: Option<i64>,
+    pub hosted_voucher_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct StripePixDisplayQrCode {
     pub data: String,
     pub image_url_png: String,
@@ -3367,6 +3448,8 @@ pub enum StripeNextActionResponse {
     DisplayBankTransferInstructions(StripeBankTransferDetails),
     MultibancoDisplayDetails(MultibancoCreditTransferResponse),
     BoletoDisplayDetails(StripeBoletoDisplayDetails),
+    OxxoDisplayDetails(StripeOxxoDisplayDetails),
+    KonbiniDisplayDetails(StripeKonbiniDisplayDetails),
     PixDisplayQrCode(StripePixDisplayQrCode),
     PromptpayDisplayQrCode(StripePromptPayDisplayQrCode),
     SwishHandleRedirectOrDisplayQrCode(StripeSwishHandleRedirectOrDisplayQrCode),
@@ -3387,6 +3470,8 @@ impl StripeNextActionResponse {
             Self::DisplayBankTransferInstructions(_) => None,
             Self::MultibancoDisplayDetails(_) => None,
             Self::BoletoDisplayDetails(_) => None,
+            Self::OxxoDisplayDetails(_) => None,
+            Self::KonbiniDisplayDetails(_) => None,
             Self::PixDisplayQrCode(_) => None,
             Self::PromptpayDisplayQrCode(_) => None,
             Self::SwishHandleRedirectOrDisplayQrCode(_) => None,
@@ -3441,6 +3526,8 @@ impl Serialize for StripeNextActionResponse {
             Self::DisplayBankTransferInstructions(ref i) => Serialize::serialize(i, serializer),
             Self::MultibancoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::BoletoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
+            Self::OxxoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
+            Self::KonbiniDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::PixDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::PromptpayDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::SwishHandleRedirectOrDisplayQrCode(ref i) => {
@@ -3730,6 +3817,7 @@ pub enum StripePaymentMethodOptions {
     Bancontact {},
     WechatPay {},
     Alipay {},
+    Paypal {},
     #[serde(rename = "p24")]
     Przelewy24 {},
     CustomerBalance {},
