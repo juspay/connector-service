@@ -5,6 +5,7 @@ use grpc_api_types::{
     payments::{
         customer_service_client::CustomerServiceClient,
         dispute_service_client::DisputeServiceClient,
+        event_service_client::EventServiceClient,
         merchant_authentication_service_client::MerchantAuthenticationServiceClient,
         payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
         payment_method_service_client::PaymentMethodServiceClient,
@@ -71,6 +72,12 @@ impl AutoClient for RecurringPaymentServiceClient<Channel> {
 }
 
 impl AutoClient for DisputeServiceClient<Channel> {
+    fn new(channel: Channel) -> Self {
+        Self::new(channel)
+    }
+}
+
+impl AutoClient for EventServiceClient<Channel> {
     fn new(channel: Channel) -> Self {
         Self::new(channel)
     }
@@ -160,6 +167,12 @@ fn build_server(
         .add_service(
             grpc_api_types::payments::payment_method_authentication_service_server::PaymentMethodAuthenticationServiceServer::with_interceptor(
                 service.payment_method_authentication_service,
+                interceptor.clone(),
+            ),
+        )
+        .add_service(
+            grpc_api_types::payments::event_service_server::EventServiceServer::with_interceptor(
+                service.event_service,
                 interceptor.clone(),
             ),
         )
