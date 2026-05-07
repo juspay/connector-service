@@ -753,6 +753,7 @@ enum Connector {
   IMERCHANTSOLUTIONS = 118;
   AXISBANK = 119;
   EASEBUZZ = 120;
+  ABCDV2 = 121;
 }
 
 // Payment method types
@@ -4206,6 +4207,11 @@ message AxisbankConfig {
   optional string base_url = 50;
 }
 
+message Abcdv2Config {
+  SecretString api_key = 1;
+  optional string base_url = 50;
+}
+
 // ConnectorSpecificConfig message with oneof containing all connector
 // configurations. Comment above each field (e.g. "// PAYPAL = 62") is the
 // Connector enum value from this file;
@@ -4462,6 +4468,8 @@ message ConnectorSpecificConfig {
 
     // EASEBUZZ = 120
     EasebuzzConfig easebuzz = 120;
+    // ABCDV2 = 121
+    Abcdv2Config abcdv2 = 121;
   }
 }
 

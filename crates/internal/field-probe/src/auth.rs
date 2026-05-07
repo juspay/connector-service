@@ -665,5 +665,9 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             juspay_public_key: s(),
             base_url: None,
         },
+        ConnectorEnum::Abcdv2 => ConnectorSpecificConfig::Abcdv2 {
+            api_key: k(),
+            base_url: None,
+        },
     }
 }
