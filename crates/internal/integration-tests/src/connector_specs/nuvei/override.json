@@ -50,9 +50,12 @@
     "create_order_with_payment_method_type": {
       "assert": {
         "status": {
-          "one_of": ["PENDING"]
+          "one_of": ["AUTHENTICATION_PENDING"]
         },
-        "session_token": null
+        "session_token": null,
+        "session_data": {
+          "must_exist": true
+        }
       }
     }
   },
