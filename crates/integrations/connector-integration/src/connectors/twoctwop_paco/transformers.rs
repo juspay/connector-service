@@ -148,9 +148,12 @@ impl TryFrom<&ConnectorSpecificConfig> for TwoctwopPacoAuthType {
 // ---------- Common envelope shared by every JOSE request body ----------
 
 #[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApiRequestEnvelope {
+    /// PACO accepts only `requestMessageID` (capital ID) — serde's camelCase
+    /// would emit `requestMessageId`, which fails server-side validation.
+    #[serde(rename = "requestMessageID")]
     pub request_message_id: String,
+    #[serde(rename = "requestDateTime")]
     pub request_date_time: String,
     pub language: &'static str,
 }
@@ -218,15 +221,16 @@ impl PacoTransactionAmount {
 }
 
 #[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct PacoNotificationUrls {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// PACO field names suffix `URL` (capitalised) — serde's camelCase
+    /// would emit `confirmationUrl`, which fails server-side validation.
+    #[serde(rename = "confirmationURL", skip_serializing_if = "Option::is_none")]
     pub confirmation_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "failedURL", skip_serializing_if = "Option::is_none")]
     pub failed_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "cancellationURL", skip_serializing_if = "Option::is_none")]
     pub cancellation_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "backendURL", skip_serializing_if = "Option::is_none")]
     pub backend_url: Option<String>,
 }
 
@@ -234,6 +238,9 @@ pub struct PacoNotificationUrls {
 #[serde(rename_all = "camelCase")]
 pub struct PacoCreditCardDetails {
     pub card_number: Secret<String>,
+    /// PACO expects `cardExpiryMMYY` — serde camelCase would emit
+    /// `cardExpiryMmyy`, which fails server-side validation.
+    #[serde(rename = "cardExpiryMMYY")]
     pub card_expiry_mmyy: Secret<String>,
     pub cvv_code: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -252,9 +259,12 @@ pub struct TwoctwopPacoCardAuthorizeRequest {
     pub product_description: String,
     pub payment_type: &'static str,
     pub transaction_amount: PacoTransactionAmount,
+    /// PACO expects the plural-with-capitals form `notificationURLs`.
+    #[serde(rename = "notificationURLs")]
     pub notification_urls: PacoNotificationUrls,
     pub credit_card_details: PacoCreditCardDetails,
     /// "Y" / "N" — card-level 3DS toggle.
+    #[serde(rename = "request3dsFlag")]
     pub request3ds_flag: &'static str,
 }
 
@@ -269,6 +279,7 @@ pub struct TwoctwopPacoWalletAuthorizeRequest {
     pub product_description: String,
     pub payment_category: &'static str,
     pub transaction_amount: PacoTransactionAmount,
+    #[serde(rename = "notificationURLs")]
     pub notification_urls: PacoNotificationUrls,
     pub preferred_payment_types: Vec<&'static str>,
 }
@@ -470,6 +481,9 @@ pub struct TwoctwopPacoCaptureRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
     pub order_no: String,
+    /// PACO field is `invoiceNo2C2P` — serde camelCase would emit
+    /// `invoiceNo2c2p`, which fails server-side validation.
+    #[serde(rename = "invoiceNo2C2P")]
     pub invoice_no2c2p: String,
     pub settlement_amount: PacoSettlementAmount,
 }
@@ -506,6 +520,9 @@ pub struct TwoctwopPacoVoidRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
     pub order_no: String,
+    /// PACO field is `invoiceNo2C2P` — serde camelCase would emit
+    /// `invoiceNo2c2p`, which fails server-side validation.
+    #[serde(rename = "invoiceNo2C2P")]
     pub invoice_no2c2p: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cancellation_reason: Option<String>,
@@ -544,6 +561,9 @@ pub struct TwoctwopPacoRefundRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
     pub order_no: String,
+    /// PACO field is `invoiceNo2C2P` — serde camelCase would emit
+    /// `invoiceNo2c2p`, which fails server-side validation.
+    #[serde(rename = "invoiceNo2C2P")]
     pub invoice_no2c2p: String,
     pub product_description: String,
     pub refund_details: PacoRefundDetails,
@@ -680,7 +700,7 @@ pub struct PacoPaymentPage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoPaymentResultBlock {
-    #[serde(default)]
+    #[serde(default, rename = "invoiceNo2C2P")]
     pub invoice_no2c2p: Option<String>,
     #[serde(default)]
     pub order_no: Option<String>,
@@ -1100,8 +1120,32 @@ impl
 pub struct TwoctwopPacoInquiryResponse {
     #[serde(default)]
     pub api_response: Option<PacoApiResponse>,
-    #[serde(default)]
+    /// PACO returns `data` as a JSON array on `/Inquiry/transactionStatus`,
+    /// even when only one transaction matches. The accessor picks the
+    /// first entry.
+    #[serde(default, deserialize_with = "deserialize_inquiry_data")]
     pub data: Option<PacoInquiryData>,
+}
+
+fn deserialize_inquiry_data<'de, D>(
+    deserializer: D,
+) -> Result<Option<PacoInquiryData>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize as _;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Repr {
+        List(Vec<PacoInquiryData>),
+        Single(PacoInquiryData),
+        Null,
+    }
+    match Option::<Repr>::deserialize(deserializer)? {
+        Some(Repr::List(mut v)) => Ok(v.drain(..).next()),
+        Some(Repr::Single(d)) => Ok(Some(d)),
+        Some(Repr::Null) | None => Ok(None),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1109,7 +1153,7 @@ pub struct TwoctwopPacoInquiryResponse {
 pub struct PacoInquiryData {
     #[serde(default)]
     pub payment_status_info: Option<PacoPaymentStatusInfo>,
-    #[serde(default)]
+    #[serde(default, rename = "invoiceNo2C2P")]
     pub invoice_no2c2p: Option<String>,
     #[serde(default)]
     pub order_no: Option<String>,
