@@ -362,6 +362,12 @@ pub struct StripePixData {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripePromptPayData {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct TokenRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(flatten)]
     pub token_data: StripePaymentMethodData<T>,
@@ -586,6 +592,7 @@ pub enum StripePaymentMethodData<
     BankTransfer(StripeBankTransferData),
     Voucher(StripeBoletoData),
     BankTransferPix(StripePixData),
+    RealTimePaymentPromptPay(StripePromptPayData),
 }
 
 #[serde_with::skip_serializing_none]
@@ -824,6 +831,8 @@ pub enum StripePaymentMethodType {
     RevolutPay,
     Boleto,
     Pix,
+    #[serde(rename = "promptpay")]
+    PromptPay,
     Swish,
 }
 
@@ -866,6 +875,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             common_enums::PaymentMethodType::Boleto => Ok(Self::Boleto),
             common_enums::PaymentMethodType::Pix => Ok(Self::Pix),
             common_enums::PaymentMethodType::Swish => Ok(Self::Swish),
+            common_enums::PaymentMethodType::PromptPay => Ok(Self::PromptPay),
             common_enums::PaymentMethodType::CardRedirect
             | common_enums::PaymentMethodType::CryptoCurrency
             | common_enums::PaymentMethodType::Multibanco
@@ -949,7 +959,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::Walley
             | common_enums::PaymentMethodType::Fps
             | common_enums::PaymentMethodType::DuitNow
-            | common_enums::PaymentMethodType::PromptPay
             | common_enums::PaymentMethodType::VietQr
             | common_enums::PaymentMethodType::NetworkToken
             | common_enums::PaymentMethodType::Mifinity
@@ -1589,8 +1598,28 @@ fn create_stripe_payment_method<
             .into()),
         },
 
+        PaymentMethodData::RealTimePayment(real_time_payment_data) => {
+            match real_time_payment_data.deref() {
+                payment_method_data::RealTimePaymentData::PromptPay {} => Ok((
+                    StripePaymentMethodData::RealTimePaymentPromptPay(StripePromptPayData {
+                        payment_method_data_type: StripePaymentMethodType::PromptPay,
+                    }),
+                    Some(StripePaymentMethodType::PromptPay),
+                    payment_request_details.billing_address,
+                )),
+                payment_method_data::RealTimePaymentData::DuitNow {}
+                | payment_method_data::RealTimePaymentData::Fps {}
+                | payment_method_data::RealTimePaymentData::VietQr {} => {
+                    Err(IntegrationError::NotImplemented(
+                        get_unimplemented_payment_method_error_message("stripe"),
+                        Default::default(),
+                    )
+                    .into())
+                }
+            }
+        }
+
         PaymentMethodData::Upi(_)
-        | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
         | PaymentMethodData::MandatePayment
         | PaymentMethodData::OpenBanking(_)
@@ -2993,6 +3022,20 @@ pub fn get_connector_metadata(
                 };
                 Some(voucher_data.encode_to_value())
             }
+            StripeNextActionResponse::PromptpayDisplayQrCode(response) => {
+                let voucher_data = VoucherNextStepData {
+                    entry_date: None,
+                    expires_at: None,
+                    expiry_date: None,
+                    reference: response.data.clone(),
+                    download_url: None,
+                    instructions_url: response.hosted_instructions_url.clone(),
+                    digitable_line: None,
+                    barcode: None,
+                    qr_code_url: Some(response.image_url_png.clone()),
+                };
+                Some(voucher_data.encode_to_value())
+            }
             StripeNextActionResponse::SwishHandleRedirectOrDisplayQrCode(response) => {
                 let qr_code_info = QrCodeInformation::QrCodeUrl {
                     image_data_url: response.qr_code.image_url_png.to_owned(),
@@ -3294,6 +3337,13 @@ pub struct StripePixDisplayQrCode {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripePromptPayDisplayQrCode {
+    pub data: String,
+    pub image_url_png: String,
+    pub hosted_instructions_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct StripeSwishQrCode {
     pub data: String,
     pub image_url_png: Url,
@@ -3318,6 +3368,7 @@ pub enum StripeNextActionResponse {
     MultibancoDisplayDetails(MultibancoCreditTransferResponse),
     BoletoDisplayDetails(StripeBoletoDisplayDetails),
     PixDisplayQrCode(StripePixDisplayQrCode),
+    PromptpayDisplayQrCode(StripePromptPayDisplayQrCode),
     SwishHandleRedirectOrDisplayQrCode(StripeSwishHandleRedirectOrDisplayQrCode),
     NoNextActionBody,
 }
@@ -3337,6 +3388,7 @@ impl StripeNextActionResponse {
             Self::MultibancoDisplayDetails(_) => None,
             Self::BoletoDisplayDetails(_) => None,
             Self::PixDisplayQrCode(_) => None,
+            Self::PromptpayDisplayQrCode(_) => None,
             Self::SwishHandleRedirectOrDisplayQrCode(_) => None,
             Self::NoNextActionBody => None,
         }
@@ -3390,6 +3442,7 @@ impl Serialize for StripeNextActionResponse {
             Self::MultibancoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::BoletoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::PixDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
+            Self::PromptpayDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::SwishHandleRedirectOrDisplayQrCode(ref i) => {
                 Serialize::serialize(i, serializer)
             }
@@ -4762,10 +4815,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .into())
                 }
             },
+            PaymentMethodData::RealTimePayment(real_time_payment_data) => {
+                match real_time_payment_data.deref() {
+                    payment_method_data::RealTimePaymentData::PromptPay {} => {
+                        Ok(Self::RealTimePaymentPromptPay(StripePromptPayData {
+                            payment_method_data_type: StripePaymentMethodType::PromptPay,
+                        }))
+                    }
+                    payment_method_data::RealTimePaymentData::DuitNow {}
+                    | payment_method_data::RealTimePaymentData::Fps {}
+                    | payment_method_data::RealTimePaymentData::VietQr {} => {
+                        Err(IntegrationError::NotImplemented(
+                            get_unimplemented_payment_method_error_message("stripe"),
+                            Default::default(),
+                        )
+                        .into())
+                    }
+                }
+            }
             PaymentMethodData::MandatePayment
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::Reward
-            | PaymentMethodData::RealTimePayment(_)
             | PaymentMethodData::MobilePayment(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::Upi(_)
