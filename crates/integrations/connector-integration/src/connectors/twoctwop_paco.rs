@@ -947,6 +947,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// ---------- 3DS trio ----------
+//
+// PACO is native 3DS. The handshake collapses into:
+//   PreAuthenticate (no-op — PACO has no DDC step)
+//   Authenticate    (POST /Payment/nonUi with request3dsFlag=Y → ACS challenge or CAVV)
+//   PostAuthenticate (GET /Inquiry/transactionStatus to confirm completion)
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
@@ -955,6 +962,52 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for TwoctwopPaco<T>
 {
+    // No build_request_v2: PACO has no DDC step. Returning None from the
+    // default implementation tells the orchestrator there is no network call,
+    // and handle_response_v2 below shapes the response router data.
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<
+            PreAuthenticate,
+            PaymentFlowData,
+            PaymentsPreAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::IntegrationError> {
+        tracing::debug!("twoctwop_paco: PreAuthenticate is a no-op (no DDC step)");
+        Ok(None)
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            PreAuthenticate,
+            PaymentFlowData,
+            PaymentsPreAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        _event_builder: Option<&mut events::Event>,
+        _res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            PreAuthenticate,
+            PaymentFlowData,
+            PaymentsPreAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        Ok(transformers::build_preauthenticate_passthrough(data))
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+        connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder, connector_config)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -965,6 +1018,98 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for TwoctwopPaco<T>
 {
+    fn get_http_method(&self) -> common_utils::request::Method {
+        common_utils::request::Method::Post
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        CONTENT_TYPE_JOSE
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+        connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder, connector_config)
+    }
+
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<
+            Authenticate,
+            PaymentFlowData,
+            PaymentsAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::IntegrationError> {
+        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
+        let body = transformers::build_authenticate_request(req, &auth)?;
+        let base_url = self.connector_base_url_payments(req);
+        let url = format!("{base_url}/api/2.0/Payment/nonUi");
+        let headers = self.build_jose_headers(&auth);
+        tracing::debug!(url = %url, "twoctwop_paco: Authenticate request built");
+        build_jose_request(
+            url,
+            common_utils::request::Method::Post,
+            &auth,
+            body,
+            headers,
+        )
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            Authenticate,
+            PaymentFlowData,
+            PaymentsAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            Authenticate,
+            PaymentFlowData,
+            PaymentsAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        let auth = TwoctwopPacoAuthType::try_from(&data.connector_config).change_context(
+            errors::ConnectorError::response_deserialization_failed_with_context(
+                res.status_code,
+                Some("twoctwop_paco: failed to read auth config for response decoding".to_string()),
+            ),
+        )?;
+        let parsed: TwoctwopPacoNonUiResponse =
+            transformers::decode_jose_response(&res.response, res.status_code, &auth)?;
+        with_error_response_body!(event_builder, parsed);
+
+        let router_data = <ResponseRouterData<
+            TwoctwopPacoNonUiResponse,
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        > as TryInto<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        >>::try_into(ResponseRouterData {
+            response: parsed,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })?;
+        Ok(router_data)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -975,6 +1120,142 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for TwoctwopPaco<T>
 {
+    fn get_http_method(&self) -> common_utils::request::Method {
+        common_utils::request::Method::Get
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        CONTENT_TYPE_JSON
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+        connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder, connector_config)
+    }
+
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            PostAuthenticate,
+            PaymentFlowData,
+            PaymentsPostAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
+        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
+        Ok(self.build_inquiry_headers(&auth))
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            PostAuthenticate,
+            PaymentFlowData,
+            PaymentsPostAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, errors::IntegrationError> {
+        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
+        let base_url = self.connector_base_url_payments(req);
+        let order_no = req
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+        Ok(format!(
+            "{base_url}/api/2.0/Inquiry/transactionStatus?merchantId={}&orderNo={}",
+            urlencoding::encode(auth.merchant_id.peek()),
+            urlencoding::encode(&order_no),
+        ))
+    }
+
+    fn build_request_v2(
+        &self,
+        req: &RouterDataV2<
+            PostAuthenticate,
+            PaymentFlowData,
+            PaymentsPostAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::Request>, errors::IntegrationError> {
+        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
+        let url = self.get_url(req)?;
+        let headers = self.build_inquiry_headers(&auth);
+        tracing::debug!(url = %url, "twoctwop_paco: PostAuthenticate inquiry request built");
+        Ok(Some(
+            common_utils::request::RequestBuilder::new()
+                .method(common_utils::request::Method::Get)
+                .url(&url)
+                .attach_default_headers()
+                .headers(headers)
+                .build(),
+        ))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            PostAuthenticate,
+            PaymentFlowData,
+            PaymentsPostAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            PostAuthenticate,
+            PaymentFlowData,
+            PaymentsPostAuthenticateData<T>,
+            PaymentsResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        let parsed: TwoctwopPacoInquiryResponse = if res.response.is_empty() {
+            serde_json::from_str("{}").change_context(
+                errors::ConnectorError::response_deserialization_failed_with_context(
+                    res.status_code,
+                    Some("twoctwop_paco PostAuthenticate: empty response".to_string()),
+                ),
+            )?
+        } else {
+            serde_json::from_slice(&res.response).change_context(
+                errors::ConnectorError::response_deserialization_failed_with_context(
+                    res.status_code,
+                    Some(
+                        "twoctwop_paco PostAuthenticate: response shape mismatch on Inquiry endpoint"
+                            .to_string(),
+                    ),
+                ),
+            )?
+        };
+        with_error_response_body!(event_builder, parsed);
+
+        let router_data = <ResponseRouterData<
+            TwoctwopPacoInquiryResponse,
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        > as TryInto<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+        >>::try_into(ResponseRouterData {
+            response: parsed,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })?;
+        Ok(router_data)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
