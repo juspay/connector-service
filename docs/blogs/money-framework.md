@@ -63,7 +63,7 @@ Amount and currency are never separate. They travel together, always. You cannot
 pub struct MinorUnit(pub i64);
 ```
 
-A 64-bit signed integer, wrapped in a named type so the compiler won't let you confuse it with a raw number, a float, or a string. The "minor unit" is the smallest subdivision of the currency — cents for USD, paise for INR, fils for KWD.
+A 64-bit signed integer, wrapped in a named type so the compiler won't let you confuse it with a raw number, a float, or a string. The "minor unit" is the smallest subdivision of the currency — cents for USD, euro-cents for EUR, yen for JPY (which has no subdivision).
 
 **What "minor units" means across currencies:**
 
@@ -82,7 +82,7 @@ Same struct. Radically different real-world values — because currency is alway
 
 One thing that surprises people: different currencies have different numbers of decimal places, governed by [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217) (the international standard for currency codes).
 
-Prism categorizes currencies into four groups:
+ISO 4217 defines the number of decimal places for every currency. Prism implements this classification into four groups:
 
 **Zero-decimal currencies** — no subdivision. The amount you send is the final amount:
 JPY, KRW, VND, and about a dozen others. `Money { amount: 1000, currency: JPY }` is ¥1,000 — not ¥10.00, there's no such thing.
@@ -214,7 +214,7 @@ The payment world learned these lessons through production incidents. But the pr
 
 ---
 
-## Practical Advice if You're Building Something Similar
+## Practical Advice
 
 - **Store amounts as integers in your database.** Never floats. `5999`, not `59.99`.
 - **Use a dedicated type.** Don't pass raw `i64` around — wrap it so the type system can help you.
