@@ -16,12 +16,13 @@ use domain_types::{
     },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecificClientAuthenticationResponse, MandateReference,
+        ConnectorCustomerResponse, ConnectorSpecificClientAuthenticationResponse,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, MandateReference,
         MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
         StripeClientAuthenticationResponse as StripeClientAuthenticationResponseDomain,
     },
     errors::{ConnectorError, IntegrationError},
@@ -458,6 +459,7 @@ pub enum StripeBankRedirectData {
     StripeEps(Box<StripeEps>),
     StripeBlik(Box<StripeBlik>),
     StripeOnlineBankingFpx(Box<StripeOnlineBankingFpx>),
+    StripePayByBank(Box<StripePayByBank>),
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -506,6 +508,12 @@ pub struct StripeBlik {
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct StripeOnlineBankingFpx {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripePayByBank {
     #[serde(rename = "payment_method_data[type]")]
     pub payment_method_data_type: StripePaymentMethodType,
 }
@@ -708,6 +716,10 @@ pub enum StripeWallet {
     AmazonpayPayment(AmazonpayPayment),
     WechatpayPayment(WechatpayPayment),
     AlipayPayment(AlipayPayment),
+    MobilepayPayment(MobilepayPayment),
+    TwintPayment(TwintPayment),
+    SatispayPayment(SatispayPayment),
+    WeroPayment(WeroPayment),
     Cashapp(CashappPayment),
     Swish(StripeSwishPayment),
     RevolutPay(RevolutpayPayment),
@@ -768,6 +780,30 @@ pub struct RevolutpayPayment {
 }
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct AlipayPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct MobilepayPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct TwintPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct SatispayPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct WeroPayment {
     #[serde(rename = "payment_method_data[type]")]
     pub payment_method_data_type: StripePaymentMethodType,
 }
@@ -858,6 +894,12 @@ pub enum StripePaymentMethodType {
     PromptPay,
     Swish,
     Paypal,
+    Mobilepay,
+    Twint,
+    Satispay,
+    Wero,
+    #[serde(rename = "pay_by_bank")]
+    PayByBank,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -902,6 +944,11 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             common_enums::PaymentMethodType::Swish => Ok(Self::Swish),
             common_enums::PaymentMethodType::PromptPay => Ok(Self::PromptPay),
             common_enums::PaymentMethodType::Paypal => Ok(Self::Paypal),
+            common_enums::PaymentMethodType::MobilePay => Ok(Self::Mobilepay),
+            common_enums::PaymentMethodType::Twint => Ok(Self::Twint),
+            common_enums::PaymentMethodType::Satispay => Ok(Self::Satispay),
+            common_enums::PaymentMethodType::Wero => Ok(Self::Wero),
+            common_enums::PaymentMethodType::OpenBankingUk => Ok(Self::PayByBank),
             common_enums::PaymentMethodType::CardRedirect
             | common_enums::PaymentMethodType::CryptoCurrency
             | common_enums::PaymentMethodType::Multibanco
@@ -932,7 +979,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::KakaoPay
             | common_enums::PaymentMethodType::LocalBankRedirect
             | common_enums::PaymentMethodType::MbWay
-            | common_enums::PaymentMethodType::MobilePay
             | common_enums::PaymentMethodType::Momo
             | common_enums::PaymentMethodType::MomoAtm
             | common_enums::PaymentMethodType::OnlineBankingThailand
@@ -940,7 +986,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::OnlineBankingFinland
             | common_enums::PaymentMethodType::OnlineBankingPoland
             | common_enums::PaymentMethodType::OnlineBankingSlovakia
-            | common_enums::PaymentMethodType::OpenBankingUk
             | common_enums::PaymentMethodType::OpenBanking
             | common_enums::PaymentMethodType::OpenBankingPIS
             | common_enums::PaymentMethodType::PagoEfectivo
@@ -951,7 +996,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::SamsungPay
             | common_enums::PaymentMethodType::TouchNGo
             | common_enums::PaymentMethodType::Trustly
-            | common_enums::PaymentMethodType::Twint
             | common_enums::PaymentMethodType::Vipps
             | common_enums::PaymentMethodType::Venmo
             | common_enums::PaymentMethodType::Alfamart
@@ -986,8 +1030,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::VietQr
             | common_enums::PaymentMethodType::NetworkToken
             | common_enums::PaymentMethodType::Mifinity
-            | common_enums::PaymentMethodType::Satispay
-            | common_enums::PaymentMethodType::Wero
             | common_enums::PaymentMethodType::LazyPay
             | common_enums::PaymentMethodType::PhonePe
             | common_enums::PaymentMethodType::BillDesk
@@ -1228,6 +1270,7 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             BankRedirectData::Przelewy24 { .. } => Ok(Self::Przelewy24),
             BankRedirectData::Eps { .. } => Ok(Self::Eps),
             BankRedirectData::Blik { .. } => Ok(Self::Blik),
+            BankRedirectData::OpenBankingUk { .. } => Ok(Self::PayByBank),
             BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
                 Default::default(),
@@ -1240,7 +1283,6 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             | BankRedirectData::OnlineBankingPoland { .. }
             | BankRedirectData::OnlineBankingSlovakia { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
-            | BankRedirectData::OpenBankingUk { .. }
             | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::OpenBanking {}
@@ -1265,10 +1307,10 @@ fn get_stripe_payment_method_type_from_wallet_data(
         WalletData::AmazonPayRedirect(_) => Ok(Some(StripePaymentMethodType::AmazonPay)),
         WalletData::RevolutPay(_) => Ok(Some(StripePaymentMethodType::RevolutPay)),
         WalletData::PaypalRedirect(_) => Ok(Some(StripePaymentMethodType::Paypal)),
-        WalletData::MobilePayRedirect(_) => Err(IntegrationError::NotImplemented(
-            get_unimplemented_payment_method_error_message("stripe"),
-            Default::default(),
-        )),
+        WalletData::MobilePayRedirect(_) => Ok(Some(StripePaymentMethodType::Mobilepay)),
+        WalletData::TwintRedirect {} => Ok(Some(StripePaymentMethodType::Twint)),
+        WalletData::Satispay(_) => Ok(Some(StripePaymentMethodType::Satispay)),
+        WalletData::Wero(_) => Ok(Some(StripePaymentMethodType::Wero)),
         WalletData::AliPayQr(_)
         | WalletData::BluecodeRedirect {}
         | WalletData::AliPayHkRedirect(_)
@@ -1285,14 +1327,11 @@ fn get_stripe_payment_method_type_from_wallet_data(
         | WalletData::PaypalSdk(_)
         | WalletData::Paze(_)
         | WalletData::SamsungPay(_)
-        | WalletData::TwintRedirect {}
         | WalletData::VippsRedirect {}
         | WalletData::TouchNGoRedirect(_)
         | WalletData::WeChatPayRedirect(_)
         | WalletData::Mifinity(_)
         | WalletData::MbWay(_)
-        | WalletData::Satispay(_)
-        | WalletData::Wero(_)
         | WalletData::LazyPayRedirect(_)
         | WalletData::PhonePeRedirect(_)
         | WalletData::BillDeskRedirect(_)
@@ -1803,11 +1842,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
                 })))
             }
             WalletData::MobilePayRedirect(_) => {
-                Err(IntegrationError::NotImplemented(
-                    get_unimplemented_payment_method_error_message("stripe"),
-                    Default::default(),
-                )
-                .into())
+                Ok(Self::Wallet(StripeWallet::MobilepayPayment(MobilepayPayment {
+                    payment_method_data_type: StripePaymentMethodType::Mobilepay,
+                })))
+            }
+            WalletData::TwintRedirect {} => {
+                Ok(Self::Wallet(StripeWallet::TwintPayment(TwintPayment {
+                    payment_method_data_type: StripePaymentMethodType::Twint,
+                })))
+            }
+            WalletData::Satispay(_) => {
+                Ok(Self::Wallet(StripeWallet::SatispayPayment(SatispayPayment {
+                    payment_method_data_type: StripePaymentMethodType::Satispay,
+                })))
+            }
+            WalletData::Wero(_) => {
+                Ok(Self::Wallet(StripeWallet::WeroPayment(WeroPayment {
+                    payment_method_data_type: StripePaymentMethodType::Wero,
+                })))
             }
             WalletData::AliPayQr(_)
             | WalletData::BluecodeRedirect {}
@@ -1825,14 +1877,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             | WalletData::PaypalSdk(_)
             | WalletData::Paze(_)
             | WalletData::SamsungPay(_)
-            | WalletData::TwintRedirect {}
             | WalletData::VippsRedirect {}
             | WalletData::TouchNGoRedirect(_)
             | WalletData::WeChatPayRedirect(_)
             | WalletData::Mifinity(_)
             | WalletData::MbWay(_)
-            | WalletData::Satispay(_)
-            | WalletData::Wero(_)
             | WalletData::LazyPayRedirect(_)
             | WalletData::PhonePeRedirect(_)
             | WalletData::BillDeskRedirect(_)
@@ -1905,6 +1954,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     })),
                 ))
             }
+            BankRedirectData::OpenBankingUk { .. } => Ok(Self::BankRedirect(
+                StripeBankRedirectData::StripePayByBank(Box::new(StripePayByBank {
+                    payment_method_data_type,
+                })),
+            )),
             BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
                 Default::default(),
@@ -1918,7 +1972,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | BankRedirectData::OnlineBankingPoland { .. }
             | BankRedirectData::OnlineBankingSlovakia { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
-            | BankRedirectData::OpenBankingUk { .. }
             | BankRedirectData::Sofort { .. }
             | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
@@ -5714,5 +5767,375 @@ impl TryFrom<ResponseRouterData<StripeClientAuthResponse, Self>>
             }),
             ..item.router_data
         })
+    }
+}
+
+pub fn map_webhook_event_to_event_type(
+    event_type: &WebhookEventType,
+    status: &Option<WebhookEventStatus>,
+) -> domain_types::connector_types::EventType {
+    use domain_types::connector_types::EventType;
+    match event_type {
+        WebhookEventType::PaymentIntentSucceed => EventType::PaymentIntentSuccess,
+        WebhookEventType::PaymentIntentFailed => EventType::PaymentIntentFailure,
+        WebhookEventType::PaymentIntentCanceled => EventType::PaymentIntentCancelled,
+        WebhookEventType::PaymentIntentProcessing | WebhookEventType::PaymentIntentCreated => {
+            EventType::PaymentIntentProcessing
+        }
+        WebhookEventType::PaymentIntentRequiresAction => EventType::PaymentActionRequired,
+        WebhookEventType::PaymentIntentAmountCapturableUpdated => {
+            EventType::PaymentIntentAuthorizationSuccess
+        }
+        WebhookEventType::PaymentIntentPartiallyFunded => EventType::PaymentIntentPartiallyFunded,
+        WebhookEventType::ChargeSucceeded | WebhookEventType::ChargeCaptured => {
+            EventType::PaymentIntentSuccess
+        }
+        WebhookEventType::ChargeFailed => EventType::PaymentIntentFailure,
+        WebhookEventType::ChargePending => EventType::PaymentIntentProcessing,
+        WebhookEventType::ChargeExpired => EventType::PaymentIntentExpired,
+        WebhookEventType::ChargeUpdated => EventType::Payment,
+        WebhookEventType::ChargeRefunded => EventType::RefundSuccess,
+        WebhookEventType::ChargeRefundUpdated => match status {
+            Some(WebhookEventStatus::Failed) => EventType::RefundFailure,
+            Some(WebhookEventStatus::Succeeded) => EventType::RefundSuccess,
+            _ => EventType::Refund,
+        },
+        WebhookEventType::DisputeCreated => EventType::DisputeOpened,
+        WebhookEventType::DisputeUpdated => EventType::DisputeChallenged,
+        WebhookEventType::DisputeClosed => match status {
+            Some(WebhookEventStatus::Won) | Some(WebhookEventStatus::WarningClosed) => {
+                EventType::DisputeWon
+            }
+            Some(WebhookEventStatus::Lost) | Some(WebhookEventStatus::ChargeRefunded) => {
+                EventType::DisputeLost
+            }
+            _ => EventType::DisputeExpired,
+        },
+        WebhookEventType::ChargeDisputeFundsReinstated => EventType::DisputeWon,
+        WebhookEventType::ChargeDisputeFundsWithdrawn => EventType::DisputeLost,
+        WebhookEventType::SourceChargeable => EventType::SourceChargeable,
+        WebhookEventType::SourceTransactionCreated => EventType::SourceTransactionCreated,
+        WebhookEventType::Unknown => EventType::IncomingWebhookEventUnspecified,
+    }
+}
+
+pub fn get_payment_attempt_status_from_webhook(
+    event_type: &WebhookEventType,
+    _status: &Option<WebhookEventStatus>,
+    event_context: &Option<domain_types::connector_types::EventContext>,
+) -> common_enums::AttemptStatus {
+    match event_type {
+        WebhookEventType::PaymentIntentSucceed | WebhookEventType::ChargeSucceeded => {
+            match event_context
+                .as_ref()
+                .and_then(|ctx| ctx.capture_method.as_ref())
+            {
+                Some(common_enums::CaptureMethod::Manual)
+                | Some(common_enums::CaptureMethod::ManualMultiple) => {
+                    common_enums::AttemptStatus::CaptureInitiated
+                }
+                _ => common_enums::AttemptStatus::Charged,
+            }
+        }
+        WebhookEventType::PaymentIntentFailed | WebhookEventType::ChargeFailed => {
+            common_enums::AttemptStatus::Failure
+        }
+        WebhookEventType::PaymentIntentCanceled => common_enums::AttemptStatus::Voided,
+        WebhookEventType::PaymentIntentProcessing | WebhookEventType::ChargePending => {
+            common_enums::AttemptStatus::Pending
+        }
+        WebhookEventType::PaymentIntentRequiresAction => {
+            common_enums::AttemptStatus::AuthenticationPending
+        }
+        WebhookEventType::PaymentIntentAmountCapturableUpdated => {
+            common_enums::AttemptStatus::Authorized
+        }
+        WebhookEventType::ChargeCaptured => common_enums::AttemptStatus::Charged,
+        WebhookEventType::ChargeExpired => common_enums::AttemptStatus::Failure,
+        WebhookEventType::SourceChargeable | WebhookEventType::SourceTransactionCreated => {
+            common_enums::AttemptStatus::Pending
+        }
+        _ => common_enums::AttemptStatus::Pending,
+    }
+}
+
+pub fn get_refund_status_from_webhook(
+    status: &Option<WebhookEventStatus>,
+) -> common_enums::RefundStatus {
+    match status {
+        Some(WebhookEventStatus::Succeeded) => common_enums::RefundStatus::Success,
+        Some(WebhookEventStatus::Failed) | Some(WebhookEventStatus::Canceled) => {
+            common_enums::RefundStatus::Failure
+        }
+        _ => common_enums::RefundStatus::Pending,
+    }
+}
+
+pub fn get_dispute_stage_and_status(
+    event_type: &WebhookEventType,
+    status: &Option<WebhookEventStatus>,
+) -> (common_enums::DisputeStage, common_enums::DisputeStatus) {
+    let stage = match status {
+        Some(WebhookEventStatus::WarningNeedsResponse)
+        | Some(WebhookEventStatus::WarningClosed)
+        | Some(WebhookEventStatus::WarningUnderReview) => common_enums::DisputeStage::PreDispute,
+        _ => common_enums::DisputeStage::Dispute,
+    };
+
+    let dispute_status = match event_type {
+        WebhookEventType::DisputeCreated => common_enums::DisputeStatus::DisputeOpened,
+        WebhookEventType::DisputeUpdated => match status {
+            Some(WebhookEventStatus::UnderReview)
+            | Some(WebhookEventStatus::WarningUnderReview) => {
+                common_enums::DisputeStatus::DisputeChallenged
+            }
+            _ => common_enums::DisputeStatus::DisputeOpened,
+        },
+        WebhookEventType::DisputeClosed => match status {
+            Some(WebhookEventStatus::Won) | Some(WebhookEventStatus::WarningClosed) => {
+                common_enums::DisputeStatus::DisputeWon
+            }
+            Some(WebhookEventStatus::Lost) | Some(WebhookEventStatus::ChargeRefunded) => {
+                common_enums::DisputeStatus::DisputeLost
+            }
+            _ => common_enums::DisputeStatus::DisputeExpired,
+        },
+        WebhookEventType::ChargeDisputeFundsReinstated => {
+            common_enums::DisputeStatus::DisputeWon
+        }
+        WebhookEventType::ChargeDisputeFundsWithdrawn => {
+            common_enums::DisputeStatus::DisputeLost
+        }
+        _ => common_enums::DisputeStatus::DisputeOpened,
+    };
+
+    (stage, dispute_status)
+}
+
+// ---------------------------------------------------------------------------
+// Dispute flows: AcceptDispute, SubmitEvidence, DefendDispute
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StripeDisputeResponse {
+    pub id: String,
+    pub status: StripeDisputeStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StripeDisputeStatus {
+    NeedsResponse,
+    UnderReview,
+    Won,
+    Lost,
+    WarningNeedsResponse,
+    WarningUnderReview,
+    WarningClosed,
+}
+
+impl From<StripeDisputeStatus> for common_enums::DisputeStatus {
+    fn from(status: StripeDisputeStatus) -> Self {
+        match status {
+            StripeDisputeStatus::NeedsResponse | StripeDisputeStatus::WarningNeedsResponse => {
+                Self::DisputeOpened
+            }
+            StripeDisputeStatus::UnderReview | StripeDisputeStatus::WarningUnderReview => {
+                Self::DisputeChallenged
+            }
+            StripeDisputeStatus::Won | StripeDisputeStatus::WarningClosed => Self::DisputeWon,
+            StripeDisputeStatus::Lost => Self::DisputeAccepted,
+        }
+    }
+}
+
+pub type StripeAcceptDisputeResponse = StripeDisputeResponse;
+pub type StripeSubmitEvidenceResponse = StripeDisputeResponse;
+pub type StripeDefendDisputeResponse = StripeDisputeResponse;
+
+impl<F, Req> TryFrom<ResponseRouterData<StripeDisputeResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<StripeDisputeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let dispute_status = common_enums::DisputeStatus::from(item.response.status);
+        Ok(Self {
+            response: Ok(DisputeResponseData {
+                connector_dispute_id: item.response.id,
+                dispute_status,
+                connector_dispute_status: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct StripeSubmitEvidenceRequest {
+    #[serde(rename = "evidence[access_activity_log]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_activity_log: Option<String>,
+    #[serde(rename = "evidence[billing_address]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub billing_address: Option<String>,
+    #[serde(rename = "evidence[cancellation_policy]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancellation_policy: Option<String>,
+    #[serde(rename = "evidence[cancellation_policy_disclosure]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancellation_policy_disclosure: Option<String>,
+    #[serde(rename = "evidence[cancellation_rebuttal]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancellation_rebuttal: Option<String>,
+    #[serde(rename = "evidence[customer_communication]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_communication: Option<String>,
+    #[serde(rename = "evidence[customer_email_address]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_email_address: Option<String>,
+    #[serde(rename = "evidence[customer_name]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_name: Option<String>,
+    #[serde(rename = "evidence[customer_purchase_ip]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_purchase_ip: Option<String>,
+    #[serde(rename = "evidence[customer_signature]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_signature: Option<String>,
+    #[serde(rename = "evidence[product_description]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub product_description: Option<String>,
+    #[serde(rename = "evidence[receipt]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<String>,
+    #[serde(rename = "evidence[refund_policy]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_policy: Option<String>,
+    #[serde(rename = "evidence[refund_policy_disclosure]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_policy_disclosure: Option<String>,
+    #[serde(rename = "evidence[refund_refusal_explanation]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_refusal_explanation: Option<String>,
+    #[serde(rename = "evidence[service_date]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub service_date: Option<String>,
+    #[serde(rename = "evidence[service_documentation]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub service_documentation: Option<String>,
+    #[serde(rename = "evidence[shipping_address]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_address: Option<String>,
+    #[serde(rename = "evidence[shipping_carrier]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_carrier: Option<String>,
+    #[serde(rename = "evidence[shipping_date]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_date: Option<String>,
+    #[serde(rename = "evidence[shipping_documentation]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_documentation: Option<String>,
+    #[serde(rename = "evidence[shipping_tracking_number]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_tracking_number: Option<String>,
+    #[serde(rename = "evidence[uncategorized_file]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uncategorized_file: Option<String>,
+    #[serde(rename = "evidence[uncategorized_text]")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uncategorized_text: Option<String>,
+    pub submit: bool,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::SubmitEvidence,
+                DisputeFlowData,
+                SubmitEvidenceData,
+                DisputeResponseData,
+            >,
+            T,
+        >,
+    > for StripeSubmitEvidenceRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::SubmitEvidence,
+                DisputeFlowData,
+                SubmitEvidenceData,
+                DisputeResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let evidence = &item.router_data.request;
+        Ok(Self {
+            access_activity_log: evidence.access_activity_log.clone(),
+            billing_address: evidence.billing_address.clone(),
+            cancellation_policy: evidence.cancellation_policy_provider_file_id.clone(),
+            cancellation_policy_disclosure: evidence.cancellation_policy_disclosure.clone(),
+            cancellation_rebuttal: evidence.cancellation_rebuttal.clone(),
+            customer_communication: evidence.customer_communication_provider_file_id.clone(),
+            customer_email_address: evidence.customer_email_address.clone(),
+            customer_name: evidence.customer_name.clone(),
+            customer_purchase_ip: evidence.customer_purchase_ip.clone(),
+            customer_signature: evidence.customer_signature_provider_file_id.clone(),
+            product_description: evidence.product_description.clone(),
+            receipt: evidence.receipt_provider_file_id.clone(),
+            refund_policy: evidence.refund_policy_provider_file_id.clone(),
+            refund_policy_disclosure: evidence.refund_policy_disclosure.clone(),
+            refund_refusal_explanation: evidence.refund_refusal_explanation.clone(),
+            service_date: evidence.service_date.clone(),
+            service_documentation: evidence.service_documentation_provider_file_id.clone(),
+            shipping_address: evidence.shipping_address.clone(),
+            shipping_carrier: evidence.shipping_carrier.clone(),
+            shipping_date: evidence.shipping_date.clone(),
+            shipping_documentation: evidence.shipping_documentation_provider_file_id.clone(),
+            shipping_tracking_number: evidence.shipping_tracking_number.clone(),
+            uncategorized_file: evidence.uncategorized_file_provider_file_id.clone(),
+            uncategorized_text: evidence.uncategorized_text.clone(),
+            submit: false,
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct StripeDefendDisputeRequest {
+    pub submit: bool,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::DefendDispute,
+                DisputeFlowData,
+                DisputeDefendData,
+                DisputeResponseData,
+            >,
+            T,
+        >,
+    > for StripeDefendDisputeRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        _item: StripeRouterData<
+            RouterDataV2<
+                domain_types::connector_flow::DefendDispute,
+                DisputeFlowData,
+                DisputeDefendData,
+                DisputeResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self { submit: true })
     }
 }
