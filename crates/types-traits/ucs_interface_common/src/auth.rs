@@ -147,7 +147,7 @@ pub fn connector_and_config_from_metadata(
     if let Some(header_value) = metadata.get(X_CONNECTOR_AUTH_DEPRECATED) {
         logger::warn!(
             "x-connector-auth header is deprecated and will be removed in a future release. \
-                 Use x-connector-config with {{\"config\":{{...}}}} format instead."
+             Use x-connector-config with {{\"config\":{{...}}}} format instead."
         );
         return parse_connector_config_from_deprecated_header(header_value);
     }
