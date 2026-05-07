@@ -214,13 +214,6 @@ The payment world learned these lessons through production incidents. But the pr
 
 ---
 
-## Practical Advice
-
-- **Store amounts as integers in your database.** Never floats. `5999`, not `59.99`.
-- **Use a dedicated type.** Don't pass raw `i64` around — wrap it so the type system can help you.
-- **Carry the unit alongside the value, always.** A `MinorUnit` without a `Currency` is meaningless, so Prism bundles them in `Money`. Apply the same thinking to any unit-bearing type.
-- **Handle currency exponents explicitly.** Don't assume all currencies divide by 100 — they don't.
-- **Display formatting is a UI concern.** `$59.99` is for humans. `5999` is your data. Keep them separate.
 
 ## Closing
 
