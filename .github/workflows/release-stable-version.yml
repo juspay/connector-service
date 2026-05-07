@@ -104,8 +104,9 @@ jobs:
           PREVIOUS_TAG="v${PREVIOUS_TAG#v}"
 
           NEXT_TAG="$(cog bump --dry-run "--${{ inputs.bump_type }}" 2>/dev/null)"
+          NEXT_TAG="v${NEXT_TAG#v}"
 
-          if [ -z "$NEXT_TAG" ]; then
+          if [ -z "${NEXT_TAG#v}" ]; then
             CURRENT="${PREVIOUS_TAG#v}"
             IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
             case "${{ inputs.bump_type }}" in
@@ -134,7 +135,7 @@ jobs:
           PREVIOUS_TAG="${{ steps.version.outputs.previous_tag }}"
           NEXT_TAG="${{ steps.version.outputs.next_tag }}"
 
-          export GIT_CLIFF__GIT__TAG_PATTERN='v[0-9]*\.[0-9]*\.[0-9]*'
+          export GIT_CLIFF__GIT__TAG_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+$'
 
           git-cliff \
             --config '.github/git-cliff-changelog.toml' \
