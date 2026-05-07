@@ -11,7 +11,7 @@ Turns out — very. A tiny mistake in how you represent a number can silently dr
 When you're building a payment system that talks to dozens of different payment processors, you quickly realize that every processor has its own opinion about what an "amount" looks like.
 
 - **[Stripe](https://docs.stripe.com/api/payment_intents/create)** wants cents as an integer. `1000` means ten dollars. Their docs say: *"A positive integer representing how much to charge in the smallest currency unit."*
-- **[Razorpay](https://razorpay.com/docs/api/orders/create/)** also wants minor units as an integer — paise for INR. Their docs say: *"Payment amount in the smallest currency sub-unit. For ₹299, pass 29900."*
+- **[Adyen](https://docs.adyen.com/api-explorer/Checkout/71/post/payments)** also wants minor units as an integer. Their docs say: *"The amount information for the transaction (in minor units)."* So `1000` for EUR means €10.00.
 - **[PayPal](https://developer.paypal.com/docs/api/orders/v2/#orders_create)** wants a string with decimals — `"10.00"`. The Orders v2 API uses a JSON string, not a number.
 - **Wells Fargo** also wants a string with decimals — `"10.00"` — but with completely different field names and request structure.
 - **[Stax](https://docs.staxpayments.com/reference/charge)** wants a float — `10.0`. Yes, an actual floating-point number. Their API field `total` is a JSON numeric type in major units.
