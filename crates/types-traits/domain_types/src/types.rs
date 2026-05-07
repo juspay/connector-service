@@ -2912,43 +2912,26 @@ impl ForeignTryFrom<grpc_api_types::payments::ProxyCardDetails>
     fn foreign_try_from(
         card: grpc_api_types::payments::ProxyCardDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Derive card_network from the proto field only.
+        // NOTE: card.card_number is a vault token (e.g. "token_123456"), NOT a real card BIN,
+        // so BIN-based issuer detection is not possible here. The caller must populate the card_network proto field
+
+        let card_network = card.card_network.and_then(|n| {
+            grpc_api_types::payments::CardNetwork::try_from(n)
+                .ok()
+                .and_then(|cn| CardNetwork::foreign_try_from(cn).ok())
+        });
+
         Ok(payment_method_data::Card {
-            card_number: RawCardNumber(card.card_number.ok_or(
-                IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Missing card number".to_string()),
-                        ..Default::default()
-                    },
-                },
-            )?),
-            card_exp_month: card
-                .card_exp_month
-                .ok_or(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Missing Card Expiry Month".to_string()),
-                        ..Default::default()
-                    },
-                })?,
-            card_exp_year: card
-                .card_exp_year
-                .ok_or(IntegrationError::InvalidDataFormat {
-                    field_name: "unknown",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Missing Card Expiry Year".to_string()),
-                        ..Default::default()
-                    },
-                })?,
-            card_cvc: card.card_cvc.ok_or(IntegrationError::InvalidDataFormat {
-                field_name: "unknown",
-                context: IntegrationErrorContext {
-                    additional_context: Some("Missing CVC".to_string()),
-                    ..Default::default()
-                },
-            })?,
+            card_number: RawCardNumber(
+                //card number token is already stored in token_data , so we can update the value to internal transformation value.
+                "{{$card_number}}".to_string().into(),
+            ),
+            card_exp_month: "{{$card_exp_month}}".to_string().into(),
+            card_exp_year: "{{$card_exp_year}}".to_string().into(),
+            card_cvc: "{{$card_cvc}}".to_string().into(),
             card_issuer: card.card_issuer,
-            card_network: None,
+            card_network,
             card_type: card.card_type,
             card_issuing_country: card.card_issuing_country_alpha2,
             bank_code: card.bank_code,
