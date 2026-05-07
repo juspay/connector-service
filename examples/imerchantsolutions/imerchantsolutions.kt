@@ -7,34 +7,21 @@
 
 package examples.imerchantsolutions
 
-import types.Payment.*
-import types.PaymentMethods.*
 import payments.PaymentClient
 import payments.RefundClient
+import payments.PaymentServiceAuthorizeRequest
+import payments.PaymentServiceCaptureRequest
+import payments.PaymentServiceRefundRequest
+import payments.PaymentServiceVoidRequest
+import payments.PaymentServiceGetRequest
+import payments.PaymentServiceProxyAuthorizeRequest
+import payments.RefundServiceGetRequest
 import payments.AuthenticationType
 import payments.CaptureMethod
 import payments.Currency
 import payments.ConnectorConfig
 import payments.SdkOptions
 import payments.Environment
-import payments.ConnectorSpecificConfig
-import types.Payment.ImerchantsolutionsConfig
-import payments.SecretString
-
-val SUPPORTED_FLOWS = listOf<String>("authorize", "capture", "get", "proxy_authorize", "refund", "refund_get", "void")
-
-val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
-    .setOptions(SdkOptions.newBuilder().setEnvironment(Environment.SANDBOX).build())
-    .setConnectorConfig(
-        ConnectorSpecificConfig.newBuilder()
-            .setImerchantsolutions(ImerchantsolutionsConfig.newBuilder()
-                .setApiKey(SecretString.newBuilder().setValue("YOUR_API_KEY").build())
-                .setBaseUrl("YOUR_BASE_URL")
-                .build())
-            .build()
-    )
-    .build()
-
 
 
 private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAuthorizeRequest {
@@ -104,6 +91,12 @@ private fun buildVoidRequest(connectorTransactionIdStr: String): PaymentServiceV
         connectorTransactionId = connectorTransactionIdStr
     }.build()
 }
+
+val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
+    .setOptions(SdkOptions.newBuilder().setEnvironment(Environment.SANDBOX).build())
+    // .setConnectorConfig(...) — set your connector config here
+    .build()
+
 
 // Scenario: One-step Payment (Authorize + Capture)
 // Simple payment that authorizes and captures in one call. Use for immediate charges.
@@ -204,8 +197,8 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
 }
 
 // Flow: PaymentService.Authorize (Card)
-fun authorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
+fun authorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
     val request = buildAuthorizeRequest("AUTOMATIC")
     val response = client.authorize(request)
     when (response.status.name) {
@@ -216,8 +209,8 @@ fun authorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
 }
 
 // Flow: PaymentService.Capture
-fun capture(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
+fun capture(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
     val request = buildCaptureRequest("probe_connector_txn_001")
     val response = client.capture(request)
     if (response.status.name == "FAILED")
@@ -226,16 +219,16 @@ fun capture(txnId: String, config: ConnectorConfig = _defaultConfig) {
 }
 
 // Flow: PaymentService.Get
-fun get(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
+fun get(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
     val request = buildGetRequest("probe_connector_txn_001")
     val response = client.get(request)
     println("Status: ${response.status.name}")
 }
 
 // Flow: PaymentService.ProxyAuthorize
-fun proxyAuthorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
+fun proxyAuthorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
     val request = PaymentServiceProxyAuthorizeRequest.newBuilder().apply {
         merchantTransactionId = "probe_proxy_txn_001"
         amountBuilder.apply {
@@ -262,8 +255,8 @@ fun proxyAuthorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
 }
 
 // Flow: PaymentService.Refund
-fun refund(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
+fun refund(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
     val request = buildRefundRequest("probe_connector_txn_001")
     val response = client.refund(request)
     if (response.status.name == "FAILED")
@@ -272,20 +265,20 @@ fun refund(txnId: String, config: ConnectorConfig = _defaultConfig) {
 }
 
 // Flow: RefundService.Get
-fun refundGet(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = RefundClient(config)
+fun refundGet(txnId: String) {
+    val client = RefundClient(_defaultConfig)
     val request = RefundServiceGetRequest.newBuilder().apply {
         merchantRefundId = "probe_refund_001"  // Identification.
         connectorTransactionId = "probe_connector_txn_001"
-        refundId = "probe_refund_id_001"  // Deprecated.
+        refundId = "probe_refund_id_001"
     }.build()
     val response = client.refund_get(request)
     println("Status: ${response.status.name}")
 }
 
 // Flow: PaymentService.Void
-fun void(txnId: String, config: ConnectorConfig = _defaultConfig) {
-    val client = PaymentClient(config)
+fun void(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
     val request = buildVoidRequest("probe_connector_txn_001")
     val response = client.void(request)
     if (response.status.name == "FAILED")
