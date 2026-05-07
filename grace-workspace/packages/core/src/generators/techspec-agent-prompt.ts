@@ -14,7 +14,7 @@ Your task is to generate a technical specification by following the official Gra
 ## Instructions
 
 1. Use read_file to read:
-   /Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.2_techspec.md
+   /Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/2.2_techspec.md
 
 2. Follow the instructions in that file EXACTLY as written, with ONE EXCEPTION:
 
@@ -102,7 +102,7 @@ CRITICAL RULES:
 export function buildTechspecAgentUserPayload(
   connector: string,
   paymentMethod: string,
-  task?: TaskDefinition
+  task?: TaskDefinition,
 ): Record<string, unknown> {
   return {
     connector,
@@ -110,25 +110,28 @@ export function buildTechspecAgentUserPayload(
     connector_lc: connector.toLowerCase(),
     paymentMethod,
     flow: paymentMethod,
-    workflowFile: "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.2_techspec.md",
+    workflowFile:
+      "/Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/2.2_techspec.md",
     skipPhase: "1c",
     generateInsteadOfCLI: true,
     // Full task context - all fields from task creation
-    task: task ? {
-      title: task.title,
-      description: task.description,
-      acceptanceCriteria: task.acceptanceCriteria,
-      connectorDocUrls: task.connectorDocUrls,
-      targetFiles: task.targetFiles,
-      projectRoot: task.projectRoot,
-      // Grace/Byne workflow fields
-      paymentMethod: task.paymentMethod,
-      targetConnectors: task.targetConnectors,
-      paymentMethodCategory: task.paymentMethodCategory,
-      priority: task.priority,
-      prerequisites: task.prerequisites,
-      estimatedComplexity: task.estimatedComplexity,
-    } : undefined,
+    task: task
+      ? {
+          title: task.title,
+          description: task.description,
+          acceptanceCriteria: task.acceptanceCriteria,
+          connectorDocUrls: task.connectorDocUrls,
+          targetFiles: task.targetFiles,
+          projectRoot: task.projectRoot,
+          // Grace/Byne workflow fields
+          paymentMethod: task.paymentMethod,
+          targetConnectors: task.targetConnectors,
+          paymentMethodCategory: task.paymentMethodCategory,
+          priority: task.priority,
+          prerequisites: task.prerequisites,
+          estimatedComplexity: task.estimatedComplexity,
+        }
+      : undefined,
   };
 }
 

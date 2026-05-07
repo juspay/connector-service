@@ -14,7 +14,7 @@ Your task is to find, verify, and store official API documentation links for int
 ## Instructions
 
 Read the workflow guidance from:
-/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.1_links.md
+/Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/2.1_links.md
 
 **IMPORTANT: SKIP the "Context Loading" section** (it references files like data/connectors.json, data/features.json, src/App.tsx which are not available in this environment).
 
@@ -111,29 +111,32 @@ CRITICAL RULES:
 export function buildLinksAgentUserPayload(
   connector: string,
   paymentMethod: string,
-  task?: TaskDefinition
+  task?: TaskDefinition,
 ): Record<string, unknown> {
   return {
     connector,
     ConnectorName: connector,
     paymentMethod,
-    workflowFile: "/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.1_links.md",
+    workflowFile:
+      "/Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/2.1_links.md",
     // Full task context - all fields from task creation
-    task: task ? {
-      title: task.title,
-      description: task.description,
-      acceptanceCriteria: task.acceptanceCriteria,
-      connectorDocUrls: task.connectorDocUrls,
-      targetFiles: task.targetFiles,
-      projectRoot: task.projectRoot,
-      // Grace/Byne workflow fields
-      paymentMethod: task.paymentMethod,
-      targetConnectors: task.targetConnectors,
-      paymentMethodCategory: task.paymentMethodCategory,
-      priority: task.priority,
-      prerequisites: task.prerequisites,
-      estimatedComplexity: task.estimatedComplexity,
-    } : undefined,
+    task: task
+      ? {
+          title: task.title,
+          description: task.description,
+          acceptanceCriteria: task.acceptanceCriteria,
+          connectorDocUrls: task.connectorDocUrls,
+          targetFiles: task.targetFiles,
+          projectRoot: task.projectRoot,
+          // Grace/Byne workflow fields
+          paymentMethod: task.paymentMethod,
+          targetConnectors: task.targetConnectors,
+          paymentMethodCategory: task.paymentMethodCategory,
+          priority: task.priority,
+          prerequisites: task.prerequisites,
+          estimatedComplexity: task.estimatedComplexity,
+        }
+      : undefined,
   };
 }
 

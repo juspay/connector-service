@@ -7,6 +7,7 @@ Transform Byne into a Grace-compatible workflow system for implementing payment 
 **Goal**: Automate adding Card/Wallet/BankTransfer payment methods to Stripe/Adyen/Checkout connectors.
 
 **Approach**: Mirror Grace's exact architecture:
+
 - Orchestrator coordinates multiple connectors
 - Connector Agent handles each connector end-to-end
 - Subagents handle specs and implementation
@@ -19,9 +20,10 @@ Transform Byne into a Grace-compatible workflow system for implementing payment 
 
 ### 2.1 Grace's Purpose
 
-Located in `/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/`
+Located in `/Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/`
 
 Grace automates adding payment flows to connectors:
+
 - Input: Payment flow type + list of connectors
 - Process: Documentation discovery → Tech spec → Code generation → Testing → PR
 - Output: Implemented connector with new payment flow
@@ -52,11 +54,13 @@ Level 2: Connector Agent (2_connector.md)
 ### 2.3 Grace File Format
 
 **connectors.json**:
+
 ```json
 ["Adyen", "Stripe", "Checkout", "Braintree"]
 ```
 
 **creds.json** (already exists):
+
 ```json
 {
   "stripe": { "api_key": "sk_test_xxx" },
@@ -101,6 +105,7 @@ Level 2: Connector Agent (2_connector.md)
 ### 3.1 Byne's New Purpose
 
 Byne will implement payment method support (not flows):
+
 - **Payment Method**: Card, Wallet, BankTransfer, BNPL
 - **Connectors**: Stripe, Adyen, Checkout, etc.
 - **Example**: "Implement Card payment method support for Stripe"
@@ -130,15 +135,15 @@ Level 2: Connector Agent (byne/workflow/2_connector.md)
 
 ### 3.3 Byne vs Grace Comparison
 
-| Aspect | Grace | Byne (New) |
-|--------|-------|------------|
-| Domain | Payment flows | Payment methods |
-| Variable | FLOW | PAYMENT_METHOD |
-| Input | connectors.json | connectors.json |
-| Credentials | creds.json | creds.json |
-| Language | Rust | TypeScript/ReScript |
-| Build | cargo build | npm run re:build |
-| Test | grpcurl | Cypress/Playwright |
+| Aspect      | Grace           | Byne (New)          |
+| ----------- | --------------- | ------------------- |
+| Domain      | Payment flows   | Payment methods     |
+| Variable    | FLOW            | PAYMENT_METHOD      |
+| Input       | connectors.json | connectors.json     |
+| Credentials | creds.json      | creds.json          |
+| Language    | Rust            | TypeScript/ReScript |
+| Build       | cargo build     | npm run re:build    |
+| Test        | grpcurl         | Cypress/Playwright  |
 
 ---
 
@@ -147,7 +152,7 @@ Level 2: Connector Agent (byne/workflow/2_connector.md)
 ### 4.1 File Structure
 
 ```
-/Users/jeeva.ramachandran/Workspace/hyperswitch-prism/
+/Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/
 ├── byne/
 │   └── workflow/
 │       ├── 1_orchestrator.md
@@ -175,11 +180,11 @@ Implement {PAYMENT_METHOD} support across connectors.
 
 ## Inputs
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| {PAYMENT_METHOD} | Payment method to add | Card, Wallet |
-| {CONNECTORS_FILE} | JSON file with connectors | connectors.json |
-| {BRANCH} | Git branch | feat/card-support |
+| Variable          | Description               | Example           |
+| ----------------- | ------------------------- | ----------------- |
+| {PAYMENT_METHOD}  | Payment method to add     | Card, Wallet      |
+| {CONNECTORS_FILE} | JSON file with connectors | connectors.json   |
+| {BRANCH}          | Git branch                | feat/card-support |
 
 ## STEP 0: Parse Connectors
 
@@ -194,19 +199,19 @@ cat creds.json
 ## STEP 2: Process Each Connector
 
 For each connector in list:
-  Check credentials in creds.json
-  If missing: mark SKIPPED
-  Else: spawn Connector Agent
+Check credentials in creds.json
+If missing: mark SKIPPED
+Else: spawn Connector Agent
 
 ## Connector Agent Spawn
 
 Task(
-  description="Add {PAYMENT_METHOD} to {CONNECTOR}",
-  prompt="Read byne/workflow/2_connector.md
-  Variables:
-    CONNECTOR: <name>
-    PAYMENT_METHOD: {PAYMENT_METHOD}
-    BRANCH: {BRANCH}"
+description="Add {PAYMENT_METHOD} to {CONNECTOR}",
+prompt="Read byne/workflow/2_connector.md
+Variables:
+CONNECTOR: <name>
+PAYMENT_METHOD: {PAYMENT_METHOD}
+BRANCH: {BRANCH}"
 )
 
 ## Summary Report
@@ -264,7 +269,7 @@ Analyze {CONNECTOR} for {PAYMENT_METHOD} implementation.
 ## Steps
 
 1. Find connector files:
-   glob: src/connectors/{connector}*/**
+   glob: src/connectors/{connector}\*/\*\*
 
 2. Check current payment methods supported
 
@@ -275,10 +280,10 @@ Analyze {CONNECTOR} for {PAYMENT_METHOD} implementation.
 ## Output
 
 {
-  "connectorFiles": [...],
-  "currentMethods": [...],
-  "filesToModify": [...],
-  "patterns": [...]
+"connectorFiles": [...],
+"currentMethods": [...],
+"filesToModify": [...],
+"patterns": [...]
 }
 ```
 
@@ -297,6 +302,7 @@ Generate spec for adding {PAYMENT_METHOD} to {CONNECTOR}.
 ## Output
 
 Payment method spec with:
+
 - API endpoints
 - Request/response transformers
 - Error handling
@@ -318,9 +324,10 @@ Implement {PAYMENT_METHOD} support for {CONNECTOR}.
 ## Steps
 
 For each file in spec:
-  1. Read current contents
-  2. Generate modifications
-  3. Write new contents
+
+1. Read current contents
+2. Generate modifications
+3. Write new contents
 
 ## Rules
 
@@ -339,7 +346,7 @@ Create PR for {CONNECTOR} {PAYMENT_METHOD} support.
 ## Steps
 
 1. Stage files:
-   git add src/connectors/{connector}*
+   git add src/connectors/{connector}\*
 
 2. Commit:
    git commit -m "feat({connector}): add {payment_method} support"
@@ -359,11 +366,13 @@ Create PR for {CONNECTOR} {PAYMENT_METHOD} support.
 ### Scenario: Add Card Support to Multiple Connectors
 
 **Step 1: Create connectors.json**
+
 ```json
 ["Stripe", "Adyen", "Checkout"]
 ```
 
 **Step 2: Invoke via Task tool**
+
 ```
 Task(
   description="Add Card support to connectors",
@@ -377,6 +386,7 @@ Variables:
 ```
 
 **Step 3: Orchestrator Execution**
+
 ```
 → Load connectors: ["Stripe", "Adyen", "Checkout"]
 → Check creds.json: all have credentials
@@ -403,31 +413,37 @@ Variables:
 ### Week 1: Create Workflow Files
 
 **Day 1-2**: 1_orchestrator.md
+
 - Write orchestrator workflow
 - Define variables and phases
 - Document Task tool invocation
 
 **Day 3-4**: 2_connector.md
+
 - Write connector agent workflow
 - Define 5 phases
 - Document subagent spawning
 
 **Day 5**: 2.1_requirements.md + 2.2_techspec.md
+
 - Requirements discovery workflow
 - Tech spec generation workflow
 
 ### Week 2: Implementation and Testing
 
 **Day 1-2**: 2.3_implementation.md + 2.4_pr.md
+
 - Code generation workflow
 - Git/PR workflow
 
 **Day 3-4**: Integration Testing
+
 - Test with sample connectors
 - Verify sequential execution
 - Check credential handling
 
 **Day 5**: Documentation and Polish
+
 - Final workflow reviews
 - Usage documentation
 - Migration guide
@@ -460,6 +476,7 @@ hyperswitch-prism/
 ```
 
 Usage:
+
 - Grace: `FLOW=BankDebit, CONNECTORS_FILE=connectors.json`
 - Byne: `PAYMENT_METHOD=Card, CONNECTORS_FILE=connectors.json`
 
@@ -467,12 +484,12 @@ Usage:
 
 ## 9. Risks and Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| File conflicts | Sequential execution (one connector at a time) |
-| Missing credentials | Silent skip with logging |
-| Build failures | Retry logic with max attempts |
-| Git conflicts | Scoped commits per connector |
+| Risk                | Mitigation                                     |
+| ------------------- | ---------------------------------------------- |
+| File conflicts      | Sequential execution (one connector at a time) |
+| Missing credentials | Silent skip with logging                       |
+| Build failures      | Retry logic with max attempts                  |
+| Git conflicts       | Scoped commits per connector                   |
 
 ---
 

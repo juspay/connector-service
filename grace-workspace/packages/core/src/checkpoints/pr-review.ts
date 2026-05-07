@@ -15,7 +15,7 @@ You have FULL ACCESS to all tools including Read, Edit, Write, Bash, Grep, Glob,
 ## Workflow Compliance
 
 STRICTLY FOLLOW the workflow defined in:
-- Local: /Users/jeeva.ramachandran/Workspace/hyperswitch-prism/grace/workflow/2.4_pr.md
+- Local: /Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/2.4_pr.md
 
 Additional checks:
 - Branch naming: Must follow pattern \`feat/grace-{connector}-{flow}\` (lowercase, kebab-case)
@@ -37,17 +37,22 @@ const COLOR: Record<string, string> = {
 export const prReviewCheckpoint: Checkpoint = {
   id: "pr_review",
   name: "PR review (automated + human gate)",
-  description: "LLM reviews for spec compliance; human confirms on non-approved output.",
+  description:
+    "LLM reviews for spec compliance; human confirms on non-approved output.",
   retryFrom: "pr_review",
   async run(ctx) {
     const implementation = ctx.artifacts.implementation;
-    if (!implementation) return { passed: false, errors: ["Missing implementation result"] };
+    if (!implementation)
+      return { passed: false, errors: ["Missing implementation result"] };
 
     const files: Array<{ path: string; contents: string }> = [];
     const seen = new Set<string>();
 
     // Get files from implementation result
-    const implFiles = (implementation as any).filesModified ?? (implementation as any).files?.map((f: any) => f.path) ?? [];
+    const implFiles =
+      (implementation as any).filesModified ??
+      (implementation as any).files?.map((f: any) => f.path) ??
+      [];
     const touched = [...implFiles];
     if (touched.length === 0) {
       return { passed: false, errors: ["No files found in implementation"] };
@@ -57,7 +62,9 @@ export const prReviewCheckpoint: Checkpoint = {
     for (const rel of touched) {
       if (seen.has(rel)) continue;
       seen.add(rel);
-      const abs = path.isAbsolute(rel) ? rel : path.join(ctx.task.projectRoot, rel);
+      const abs = path.isAbsolute(rel)
+        ? rel
+        : path.join(ctx.task.projectRoot, rel);
       try {
         const contents = await fs.readFile(abs, "utf-8");
         files.push({ path: rel, contents: contents.slice(0, 8000) });
@@ -92,15 +99,24 @@ export const prReviewCheckpoint: Checkpoint = {
       };
     }
 
-    if (!parsed || typeof parsed.approved !== "boolean" || !Array.isArray(parsed.comments)) {
-      return { passed: false, errors: [`Invalid PR review JSON: ${JSON.stringify(parsed).slice(0, 300)}`] };
+    if (
+      !parsed ||
+      typeof parsed.approved !== "boolean" ||
+      !Array.isArray(parsed.comments)
+    ) {
+      return {
+        passed: false,
+        errors: [
+          `Invalid PR review JSON: ${JSON.stringify(parsed).slice(0, 300)}`,
+        ],
+      };
     }
 
     for (const c of parsed.comments) {
       const color = COLOR[c.severity] ?? "";
       // eslint-disable-next-line no-console
       console.log(
-        `${color}[${c.severity.toUpperCase()}]\x1b[0m ${c.file}${c.line ? `:${c.line}` : ""} — ${c.comment}`
+        `${color}[${c.severity.toUpperCase()}]\x1b[0m ${c.file}${c.line ? `:${c.line}` : ""} — ${c.comment}`,
       );
     }
 
@@ -129,12 +145,17 @@ export const prReviewCheckpoint: Checkpoint = {
     const timeoutMs = cfg.humanApprovalTimeoutMs;
     const promptP = askYesNo(
       `Manual override: approve this PR despite the review? (score=${parsed.specComplianceScore})`,
-      false
+      false,
     );
-    const timeoutP = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), timeoutMs));
+    const timeoutP = new Promise<boolean>((resolve) =>
+      setTimeout(() => resolve(false), timeoutMs),
+    );
     const approved = await Promise.race([promptP, timeoutP]);
     if (approved) {
-      return { passed: true, artifacts: { prReview: { ...parsed, approved: true } } };
+      return {
+        passed: true,
+        artifacts: { prReview: { ...parsed, approved: true } },
+      };
     }
     return {
       passed: false,
