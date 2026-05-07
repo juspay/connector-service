@@ -595,6 +595,22 @@ export interface PRReviewResult {
   approved: boolean;
   comments: PRComment[];
   specComplianceScore: number;
+  /**
+   * "SUCCESS" if the connector passed validation, "FAILED" if the workflow
+   * raised a do-not-merge PR for visibility. Mirrors the workflow's STATUS
+   * field — set even when approved=true.
+   */
+  status?: "SUCCESS" | "FAILED";
+  /** URL of the PR raised by the agent on juspay/hyperswitch-prism. */
+  prUrl?: string;
+  /** PR number, derived from prUrl by the engine for convenience. */
+  prNumber?: number;
+  /** GRACE branch pushed to origin, e.g. feat/grace-cybersource-bankdebit. */
+  branchName?: string;
+  /** Hash of the commit cherry-picked onto the PR branch. */
+  commitHash?: string;
+  /** Free-text reason when status is FAILED. */
+  reason?: string;
 }
 
 export type HumanReviewDecision = "approve" | "edit" | "regenerate";

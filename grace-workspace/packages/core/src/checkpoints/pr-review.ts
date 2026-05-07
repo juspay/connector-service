@@ -6,11 +6,11 @@ import { safeParseJson } from "../utils.js";
 import { getConfig } from "../config.js";
 import { askYesNo } from "../prompts/cli-prompts.js";
 
-const SYSTEM = `You are a senior engineer performing a spec-compliance code review on a hyperswitch-prism PR.
+const SYSTEM = `You are a senior engineer performing a spec-compliance code review on a hyperswitch-prism PR AND raising the PR.
 
 ## Tool Access
 
-You have FULL ACCESS to all tools including Read, Edit, Write, Bash, Grep, Glob, and WebFetch. Use any tool necessary to thoroughly review the code.
+You have FULL ACCESS to all tools including Read, Edit, Write, Bash, Grep, Glob, and WebFetch. Use any tool necessary to commit, push, and open the PR.
 
 ## Workflow Compliance
 
@@ -21,12 +21,22 @@ Additional checks:
 - Branch naming: Must follow pattern \`feat/grace-{connector}-{flow}\` (lowercase, kebab-case)
 - If branch already exists from a previous run, skip branch creation verification
 
-Return ONLY valid JSON:
+## Output contract
+
+Return ONLY valid JSON in this exact shape — no STATUS:/PR_URL: free-text format. The engine parses ONLY this JSON:
+
 {
   "approved": boolean,
   "specComplianceScore": number (0..1),
-  "comments": [{ "file": "string", "line": number | null, "comment": "string", "severity": "info"|"warning"|"blocking" }]
-}`;
+  "comments": [{ "file": "string", "line": number | null, "comment": "string", "severity": "info"|"warning"|"blocking" }],
+  "status": "SUCCESS" | "FAILED",
+  "prUrl": "https://github.com/juspay/hyperswitch-prism/pull/<n>" | "",
+  "branchName": "feat/grace-<connector>-<flow>" | "",
+  "commitHash": "<sha>" | "",
+  "reason": "<short explanation if status=FAILED, empty string if SUCCESS>"
+}
+
+When the workflow asks you to "Output STATUS / PR_URL / PR_BRANCH / REASON", translate those into the corresponding JSON fields above. Do NOT also emit the STATUS-format text — return ONLY the JSON. \`prUrl\` should be the URL captured from the \`gh pr create\` output (or from \`gh pr list\` if the PR already existed when you started).`;
 
 const COLOR: Record<string, string> = {
   info: "\x1b[36m",
@@ -110,6 +120,22 @@ export const prReviewCheckpoint: Checkpoint = {
           `Invalid PR review JSON: ${JSON.stringify(parsed).slice(0, 300)}`,
         ],
       };
+    }
+
+    // Derive prNumber from prUrl so the dashboard doesn't have to re-parse.
+    if (parsed.prUrl && typeof parsed.prUrl === "string") {
+      const m = parsed.prUrl.match(/\/pull\/(\d+)/);
+      if (m) parsed.prNumber = Number(m[1]);
+    }
+
+    // Soft-warn if a SUCCESS run didn't capture a PR URL — don't reject,
+    // since the workflow's Phase 1a allows skipping when there are no
+    // connector files to commit, but make it visible in the engine log.
+    if (parsed.status === "SUCCESS" && !parsed.prUrl) {
+      ctx.log(
+        "[pr_review] status=SUCCESS but prUrl is empty — agent may have skipped PR creation; check workflow Phase 1a/6a",
+        "warn"
+      );
     }
 
     for (const c of parsed.comments) {

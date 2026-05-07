@@ -89,7 +89,7 @@ export const grpcTestCheckpoint: Checkpoint = {
   retryFrom: "implementation",
   // Outer budget covers preflight (~5s) + cargo relink+server start (~30s) +
   // health wait (≤45s) + agent runAI (≤6min) + cleanup (~5s) with margin.
-  timeout: 12 * 60 * 1000,
+  timeout: 20 * 60 * 1000,
   continueOnFailure: true,
 
   async run(ctx) {

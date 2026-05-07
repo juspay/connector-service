@@ -1653,6 +1653,192 @@ function CompilerArtifact({ result }: { result: any }) {
 
 // ─── Codegen Artifact ──────────────────────────────────────────────────
 
+// ─── PR Review Artifact ────────────────────────────────────────────────
+
+function PrReviewArtifact({ result }: { result: any }) {
+  const r = (result ?? {}) as {
+    approved?: boolean;
+    specComplianceScore?: number;
+    comments?: Array<{
+      file: string;
+      line?: number | null;
+      comment: string;
+      severity: "info" | "warning" | "blocking";
+    }>;
+    status?: "SUCCESS" | "FAILED";
+    prUrl?: string;
+    prNumber?: number;
+    branchName?: string;
+    commitHash?: string;
+    reason?: string;
+  };
+
+  const isFailed = r.status === "FAILED";
+  const statusTone: "ok" | "error" | "warn" = isFailed
+    ? "error"
+    : r.status === "SUCCESS"
+      ? "ok"
+      : "warn";
+
+  const commentsBySeverity = {
+    blocking: (r.comments ?? []).filter((c) => c.severity === "blocking"),
+    warning: (r.comments ?? []).filter((c) => c.severity === "warning"),
+    info: (r.comments ?? []).filter((c) => c.severity === "info"),
+  };
+
+  return (
+    <Card>
+      {/* Header: status + score + View PR anchor */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 18,
+        }}
+      >
+        <Tag tone={statusTone}>{r.status ?? "UNKNOWN"}</Tag>
+        <Tag tone={r.approved ? "ok" : "warn"}>
+          {r.approved ? "Approved" : "Not approved"}
+        </Tag>
+        {typeof r.specComplianceScore === "number" && (
+          <Tag tone="neutral">
+            score {r.specComplianceScore.toFixed(2)}
+          </Tag>
+        )}
+        {r.prUrl ? (
+          <a
+            href={r.prUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              marginLeft: "auto",
+              fontSize: 12,
+              fontWeight: 600,
+              color: T.accent,
+              padding: "5px 12px",
+              border: `1px solid ${T.accent}`,
+              borderRadius: 6,
+              textDecoration: "none",
+            }}
+          >
+            View PR{r.prNumber ? ` #${r.prNumber}` : ""} ↗
+          </a>
+        ) : (
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: 11,
+              fontStyle: "italic",
+              color: T.textSubtle,
+            }}
+          >
+            PR link not captured
+          </span>
+        )}
+      </div>
+
+      {/* Failure reason callout */}
+      {isFailed && r.reason && (
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: 8,
+            background: T.errorSoft,
+            color: T.error,
+            fontSize: 13,
+            lineHeight: 1.5,
+            marginBottom: 18,
+            border: `1px solid ${T.error}30`,
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Failure reason</div>
+          {r.reason}
+        </div>
+      )}
+
+      {/* PR metadata */}
+      {(r.branchName || r.commitHash) && (
+        <div style={{ marginBottom: 18 }}>
+          {r.branchName && (
+            <Field label="Branch">
+              <code style={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }}>
+                {r.branchName}
+              </code>
+            </Field>
+          )}
+          {r.commitHash && (
+            <Field label="Commit">
+              <code style={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }}>
+                {r.commitHash.slice(0, 12)}
+              </code>
+            </Field>
+          )}
+        </div>
+      )}
+
+      {/* Review feedback grouped by severity */}
+      {(r.comments ?? []).length > 0 && (
+        <div>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: 0.8,
+              textTransform: "uppercase",
+              color: T.textMuted,
+              marginBottom: 10,
+            }}
+          >
+            Review feedback ({r.comments!.length})
+          </div>
+          {(["blocking", "warning", "info"] as const).map((sev) => {
+            const list = commentsBySeverity[sev];
+            if (list.length === 0) return null;
+            const tone: "error" | "warn" | "neutral" =
+              sev === "blocking" ? "error" : sev === "warning" ? "warn" : "neutral";
+            return (
+              <div key={sev} style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 6 }}>
+                  <Tag tone={tone}>
+                    {sev} ({list.length})
+                  </Tag>
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {list.map((c, i) => (
+                    <li
+                      key={i}
+                      style={{
+                        fontSize: 13,
+                        color: T.text,
+                        marginBottom: 6,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <code
+                        style={{
+                          fontFamily: "ui-monospace, monospace",
+                          fontSize: 11,
+                          color: T.textMuted,
+                        }}
+                      >
+                        {c.file}
+                        {c.line ? `:${c.line}` : ""}
+                      </code>{" "}
+                      — {c.comment}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ─── Dispatcher ────────────────────────────────────────────────────────
 
 export function ArtifactView({
@@ -1687,6 +1873,8 @@ export function ArtifactView({
       return <CompilerArtifact result={artifact} />;
     case "grpc_test":
       return <GrpcTestArtifact result={artifact as any} />;
+    case "pr_review":
+      return <PrReviewArtifact result={artifact as any} />;
     default:
       return (
         <Card>
