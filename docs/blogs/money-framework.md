@@ -1,4 +1,4 @@
-# Why 1000 Is Not Always 1000 in Payments
+# Why 1000 != 1000 in Payments
 
 Money is deceptively simple. You have an amount, you have a currency. How hard can it be?
 
