@@ -50,7 +50,7 @@ message SurchargeServiceCalculateRequest {
   SecretString postal_code = 4;  // Billing postal/ZIP code for regional fees
 
   // Optional Fields
-  optional string previous_external_surcharge_id = 5;  // Previous sTxId from connector (for subsequent calls)
+  optional string previous_connector_surcharge_id = 5;  // Previous surcharge id from connector (for subsequent calls)
   optional CountryAlpha2 country = 6;                  // ISO alpha-2 country code (defaults to USA)
   optional SurchargeStrategy surcharge_strategy = 7;   // Strategy for handling surcharge (defaults to APPLY)
 }
@@ -69,7 +69,7 @@ message SurchargeServiceCalculateResponse {
   optional double surcharge_percentage = 3; // Surcharge rate as percentage (transactionFeePercent)
 
   // Connector Reference
-  optional string external_surcharge_transaction_id = 4;  // Unique ID from connector for referencing this calculation
+  optional string connector_surcharge_id = 4;  // Unique ID from connector for referencing this calculation
 
   // Status Information 
   uint32 status_code = 5; // HTTP status code from the connector
