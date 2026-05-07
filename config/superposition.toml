@@ -31,7 +31,7 @@ metrics_port = { value = 8080, schema = { type = "integer" } }
 # Proxy configuration
 proxy_idle_pool_connection_timeout = { value = 90, schema = { type = "integer" } }
 proxy_bypass_proxy_urls = { value = ["localhost", "local"], schema = { type = "array" } }
-proxy_mitm_proxy_enabled = { value = false, schema = { type = "boolean" } }
+proxy_mitm_enabled = { value = false, schema = { type = "boolean" } }
 
 # Events configuration
 events_enabled = { value = false, schema = { type = "boolean" } }

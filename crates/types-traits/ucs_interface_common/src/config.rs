@@ -33,53 +33,51 @@ pub fn merge_config_with_override(
                 })?;
 
             if let Some(proxy_patch) = override_patch.proxy.as_mut() {
-                if let Some(cert_input) = proxy_patch
-                    .mitm_ca_cert
-                    .as_ref()
-                    .and_then(|value| value.as_ref())
-                {
-                    let cert_trimmed = cert_input.trim();
+                if let Some(mitm_patch) = proxy_patch.mitm.as_mut().and_then(|m| m.as_mut()) {
+                    if let Some(cert_input) = mitm_patch.ca_cert.as_ref().and_then(|v| v.as_ref()) {
+                        let cert_trimmed = cert_input.trim();
 
-                    let cert = if cert_trimmed.is_empty() {
-                        Err(Report::new(IntegrationError::InvalidDataFormat {
-                            field_name: "proxy.mitm_ca_cert",
-                            context: IntegrationErrorContext {
-                                additional_context: Some(
-                                    "proxy.mitm_ca_cert must be base64-encoded".to_string(),
-                                ),
-                                ..Default::default()
-                            },
-                        }))
-                    } else {
-                        let sanitized: String = cert_trimmed.split_whitespace().collect();
-                        let decoded = general_purpose::STANDARD
-                            .decode(sanitized.as_bytes())
-                            .map_err(|e| {
+                        let cert = if cert_trimmed.is_empty() {
+                            Err(Report::new(IntegrationError::InvalidDataFormat {
+                                field_name: "proxy.mitm.ca_cert",
+                                context: IntegrationErrorContext {
+                                    additional_context: Some(
+                                        "proxy.mitm.ca_cert must be base64-encoded".to_string(),
+                                    ),
+                                    ..Default::default()
+                                },
+                            }))
+                        } else {
+                            let sanitized: String = cert_trimmed.split_whitespace().collect();
+                            let decoded = general_purpose::STANDARD
+                                .decode(sanitized.as_bytes())
+                                .map_err(|e| {
+                                    Report::new(IntegrationError::InvalidDataFormat {
+                                        field_name: "proxy.mitm.ca_cert",
+                                        context: IntegrationErrorContext {
+                                            additional_context: Some(format!(
+                                                "Invalid base64 for proxy.mitm.ca_cert: {e}"
+                                            )),
+                                            ..Default::default()
+                                        },
+                                    })
+                                })?;
+
+                            String::from_utf8(decoded).map_err(|e| {
                                 Report::new(IntegrationError::InvalidDataFormat {
-                                    field_name: "proxy.mitm_ca_cert",
+                                    field_name: "proxy.mitm.ca_cert",
                                     context: IntegrationErrorContext {
                                         additional_context: Some(format!(
-                                            "Invalid base64 for proxy.mitm_ca_cert: {e}"
+                                            "Decoded proxy.mitm.ca_cert is not valid UTF-8: {e}"
                                         )),
                                         ..Default::default()
                                     },
                                 })
-                            })?;
-
-                        String::from_utf8(decoded).map_err(|e| {
-                            Report::new(IntegrationError::InvalidDataFormat {
-                                field_name: "proxy.mitm_ca_cert",
-                                context: IntegrationErrorContext {
-                                    additional_context: Some(format!(
-                                        "Decoded proxy.mitm_ca_cert is not valid UTF-8: {e}"
-                                    )),
-                                    ..Default::default()
-                                },
                             })
-                        })
-                    }?;
+                        }?;
 
-                    proxy_patch.mitm_ca_cert = Some(Some(cert));
+                        mitm_patch.ca_cert = Some(Some(cert));
+                    }
                 }
             }
 

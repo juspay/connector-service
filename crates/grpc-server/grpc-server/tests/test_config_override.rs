@@ -303,11 +303,20 @@ mod unit {
         let encoded = general_purpose::STANDARD.encode(pem.as_bytes());
         let override_json = json!({
             "proxy": {
-                "mitm_ca_cert": encoded
+                "mitm": {
+                    "ca_cert": encoded
+                }
             }
         });
         let new_config = apply_override(override_json);
-        assert_eq!(new_config.proxy.mitm_ca_cert.as_deref(), Some(pem));
+        assert_eq!(
+            new_config
+                .proxy
+                .mitm
+                .as_ref()
+                .and_then(|m| m.ca_cert.as_deref()),
+            Some(pem)
+        );
     }
 
     #[test]
@@ -315,13 +324,15 @@ mod unit {
         let base_config = base_config();
         let override_json = json!({
             "proxy": {
-                "mitm_ca_cert": "-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----\n"
+                "mitm": {
+                    "ca_cert": "-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----\n"
+                }
             }
         });
         let result = merge_config_with_override(override_json.to_string(), base_config.clone());
         assert!(
             result.is_err(),
-            "config_from_metadata should reject raw PEM in mitm_ca_cert override"
+            "config_from_metadata should reject raw PEM in proxy.mitm.ca_cert override"
         );
     }
 
@@ -335,8 +346,11 @@ mod unit {
                 "https_url": null,
                 "idle_pool_connection_timeout": 45,
                 "bypass_proxy_urls": ["http://no-proxy.local"],
-                "mitm_proxy_enabled": true,
-                "mitm_ca_cert": encoded
+                "mitm": {
+                    "enabled": true,
+                    "https_url": "http://mitm.local",
+                    "ca_cert": encoded
+                }
             },
         });
         let new_config = apply_override(override_json);
@@ -350,8 +364,10 @@ mod unit {
             new_config.proxy.bypass_proxy_urls,
             vec!["http://no-proxy.local".to_string()]
         );
-        assert!(new_config.proxy.mitm_proxy_enabled);
-        assert_eq!(new_config.proxy.mitm_ca_cert.as_deref(), Some(pem));
+        let mitm = new_config.proxy.mitm.as_ref().expect("mitm should be set");
+        assert!(mitm.enabled);
+        assert_eq!(mitm.https_url.as_deref(), Some("http://mitm.local"));
+        assert_eq!(mitm.ca_cert.as_deref(), Some(pem));
     }
 
     #[test]

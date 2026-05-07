@@ -580,24 +580,60 @@ impl Connectors {
     }
 }
 
+#[derive(
+    Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, Default, config_patch_derive::Patch,
+)]
+pub struct MitmProxy {
+    pub https_url: Option<String>,
+    pub http_url: Option<String>,
+    #[serde(default)]
+    pub enabled: bool,
+    pub ca_cert: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, config_patch_derive::Patch)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
     pub idle_pool_connection_timeout: Option<u64>,
     pub bypass_proxy_urls: Vec<String>,
-    pub mitm_proxy_enabled: bool,
-    pub mitm_ca_cert: Option<String>,
+    #[serde(default)]
+    pub mitm: Option<MitmProxy>,
 }
 
 impl Proxy {
-    pub fn cache_key(&self, should_bypass_proxy: bool) -> Option<Self> {
-        // Return Some(self) if there's an actual proxy configuration
-        // let sbp = self.bypass_proxy_urls.contains(&url.to_string());
-        if should_bypass_proxy || (self.http_url.is_none() && self.https_url.is_none()) {
+    /// Returns the effective proxy URL for the given shadow_mode.
+    /// Shadow mode uses the mitm proxy; primary mode uses the direct squid proxy.
+    pub fn effective_https_url(&self, shadow_mode: bool) -> Option<&str> {
+        if shadow_mode {
+            self.mitm
+                .as_ref()
+                .and_then(|m| m.https_url.as_deref())
+                .or(self.https_url.as_deref())
+        } else {
+            self.https_url.as_deref()
+        }
+    }
+
+    pub fn effective_http_url(&self, shadow_mode: bool) -> Option<&str> {
+        if shadow_mode {
+            self.mitm
+                .as_ref()
+                .and_then(|m| m.http_url.as_deref())
+                .or(self.http_url.as_deref())
+        } else {
+            self.http_url.as_deref()
+        }
+    }
+
+    pub fn cache_key(&self, should_bypass_proxy: bool, shadow_mode: bool) -> Option<(Self, bool)> {
+        if should_bypass_proxy
+            || (self.effective_https_url(shadow_mode).is_none()
+                && self.effective_http_url(shadow_mode).is_none())
+        {
             None
         } else {
-            Some(self.clone())
+            Some((self.clone(), shadow_mode))
         }
     }
 
