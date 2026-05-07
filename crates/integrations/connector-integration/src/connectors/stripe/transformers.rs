@@ -6154,7 +6154,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             shipping_tracking_number: evidence.shipping_tracking_number.clone(),
             uncategorized_file: evidence.uncategorized_file_provider_file_id.clone(),
             uncategorized_text: evidence.uncategorized_text.clone(),
-            submit: false,
+            submit: true,
         })
     }
 }
