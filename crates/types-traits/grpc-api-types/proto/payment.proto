@@ -753,6 +753,7 @@ enum Connector {
   IMERCHANTSOLUTIONS = 118;
   AXISBANK = 119;
   EASEBUZZ = 120;
+  TWOCTWOP_PACO = 121;
 }
 
 // Payment method types
@@ -4197,6 +4198,27 @@ message AxisbankConfig {
   optional string base_url = 50;
 }
 
+message TwoctwopPacoConfig {
+  // Company access token, used as both the `token`/`apikey` HTTP header and
+  // as the `iss` / `CompanyApiKey` JWT claim.
+  SecretString access_token = 1;
+  // Office identifier (PACO multi-merchant scoping). Required in every body.
+  SecretString office_id = 2;
+  // Acquirer-side merchant id, required as a query param on the Inquiry path.
+  SecretString merchant_id = 3;
+  // 32-hex-char JWE key id, environment-specific (UAT vs PRD).
+  SecretString paco_kid = 4;
+  // Merchant RSA private key (PEM) — signs the request JWS (PS256).
+  SecretString merchant_signing_private_key = 5;
+  // Merchant RSA private key (PEM) — decrypts the response JWE (RSA-OAEP).
+  SecretString merchant_encryption_private_key = 6;
+  // PACO RSA public key (PEM) — verifies the response JWS.
+  SecretString paco_signing_public_key = 7;
+  // PACO RSA public key (PEM) — encrypts the request JWE.
+  SecretString paco_encryption_public_key = 8;
+  optional string base_url = 50;
+}
+
 // ConnectorSpecificConfig message with oneof containing all connector
 // configurations. Comment above each field (e.g. "// PAYPAL = 62") is the
 // Connector enum value from this file;
@@ -4453,6 +4475,9 @@ message ConnectorSpecificConfig {
 
     // EASEBUZZ = 120
     EasebuzzConfig easebuzz = 120;
+
+    // TWOCTWOP_PACO = 121
+    TwoctwopPacoConfig twoctwop_paco = 121;
   }
 }
 

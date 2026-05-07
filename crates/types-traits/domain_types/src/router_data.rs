@@ -741,6 +741,21 @@ pub enum ConnectorSpecificConfig {
         juspay_public_key: Secret<String>,
         base_url: Option<String>,
     },
+    /// 2C2P PACO - Payment Air Controller. JOSE-encrypted REST.
+    /// Carries a 32-hex `paco_kid`, four RSA PEMs, an access token, an
+    /// `office_id` (multi-merchant scoping in PACO) and the acquirer-side
+    /// `merchant_id` (used on the Inquiry path).
+    TwoctwopPaco {
+        access_token: Secret<String>,
+        office_id: Secret<String>,
+        merchant_id: Secret<String>,
+        paco_kid: Secret<String>,
+        merchant_signing_private_key: Secret<String>,
+        merchant_encryption_private_key: Secret<String>,
+        paco_signing_public_key: Secret<String>,
+        paco_encryption_public_key: Secret<String>,
+        base_url: Option<String>,
+    },
 }
 
 impl ConnectorSpecificConfig {
@@ -1054,6 +1069,12 @@ impl ConnectorSpecificConfig {
                 client_secret
             },
             Imerchantsolutions { api_key },
+            TwoctwopPaco {
+                access_token,
+                office_id,
+                merchant_id,
+                paco_kid
+            },
         )
     }
 
@@ -1459,6 +1480,12 @@ impl ConnectorSpecificConfig {
                     client_secret
                 },
                 Imerchantsolutions { api_key },
+                TwoctwopPaco {
+                    access_token,
+                    office_id,
+                    merchant_id,
+                    paco_kid
+                },
             ),
             serde_json::Value::Object(connector_patch),
         );
@@ -1991,6 +2018,23 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: imerchantsolutions.api_key.ok_or_else(err)?,
                 merchant_id: imerchantsolutions.merchant_id,
                 base_url: imerchantsolutions.base_url,
+            }),
+            AuthType::TwoctwopPaco(twoctwop_paco) => Ok(Self::TwoctwopPaco {
+                access_token: twoctwop_paco.access_token.ok_or_else(err)?,
+                office_id: twoctwop_paco.office_id.ok_or_else(err)?,
+                merchant_id: twoctwop_paco.merchant_id.ok_or_else(err)?,
+                paco_kid: twoctwop_paco.paco_kid.ok_or_else(err)?,
+                merchant_signing_private_key: twoctwop_paco
+                    .merchant_signing_private_key
+                    .ok_or_else(err)?,
+                merchant_encryption_private_key: twoctwop_paco
+                    .merchant_encryption_private_key
+                    .ok_or_else(err)?,
+                paco_signing_public_key: twoctwop_paco.paco_signing_public_key.ok_or_else(err)?,
+                paco_encryption_public_key: twoctwop_paco
+                    .paco_encryption_public_key
+                    .ok_or_else(err)?,
+                base_url: twoctwop_paco.base_url,
             }),
         }
     }
@@ -3056,6 +3100,11 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
+            // PACO carries an 8-field credential set that does not fit any
+            // of the legacy `ConnectorAuthType` variants. Configuration must
+            // arrive via the typed gRPC `ConnectorSpecificConfig::TwoctwopPaco`
+            // path (see `ForeignTryFrom<grpc::ConnectorSpecificConfig>`).
+            ConnectorEnum::TwoctwopPaco => Err(err().into()),
         }
     }
 }
