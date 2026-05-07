@@ -793,7 +793,7 @@ impl<F, T>
     TryFrom<
         ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 where
@@ -804,7 +804,7 @@ where
     fn try_from(
         item: ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
@@ -908,7 +908,7 @@ impl
     TryFrom<
         ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
@@ -917,7 +917,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
@@ -980,7 +980,7 @@ impl
     TryFrom<
         ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
@@ -989,7 +989,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
@@ -1052,7 +1052,7 @@ impl
     TryFrom<
         ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            Self,
         >,
     > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
@@ -1061,7 +1061,7 @@ impl
     fn try_from(
         item: ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
@@ -1535,12 +1535,7 @@ impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     >
     for RouterDataV2<
@@ -1555,12 +1550,7 @@ impl<T: PaymentMethodDataTypes>
     fn try_from(
         item: ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
@@ -1685,12 +1675,7 @@ impl<T: PaymentMethodDataTypes>
     TryFrom<
         ResponseRouterData<
             TwoctwopPacoInquiryResponse,
-            RouterDataV2<
-                PostAuthenticate,
-                PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     >
     for RouterDataV2<
@@ -1705,12 +1690,7 @@ impl<T: PaymentMethodDataTypes>
     fn try_from(
         item: ResponseRouterData<
             TwoctwopPacoInquiryResponse,
-            RouterDataV2<
-                PostAuthenticate,
-                PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
+            Self,
         >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
