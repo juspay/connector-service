@@ -108,7 +108,7 @@ Here's where the design gets elegant. Prism doesn't pick one format and force ev
 Here's how Prism implements it. There are four output types:
 
 ```
-MinorUnit        → raw integer          (Stripe, Razorpay)
+MinorUnit        → raw integer          (Stripe, Adyen)
 StringMinorUnit  → integer as a string  ("1000")
 StringMajorUnit  → decimal string       ("10.00") (PayPal, Wells Fargo)
 FloatMajorUnit   → floating-point       (10.0) (Stax)
