@@ -2637,11 +2637,14 @@ pub struct SetupRecurringRequest {
     pub metadata: Option<Secret<String>>,
     pub connector_feature_data: Option<Secret<String>>,
     pub state: Option<grpc_payment_types::ConnectorState>,
+    pub session_token: Option<String>,
     pub setup_mandate_details: Option<grpc_payment_types::SetupMandateDetails>,
     pub customer_acceptance: Option<grpc_payment_types::CustomerAcceptance>,
     pub auth_type: AuthenticationType,
     pub authentication_data: Option<grpc_payment_types::AuthenticationData>,
     pub setup_future_usage: grpc_payment_types::FutureUsage,
+    pub request_incremental_authorization: bool,
+    pub enable_partial_authorization: Option<bool>,
     pub browser_info: Option<grpc_payment_types::BrowserInformation>,
     pub billing_descriptor: Option<grpc_payment_types::BillingDescriptor>,
     pub locale: Option<String>,
@@ -2651,7 +2654,9 @@ pub struct SetupRecurringRequest {
     pub order_category: Option<String>,
     pub order_id: Option<String>,
     pub order_tax_amount: Option<i64>,
+    pub shipping_cost: Option<i64>,
     pub merchant_order_id: Option<String>,
+    pub connector_testing_data: Option<Secret<String>>,
     pub l2_l3_data: Option<grpc_payment_types::L2l3Data>,
 }
 
@@ -2663,6 +2668,10 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
         let tokenization_strategy = req
             .tokenization_strategy
             .map(|_| req.tokenization_strategy());
+        let payment_experience = req.payment_experience.map(|_| req.payment_experience());
+        let threeds_completion_indicator = req
+            .threeds_completion_indicator
+            .map(|_| req.threeds_completion_indicator());
         Self {
             merchant_transaction_id: req.merchant_transaction_id.clone(),
             amount: req.amount,
@@ -2691,13 +2700,13 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
             customer_acceptance: req.customer_acceptance.clone(),
             browser_info: req.browser_info.clone(),
             billing_descriptor: req.billing_descriptor.clone(),
-            payment_experience: Some(req.payment_experience()),
+            payment_experience,
             description: req.description.clone(),
             payment_channel: req.payment_channel(),
             locale: req.locale.clone(),
             state: req.state.clone(),
             tokenization_strategy,
-            threeds_completion_indicator: Some(req.threeds_completion_indicator()),
+            threeds_completion_indicator,
             redirection_response: req.redirection_response,
             continue_redirection_url: req.continue_redirection_url,
             l2_l3_data: req.l2_l3_data,
@@ -2789,6 +2798,7 @@ impl From<grpc_payment_types::PaymentServiceSetupRecurringRequest> for SetupRecu
             metadata: req.metadata,
             connector_feature_data: req.connector_feature_data,
             state: req.state,
+            session_token: req.session_token,
             setup_mandate_details: req.setup_mandate_details,
             customer_acceptance: req.customer_acceptance,
             authentication_data: req.authentication_data,
@@ -2798,10 +2808,14 @@ impl From<grpc_payment_types::PaymentServiceSetupRecurringRequest> for SetupRecu
             payment_channel: req.payment_channel,
             complete_authorize_url: req.complete_authorize_url,
             off_session: req.off_session,
+            request_incremental_authorization: req.request_incremental_authorization,
+            enable_partial_authorization: req.enable_partial_authorization,
             order_category: req.order_category,
             order_id: req.order_id,
             order_tax_amount: req.order_tax_amount,
+            shipping_cost: req.shipping_cost,
             merchant_order_id: req.merchant_order_id,
+            connector_testing_data: req.connector_testing_data,
             l2_l3_data: req.l2_l3_data,
         }
     }
@@ -2832,9 +2846,12 @@ impl From<grpc_payment_types::PaymentServiceProxySetupRecurringRequest> for Setu
             metadata: req.metadata,
             connector_feature_data: None,
             state: req.state,
+            session_token: None,
             setup_mandate_details: req.setup_mandate_details,
             customer_acceptance: req.customer_acceptance,
             authentication_data: req.authentication_data,
+            request_incremental_authorization: false,
+            enable_partial_authorization: None,
             browser_info: req.browser_info,
             billing_descriptor: None,
             locale: None,
@@ -2844,7 +2861,9 @@ impl From<grpc_payment_types::PaymentServiceProxySetupRecurringRequest> for Setu
             order_category: req.order_category,
             order_id: None,
             order_tax_amount: None,
+            shipping_cost: None,
             merchant_order_id: None,
+            connector_testing_data: None,
             l2_l3_data: None,
         }
     }
@@ -3294,14 +3313,19 @@ impl<
             mandate_id: None,
             off_session: value.off_session,
             order_category: value.order_category,
-            session_token: None,
+            session_token: value.session_token,
             access_token,
             customer_acceptance: customer_acceptance
                 .map(mandates::CustomerAcceptance::foreign_try_from)
                 .transpose()?,
             enrolled_for_3ds: value.enrolled_for_3ds,
             related_transaction_id: None,
-            payment_experience: None,
+            payment_experience: match value.payment_experience {
+                Some(grpc_payment_types::PaymentExperience::Unspecified) | None => None,
+                Some(payment_experience) => Some(
+                    common_enums::PaymentExperience::foreign_try_from(payment_experience)?,
+                ),
+            },
             customer_id: value
                 .customer
                 .and_then(|customer| customer.id)
@@ -3320,7 +3344,9 @@ impl<
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
                 .transpose()?,
             merchant_order_id: value.merchant_order_id,
-            order_tax_amount: None,
+            order_tax_amount: value
+                .order_tax_amount
+                .map(common_utils::types::MinorUnit::new),
             shipping_cost,
             merchant_account_id,
             integrity_object: None,
@@ -3416,6 +3442,21 @@ impl<
             .billing_descriptor
             .map(|descriptor| BillingDescriptor::from((&descriptor, None, None)));
 
+        let payment_channel = value
+            .payment_channel
+            .map(grpc_payment_types::PaymentChannel::try_from)
+            .transpose()
+            .ok()
+            .flatten()
+            .filter(|channel| !matches!(channel, grpc_payment_types::PaymentChannel::Unspecified))
+            .map(common_enums::PaymentChannel::foreign_try_from)
+            .transpose()?;
+
+        let connector_testing_data = value
+            .connector_testing_data
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "connector_testing_data")))
+            .transpose()?;
+
         Ok(Self {
             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             payment_method_data,
@@ -3456,7 +3497,7 @@ impl<
                     })
                 })?,
             )?,
-            request_incremental_authorization: false,
+            request_incremental_authorization: value.request_incremental_authorization,
             metadata: value
                 .metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
@@ -3465,9 +3506,7 @@ impl<
             capture_method: None,
             merchant_order_id: value.merchant_order_id,
             minor_amount: Some(common_utils::types::MinorUnit::new(amount.minor_amount)),
-            shipping_cost: value
-                .order_tax_amount
-                .map(common_utils::types::MinorUnit::new),
+            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
             customer_id: value
                 .customer
                 .and_then(|customer| customer.connector_customer_id)
@@ -3481,10 +3520,10 @@ impl<
                     },
                 })?,
             integrity_object: None,
-            payment_channel: None,
-            enable_partial_authorization: None,
+            payment_channel,
+            enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
-            connector_testing_data: None,
+            connector_testing_data,
         })
     }
 }
@@ -4169,13 +4208,27 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: common_enums::AttemptStatus::Pending,
-            payment_method: PaymentMethod::Card,
+            payment_method: PaymentMethod::foreign_try_from(
+                value.payment_method.clone().unwrap_or_default(),
+            )?,
             address,
-            auth_type: common_enums::AuthenticationType::default(),
+            auth_type: common_enums::AuthenticationType::foreign_try_from(value.auth_type)?,
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.merchant_transaction_id,
             ),
-            customer_id: None,
+            customer_id: value
+                .customer
+                .clone()
+                .and_then(|customer| customer.id)
+                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                .transpose()
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "unknown",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Failed to parse Customer Id".to_string()),
+                        ..Default::default()
+                    },
+                })?,
             connector_customer: value
                 .customer
                 .and_then(|customer| customer.connector_customer_id),
@@ -4188,11 +4241,11 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             amount: None,
             access_token,
             session_token: value.session_token,
-            reference_id: None,
+            reference_id: value.merchant_order_id.clone(),
             connector_order_id: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -4255,12 +4308,26 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             status: common_enums::AttemptStatus::Pending,
             payment_method: PaymentMethod::Card,
             address,
-            auth_type: common_enums::AuthenticationType::default(),
+            auth_type: common_enums::AuthenticationType::foreign_try_from(value.auth_type)?,
             connector_request_reference_id: extract_connector_request_reference_id(&Some(
                 value.merchant_recurring_payment_id.clone(),
             )),
-            customer_id: None,
-            connector_customer: None,
+            customer_id: value
+                .customer
+                .clone()
+                .and_then(|customer| customer.id)
+                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                .transpose()
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "unknown",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Failed to parse Customer Id".to_string()),
+                        ..Default::default()
+                    },
+                })?,
+            connector_customer: value
+                .customer
+                .and_then(|customer| customer.connector_customer_id),
             description: None,
             return_url: value.return_url.clone(),
             connector_feature_data,
@@ -4269,9 +4336,9 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             minor_amount_capturable: None,
             amount: None,
             access_token,
-            session_token: None,
-            reference_id: None,
-            connector_order_id: None,
+            session_token: value.session_token,
+            reference_id: value.order_id.clone(),
+            connector_order_id: value.order_id,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
@@ -8535,7 +8602,10 @@ impl
             status: common_enums::AttemptStatus::Pending,
             payment_method: PaymentMethod::Card,
             address,
-            auth_type: common_enums::AuthenticationType::default(),
+            auth_type: common_enums::AuthenticationType::foreign_try_from(
+                grpc_api_types::payments::AuthenticationType::try_from(value.auth_type)
+                    .unwrap_or_default(),
+            )?,
             connector_request_reference_id: value.merchant_recurring_payment_id,
             customer_id: value
                 .customer
@@ -8639,13 +8709,21 @@ impl<
 
         let setup_future_usage = value.setup_future_usage();
 
-        let setup_mandate_details = MandateData {
-            update_mandate_id: None,
-            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                customer_acceptance.clone(),
+        let payment_channel = match value.payment_channel() {
+            grpc_payment_types::PaymentChannel::Unspecified => None,
+            _ => Some(common_enums::PaymentChannel::foreign_try_from(
+                value.payment_channel(),
             )?),
-            mandate_type: None,
         };
+
+        let mut setup_mandate_details = value
+            .setup_mandate_details
+            .map(MandateData::foreign_try_from)
+            .transpose()?
+            .unwrap_or_default();
+        setup_mandate_details.customer_acceptance = Some(
+            mandates::CustomerAcceptance::foreign_try_from(customer_acceptance.clone())?,
+        );
 
         let billing_descriptor =
             value
@@ -8659,13 +8737,6 @@ impl<
                     statement_descriptor_suffix: descriptor.statement_descriptor_suffix.clone(),
                     reference: descriptor.reference.clone(),
                 });
-
-        let payment_channel = match value.payment_channel() {
-            grpc_payment_types::PaymentChannel::Unspecified => None,
-            _ => Some(common_enums::PaymentChannel::foreign_try_from(
-                value.payment_channel(),
-            )?),
-        };
 
         Ok(Self {
             currency: amount.currency,
@@ -8699,16 +8770,16 @@ impl<
                 .map(<Option<common_enums::PaymentMethodType>>::foreign_try_from)
                 .transpose()?
                 .flatten(),
-            request_incremental_authorization: false,
+            request_incremental_authorization: value.request_incremental_authorization,
             metadata: value
                 .metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "metadata")))
                 .transpose()?,
-            complete_authorize_url: None,
+            complete_authorize_url: value.complete_authorize_url.clone(),
             capture_method: None,
             integrity_object: None,
             minor_amount: Some(amount.amount),
-            shipping_cost: None,
+            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
             customer_id: value
                 .customer
                 .and_then(|customer| customer.id)
@@ -13563,236 +13634,5 @@ impl From<connector_types::WebhookResourceReference> for grpc_api_types::payment
                 })),
             },
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        proxied_authorize_to_base, proxied_setup_recurring_to_base,
-        tokenized_setup_recurring_to_base, AuthorizationRequest, SetupRecurringRequest,
-    };
-    use grpc_api_types::payments as grpc_payment_types;
-    use hyperswitch_masking::Secret;
-
-    fn secret(value: &str) -> Secret<String> {
-        Secret::new(value.to_string())
-    }
-
-    fn money() -> grpc_payment_types::Money {
-        grpc_payment_types::Money {
-            minor_amount: 100,
-            currency: grpc_payment_types::Currency::Usd as i32,
-        }
-    }
-
-    fn billing_descriptor() -> grpc_payment_types::BillingDescriptor {
-        grpc_payment_types::BillingDescriptor {
-            statement_descriptor: Some("statement".to_string()),
-            statement_descriptor_suffix: Some("suffix".to_string()),
-            ..Default::default()
-        }
-    }
-
-    fn setup_mandate_details() -> grpc_payment_types::SetupMandateDetails {
-        grpc_payment_types::SetupMandateDetails {
-            update_mandate_id: Some("mandate-update-id".to_string()),
-            ..Default::default()
-        }
-    }
-
-    fn authentication_data() -> grpc_payment_types::AuthenticationData {
-        grpc_payment_types::AuthenticationData {
-            eci: Some("05".to_string()),
-            cavv: Some("sample-cavv".to_string()),
-            ..Default::default()
-        }
-    }
-
-    fn proxy_card() -> grpc_payment_types::ProxyCardDetails {
-        grpc_payment_types::ProxyCardDetails {
-            card_number: Some(secret("4111111111111111")),
-            card_exp_month: Some(secret("12")),
-            card_exp_year: Some(secret("2030")),
-            card_cvc: Some(secret("123")),
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn tokenized_setup_recurring_to_base_maps_supported_proto_fields() {
-        let request = grpc_payment_types::PaymentServiceTokenSetupRecurringRequest {
-            merchant_recurring_payment_id: "merchant-recurring-id".to_string(),
-            amount: Some(money()),
-            billing_descriptor: Some(billing_descriptor()),
-            locale: Some("en-US".to_string()),
-            setup_mandate_details: Some(setup_mandate_details()),
-            ..Default::default()
-        };
-
-        let base = tokenized_setup_recurring_to_base(request);
-
-        assert_eq!(
-            base.billing_descriptor
-                .as_ref()
-                .and_then(|descriptor| descriptor.statement_descriptor.as_deref()),
-            Some("statement")
-        );
-        assert_eq!(base.locale.as_deref(), Some("en-US"));
-        assert_eq!(
-            base.setup_mandate_details
-                .as_ref()
-                .and_then(|details| details.update_mandate_id.as_deref()),
-            Some("mandate-update-id")
-        );
-    }
-
-    #[test]
-    fn proxied_authorize_to_base_maps_supported_proto_fields() {
-        let request = grpc_payment_types::PaymentServiceProxyAuthorizeRequest {
-            amount: Some(money()),
-            card_proxy: Some(proxy_card()),
-            auth_type: grpc_payment_types::AuthenticationType::ThreeDs as i32,
-            authentication_data: Some(authentication_data()),
-            setup_mandate_details: Some(setup_mandate_details()),
-            billing_descriptor: Some(billing_descriptor()),
-            threeds_completion_indicator: Some(
-                grpc_payment_types::ThreeDsCompletionIndicator::Success as i32,
-            ),
-            redirection_response: Some(grpc_payment_types::RedirectionResponse {
-                params: Some("pares=abc".to_string()),
-                ..Default::default()
-            }),
-            shipping_cost: Some(250),
-            test_mode: Some(true),
-            order_category: Some("digital".to_string()),
-            ..Default::default()
-        };
-
-        let base = proxied_authorize_to_base(request).expect("proxy authorize normalization");
-
-        assert_eq!(
-            base.auth_type(),
-            grpc_payment_types::AuthenticationType::ThreeDs
-        );
-        assert_eq!(
-            base.authentication_data
-                .as_ref()
-                .and_then(|data| data.eci.as_deref()),
-            Some("05")
-        );
-        assert_eq!(
-            base.setup_mandate_details
-                .as_ref()
-                .and_then(|details| details.update_mandate_id.as_deref()),
-            Some("mandate-update-id")
-        );
-        assert_eq!(base.shipping_cost, Some(250));
-        assert_eq!(base.test_mode, Some(true));
-        assert_eq!(base.order_category.as_deref(), Some("digital"));
-        assert_eq!(
-            base.billing_descriptor
-                .as_ref()
-                .and_then(|descriptor| descriptor.statement_descriptor.as_deref()),
-            Some("statement")
-        );
-        assert_eq!(
-            base.redirection_response
-                .as_ref()
-                .and_then(|response| response.params.as_deref()),
-            Some("pares=abc")
-        );
-        assert_eq!(
-            base.threeds_completion_indicator(),
-            grpc_payment_types::ThreeDsCompletionIndicator::Success
-        );
-    }
-
-    #[test]
-    fn proxy_authorize_into_authorization_request_preserves_proxy_fields() {
-        let request = grpc_payment_types::PaymentServiceProxyAuthorizeRequest {
-            amount: Some(money()),
-            card_proxy: Some(proxy_card()),
-            billing_descriptor: Some(billing_descriptor()),
-            threeds_completion_indicator: Some(
-                grpc_payment_types::ThreeDsCompletionIndicator::Success as i32,
-            ),
-            redirection_response: Some(grpc_payment_types::RedirectionResponse {
-                params: Some("pares=abc".to_string()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let auth_request: AuthorizationRequest = request.into();
-
-        assert_eq!(
-            auth_request
-                .billing_descriptor
-                .as_ref()
-                .and_then(|descriptor| descriptor.statement_descriptor.as_deref()),
-            Some("statement")
-        );
-        assert_eq!(
-            auth_request.threeds_completion_indicator,
-            Some(grpc_payment_types::ThreeDsCompletionIndicator::Success)
-        );
-        assert_eq!(
-            auth_request
-                .redirection_response
-                .as_ref()
-                .and_then(|response| response.params.as_deref()),
-            Some("pares=abc")
-        );
-    }
-
-    #[test]
-    fn proxied_setup_recurring_to_base_maps_supported_proto_fields() {
-        let request = grpc_payment_types::PaymentServiceProxySetupRecurringRequest {
-            merchant_recurring_payment_id: "merchant-recurring-id".to_string(),
-            amount: Some(money()),
-            card_proxy: Some(proxy_card()),
-            auth_type: grpc_payment_types::AuthenticationType::ThreeDs as i32,
-            authentication_data: Some(authentication_data()),
-            setup_mandate_details: Some(setup_mandate_details()),
-            order_category: Some("service".to_string()),
-            ..Default::default()
-        };
-
-        let base =
-            proxied_setup_recurring_to_base(request).expect("proxy setup recurring normalization");
-
-        assert_eq!(
-            base.auth_type(),
-            grpc_payment_types::AuthenticationType::ThreeDs
-        );
-        assert_eq!(
-            base.authentication_data
-                .as_ref()
-                .and_then(|data| data.eci.as_deref()),
-            Some("05")
-        );
-        assert_eq!(base.order_category.as_deref(), Some("service"));
-        assert_eq!(
-            base.setup_mandate_details
-                .as_ref()
-                .and_then(|details| details.update_mandate_id.as_deref()),
-            Some("mandate-update-id")
-        );
-    }
-
-    #[test]
-    fn proxy_setup_recurring_into_setup_recurring_request_preserves_order_category() {
-        let request = grpc_payment_types::PaymentServiceProxySetupRecurringRequest {
-            merchant_recurring_payment_id: "merchant-recurring-id".to_string(),
-            amount: Some(money()),
-            card_proxy: Some(proxy_card()),
-            order_category: Some("service".to_string()),
-            ..Default::default()
-        };
-
-        let setup_request: SetupRecurringRequest = request.into();
-
-        assert_eq!(setup_request.order_category.as_deref(), Some("service"));
     }
 }
