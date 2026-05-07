@@ -84,7 +84,49 @@ test-prism --connector {CONNECTOR} --suite authorize
 
 ## Phase 2: Analyze Results
 
+**Research the failure before classifying it. Do NOT guess.**
+
+Use this checklist for every failing scenario:
+
+1. Read the **latest** matching block in `crates/internal/integration-tests/report.json`.
+2. Inspect the connector's **effective request** with:
+
+```bash
+UCS_DEBUG_EFFECTIVE_REQ=1 test-prism --connector {CONNECTOR} --interface {TEST_MODE} --report
+```
+
+3. Compare the base scenario with the connector override:
+   - Base: `crates/internal/integration-tests/src/global_suites/<suite>_suite/scenario.json`
+   - Override: `crates/internal/integration-tests/src/connector_specs/{CONNECTOR}/override.json`
+4. Read the harness docs/code that explain what the runner really sends:
+   - `crates/internal/integration-tests/docs/connector-overrides.md`
+   - `crates/internal/integration-tests/docs/code-walkthrough.md`
+   - `crates/internal/integration-tests/src/harness/connector_override/mod.rs`
+   - `crates/internal/integration-tests/src/harness/scenario_api.rs`
+5. Read the connector implementation to identify:
+   - required request fields sourced from scenario input
+   - fields sourced from creds/config/header generation instead of `override.json`
+   - explicitly unsupported payment methods / flows
+   - strict response parsing that can fail after the request is sent
+6. Use local reference material when available:
+   - integration-test docs/files under `crates/internal/integration-tests/docs/*`, `src/*`, `README.md`, `TESTING_PLAN.md`, `test_suite.sh`
+
+**Important facts while analyzing:**
+
+- `override.json` is merged into the effective `grpc_req` **before** execution.
+- `test-prism --interface grpc` sends the harness-built request through gRPC/grpcurl.
+- You may add request fields via `override.json` **only if** they are valid in the proto request shape and sourced from scenario input.
+- `override.json` cannot directly fix:
+  - connector config / creds-derived fields
+  - generated headers or request-reference IDs
+  - connector code branches that return `NotSupported` / `NotImplemented`
+  - response deserialization mismatches after the connector responds
+  - harness/core dependency propagation bugs
+- Downstream suites (`Capture`, `Get`, `Refund`, `Void`) can use authorize-derived IDs **only if** authorize succeeded and the prior response exposes the ID in a path the harness can reuse. If authorize fails, omits the ID, or returns it in an unmapped shape, later suites will still fail with missing transaction/refund IDs.
+- Treat known connector behavior from references as real evidence. Example: Payload duplicate-sensitive flows need a delay window; NMI SetupMandate must be exactly zero amount.
+
 ### If ALL tests pass:
+
 - Result: **HARDENED**
 - The connector is now fully tested and can move to "Tested" status in docs
 
@@ -108,10 +150,12 @@ test-prism --connector {CONNECTOR} --suite authorize
 - **You MUST make a test change between retries.** Never rerun tests without changing test data. No change = same result = STOP → return FAILED.
 
 **MANDATORY SEQUENCE:**
+
 1. **First:** Identify fixable issues (test data, credentials)
 2. **Second:** For each fixable issue → FIX IT in override.json/creds.json → RERUN tests
 3. **Third:** Only after reruns pass → return HARDENED
 4. **Fourth:** Only if CANNOT fix → return FAILED with evidence of attempted fixes
+
 - If test fails due to test data (positive override) → FIX IT NOW, don't ask
 - If test fails due to connector code bug → FAILED (report)
 - If test fails due to framework bug → REPORT_TO_MASTER (stop)
@@ -125,6 +169,10 @@ test-prism --connector {CONNECTOR} --suite authorize
 - Confirm whether the failing suite is a standalone entrypoint (for example `PaymentService/CreateOrder`) or a scenario dependency
 - Do NOT assume `CreateOrder`, `Authorize`, or session-token flows are chained together unless the scenario explicitly wires them together
 - Check the request payload before deciding what should exist in the response; for example, payment-method-specific fields may be the reason `session_data` appears in one scenario and not another
+- For missing required fields, verify whether the field comes from:
+  - scenario request data (`override.json` can help), or
+  - connector config / generated headers / request-reference plumbing (`override.json` cannot help)
+- For missing `connector_transaction_id`, verify the upstream authorize/latest dependency response before changing a downstream scenario. Missing downstream IDs are often symptoms of an earlier failure, not independent override bugs.
 
 1. **Test Bug — POSITIVE Override Issue (FIX):**
    - Test uses wrong field names → fix the test data
@@ -196,6 +244,26 @@ git checkout -b fix/test-{connector}-{issue}
   - `specs.json` — connector-specific specs
   - Scenario JSON files in the connector spec folder
 
+**How to update `override.json` safely:**
+
+1. Start from the base global scenario and patch only the connector-specific delta.
+2. Follow `crates/internal/integration-tests/docs/connector-overrides.md` exactly:
+   - key shape is `suite -> scenario -> { grpc_req, assert }`
+   - `grpc_req` uses JSON Merge Patch semantics
+   - `null` removes a key
+3. Prefer **leaf-field** edits over replacing whole nested objects.
+4. Use `crates/internal/integration-tests/src/connector_specs/stripe/override.json` as the reference style.
+5. Do not use `override.json` to hide a real connector failure. The request must remain truthful.
+6. If the connector code shows the field comes from creds/config/header generation, stop — that is **not** an override fix.
+7. If the connector code explicitly rejects the PM/flow, stop — that is **not** an override fix.
+
+**Validate override changes before rerunning the connector:**
+
+```bash
+cargo test -p integration-tests all_supported_scenarios_match_proto_schema_for_all_connectors
+cargo test -p integration-tests all_override_entries_match_existing_scenarios_and_proto_schema
+```
+
 **Verify fix:**
 
 ```bash
@@ -209,6 +277,7 @@ test-prism --connector {CONNECTOR} --report
 - Push: `git push -u origin fix/test-{connector}-{issue}`
 
 **MANDATORY: After pushing, CREATE PR:**
+
 ```
 # Create PR after pushing
 gh pr create --title "fix({CONNECTOR}): positive override test fixes" --body "- Test fixes applied for {connector}" --repo juspay/hyperswitch-prism
