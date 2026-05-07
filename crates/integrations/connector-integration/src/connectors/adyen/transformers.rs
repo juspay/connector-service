@@ -1217,17 +1217,26 @@ impl TryFrom<&common_enums::PaymentMethodType> for PaymentType {
             | common_enums::PaymentMethodType::OnlineBankingSlovakia
             | common_enums::PaymentMethodType::Trustly
             | common_enums::PaymentMethodType::GooglePay
-            | common_enums::PaymentMethodType::AliPay
             | common_enums::PaymentMethodType::ApplePay
-            | common_enums::PaymentMethodType::AliPayHk
-            | common_enums::PaymentMethodType::MbWay
             | common_enums::PaymentMethodType::MobilePay
-            | common_enums::PaymentMethodType::WeChatPay
             | common_enums::PaymentMethodType::SamsungPay
             | common_enums::PaymentMethodType::Affirm
             | common_enums::PaymentMethodType::AfterpayClearpay
             | common_enums::PaymentMethodType::PayBright
             | common_enums::PaymentMethodType::Walley => Ok(Self::Scheme),
+            common_enums::PaymentMethodType::AliPay => Ok(Self::Alipay),
+            common_enums::PaymentMethodType::AliPayHk => Ok(Self::AlipayHk),
+            common_enums::PaymentMethodType::MbWay => Ok(Self::Mbway),
+            common_enums::PaymentMethodType::WeChatPay => Ok(Self::WeChatPayWeb),
+            common_enums::PaymentMethodType::Dana => Ok(Self::Dana),
+            common_enums::PaymentMethodType::Gcash => Ok(Self::Gcash),
+            common_enums::PaymentMethodType::GoPay => Ok(Self::GoPay),
+            common_enums::PaymentMethodType::KakaoPay => Ok(Self::Kakaopay),
+            common_enums::PaymentMethodType::Momo => Ok(Self::Momo),
+            common_enums::PaymentMethodType::TouchNGo => Ok(Self::TouchNGo),
+            common_enums::PaymentMethodType::Twint => Ok(Self::Twint),
+            common_enums::PaymentMethodType::Vipps => Ok(Self::Vipps),
+            common_enums::PaymentMethodType::Swish => Ok(Self::Swish),
             common_enums::PaymentMethodType::Sepa => Ok(Self::SepaDirectDebit),
             common_enums::PaymentMethodType::Bacs => Ok(Self::BacsDirectDebit),
             common_enums::PaymentMethodType::Ach => Ok(Self::AchDirectDebit),
