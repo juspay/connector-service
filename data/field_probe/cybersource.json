@@ -1008,7 +1008,8 @@
             "card_exp_month": "03",
             "card_exp_year": "2030",
             "card_cvc": "123",
-            "card_holder_name": "John Doe"
+            "card_holder_name": "John Doe",
+            "card_network": "VISA"
           },
           "customer": {
             "email": "test@example.com"
@@ -1033,7 +1034,7 @@
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
           },
-          "body": "{\"processingInformation\":{\"actionList\":null,\"actionTokenTypes\":null,\"authorizationOptions\":{\"initiator\":null,\"merchantInitiatedTransaction\":null,\"ignoreAvsResult\":null,\"ignoreCvResult\":null},\"commerceIndicator\":\"internet\",\"capture\":true,\"captureOptions\":null,\"paymentSolution\":null},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"123\",\"type\":null,\"typeSelectionIndicator\":\"1\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":null,\"lastName\":null,\"address1\":null,\"locality\":null,\"country\":null,\"email\":\"test@example.com\"}},\"clientReferenceInformation\":{\"code\":\"probe_proxy_txn_001\"}}"
+          "body": "{\"processingInformation\":{\"actionList\":null,\"actionTokenTypes\":null,\"authorizationOptions\":{\"initiator\":null,\"merchantInitiatedTransaction\":null,\"ignoreAvsResult\":null,\"ignoreCvResult\":null},\"commerceIndicator\":\"internet\",\"capture\":true,\"captureOptions\":null,\"paymentSolution\":null},\"paymentInformation\":{\"card\":{\"number\":\"{{$card_number}}\",\"expirationMonth\":\"{{$card_exp_month}}\",\"expirationYear\":\"{{$card_exp_year}}\",\"securityCode\":\"{{$card_cvc}}\",\"type\":\"001\",\"typeSelectionIndicator\":\"1\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":null,\"lastName\":null,\"address1\":null,\"locality\":null,\"country\":null,\"email\":\"test@example.com\"}},\"clientReferenceInformation\":{\"code\":\"probe_proxy_txn_001\"}}"
         }
       }
     },
