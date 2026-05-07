@@ -595,6 +595,11 @@ export interface PRReviewResult {
   approved: boolean;
   comments: PRComment[];
   specComplianceScore: number;
+  /** PR-creation outputs from 2.4_pr.md Phase 6 + Output section. */
+  status?: "SUCCESS" | "FAILED";
+  prUrl?: string;
+  prBranch?: string;
+  reason?: string;
 }
 
 export type HumanReviewDecision = "approve" | "edit" | "regenerate";
@@ -691,6 +696,10 @@ export interface PipelineArtifacts {
   task?: TaskDefinition;
   /** GRACE: Requirements discovery results */
   requirements?: TaskDefinition["requirements"];
+  /** Working git branch produced by preflight (legacy alias for `devBranch`). */
+  branch?: string;
+  /** Working git branch produced by preflight; consumed by pr_review as DEV_BRANCH input. */
+  devBranch?: string;
   productAlignment?: ProductAlignmentDoc;
   featureResearch?: FeatureResearchReport;
   designGate?: DesignGateResult;
@@ -715,6 +724,14 @@ export interface PipelineArtifacts {
   };
   /** gRPC test errors from previous test attempt for retry */
   grpcTestErrors?: string[];
+  /** True iff the last grpc_test attempt failed (set by grpc-test.ts). */
+  grpcTestFailed?: boolean;
+  /** Free-form error string from grpc_test (mirrors errors[0]). */
+  grpcTestError?: string;
+  /** grpcurl command from the last grpc_test attempt. */
+  grpcurlCommand?: string;
+  /** Sanitized response summary from the last grpc_test attempt. */
+  grpcResponse?: string;
   /** Raw grpcurl output from test attempts */
   grpcurlOutput?: string;
   designDiff?: DesignDiffResult;
