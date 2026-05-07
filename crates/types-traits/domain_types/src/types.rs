@@ -1591,6 +1591,11 @@ impl<
                         payment_method_data::RealTimePaymentData::DuitNow {},
                     )))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::PromptPay(_) => {
+                    Ok(Self::RealTimePayment(Box::new(
+                        payment_method_data::RealTimePaymentData::PromptPay {},
+                    )))
+                }
                 // ============================================================================
                 // BUY NOW, PAY LATER - Direct variants
                 // ============================================================================
@@ -2304,6 +2309,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::DuitNow(_) => Ok(Some(PaymentMethodType::DuitNow)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PromptPay(_) => Ok(Some(PaymentMethodType::PromptPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Crypto(_) => Ok(Some(PaymentMethodType::CryptoCurrency)),
                 // ============================================================================
                 // BUY NOW, PAY LATER - PaymentMethodType mappings
@@ -6592,6 +6598,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::CryptoCurrency => Ok(Self::Crypto),
 
             grpc_api_types::payments::PaymentMethodType::DuitNow => Ok(Self::RealTimePayment),
+            grpc_api_types::payments::PaymentMethodType::PromptPay => Ok(Self::RealTimePayment),
 
             grpc_api_types::payments::PaymentMethodType::Boleto => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethodType::Oxxo => Ok(Self::Voucher),
@@ -9508,42 +9515,53 @@ pub fn generate_defend_dispute_response(
         .get_raw_connector_request();
 
     match defend_dispute_response {
-        Ok(response) => Ok(DisputeServiceDefendResponse {
-            dispute_id: response.connector_dispute_id,
-            dispute_status: response.dispute_status as i32,
-            connector_status_code: None,
-            error: None,
-            merchant_dispute_id: None,
-            status_code: response.status_code as u32,
-            response_headers: router_data_v2
-                .resource_common_data
-                .get_connector_response_headers_as_map(),
-            raw_connector_request,
-        }),
-        Err(e) => Ok(DisputeServiceDefendResponse {
-            dispute_id: e
-                .connector_transaction_id
-                .clone()
-                .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-            dispute_status: common_enums::DisputeStatus::DisputeLost as i32,
-            connector_status_code: None,
-            error: Some(grpc_api_types::payments::ErrorInfo {
-                unified_details: None,
-                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
-                    message: Some(e.message.clone()),
-                    code: Some(e.code.clone()),
-                    reason: e.reason.clone(),
-                    connector_transaction_id: e.connector_transaction_id.clone(),
+        Ok(response) => {
+            let grpc_status =
+                grpc_api_types::payments::DisputeStatus::foreign_from(response.dispute_status);
+
+            Ok(DisputeServiceDefendResponse {
+                dispute_id: response.connector_dispute_id,
+                dispute_status: grpc_status.into(),
+                connector_status_code: None,
+                error: None,
+                merchant_dispute_id: None,
+                status_code: response.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
+                raw_connector_request,
+            })
+        }
+        Err(e) => {
+            let grpc_dispute_status = grpc_api_types::payments::DisputeStatus::foreign_from(
+                common_enums::DisputeStatus::DisputeLost,
+            );
+
+            Ok(DisputeServiceDefendResponse {
+                dispute_id: e
+                    .connector_transaction_id
+                    .clone()
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                dispute_status: grpc_dispute_status.into(),
+                connector_status_code: None,
+                error: Some(grpc_api_types::payments::ErrorInfo {
+                    unified_details: None,
+                    connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                        message: Some(e.message.clone()),
+                        code: Some(e.code.clone()),
+                        reason: e.reason.clone(),
+                        connector_transaction_id: e.connector_transaction_id.clone(),
+                    }),
+                    issuer_details: None,
                 }),
-                issuer_details: None,
-            }),
-            merchant_dispute_id: None,
-            status_code: e.status_code as u32,
-            response_headers: router_data_v2
-                .resource_common_data
-                .get_connector_response_headers_as_map(),
-            raw_connector_request,
-        }),
+                merchant_dispute_id: None,
+                status_code: e.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
+                raw_connector_request,
+            })
+        }
     }
 }
 
