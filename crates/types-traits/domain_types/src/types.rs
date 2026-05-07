@@ -1591,6 +1591,11 @@ impl<
                         payment_method_data::RealTimePaymentData::DuitNow {},
                     )))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::PromptPay(_) => {
+                    Ok(Self::RealTimePayment(Box::new(
+                        payment_method_data::RealTimePaymentData::PromptPay {},
+                    )))
+                }
                 // ============================================================================
                 // BUY NOW, PAY LATER - Direct variants
                 // ============================================================================
@@ -2304,6 +2309,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // MOBILE & CRYPTO PAYMENTS - PaymentMethodType mappings
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::DuitNow(_) => Ok(Some(PaymentMethodType::DuitNow)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PromptPay(_) => Ok(Some(PaymentMethodType::PromptPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Crypto(_) => Ok(Some(PaymentMethodType::CryptoCurrency)),
                 // ============================================================================
                 // BUY NOW, PAY LATER - PaymentMethodType mappings
@@ -6592,6 +6598,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::CryptoCurrency => Ok(Self::Crypto),
 
             grpc_api_types::payments::PaymentMethodType::DuitNow => Ok(Self::RealTimePayment),
+            grpc_api_types::payments::PaymentMethodType::PromptPay => Ok(Self::RealTimePayment),
 
             grpc_api_types::payments::PaymentMethodType::Boleto => Ok(Self::Voucher),
             grpc_api_types::payments::PaymentMethodType::Oxxo => Ok(Self::Voucher),

@@ -30,7 +30,7 @@ use domain_types::{
         self, AchTransfer, BankRedirectData, BankTransferInstructions, BankTransferNextStepsData,
         Card, CardRedirectData, GiftCardData, GooglePayWalletData, MultibancoTransferInstructions,
         PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
-        WalletData,
+        VoucherNextStepData, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
@@ -347,6 +347,12 @@ pub struct StripePayLaterData {
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripePromptPayData {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct TokenRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(flatten)]
     pub token_data: StripePaymentMethodData<T>,
@@ -569,6 +575,7 @@ pub enum StripePaymentMethodData<
     BankRedirect(StripeBankRedirectData),
     BankDebit(StripeBankDebitData),
     BankTransfer(StripeBankTransferData),
+    RealTimePaymentPromptPay(StripePromptPayData),
 }
 
 #[serde_with::skip_serializing_none]
@@ -795,6 +802,8 @@ pub enum StripePaymentMethodType {
     #[serde(rename = "cashapp")]
     Cashapp,
     RevolutPay,
+    #[serde(rename = "promptpay")]
+    PromptPay,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -831,6 +840,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             common_enums::PaymentMethodType::AliPay => Ok(Self::Alipay),
             common_enums::PaymentMethodType::Przelewy24 => Ok(Self::Przelewy24),
             common_enums::PaymentMethodType::RevolutPay => Ok(Self::RevolutPay),
+            common_enums::PaymentMethodType::PromptPay => Ok(Self::PromptPay),
             // Stripe expects PMT as Card for Recurring Mandates Payments
             common_enums::PaymentMethodType::GooglePay => Ok(Self::Card),
             common_enums::PaymentMethodType::Boleto
@@ -919,7 +929,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::Walley
             | common_enums::PaymentMethodType::Fps
             | common_enums::PaymentMethodType::DuitNow
-            | common_enums::PaymentMethodType::PromptPay
             | common_enums::PaymentMethodType::VietQr
             | common_enums::PaymentMethodType::NetworkToken
             | common_enums::PaymentMethodType::Mifinity
@@ -1542,8 +1551,28 @@ fn create_stripe_payment_method<
             .into()),
         },
 
+        PaymentMethodData::RealTimePayment(real_time_payment_data) => {
+            match real_time_payment_data.deref() {
+                payment_method_data::RealTimePaymentData::PromptPay {} => Ok((
+                    StripePaymentMethodData::RealTimePaymentPromptPay(StripePromptPayData {
+                        payment_method_data_type: StripePaymentMethodType::PromptPay,
+                    }),
+                    Some(StripePaymentMethodType::PromptPay),
+                    payment_request_details.billing_address,
+                )),
+                payment_method_data::RealTimePaymentData::DuitNow {}
+                | payment_method_data::RealTimePaymentData::Fps {}
+                | payment_method_data::RealTimePaymentData::VietQr {} => {
+                    Err(IntegrationError::NotImplemented(
+                        get_unimplemented_payment_method_error_message("stripe"),
+                        Default::default(),
+                    )
+                    .into())
+                }
+            }
+        }
+
         PaymentMethodData::Upi(_)
-        | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
         | PaymentMethodData::MandatePayment
         | PaymentMethodData::OpenBanking(_)
@@ -2915,6 +2944,20 @@ pub fn get_connector_metadata(
                 };
                 Some(multibanco_bank_transfer_instructions.encode_to_value())
             }
+            StripeNextActionResponse::PromptpayDisplayQrCode(response) => {
+                let voucher_data = VoucherNextStepData {
+                    entry_date: None,
+                    expires_at: None,
+                    expiry_date: None,
+                    reference: response.data.clone(),
+                    download_url: None,
+                    instructions_url: response.hosted_instructions_url.clone(),
+                    digitable_line: None,
+                    barcode: None,
+                    qr_code_url: Some(response.image_url_png.clone()),
+                };
+                Some(voucher_data.encode_to_value())
+            }
             _ => None,
         })
         .transpose()
@@ -3191,6 +3234,13 @@ pub fn stripe_opt_latest_attempt_to_opt_string(
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripePromptPayDisplayQrCode {
+    pub data: String,
+    pub image_url_png: String,
+    pub hosted_instructions_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case", remote = "Self")]
 pub enum StripeNextActionResponse {
     CashappHandleRedirectOrDisplayQrCode(StripeCashappQrResponse),
@@ -3200,6 +3250,7 @@ pub enum StripeNextActionResponse {
     WechatPayDisplayQrCode(WechatPayRedirectToQr),
     DisplayBankTransferInstructions(StripeBankTransferDetails),
     MultibancoDisplayDetails(MultibancoCreditTransferResponse),
+    PromptpayDisplayQrCode(StripePromptPayDisplayQrCode),
     NoNextActionBody,
 }
 
@@ -3216,6 +3267,7 @@ impl StripeNextActionResponse {
             Self::CashappHandleRedirectOrDisplayQrCode(_) => None,
             Self::DisplayBankTransferInstructions(_) => None,
             Self::MultibancoDisplayDetails(_) => None,
+            Self::PromptpayDisplayQrCode(_) => None,
             Self::NoNextActionBody => None,
         }
     }
@@ -3266,6 +3318,7 @@ impl Serialize for StripeNextActionResponse {
             Self::WechatPayDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::DisplayBankTransferInstructions(ref i) => Serialize::serialize(i, serializer),
             Self::MultibancoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
+            Self::PromptpayDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::NoNextActionBody => Serialize::serialize("NoNextActionBody", serializer),
         }
     }
@@ -4631,10 +4684,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     .into())
                 }
             },
+            PaymentMethodData::RealTimePayment(real_time_payment_data) => {
+                match real_time_payment_data.deref() {
+                    payment_method_data::RealTimePaymentData::PromptPay {} => {
+                        Ok(Self::RealTimePaymentPromptPay(StripePromptPayData {
+                            payment_method_data_type: StripePaymentMethodType::PromptPay,
+                        }))
+                    }
+                    payment_method_data::RealTimePaymentData::DuitNow {}
+                    | payment_method_data::RealTimePaymentData::Fps {}
+                    | payment_method_data::RealTimePaymentData::VietQr {} => {
+                        Err(IntegrationError::NotImplemented(
+                            get_unimplemented_payment_method_error_message("stripe"),
+                            Default::default(),
+                        )
+                        .into())
+                    }
+                }
+            }
             PaymentMethodData::MandatePayment
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::Reward
-            | PaymentMethodData::RealTimePayment(_)
             | PaymentMethodData::MobilePayment(_)
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::Upi(_)
