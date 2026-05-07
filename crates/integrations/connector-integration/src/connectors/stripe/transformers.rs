@@ -11,13 +11,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
-        IncrementalAuthorization, PaymentMethodToken, RepeatPayment, SetupMandate, Void,
+        Accept, Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
+        DefendDispute, IncrementalAuthorization, PaymentMethodToken, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecificClientAuthenticationResponse,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, MandateReference,
+        AcceptDisputeData, ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorCustomerData, ConnectorCustomerResponse,
+        ConnectorSpecificClientAuthenticationResponse, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, MandateReference,
         MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
@@ -5934,17 +5936,28 @@ pub enum StripeDisputeStatus {
     WarningClosed,
 }
 
-impl From<StripeDisputeStatus> for common_enums::DisputeStatus {
-    fn from(status: StripeDisputeStatus) -> Self {
-        match status {
-            StripeDisputeStatus::NeedsResponse | StripeDisputeStatus::WarningNeedsResponse => {
-                Self::DisputeOpened
+fn map_stripe_dispute_status(
+    status: StripeDisputeStatus,
+    is_accept_flow: bool,
+) -> common_enums::DisputeStatus {
+    match status {
+        StripeDisputeStatus::NeedsResponse | StripeDisputeStatus::WarningNeedsResponse => {
+            common_enums::DisputeStatus::DisputeOpened
+        }
+        StripeDisputeStatus::UnderReview | StripeDisputeStatus::WarningUnderReview => {
+            common_enums::DisputeStatus::DisputeChallenged
+        }
+        StripeDisputeStatus::Won | StripeDisputeStatus::WarningClosed => {
+            common_enums::DisputeStatus::DisputeWon
+        }
+        // AcceptDispute: merchant accepted the loss → DisputeAccepted
+        // SubmitEvidence / DefendDispute: network ruled against merchant → DisputeLost
+        StripeDisputeStatus::Lost => {
+            if is_accept_flow {
+                common_enums::DisputeStatus::DisputeAccepted
+            } else {
+                common_enums::DisputeStatus::DisputeLost
             }
-            StripeDisputeStatus::UnderReview | StripeDisputeStatus::WarningUnderReview => {
-                Self::DisputeChallenged
-            }
-            StripeDisputeStatus::Won | StripeDisputeStatus::WarningClosed => Self::DisputeWon,
-            StripeDisputeStatus::Lost => Self::DisputeAccepted,
         }
     }
 }
@@ -5953,14 +5966,54 @@ pub type StripeAcceptDisputeResponse = StripeDisputeResponse;
 pub type StripeSubmitEvidenceResponse = StripeDisputeResponse;
 pub type StripeDefendDisputeResponse = StripeDisputeResponse;
 
-impl<F, Req> TryFrom<ResponseRouterData<StripeDisputeResponse, Self>>
-    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+impl TryFrom<ResponseRouterData<StripeDisputeResponse, Self>>
+    for RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<StripeDisputeResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let dispute_status = common_enums::DisputeStatus::from(item.response.status);
+        let dispute_status = map_stripe_dispute_status(item.response.status, true);
+        Ok(Self {
+            response: Ok(DisputeResponseData {
+                connector_dispute_id: item.response.id,
+                dispute_status,
+                connector_dispute_status: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<StripeDisputeResponse, Self>>
+    for RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<StripeDisputeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let dispute_status = map_stripe_dispute_status(item.response.status, false);
+        Ok(Self {
+            response: Ok(DisputeResponseData {
+                connector_dispute_id: item.response.id,
+                dispute_status,
+                connector_dispute_status: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<StripeDisputeResponse, Self>>
+    for RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<StripeDisputeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let dispute_status = map_stripe_dispute_status(item.response.status, false);
         Ok(Self {
             response: Ok(DisputeResponseData {
                 connector_dispute_id: item.response.id,
@@ -6054,7 +6107,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<
-                domain_types::connector_flow::SubmitEvidence,
+                SubmitEvidence,
                 DisputeFlowData,
                 SubmitEvidenceData,
                 DisputeResponseData,
@@ -6067,7 +6120,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn try_from(
         item: StripeRouterData<
             RouterDataV2<
-                domain_types::connector_flow::SubmitEvidence,
+                SubmitEvidence,
                 DisputeFlowData,
                 SubmitEvidenceData,
                 DisputeResponseData,
@@ -6115,7 +6168,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         StripeRouterData<
             RouterDataV2<
-                domain_types::connector_flow::DefendDispute,
+                DefendDispute,
                 DisputeFlowData,
                 DisputeDefendData,
                 DisputeResponseData,
@@ -6128,7 +6181,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn try_from(
         _item: StripeRouterData<
             RouterDataV2<
-                domain_types::connector_flow::DefendDispute,
+                DefendDispute,
                 DisputeFlowData,
                 DisputeDefendData,
                 DisputeResponseData,
