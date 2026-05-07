@@ -6,7 +6,7 @@ use error_stack::Report;
 use tonic::metadata;
 use ucs_env::{configs, error::ResultExtGrpc};
 
-use crate::utils::{connector_and_optional_config_from_metadata, MetadataPayload};
+use crate::utils::{connector_and_config_from_metadata, connector_from_metadata, MetadataPayload};
 use ucs_interface_common::metadata::{
     merchant_id_from_metadata, request_id_from_metadata, tenant_id_from_metadata,
 };
@@ -82,8 +82,21 @@ fn extract_routing_metadata_only(
     // inside the config (e.g. for external source verification). Use it when present,
     // otherwise fall back to NoKey so callers can still proceed.
     // The connector name is always required and will error if absent.
-    let (connector, optional_config) = connector_and_optional_config_from_metadata(metadata)?;
-    let connector_config = optional_config.unwrap_or(ConnectorSpecificConfig::NoKey);
+    let x_auth_value = metadata.get(consts::X_AUTH).and_then(|v| v.to_str().ok());
+
+    let (connector, connector_config) = match x_auth_value {
+        // If X_AUTH is "NoKey", skip full auth parsing and hardcode connector_config to NoKey.
+        // This is a special convention used by certain webhook flows that don't require auth credentials.
+        Some(v) if v.eq_ignore_ascii_case("NoKey") => {
+            let connector = connector_from_metadata(metadata)?;
+            (connector, ConnectorSpecificConfig::NoKey)
+        }
+        // For all other cases, resolve connector and config through the standard metadata parsing.
+        _ => {
+            let (connector, connector_config) = connector_and_config_from_metadata(metadata)?;
+            (connector, connector_config)
+        }
+    };
 
     // Extract optional fields
     let reference_id = metadata

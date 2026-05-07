@@ -14,7 +14,7 @@ use std::{str::FromStr, sync::Arc};
 use tonic::metadata;
 use ucs_env::configs;
 
-use crate::auth::connector_and_optional_config_from_metadata;
+use crate::auth::connector_and_config_from_metadata;
 
 /// Struct to hold extracted metadata payload.
 ///
@@ -47,19 +47,7 @@ pub fn get_metadata_payload(
 ) -> CustomResult<MetadataPayload, IntegrationError> {
     // Resolve connector and config: try x-connector-config header first,
     // then fall back to legacy x-connector and x-auth headers.
-    // For authenticated flows, connector config is required — error if absent.
-    let (connector, optional_config) = connector_and_optional_config_from_metadata(metadata)?;
-    let connector_config = optional_config.ok_or_else(|| {
-        Report::new(IntegrationError::MissingRequiredField {
-            field_name: "x-connector-config or x-auth",
-            context: IntegrationErrorContext {
-                additional_context: Some(
-                    "Connector config is required for authenticated flows".to_string(),
-                ),
-                ..Default::default()
-            },
-        })
-    })?;
+    let (connector, connector_config) = connector_and_config_from_metadata(metadata)?;
 
     let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;
