@@ -30,7 +30,7 @@ This is the classic. You send `10` when the processor expects `1000`. Your custo
 
 This one is subtle. Floating-point arithmetic isn't exact. Try this in any language:
 
-```
+```text
 10.99 + 20.99 = 31.980000000000004
 ```
 
@@ -107,7 +107,7 @@ Here's where the design gets elegant. Prism doesn't pick one format and force ev
 
 Here's how Prism implements it. There are four output types:
 
-```
+```text
 MinorUnit        → raw integer          (Stripe, Adyen)
 StringMinorUnit  → integer as a string  ("1000")
 StringMajorUnit  → decimal string       ("10.00") (PayPal, Wells Fargo)
@@ -149,7 +149,7 @@ The key is where the float lives. Inside Prism, everything is `MinorUnit` (an in
 
 The conversion itself uses [`rust_decimal::Decimal`](https://docs.rs/rust_decimal/latest/rust_decimal/) as an intermediate — a fixed-precision decimal library, not native floating-point — so the arithmetic stays clean:
 
-```
+```text
 // Converting Money { amount: MinorUnit(1234), currency: USD }
 // to StringMajorUnit for a connector that wants "12.34":
 
@@ -236,8 +236,13 @@ And once you see the pattern, you start seeing where else it applies.
 
 Prism is open source — built in Rust, with SDKs across languages.
 
-- GitHub: [github.com/juspay/hyperswitch-prism](https://github.com/juspay/hyperswitch-prism)
+{% github juspay/hyperswitch-prism %}
+
 - Node.js: `npm install hyperswitch-prism`
 - Python: `pip install hyperswitch-prism`
 - Java: `io.hyperswitch:prism` on Maven Central
 - Docs: [docs.hyperswitch.io/integrations/prism/prism/installation](https://docs.hyperswitch.io/integrations/prism/prism/installation)
+
+---
+
+*If this was useful, a ⭐ on GitHub goes a long way. And if your stack handles currency conversion differently — we'd love to hear how in the comments.*
