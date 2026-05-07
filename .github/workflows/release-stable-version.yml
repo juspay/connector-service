@@ -133,21 +133,15 @@ jobs:
         run: |
           PREVIOUS_TAG="${{ steps.version.outputs.previous_tag }}"
           NEXT_TAG="${{ steps.version.outputs.next_tag }}"
-          NOTES_FILE=".github/releases/${NEXT_TAG}.md"
 
           export GIT_CLIFF__GIT__TAG_PATTERN='v[0-9]*\.[0-9]*\.[0-9]*'
 
-          if [ -f "${NOTES_FILE}" ]; then
-            echo "Using existing release notes: ${NOTES_FILE}"
-            cp "${NOTES_FILE}" release-notes.md
-          else
-            git-cliff \
-              --config '.github/git-cliff-changelog.toml' \
-              --strip header \
-              --tag "${NEXT_TAG}" \
-              "${PREVIOUS_TAG}^.." \
-              | sed "/## ${PREVIOUS_TAG}\$/,\$d" > release-notes.md
-          fi
+          git-cliff \
+            --config '.github/git-cliff-changelog.toml' \
+            --strip header \
+            --tag "${NEXT_TAG}" \
+            "${PREVIOUS_TAG}^.." \
+            | sed "/## ${PREVIOUS_TAG}\$/,\$d" > release-notes.md
 
           echo "notes_file=release-notes.md" >> "$GITHUB_OUTPUT"
 
