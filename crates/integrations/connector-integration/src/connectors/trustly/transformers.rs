@@ -288,19 +288,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .change_context(errors::IntegrationError::AmountConversionFailed {
                             context: Default::default(),
                         })?,
-                    country: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_country()
-                        .unwrap_or(
-                            item.router_data
-                                .resource_common_data
-                                .get_optional_shipping_country()
-                                .ok_or(errors::IntegrationError::MissingRequiredField {
-                                    field_name: "country",
-                                    context: Default::default(),
-                                })?,
-                        ),
+                    country: match item.router_data.resource_common_data.get_billing_country() {
+                        Ok(country) => country,
+                        Err(_) => item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_shipping_country()
+                            .ok_or(errors::IntegrationError::MissingRequiredField {
+                                field_name: "country",
+                                context: Default::default(),
+                            })?,
+                    },
                     currency: item.router_data.request.currency,
                     email: item
                         .router_data
