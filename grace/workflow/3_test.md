@@ -43,6 +43,14 @@ cat creds.json | jq '.${CONNECTOR}'
 
 ## Phase 1: Run Tests
 
+**Before the first run (and again on any readiness failure), clear stale listeners on BOTH ports:**
+
+```bash
+# test-prism waits for gRPC on 8000, but stale listeners on 8080 can also kill startup
+lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+```
+
 **Run with timeout (5-10 minutes per connector):**
 
 ```bash
@@ -60,6 +68,12 @@ test-prism --connector {CONNECTOR} --suite authorize
 ```
 
 **Capture the full output** — save test results for analysis.
+
+**Read the latest report carefully:**
+
+- `crates/internal/integration-tests/report.json` accumulates entries across runs
+- Always inspect the latest block for the scenario you just reran (usually near the end of the file)
+- Do NOT justify a fix from an older matching scenario block
 
 **View results in UI:**
 
@@ -106,12 +120,20 @@ test-prism --connector {CONNECTOR} --suite authorize
 
 **Determine failure type:**
 
+**Before classifying a failure, verify the actual suite entrypoint and request shape:**
+
+- Confirm whether the failing suite is a standalone entrypoint (for example `PaymentService/CreateOrder`) or a scenario dependency
+- Do NOT assume `CreateOrder`, `Authorize`, or session-token flows are chained together unless the scenario explicitly wires them together
+- Check the request payload before deciding what should exist in the response; for example, payment-method-specific fields may be the reason `session_data` appears in one scenario and not another
+
 1. **Test Bug — POSITIVE Override Issue (FIX):**
    - Test uses wrong field names → fix the test data
    - Missing required fields in test data → add field
    - Test assertion logic is wrong → fix assertion to match expected behavior
    - Missing connector config in test → add config
    - **Key: The fix makes the test correct, not just asserts failure**
+   - Removing an invalid success-only assertion is allowed only when the real failing payload remains visible after the change
+   - Widening a status assertion is allowed only when the latest report block AND connector/UCS mapping both support that status
    - **→ FIX IMMEDIATELY, DO NOT WAIT → RERUN → THEN proceed**
    - **→ FIX NOW, proceed to Phase 3 immediately**
 
@@ -222,6 +244,7 @@ gh pr label add "grace" --repo juspay/hyperswitch-prism
 
 - **ALWAYS check creds first** — no creds = SKIPPED
 - **Set timeout** — 5-10 minutes per connector
+- **If server readiness fails, inspect both 8000 and 8080** — stale metrics listeners can look like a gRPC 8000 problem
 - **Positive overrides only** — fix assertions, not just assert failure
 - **NEVER touch UCS core** — only test files
 - **NEVER touch framework core** — only connector_specs/
