@@ -802,7 +802,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::BankRedirect(
                     BankRedirectData::Przelewy24 { .. }
                     | BankRedirectData::Blik { .. }
-                    | BankRedirectData::Trustly { .. },
+                    | BankRedirectData::Trustly { .. }
+                    | BankRedirectData::BancontactCard { .. },
                 ) => (None, return_url.clone()),
                 _ => (return_url.clone(), return_url.clone()),
             };
@@ -817,30 +818,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let billing = item.router_data.resource_common_data.get_optional_billing();
-        let apm_customer = if is_bank_redirect {
-            let is_bizum = matches!(
-                &item.router_data.request.payment_method_data,
-                PaymentMethodData::BankRedirect(BankRedirectData::Bizum { .. })
-            );
-            let email = if is_bizum {
-                None
-            } else {
-                billing
-                    .and_then(|a| a.email.as_ref())
-                    .map(|e| Secret::new(e.peek().clone()))
-            };
-            Some(ApmCustomer { email, first_name: None, last_name: None })
-        } else if is_pay_later_klarna {
-            let first_name = billing.and_then(|a| a.get_optional_first_name());
-            let last_name = billing.and_then(|a| a.get_optional_last_name());
+        let is_bizum = matches!(
+            &item.router_data.request.payment_method_data,
+            PaymentMethodData::BankRedirect(BankRedirectData::Bizum { .. })
+        );
+        let apm_customer = if is_bank_redirect && !is_bizum {
             let email = billing
                 .and_then(|a| a.email.as_ref())
                 .map(|e| Secret::new(e.peek().clone()));
-            Some(ApmCustomer {
-                email,
-                first_name,
-                last_name,
-            })
+            Some(ApmCustomer { email, first_name: None, last_name: None })
         } else {
             None
         };

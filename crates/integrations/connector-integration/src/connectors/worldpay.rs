@@ -40,7 +40,7 @@ use domain_types::{
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
         WebhookResourceReference,
     },
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, WalletData},
+    payment_method_data::{BankDebitData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -557,6 +557,7 @@ macros::macro_connector_implementation!(
                 }
                 // APM endpoint (/apmPayments) requires 2024-07-01
                 PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::PayLater(PayLaterData::KlarnaRedirect { .. })
                 | PaymentMethodData::Wallet(
                     WalletData::PaypalRedirect(_)
                     | WalletData::PaypalSdk(_)
@@ -564,7 +565,8 @@ macros::macro_connector_implementation!(
                     | WalletData::AliPayQr(_)
                     | WalletData::AliPayHkRedirect(_)
                     | WalletData::WeChatPayRedirect(_)
-                    | WalletData::WeChatPayQr(_),
+                    | WalletData::WeChatPayQr(_)
+                    | WalletData::SwishQr(_),
                 ) => Some("2024-07-01"),
                 _ => None,
             };
@@ -596,7 +598,9 @@ macros::macro_connector_implementation!(
                     | WalletData::AliPayHkRedirect(_)
                     | WalletData::WeChatPayRedirect(_)
                     | WalletData::WeChatPayQr(_)
+                    | WalletData::SwishQr(_)
                 ) | PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::PayLater(PayLaterData::KlarnaRedirect { .. })
             );
             if is_apm {
                 Ok(format!("{base_url}apmPayments"))
