@@ -123,7 +123,13 @@ pack-archive:
 	@mkdir -p $(PACKAGE_DIR)
 	@rm -f $(PACKAGE_DIR)/$(subst -,_,$(PACKAGE_NAME))-*.whl
 	@rm -rf $(SDK_ROOT)/build
+ifdef VERSION
+	@sed -i.bak 's/^version = .*/version = "$(VERSION)"/' $(SDK_ROOT)/pyproject.toml
+endif
 	@cd $(SDK_ROOT) && python3 -m pip wheel . --no-deps --wheel-dir $(PACKAGE_DIR)/
+ifdef VERSION
+	@mv $(SDK_ROOT)/pyproject.toml.bak $(SDK_ROOT)/pyproject.toml
+endif
 	@echo "Wheel built: $(WHEEL_FILE)"
 
 # ---------------------------------------------------------------------------

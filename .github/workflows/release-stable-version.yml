@@ -3,6 +3,10 @@ name: Release a stable version
 on:
   workflow_dispatch:
     inputs:
+      calver_tag:
+        description: "CalVer nightly tag to release from (e.g. 2026.05.07.0)"
+        required: true
+        type: string
       dry_run:
         description: "Dry run — preview version and changelog without publishing"
         required: false
@@ -11,17 +15,15 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   tag-release:
     name: Bump version, tag, and generate changelog
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     outputs:
       version: ${{ steps.version.outputs.version }}
       previous_tag: ${{ steps.version.outputs.previous_tag }}
@@ -31,10 +33,10 @@ jobs:
       - name: Validate CalVer tag
         shell: bash
         run: |
-          if [[ "${{ github.ref }}" =~ ^refs/tags/[0-9]{4}\.[0-9]{2}\.[0-9]{2}(\.[0-9]+)?(-[a-zA-Z0-9._-]+)?$ ]]; then
-            echo "Valid CalVer tag: ${{ github.ref_name }}"
+          if [[ "${{ inputs.calver_tag }}" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+(-[a-zA-Z0-9._-]+)?$ ]]; then
+            echo "Valid CalVer tag: ${{ inputs.calver_tag }}"
           else
-            echo "::error::${{ github.ref_name }} is not a valid CalVer tag (expected YYYY.MM.DD.N or YYYY.MM.DD.N-suffix)"
+            echo "::error::${{ inputs.calver_tag }} is not a valid CalVer tag (expected YYYY.MM.DD.N or YYYY.MM.DD.N-suffix)"
             exit 1
           fi
 
@@ -63,7 +65,7 @@ jobs:
 
           allowed_teams=('connector-service-admins' 'connector-service-maintainers')
           is_user_authorized=false
-          username=${{ github.triggering_actor }}
+          username="${{ github.triggering_actor }}"
 
           for team in "${allowed_teams[@]}"; do
             if is_user_team_member "${username}" "${team}"; then
@@ -80,9 +82,10 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout repository
+      - name: Checkout repository at CalVer tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.calver_tag }}
           fetch-depth: 0
           token: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
 
@@ -103,30 +106,27 @@ jobs:
           PREVIOUS_TAG="$(cog get-version 2>/dev/null || echo '0.0.0')"
           PREVIOUS_TAG="v${PREVIOUS_TAG#v}"
 
-          NEXT_TAG="$(cog bump --dry-run --auto --skip-untracked 2>/dev/null)"
-          NEXT_TAG="v${NEXT_TAG#v}"
+          NEXT_VERSION="$(cog bump --dry-run --auto --skip-untracked 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)"
+          NEXT_TAG="v${NEXT_VERSION}"
 
-          if [ -z "${NEXT_TAG#v}" ]; then
+          if [ -z "${NEXT_VERSION}" ]; then
             echo "::error::cog bump --auto produced no version. Check that commits follow conventional format."
             exit 1
           fi
 
-          VERSION="${NEXT_TAG#v}"
-
           echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
           echo "next_tag=${NEXT_TAG}"         >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}"           >> "$GITHUB_OUTPUT"
+          echo "version=${NEXT_VERSION}"      >> "$GITHUB_OUTPUT"
 
           echo "### Version Bump Preview" >> "$GITHUB_STEP_SUMMARY"
           echo "| | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| calver_tag | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| calver_tag | \`${{ inputs.calver_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| previous   | \`${PREVIOUS_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| next       | \`${NEXT_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| dry_run    | \`${{ inputs.dry_run }}\` |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate release notes
-        id: changelog
         shell: bash
         run: |
           PREVIOUS_TAG="${{ steps.version.outputs.previous_tag }}"
@@ -165,13 +165,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
         run: |
+          CALVER_SHA="$(git rev-parse HEAD)"
           gh api \
             --method POST \
             --header 'Accept: application/vnd.github+json' \
             --header 'X-GitHub-Api-Version: 2022-11-28' \
             '/repos/{owner}/{repo}/git/refs' \
             --raw-field "ref=refs/tags/${{ steps.version.outputs.next_tag }}" \
-            --raw-field "sha=${{ github.sha }}"
+            --raw-field "sha=${CALVER_SHA}"
 
       - name: Create GitHub release (draft)
         if: ${{ inputs.dry_run == false }}
@@ -188,7 +189,7 @@ jobs:
   publish-sdks:
     name: Publish SDKs
     needs: [tag-release]
-    if: ${{ inputs.dry_run == false }}
+    if: ${{ inputs.dry_run == false && needs.tag-release.result == 'success' }}
     uses: ./.github/workflows/release-sdks.yml
     with:
       publish_java: true

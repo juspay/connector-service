@@ -135,7 +135,13 @@ build-ts: install-deps
 pack-archive: build-ts
 	@echo "Packing npm archive..."
 	@mkdir -p $(PACKAGE_DIR)
+ifdef VERSION
+	@cd $(SDK_ROOT) && npm version $(VERSION) --no-git-tag-version --allow-same-version
+endif
 	@npm pack --pack-destination $(PACKAGE_DIR)
+ifdef VERSION
+	@cd $(SDK_ROOT) && npm version 0.0.0-dev --no-git-tag-version --allow-same-version
+endif
 	@echo "Tarball created: $(JS_TARBALL)"
 
 # ---------------------------------------------------------------------------
