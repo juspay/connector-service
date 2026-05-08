@@ -541,7 +541,7 @@ jobs:
         continue-on-error: true
         working-directory: sdk/javascript
         run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          PACKAGE_VERSION="${VERSION:-$(node -p "require('./package.json').version")}"
           echo "Checking if hyperswitch-prism $PACKAGE_VERSION exists on npm..."
           if npm view hyperswitch-prism@$PACKAGE_VERSION version >/dev/null 2>&1; then
             echo "Error: Version $PACKAGE_VERSION already exists on npm"

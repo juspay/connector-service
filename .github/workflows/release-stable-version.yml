@@ -60,7 +60,7 @@ jobs:
                 --header "Authorization: Bearer ${GH_TOKEN}" \
                 "https://api.github.com/orgs/${org_name}/teams/${team_slug}/memberships/${username}"
             )"
-            [[ status_code -eq 200 ]]
+            [[ $status_code -eq 200 ]]
           }
 
           allowed_teams=('connector-service-admins' 'connector-service-maintainers')
