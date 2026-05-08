@@ -235,8 +235,7 @@ pub struct ApmBillingAddress {
     pub address1: Secret<String>,
     pub postal_code: Secret<String>,
     pub city: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state: Option<Secret<String>>,
+    pub state: Secret<String>,
     pub country_code: common_enums::CountryAlpha2,
 }
 

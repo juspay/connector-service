@@ -398,7 +398,7 @@ fn fetch_payment_instrument<
                             address1: address.line1.clone()?,
                             postal_code: address.zip.clone()?,
                             city: address.city.clone()?,
-                            state: address.state.clone(),
+                            state: address.state.clone().unwrap_or_else(|| Secret::new(String::new())),
                             country_code: address.country?,
                         })
                     });
@@ -725,10 +725,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 true,
             )
         } else if is_swish {
-            (
-                Some(InstructionMethod::Apm("swish".to_string())),
-                true,
-            )
+            (None, true)
         } else {
             let m = PaymentMethod::try_from((
                 item.router_data.resource_common_data.payment_method,
@@ -834,6 +831,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .and_then(|p| p.get_number_with_country_code().ok())
                 .map(|ph| Secret::new(ph.peek().replace('+', "")));
             Some(ApmCustomer { email: None, first_name: None, last_name: None, phone })
+        } else if is_pay_later_klarna {
+            let email = billing
+                .and_then(|a| a.email.as_ref())
+                .map(|e| Secret::new(e.peek().clone()));
+            let first_name = billing
+                .and_then(|a| a.address.as_ref())
+                .and_then(|d| d.get_optional_first_name());
+            let last_name = billing
+                .and_then(|a| a.address.as_ref())
+                .and_then(|d| d.get_optional_last_name());
+            Some(ApmCustomer { email, first_name, last_name, phone: None })
         } else if is_bank_redirect {
             let email = billing
                 .and_then(|a| a.email.as_ref())
