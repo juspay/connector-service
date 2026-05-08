@@ -729,14 +729,20 @@ pub struct PacoPaymentResultBlock {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AresAcsChallenge {
-    #[serde(rename = "acsURL")]
-    pub acs_url: String,
-    pub creq: String,
-    #[serde(rename = "threeDSSessionData")]
+    /// PACO field is `acsURL` (capital URL).
+    #[serde(default, rename = "acsURL", alias = "acsUrl")]
+    pub acs_url: Option<String>,
+    /// PACO can name the CReq blob `creq`, `cReq`, or `creqB64`. Accept any.
+    #[serde(default, alias = "cReq", alias = "creqB64")]
+    pub creq: Option<String>,
+    /// `threeDSSessionData` (capital DS).
+    #[serde(default, rename = "threeDSSessionData")]
     pub three_ds_session_data: Option<String>,
-    #[serde(rename = "authentication3DSVersion")]
+    /// `authentication3DSVersion` (capital DS).
+    #[serde(default, rename = "authentication3DSVersion")]
     pub authentication_3ds_version: Option<String>,
-    #[serde(rename = "challengeHTML")]
+    /// `challengeHTML` (capital HTML).
+    #[serde(default, rename = "challengeHTML")]
     pub challenge_html: Option<String>,
 }
 
@@ -1602,17 +1608,23 @@ impl<T: PaymentMethodDataTypes>
         // Challenge required → build CReq POST form.
         let challenge = result.and_then(|b| b.ares_acs_challenge.as_ref());
         if let Some(challenge) = challenge {
+            // PACO returns aresACSChallenge with at least the acsURL when a
+            // challenge is required; creq may be absent on some 3DS-method-data
+            // responses. Use empty string defaults so we still surface the
+            // form to the orchestrator.
+            let acs_url = challenge.acs_url.clone().unwrap_or_default();
+            let creq = challenge.creq.clone().unwrap_or_default();
             tracing::debug!(
-                acs_url = %challenge.acs_url,
+                acs_url = %acs_url,
                 "twoctwop_paco: Authenticate requires ACS challenge"
             );
             let mut form_fields: HashMap<String, String> = HashMap::new();
-            form_fields.insert("creq".to_string(), challenge.creq.clone());
+            form_fields.insert("creq".to_string(), creq);
             if let Some(session_data) = &challenge.three_ds_session_data {
                 form_fields.insert("threeDSSessionData".to_string(), session_data.clone());
             }
             let redirect = Box::new(RedirectForm::Form {
-                endpoint: challenge.acs_url.clone(),
+                endpoint: acs_url,
                 method: Method::Post,
                 form_fields,
             });
