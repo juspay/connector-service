@@ -40,7 +40,7 @@ use domain_types::{
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
         WebhookResourceReference,
     },
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -549,13 +549,43 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-            self.build_headers(req)
+            let mut headers = self.build_headers(req)?;
+            let api_version_override = match &req.request.payment_method_data {
+                // ACH PayDirect API requires 2023-06-01
+                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit { .. }) => {
+                    Some("2023-06-01")
+                }
+                // APM endpoint (/apmPayments) requires 2024-07-01
+                PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::Wallet(
+                    WalletData::PaypalRedirect(_)
+                    | WalletData::PaypalSdk(_)
+                    | WalletData::AliPayRedirect(_)
+                    | WalletData::AliPayQr(_)
+                    | WalletData::AliPayHkRedirect(_)
+                    | WalletData::WeChatPayRedirect(_)
+                    | WalletData::WeChatPayQr(_),
+                ) => Some("2024-07-01"),
+                _ => None,
+            };
+            if let Some(version) = api_version_override {
+                if let Some(header) = headers.iter_mut().find(|(k, _)| k == "WP-API-Version") {
+                    *header = ("WP-API-Version".to_string(), version.into());
+                }
+            }
+            Ok(headers)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url_payments(req);
+            if matches!(
+                &req.request.payment_method_data,
+                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit { .. })
+            ) {
+                return Ok(format!("{base_url}payments/alternative/direct/sale"));
+            }
             let is_apm = matches!(
                 &req.request.payment_method_data,
                 PaymentMethodData::Wallet(
