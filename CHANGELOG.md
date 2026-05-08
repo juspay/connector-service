@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.08.0
+
+### Bug Fixes
+
+- **connector:** [Trustly] Skip serializing fields if none ([#1247](https://github.com/juspay/connector-service/pull/1247)) ([`2fc84fc`](https://github.com/juspay/connector-service/commit/2fc84fc0ceca1796e8faee0fc7afea3c8cc08afe))
+
+**Full Changelog:** [`2026.05.07.1...2026.05.08.0`](https://github.com/juspay/connector-service/compare/2026.05.07.1...2026.05.08.0)
+
+- - -
+
 ## 2026.05.07.1
 
 ### Features
