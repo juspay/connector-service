@@ -10,13 +10,13 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        Void,
+        Void, VoidPC,
     },
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
@@ -544,6 +544,30 @@ pub fn build_void_request(
     })
 }
 
+/// PACO's `/api/2.0/Void` accepts both pre- and post-capture reversals.
+/// VoidPC carries the same identifiers as Void, so the wire body is the
+/// same — only the upstream Prism flow marker differs.
+pub fn build_void_pc_request(
+    item: &RouterDataV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    >,
+    auth: &TwoctwopPacoAuthType,
+) -> Result<TwoctwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
+    Ok(TwoctwopPacoVoidRequest {
+        api_request: ApiRequestEnvelope::new(),
+        office_id: auth.office_id.clone(),
+        order_no: item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone(),
+        invoice_no2c2p: item.request.connector_transaction_id.clone(),
+        cancellation_reason: item.request.cancellation_reason.clone(),
+    })
+}
+
 // ---------- Refund ----------
 
 #[derive(Debug, Clone, Serialize)]
@@ -934,6 +958,78 @@ impl
         let result = response.merged_result();
         let api_response = response.api_response.clone();
         let (status, txn_id, ref_id, prior) = extract_status(result, AttemptStatus::CaptureInitiated);
+
+        if matches!(status, AttemptStatus::Failure) {
+            let (code, message) = error_code_message(&api_response, &prior);
+            let error = ErrorResponse {
+                code,
+                message: message.clone(),
+                reason: Some(message),
+                status_code: http_code,
+                attempt_status: Some(status),
+                connector_transaction_id: txn_id,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            };
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..router_data.resource_common_data
+                },
+                response: Err(error),
+                ..router_data
+            });
+        }
+
+        let resource_id = txn_id
+            .map(ResponseId::ConnectorTransactionId)
+            .unwrap_or(ResponseId::NoResponseId);
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id,
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: ref_id,
+                incremental_authorization_allowed: None,
+                status_code: http_code,
+            }),
+            ..router_data
+        })
+    }
+}
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            TwoctwopPacoNonUiResponse,
+            Self,
+        >,
+    > for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            TwoctwopPacoNonUiResponse,
+            Self,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+        let result = response.merged_result();
+        let api_response = response.api_response.clone();
+        let (status, txn_id, ref_id, prior) = extract_status(result, AttemptStatus::VoidInitiated);
 
         if matches!(status, AttemptStatus::Failure) {
             let (code, message) = error_code_message(&api_response, &prior);
