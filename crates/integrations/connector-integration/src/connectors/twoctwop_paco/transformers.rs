@@ -272,6 +272,25 @@ pub struct TwoctwopPacoCardAuthorizeRequest {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PacoDeviceDetails {
+    /// `M` (mobile) / `P` (PC). Drives whether the GCash deep-link or the
+    /// web-first hosted page is generated; PACO returns a null
+    /// `paymentPageURL` when this field is missing.
+    pub device_category: &'static str,
+    pub user_agent: String,
+}
+
+impl PacoDeviceDetails {
+    fn default_browser() -> Self {
+        Self {
+            device_category: "P",
+            user_agent: "Mozilla/5.0 hyperswitch-prism".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TwoctwopPacoWalletAuthorizeRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
@@ -281,6 +300,7 @@ pub struct TwoctwopPacoWalletAuthorizeRequest {
     pub transaction_amount: PacoTransactionAmount,
     #[serde(rename = "notificationURLs")]
     pub notification_urls: PacoNotificationUrls,
+    pub device_details: PacoDeviceDetails,
     pub preferred_payment_types: Vec<&'static str>,
 }
 
@@ -359,6 +379,16 @@ where
             })
         }
         PaymentMethodData::Wallet(WalletData::GcashRedirect(_)) => {
+            let device_details = item
+                .request
+                .browser_info
+                .as_ref()
+                .and_then(|bi| bi.user_agent.clone())
+                .map(|ua| PacoDeviceDetails {
+                    device_category: "P",
+                    user_agent: ua,
+                })
+                .unwrap_or_else(PacoDeviceDetails::default_browser);
             let body = TwoctwopPacoWalletAuthorizeRequest {
                 api_request: ApiRequestEnvelope::new(),
                 office_id: auth.office_id.clone(),
@@ -367,6 +397,7 @@ where
                 payment_category: PACO_PAYMENT_CATEGORY_ECOM,
                 transaction_amount: amount,
                 notification_urls,
+                device_details,
                 preferred_payment_types: vec![PACO_PREFERRED_PAYMENT_TYPE_GCASH],
             };
             Ok(AuthorizeRequest {
@@ -718,6 +749,10 @@ pub struct PacoPriorPaymentResponseDetails {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoPaymentPage {
+    /// PACO returns this field as `paymentPageUrl` on /Payment/nonUi
+    /// responses but as `paymentPageURL` on /Payment/prepaymentUi. Accept
+    /// both casings.
+    #[serde(default, alias = "paymentPageURL")]
     pub payment_page_url: Option<String>,
 }
 
@@ -736,7 +771,9 @@ pub struct PacoPaymentResultBlock {
     pub prior_payment_response_details: Option<PacoPriorPaymentResponseDetails>,
     #[serde(default)]
     pub payment_page: Option<PacoPaymentPage>,
-    #[serde(default)]
+    /// Top-level page URL fallback. PACO emits this as `paymentPageUrl`
+    /// on /Payment/nonUi and as `paymentPageURL` on /Payment/prepaymentUi.
+    #[serde(default, alias = "paymentPageURL")]
     pub payment_page_url: Option<String>,
     /// Present on /Payment/nonUi 3DS challenge responses
     /// (paymentStatus=I, paymentStep=AC).
@@ -792,6 +829,12 @@ pub struct PacoData {
     pub payment_result: Option<PacoPaymentResultBlock>,
     #[serde(default)]
     pub payment_incomplete_result: Option<PacoPaymentResultBlock>,
+    /// On `/Payment/prepaymentUi` responses (GCash hosted-page) PACO returns
+    /// `paymentPage` as a sibling of `paymentIncompleteResult` inside `data`,
+    /// not nested under it. The `merged_payment_page_url` accessor below
+    /// checks both locations.
+    #[serde(default)]
+    pub payment_page: Option<PacoPaymentPage>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -863,10 +906,23 @@ where
                             )
                         })?;
                     let status = map_attempt_status(&info.payment_status, &info.payment_step);
-                    let url = block
-                        .payment_page
+                    // PACO publishes the hosted-page URL in three possible
+                    // shapes across nonUi/prepaymentUi: `data.paymentPage`
+                    // (sibling of paymentIncompleteResult, GCash flow),
+                    // `data.<result>.paymentPage` (nested), or
+                    // `data.<result>.paymentPageUrl` (top-level fallback).
+                    // Check all three.
+                    let url = response
+                        .data
                         .as_ref()
+                        .and_then(|d| d.payment_page.as_ref())
                         .and_then(|p| p.payment_page_url.clone())
+                        .or_else(|| {
+                            block
+                                .payment_page
+                                .as_ref()
+                                .and_then(|p| p.payment_page_url.clone())
+                        })
                         .or_else(|| block.payment_page_url.clone());
                     let redirection_data = url.map(|endpoint| {
                         Box::new(RedirectForm::Form {
