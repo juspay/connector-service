@@ -15,7 +15,7 @@ include $(SDK_ROOT)/../common.mk
 # SDK-specific paths continued
 GENERATED_OUT    := $(SDK_ROOT)/src/payments/generated
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-javascript
-PACKAGE_VERSION  := $(shell node -p "require('$(SDK_ROOT)/package.json').version")
+PACKAGE_VERSION  := $(if $(VERSION),$(VERSION),$(shell node -p "require('$(SDK_ROOT)/package.json').version"))
 JS_TARBALL       := $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).tgz
 
 # ---------------------------------------------------------------------------

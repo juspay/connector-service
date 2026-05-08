@@ -28,6 +28,11 @@ on:
         required: false
         default: ''
         type: string
+      version:
+        description: 'Version to publish (e.g. 0.1.0) — overrides version in manifest files'
+        required: false
+        default: ''
+        type: string
 
   workflow_call:
     inputs:
@@ -48,6 +53,10 @@ on:
         default: false
         type: boolean
       ref:
+        required: false
+        default: ''
+        type: string
+      version:
         required: false
         default: ''
         type: string
@@ -199,6 +208,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-binaries]
     if: ${{ inputs.preview_only == true || inputs.publish_java == true }}
+    env:
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -244,6 +255,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-binaries]
     if: ${{ inputs.preview_only == true || inputs.publish_python == true }}
+    env:
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -283,6 +296,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-binaries]
     if: ${{ inputs.preview_only == true || inputs.publish_javascript == true }}
+    env:
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
