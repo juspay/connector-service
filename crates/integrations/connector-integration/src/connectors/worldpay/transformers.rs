@@ -12,8 +12,8 @@ use domain_types::{
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
-        BankDebitData, BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        WalletData as WalletDataPaymentMethod,
+        BankDebitData, BankRedirectData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, WalletData as WalletDataPaymentMethod,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -176,6 +176,7 @@ fn fetch_payment_instrument<
                     instrument_type: ApmInstrumentType::Direct,
                     method: Some("paypal".to_string()),
                     country: None,
+                    billing_address: None,
                 }))
             }
             WalletDataPaymentMethod::PaypalSdk(_) => {
@@ -183,6 +184,7 @@ fn fetch_payment_instrument<
                     instrument_type: ApmInstrumentType::Sdk,
                     method: Some("paypal".to_string()),
                     country: None,
+                    billing_address: None,
                 }))
             }
             WalletDataPaymentMethod::AliPayRedirect(_)
@@ -191,6 +193,7 @@ fn fetch_payment_instrument<
                     instrument_type: ApmInstrumentType::Direct,
                     method: Some("alipay_cn".to_string()),
                     country: None,
+                    billing_address: None,
                 }))
             }
             WalletDataPaymentMethod::AliPayHkRedirect(_) => {
@@ -198,6 +201,7 @@ fn fetch_payment_instrument<
                     instrument_type: ApmInstrumentType::Direct,
                     method: Some("alipay_uni".to_string()),
                     country: None,
+                    billing_address: None,
                 }))
             }
             WalletDataPaymentMethod::WeChatPayRedirect(_)
@@ -206,6 +210,7 @@ fn fetch_payment_instrument<
                     instrument_type: ApmInstrumentType::Direct,
                     method: Some("wechatpay".to_string()),
                     country: None,
+                    billing_address: None,
                 }))
             }
             WalletDataPaymentMethod::SamsungPay(_)
@@ -219,6 +224,14 @@ fn fetch_payment_instrument<
                     message: utils::get_unimplemented_payment_method_error_message("worldpay"),
                     connector: "Worldpay",
                     context: Default::default(),
+                }))
+            }
+            WalletDataPaymentMethod::SwishQr(_) => {
+                Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
+                    instrument_type: ApmInstrumentType::Direct,
+                    method: Some("swish".to_string()),
+                    country: None,
+                    billing_address: None,
                 }))
             }
             WalletDataPaymentMethod::MomoRedirect(_)
@@ -235,7 +248,6 @@ fn fetch_payment_instrument<
             | WalletDataPaymentMethod::TwintRedirect {}
             | WalletDataPaymentMethod::VippsRedirect {}
             | WalletDataPaymentMethod::TouchNGoRedirect(_)
-            | WalletDataPaymentMethod::SwishQr(_)
             | WalletDataPaymentMethod::BluecodeRedirect {}
             | WalletDataPaymentMethod::Satispay(_)
             | WalletDataPaymentMethod::Wero(_)
@@ -261,7 +273,8 @@ fn fetch_payment_instrument<
                 | BankRedirectData::Blik { .. }
                 | BankRedirectData::Trustly { .. }
                 | BankRedirectData::Bizum { .. }
-                | BankRedirectData::OpenBankingUk { .. } => {}
+                | BankRedirectData::OpenBankingUk { .. }
+                | BankRedirectData::BancontactCard { .. } => {}
                 BankRedirectData::Sofort { .. }
                 | BankRedirectData::Giropay { .. }
                 | BankRedirectData::Eps { .. }
@@ -293,6 +306,7 @@ fn fetch_payment_instrument<
                 instrument_type: ApmInstrumentType::Direct,
                 method: None,
                 country,
+                billing_address: None,
             }))
         }
         PaymentMethodData::BankDebit(bank_debit) => match bank_debit {
@@ -361,13 +375,49 @@ fn fetch_payment_instrument<
                 context: Default::default(),
             }))
         }
-        PaymentMethodData::PayLater(_) => {
-            Err(error_stack::report!(IntegrationError::NotSupported {
-                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
-                connector: "Worldpay",
-                context: Default::default(),
-            }))
-        }
+        PaymentMethodData::PayLater(pay_later) => match pay_later {
+            PayLaterData::KlarnaRedirect { .. } => {
+                let country = billing_address
+                    .and_then(|a| a.address.as_ref())
+                    .and_then(|d| d.country)
+                    .map(|c| c.to_string());
+                let klarna_billing = billing_address
+                    .and_then(|addr| {
+                        let address = addr.address.as_ref()?;
+                        Some(ApmBillingAddress {
+                            first_name: address.get_optional_first_name()?,
+                            last_name: address.get_optional_last_name()?,
+                            phone: addr
+                                .phone
+                                .as_ref()
+                                .and_then(|p| p.get_number_with_country_code().ok()),
+                            address1: address.line1.clone()?,
+                            postal_code: address.zip.clone()?,
+                            city: address.city.clone()?,
+                            country_code: address.country?,
+                        })
+                    });
+                Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
+                    instrument_type: ApmInstrumentType::Direct,
+                    method: None,
+                    country,
+                    billing_address: klarna_billing,
+                }))
+            }
+            PayLaterData::KlarnaSdk { .. }
+            | PayLaterData::AffirmRedirect {}
+            | PayLaterData::AfterpayClearpayRedirect {}
+            | PayLaterData::PayBrightRedirect {}
+            | PayLaterData::WalleyRedirect {}
+            | PayLaterData::AlmaRedirect {}
+            | PayLaterData::AtomeRedirect {} => {
+                Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                    connector: "Worldpay",
+                    context: Default::default(),
+                }))
+            }
+        },
         PaymentMethodData::CardRedirect(_) => {
             Err(error_stack::report!(IntegrationError::NotSupported {
                 message: utils::get_unimplemented_payment_method_error_message("worldpay"),
@@ -427,6 +477,7 @@ impl TryFrom<(enums::PaymentMethod, Option<enums::PaymentMethodType>)> for Payme
                     enums::PaymentMethodType::WeChatPay => Ok(Self::WeChatPay),
                     enums::PaymentMethodType::AliPay => Ok(Self::AliPayCn),
                     enums::PaymentMethodType::AliPayHk => Ok(Self::AliPayUni),
+                    enums::PaymentMethodType::Swish => Ok(Self::Swish),
                     _ => Err(IntegrationError::NotSupported {
                         message: utils::get_unimplemented_payment_method_error_message("worldpay"),
                         connector: "Worldpay",
@@ -633,6 +684,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let is_bank_redirect = item.router_data.resource_common_data.payment_method
             == enums::PaymentMethod::BankRedirect;
 
+        let is_pay_later_klarna = matches!(
+            &item.router_data.request.payment_method_data,
+            PaymentMethodData::PayLater(PayLaterData::KlarnaRedirect { .. })
+        );
+
         let (method, is_apm) = if is_bank_debit_ach {
             (None, false)
         } else if is_bank_redirect {
@@ -644,12 +700,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     BankRedirectData::Trustly { .. } => Some("trustly"),
                     BankRedirectData::Bizum { .. } => Some("bizum"),
                     BankRedirectData::OpenBankingUk { .. } => Some("open_banking"),
+                    BankRedirectData::BancontactCard { .. } => Some("bancontact"),
                     _ => None,
                 },
                 _ => None,
             };
             (
                 br_method.map(|m| InstructionMethod::Apm(m.to_string())),
+                true,
+            )
+        } else if is_pay_later_klarna {
+            (
+                Some(InstructionMethod::Apm("klarna_network".to_string())),
                 true,
             )
         } else {
@@ -663,6 +725,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | PaymentMethod::WeChatPay
                     | PaymentMethod::AliPayCn
                     | PaymentMethod::AliPayUni
+                    | PaymentMethod::Swish
             );
             (
                 if apm {
@@ -691,7 +754,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
         };
 
-        let (settlement, request_auto_settlement) = if is_bank_debit_ach || is_apm {
+        let (settlement, request_auto_settlement) = if is_pay_later_klarna {
+            // Klarna requires settlement.auto: true inside the instruction.
+            (Some(AutoSettlement { auto: true }), None)
+        } else if is_bank_debit_ach || is_apm {
             // /apmPayments and PayDirect endpoints do not accept requestAutoSettlement.
             (None, None)
         } else {
@@ -701,8 +767,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
         };
 
-        let (success_url, failure_url, pending_url, cancel_url) = if is_apm && !is_bank_redirect {
-            // Wallet APMs use top-level URL fields.
+        let (success_url, failure_url, pending_url, cancel_url) =
+            if is_apm && !is_bank_redirect && !is_pay_later_klarna {
+            // Wallet APMs (PayPal, AliPay, WeChatPay, Swish) use top-level URL fields.
             let return_url = item
                 .router_data
                 .request
@@ -718,10 +785,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             (None, None, None, None)
         };
 
-        // BankRedirect APMs require result URLs inside the instruction object.
+        // BankRedirect APMs and Klarna require result URLs inside the instruction object.
         // Worldpay applies per-APM schema validation — each APM accepts a different
         // subset of resultUrls and customer fields.
-        let result_urls = if is_bank_redirect {
+        let result_urls = if is_bank_redirect || is_pay_later_klarna {
             let return_url = item
                 .router_data
                 .request
@@ -762,7 +829,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .and_then(|a| a.email.as_ref())
                     .map(|e| Secret::new(e.peek().clone()))
             };
-            Some(ApmCustomer { email })
+            Some(ApmCustomer { email, first_name: None, last_name: None })
+        } else if is_pay_later_klarna {
+            let first_name = billing.and_then(|a| a.get_optional_first_name());
+            let last_name = billing.and_then(|a| a.get_optional_last_name());
+            let email = billing
+                .and_then(|a| a.email.as_ref())
+                .map(|e| Secret::new(e.peek().clone()));
+            Some(ApmCustomer {
+                email,
+                first_name,
+                last_name,
+            })
         } else {
             None
         };
@@ -1149,12 +1227,15 @@ impl<F, T>
         ),
     ) -> Result<Self, Self::Error> {
         let (router_data, optional_correlation_id, amount) = item;
-        let apm_redirect = router_data.response.redirect.as_ref().map(|url| {
-            RedirectForm::Form {
-                endpoint: url.clone(),
-                method: common_utils::request::Method::Get,
-                form_fields: HashMap::new(),
-            }
+        let redirect_url = router_data
+            .response
+            .redirect
+            .as_ref()
+            .or(router_data.response.transaction_code.as_ref());
+        let apm_redirect = redirect_url.map(|url| RedirectForm::Form {
+            endpoint: url.clone(),
+            method: common_utils::request::Method::Get,
+            form_fields: HashMap::new(),
         });
 
         let (description, redirection_data, mandate_reference, network_txn_id, error) = router_data

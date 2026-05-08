@@ -17,6 +17,9 @@ pub struct WorldpayPaymentsResponse {
     pub actions: Option<ActionLinks>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect: Option<String>,
+    /// Swish returns a deep-link in transactionCode instead of a redirect URL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_code: Option<String>,
     #[serde(flatten)]
     pub other_fields: Option<WorldpayPaymentResponseFields>,
 }

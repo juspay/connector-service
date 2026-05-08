@@ -211,13 +211,31 @@ pub struct BankAccountUSPayment {
 pub struct ApmPaymentInstrument {
     #[serde(rename = "type")]
     pub instrument_type: ApmInstrumentType,
-    /// Wallet APMs (PayPal, AliPay, WeChatPay) send method inside paymentInstrument.
-    /// BankRedirect sends method at instruction level instead.
+    /// Wallet APMs (PayPal, AliPay, WeChatPay, Swish) send method inside paymentInstrument.
+    /// BankRedirect / PayLater sends method at instruction level instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
-    /// ISO 3166-1 alpha-2 country code — required by most BankRedirect APMs.
+    /// ISO 3166-1 alpha-2 country code — required by most BankRedirect APMs and Klarna.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
+    /// Billing address inside paymentInstrument — required by Klarna.
+    #[serde(rename = "billingAddress", skip_serializing_if = "Option::is_none")]
+    pub billing_address: Option<ApmBillingAddress>,
+}
+
+/// Billing address embedded inside the APM paymentInstrument.
+/// Used by Klarna which requires name + phone + address inside the instrument.
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApmBillingAddress {
+    pub first_name: Secret<String>,
+    pub last_name: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Secret<String>>,
+    pub address1: Secret<String>,
+    pub postal_code: Secret<String>,
+    pub city: Secret<String>,
+    pub country_code: common_enums::CountryAlpha2,
 }
 
 /// Redirect URLs inside the instruction — required by most BankRedirect APMs.
@@ -234,12 +252,18 @@ pub struct ResultUrls {
     pub cancel_url: Option<String>,
 }
 
-/// Customer object inside the instruction — required by most BankRedirect APMs.
+/// Customer object inside the instruction — required by most BankRedirect APMs and Klarna.
 /// Worldpay uses "email" (not "shopperEmailAddress") inside instruction.customer.
+/// Klarna additionally requires firstName and lastName.
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ApmCustomer {
-    #[serde(rename = "email", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<Secret<String>>,
 }
 
 #[derive(
@@ -423,6 +447,8 @@ pub enum PaymentMethod {
     AliPayCn,
     #[serde(rename = "alipay_uni")]
     AliPayUni,
+    #[serde(rename = "swish")]
+    Swish,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
