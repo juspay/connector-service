@@ -84,8 +84,8 @@ pub struct PayoutCreateRequest {
     pub priority: Option<common_enums::PayoutPriority>,
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
+    pub description: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
-    // Add additional nested structures as needed
 }
 
 #[derive(Debug, Clone)]
@@ -107,6 +107,7 @@ pub struct PayoutTransferRequest {
     pub priority: Option<common_enums::PayoutPriority>,
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
+    pub description: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
 }
 

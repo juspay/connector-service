@@ -122,6 +122,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRequest>
                 .transpose()?,
             connector_payout_method_id: value.connector_payout_method_id.clone(),
             webhook_url: value.webhook_url.clone(),
+            description: value.description.clone(),
             payout_method_data,
         })
     }
@@ -1016,6 +1017,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             priority,
             connector_payout_method_id: value.connector_payout_method_id,
             webhook_url: value.webhook_url,
+            description: value.description,
             payout_method_data,
         })
     }

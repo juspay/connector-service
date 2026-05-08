@@ -238,6 +238,8 @@ message PayoutServiceCreateRequest {
   optional BrowserInformation browser_info = 13;
   // access token
   optional SecretString access_token = 14;
+  // Description of the payout
+  optional string description = 15;
 }
 
 // Response message for creating a payout
@@ -282,6 +284,8 @@ message PayoutServiceTransferRequest {
   optional BrowserInformation browser_info = 12;
   // access token
   optional SecretString access_token = 13;
+  // Description of the payout
+  optional string description = 14;
 }
 
 // Response message for transferring a payout

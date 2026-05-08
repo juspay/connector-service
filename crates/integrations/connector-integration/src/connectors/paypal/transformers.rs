@@ -4010,20 +4010,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         "PayPal Payout Transfer - Payout amount must be greater than zero"
                             .to_string(),
                     ),
-                    ..Default::default()
+                    suggested_action: Some(
+                        "Provide a valid payout amount greater than zero".to_string(),
+                    ),
+                    doc_url: None,
                 },
             }
             .into());
         }
 
         let amount = PayoutAmount {
-            value: item
-                .connector
-                .amount_converter
-                .convert(minor_amount, item.router_data.request.destination_currency)
-                .change_context(IntegrationError::AmountConversionFailed {
-                    context: Default::default(),
-                })?,
+            value: utils::convert_amount(
+                item.connector.amount_converter,
+                minor_amount,
+                item.router_data.request.destination_currency,
+            )?,
             currency: item.router_data.request.destination_currency,
         };
 
@@ -4048,7 +4049,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 field_name: "receiver_data",
                                 context: IntegrationErrorContext {
                                     additional_context: Some("PayPal Payout Transfer - Missing recipient data (email, phone, or PayPal ID)".to_string()),
-                                    ..Default::default()
+                                    suggested_action: Some(
+                                        "Provide one of: email, telephone_number, or paypal_id in the payout method data".to_string(),
+                                    ),
+                                    doc_url: None,
                                 },
                             })?,
                         };
@@ -4064,7 +4068,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         PaypalPayoutDataType::OtherType(data.telephone_number.clone().ok_or(
                             IntegrationError::MissingRequiredField {
                                 field_name: "telephone_number",
-                                context: Default::default(),
+                                context: IntegrationErrorContext {
+                                    additional_context: Some(
+                                        "PayPal Payout Transfer - Venmo requires telephone number".to_string(),
+                                    ),
+                                    suggested_action: Some(
+                                        "Provide a valid telephone_number for Venmo payout".to_string(),
+                                    ),
+                                    doc_url: None,
+                                },
                             },
                         )?);
                     PaypalPayoutMethodData {
@@ -4076,20 +4088,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PayoutWallet::ApplePayDecrypt(_) => Err(IntegrationError::NotSupported {
                     message: "ApplePayDecrypt PayoutMethodType is not supported".to_string(),
                     connector: "Paypal",
-                    context: Default::default(),
+                    context: IntegrationErrorContext {
+                        additional_context: Some(
+                            "PayPal Payout Transfer - Apple Pay Decrypt is not supported for payouts".to_string(),
+                        ),
+                        suggested_action: Some(
+                            "Use PayPal or Venmo wallet for payouts".to_string(),
+                        ),
+                        doc_url: None,
+                    },
                 })?,
             },
             _ => Err(IntegrationError::NotSupported {
                 message: "PayoutMethodType is not supported".to_string(),
                 connector: "Paypal",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "PayPal Payout Transfer - Only PayPal and Venmo wallets are supported".to_string(),
+                    ),
+                    suggested_action: Some(
+                        "Use PayPal or Venmo wallet for payouts".to_string(),
+                    ),
+                    doc_url: None,
+                },
             })?,
         };
 
         Ok(Self {
             amount,
             payout_method_data,
-            note: None,
+            note: item.router_data.request.description.clone(),
             notification_language: constants::DEFAULT_NOTIFICATION_LANGUAGE.to_string(),
         })
     }
