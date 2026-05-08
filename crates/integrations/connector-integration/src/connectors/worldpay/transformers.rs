@@ -254,16 +254,58 @@ fn fetch_payment_instrument<
                 context: Default::default(),
             }))
         }
-        PaymentMethodData::PayLater(_)
-        | PaymentMethodData::BankDebit(_)
-        | PaymentMethodData::BankTransfer(_)
-        | PaymentMethodData::Crypto(_)
+        PaymentMethodData::BankDebit(_) => {
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                connector: "Worldpay",
+                context: Default::default(),
+            }))
+        }
+        PaymentMethodData::BankTransfer(_) => {
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                connector: "Worldpay",
+                context: Default::default(),
+            }))
+        }
+        PaymentMethodData::PayLater(_) => {
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                connector: "Worldpay",
+                context: Default::default(),
+            }))
+        }
+        PaymentMethodData::CardRedirect(_) => {
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                connector: "Worldpay",
+                context: Default::default(),
+            }))
+        }
+        PaymentMethodData::Voucher(_) => {
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                connector: "Worldpay",
+                context: Default::default(),
+            }))
+        }
+        PaymentMethodData::Upi(_) => {
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                connector: "Worldpay",
+                context: Default::default(),
+            }))
+        }
+        PaymentMethodData::RealTimePayment(_) => {
+            Err(error_stack::report!(IntegrationError::NotSupported {
+                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                connector: "Worldpay",
+                context: Default::default(),
+            }))
+        }
+        PaymentMethodData::Crypto(_)
         | PaymentMethodData::Reward
-        | PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
-        | PaymentMethodData::Upi(_)
-        | PaymentMethodData::Voucher(_)
-        | PaymentMethodData::CardRedirect(_)
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::PaymentMethodToken(_)
