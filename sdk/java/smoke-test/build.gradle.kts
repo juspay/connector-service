@@ -14,7 +14,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
     // Depend on published SDK to avoid Gradle circular dependency (root :jar -> :classes -> :compileKotlin).
     // CI and Makefile run publishToMavenLocal (or equivalent) before running smoke-test.
-    val prismVersion = System.getenv("VERSION") ?: (rootProject.version as String)
+    val prismVersion = System.getenv("VERSION") ?: "0.0.0-dev"
     implementation("io.hyperswitch:prism:$prismVersion")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
