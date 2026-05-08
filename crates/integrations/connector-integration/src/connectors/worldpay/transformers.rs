@@ -253,6 +253,8 @@ fn fetch_payment_instrument<
             }
         },
         PaymentMethodData::BankRedirect(bank_redirect) => {
+            // iDEAL rejects paymentInstrument.country — check before the consuming match.
+            let is_ideal = matches!(bank_redirect, BankRedirectData::Ideal { .. });
             match bank_redirect {
                 BankRedirectData::Ideal { .. }
                 | BankRedirectData::Przelewy24 { .. }
@@ -278,11 +280,15 @@ fn fetch_payment_instrument<
                 }
             };
             // Method string goes at instruction.method, not inside paymentInstrument.
-            // Country derived from billing address — required by most BankRedirect APMs.
-            let country = billing_address
-                .and_then(|a| a.address.as_ref())
-                .and_then(|d| d.country)
-                .map(|c| c.to_string());
+            // iDEAL rejects country; all other BankRedirect APMs expect it from billing.
+            let country = if is_ideal {
+                None
+            } else {
+                billing_address
+                    .and_then(|a| a.address.as_ref())
+                    .and_then(|d| d.country)
+                    .map(|c| c.to_string())
+            };
             Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                 instrument_type: ApmInstrumentType::Direct,
                 method: None,
@@ -713,31 +719,50 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // BankRedirect APMs require result URLs inside the instruction object.
+        // Worldpay applies per-APM schema validation — each APM accepts a different
+        // subset of resultUrls and customer fields.
         let result_urls = if is_bank_redirect {
             let return_url = item
                 .router_data
                 .request
                 .get_router_return_url()
                 .ok();
+            let pmd = &item.router_data.request.payment_method_data;
+            let (failure_url, pending_url) = match pmd {
+                PaymentMethodData::BankRedirect(BankRedirectData::Ideal { .. }) => {
+                    (return_url.clone(), None)
+                }
+                PaymentMethodData::BankRedirect(
+                    BankRedirectData::Przelewy24 { .. }
+                    | BankRedirectData::Blik { .. }
+                    | BankRedirectData::Trustly { .. },
+                ) => (None, return_url.clone()),
+                _ => (return_url.clone(), return_url.clone()),
+            };
             Some(ResultUrls {
                 success_url: return_url.clone(),
-                failure_url: return_url.clone(),
-                pending_url: return_url.clone(),
+                failure_url,
+                pending_url,
                 cancel_url: return_url,
             })
         } else {
             None
         };
 
-        // BankRedirect APMs require customer email inside the instruction.
         let billing = item.router_data.resource_common_data.get_optional_billing();
         let apm_customer = if is_bank_redirect {
-            let email = billing
-                .and_then(|a| a.email.as_ref())
-                .map(|e| Secret::new(e.peek().clone()));
-            Some(ApmCustomer {
-                email,
-            })
+            let is_bizum = matches!(
+                &item.router_data.request.payment_method_data,
+                PaymentMethodData::BankRedirect(BankRedirectData::Bizum { .. })
+            );
+            let email = if is_bizum {
+                None
+            } else {
+                billing
+                    .and_then(|a| a.email.as_ref())
+                    .map(|e| Secret::new(e.peek().clone()))
+            };
+            Some(ApmCustomer { email })
         } else {
             None
         };
