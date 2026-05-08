@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.15.0-hotfix3
+
+### Bug Fixes
+
+- **connector:**
+  - [Trustly] Fix country handling in the request ([#1243](https://github.com/juspay/connector-service/pull/1243)) ([`240a0e2`](https://github.com/juspay/connector-service/commit/240a0e2fc4e4e6ea24864846d3245dbcd03b0f4c))
+  - [Trustly] Skip serializing fields if none ([#1262](https://github.com/juspay/connector-service/pull/1262)) ([`31c074a`](https://github.com/juspay/connector-service/commit/31c074a05fca7abd6c09c68ccebe27edf4430032))
+
+**Full Changelog:** [`2026.04.15.0-hotfix2...2026.04.15.0-hotfix3`](https://github.com/juspay/connector-service/compare/2026.04.15.0-hotfix2...2026.04.15.0-hotfix3)
+
+- - -
+
 ## 2026.04.15.0-hotfix2
 
 ### Bug Fixes
