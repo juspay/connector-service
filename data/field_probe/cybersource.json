@@ -52,8 +52,45 @@
     },
     "authorize": {
       "Ach": {
-        "status": "not_supported",
-        "error": "Selected payment method through Cybersource is not supported by Cybersource"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "ach": {
+              "account_number": "000123456789",
+              "routing_number": "110000000",
+              "bank_account_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "email": "test@example.com"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://apitest.cybersource.com/pts/v2/payments/",
+          "method": "Post",
+          "headers": {
+            "accept": "application/hal+json;charset=utf-8",
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"processingInformation\":{\"actionList\":null,\"actionTokenTypes\":null,\"authorizationOptions\":null,\"commerceIndicator\":\"internet\",\"capture\":null,\"captureOptions\":null,\"paymentSolution\":null,\"bankTransferOptions\":{\"secCode\":\"WEB\"}},\"paymentInformation\":{\"bank\":{\"account\":{\"number\":\"000123456789\",\"type\":\"C\"},\"routingNumber\":\"110000000\"},\"paymentType\":{\"name\":\"check\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":null,\"lastName\":null,\"address1\":null,\"locality\":null,\"country\":null,\"email\":\"test@example.com\"}},\"clientReferenceInformation\":{\"code\":\"probe_txn_001\"}}"
+        }
       },
       "AchBankTransfer": {
         "status": "not_supported",
