@@ -13,7 +13,11 @@ use self::response::{
     WorldpayPreAuthenticateResponse, WorldpayRefundResponse, WorldpayRefundSyncResponse,
     WorldpayRepeatPaymentResponse, WorldpaySyncResponse, WorldpayVoidResponse,
 };
-use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, request::Request};
+use common_enums as enums;
+use common_utils::{
+    errors::CustomResult, events, ext_traits::ByteSliceExt, ext_traits::BytesExt,
+    request::Request,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
@@ -22,15 +26,19 @@ use domain_types::{
         Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, ClientAuthenticationTokenRequestData, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorWebhookSecrets,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventContext,
+        EventType as CtEventType, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentWebhookReference, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundWebhookReference,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        WebhookResourceReference,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -39,6 +47,7 @@ use domain_types::{
     types::Connectors,
 };
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use domain_types::errors::WebhookError;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -143,6 +152,141 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Worldpay<T>
 {
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+    ) -> Result<CtEventType, error_stack::Report<WebhookError>> {
+        let event: response::WorldpayWebhookEventType = request
+            .body
+            .parse_struct("WorldpayWebhookEventType")
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+
+        Ok(CtEventType::from(event.event_details.event_type))
+    }
+
+    fn get_webhook_event_reference(
+        &self,
+        request: RequestDetails,
+    ) -> Result<Option<WebhookResourceReference>, error_stack::Report<WebhookError>> {
+        let event: response::WorldpayWebhookEventType = request
+            .body
+            .parse_struct("WorldpayWebhookEventType")
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+
+        let event_type = &event.event_details.event_type;
+
+        match event_type {
+            response::EventType::SentForRefund
+            | response::EventType::Refunded
+            | response::EventType::RefundFailed => {
+                Ok(Some(WebhookResourceReference::Refund(RefundWebhookReference {
+                    connector_refund_id: None,
+                    merchant_refund_id: None,
+                    connector_transaction_id: Some(
+                        event.event_details.transaction_reference.clone(),
+                    ),
+                })))
+            }
+            _ => Ok(Some(WebhookResourceReference::Payment(
+                PaymentWebhookReference {
+                    connector_transaction_id: None,
+                    merchant_transaction_id: Some(
+                        event.event_details.transaction_reference.clone(),
+                    ),
+                },
+            ))),
+        }
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+        _event_context: Option<EventContext>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        let request_body_copy = request.body.clone();
+        let event: response::WorldpayWebhookEventType = request
+            .body
+            .parse_struct("WorldpayWebhookEventType")
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+
+        let status = enums::AttemptStatus::from(&event.event_details.event_type);
+        let transaction_reference = event.event_details.transaction_reference.clone();
+
+        Ok(WebhookDetailsResponse {
+            resource_id: Some(ResponseId::ConnectorTransactionId(
+                transaction_reference.clone(),
+            )),
+            status,
+            status_code: 200,
+            connector_response_reference_id: Some(transaction_reference),
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            raw_connector_response: Some(
+                String::from_utf8_lossy(&request_body_copy).to_string(),
+            ),
+            response_headers: None,
+            mandate_reference: None,
+            minor_amount_captured: None,
+            amount_captured: None,
+            network_txn_id: None,
+            payment_method_update: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        let request_body_copy = request.body.clone();
+        let event: response::WorldpayWebhookEventType = request
+            .body
+            .parse_struct("WorldpayWebhookEventType")
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+
+        let status = enums::RefundStatus::from(event.event_details.event_type);
+
+        Ok(RefundWebhookDetailsResponse {
+            connector_refund_id: None,
+            status,
+            connector_response_reference_id: Some(
+                event.event_details.transaction_reference,
+            ),
+            error_code: None,
+            error_message: None,
+            raw_connector_response: Some(
+                String::from_utf8_lossy(&request_body_copy).to_string(),
+            ),
+            status_code: 200,
+            response_headers: None,
+        })
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
+    {
+        let event: response::WorldpayWebhookEventType = request
+            .body
+            .parse_struct("WorldpayWebhookEventType")
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+
+        let webhook_response = response::WorldpayEventResponse {
+            last_event: event.event_details.event_type,
+            links: None,
+        };
+
+        Ok(Box::new(webhook_response))
+    }
+
+    fn sample_webhook_body(&self) -> &'static [u8] {
+        br#"{"eventId":"probe-evt-001","eventTimestamp":"2024-01-01T00:00:00.000Z","eventDetails":{"type":"authorized","transactionReference":"probe-txn-001"}}"#
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyRedirectResponse for Worldpay<T>
@@ -379,7 +523,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             code: response.error_name,
             message: response.message,
             reason: response.validation_errors.map(|e| e.to_string()),
-            attempt_status: Some(common_enums::AttemptStatus::Failure),
+            attempt_status: Some(enums::AttemptStatus::Failure),
             connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,

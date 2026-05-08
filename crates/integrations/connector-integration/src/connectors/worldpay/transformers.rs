@@ -882,6 +882,23 @@ impl From<EventType> for enums::RefundStatus {
     }
 }
 
+impl From<EventType> for domain_types::connector_types::EventType {
+    fn from(value: EventType) -> Self {
+        match value {
+            EventType::Authorized => Self::PaymentIntentAuthorizationSuccess,
+            EventType::SentForSettlement | EventType::Settled => Self::PaymentIntentCaptureSuccess,
+            EventType::SettlementFailed => Self::PaymentIntentCaptureFailure,
+            EventType::Refused => Self::PaymentIntentFailure,
+            EventType::Cancelled => Self::PaymentIntentCancelled,
+            EventType::Expired => Self::PaymentIntentExpired,
+            EventType::SentForRefund | EventType::Refunded => Self::RefundSuccess,
+            EventType::RefundFailed => Self::RefundFailure,
+            EventType::SentForAuthorization => Self::PaymentIntentProcessing,
+            EventType::Error | EventType::Unknown => Self::IncomingWebhookEventUnspecified,
+        }
+    }
+}
+
 // Add the TryFrom implementation that the macro system expects
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
