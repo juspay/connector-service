@@ -229,6 +229,8 @@ lsof -ti:8080 | xargs kill -9 2>/dev/null || true
 - Web: https://hyperswitch-prism-testing.netlify.app/
 - Latest JSON: https://integ.hyperswitch.io/connector-service/reports/grpc/report_latest.json
 
+**Debugging Test Failures:** See `grace/workflow/3_test.md` for detailed investigation procedures, common failure patterns, and debugging commands.
+
 ---
 
 ### STEP 2: PROCESS EACH CONNECTOR

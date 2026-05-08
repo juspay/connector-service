@@ -64,7 +64,10 @@ test-prism --connector {CONNECTOR} --interface {TEST_MODE} --report
 **Or for a specific suite:**
 
 ```bash
-test-prism --connector {CONNECTOR} --suite authorize
+# IMPORTANT: Suite names use FORWARD SLASHES, not underscores
+# WRONG: test-prism --connector nmi --suite PaymentService_Authorize
+# RIGHT: test-prism --connector nmi --suite PaymentService/Authorize
+test-prism --connector {CONNECTOR} --suite PaymentService/Authorize
 ```
 
 **Capture the full output** — save test results for analysis.
@@ -74,6 +77,11 @@ test-prism --connector {CONNECTOR} --suite authorize
 - `crates/internal/integration-tests/report.json` accumulates entries across runs
 - Always inspect the latest block for the scenario you just reran (usually near the end of the file)
 - Do NOT justify a fix from an older matching scenario block
+- **Markdown reports** are generated at `crates/internal/integration-tests/test_report/connectors/{connector}/` — these provide human-readable summaries with exact request/response pairs for each scenario
+- **To debug failures**, examine:
+  1. The markdown report in `test_report/connectors/{connector}/{suite}.md` for request/response details
+  2. The JSON report for raw proto payloads
+  3. The connector transformer code in `crates/integrations/connector-integration/src/connectors/{connector}/` to understand expected fields
 
 **View results in UI:**
 
@@ -129,6 +137,63 @@ UCS_DEBUG_EFFECTIVE_REQ=1 test-prism --connector {CONNECTOR} --interface {TEST_M
 
 - Result: **HARDENED**
 - The connector is now fully tested and can move to "Tested" status in docs
+
+### Debugging Failed Tests - Where to Look
+
+When tests fail, follow this investigation order:
+
+1. **Check Markdown Reports** (immediate visibility):
+
+   ```bash
+   # Find the connector's markdown report
+   ls -la crates/internal/integration-tests/test_report/connectors/{CONNECTOR}/
+
+   # Read specific suite report
+   cat crates/internal/integration-tests/test_report/connectors/{CONNECTOR}/paymentservice-authorize.md
+   ```
+
+   These reports show:
+   - Exact gRPC request sent
+   - Exact gRPC response received
+   - Assertion failures with field-level detail
+
+2. **Check JSON Report** (raw payloads):
+
+   ```bash
+   cat crates/internal/integration-tests/report.json | jq '.[-10:]'
+   ```
+
+   Shows the raw proto serialization for debugging override issues
+
+3. **Check Connector Code** (why request fails):
+
+   ```bash
+   # Find connector transformer
+   ls crates/integrations/connector-integration/src/connectors/{CONNECTOR}/
+
+   # Read the transformer to understand expected fields
+   cat crates/integrations/connector-integration/src/connectors/{CONNECTOR}/transformers.rs
+   ```
+
+   Look for:
+   - Required fields that must come from scenario input (vs creds/config)
+   - Explicit `NotSupported` or `NotImplemented` branches
+   - Payment method type checking that rejects certain PMs
+   - Response parsing that can fail if connector returns unexpected shape
+
+4. **Debug Request with Effective Req**:
+
+   ```bash
+   UCS_DEBUG_EFFECTIVE_REQ=1 test-prism --connector {CONNECTOR} --suite {SUITE} --report
+   ```
+
+   Shows exactly what the harness builds before sending to gRPC server
+
+5. **Check Override JSON** (verify test data):
+   ```bash
+   cat crates/internal/integration-tests/src/connector_specs/{CONNECTOR}/override.json
+   ```
+   Compare against base scenario to ensure override is valid
 
 ### If tests FAIL:
 
