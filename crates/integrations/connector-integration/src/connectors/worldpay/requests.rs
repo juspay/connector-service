@@ -49,7 +49,8 @@ pub struct Instruction<
 > {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settlement: Option<AutoSettlement>,
-    pub method: PaymentMethod,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<PaymentMethod>,
     pub payment_instrument: PaymentInstrument<T>,
     pub narrative: InstructionNarrative,
     pub value: PaymentValue,
