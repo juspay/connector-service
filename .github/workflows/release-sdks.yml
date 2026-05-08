@@ -38,19 +38,19 @@ on:
     inputs:
       publish_java:
         required: false
-        default: true
+        default: false
         type: boolean
       publish_python:
         required: false
-        default: true
+        default: false
         type: boolean
       publish_javascript:
         required: false
-        default: true
+        default: false
         type: boolean
       preview_only:
         required: false
-        default: false
+        default: true
         type: boolean
       ref:
         required: false
