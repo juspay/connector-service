@@ -17,7 +17,11 @@ export const preflightCheckpoint: Checkpoint = {
 
     const connector = task.targetConnectors?.[0] || "unknown";
     const flow = task.paymentMethod || "unknown";
-    const branchName = `feat/grace-${connector.toLowerCase()}-${flow.toLowerCase()}`;
+    // Append the trailing 6-hex of ctx.runId so every run gets a unique branch
+    // and `git checkout -b` below never collides with a leftover from a prior
+    // aborted run.
+    const runSuffix = ctx.runId.slice(-6);
+    const branchName = `feat/grace-${connector.toLowerCase()}-${flow.toLowerCase()}-${runSuffix}`;
 
     ctx.log("[preflight] Following Grace workflow: 1_orchestrator.md", "info");
     ctx.log(`[preflight] Creating branch: ${branchName}`, "info");

@@ -18,7 +18,7 @@ STRICTLY FOLLOW the workflow defined in:
 - Local: /Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/2.4_pr.md
 
 Additional checks:
-- Branch naming: Must follow pattern \`feat/grace-{connector}-{flow}\` (lowercase, kebab-case)
+- Branch naming: Must follow pattern \`feat/grace-{connector}-{flow}-{runId6}\` (lowercase, kebab-case; the trailing 6-hex is the last six chars of the engine's runId, already on the branch checked out by preflight). Read the actual current branch with \`git branch --show-current\` rather than reconstructing it.
 - If branch already exists from a previous run, skip branch creation verification
 
 ## Output contract
@@ -31,7 +31,7 @@ Return ONLY valid JSON in this exact shape — no STATUS:/PR_URL: free-text form
   "comments": [{ "file": "string", "line": number | null, "comment": "string", "severity": "info"|"warning"|"blocking" }],
   "status": "SUCCESS" | "FAILED",
   "prUrl": "https://github.com/juspay/hyperswitch-prism/pull/<n>" | "",
-  "branchName": "feat/grace-<connector>-<flow>" | "",
+  "branchName": "feat/grace-<connector>-<flow>-<runId6>" | "",
   "commitHash": "<sha>" | "",
   "reason": "<short explanation if status=FAILED, empty string if SUCCESS>"
 }
