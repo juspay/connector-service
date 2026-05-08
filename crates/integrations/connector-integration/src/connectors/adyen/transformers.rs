@@ -809,7 +809,7 @@ pub struct BacsDirectDebitData {
 pub struct BecsDirectDebitData {
     bank_account_number: Secret<String>,
     bank_location_id: Secret<String>,
-    holder_name: Secret<String>,
+    owner_name: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -2056,7 +2056,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Ok(Self::BecsDirectDebit(Box::new(BecsDirectDebitData {
                     bank_account_number: account_number.clone(),
                     bank_location_id: bsb_number.clone(),
-                    holder_name: holder,
+                    owner_name: holder,
                 })))
             }
             BankDebitData::SepaGuaranteedBankDebit { .. }
