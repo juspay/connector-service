@@ -137,6 +137,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PayloadClientAuthenticationResponse: ["clientToken"],
   MultisafepayClientAuthenticationResponse: ["apiToken"],
   NexixpayClientAuthenticationResponse: ["securityToken"],
+  RevolutClientAuthenticationResponse: ["token"],
   StripeClientAuthenticationResponse: ["clientSecret"],
   GpayTokenParameters: ["publicKey"],
   SecretInfoToInitiateSdk: ["display", "payment"],
@@ -241,7 +242,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   ZiftConfig: ["userName", "password", "accountId"],
   FiservcommercehubConfig: ["apiKey", "secret", "merchantId", "terminalId"],
   SanlamConfig: ["apiKey", "merchantId"],
-  ItaubankConfig: ["clientSecret", "clientId"],
+  ItaubankConfig: ["clientSecret", "clientId", "certificates", "privateKey"],
   GigadatConfig: ["campaignId", "accessToken", "securityToken"],
   PhonepeConfig: ["merchantId", "saltKey", "saltIndex"],
   ForteConfig: ["apiAccessId", "organizationId", "locationId", "apiSecretKey"],
@@ -265,7 +266,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   EasebuzzConfig: ["apiKey", "apiSalt"],
   TruelayerConfig: ["clientId", "clientSecret", "merchantAccountId", "accountHolderName", "privateKey", "kid"],
   PinelabsOnlineConfig: ["clientId", "clientSecret"],
-  ImerchantsolutionsConfig: ["apiKey"],
+  ImerchantsolutionsConfig: ["apiKey", "merchantId"],
   AxisbankConfig: ["merchantKid", "juspayKid", "merchantPrivateKey", "juspayPublicKey"],
   PaymentServiceTokenAuthorizeRequest: ["connectorToken", "metadata", "connectorFeatureData"],
   PaymentServiceTokenSetupRecurringRequest: ["connectorToken", "metadata", "connectorFeatureData"],
@@ -275,7 +276,9 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   AchBankTransferPayout: ["bankAccountNumber", "bankRoutingNumber"],
   BacsBankTransferPayout: ["bankAccountNumber", "bankSortCode"],
   SepaBankTransferPayout: ["iban", "bic"],
-  PixBankTransferPayout: ["bankAccountNumber", "pixKey", "taxId"],
+  PixBankTransferPayout: ["bankAccountNumber", "taxId", "ispb"],
+  PixKeyBankTransferPayout: ["pixKey"],
+  PixEmvBankTransferPayout: ["emv"],
   ApplePayDecrypt: ["dpan", "expiryMonth", "expiryYear", "cardHolderName"],
   Paypal: ["email", "telephoneNumber", "paypalId"],
   Venmo: ["telephoneNumber"],
@@ -290,6 +293,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PayoutServiceCreateRecipientRequest: ["accessToken"],
   PayoutServiceEnrollDisburseAccountRequest: ["accessToken"],
   PayoutMethodEligibilityRequest: ["connectorFeatureData", "accessToken"],
+  SurchargeServiceCalculateRequest: ["postalCode"],
 };
 
 const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
@@ -332,7 +336,7 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   ConnectorResponseData: { "additionalPaymentMethodData": "AdditionalPaymentMethodConnectorResponse", "extendedAuthorizationResponseData": "ExtendedAuthorizationResponseData" },
   PaymentMethodUpdate: { "card": "CardDetailUpdate" },
   ClientAuthenticationTokenData: { "googlePay": "GpayClientAuthenticationResponse", "paypal": "PaypalClientAuthenticationResponse", "applePay": "ApplepayClientAuthenticationResponse", "connectorSpecific": "ConnectorSpecificClientAuthenticationResponse" },
-  ConnectorSpecificClientAuthenticationResponse: { "stripe": "StripeClientAuthenticationResponse", "adyen": "AdyenClientAuthenticationResponse", "checkout": "CheckoutClientAuthenticationResponse", "cybersource": "CybersourceClientAuthenticationResponse", "nuvei": "NuveiClientAuthenticationResponse", "mollie": "MollieClientAuthenticationResponse", "globalpay": "GlobalpayClientAuthenticationResponse", "bluesnap": "BluesnapClientAuthenticationResponse", "rapyd": "RapydClientAuthenticationResponse", "shift4": "Shift4ClientAuthenticationResponse", "bankOfAmerica": "BankOfAmericaClientAuthenticationResponse", "wellsfargo": "WellsfargoClientAuthenticationResponse", "fiserv": "FiservClientAuthenticationResponse", "elavon": "ElavonClientAuthenticationResponse", "noon": "NoonClientAuthenticationResponse", "paysafe": "PaysafeClientAuthenticationResponse", "bamboraapac": "BamboraapacClientAuthenticationResponse", "jpmorgan": "JpmorganClientAuthenticationResponse", "billwerk": "BillwerkClientAuthenticationResponse", "datatrans": "DatatransClientAuthenticationResponse", "bambora": "BamboraClientAuthenticationResponse", "payload": "PayloadClientAuthenticationResponse", "multisafepay": "MultisafepayClientAuthenticationResponse", "nexinets": "NexinetsClientAuthenticationResponse", "nexixpay": "NexixpayClientAuthenticationResponse" },
+  ConnectorSpecificClientAuthenticationResponse: { "stripe": "StripeClientAuthenticationResponse", "adyen": "AdyenClientAuthenticationResponse", "checkout": "CheckoutClientAuthenticationResponse", "cybersource": "CybersourceClientAuthenticationResponse", "nuvei": "NuveiClientAuthenticationResponse", "mollie": "MollieClientAuthenticationResponse", "globalpay": "GlobalpayClientAuthenticationResponse", "bluesnap": "BluesnapClientAuthenticationResponse", "rapyd": "RapydClientAuthenticationResponse", "shift4": "Shift4ClientAuthenticationResponse", "bankOfAmerica": "BankOfAmericaClientAuthenticationResponse", "wellsfargo": "WellsfargoClientAuthenticationResponse", "fiserv": "FiservClientAuthenticationResponse", "elavon": "ElavonClientAuthenticationResponse", "noon": "NoonClientAuthenticationResponse", "paysafe": "PaysafeClientAuthenticationResponse", "bamboraapac": "BamboraapacClientAuthenticationResponse", "jpmorgan": "JpmorganClientAuthenticationResponse", "billwerk": "BillwerkClientAuthenticationResponse", "datatrans": "DatatransClientAuthenticationResponse", "bambora": "BamboraClientAuthenticationResponse", "payload": "PayloadClientAuthenticationResponse", "multisafepay": "MultisafepayClientAuthenticationResponse", "nexinets": "NexinetsClientAuthenticationResponse", "nexixpay": "NexixpayClientAuthenticationResponse", "revolut": "RevolutClientAuthenticationResponse" },
   GpayClientAuthenticationResponse: { "googlePaySession": "GooglePaySessionResponse" },
   GooglePaySessionResponse: { "merchantInfo": "GpayMerchantInfo", "shippingAddressParameters": "GpayShippingAddressParameters", "allowedPaymentMethods": "GpayAllowedPaymentMethods", "transactionInfo": "GpayTransactionInfo", "secrets": "SecretInfoToInitiateSdk" },
   GpayAllowedPaymentMethods: { "parameters": "GpayAllowedMethodsParameters", "tokenizationSpecification": "GpayTokenizationSpecification" },
@@ -415,10 +419,11 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   PaymentServiceProxyAuthorizeRequest: { "amount": "Money", "cardProxy": "ProxyCardDetails", "customer": "Customer", "address": "PaymentAddress", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "billingDescriptor": "BillingDescriptor", "redirectionResponse": "RedirectionResponse", "l2L3Data": "L2L3Data", "customerAcceptance": "CustomerAcceptance" },
   PaymentServiceProxySetupRecurringRequest: { "amount": "Money", "cardProxy": "ProxyCardDetails", "customer": "Customer", "address": "PaymentAddress", "state": "ConnectorState", "setupMandateDetails": "SetupMandateDetails", "customerAcceptance": "CustomerAcceptance", "authenticationData": "AuthenticationData", "browserInfo": "BrowserInformation" },
   PayoutAddress: { "shippingAddress": "Address", "billingAddress": "Address" },
-  PayoutMethod: { "card": "CardPayout", "ach": "AchBankTransferPayout", "bacs": "BacsBankTransferPayout", "sepa": "SepaBankTransferPayout", "pix": "PixBankTransferPayout", "applePayDecrypt": "ApplePayDecrypt", "paypal": "Paypal", "venmo": "Venmo", "interac": "InteracPayout", "openBankingUk": "OpenBankingUkPayout", "passthrough": "Passthrough" },
-  PayoutServiceCreateRequest: { "address": "PayoutAddress", "payoutMethodData": "PayoutMethod", "amount": "Money", "customer": "Customer", "browserInfo": "BrowserInformation" },
+  PayoutMethod: { "card": "CardPayout", "ach": "AchBankTransferPayout", "bacs": "BacsBankTransferPayout", "sepa": "SepaBankTransferPayout", "pix": "PixBankTransferPayout", "applePayDecrypt": "ApplePayDecrypt", "paypal": "Paypal", "venmo": "Venmo", "interac": "InteracPayout", "openBankingUk": "OpenBankingUkPayout", "passthrough": "Passthrough", "pixKey": "PixKeyBankTransferPayout", "pixEmv": "PixEmvBankTransferPayout" },
+  SourceBankData: { "ach": "AchBankTransferPayout", "bacs": "BacsBankTransferPayout", "sepa": "SepaBankTransferPayout", "pix": "PixBankTransferPayout", "pixKey": "PixKeyBankTransferPayout", "pixEmv": "PixEmvBankTransferPayout" },
+  PayoutServiceCreateRequest: { "address": "PayoutAddress", "payoutMethodData": "PayoutMethod", "amount": "Money", "customer": "Customer", "browserInfo": "BrowserInformation", "sourceBankData": "SourceBankData" },
   PayoutServiceCreateResponse: { "error": "ErrorInfo" },
-  PayoutServiceTransferRequest: { "address": "PayoutAddress", "payoutMethodData": "PayoutMethod", "amount": "Money", "customer": "Customer", "browserInfo": "BrowserInformation" },
+  PayoutServiceTransferRequest: { "address": "PayoutAddress", "payoutMethodData": "PayoutMethod", "amount": "Money", "customer": "Customer", "browserInfo": "BrowserInformation", "sourceBankData": "SourceBankData" },
   PayoutServiceTransferResponse: { "error": "ErrorInfo" },
   PayoutServiceStageRequest: { "address": "PayoutAddress", "amount": "Money", "customer": "Customer", "browserInfo": "BrowserInformation" },
   PayoutServiceStageResponse: { "error": "ErrorInfo" },
@@ -441,6 +446,8 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   FfiConnectorHttpResponse: { "headers": "HeadersEntry" },
   ConnectorError: { "errorInfo": "ErrorInfo" },
   FfiResult: { "httpRequest": "FfiConnectorHttpRequest", "httpResponse": "FfiConnectorHttpResponse", "integrationError": "IntegrationError", "connectorError": "ConnectorError" },
+  SurchargeServiceCalculateRequest: { "amount": "Money" },
+  SurchargeServiceCalculateResponse: { "surchargeAmount": "Money", "error": "ErrorInfo" },
 };
 
 function _wrapSecretStrings(obj: unknown, msgName: string): unknown {
@@ -758,6 +765,17 @@ export class GrpcRefundClient {
   }
 }
 
+// SurchargeService
+export class GrpcSurchargeClient {
+  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
+
+  /** SurchargeService.Calculate — Calculate surcharge fees for a payment amount before processing. */
+  async calculate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "surcharge/calculate",
+      req, types.SurchargeServiceCalculateRequest, types.SurchargeServiceCalculateResponse);
+  }
+}
+
 // ── Top-level GrpcClient ──────────────────────────────────────────────────────
 
 export class GrpcClient {
@@ -771,6 +789,7 @@ export class GrpcClient {
   public payout: GrpcPayoutClient;
   public recurringPayment: GrpcRecurringPaymentClient;
   public refund: GrpcRefundClient;
+  public surcharge: GrpcSurchargeClient;
 
   constructor(config: GrpcConfig, libPath?: string) {
     const ffi = loadGrpcFfi(libPath);
@@ -784,5 +803,6 @@ export class GrpcClient {
     this.payout = new GrpcPayoutClient(ffi, config);
     this.recurringPayment = new GrpcRecurringPaymentClient(ffi, config);
     this.refund = new GrpcRefundClient(ffi, config);
+    this.surcharge = new GrpcSurchargeClient(ffi, config);
   }
 }

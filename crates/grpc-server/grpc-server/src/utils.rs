@@ -605,6 +605,7 @@ macro_rules! implement_connector_operation {
                 resource_id: &metadata_payload.resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
                 tenant_id: &metadata_payload.tenant_id,
+                return_raw_connector_data: config.common.return_raw_connector_data,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &config.proxy,
@@ -733,6 +734,7 @@ macro_rules! implement_connector_operation {
                 resource_id: &metadata_payload.resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
                 tenant_id: &metadata_payload.tenant_id,
+                return_raw_connector_data: config.common.return_raw_connector_data,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &config.proxy,
@@ -857,6 +859,7 @@ macro_rules! implement_connector_operation {
                 resource_id: &metadata_payload.resource_id,
                 shadow_mode: metadata_payload.shadow_mode,
                 tenant_id: &metadata_payload.tenant_id,
+                return_raw_connector_data: config.common.return_raw_connector_data,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &config.proxy,

@@ -19,6 +19,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.08.0
+
+### Bug Fixes
+
+- **connector:** [Trustly] Skip serializing fields if none ([#1247](https://github.com/juspay/connector-service/pull/1247)) ([`2fc84fc`](https://github.com/juspay/connector-service/commit/2fc84fc0ceca1796e8faee0fc7afea3c8cc08afe))
+
+**Full Changelog:** [`2026.05.07.1...2026.05.08.0`](https://github.com/juspay/connector-service/compare/2026.05.07.1...2026.05.08.0)
+
+- - -
+
+## 2026.05.07.1
+
+### Features
+
+- **connector:** Add payout flows to loonio ([#1197](https://github.com/juspay/connector-service/pull/1197)) ([`bf16c14`](https://github.com/juspay/connector-service/commit/bf16c140fd90e74d892cd3bd579c4bc16621fd54))
+- **proto:** Add API contract for surcharge granular flow ([#1232](https://github.com/juspay/connector-service/pull/1232)) ([`1ef8761`](https://github.com/juspay/connector-service/commit/1ef876126c42e1ed216f61845cff508a90badcf5))
+
+### Bug Fixes
+
+- **connector:** [Trustly] Fix country handling in the request ([#1241](https://github.com/juspay/connector-service/pull/1241)) ([`93bb564`](https://github.com/juspay/connector-service/commit/93bb564cec1f8ba972907544f90eca66f6b733da))
+- **nuvei:** Fix positive override test bugs in CreateOrder status expectations ([#1208](https://github.com/juspay/connector-service/pull/1208)) ([`e5b3618`](https://github.com/juspay/connector-service/commit/e5b36180a0fb314bde8cb4e63ea23e37acf31e81))
+- Fix injector flow ([#1165](https://github.com/juspay/connector-service/pull/1165)) ([`f77e758`](https://github.com/juspay/connector-service/commit/f77e7583810dae11dcfb0ad7713bdd7d3066bc09))
+
+### Miscellaneous Tasks
+
+- Bump SDK versions — npm 0.0.9, PyPI 0.0.5, Maven 0.0.6 ([#1244](https://github.com/juspay/connector-service/pull/1244)) ([`3060f0e`](https://github.com/juspay/connector-service/commit/3060f0e421b3034b1cdb58154a7de1f01e2cc93a))
+
+**Full Changelog:** [`2026.05.07.0...2026.05.07.1`](https://github.com/juspay/connector-service/compare/2026.05.07.0...2026.05.07.1)
+
+- - -
+
+## 2026.05.07.0
+
+### Bug Fixes
+
+- **connector:** [Truelayer] Make phone details optional ([#1228](https://github.com/juspay/connector-service/pull/1228)) ([`9fa70a6`](https://github.com/juspay/connector-service/commit/9fa70a6f8512f69ebeeb63a7d6e70a854ed777c6))
+
+### Miscellaneous Tasks
+
+- Add blog about ffi ([#1209](https://github.com/juspay/connector-service/pull/1209)) ([`8bb216d`](https://github.com/juspay/connector-service/commit/8bb216d125b48d694552fe96b72d59d7b4d43b40))
+
+**Full Changelog:** [`2026.05.06.0...2026.05.07.0`](https://github.com/juspay/connector-service/compare/2026.05.06.0...2026.05.07.0)
+
+- - -
+
+## 2026.05.06.0
+
+### Features
+
+- **connector:**
+  - [iMerchant Solutions] Implement Payment and Refund Webhooks ([#1185](https://github.com/juspay/connector-service/pull/1185)) ([`aa4bc5d`](https://github.com/juspay/connector-service/commit/aa4bc5dbbe236a65734d4bd8867831302c7986b4))
+  - Implement CreateClientAuthenticationToken for Revolut ([#993](https://github.com/juspay/connector-service/pull/993)) ([`86d3b5e`](https://github.com/juspay/connector-service/commit/86d3b5e13ae455ab6bc6b667d328caead700cb7d))
+- **server:** Add config toggle for raw connector request/response storage ([#1199](https://github.com/juspay/connector-service/pull/1199)) ([`3da02a9`](https://github.com/juspay/connector-service/commit/3da02a9fd5d40cd7f422995a2530665431ed8af8))
+
+**Full Changelog:** [`2026.05.05.0...2026.05.06.0`](https://github.com/juspay/connector-service/compare/2026.05.05.0...2026.05.06.0)
+
+- - -
+
+## 2026.05.05.0
+
+### Features
+
+- **grace:** Add hardening workflow for connector test suite ([#1196](https://github.com/juspay/connector-service/pull/1196)) ([`cf39d28`](https://github.com/juspay/connector-service/commit/cf39d288a5fc7aa92ceb7ebf7e1928ad8784ec01))
+- **payouts:** Audit Itaubank for Production ([#1053](https://github.com/juspay/connector-service/pull/1053)) ([`d47a8d0`](https://github.com/juspay/connector-service/commit/d47a8d04d0338bba0719efec3e7cff8220df3f96))
+
+**Full Changelog:** [`2026.05.01.0...2026.05.05.0`](https://github.com/juspay/connector-service/compare/2026.05.01.0...2026.05.05.0)
+
+- - -
+
+## 2026.05.01.0
+
+### Features
+
+- **connector:** Implement MIT for jpmorgan ([#908](https://github.com/juspay/connector-service/pull/908)) ([`d72421d`](https://github.com/juspay/connector-service/commit/d72421df1db2fba23c3bf992506b6b09e9ea587f))
+
+**Full Changelog:** [`2026.04.30.0...2026.05.01.0`](https://github.com/juspay/connector-service/compare/2026.04.30.0...2026.05.01.0)
+
+- - -
+
+## 2026.04.30.0
+
+### Features
+
+- **connector:**
+  - [nuvei] introduce bank redirect payment method ([#662](https://github.com/juspay/connector-service/pull/662)) ([`57fecb7`](https://github.com/juspay/connector-service/commit/57fecb78b3ca5e33d7a71116e4f99308b86170c0))
+  - [AXIS_BANK] integrate juspay upi stack payin flows ([#1162](https://github.com/juspay/connector-service/pull/1162)) ([`2a01185`](https://github.com/juspay/connector-service/commit/2a01185bf5bfcea88f67986bf57117e455d12b42))
+  - Wire easebuzz with two-step seamless flow ([#1095](https://github.com/juspay/connector-service/pull/1095)) ([`bb70908`](https://github.com/juspay/connector-service/commit/bb70908055c7fe6a5da3eab37d71b76f286fa27e))
+
+### Bug Fixes
+
+- **connector:** [tsys] wire SetupRecurring -> Charge MIT chain ([#1071](https://github.com/juspay/connector-service/pull/1071)) ([`af55fe6`](https://github.com/juspay/connector-service/commit/af55fe64d98745b0484165b95e50bfbe195ecf58))
+
+### Documentation
+
+- **grace:** Fix rulesbook gaps - add missing flows, patterns, and codegen improvements ([#861](https://github.com/juspay/connector-service/pull/861)) ([`b37cec4`](https://github.com/juspay/connector-service/commit/b37cec45b24d3b8740287573786a6025c5d90418))
+
+**Full Changelog:** [`2026.04.29.0...2026.04.30.0`](https://github.com/juspay/connector-service/compare/2026.04.29.0...2026.04.30.0)
+
+- - -
+
 ## 2026.04.29.0
 
 ### Features

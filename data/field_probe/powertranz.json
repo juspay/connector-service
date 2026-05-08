@@ -617,7 +617,8 @@
             "card_exp_month": "03",
             "card_exp_year": "2030",
             "card_cvc": "123",
-            "card_holder_name": "John Doe"
+            "card_holder_name": "John Doe",
+            "card_network": "VISA"
           },
           "address": {
             "billing_address": {}
@@ -635,7 +636,7 @@
             "powertranz-powertranzpassword": "probe_pass",
             "via": "HyperSwitch"
           },
-          "body": "{\"TransactionIdentifier\":\"00000000-0000-0000-0000-000000000000\",\"TotalAmount\":10.0,\"CurrencyCode\":\"840\",\"ThreeDSecure\":false,\"Source\":{\"CardholderName\":\"John Doe\",\"CardPan\":\"4111111111111111\",\"CardCvv\":\"123\",\"CardExpiration\":\"3003\"},\"OrderIdentifier\":\"probe_proxy_txn_001\",\"ExtendedData\":null}"
+          "body": "{\"TransactionIdentifier\":\"00000000-0000-0000-0000-000000000000\",\"TotalAmount\":10.0,\"CurrencyCode\":\"840\",\"ThreeDSecure\":false,\"Source\":{\"CardholderName\":\"John Doe\",\"CardPan\":\"{{$card_number}}\",\"CardCvv\":\"{{$card_cvc}}\",\"CardExpiration\":\"{{$card_exp_year}}{{$card_exp_month}}\"},\"OrderIdentifier\":\"probe_proxy_txn_001\",\"ExtendedData\":null}"
         }
       }
     },
@@ -653,7 +654,8 @@
             "card_exp_month": "03",
             "card_exp_year": "2030",
             "card_cvc": "123",
-            "card_holder_name": "John Doe"
+            "card_holder_name": "John Doe",
+            "card_network": "VISA"
           },
           "address": {
             "billing_address": {}
@@ -674,7 +676,7 @@
             "powertranz-powertranzpassword": "probe_pass",
             "via": "HyperSwitch"
           },
-          "body": "{\"TransactionIdentifier\":\"00000000-0000-0000-0000-000000000000\",\"TotalAmount\":0.0,\"CurrencyCode\":\"840\",\"ThreeDSecure\":false,\"Source\":{\"CardholderName\":\"John Doe\",\"CardPan\":\"4111111111111111\",\"CardCvv\":\"123\",\"CardExpiration\":\"3003\"},\"OrderIdentifier\":\"probe_proxy_mandate_001\",\"ExtendedData\":null}"
+          "body": "{\"TransactionIdentifier\":\"00000000-0000-0000-0000-000000000000\",\"TotalAmount\":0.0,\"CurrencyCode\":\"840\",\"ThreeDSecure\":false,\"Source\":{\"CardholderName\":\"John Doe\",\"CardPan\":\"{{$card_number}}\",\"CardCvv\":\"{{$card_cvc}}\",\"CardExpiration\":\"{{$card_exp_year}}{{$card_exp_month}}\"},\"OrderIdentifier\":\"probe_proxy_mandate_001\",\"ExtendedData\":null}"
         }
       }
     },

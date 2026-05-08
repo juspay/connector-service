@@ -632,7 +632,8 @@
             "card_exp_month": "03",
             "card_exp_year": "2030",
             "card_cvc": "123",
-            "card_holder_name": "John Doe"
+            "card_holder_name": "John Doe",
+            "card_network": "VISA"
           },
           "customer": {
             "name": "John Doe",
@@ -653,7 +654,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"buyer_name\":\"John Doe\",\"buyer_email\":\"test@example.com\",\"payme_sale_id\":\"connector_order_id\",\"credit_card_number\":\"4111111111111111\",\"credit_card_exp\":\"0330\",\"credit_card_cvv\":\"123\",\"language\":\"en\"}"
+          "body": "{\"buyer_name\":\"John Doe\",\"buyer_email\":\"test@example.com\",\"payme_sale_id\":\"connector_order_id\",\"credit_card_number\":\"{{$card_number}}\",\"credit_card_exp\":\"{{$card_exp_month}}{{$card_exp_year}}\",\"credit_card_cvv\":\"{{$card_cvc}}\",\"language\":\"en\"}"
         }
       }
     },

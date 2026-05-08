@@ -81,7 +81,7 @@ use grpc_api_types::payments::{
     RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface};
-use injector::{TokenData, VaultConnectors};
+use injector::TokenData;
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     verification::ConnectorSourceVerificationSecrets,
@@ -109,39 +109,34 @@ struct EventParams<'a> {
 #[derive(Debug, serde::Serialize)]
 struct CardTokenData {
     card_number: String,
-    cvv: String,
-    exp_month: String,
-    exp_year: String,
+    card_cvc: String,
+    card_exp_month: String,
+    card_exp_year: String,
 }
 
 trait ToTokenData {
     fn to_token_data(&self) -> TokenData;
-    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData;
 }
 
 impl ToTokenData for grpc_api_types::payments::CardDetails {
     fn to_token_data(&self) -> TokenData {
-        self.to_token_data_with_vault(VaultConnectors::VGS)
-    }
-
-    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
         let card_data = CardTokenData {
             card_number: self
                 .card_number
                 .as_ref()
                 .map(|cn| cn.get_card_no())
                 .unwrap_or_default(),
-            cvv: self
+            card_cvc: self
                 .card_cvc
                 .as_ref()
                 .map(|cvc| cvc.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_month: self
+            card_exp_month: self
                 .card_exp_month
                 .as_ref()
                 .map(|em| em.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_year: self
+            card_exp_year: self
                 .card_exp_year
                 .as_ref()
                 .map(|ey| ey.clone().expose().to_string())
@@ -152,34 +147,29 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
 
         TokenData {
             specific_token_data: SecretSerdeValue::new(card_json),
-            vault_connector,
         }
     }
 }
 
 impl ToTokenData for grpc_api_types::payments::ProxyCardDetails {
     fn to_token_data(&self) -> TokenData {
-        self.to_token_data_with_vault(VaultConnectors::VGS) //?
-    }
-
-    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
         let card_data = CardTokenData {
             card_number: self
                 .card_number
                 .as_ref()
                 .map(|cn| cn.peek().to_owned())
                 .unwrap_or_default(),
-            cvv: self
+            card_cvc: self
                 .card_cvc
                 .as_ref()
                 .map(|cvc| cvc.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_month: self
+            card_exp_month: self
                 .card_exp_month
                 .as_ref()
                 .map(|em| em.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_year: self
+            card_exp_year: self
                 .card_exp_year
                 .as_ref()
                 .map(|ey| ey.clone().expose().to_string())
@@ -190,7 +180,6 @@ impl ToTokenData for grpc_api_types::payments::ProxyCardDetails {
 
         TokenData {
             specific_token_data: SecretSerdeValue::new(card_json),
-            vault_connector,
         }
     }
 }
@@ -419,6 +408,7 @@ impl CustomerService for Customer {
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                         tenant_id: &metadata_payload.tenant_id,
+                        return_raw_connector_data: config.common.return_raw_connector_data,
                     };
 
                     let response = Box::pin(
@@ -546,6 +536,7 @@ impl Payments {
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
             tenant_id: &metadata_payload.tenant_id,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         // Execute connector processing - ONLY the authorize call
@@ -665,6 +656,7 @@ impl Payments {
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
             tenant_id: &metadata_payload.tenant_id,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         let response = Box::pin(
@@ -1049,6 +1041,7 @@ impl PaymentService for Payments {
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                         tenant_id: &metadata_payload.tenant_id,
+                        return_raw_connector_data: config.common.return_raw_connector_data,
                     };
 
                     // handle_response field removed from proto (field 5 reserved)
@@ -2176,6 +2169,7 @@ impl PaymentMethod {
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
             tenant_id: &metadata_payload.tenant_id,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         let response = Box::pin(
@@ -2283,6 +2277,7 @@ impl MerchantAuthentication {
             resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
             tenant_id: event_params.tenant_id,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         // Execute connector processing
@@ -2396,6 +2391,7 @@ impl MerchantAuthentication {
             resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
             tenant_id: event_params.tenant_id,
+            return_raw_connector_data: config.common.return_raw_connector_data,
         };
 
         let response = Box::pin(
@@ -2871,6 +2867,7 @@ impl RecurringPaymentService for RecurringPayments {
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
                         tenant_id: &metadata_payload.tenant_id,
+                        return_raw_connector_data: config.common.return_raw_connector_data,
                     };
 
                     let response = Box::pin(

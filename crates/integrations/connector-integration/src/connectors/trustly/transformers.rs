@@ -117,14 +117,21 @@ pub struct TrustlyPaymentRequestAttributes {
     email: pii::Email,
     fail_u_r_l: String,
     firstname: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     i_p: Option<Secret<String, IpAddress>>,
     lastname: Secret<String>,
     locale: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     mobile: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_city: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_country: Option<CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_line1: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_line2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_postal_code: Option<Secret<String>>,
     shopper_statement: String,
     success_u_r_l: String,
@@ -288,19 +295,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .change_context(errors::IntegrationError::AmountConversionFailed {
                             context: Default::default(),
                         })?,
-                    country: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_country()
-                        .unwrap_or(
-                            item.router_data
-                                .resource_common_data
-                                .get_optional_shipping_country()
-                                .ok_or(errors::IntegrationError::MissingRequiredField {
-                                    field_name: "country",
-                                    context: Default::default(),
-                                })?,
-                        ),
+                    country: match item.router_data.resource_common_data.get_billing_country() {
+                        Ok(country) => country,
+                        Err(_) => item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_shipping_country()
+                            .ok_or(errors::IntegrationError::MissingRequiredField {
+                                field_name: "country",
+                                context: Default::default(),
+                            })?,
+                    },
                     currency: item.router_data.request.currency,
                     email: item
                         .router_data
@@ -540,6 +545,7 @@ pub struct TrustlyRefundRequestData {
     order_i_d: String,
     amount: StringMajorUnit,
     currency: Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
     attributes: Option<TrustlyRefundAttributes>,
 }
 

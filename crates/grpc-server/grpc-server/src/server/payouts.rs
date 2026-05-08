@@ -154,6 +154,7 @@ async fn fetch_oauth_access_token(
         resource_id: &None,
         shadow_mode: false,
         tenant_id: "default",
+        return_raw_connector_data: config.common.return_raw_connector_data,
     };
 
     let access_token_result = Box::pin(
