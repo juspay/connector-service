@@ -549,7 +549,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.capture_method.unwrap_or_default(),
                 enums::CaptureMethod::Automatic | enums::CaptureMethod::SequentialAutomatic
             );
-            (None, Some(RequestAutoSettlement { enabled: auto_settle }))
+            (
+                None,
+                Some(RequestAutoSettlement {
+                    enabled: auto_settle,
+                }),
+            )
         } else {
             (
                 get_settlement_info(&item.router_data, item.router_data.request.minor_amount),
@@ -558,11 +563,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let (success_url, failure_url, pending_url, cancel_url) = if is_apm {
-            let return_url = item
-                .router_data
-                .request
-                .get_router_return_url()
-                .ok();
+            let return_url = item.router_data.request.get_router_return_url().ok();
             (
                 return_url.clone(),
                 return_url.clone(),
@@ -705,7 +706,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     currency: item.router_data.request.currency,
                 },
                 debt_repayment: None,
-                three_ds: None,       // MIT transactions don't require 3DS
+                three_ds: None, // MIT transactions don't require 3DS
                 request_auto_settlement: None,
                 token_creation: None, // No new token creation for repeat payments
                 customer_agreement: Some(CustomerAgreement {
@@ -918,13 +919,15 @@ impl<F, T>
         ),
     ) -> Result<Self, Self::Error> {
         let (router_data, optional_correlation_id, amount) = item;
-        let apm_redirect = router_data.response.redirect.as_ref().map(|url| {
-            RedirectForm::Form {
+        let apm_redirect = router_data
+            .response
+            .redirect
+            .as_ref()
+            .map(|url| RedirectForm::Form {
                 endpoint: url.clone(),
                 method: common_utils::request::Method::Get,
                 form_fields: HashMap::new(),
-            }
-        });
+            });
 
         let (description, redirection_data, mandate_reference, network_txn_id, error) = router_data
             .response
