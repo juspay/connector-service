@@ -13,7 +13,7 @@ use self::response::{
     WorldpayPreAuthenticateResponse, WorldpayRefundResponse, WorldpayRefundSyncResponse,
     WorldpayRepeatPaymentResponse, WorldpaySyncResponse, WorldpayVoidResponse,
 };
-use common_utils::{errors::CustomResult, events, ext_traits::BytesExt};
+use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, request::Request};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
@@ -802,6 +802,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Worldpay<T>
 {
+    fn build_request_v2(
+        &self,
+        _req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<Request>, IntegrationError> {
+        Err(IntegrationError::FlowNotSupported {
+            flow: "SetupMandate".to_string(),
+            connector: "worldpay".to_string(),
+            context: Default::default(),
+        }
+        .into())
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

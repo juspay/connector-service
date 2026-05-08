@@ -75,5 +75,17 @@
     "https://docs.stripe.com/api/errors",
     "https://docs.stripe.com/webhooks",
     "https://docs.stripe.com/api/idempotent_requests"
+  ],
+  "Worldpay": [
+    "https://docs.worldpay.com/access/products/access/apms",
+    "https://docs.worldpay.com/access/products/access/apms/openapi",
+    "https://docs.worldpay.com/access/products/access/apms/ideal",
+    "https://docs.worldpay.com/access/products/access/apms/przelewy24",
+    "https://docs.worldpay.com/access/products/access/apms/blik",
+    "https://docs.worldpay.com/access/products/access/apms/trustly",
+    "https://docs.worldpay.com/access/products/access/apms/bizum",
+    "https://docs.worldpay.com/access/products/access/apms/open-banking",
+    "https://docs.worldpay.com/access/products/access/apms/openapi/other/payment",
+    "https://docs.worldpay.com/access/products/events"
   ]
 }
