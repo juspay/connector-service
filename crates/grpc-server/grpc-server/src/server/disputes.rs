@@ -2,7 +2,7 @@ use crate::utils::{self, get_config_from_request};
 use crate::{
     implement_connector_operation,
     request::RequestData,
-    utils::{grpc_logging_wrapper, MetadataPayload},
+    utils::{grpc_logging_wrapper_with_parser, MetadataPayload},
 };
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -92,14 +92,15 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
-        Box::pin(grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             common_utils::events::FlowName::SubmitEvidence,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
-                async move {
+                Box::pin(async move {
                     let payload = request_data.payload;
                     let MetadataPayload {
                         connector,
@@ -183,7 +184,7 @@ impl DisputeService for Disputes {
                         .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(dispute_response))
-                }
+                })
             },
         ))
         .await
@@ -222,17 +223,20 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             common_utils::events::FlowName::Dsync,
-            |request_data| async {
-                let _payload = request_data.payload;
-                let response = DisputeResponse {
-                    ..Default::default()
-                };
-                Ok(tonic::Response::new(response))
+            RequestData::from_grpc_request,
+            |request_data| {
+                Box::pin(async {
+                    let _payload = request_data.payload;
+                    let response = DisputeResponse {
+                        ..Default::default()
+                    };
+                    Ok(tonic::Response::new(response))
+                })
             },
         )
         .await
@@ -269,12 +273,16 @@ impl DisputeService for Disputes {
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             common_utils::events::FlowName::DefendDispute,
-            |request_data| async move { self.internal_defend(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let disputes_service = self.clone();
+                Box::pin(async move { disputes_service.internal_defend(request_data).await })
+            },
         )
         .await
     }
@@ -311,14 +319,15 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
-        Box::pin(grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             common_utils::events::FlowName::AcceptDispute,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
-                async move {
+                Box::pin(async move {
                     let payload = request_data.payload;
                     let MetadataPayload {
                         connector,
@@ -404,7 +413,7 @@ impl DisputeService for Disputes {
                         .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(dispute_response))
-                }
+                })
             },
         ))
         .await

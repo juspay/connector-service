@@ -3,7 +3,7 @@ use std::{fmt::Debug, sync::Arc};
 use crate::{
     implement_connector_operation,
     request::RequestData,
-    utils::{self, get_config_from_request, grpc_logging_wrapper},
+    utils::{self, get_config_from_request, grpc_logging_wrapper_with_parser},
 };
 use common_enums;
 use common_utils::{events::FlowName, lineage, metadata::MaskedMetadata, SecretSerdeValue};
@@ -320,11 +320,12 @@ impl CustomerService for Customer {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::CreateConnectorCustomer,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
                 let config = config.clone();
@@ -810,8 +811,9 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(request, &service_name, config.clone(), FlowName::Authorize, |request_data| {
+        grpc_logging_wrapper_with_parser(request, &service_name, config.clone(), FlowName::Authorize, RequestData::from_grpc_request, |request_data| {
             let service_name = service_name.clone();
+            let payments_service = self.clone();
             Box::pin(async move {
                 let metadata_payload = request_data.extracted_metadata;
                 let metadata = &request_data.masked_metadata;
@@ -833,7 +835,7 @@ impl PaymentService for Payments {
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
                         tracing::info!("INJECTOR: Authorization completed successfully with injector");
-                        Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                        Box::pin(payments_service.process_authorization_internal::<VaultTokenHolder>(
                             &config,
                             payload,
                             metadata_payload.connector,
@@ -854,7 +856,7 @@ impl PaymentService for Payments {
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
                         tracing::info!("REGULAR: Authorization completed successfully without injector");
-                        Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                        Box::pin(payments_service.process_authorization_internal::<DefaultPCIHolder>(
                             &config,
                             payload,
                             metadata_payload.connector,
@@ -875,7 +877,7 @@ impl PaymentService for Payments {
                                 tonic::Status::invalid_argument("Invalid payment method data")
                             })?;
                         tracing::info!("REGULAR: Authorization completed successfully without injector");
-                        Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                        Box::pin(payments_service.process_authorization_internal::<DefaultPCIHolder>(
                             &config,
                             payload,
                             metadata_payload.connector,
@@ -931,11 +933,12 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
 
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::Psync,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
@@ -1104,12 +1107,16 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::CreateOrder,
-            |request_data| async move { self.internal_create_order(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payments_service = self.clone();
+                Box::pin(async move { payments_service.internal_create_order(request_data).await })
+            },
         )
         .await
     }
@@ -1146,12 +1153,14 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::Void,
+            RequestData::from_grpc_request,
             |request_data| {
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let metadata_payload = &request_data.extracted_metadata;
                     let connector = metadata_payload.connector;
@@ -1191,7 +1200,7 @@ impl PaymentService for Payments {
                             .map_err(|e| tonic::Status::unauthenticated(format!("Invalid access token: {e}")))?;
                     }
 
-                    self.internal_void_payment(request_data).await
+                    payments_service.internal_void_payment(request_data).await
                 })
             },
         )
@@ -1229,12 +1238,20 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::VoidPostCapture,
-            |request_data| async move { self.internal_void_post_capture(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payments_service = self.clone();
+                Box::pin(async move {
+                    payments_service
+                        .internal_void_post_capture(request_data)
+                        .await
+                })
+            },
         )
         .await
     }
@@ -1270,13 +1287,14 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::VerifyRedirectResponse,
+            RequestData::from_grpc_request,
             |request_data| {
-                async move {
+                Box::pin(async move {
                     let payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
                     let connector = metadata_payload.connector;
@@ -1353,9 +1371,10 @@ impl PaymentService for Payments {
                         .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(response))
-                }
-            }
-        ).await
+                })
+            },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -1389,12 +1408,16 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::Refund,
-            |request_data| async move { self.internal_refund(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payments_service = self.clone();
+                Box::pin(async move { payments_service.internal_refund(request_data).await })
+            },
         )
         .await
     }
@@ -1431,12 +1454,14 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::Capture,
+            RequestData::from_grpc_request,
             |request_data| {
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let metadata_payload = &request_data.extracted_metadata;
                     let connector = metadata_payload.connector;
@@ -1476,7 +1501,7 @@ impl PaymentService for Payments {
                             .map_err(|e| tonic::Status::unauthenticated(format!("Invalid access token: {e}")))?;
                     }
 
-                    self.internal_payment_capture(request_data).await
+                    payments_service.internal_payment_capture(request_data).await
                 })
             },
         )
@@ -1515,14 +1540,16 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::SetupMandate,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
                 let config = config.clone();
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let proto_payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
@@ -1547,7 +1574,7 @@ impl PaymentService for Payments {
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
 
-                    Box::pin(self.handle_setup_recurring_internal::<VaultTokenHolder>(
+                    Box::pin(payments_service.handle_setup_recurring_internal::<VaultTokenHolder>(
                         &config,
                         payload,
                         *connector,
@@ -1568,7 +1595,7 @@ impl PaymentService for Payments {
                             tracing::error!("SETUP_RECURRING_FLOW: failed to get payment method data action - error: {:?}", err);
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
-                        Box::pin(self.handle_setup_recurring_internal::<DefaultPCIHolder>(
+                        Box::pin(payments_service.handle_setup_recurring_internal::<DefaultPCIHolder>(
                         &config,
                         payload,
                         *connector,
@@ -1587,7 +1614,7 @@ impl PaymentService for Payments {
                                 tracing::error!("Failed to convert payment method data: {:?}", err);
                                 tonic::Status::invalid_argument("Invalid payment method data")
                             })?;
-                        Box::pin(self.handle_setup_recurring_internal::<DefaultPCIHolder>(
+                        Box::pin(payments_service.handle_setup_recurring_internal::<DefaultPCIHolder>(
                         &config,
                         payload,
                         *connector,
@@ -1640,13 +1667,19 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::IncrementalAuthorization,
-            |request_data: RequestData<PaymentServiceIncrementalAuthorizationRequest>| async move {
-                self.internal_incremental_authorization(request_data).await
+            RequestData::from_grpc_request,
+            |request_data: RequestData<PaymentServiceIncrementalAuthorizationRequest>| {
+                let payments_service = self.clone();
+                Box::pin(async move {
+                    payments_service
+                        .internal_incremental_authorization(request_data)
+                        .await
+                })
             },
         )
         .await
@@ -1688,15 +1721,17 @@ impl PaymentService for Payments {
         let extensions = request.extensions().clone();
         let metadata = request.metadata().clone();
 
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::Authorize,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let authorize_request = tokenized_authorize_to_base(request_data.payload);
 
@@ -1705,7 +1740,7 @@ impl PaymentService for Payments {
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    <Self as PaymentService>::authorize(self, inner_request).await
+                    <Self as PaymentService>::authorize(&payments_service, inner_request).await
                 })
             },
         )
@@ -1748,15 +1783,17 @@ impl PaymentService for Payments {
         let extensions = request.extensions().clone();
         let metadata = request.metadata().clone();
 
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::SetupMandate,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let setup_recurring_request =
                         tokenized_setup_recurring_to_base(request_data.payload);
@@ -1766,7 +1803,8 @@ impl PaymentService for Payments {
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    <Self as PaymentService>::setup_recurring(self, inner_request).await
+                    <Self as PaymentService>::setup_recurring(&payments_service, inner_request)
+                        .await
                 })
             },
         )
@@ -1805,13 +1843,15 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
 
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::Authorize,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let proto_payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
@@ -1831,7 +1871,7 @@ impl PaymentService for Payments {
                             })?
                     );
                     // Call process_authorization_internal directly with intermediate type
-                    match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                    match Box::pin(payments_service.process_authorization_internal::<VaultTokenHolder>(
                         &config,
                         payload,
                         metadata_payload.connector,
@@ -1893,14 +1933,16 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
 
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::SetupMandate,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
                 let config = config.clone();
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let proto_payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
@@ -1923,7 +1965,7 @@ impl PaymentService for Payments {
                             })?
                     );
                     // Call handle_setup_recurring_internal directly with intermediate type
-                    let setup_mandate_response = Box::pin(self.handle_setup_recurring_internal::<VaultTokenHolder>(
+                    let setup_mandate_response = Box::pin(payments_service.handle_setup_recurring_internal::<VaultTokenHolder>(
                         &config,
                         payload,
                         *connector,
@@ -1979,14 +2021,16 @@ impl PaymentMethodService for PaymentMethod {
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
 
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::PaymentMethodToken,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
                 let config = config.clone();
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
@@ -2010,7 +2054,7 @@ impl PaymentMethodService for PaymentMethod {
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
 
-                    self.handle_tokenize_internal::<VaultTokenHolder>(
+                    payments_service.handle_tokenize_internal::<VaultTokenHolder>(
                         &config,
                         payload,
                         *connector,
@@ -2031,7 +2075,7 @@ impl PaymentMethodService for PaymentMethod {
                             tracing::error!("PAYMENT_AUTHORIZE_FLOW: failed to get payment method data action - error: {:?}", err);
                             tonic::Status::invalid_argument("Invalid payment method data")
                         })?);
-                        self.handle_tokenize_internal::<DefaultPCIHolder>(
+                        payments_service.handle_tokenize_internal::<DefaultPCIHolder>(
                         &config,
                         payload,
                         *connector,
@@ -2050,7 +2094,7 @@ impl PaymentMethodService for PaymentMethod {
                                 tracing::error!("Failed to convert payment method data: {:?}", err);
                                 tonic::Status::invalid_argument("Invalid payment method data")
                             })?;
-                        self.handle_tokenize_internal::<DefaultPCIHolder>(
+                        payments_service.handle_tokenize_internal::<DefaultPCIHolder>(
                         &config,
                         payload,
                         *connector,
@@ -2470,12 +2514,20 @@ impl MerchantAuthenticationService for MerchantAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::ClientAuthenticationToken,
-            |request_data| async move { self.internal_sdk_session_token(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payments_service = self.clone();
+                Box::pin(async move {
+                    payments_service
+                        .internal_sdk_session_token(request_data)
+                        .await
+                })
+            },
         )
         .await
     }
@@ -2519,13 +2571,15 @@ impl MerchantAuthenticationService for MerchantAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::ServerSessionAuthenticationToken,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
@@ -2567,7 +2621,7 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         tenant_id: &metadata_payload.tenant_id,
                     };
 
-                    let session_response = Box::pin(self.handle_session_token(
+                    let session_response = Box::pin(payments_service.handle_session_token(
                         &config,
                         connector_data.clone(),
                         &payment_flow_data,
@@ -2636,13 +2690,15 @@ impl MerchantAuthenticationService for MerchantAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::ServerAuthenticationToken,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
+                let payments_service = self.clone();
                 Box::pin(async move {
                     let metadata_payload = request_data.extracted_metadata;
                     let (connector, request_id, lineage_ids) = (
@@ -2685,16 +2741,17 @@ impl MerchantAuthenticationService for MerchantAuthentication {
 
                     // Reuse the existing handle_access_token function which now uses
                     // generate_access_token_response for consistent error handling
-                    let server_auth_token_response = Box::pin(self.handle_access_token(
-                        &config,
-                        connector_data,
-                        &payment_flow_data,
-                        connector_config.clone(),
-                        &connector.to_string(),
-                        &service_name,
-                        event_params,
-                    ))
-                    .await?;
+                    let server_auth_token_response =
+                        Box::pin(payments_service.handle_access_token(
+                            &config,
+                            connector_data,
+                            &payment_flow_data,
+                            connector_config.clone(),
+                            &connector.to_string(),
+                            &service_name,
+                            event_params,
+                        ))
+                        .await?;
 
                     Ok(tonic::Response::new(server_auth_token_response))
                 })
@@ -2753,11 +2810,12 @@ impl RecurringPaymentService for RecurringPayments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::RepeatPayment,
+            RequestData::from_grpc_request,
             |request_data| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
@@ -2928,12 +2986,18 @@ impl RecurringPaymentService for RecurringPayments {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::Authenticate,
-            |request_data| async move { self.internal_mandate_revoke(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payments_service = self.clone();
+                Box::pin(
+                    async move { payments_service.internal_mandate_revoke(request_data).await },
+                )
+            },
         )
         .await
     }
@@ -3025,12 +3089,20 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        Box::pin(grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::PreAuthenticate,
-            |request_data| async move { self.internal_pre_authenticate(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payments_service = self.clone();
+                Box::pin(async move {
+                    payments_service
+                        .internal_pre_authenticate(request_data)
+                        .await
+                })
+            },
         ))
         .await
     }
@@ -3069,12 +3141,16 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        Box::pin(grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::Authenticate,
-            |request_data| async move { self.internal_authenticate(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payments_service = self.clone();
+                Box::pin(async move { payments_service.internal_authenticate(request_data).await })
+            },
         ))
         .await
     }
@@ -3113,12 +3189,20 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        Box::pin(grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             FlowName::PostAuthenticate,
-            |request_data| async move { self.internal_post_authenticate(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payments_service = self.clone();
+                Box::pin(async move {
+                    payments_service
+                        .internal_post_authenticate(request_data)
+                        .await
+                })
+            },
         ))
         .await
     }

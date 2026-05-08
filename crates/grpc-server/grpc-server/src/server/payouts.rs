@@ -34,9 +34,10 @@ use ucs_env::error::ResultExtGrpc;
 use crate::{
     implement_connector_operation,
     request::RequestData,
-    utils::{get_config_from_request, grpc_logging_wrapper},
+    utils::{get_config_from_request, grpc_logging_wrapper_with_parser},
 };
 
+#[derive(Clone)]
 pub struct Payouts;
 
 #[tonic::async_trait]
@@ -51,12 +52,16 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::PayoutCreate,
-            |request_data| self.internal_payout_create(request_data),
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payouts_service = self.clone();
+                Box::pin(async move { payouts_service.internal_payout_create(request_data).await })
+            },
         )
         .await
     }
@@ -71,12 +76,18 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::PayoutTransfer,
-            |request_data| self.internal_payout_transfer(request_data),
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payouts_service = self.clone();
+                Box::pin(
+                    async move { payouts_service.internal_payout_transfer(request_data).await },
+                )
+            },
         )
         .await
     }
@@ -91,12 +102,16 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::PayoutGet,
-            |request_data| self.internal_payout_get(request_data),
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payouts_service = self.clone();
+                Box::pin(async move { payouts_service.internal_payout_get(request_data).await })
+            },
         )
         .await
     }
@@ -111,12 +126,16 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::PayoutVoid,
-            |request_data| self.internal_payout_void(request_data),
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payouts_service = self.clone();
+                Box::pin(async move { payouts_service.internal_payout_void(request_data).await })
+            },
         )
         .await
     }
@@ -131,12 +150,16 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::PayoutStage,
-            |request_data| self.internal_payout_stage(request_data),
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payouts_service = self.clone();
+                Box::pin(async move { payouts_service.internal_payout_stage(request_data).await })
+            },
         )
         .await
     }
@@ -151,12 +174,20 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::PayoutCreateLink,
-            |request_data| self.internal_payout_create_link(request_data),
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payouts_service = self.clone();
+                Box::pin(async move {
+                    payouts_service
+                        .internal_payout_create_link(request_data)
+                        .await
+                })
+            },
         )
         .await
     }
@@ -171,12 +202,20 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::PayoutCreateRecipient,
-            |request_data| self.internal_payout_create_recipient(request_data),
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payouts_service = self.clone();
+                Box::pin(async move {
+                    payouts_service
+                        .internal_payout_create_recipient(request_data)
+                        .await
+                })
+            },
         )
         .await
     }
@@ -191,12 +230,20 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-        grpc_logging_wrapper(
+        grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config,
             FlowName::PayoutEnrollDisburseAccount,
-            |request_data| self.internal_payout_enroll_disburse_account(request_data),
+            RequestData::from_grpc_request,
+            |request_data| {
+                let payouts_service = self.clone();
+                Box::pin(async move {
+                    payouts_service
+                        .internal_payout_enroll_disburse_account(request_data)
+                        .await
+                })
+            },
         )
         .await
     }
