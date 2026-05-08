@@ -106,11 +106,17 @@ jobs:
           PREVIOUS_TAG="$(cog get-version 2>/dev/null || echo '0.0.0')"
           PREVIOUS_TAG="v${PREVIOUS_TAG#v}"
 
-          NEXT_VERSION="$(cog bump --dry-run --auto --skip-untracked 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)"
+          COG_OUTPUT="$(cog bump --dry-run --auto --skip-untracked 2>&1)"
+          NEXT_VERSION="$(echo "${COG_OUTPUT}" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)"
           NEXT_TAG="v${NEXT_VERSION}"
 
           if [ -z "${NEXT_VERSION}" ]; then
-            echo "::error::cog bump --auto produced no version. Check that commits follow conventional format."
+            echo "::error::cog bump --auto produced no version. cog output: ${COG_OUTPUT}"
+            exit 1
+          fi
+
+          if [[ ! "${NEXT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Computed version '${NEXT_VERSION}' is not valid SemVer (expected X.Y.Z)"
             exit 1
           fi
 
