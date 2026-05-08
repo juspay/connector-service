@@ -264,6 +264,8 @@ pub struct ApmCustomer {
     pub first_name: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Secret<String>>,
 }
 
 #[derive(

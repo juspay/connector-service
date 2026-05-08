@@ -229,7 +229,7 @@ fn fetch_payment_instrument<
             WalletDataPaymentMethod::SwishQr(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: Some("swish".to_string()),
+                    method: None,
                     country: None,
                     billing_address: None,
                 }))
@@ -689,6 +689,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::PayLater(PayLaterData::KlarnaRedirect { .. })
         );
 
+        let is_swish = matches!(
+            &item.router_data.request.payment_method_data,
+            PaymentMethodData::Wallet(WalletDataPaymentMethod::SwishQr(_))
+        );
+
         let (method, is_apm) = if is_bank_debit_ach {
             (None, false)
         } else if is_bank_redirect {
@@ -714,6 +719,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 Some(InstructionMethod::Apm("klarna_network".to_string())),
                 true,
             )
+        } else if is_swish {
+            (
+                Some(InstructionMethod::Apm("swish".to_string())),
+                true,
+            )
         } else {
             let m = PaymentMethod::try_from((
                 item.router_data.resource_common_data.payment_method,
@@ -725,7 +735,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | PaymentMethod::WeChatPay
                     | PaymentMethod::AliPayCn
                     | PaymentMethod::AliPayUni
-                    | PaymentMethod::Swish
             );
             (
                 if apm {
@@ -822,11 +831,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item.router_data.request.payment_method_data,
             PaymentMethodData::BankRedirect(BankRedirectData::Bizum { .. })
         );
-        let apm_customer = if is_bank_redirect && !is_bizum {
+        let apm_customer = if is_bizum {
+            let phone = billing
+                .and_then(|a| a.phone.as_ref())
+                .and_then(|p| p.get_number_with_country_code().ok());
+            Some(ApmCustomer { email: None, first_name: None, last_name: None, phone })
+        } else if is_bank_redirect {
             let email = billing
                 .and_then(|a| a.email.as_ref())
                 .map(|e| Secret::new(e.peek().clone()));
-            Some(ApmCustomer { email, first_name: None, last_name: None })
+            Some(ApmCustomer { email, first_name: None, last_name: None, phone: None })
         } else {
             None
         };
