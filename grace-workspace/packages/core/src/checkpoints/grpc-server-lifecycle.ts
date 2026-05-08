@@ -37,6 +37,20 @@ export interface WaitForHealthyOptions {
   pollIntervalMs?: number;
 }
 
+export interface WaitForBuildOptions {
+  /** Path to the cargo run log file (combined stdout+stderr). */
+  logFile: string;
+  /** Total budget for the build phase. Cold builds can run into the minutes. */
+  timeoutMs: number;
+  /** How often to read appended bytes from the log file. Default 1000ms. */
+  pollIntervalMs?: number;
+  /**
+   * How often to emit a progress log line ("still compiling: <crate>") so the
+   * dashboard shows the build isn't stuck. Default 30000ms. Set to 0 to mute.
+   */
+  progressIntervalMs?: number;
+}
+
 type Logger = (msg: string, level?: "info" | "warn" | "error") => void;
 
 const noopLog: Logger = () => undefined;
@@ -154,6 +168,94 @@ export async function startGrpcServer(
   } finally {
     closeSync(fd);
   }
+}
+
+/**
+ * Watch the cargo run log file for the "Running `target/.../grpc-server`"
+ * marker that cargo prints after `Finished` and immediately before exec'ing
+ * the binary. Returning here means cargo is done compiling and the server
+ * binary is launching — the TCP health probe (`waitForHealthy`) is the next
+ * gate.
+ *
+ * Why this exists: a cold `cargo run --bin grpc-server` compiles the entire
+ * dep graph (diesel, tokio, hyper, …) which can take 5-15 minutes. The TCP
+ * probe's 45s budget is correct for "binary up → bind to port" but far too
+ * short for "compile from scratch → bind to port." Splitting the wait in two
+ * keeps each timer scoped to the right thing and lets us emit "still
+ * compiling: <crate>" progress while the build runs.
+ *
+ * Detects compile failures fast: if `error[E…]` or
+ * `error: could not compile` shows up in the log, throw immediately rather
+ * than waiting for the outer timeout.
+ */
+export async function waitForBuildComplete(
+  opts: WaitForBuildOptions,
+  log: Logger = noopLog
+): Promise<void> {
+  const pollIntervalMs = opts.pollIntervalMs ?? 1000;
+  const progressIntervalMs = opts.progressIntervalMs ?? 30_000;
+  const deadline = Date.now() + opts.timeoutMs;
+  const runningMarker = /Running\s+`?[^\n`]*grpc-server[^\n`]*`?/;
+  const cargoErrorMarker = /(^error(\[E\d+\])?:|^error: could not compile)/m;
+
+  let lastSize = 0;
+  let buf = "";
+  let lastProgressAt = Date.now();
+
+  while (Date.now() < deadline) {
+    try {
+      const stat = await fs.stat(opts.logFile);
+      if (stat.size > lastSize) {
+        const fh = await fs.open(opts.logFile, "r");
+        try {
+          const slice = Buffer.alloc(stat.size - lastSize);
+          await fh.read(slice, 0, slice.length, lastSize);
+          buf += slice.toString("utf-8");
+          lastSize = stat.size;
+        } finally {
+          await fh.close();
+        }
+      }
+    } catch {
+      // Log file not yet created by the cargo child — keep polling.
+    }
+
+    if (runningMarker.test(buf)) {
+      log("grpc-server build complete; binary launching");
+      return;
+    }
+    if (cargoErrorMarker.test(buf)) {
+      const errLines = buf
+        .split(/\r?\n/)
+        .filter((l) => /^error/i.test(l))
+        .slice(-5)
+        .join("\n");
+      throw new Error(
+        `cargo build failed before grpc-server could start:\n${errLines}`
+      );
+    }
+
+    if (
+      progressIntervalMs > 0 &&
+      Date.now() - lastProgressAt >= progressIntervalMs
+    ) {
+      const lastCompiling = buf
+        .split(/\r?\n/)
+        .reverse()
+        .find((l) => /^\s*Compiling\b/.test(l));
+      if (lastCompiling) {
+        log(`still building: ${lastCompiling.trim()}`);
+      }
+      lastProgressAt = Date.now();
+    }
+
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
+  }
+
+  throw new Error(
+    `grpc-server build did not complete within ${opts.timeoutMs}ms; ` +
+      `last log: ${buf.slice(-500) || "(empty)"}`
+  );
 }
 
 /**

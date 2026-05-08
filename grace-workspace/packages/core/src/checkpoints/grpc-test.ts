@@ -5,6 +5,7 @@ import { runAI } from "../tools/runner-factory.js";
 import {
   killStaleProcesses,
   startGrpcServer,
+  waitForBuildComplete,
   waitForHealthy,
   tailLogFile,
   type ServerHandle,
@@ -87,9 +88,10 @@ export const grpcTestCheckpoint: Checkpoint = {
   description:
     "Test connector via gRPC calls using grpcurl (orchestrator-managed server)",
   retryFrom: "implementation",
-  // Outer budget covers preflight (~5s) + cargo relink+server start (~30s) +
-  // health wait (≤45s) + agent runAI (≤6min) + cleanup (~5s) with margin.
-  timeout: 20 * 60 * 1000,
+  // Outer budget covers preflight (~5s) + cargo build (≤15min cold) +
+  // server start + health wait (≤45s) + agent runAI (≤6min) + cleanup (~5s)
+  // with margin.
+  timeout: 30 * 60 * 1000,
   continueOnFailure: true,
 
   async run(ctx) {
@@ -168,6 +170,16 @@ export const grpcTestCheckpoint: Checkpoint = {
 
       tsLog(`starting grpc-server, log → ${logFile}`);
       server = await startGrpcServer({ projectRoot, logFile }, tsLog);
+
+      // Cold cargo builds can take 10-20 min on this tree (diesel + macros);
+      // the TCP probe's 45s budget is only correct once the binary is exec'd.
+      // Watch the log for cargo's "Running `target/.../grpc-server`" marker
+      // first, then probe TCP.
+      tsLog("waiting for cargo build to finish (≤20min for cold builds)");
+      await waitForBuildComplete(
+        { logFile, timeoutMs: 20 * 60 * 1000 },
+        tsLog
+      );
 
       tsLog(`waiting for ${serverHost} to become healthy (≤45s)`);
       await waitForHealthy(
