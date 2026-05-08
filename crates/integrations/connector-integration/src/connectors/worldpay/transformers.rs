@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
-        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -278,13 +278,65 @@ fn fetch_payment_instrument<
                 method: None,
             }))
         }
-        PaymentMethodData::BankDebit(_) => {
-            Err(error_stack::report!(IntegrationError::NotSupported {
-                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
-                connector: "Worldpay",
-                context: Default::default(),
-            }))
-        }
+        PaymentMethodData::BankDebit(bank_debit) => match bank_debit {
+            BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_type,
+                bank_holder_type,
+                ..
+            } => {
+                let account_type = match (bank_type, bank_holder_type) {
+                    (Some(enums::BankType::Savings), Some(enums::BankHolderType::Business)) => {
+                        "corporateSavings"
+                    }
+                    (_, Some(enums::BankHolderType::Business)) => "corporate",
+                    (Some(enums::BankType::Savings), _) => "savings",
+                    _ => "checking",
+                };
+                let billing = billing_address
+                    .and_then(|addr| addr.address.clone())
+                    .and_then(|address| {
+                        match (address.line1, address.city, address.zip, address.country) {
+                            (Some(address1), Some(city), Some(postal_code), Some(country_code)) => {
+                                Some(BillingAddress {
+                                    address1,
+                                    address2: address.line2,
+                                    address3: address.line3,
+                                    city,
+                                    state: address.state,
+                                    postal_code,
+                                    country_code,
+                                })
+                            }
+                            _ => None,
+                        }
+                    });
+                Ok(PaymentInstrument::BankAccountUS(BankAccountUSPayment {
+                    instrument_type: "bankAccountUS".to_string(),
+                    account_type: account_type.to_string(),
+                    account_number: account_number.clone(),
+                    routing_number: routing_number.clone(),
+                    billing_address: billing,
+                }))
+            }
+            BankDebitData::SepaBankDebit { .. } | BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                Err(error_stack::report!(IntegrationError::NotImplemented(
+                    "SEPA BankDebit is redirect-based for Worldpay; use BankRedirect flow instead"
+                        .to_string(),
+                    Default::default(),
+                )))
+            }
+            BankDebitData::BacsBankDebit { .. }
+            | BankDebitData::BecsBankDebit { .. }
+            | BankDebitData::EftBankDebit { .. } => {
+                Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                    connector: "Worldpay",
+                    context: Default::default(),
+                }))
+            }
+        },
         PaymentMethodData::BankTransfer(_) => {
             Err(error_stack::report!(IntegrationError::NotSupported {
                 message: utils::get_unimplemented_payment_method_error_message("worldpay"),
@@ -556,10 +608,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
 
+        let is_bank_debit_ach = matches!(
+            &item.router_data.request.payment_method_data,
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit { .. })
+        );
+
         let is_bank_redirect = item.router_data.resource_common_data.payment_method
             == enums::PaymentMethod::BankRedirect;
 
-        let (method, is_apm) = if is_bank_redirect {
+        let (method, is_apm) = if is_bank_debit_ach {
+            (None, false)
+        } else if is_bank_redirect {
             let br_method = match &item.router_data.request.payment_method_data {
                 PaymentMethodData::BankRedirect(br) => match br {
                     BankRedirectData::Ideal { .. } => Some("ideal"),
@@ -598,13 +657,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
         };
 
-        let three_ds = if is_apm {
+        let three_ds = if is_apm || is_bank_debit_ach {
             None
         } else {
             create_three_ds_request(&item.router_data, is_mandate_payment)?
         };
 
-        let (token_creation, customer_agreement) = if is_apm {
+        let (token_creation, customer_agreement) = if is_apm || is_bank_debit_ach {
             (None, None)
         } else {
             get_token_and_agreement(
@@ -615,12 +674,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
         };
 
-        let (settlement, request_auto_settlement) = if is_apm {
-            let auto_settle = matches!(
-                item.router_data.request.capture_method.unwrap_or_default(),
-                enums::CaptureMethod::Automatic | enums::CaptureMethod::SequentialAutomatic
-            );
-            (None, Some(RequestAutoSettlement { enabled: auto_settle }))
+        let (settlement, request_auto_settlement) = if is_bank_debit_ach || is_apm {
+            // /apmPayments and PayDirect endpoints do not accept requestAutoSettlement.
+            (None, None)
         } else {
             (
                 get_settlement_info(&item.router_data, item.router_data.request.minor_amount),
@@ -961,10 +1017,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: ResponseRouterData<WorldpayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        // Extract amount before moving item to pass for correct status determination
         let amount = item.router_data.request.minor_amount;
-        // Use the existing ForeignTryFrom implementation
-        Self::foreign_try_from((item, None, amount))
+        let correlation_id = Some(
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        );
+        Self::foreign_try_from((item, correlation_id, amount))
     }
 }
 
