@@ -736,7 +736,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .and_then(|a| a.email.as_ref())
                 .map(|e| Secret::new(e.peek().clone()));
             Some(ApmCustomer {
-                shopper_email_address: email,
+                email,
             })
         } else {
             None

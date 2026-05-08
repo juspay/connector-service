@@ -221,25 +221,25 @@ pub struct ApmPaymentInstrument {
 }
 
 /// Redirect URLs inside the instruction — required by most BankRedirect APMs.
+/// Field names follow Worldpay's convention: "success", "failure", "pending", "cancel".
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ResultUrls {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "success", skip_serializing_if = "Option::is_none")]
     pub success_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "failure", skip_serializing_if = "Option::is_none")]
     pub failure_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "pending", skip_serializing_if = "Option::is_none")]
     pub pending_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "cancel", skip_serializing_if = "Option::is_none")]
     pub cancel_url: Option<String>,
 }
 
 /// Customer object inside the instruction — required by most BankRedirect APMs.
+/// Worldpay uses "email" (not "shopperEmailAddress") inside instruction.customer.
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ApmCustomer {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub shopper_email_address: Option<Secret<String>>,
+    #[serde(rename = "email", skip_serializing_if = "Option::is_none")]
+    pub email: Option<Secret<String>>,
 }
 
 #[derive(
