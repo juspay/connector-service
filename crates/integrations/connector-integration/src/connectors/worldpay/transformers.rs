@@ -552,7 +552,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             instruction: Instruction {
                 settlement,
-                method,
+                method: if is_apm { None } else { Some(method) },
                 payment_instrument: fetch_payment_instrument(
                     item.router_data.request.payment_method_data.clone(),
                     item.router_data.resource_common_data.get_optional_billing(),
@@ -671,7 +671,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             instruction: Instruction {
                 settlement,
-                method: PaymentMethod::Card, // RepeatPayment is always card-based
+                method: Some(PaymentMethod::Card), // RepeatPayment is always card-based
                 payment_instrument,
                 narrative: InstructionNarrative {
                     line1: merchant_name.expose(),
