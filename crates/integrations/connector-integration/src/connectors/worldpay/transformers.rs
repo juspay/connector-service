@@ -227,10 +227,14 @@ fn fetch_payment_instrument<
                 }))
             }
             WalletDataPaymentMethod::SwishQr(_) => {
+                let country = billing_address
+                    .and_then(|a| a.address.as_ref())
+                    .and_then(|d| d.country)
+                    .map(|c| c.to_string());
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
                     method: None,
-                    country: None,
+                    country,
                     billing_address: None,
                 }))
             }
@@ -834,7 +838,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let apm_customer = if is_bizum {
             let phone = billing
                 .and_then(|a| a.phone.as_ref())
-                .and_then(|p| p.get_number_with_country_code().ok());
+                .and_then(|p| p.get_number_with_country_code().ok())
+                .map(|ph| Secret::new(ph.peek().replace('+', "")));
             Some(ApmCustomer { email: None, first_name: None, last_name: None, phone })
         } else if is_bank_redirect {
             let email = billing
