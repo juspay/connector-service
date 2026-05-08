@@ -42,29 +42,85 @@ response, return JSON.
 
 1. Read CREDS_PATH (a JSON file at the project root) to obtain the connector
    credentials. Pick the entry matching CONNECTOR.
-2. If HAS_FIELD_PROBE is true, read FIELD_PROBE_PATH and use the captured
-   payload structure as the source of truth for the request body. Field probe
-   is authoritative — prefer it over guessing field names.
-3. Discover the gRPC method to call. Useful commands:
+
+2. Treat field_probe as a HINT, not authority. If HAS_FIELD_PROBE is true,
+   read FIELD_PROBE_PATH. For the entry matching the current FLOW (or its
+   payment-method name, e.g. \`Ach\` for BankDebit), IGNORE it if it has
+   \`status: "not_supported"\` or \`status: "error"\` — those entries predate
+   the current implementation and are stale. Otherwise the probe is a
+   useful starting point but NOT authoritative; steps 3a and 3b override it
+   on any conflict.
+
+3. Resolve the actual request shape by reading these in order:
+
+   a. **Proto file** at \`crates/types-traits/grpc-api-types/proto/payment_methods.proto\`.
+      Find the \`PaymentMethod\` \`oneof payment_method\` block and pick the
+      variant whose snake_case field name matches FLOW:
+        - FLOW=BankDebit → direct-debit variants: \`ach\`, \`sepa\`, \`bacs\`,
+          \`becs\`, \`sepa_guaranteed_debit\`, \`eft\`. Pick by region/spec
+          (Cybersource ACH = \`ach\`, GoCardless EU = \`sepa\`, etc.).
+        - FLOW=Wallet → \`apple_pay\`, \`google_pay\`, \`samsung_pay\`,
+          \`paypal\`, etc.
+        - FLOW=UPI → \`upi_collect\` or \`upi_intent\`.
+        - FLOW=BankRedirect → \`ideal\`, \`giropay\`, \`sofort\`, etc.
+        - FLOW=BankTransfer → \`ach_bank_transfer\`, \`sepa_bank_transfer\`, etc.
+        - FLOW=Card → \`card\`.
+      The variant's MESSAGE TYPE (e.g. \`Ach\`) defines the inner shape.
+      Read its proto definition for required vs optional fields.
+
+   b. **Just-generated transformer** at
+      \`crates/integrations/connector-integration/src/connectors/<CONNECTOR>/transformers.rs\`.
+      Grep for the FLOW match arm — typically
+      \`PaymentMethodData::BankDebit(...)\`, \`PaymentMethodData::Wallet(...)\`,
+      \`PaymentMethodData::Upi(...)\`, etc. Every field that arm reads with
+      a \`?\` (no fallback) is REQUIRED in your payload. This includes
+      top-level fields the transformer pulls off the request directly,
+      such as \`request.get_email()\` (maps to top-level \`customer.email\`
+      in the gRPC request), \`request.get_billing_address()\`, etc. — those
+      are NOT inside \`payment_method\` and are easy to miss.
+
+   c. field_probe (only if not flagged stale by step 2).
+
+4. Discover the gRPC method to call against the running server:
      grpcurl -plaintext SERVER_HOST list
      grpcurl -plaintext SERVER_HOST describe <service>
-4. Construct the grpcurl request:
+
+5. Construct the grpcurl request:
    - Pass connector credentials via -H headers. Header names are
-     connector-specific; populate them from CREDS_PATH. Do not invent headers
-     that aren't in the credentials file.
-   - The request body must match what FLOW expects (Authorize, BankDebit,
-     etc.) for CONNECTOR. Use field_probe if available.
-   - Capture both the FULL command and FULL response.
-5. Run the grpcurl call.
-6. Validate the response:
-   - PASS if status is one of: authorized, PENDING, charged, requires_capture,
-     succeeded.
-   - FAIL if response contains "Error invoking method", "PAYMENT_FLOW_ERROR",
-     HTTP 4xx/5xx, or any explicit error/failure status.
-7. On FAIL: read the server log at SERVER_LOG_PATH (the grpc-server's
-   stdout+stderr for this run) to find the actual root cause — serialization
-   error, missing field, wrong URL, panic, auth rejection, etc. Include the
-   relevant log excerpt in response_summary.
+     connector-specific; populate them from CREDS_PATH. Do not invent
+     headers that aren't in the credentials file.
+   - For non-card flows: the payload uses the appropriate direct-debit /
+     wallet / upi / bank_redirect variant of \`payment_method\`, NOT
+     \`card\`. A card-shaped payload sent to a BankDebit/Wallet/UPI test
+     will be rejected with INVALID_ARGUMENT every time. Re-confirm with
+     step 3a before sending.
+   - Include any required top-level fields the transformer reads
+     (commonly \`customer.email\`, \`address.billing_address\`).
+   - Capture the FULL command and FULL response.
+
+6. Run the grpcurl call. Initial attempt = ATTEMPT 1.
+
+7. **Corrective retry within this run.** On a non-success response, do
+   NOT just report FAIL. Attempt up to 3 corrective retries (so up to 4
+   grpcurl calls total per agent run) before giving up:
+
+   a. Tail SERVER_LOG_PATH — find the most recent error line. Look for
+      \`error_message\`, \`Missing required field: X\`,
+      \`InvalidArgument\`, panics, or 4xx/5xx tower-http traces.
+   b. Identify what was missing or wrong. Re-check step 3a (proto) and
+      step 3b (transformer) to confirm the right field name and shape.
+   c. Build a corrected payload, run grpcurl again, capture full command
+      + response.
+
+   Stop early on a 2xx-equivalent status (\`authorized\`, \`PENDING\`,
+   \`charged\`, \`requires_capture\`, \`succeeded\`). If 4 attempts have all
+   failed, stop and report FAIL with the final blocker explained.
+
+8. Validate the FINAL response:
+   - PASS if status is one of: authorized, PENDING, charged,
+     requires_capture, succeeded.
+   - FAIL otherwise — and \`response_summary\` must include the relevant
+     SERVER_LOG_PATH excerpt explaining why.
 
 ## Output format
 
@@ -74,11 +130,11 @@ character must be \`{\`, last must be \`}\`.
 {
   "status": "SUCCESS" | "FAILED",
   "grpcurl_result": "PASS" | "FAIL",
-  "grpcurl_command": "the full grpcurl command used",
-  "copy_paste_command": "complete command with JSON payload embedded inline",
-  "request_payload": "the exact JSON payload sent",
-  "grpcurl_output": "the full output including command and response",
-  "response_summary": "brief summary, plus relevant SERVER_LOG_PATH excerpt on FAIL"
+  "grpcurl_command": "the LAST grpcurl command (the one that produced the final response)",
+  "copy_paste_command": "complete LAST command with JSON payload embedded inline",
+  "request_payload": "the exact JSON payload of the LAST attempt",
+  "grpcurl_output": "concatenation of ALL attempts, prefixed '=== ATTEMPT N ===' so the reviewer sees the iteration",
+  "response_summary": "which attempt succeeded, or — if all failed — the final blocker plus the relevant SERVER_LOG_PATH excerpt"
 }
 `;
 
@@ -202,9 +258,12 @@ export const grpcTestCheckpoint: Checkpoint = {
         },
         cwd: projectRoot,
         label: "grpc:test",
-        // Strictly less than the outer checkpoint timeout so the finally
-        // block has room to clean up after the agent.
-        timeoutMs: 6 * 60 * 1000,
+        // Up to 4 grpcurl calls + transformer/proto reads + log tailing:
+        // the prior 6-min budget left no headroom for the corrective
+        // retry loop, so the agent kept running out of time mid-iteration.
+        // Strictly less than the outer checkpoint timeout (30 min) so the
+        // finally block has room to clean up after the agent.
+        timeoutMs: 10 * 60 * 1000,
       });
 
       const testPassed =
