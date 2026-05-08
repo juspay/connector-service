@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -247,11 +247,34 @@ fn fetch_payment_instrument<
                 }))
             }
         },
-        PaymentMethodData::BankRedirect(_) => {
-            Err(error_stack::report!(IntegrationError::NotSupported {
-                message: utils::get_unimplemented_payment_method_error_message("worldpay"),
-                connector: "Worldpay",
-                context: Default::default(),
+        PaymentMethodData::BankRedirect(bank_redirect) => {
+            let method = match bank_redirect {
+                BankRedirectData::Ideal { .. } => "ideal",
+                BankRedirectData::Przelewy24 { .. } => "przelewy",
+                BankRedirectData::Blik { .. } => "blik",
+                BankRedirectData::Trustly { .. } => "trustly",
+                BankRedirectData::Bizum { .. } => "bizum",
+                BankRedirectData::OpenBankingUk { .. } => "open_banking",
+                BankRedirectData::Sofort { .. }
+                | BankRedirectData::Giropay { .. }
+                | BankRedirectData::Eps { .. }
+                | BankRedirectData::Interac { .. } => {
+                    return Err(error_stack::report!(IntegrationError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("worldpay"),
+                        Default::default(),
+                    )))
+                }
+                _ => {
+                    return Err(error_stack::report!(IntegrationError::NotSupported {
+                        message: utils::get_unimplemented_payment_method_error_message("worldpay"),
+                        connector: "Worldpay",
+                        context: Default::default(),
+                    }))
+                }
+            };
+            Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
+                instrument_type: ApmInstrumentType::Direct,
+                method: method.to_string(),
             }))
         }
         PaymentMethodData::BankDebit(_) => {
@@ -532,18 +555,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
 
-        let method = PaymentMethod::try_from((
-            item.router_data.resource_common_data.payment_method,
-            item.router_data.request.payment_method_type,
-        ))?;
+        let is_bank_redirect = item.router_data.resource_common_data.payment_method
+            == enums::PaymentMethod::BankRedirect;
 
-        let is_apm = matches!(
-            method,
-            PaymentMethod::Paypal
-                | PaymentMethod::WeChatPay
-                | PaymentMethod::AliPayCn
-                | PaymentMethod::AliPayUni
-        );
+        let (method, is_apm) = if is_bank_redirect {
+            (None, true)
+        } else {
+            let m = PaymentMethod::try_from((
+                item.router_data.resource_common_data.payment_method,
+                item.router_data.request.payment_method_type,
+            ))?;
+            let apm = matches!(
+                m,
+                PaymentMethod::Paypal
+                    | PaymentMethod::WeChatPay
+                    | PaymentMethod::AliPayCn
+                    | PaymentMethod::AliPayUni
+            );
+            (if apm { None } else { Some(m) }, apm)
+        };
 
         let three_ds = if is_apm {
             None
@@ -594,7 +624,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             instruction: Instruction {
                 settlement,
-                method: if is_apm { None } else { Some(method) },
+                method,
                 payment_instrument: fetch_payment_instrument(
                     item.router_data.request.payment_method_data.clone(),
                     item.router_data.resource_common_data.get_optional_billing(),
