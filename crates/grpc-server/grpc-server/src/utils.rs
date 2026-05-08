@@ -350,66 +350,6 @@ where
     grpc_response
 }
 
-/// Original gRPC logging wrapper for authenticated flows.
-/// Maintains backward compatibility with existing code.
-pub async fn grpc_logging_wrapper<T, F, Fut, R>(
-    request: tonic::Request<T>,
-    service_name: &str,
-    config: Arc<configs::Config>,
-    flow_name: FlowName,
-    parser: P,
-    handler: F,
-) -> Result<tonic::Response<R>, tonic::Status>
-where
-    T: serde::Serialize
-        + std::fmt::Debug
-        + Send
-        + 'static
-        + hyperswitch_masking::ErasedMaskSerialize,
-    P: FnOnce(tonic::Request<T>, Arc<configs::Config>) -> Result<RequestData<T>, tonic::Status>,
-    F: FnOnce(
-        RequestData<T>,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send>,
-    >,
-    R: serde::Serialize + std::fmt::Debug + hyperswitch_masking::ErasedMaskSerialize,
-{
-    let current_span = tracing::Span::current();
-    let start_time = tokio::time::Instant::now();
-    let masked_request_data =
-        MaskedSerdeValue::from_masked_optional(request.get_ref(), "grpc_request");
-    let mut event_metadata_payload = None;
-    let mut event_headers = HashMap::new();
-
-    let grpc_response = async {
-        let request_data = parser(request, config.clone())?;
-        log_before_initialization(&request_data, service_name).into_grpc_status()?;
-        event_headers = request_data.masked_metadata.get_all_masked();
-        event_metadata_payload = Some(request_data.extracted_metadata.clone());
-
-        let result = handler(request_data).await;
-
-        let duration = start_time.elapsed().as_millis();
-        current_span.record("response_time", duration);
-        log_after_initialization(&result);
-        result
-    }
-    .await;
-
-    create_and_emit_grpc_event(
-        masked_request_data,
-        &grpc_response,
-        start_time,
-        flow_name,
-        service_name,
-        &config,
-        event_metadata_payload.as_ref(),
-        event_headers,
-    );
-
-    grpc_response
-}
-
 #[allow(clippy::too_many_arguments)]
 fn create_and_emit_grpc_event<R>(
     masked_request_data: Option<MaskedSerdeValue>,
