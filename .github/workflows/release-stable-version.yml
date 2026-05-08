@@ -1,23 +1,10 @@
-name: Release a stable SDK version
+name: Release a stable version
 
 on:
   workflow_dispatch:
     inputs:
-      bump_type:
-        description: "Version bump type (semver)"
-        required: true
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      ref:
-        description: "Tag or branch to release from (e.g. 2026.05.07.0 or main)"
-        required: false
-        default: "main"
-        type: string
       dry_run:
-        description: "Dry run — preview version and changelog without committing or publishing"
+        description: "Dry run — preview version and changelog without publishing"
         required: false
         default: true
         type: boolean
@@ -31,9 +18,14 @@ permissions:
   actions: write
 
 jobs:
-  create-semver-tag:
-    name: Tag and create GitHub release
+  tag-and-changelog:
+    name: Bump version, tag, and generate changelog
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      previous_tag: ${{ steps.version.outputs.previous_tag }}
+      next_tag: ${{ steps.version.outputs.next_tag }}
 
     steps:
       - name: Check if user is authorized to trigger workflow
@@ -45,7 +37,6 @@ jobs:
             local username="${1}"
             local team_slug="${2}"
             local org_name="juspay"
-
             status_code="$(
               curl \
                 --location \
@@ -83,7 +74,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.ref }}
           token: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
 
       - name: Install cocogitto
@@ -96,34 +86,35 @@ jobs:
         with:
           tool: git-cliff
 
+      - name: Configure git
+        run: |
+          git config user.email "hyperswitch-bot@juspay.in"
+          git config user.name "Hyperswitch Bot"
+
       - name: Compute next version
         id: version
         shell: bash
         run: |
-          PREVIOUS_TAG="$(cog get-version 2>/dev/null || git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null || echo 'v0.0.0')"
+          PREVIOUS_TAG="$(cog get-version 2>/dev/null || echo '0.0.0')"
           PREVIOUS_TAG="v${PREVIOUS_TAG#v}"
 
-          NEXT_TAG="$(cog bump --dry-run "--${{ inputs.bump_type }}" 2>/dev/null)"
+          NEXT_TAG="$(cog bump --dry-run --auto 2>/dev/null)"
           NEXT_TAG="v${NEXT_TAG#v}"
 
           if [ -z "${NEXT_TAG#v}" ]; then
-            CURRENT="${PREVIOUS_TAG#v}"
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-            case "${{ inputs.bump_type }}" in
-              major) NEXT_TAG="v$((MAJOR+1)).0.0" ;;
-              minor) NEXT_TAG="v${MAJOR}.$((MINOR+1)).0" ;;
-              patch) NEXT_TAG="v${MAJOR}.${MINOR}.$((PATCH+1))" ;;
-            esac
+            echo "::error::cog bump --auto produced no version. Check that commits follow conventional format."
+            exit 1
           fi
+
+          VERSION="${NEXT_TAG#v}"
 
           echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
           echo "next_tag=${NEXT_TAG}"         >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}"           >> "$GITHUB_OUTPUT"
 
           echo "### Version Bump Preview" >> "$GITHUB_STEP_SUMMARY"
           echo "| | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| bump_type | \`${{ inputs.bump_type }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| ref       | \`${{ inputs.ref }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| previous  | \`${PREVIOUS_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| next      | \`${NEXT_TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| dry_run   | \`${{ inputs.dry_run }}\` |" >> "$GITHUB_STEP_SUMMARY"
@@ -137,14 +128,18 @@ jobs:
 
           export GIT_CLIFF__GIT__TAG_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+$'
 
-          git-cliff \
-            --config '.github/git-cliff-changelog.toml' \
-            --strip header \
-            --tag "${NEXT_TAG}" \
-            "${PREVIOUS_TAG}^.." \
-            | sed "/## ${PREVIOUS_TAG}\$/,\$d" > release-notes.md
-
-          echo "notes_file=release-notes.md" >> "$GITHUB_OUTPUT"
+          if git rev-parse "${PREVIOUS_TAG}" >/dev/null 2>&1; then
+            git-cliff \
+              --config '.github/git-cliff-changelog.toml' \
+              --strip all \
+              --tag "${NEXT_TAG}" \
+              "${PREVIOUS_TAG}..HEAD" > release-notes.md
+          else
+            git-cliff \
+              --config '.github/git-cliff-changelog.toml' \
+              --strip all \
+              --tag "${NEXT_TAG}" > release-notes.md
+          fi
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Release Notes Preview" >> "$GITHUB_STEP_SUMMARY"
@@ -152,59 +147,275 @@ jobs:
           head -60 release-notes.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Create and push SemVer tag
-        if: ${{ inputs.dry_run == false }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
-        run: |
-          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
-
-          gh api \
-            --method POST \
-            --header 'Accept: application/vnd.github+json' \
-            --header 'X-GitHub-Api-Version: 2022-11-28' \
-            '/repos/{owner}/{repo}/git/refs' \
-            --raw-field "ref=refs/tags/${NEXT_TAG}" \
-            --raw-field "sha=${{ github.sha }}"
-
-      - name: Update latest tag
-        if: ${{ inputs.dry_run == false }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
-        run: |
-          gh api \
-            --method POST \
-            --header 'Accept: application/vnd.github+json' \
-            --header 'X-GitHub-Api-Version: 2022-11-28' \
-            '/repos/{owner}/{repo}/git/refs' \
-            --raw-field "ref=refs/tags/latest" \
-            --raw-field "sha=${{ github.sha }}" \
-          || \
-          gh api \
-            --method PATCH \
-            --header 'Accept: application/vnd.github+json' \
-            --header 'X-GitHub-Api-Version: 2022-11-28' \
-            '/repos/{owner}/{repo}/git/refs/tags/latest' \
-            --raw-field "sha=${{ github.sha }}" \
-            --field force=true
-
-      - name: Create GitHub release
-        if: ${{ inputs.dry_run == false }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
-        run: |
-          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
-
-          gh release create "${NEXT_TAG}" \
-            --title "${NEXT_TAG}" \
-            --notes-file release-notes.md \
-            --latest
-
       - name: Upload release notes artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-notes
           path: release-notes.md
+
+      - name: Bump SDK manifest versions
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('sdk/javascript/package.json'));
+            pkg.version = '${VERSION}';
+            fs.writeFileSync('sdk/javascript/package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" sdk/python/pyproject.toml
+          sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" sdk/java/build.gradle.kts
+          sed -i "s/implementation(\"io.hyperswitch:prism:[^\"]*\")/implementation(\"io.hyperswitch:prism:${VERSION}\")/" sdk/java/smoke-test/build.gradle.kts
+
+          git add sdk/javascript/package.json sdk/python/pyproject.toml sdk/java/build.gradle.kts sdk/java/smoke-test/build.gradle.kts
+          git commit -m "chore(release): prepare for ${{ steps.version.outputs.next_tag }}"
+
+      - name: Create and push tag
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        run: |
+          NEXT_TAG="${{ steps.version.outputs.next_tag }}"
+          git tag "${NEXT_TAG}"
+          git push origin main
+          git push origin "${NEXT_TAG}"
+
+      - name: Create GitHub release (draft)
+        if: ${{ inputs.dry_run == false }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
+        run: |
+          gh release create "${{ steps.version.outputs.next_tag }}" \
+            --title "${{ steps.version.outputs.next_tag }}" \
+            --notes-file release-notes.md \
+            --draft
+
+  build-binaries:
+    name: Build Binaries (${{ matrix.os }} ${{ matrix.arch }})
+    needs: [tag-and-changelog]
+    if: ${{ inputs.dry_run == false }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - os: macos
+            arch: aarch64
+            target: aarch64-apple-darwin
+            runner: macos-latest
+          - os: linux
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag-and-changelog.outputs.next_tag }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release-${{ matrix.target }}"
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install PostgreSQL (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          brew install libpq
+          echo "LIBRARY_PATH=$(brew --prefix libpq)/lib:$LIBRARY_PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$(brew --prefix libpq)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+      - name: Build binary
+        run: make -C sdk/java build-ffi-lib PROFILE=release
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/libconnector_service_ffi.*
+
+      - name: Set up Python (macOS only, for codegen)
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate Java SDK
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: make -C sdk/java generate-all
+
+      - name: Upload UniFFI Kotlin bindings
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-kotlin
+          path: sdk/java/src/main/kotlin/generated/
+
+      - name: Upload Java proto stubs
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-java-proto
+          path: sdk/java/src/main/java/generated/
+
+      - name: Generate Python SDK
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: make -C sdk/python generate-all
+
+      - name: Upload Python SDK generated files
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-python
+          path: sdk/python/src/payments/generated/
+
+      - name: Generate JavaScript SDK
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: make -C sdk/javascript generate-all PROFILE=release
+
+      - name: Upload JavaScript SDK generated files
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-javascript
+          path: sdk/javascript/src/payments/generated/
+
+  publish-java:
+    name: Publish Java SDK to Maven Central
+    runs-on: ubuntu-latest
+    needs: [tag-and-changelog, build-binaries]
+    if: ${{ inputs.dry_run == false }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag-and-changelog.outputs.next_tag }}
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+      - name: Organize binaries
+        run: |
+          for dir in target/binary-*; do
+            target_name=$(basename "$dir" | sed 's/binary-//')
+            mkdir -p "target/$target_name/release"
+            cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+          done
+      - name: Download generated Kotlin bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-kotlin
+          path: sdk/java/src/main/kotlin/generated/
+      - name: Download Java proto stubs
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-java-proto
+          path: sdk/java/src/main/java/generated/
+      - name: Package and publish Java SDK
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSWORD: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
+        run: make -C sdk/java dist && make -C sdk/java publish
+
+  publish-python:
+    name: Publish Python SDK to PyPI
+    runs-on: ubuntu-latest
+    needs: [tag-and-changelog, build-binaries]
+    if: ${{ inputs.dry_run == false }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag-and-changelog.outputs.next_tag }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install twine
+        run: pip install twine
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+      - name: Organize binaries
+        run: |
+          for dir in target/binary-*; do
+            target_name=$(basename "$dir" | sed 's/binary-//')
+            mkdir -p "target/$target_name/release"
+            cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+          done
+      - name: Download Python generated files
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-python
+          path: sdk/python/src/payments/generated/
+      - name: Package and publish Python SDK
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: make -C sdk/python dist && make -C sdk/python publish
+
+  publish-javascript:
+    name: Publish JavaScript SDK to npm
+    runs-on: ubuntu-latest
+    needs: [tag-and-changelog, build-binaries]
+    if: ${{ inputs.dry_run == false }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag-and-changelog.outputs.next_tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+      - name: Organize binaries
+        run: |
+          for dir in target/binary-*; do
+            target_name=$(basename "$dir" | sed 's/binary-//')
+            mkdir -p "target/$target_name/release"
+            cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+          done
+      - name: Download JavaScript generated files
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-javascript
+          path: sdk/javascript/src/payments/generated/
+      - name: Package and publish JavaScript SDK
+        working-directory: sdk/javascript
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm ci
+          make -C ../../sdk/javascript dist
+          npm publish ../../artifacts/sdk-javascript/*.tgz --access public
