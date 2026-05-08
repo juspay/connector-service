@@ -233,7 +233,7 @@ fn fetch_payment_instrument<
                     .map(|c| c.to_string());
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: None,
+                    method: Some("swish".to_string()),
                     country,
                     billing_address: None,
                 }))
