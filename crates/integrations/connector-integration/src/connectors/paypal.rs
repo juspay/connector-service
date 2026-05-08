@@ -349,7 +349,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     additional_context: Some(
                         "PayPal Payout Get - Missing connector payout ID".to_string(),
                     ),
-                    ..Default::default()
+                    suggested_action: None,
+                    doc_url: None,
                 },
             },
         )?;
@@ -360,7 +361,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 field_name: "base_url",
                 context: IntegrationErrorContext {
                     additional_context: Some("PayPal Payout Get - Invalid base URL".to_string()),
-                    ..Default::default()
+                    suggested_action: None,
+                    doc_url: None,
                 },
             })?
             .join(&format!("v1/payments/payouts/{}", connector_payout_id))
@@ -370,7 +372,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     additional_context: Some(
                         "PayPal Payout Get - Invalid connector payout ID for URL".to_string(),
                     ),
-                    ..Default::default()
+                    suggested_action: None,
+                    doc_url: None,
                 },
             })?;
 
@@ -894,7 +897,8 @@ macros::create_all_prerequisites!(
                             "PayPal {} - Failed to obtain OAuth access token",
                             flow_name
                         )),
-                        ..Default::default()
+                        suggested_action: None,
+                        doc_url: None,
                     },
                 })?;
 
