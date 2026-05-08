@@ -174,7 +174,7 @@ fn fetch_payment_instrument<
             WalletDataPaymentMethod::PaypalRedirect(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: Some("paypal".to_string()),
+                    method: None,
                     country: None,
                     billing_address: None,
                 }))
@@ -182,7 +182,7 @@ fn fetch_payment_instrument<
             WalletDataPaymentMethod::PaypalSdk(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Sdk,
-                    method: Some("paypal".to_string()),
+                    method: None,
                     country: None,
                     billing_address: None,
                 }))
@@ -191,7 +191,7 @@ fn fetch_payment_instrument<
             | WalletDataPaymentMethod::AliPayQr(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: Some("alipay_cn".to_string()),
+                    method: None,
                     country: None,
                     billing_address: None,
                 }))
@@ -199,7 +199,7 @@ fn fetch_payment_instrument<
             WalletDataPaymentMethod::AliPayHkRedirect(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: Some("alipay_uni".to_string()),
+                    method: None,
                     country: None,
                     billing_address: None,
                 }))
@@ -208,7 +208,7 @@ fn fetch_payment_instrument<
             | WalletDataPaymentMethod::WeChatPayQr(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: Some("wechatpay".to_string()),
+                    method: None,
                     country: None,
                     billing_address: None,
                 }))
@@ -398,6 +398,7 @@ fn fetch_payment_instrument<
                             address1: address.line1.clone()?,
                             postal_code: address.zip.clone()?,
                             city: address.city.clone()?,
+                            state: address.state.clone(),
                             country_code: address.country?,
                         })
                     });
@@ -733,21 +734,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.resource_common_data.payment_method,
                 item.router_data.request.payment_method_type,
             ))?;
-            let apm = matches!(
-                m,
-                PaymentMethod::Paypal
-                    | PaymentMethod::WeChatPay
-                    | PaymentMethod::AliPayCn
-                    | PaymentMethod::AliPayUni
-            );
-            (
-                if apm {
-                    None
-                } else {
-                    Some(InstructionMethod::Standard(m))
-                },
-                apm,
-            )
+            match m {
+                PaymentMethod::Paypal => (Some(InstructionMethod::Apm("paypal".to_string())), true),
+                PaymentMethod::WeChatPay => (Some(InstructionMethod::Apm("wechatpay".to_string())), true),
+                PaymentMethod::AliPayCn => (Some(InstructionMethod::Apm("alipay_cn".to_string())), true),
+                PaymentMethod::AliPayUni => (Some(InstructionMethod::Apm("alipay_uni".to_string())), true),
+                _ => (Some(InstructionMethod::Standard(m)), false),
+            }
         };
 
         let three_ds = if is_apm || is_bank_debit_ach {

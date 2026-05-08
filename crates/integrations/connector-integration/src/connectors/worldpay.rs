@@ -551,12 +551,9 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             let mut headers = self.build_headers(req)?;
             let api_version_override = match &req.request.payment_method_data {
-                // ACH PayDirect API requires 2023-06-01
-                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit { .. }) => {
-                    Some("2023-06-01")
-                }
                 // APM endpoint (/apmPayments) requires 2024-07-01
-                PaymentMethodData::BankRedirect(_)
+                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit { .. })
+                | PaymentMethodData::BankRedirect(_)
                 | PaymentMethodData::PayLater(PayLaterData::KlarnaRedirect { .. })
                 | PaymentMethodData::Wallet(
                     WalletData::PaypalRedirect(_)
@@ -582,15 +579,10 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
             let base_url = self.connector_base_url_payments(req);
-            if matches!(
-                &req.request.payment_method_data,
-                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit { .. })
-            ) {
-                return Ok(format!("{base_url}payments/alternative/direct/sale"));
-            }
             let is_apm = matches!(
                 &req.request.payment_method_data,
-                PaymentMethodData::Wallet(
+                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit { .. })
+                | PaymentMethodData::Wallet(
                     WalletData::PaypalRedirect(_)
                     | WalletData::PaypalSdk(_)
                     | WalletData::AliPayRedirect(_)

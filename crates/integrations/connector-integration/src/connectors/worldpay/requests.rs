@@ -211,8 +211,8 @@ pub struct BankAccountUSPayment {
 pub struct ApmPaymentInstrument {
     #[serde(rename = "type")]
     pub instrument_type: ApmInstrumentType,
-    /// Wallet APMs (PayPal, AliPay, WeChatPay, Swish) send method inside paymentInstrument.
-    /// BankRedirect / PayLater sends method at instruction level instead.
+    /// APM method string — only used when method is carried inside the paymentInstrument
+    /// (rare; most APMs place method at instruction level instead).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
     /// ISO 3166-1 alpha-2 country code — required by most BankRedirect APMs and Klarna.
@@ -235,6 +235,8 @@ pub struct ApmBillingAddress {
     pub address1: Secret<String>,
     pub postal_code: Secret<String>,
     pub city: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<Secret<String>>,
     pub country_code: common_enums::CountryAlpha2,
 }
 
