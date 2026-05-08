@@ -69,10 +69,19 @@ pub struct Instruction<
     pub three_ds: Option<ThreeDSRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_auto_settlement: Option<RequestAutoSettlement>,
-    /// For setting up mandates
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token_creation: Option<TokenCreation>,
-    /// For specifying CIT vs MIT
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_agreement: Option<CustomerAgreement>,
+    /// Redirect result URLs inside instruction — required by most BankRedirect APMs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result_urls: Option<ResultUrls>,
+    /// Customer (email) inside instruction — required by most BankRedirect APMs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer: Option<ApmCustomer>,
+    /// BLIK-specific: must be true to accept terms before redirect.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terms_accepted: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -128,6 +137,7 @@ pub enum PaymentInstrument<
     Googlepay(WalletPayment),
     Applepay(WalletPayment),
     ApmWallet(ApmPaymentInstrument),
+    BankAccountUS(BankAccountUSPayment),
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -186,11 +196,50 @@ pub struct WalletPayment {
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankAccountUSPayment {
+    #[serde(rename = "type")]
+    pub instrument_type: String,
+    pub account_type: String,
+    pub account_number: Secret<String>,
+    pub routing_number: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub billing_address: Option<BillingAddress>,
+}
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct ApmPaymentInstrument {
     #[serde(rename = "type")]
     pub instrument_type: ApmInstrumentType,
+    /// Wallet APMs (PayPal, AliPay, WeChatPay) send method inside paymentInstrument.
+    /// BankRedirect sends method at instruction level instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
+    /// ISO 3166-1 alpha-2 country code — required by most BankRedirect APMs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
+}
+
+/// Redirect URLs inside the instruction — required by most BankRedirect APMs.
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResultUrls {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub success_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failure_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pending_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancel_url: Option<String>,
+}
+
+/// Customer object inside the instruction — required by most BankRedirect APMs.
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApmCustomer {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shopper_email_address: Option<Secret<String>>,
 }
 
 #[derive(

@@ -175,12 +175,14 @@ fn fetch_payment_instrument<
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
                     method: Some("paypal".to_string()),
+                    country: None,
                 }))
             }
             WalletDataPaymentMethod::PaypalSdk(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Sdk,
                     method: Some("paypal".to_string()),
+                    country: None,
                 }))
             }
             WalletDataPaymentMethod::AliPayRedirect(_)
@@ -188,12 +190,14 @@ fn fetch_payment_instrument<
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
                     method: Some("alipay_cn".to_string()),
+                    country: None,
                 }))
             }
             WalletDataPaymentMethod::AliPayHkRedirect(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
                     method: Some("alipay_uni".to_string()),
+                    country: None,
                 }))
             }
             WalletDataPaymentMethod::WeChatPayRedirect(_)
@@ -201,6 +205,7 @@ fn fetch_payment_instrument<
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
                     method: Some("wechatpay".to_string()),
+                    country: None,
                 }))
             }
             WalletDataPaymentMethod::SamsungPay(_)
@@ -273,9 +278,15 @@ fn fetch_payment_instrument<
                 }
             };
             // Method string goes at instruction.method, not inside paymentInstrument.
+            // Country derived from billing address — required by most BankRedirect APMs.
+            let country = billing_address
+                .and_then(|a| a.address.as_ref())
+                .and_then(|d| d.country)
+                .map(|c| c.to_string());
             Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                 instrument_type: ApmInstrumentType::Direct,
                 method: None,
+                country,
             }))
         }
         PaymentMethodData::BankDebit(bank_debit) => match bank_debit {
@@ -684,7 +695,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
         };
 
-        let (success_url, failure_url, pending_url, cancel_url) = if is_apm {
+        let (success_url, failure_url, pending_url, cancel_url) = if is_apm && !is_bank_redirect {
+            // Wallet APMs use top-level URL fields.
             let return_url = item
                 .router_data
                 .request
@@ -700,13 +712,53 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             (None, None, None, None)
         };
 
+        // BankRedirect APMs require result URLs inside the instruction object.
+        let result_urls = if is_bank_redirect {
+            let return_url = item
+                .router_data
+                .request
+                .get_router_return_url()
+                .ok();
+            Some(ResultUrls {
+                success_url: return_url.clone(),
+                failure_url: return_url.clone(),
+                pending_url: return_url.clone(),
+                cancel_url: return_url,
+            })
+        } else {
+            None
+        };
+
+        // BankRedirect APMs require customer email inside the instruction.
+        let billing = item.router_data.resource_common_data.get_optional_billing();
+        let apm_customer = if is_bank_redirect {
+            let email = billing
+                .and_then(|a| a.email.as_ref())
+                .map(|e| Secret::new(e.peek().clone()));
+            Some(ApmCustomer {
+                shopper_email_address: email,
+            })
+        } else {
+            None
+        };
+
+        // BLIK requires termsAccepted = true inside the instruction.
+        let terms_accepted = if matches!(
+            &item.router_data.request.payment_method_data,
+            PaymentMethodData::BankRedirect(BankRedirectData::Blik { .. })
+        ) {
+            Some(true)
+        } else {
+            None
+        };
+
         Ok(Self {
             instruction: Instruction {
                 settlement,
                 method,
                 payment_instrument: fetch_payment_instrument(
                     item.router_data.request.payment_method_data.clone(),
-                    item.router_data.resource_common_data.get_optional_billing(),
+                    billing,
                 )?,
                 narrative: InstructionNarrative {
                     line1: merchant_name.expose(),
@@ -720,6 +772,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 request_auto_settlement,
                 token_creation,
                 customer_agreement,
+                result_urls,
+                customer: apm_customer,
+                terms_accepted,
             },
             merchant: Merchant {
                 entity: WorldpayAuthType::try_from(&item.router_data.connector_config)?.entity_id,
@@ -832,14 +887,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     currency: item.router_data.request.currency,
                 },
                 debt_repayment: None,
-                three_ds: None,       // MIT transactions don't require 3DS
+                three_ds: None,
                 request_auto_settlement: None,
-                token_creation: None, // No new token creation for repeat payments
+                token_creation: None,
                 customer_agreement: Some(CustomerAgreement {
                     agreement_type: CustomerAgreementType::Subscription,
-                    stored_card_usage: Some(StoredCardUsageType::Subsequent), // CRITICAL: MIT indicator
+                    stored_card_usage: Some(StoredCardUsageType::Subsequent),
                     scheme_reference: None,
                 }),
+                result_urls: None,
+                customer: None,
+                terms_accepted: None,
             },
             merchant: Merchant {
                 entity: WorldpayAuthType::try_from(&item.router_data.connector_config)?.entity_id,

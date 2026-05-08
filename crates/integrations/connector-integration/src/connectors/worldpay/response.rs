@@ -192,8 +192,8 @@ impl std::fmt::Display for PaymentOutcome {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SelfLink {
-    #[serde(rename = "self")]
-    pub self_link: SelfLinkInner,
+    #[serde(rename = "self", default)]
+    pub self_link: Option<SelfLinkInner>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -285,7 +285,8 @@ where
     let optional_reference_id = response
         .links
         .as_ref()
-        .and_then(|link| link.self_link.href.rsplit_once('/').map(|(_, h)| h))
+        .and_then(|link| link.self_link.as_ref())
+        .and_then(|self_link| self_link.href.rsplit_once('/').map(|(_, h)| h))
         .or_else(|| {
             // Fallback to variant-specific logic for DDC and 3DS challenges
             response
