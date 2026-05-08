@@ -460,7 +460,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.title.clone(),
-            message: response.title,
+            message: response
+                .errors
+                .clone()
+                .unwrap_or_else(|| serde_json::Value::String(response.title.clone()))
+                .to_string(),
             reason: Some(response.detail),
             attempt_status: None,
             connector_transaction_id: Some(response.trace_id),

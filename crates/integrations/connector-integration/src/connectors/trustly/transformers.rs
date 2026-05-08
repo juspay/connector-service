@@ -117,14 +117,21 @@ pub struct TrustlyPaymentRequestAttributes {
     email: pii::Email,
     fail_u_r_l: String,
     firstname: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     i_p: Option<Secret<String, IpAddress>>,
     lastname: Secret<String>,
     locale: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     mobile: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_city: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_country: Option<CountryAlpha2>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_line1: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_line2: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shipping_address_postal_code: Option<Secret<String>>,
     shopper_statement: String,
     success_u_r_l: String,
@@ -536,6 +543,7 @@ pub struct TrustlyRefundRequestData {
     order_i_d: String,
     amount: StringMajorUnit,
     currency: Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
     attributes: Option<TrustlyRefundAttributes>,
 }
 
