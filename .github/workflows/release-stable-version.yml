@@ -18,7 +18,7 @@ permissions:
   actions: write
 
 jobs:
-  tag-and-changelog:
+  tag-release:
     name: Bump version, tag, and generate changelog
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -196,7 +196,7 @@ jobs:
 
   publish-sdks:
     name: Publish SDKs
-    needs: [tag-and-changelog]
+    needs: [tag-release]
     if: ${{ inputs.dry_run == false }}
     uses: ./.github/workflows/release-sdks.yml
     with:
@@ -204,7 +204,7 @@ jobs:
       publish_python: true
       publish_javascript: true
       preview_only: false
-      ref: ${{ needs.tag-and-changelog.outputs.next_tag }}
+      ref: ${{ needs.tag-release.outputs.next_tag }}
     secrets:
       CONNECTOR_SERVICE_CI_PAT: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
       CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
