@@ -37,6 +37,15 @@ pub struct Merchant {
     pub payment_facilitator: Option<PaymentFacilitator>,
 }
 
+/// Untagged union so both `PaymentMethod` enum variants (for card/wallet flows)
+/// and raw APM method strings (for bank-redirect flows) serialise as plain JSON strings.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum InstructionMethod {
+    Standard(PaymentMethod),
+    Apm(String),
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Instruction<
@@ -50,7 +59,7 @@ pub struct Instruction<
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settlement: Option<AutoSettlement>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub method: Option<PaymentMethod>,
+    pub method: Option<InstructionMethod>,
     pub payment_instrument: PaymentInstrument<T>,
     pub narrative: InstructionNarrative,
     pub value: PaymentValue,
@@ -180,7 +189,8 @@ pub struct WalletPayment {
 pub struct ApmPaymentInstrument {
     #[serde(rename = "type")]
     pub instrument_type: ApmInstrumentType,
-    pub method: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
 }
 
 #[derive(

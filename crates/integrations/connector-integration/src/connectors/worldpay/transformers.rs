@@ -174,33 +174,33 @@ fn fetch_payment_instrument<
             WalletDataPaymentMethod::PaypalRedirect(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: "paypal".to_string(),
+                    method: Some("paypal".to_string()),
                 }))
             }
             WalletDataPaymentMethod::PaypalSdk(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Sdk,
-                    method: "paypal".to_string(),
+                    method: Some("paypal".to_string()),
                 }))
             }
             WalletDataPaymentMethod::AliPayRedirect(_)
             | WalletDataPaymentMethod::AliPayQr(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: "alipay_cn".to_string(),
+                    method: Some("alipay_cn".to_string()),
                 }))
             }
             WalletDataPaymentMethod::AliPayHkRedirect(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: "alipay_uni".to_string(),
+                    method: Some("alipay_uni".to_string()),
                 }))
             }
             WalletDataPaymentMethod::WeChatPayRedirect(_)
             | WalletDataPaymentMethod::WeChatPayQr(_) => {
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: "wechatpay".to_string(),
+                    method: Some("wechatpay".to_string()),
                 }))
             }
             WalletDataPaymentMethod::SamsungPay(_)
@@ -248,13 +248,13 @@ fn fetch_payment_instrument<
             }
         },
         PaymentMethodData::BankRedirect(bank_redirect) => {
-            let method = match bank_redirect {
-                BankRedirectData::Ideal { .. } => "ideal",
-                BankRedirectData::Przelewy24 { .. } => "przelewy",
-                BankRedirectData::Blik { .. } => "blik",
-                BankRedirectData::Trustly { .. } => "trustly",
-                BankRedirectData::Bizum { .. } => "bizum",
-                BankRedirectData::OpenBankingUk { .. } => "open_banking",
+            match bank_redirect {
+                BankRedirectData::Ideal { .. }
+                | BankRedirectData::Przelewy24 { .. }
+                | BankRedirectData::Blik { .. }
+                | BankRedirectData::Trustly { .. }
+                | BankRedirectData::Bizum { .. }
+                | BankRedirectData::OpenBankingUk { .. } => {}
                 BankRedirectData::Sofort { .. }
                 | BankRedirectData::Giropay { .. }
                 | BankRedirectData::Eps { .. }
@@ -272,9 +272,10 @@ fn fetch_payment_instrument<
                     }))
                 }
             };
+            // Method string goes at instruction.method, not inside paymentInstrument.
             Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                 instrument_type: ApmInstrumentType::Direct,
-                method: method.to_string(),
+                method: None,
             }))
         }
         PaymentMethodData::BankDebit(_) => {
@@ -559,7 +560,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             == enums::PaymentMethod::BankRedirect;
 
         let (method, is_apm) = if is_bank_redirect {
-            (None, true)
+            let br_method = match &item.router_data.request.payment_method_data {
+                PaymentMethodData::BankRedirect(br) => match br {
+                    BankRedirectData::Ideal { .. } => Some("ideal"),
+                    BankRedirectData::Przelewy24 { .. } => Some("przelewy"),
+                    BankRedirectData::Blik { .. } => Some("blik"),
+                    BankRedirectData::Trustly { .. } => Some("trustly"),
+                    BankRedirectData::Bizum { .. } => Some("bizum"),
+                    BankRedirectData::OpenBankingUk { .. } => Some("open_banking"),
+                    _ => None,
+                },
+                _ => None,
+            };
+            (
+                br_method.map(|m| InstructionMethod::Apm(m.to_string())),
+                true,
+            )
         } else {
             let m = PaymentMethod::try_from((
                 item.router_data.resource_common_data.payment_method,
@@ -572,7 +588,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | PaymentMethod::AliPayCn
                     | PaymentMethod::AliPayUni
             );
-            (if apm { None } else { Some(m) }, apm)
+            (
+                if apm {
+                    None
+                } else {
+                    Some(InstructionMethod::Standard(m))
+                },
+                apm,
+            )
         };
 
         let three_ds = if is_apm {
@@ -743,7 +766,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             instruction: Instruction {
                 settlement,
-                method: Some(PaymentMethod::Card), // RepeatPayment is always card-based
+                method: Some(InstructionMethod::Standard(PaymentMethod::Card)),
                 payment_instrument,
                 narrative: InstructionNarrative {
                     line1: merchant_name.expose(),
