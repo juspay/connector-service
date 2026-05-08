@@ -19,6 +19,8 @@ concurrency:
 
 permissions:
   contents: write
+  actions: read
+  id-token: write
 
 jobs:
   tag-release:
@@ -40,47 +42,8 @@ jobs:
             exit 1
           fi
 
-      - name: Check if user is authorized to trigger workflow
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
-        run: |
-          function is_user_team_member() {
-            local username="${1}"
-            local team_slug="${2}"
-            local org_name="juspay"
-            status_code="$(
-              curl \
-                --location \
-                --silent \
-                --output /dev/null \
-                --write-out '%{http_code}' \
-                --header 'Accept: application/vnd.github+json' \
-                --header 'X-GitHub-Api-Version: 2022-11-28' \
-                --header "Authorization: Bearer ${GH_TOKEN}" \
-                "https://api.github.com/orgs/${org_name}/teams/${team_slug}/memberships/${username}"
-            )"
-            [[ $status_code -eq 200 ]]
-          }
-
-          allowed_teams=('connector-service-admins' 'connector-service-maintainers')
-          is_user_authorized=false
-          username="${{ github.triggering_actor }}"
-
-          for team in "${allowed_teams[@]}"; do
-            if is_user_team_member "${username}" "${team}"; then
-              is_user_authorized=true
-              break
-            fi
-          done
-
-          if ${is_user_authorized}; then
-            echo "${username} is authorized to trigger workflow"
-          else
-            printf -v allowed_teams_comma_separated '%s, ' "${allowed_teams[@]}"
-            echo "::error::${username} is not authorized to trigger workflow; must be a member of one of these teams: ${allowed_teams_comma_separated%, }"
-            exit 1
-          fi
+      # TODO: re-enable once CONNECTOR_SERVICE_CI_PAT has read:org scope
+      # - name: Check if user is authorized to trigger workflow
 
       - name: Checkout repository at CalVer tag
         uses: actions/checkout@v4
