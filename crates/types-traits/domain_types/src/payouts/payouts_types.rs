@@ -302,6 +302,7 @@ pub struct PayoutTransferResponse {
 pub struct PayoutGetRequest {
     pub merchant_payout_id: Option<String>,
     pub connector_payout_id: Option<String>,
+    pub access_token: Option<ServerAuthenticationTokenResponseData>,
 }
 
 #[derive(Debug, Clone)]
