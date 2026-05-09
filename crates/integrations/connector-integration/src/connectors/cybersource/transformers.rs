@@ -30,9 +30,10 @@ use domain_types::{
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_address::Address,
     payment_method_data::{
-        self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
-        GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData, PaymentMethodData,
-        PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
+        self, ApplePayDecryptedData, ApplePayWalletData, BankDebitData,
+        CardDetailsForNetworkTransactionId, GooglePayDecryptedData, GooglePayWalletData,
+        NetworkTokenData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        SamsungPayWalletData, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorSpecificConfig, ErrorResponse,
@@ -834,6 +835,7 @@ pub enum PaymentInformation<
     /// Used when payment info comes from tokenInformation.transientTokenJwt
     CardToken(Box<CardTokenPaymentInformation>),
     ECheck(Box<ECheckPaymentInformation>),
+    BankDebit(Box<CybersourceBankDebitPaymentInformation>),
 }
 
 #[derive(Debug, Serialize)]
@@ -876,6 +878,68 @@ pub struct ECheckPaymentType {
 /// via token_information. The token contains all card details.
 #[derive(Debug, Serialize)]
 pub struct CardTokenPaymentInformation {}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceBankDebitPaymentInformation {
+    bank: CybersourceBankAccount,
+    #[serde(rename = "bankType")]
+    bank_type: CybersourceSecCode,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceBankAccount {
+    account: CybersourceBankAccountDetails,
+    #[serde(rename = "routingNumber")]
+    routing_number: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceBankAccountDetails {
+    number: Secret<String>,
+    #[serde(rename = "type")]
+    account_type: CybersourceBankAccountType,
+}
+
+#[derive(Debug, Serialize)]
+pub enum CybersourceBankAccountType {
+    #[serde(rename = "C")]
+    Checking,
+    #[serde(rename = "S")]
+    Savings,
+}
+
+#[derive(Debug, Serialize)]
+pub enum CybersourceSecCode {
+    #[serde(rename = "WEB")]
+    Web,
+    #[serde(rename = "PPD")]
+    Ppd,
+    #[serde(rename = "TEL")]
+    Tel,
+    #[serde(rename = "CCD")]
+    Ccd,
+}
+
+fn derive_bank_account_type(
+    bank_type: Option<common_enums::BankType>,
+) -> CybersourceBankAccountType {
+    match bank_type {
+        Some(common_enums::BankType::Checking) => CybersourceBankAccountType::Checking,
+        _ => CybersourceBankAccountType::Savings,
+    }
+}
+
+fn derive_bank_sec_code(
+    bank_holder_type: Option<common_enums::BankHolderType>,
+) -> CybersourceSecCode {
+    match bank_holder_type {
+        Some(common_enums::BankHolderType::Business) => CybersourceSecCode::Ccd,
+        _ => CybersourceSecCode::Web,
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CybersoucrePaymentInstrument {
@@ -2445,6 +2509,64 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     token_information: Some(CybersourceTokenInformationRequest {
                         transient_token_jwt: token,
                     }),
+                })
+            }
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_type,
+                bank_holder_type,
+                ..
+            }) => {
+                let sec_code = derive_bank_sec_code(bank_holder_type);
+                let acct_type = derive_bank_account_type(bank_type);
+                let payment_information =
+                    PaymentInformation::BankDebit(Box::new(CybersourceBankDebitPaymentInformation {
+                        bank: CybersourceBankAccount {
+                            account: CybersourceBankAccountDetails {
+                                number: account_number,
+                                account_type: acct_type,
+                            },
+                            routing_number,
+                        },
+                        bank_type: sec_code,
+                    }));
+                let email = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_email()
+                    .or(item.router_data.request.get_email())?;
+                let bill_to = build_bill_to(
+                    item.router_data.resource_common_data.get_optional_billing(),
+                    email,
+                )?;
+                let order_information = OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
+                let processing_information = ProcessingInformation {
+                    action_list: None,
+                    action_token_types: None,
+                    authorization_options: None,
+                    commerce_indicator: "internet".to_string(),
+                    capture: None,
+                    capture_options: None,
+                    payment_solution: None,
+                };
+                let client_reference_information = ClientReferenceInformation::from(&item);
+                let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+                    item.router_data
+                        .request
+                        .metadata
+                        .clone()
+                        .map(|metadata| metadata.expose()),
+                    item.router_data.request.merchant_order_id.clone(),
+                );
+                Ok(Self {
+                    processing_information,
+                    payment_information,
+                    order_information,
+                    client_reference_information,
+                    consumer_authentication_information: None,
+                    merchant_defined_information,
+                    token_information: None,
                 })
             }
             PaymentMethodData::BankDebit(bank_debit_data) => {
