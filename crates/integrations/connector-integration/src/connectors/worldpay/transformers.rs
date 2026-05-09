@@ -833,10 +833,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let apm_customer = if is_pay_later_klarna {
             None
         } else if is_bank_redirect {
-            let email = billing
-                .and_then(|a| a.email.as_ref())
-                .map(|e| Secret::new(e.peek().clone()));
-            Some(ApmCustomer { email, first_name: None, last_name: None, phone: None })
+            let is_bizum = matches!(
+                &item.router_data.request.payment_method_data,
+                PaymentMethodData::BankRedirect(BankRedirectData::Bizum { .. })
+            );
+            if is_bizum {
+                let phone = billing
+                    .and_then(|a| a.phone.as_ref())
+                    .and_then(|p| p.get_number_with_country_code().ok());
+                Some(ApmCustomer { email: None, first_name: None, last_name: None, phone })
+            } else {
+                let email = billing
+                    .and_then(|a| a.email.as_ref())
+                    .map(|e| Secret::new(e.peek().clone()));
+                Some(ApmCustomer { email, first_name: None, last_name: None, phone: None })
+            }
         } else {
             None
         };
