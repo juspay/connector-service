@@ -14,7 +14,7 @@ program
 
 program
   .command("run")
-  .description("Run the pipeline end-to-end")
+  .description("Run the pipeline end-to-end (single-session engine)")
   .option("--task-file <path>", "Load task definition from a JSON file")
   .option("--start-from <id>", "Start from a specific checkpoint")
   .option("--project <path>", "Project root path (default: from config.yml)")
@@ -28,7 +28,25 @@ program
   .option("--review-timeout <ms>", "Timeout for human review steps", (v) => parseInt(v, 10))
   .option("--resume <runId>", "Resume a previous run from its last checkpoint")
   .option("--config <path>", "Path to config.yml")
+  .option(
+    "--session <id>",
+    "Owning session id. Overrides task.sessionId. Used by the supervisor when spawning a child engine. Defaults to 'default'."
+  )
+  .option(
+    "--ws-port <n>",
+    "Override config.yml wsPort. Used by the supervisor to assign a per-session port from its allocation pool.",
+    (v) => parseInt(v, 10)
+  )
   .action((opts) => runCommand(opts));
+
+program
+  .command("supervisor")
+  .description("Run the multi-session supervisor (default for `pnpm dev`)")
+  .option("--config <path>", "Path to config.yml")
+  .action(async (opts) => {
+    const { supervisorCommand } = await import("./commands/supervisor.js");
+    await supervisorCommand(opts);
+  });
 
 program
   .command("status [runId]")

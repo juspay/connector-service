@@ -22,6 +22,8 @@ export interface SavedState {
 export interface RunSummary {
   runId: string;
   title: string;
+  sessionId: string;
+  status: RunStatus;
   createdAt: number;
   updatedAt: number;
   lastCheckpoint?: CheckpointId;
@@ -34,7 +36,69 @@ export interface CheckpointHistory {
   updatedAt: number;
 }
 
-const SCHEMA = `
+export type RunStatus =
+  | "pending"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled";
+
+export type SessionStatus = "idle" | "running" | "cancelling" | "error" | "archived";
+
+export type SessionCopyStrategy = "git-worktree" | "full" | "shallow" | "legacy";
+
+export interface SessionMetadata {
+  originalPath: string;
+  copyStrategy: SessionCopyStrategy;
+  diskUsageBytes?: number;
+}
+
+export interface SessionRecord {
+  sessionId: string;
+  name: string;
+  description: string | null;
+  projectRoot: string;
+  currentRunId: string | null;
+  status: SessionStatus;
+  wsPort: number | null;
+  pid: number | null;
+  createdAt: number;
+  updatedAt: number;
+  metadata: SessionMetadata;
+}
+
+export interface CheckpointEvent {
+  runId: string;
+  checkpointId: CheckpointId;
+  eventType: "started" | "passed" | "failed" | "retry";
+  attemptNumber?: number;
+  timestamp?: number;
+  durationMs?: number;
+  errorMessage?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SessionActivityEvent {
+  sessionId: string;
+  activityType:
+    | "created"
+    | "run_started"
+    | "run_completed"
+    | "archived"
+    | "deleted";
+  runId?: string;
+  timestamp?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export const DEFAULT_SESSION_ID = "default";
+
+/**
+ * Schema for the *initial* (pre-session) database. Kept verbatim so first-time
+ * installs hit `IF NOT EXISTS` paths and existing databases get upgraded by
+ * `runMigrations()`.
+ */
+const BASE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS runs (
   run_id TEXT PRIMARY KEY,
   task_json TEXT NOT NULL,
@@ -66,6 +130,60 @@ CREATE INDEX IF NOT EXISTS idx_attempts_run_cp
   ON checkpoint_attempts(run_id, checkpoint_id);
 `;
 
+/**
+ * Session-management schema. Applied on top of BASE_SCHEMA via PRAGMA-gated
+ * migrations so existing pre-v1 databases pick up the new tables and columns.
+ *
+ * Indexes that touch newly-added columns on `runs` live in
+ * `RUNS_SESSION_INDEXES` so they're created *after* the ALTER TABLE step.
+ */
+const SESSION_SCHEMA = `
+CREATE TABLE IF NOT EXISTS sessions (
+  session_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  project_root TEXT NOT NULL,
+  current_run_id TEXT,
+  status TEXT NOT NULL DEFAULT 'idle',
+  ws_port INTEGER,
+  pid INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  metadata_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS checkpoint_events (
+  event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id TEXT NOT NULL,
+  checkpoint_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  attempt_number INTEGER DEFAULT 0,
+  timestamp INTEGER NOT NULL,
+  duration_ms INTEGER,
+  error_message TEXT,
+  metadata_json TEXT
+);
+CREATE TABLE IF NOT EXISTS session_activity (
+  activity_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL,
+  activity_type TEXT NOT NULL,
+  run_id TEXT,
+  timestamp INTEGER NOT NULL,
+  metadata_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_current_run ON sessions(current_run_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_checkpoint_events_run ON checkpoint_events(run_id);
+CREATE INDEX IF NOT EXISTS idx_checkpoint_events_type ON checkpoint_events(event_type, timestamp);
+CREATE INDEX IF NOT EXISTS idx_session_activity_session ON session_activity(session_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_session_activity_type ON session_activity(activity_type, timestamp);
+`;
+
+/** Indexes that depend on columns added by ALTER TABLE in v0→v1 migration. */
+const RUNS_SESSION_INDEXES = `
+CREATE INDEX IF NOT EXISTS idx_runs_session ON runs(session_id);
+CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
+`;
+
 export class StateManager {
   private db: Database.Database;
 
@@ -76,7 +194,491 @@ export class StateManager {
     fs.mkdirSync(path.dirname(p), { recursive: true });
     this.db = new Database(p);
     this.db.pragma("journal_mode = WAL");
-    this.db.exec(SCHEMA);
+    this.db.exec(BASE_SCHEMA);
+    this.runMigrations();
+  }
+
+  /**
+   * Idempotent schema migrations gated by `PRAGMA user_version`.
+   * - v0 → v1: session-management tables, ALTER runs to add session_id +
+   *   lifecycle columns, backfill a default session row, mark legacy runs
+   *   as `succeeded`.
+   *
+   * Wrapped in BEGIN IMMEDIATE so concurrent boots can't half-apply.
+   */
+  private runMigrations(): void {
+    const current = (this.db.pragma("user_version", { simple: true }) as number) ?? 0;
+    if (current >= 1) return;
+
+    const tx = this.db.transaction(() => {
+      // 1. Sessions tables + indexes (idempotent on re-run).
+      this.db.exec(SESSION_SCHEMA);
+
+      // 2. Add columns to runs only if they don't already exist.
+      const cols = (this.db.prepare(`PRAGMA table_info(runs)`).all() as {
+        name: string;
+      }[]).map((c) => c.name);
+      const addColumn = (name: string, def: string) => {
+        if (!cols.includes(name)) {
+          this.db.exec(`ALTER TABLE runs ADD COLUMN ${name} ${def}`);
+        }
+      };
+      addColumn("session_id", "TEXT");
+      addColumn("status", "TEXT DEFAULT 'pending'");
+      addColumn("heartbeat_at", "INTEGER");
+      addColumn("started_at", "INTEGER");
+      addColumn("completed_at", "INTEGER");
+      addColumn("duration_ms", "INTEGER");
+
+      // 2b. Now that the new columns exist, create their indexes.
+      this.db.exec(RUNS_SESSION_INDEXES);
+
+      // 3. Backfill: create default session pointing at the existing
+      //    config.projectRoot. We don't have access to the config from
+      //    inside StateManager, so we plant a placeholder; the caller
+      //    (run.ts) overwrites it on boot once config is loaded.
+      const existing = this.db
+        .prepare(`SELECT 1 FROM sessions WHERE session_id = ?`)
+        .get(DEFAULT_SESSION_ID);
+      if (!existing) {
+        const now = Date.now();
+        this.db
+          .prepare(
+            `INSERT INTO sessions (
+              session_id, name, description, project_root,
+              current_run_id, status, ws_port, pid,
+              created_at, updated_at, metadata_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(
+            DEFAULT_SESSION_ID,
+            "Default Session",
+            "Auto-created during session-management migration. Pre-existing runs are linked here.",
+            "", // populated by ensureDefaultSession() at boot
+            null,
+            "idle",
+            null,
+            null,
+            now,
+            now,
+            JSON.stringify({
+              originalPath: "",
+              copyStrategy: "legacy",
+            } satisfies SessionMetadata)
+          );
+      }
+
+      // 4. Backfill: link orphan runs to default session, mark them succeeded
+      //    (we can't tell from on-disk state whether they finished cleanly,
+      //    but treating prior runs as historical avoids spurious "running"
+      //    states blocking the default session lock).
+      this.db.exec(`
+        UPDATE runs
+           SET session_id = '${DEFAULT_SESSION_ID}'
+         WHERE session_id IS NULL OR session_id = '';
+      `);
+      this.db.exec(`
+        UPDATE runs
+           SET status = 'succeeded'
+         WHERE status IS NULL OR status = '' OR status = 'pending';
+      `);
+
+      this.db.pragma("user_version = 1");
+    });
+    tx.immediate();
+  }
+
+  /**
+   * Make sure a default session exists with the supplied projectRoot. Called
+   * by run.ts on boot so the placeholder planted during migration gets a real
+   * path to point at.
+   */
+  ensureDefaultSession(projectRoot: string): SessionRecord {
+    const now = Date.now();
+    const existing = this.getSession(DEFAULT_SESSION_ID);
+    if (existing) {
+      if (!existing.projectRoot) {
+        this.db
+          .prepare(
+            `UPDATE sessions
+                SET project_root = @projectRoot,
+                    metadata_json = @metadata,
+                    updated_at = @now
+              WHERE session_id = @id`
+          )
+          .run({
+            id: DEFAULT_SESSION_ID,
+            projectRoot,
+            metadata: JSON.stringify({
+              ...existing.metadata,
+              originalPath: projectRoot,
+            } satisfies SessionMetadata),
+            now,
+          });
+        return this.getSession(DEFAULT_SESSION_ID)!;
+      }
+      return existing;
+    }
+    this.db
+      .prepare(
+        `INSERT INTO sessions (
+          session_id, name, description, project_root,
+          current_run_id, status, ws_port, pid,
+          created_at, updated_at, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        DEFAULT_SESSION_ID,
+        "Default Session",
+        null,
+        projectRoot,
+        null,
+        "idle",
+        null,
+        null,
+        now,
+        now,
+        JSON.stringify({
+          originalPath: projectRoot,
+          copyStrategy: "legacy",
+        } satisfies SessionMetadata)
+      );
+    return this.getSession(DEFAULT_SESSION_ID)!;
+  }
+
+  // ─── Session CRUD ────────────────────────────────────────────────────────
+
+  createSession(input: {
+    sessionId: string;
+    name: string;
+    description?: string | null;
+    projectRoot: string;
+    metadata: SessionMetadata;
+  }): SessionRecord {
+    const now = Date.now();
+    this.db
+      .prepare(
+        `INSERT INTO sessions (
+          session_id, name, description, project_root,
+          current_run_id, status, ws_port, pid,
+          created_at, updated_at, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        input.sessionId,
+        input.name,
+        input.description ?? null,
+        input.projectRoot,
+        null,
+        "idle",
+        null,
+        null,
+        now,
+        now,
+        JSON.stringify(input.metadata)
+      );
+    this.recordSessionActivity({
+      sessionId: input.sessionId,
+      activityType: "created",
+    });
+    return this.getSession(input.sessionId)!;
+  }
+
+  getSession(sessionId: string): SessionRecord | null {
+    const row = this.db
+      .prepare(`SELECT * FROM sessions WHERE session_id = ?`)
+      .get(sessionId) as
+      | {
+          session_id: string;
+          name: string;
+          description: string | null;
+          project_root: string;
+          current_run_id: string | null;
+          status: SessionStatus;
+          ws_port: number | null;
+          pid: number | null;
+          created_at: number;
+          updated_at: number;
+          metadata_json: string;
+        }
+      | undefined;
+    if (!row) return null;
+    return rowToSession(row);
+  }
+
+  listSessions(): SessionRecord[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM sessions ORDER BY updated_at DESC`)
+      .all() as Parameters<typeof rowToSession>[0][];
+    return rows.map(rowToSession);
+  }
+
+  archiveSession(sessionId: string): void {
+    this.db
+      .prepare(
+        `UPDATE sessions
+            SET status = 'archived', updated_at = ?
+          WHERE session_id = ?`
+      )
+      .run(Date.now(), sessionId);
+    this.recordSessionActivity({ sessionId, activityType: "archived" });
+  }
+
+  /**
+   * Drop a session row. Caller is responsible for removing the on-disk
+   * worktree (SessionManager.delete handles that).
+   */
+  deleteSession(sessionId: string): void {
+    if (sessionId === DEFAULT_SESSION_ID) {
+      throw new Error("Cannot delete the default session");
+    }
+    this.recordSessionActivity({ sessionId, activityType: "deleted" });
+    this.db.prepare(`DELETE FROM sessions WHERE session_id = ?`).run(sessionId);
+  }
+
+  updateSessionRuntime(
+    sessionId: string,
+    update: { wsPort?: number | null; pid?: number | null }
+  ): void {
+    this.db
+      .prepare(
+        `UPDATE sessions
+            SET ws_port = COALESCE(@wsPort, ws_port),
+                pid     = COALESCE(@pid, pid),
+                updated_at = @now
+          WHERE session_id = @sessionId`
+      )
+      .run({
+        sessionId,
+        wsPort: update.wsPort ?? null,
+        pid: update.pid ?? null,
+        now: Date.now(),
+      });
+  }
+
+  // ─── Concurrency primitives ──────────────────────────────────────────────
+
+  /**
+   * Atomically claim a session for a run. Returns true if the lock was
+   * acquired; false if another run already holds it. Re-claiming the same
+   * (sessionId, runId) pair is a no-op success — useful for engine resume
+   * paths that re-enter run().
+   */
+  claimSession(sessionId: string, runId: string): boolean {
+    const stmt = this.db.prepare(`
+      UPDATE sessions
+         SET current_run_id = @runId,
+             status = 'running',
+             updated_at = @now
+       WHERE session_id = @sessionId
+         AND (current_run_id IS NULL OR current_run_id = @runId)
+    `);
+    const result = stmt.run({ sessionId, runId, now: Date.now() });
+    if (result.changes > 0) {
+      this.recordSessionActivity({
+        sessionId,
+        activityType: "run_started",
+        runId,
+      });
+    }
+    return result.changes > 0;
+  }
+
+  /**
+   * Release a session's lock and stamp the run's terminal status. Idempotent —
+   * calling this twice with the same finalStatus is harmless.
+   */
+  releaseSession(
+    sessionId: string,
+    runId: string,
+    finalStatus: "succeeded" | "failed" | "cancelled"
+  ): void {
+    const tx = this.db.transaction(() => {
+      const now = Date.now();
+      this.db
+        .prepare(
+          `UPDATE sessions
+              SET current_run_id = NULL,
+                  status = 'idle',
+                  updated_at = @now
+            WHERE session_id = @sessionId
+              AND current_run_id = @runId`
+        )
+        .run({ sessionId, runId, now });
+
+      // Compute duration from started_at when present.
+      const row = this.db
+        .prepare(`SELECT started_at FROM runs WHERE run_id = ?`)
+        .get(runId) as { started_at: number | null } | undefined;
+      const duration = row?.started_at != null ? now - row.started_at : null;
+
+      this.db
+        .prepare(
+          `UPDATE runs
+              SET status = @status,
+                  heartbeat_at = NULL,
+                  completed_at = @now,
+                  duration_ms = @duration,
+                  updated_at = @now
+            WHERE run_id = @runId`
+        )
+        .run({ runId, status: finalStatus, now, duration });
+
+      this.recordSessionActivity({
+        sessionId,
+        activityType: "run_completed",
+        runId,
+        metadata: { status: finalStatus, durationMs: duration ?? undefined },
+      });
+    });
+    tx();
+  }
+
+  /**
+   * Liveness ping. Called between checkpoints. No-op if the run isn't
+   * currently in `running` status, so this is safe to call from anywhere.
+   */
+  heartbeat(runId: string): void {
+    const now = Date.now();
+    this.db
+      .prepare(
+        `UPDATE runs
+            SET heartbeat_at = @now,
+                updated_at = @now
+          WHERE run_id = @runId AND status = 'running'`
+      )
+      .run({ runId, now });
+  }
+
+  /**
+   * Mark a run as actively running (status='running', stamp started_at on
+   * first transition). Called by the engine right before the checkpoint
+   * loop begins.
+   */
+  markRunRunning(runId: string): void {
+    const now = Date.now();
+    this.db
+      .prepare(
+        `UPDATE runs
+            SET status = 'running',
+                started_at = COALESCE(started_at, @now),
+                heartbeat_at = @now,
+                updated_at = @now
+          WHERE run_id = @runId`
+      )
+      .run({ runId, now });
+  }
+
+  /**
+   * Reap stale sessions whose runs haven't beat in `timeoutMs`. Used on
+   * engine boot to clean up after crashes.
+   */
+  recoverStaleSessions(timeoutMs = 60_000): number {
+    const cutoff = Date.now() - timeoutMs;
+    const now = Date.now();
+    let cleared = 0;
+    const tx = this.db.transaction(() => {
+      const stale = this.db
+        .prepare(
+          `SELECT run_id FROM runs
+             WHERE status = 'running'
+               AND (heartbeat_at IS NULL OR heartbeat_at < ?)`
+        )
+        .all(cutoff) as { run_id: string }[];
+      cleared = stale.length;
+      if (cleared === 0) return;
+
+      this.db
+        .prepare(
+          `UPDATE sessions
+              SET current_run_id = NULL,
+                  status = 'error',
+                  updated_at = ?
+            WHERE current_run_id IN (
+              SELECT run_id FROM runs
+                WHERE status = 'running'
+                  AND (heartbeat_at IS NULL OR heartbeat_at < ?)
+            )`
+        )
+        .run(now, cutoff);
+
+      this.db
+        .prepare(
+          `UPDATE runs
+              SET status = 'failed',
+                  heartbeat_at = NULL,
+                  completed_at = ?,
+                  updated_at = ?
+            WHERE status = 'running'
+              AND (heartbeat_at IS NULL OR heartbeat_at < ?)`
+        )
+        .run(now, now, cutoff);
+    });
+    tx();
+    return cleared;
+  }
+
+  /**
+   * Insert a pending run row tied to a session. Returns the new runId.
+   * The supervisor / worker loop is responsible for picking it up.
+   */
+  enqueueRun(sessionId: string, runId: string, task: TaskDefinition): void {
+    const now = Date.now();
+    this.db
+      .prepare(
+        `INSERT INTO runs (
+          run_id, session_id, task_json, artifacts_json, retry_json,
+          status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        runId,
+        sessionId,
+        JSON.stringify(task),
+        "{}",
+        "{}",
+        "pending",
+        now,
+        now
+      );
+  }
+
+  // ─── Analytics events ────────────────────────────────────────────────────
+
+  recordCheckpointEvent(event: CheckpointEvent): void {
+    this.db
+      .prepare(
+        `INSERT INTO checkpoint_events (
+          run_id, checkpoint_id, event_type, attempt_number, timestamp,
+          duration_ms, error_message, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        event.runId,
+        event.checkpointId,
+        event.eventType,
+        event.attemptNumber ?? 0,
+        event.timestamp ?? Date.now(),
+        event.durationMs ?? null,
+        event.errorMessage ?? null,
+        event.metadata ? JSON.stringify(event.metadata) : null
+      );
+  }
+
+  recordSessionActivity(event: SessionActivityEvent): void {
+    this.db
+      .prepare(
+        `INSERT INTO session_activity (
+          session_id, activity_type, run_id, timestamp, metadata_json
+        ) VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(
+        event.sessionId,
+        event.activityType,
+        event.runId ?? null,
+        event.timestamp ?? Date.now(),
+        event.metadata ? JSON.stringify(event.metadata) : null
+      );
   }
 
   async save(
@@ -85,9 +687,16 @@ export class StateManager {
     status: CheckpointStatus
   ): Promise<void> {
     const now = Date.now();
+    const sessionId = ctx.sessionId ?? DEFAULT_SESSION_ID;
     const upsertRun = this.db.prepare(`
-      INSERT INTO runs (run_id, task_json, artifacts_json, retry_json, created_at, updated_at)
-      VALUES (@run_id, @task_json, @artifacts_json, @retry_json, @created_at, @updated_at)
+      INSERT INTO runs (
+        run_id, session_id, task_json, artifacts_json, retry_json,
+        status, created_at, updated_at
+      )
+      VALUES (
+        @run_id, @session_id, @task_json, @artifacts_json, @retry_json,
+        'running', @created_at, @updated_at
+      )
       ON CONFLICT(run_id) DO UPDATE SET
         task_json = excluded.task_json,
         artifacts_json = excluded.artifacts_json,
@@ -96,6 +705,7 @@ export class StateManager {
     `);
     upsertRun.run({
       run_id: ctx.runId,
+      session_id: sessionId,
       task_json: JSON.stringify(ctx.task),
       artifacts_json: JSON.stringify(ctx.artifacts),
       retry_json: JSON.stringify(ctx.retryCount),
@@ -230,13 +840,19 @@ export class StateManager {
     };
   }
 
-  async listRuns(): Promise<RunSummary[]> {
+  async listRuns(sessionId?: string): Promise<RunSummary[]> {
+    const where = sessionId ? `WHERE session_id = ?` : ``;
+    const params = sessionId ? [sessionId] : [];
     const rows = this.db
       .prepare(
-        `SELECT run_id, task_json, created_at, updated_at FROM runs ORDER BY updated_at DESC`
+        `SELECT run_id, session_id, status, task_json, created_at, updated_at
+           FROM runs ${where}
+          ORDER BY updated_at DESC`
       )
-      .all() as {
+      .all(...params) as {
       run_id: string;
+      session_id: string | null;
+      status: RunStatus | null;
       task_json: string;
       created_at: number;
       updated_at: number;
@@ -253,6 +869,8 @@ export class StateManager {
       return {
         runId: r.run_id,
         title: task.title ?? "(untitled)",
+        sessionId: r.session_id ?? DEFAULT_SESSION_ID,
+        status: (r.status ?? "succeeded") as RunStatus,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
         lastCheckpoint: last?.checkpoint_id,
@@ -320,8 +938,14 @@ export class StateManager {
    * even if it was later abandoned — those represent real progress.
    */
   async pruneEmptyRuns(): Promise<number> {
+    // Pending and running rows are intentionally untitled — the supervisor
+    // seeds them via enqueueRun() before the child engine fills in the task
+    // from UI input. Pruning those would race with the spawn handshake.
     const rows = this.db
-      .prepare(`SELECT run_id, task_json FROM runs`)
+      .prepare(
+        `SELECT run_id, task_json FROM runs
+          WHERE status IS NULL OR status NOT IN ('pending', 'running')`
+      )
       .all() as { run_id: string; task_json: string }[];
     let removed = 0;
     const deleteRun = this.db.prepare(`DELETE FROM runs WHERE run_id = ?`);
@@ -356,4 +980,41 @@ export class StateManager {
   close() {
     this.db.close();
   }
+}
+
+function rowToSession(row: {
+  session_id: string;
+  name: string;
+  description: string | null;
+  project_root: string;
+  current_run_id: string | null;
+  status: SessionStatus;
+  ws_port: number | null;
+  pid: number | null;
+  created_at: number;
+  updated_at: number;
+  metadata_json: string;
+}): SessionRecord {
+  let metadata: SessionMetadata = {
+    originalPath: row.project_root,
+    copyStrategy: "legacy",
+  };
+  try {
+    metadata = JSON.parse(row.metadata_json) as SessionMetadata;
+  } catch {
+    /* keep fallback */
+  }
+  return {
+    sessionId: row.session_id,
+    name: row.name,
+    description: row.description,
+    projectRoot: row.project_root,
+    currentRunId: row.current_run_id,
+    status: row.status,
+    wsPort: row.ws_port,
+    pid: row.pid,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    metadata,
+  };
 }

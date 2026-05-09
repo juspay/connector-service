@@ -3,8 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import {
   ALL_CHECKPOINTS,
+  DEFAULT_SESSION_ID,
   PipelineEngine,
   PipelineEventBus,
+  SessionBusyError,
   StateManager,
   loadConfig,
   newRunId,
@@ -31,6 +33,10 @@ interface RunOpts {
   config?: string;
   taskFromUi?: boolean;
   autoMode?: boolean;
+  /** Session this engine instance is bound to. Falls back to "default". */
+  session?: string;
+  /** Override config.yml wsPort. Used by the supervisor's per-session port allocator. */
+  wsPort?: number;
 }
 
 /**
@@ -63,8 +69,18 @@ export async function runCommand(opts: RunOpts): Promise<void> {
   setConfig(cfg);
 
   if (opts.project) cfg.projectRoot = path.resolve(opts.project);
+  // CLI --ws-port wins over config. The supervisor uses this to give each
+  // child engine a distinct port from its allocation pool.
+  if (typeof opts.wsPort === "number" && Number.isFinite(opts.wsPort)) {
+    cfg.wsPort = opts.wsPort;
+  }
 
   const state = new StateManager();
+
+  // Make sure the default session exists and points at the configured
+  // projectRoot. The schema migration plants a placeholder row; this fills
+  // in the real path on every boot so config changes propagate.
+  state.ensureDefaultSession(cfg.projectRoot);
 
   // Clean out any empty/abandoned runs from prior sessions.
   try {
@@ -72,6 +88,26 @@ export async function runCommand(opts: RunOpts): Promise<void> {
     if (pruned > 0) {
       // eslint-disable-next-line no-console
       console.log(`\x1b[90m[byne] pruned ${pruned} empty run(s)\x1b[0m`);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // Reap any session locks left over from a crashed prior boot. Without this,
+  // a SIGKILL'd engine leaves `sessions.current_run_id` set and the very
+  // next claim attempt would fail with SessionBusyError.
+  //
+  // Aggressive 5s cutoff is correct for Phase 1 single-engine: at boot, by
+  // definition no other engine process is alive, so any lock visible here
+  // belongs to a prior incarnation and is stale. Phase 3's process-per-
+  // session supervisor will replace this with PID-based liveness checks.
+  try {
+    const cleared = state.recoverStaleSessions(5_000);
+    if (cleared > 0) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\x1b[33m[byne] recovered ${cleared} stale session lock(s) from a prior crash\x1b[0m`
+      );
     }
   } catch {
     /* ignore */
@@ -217,7 +253,35 @@ export async function runCommand(opts: RunOpts): Promise<void> {
     }
   }
 
-  const bus = opts.dashboard === false ? undefined : new PipelineEventBus(runId, cfg.wsPort);
+  // Resolve the owning session. Precedence: CLI flag > task.sessionId > default.
+  // The supervisor passes --session when spawning a child engine; standalone
+  // engines fall back to whatever the resumed run says, or finally the default.
+  const sessionId = opts.session ?? task.sessionId ?? DEFAULT_SESSION_ID;
+  task.sessionId = sessionId;
+  // `--session` is set exclusively by the supervisor when spawning a child.
+  // Use that as the supervised-mode flag so runs:new / runs:resume route
+  // through the stdout-marker respawn protocol instead of the legacy
+  // resume.json + watch-bounce dance.
+  const supervised = !!opts.session;
+  // Override projectRoot from the session row so the engine always sees the
+  // session-scoped path. For the default session this is the same as
+  // cfg.projectRoot — but for any future session it's the per-session
+  // worktree under ~/.byne/sessions/<id>/<projectName>.
+  const session = state.getSession(sessionId);
+  if (session?.projectRoot) {
+    task.projectRoot = session.projectRoot;
+  }
+
+  // Phase 5: bus is now a *client* that connects outbound to the supervisor's
+  // control WS. Multiple engines share the same control port; the supervisor
+  // routes messages by sessionId. Standalone (`pnpm engine`) still works
+  // because it implicitly assumes a supervisor on cfg.wsPort — if none is
+  // running, the bus simply drops events (process still functions).
+  const controlWsUrl = `ws://localhost:${cfg.wsPort}`;
+  const bus =
+    opts.dashboard === false
+      ? undefined
+      : new PipelineEventBus(runId, controlWsUrl, sessionId);
 
   // Inbound dashboard commands: abort, list runs, resume a run.
   if (bus) {
@@ -229,9 +293,20 @@ export async function runCommand(opts: RunOpts): Promise<void> {
       if (msg.type === "pipeline:abort") {
         // eslint-disable-next-line no-console
         console.log(
-          "\x1b[31m[byne] pipeline:abort received from dashboard — exiting\x1b[0m"
+          "\x1b[31m[byne] pipeline:abort received from dashboard — releasing session lock and exiting\x1b[0m"
         );
         bus.emit("pipeline:abort", undefined, { error: "cancelled from dashboard" });
+        // Release the session lock with a 'cancelled' terminal status so
+        // the very next engine boot doesn't see an orphaned lock and refuse
+        // to start a new run on this session. This is the half of the abort
+        // path that the engine's own `finally` can't run — process.exit()
+        // below would skip it.
+        try {
+          state.releaseSession(sessionId, ctx.runId, "cancelled");
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`[byne] abort: releaseSession failed:`, err);
+        }
         try {
           const entry = process.argv[1];
           if (entry && fs.existsSync(entry)) {
@@ -303,10 +378,19 @@ export async function runCommand(opts: RunOpts): Promise<void> {
       }
 
       if (msg.type === "runs:new") {
-        // Start a brand-new run: delete any pending resume marker so the
-        // restarted engine doesn't auto-resume the current run, then bounce
-        // the entry file so `node --watch` restarts. The new process will
-        // create a fresh runId and wait for task:submit from the dashboard.
+        // In supervised mode (Phase 3+), exit cleanly with a respawn marker
+        // on stdout — the parent supervisor will spawn a fresh child for this
+        // session. Standalone mode falls back to the legacy file-bounce so
+        // `pnpm engine` still works without a supervisor.
+        bus.emit("runs:new:ack", undefined, { ok: true });
+        if (supervised) {
+          // eslint-disable-next-line no-console
+          console.log(
+            `\x1b[35m[byne] runs:new received — emitting respawn intent and exiting cleanly\x1b[0m`
+          );
+          await emitRespawnAndExit(state, sessionId, ctx.runId, {});
+          return;
+        }
         try {
           const resumePath = path.join(os.homedir(), ".byne", "resume.json");
           if (fs.existsSync(resumePath)) fs.unlinkSync(resumePath);
@@ -314,7 +398,6 @@ export async function runCommand(opts: RunOpts): Promise<void> {
           console.log(
             `\x1b[35m[byne] runs:new received — restarting engine for a fresh run\x1b[0m`
           );
-          bus.emit("runs:new:ack", undefined, { ok: true });
           try {
             const entry =
               process.argv[1] && fs.existsSync(process.argv[1])
@@ -341,6 +424,20 @@ export async function runCommand(opts: RunOpts): Promise<void> {
       if (msg.type === "runs:resume") {
         const target = msg.payload as { runId: string; startFrom?: CheckpointId };
         if (!target?.runId) return;
+
+        if (supervised) {
+          bus.emit("runs:resuming", undefined, target);
+          // eslint-disable-next-line no-console
+          console.log(
+            `\x1b[35m[byne] resume requested for ${target.runId}${target.startFrom ? ` from ${target.startFrom}` : ""} — emitting respawn intent and exiting\x1b[0m`
+          );
+          await emitRespawnAndExit(state, sessionId, ctx.runId, {
+            runId: target.runId,
+            startFrom: target.startFrom,
+          });
+          return;
+        }
+
         try {
           fs.mkdirSync(path.join(os.homedir(), ".byne"), { recursive: true });
           fs.writeFileSync(
@@ -353,9 +450,6 @@ export async function runCommand(opts: RunOpts): Promise<void> {
           console.log(
             `\x1b[35m[byne] resume requested for ${target.runId}${target.startFrom ? ` from ${target.startFrom}` : ""} — restarting engine\x1b[0m`
           );
-          // Force `node --watch` to restart by rewriting the entry file's bytes.
-          // `utimesSync` (mtime-only) is unreliable on macOS FSEvents — a real
-          // content write guarantees a change event fires.
           try {
             const entry =
               process.argv[1] && fs.existsSync(process.argv[1])
@@ -369,7 +463,6 @@ export async function runCommand(opts: RunOpts): Promise<void> {
             // eslint-disable-next-line no-console
             console.error(`[byne] resume: failed to bounce entry file:`, err);
           }
-          // Exit after a beat so the rewrite + bus flush can propagate.
           setTimeout(() => process.exit(0), 250);
         } catch (err) {
           bus.emit("runs:resuming", undefined, {
@@ -402,6 +495,7 @@ export async function runCommand(opts: RunOpts): Promise<void> {
 
   const ctx: PipelineContext = {
     runId,
+    sessionId,
     task,
     artifacts,
     retryCount,
@@ -434,7 +528,18 @@ export async function runCommand(opts: RunOpts): Promise<void> {
       for (const [cpId, status] of Object.entries(saved.checkpointStates)) {
         bus.emit("checkpoint:status", cpId as CheckpointId, { status });
       }
-      bus.emit("artifact:update", undefined, { artifacts });
+      // Strip the placeholder task seeded by SessionSupervisor.startSession
+      // from the replay payload — it has an empty title and would otherwise
+      // pollute artifacts.task on every newly-connecting dashboard tab,
+      // making `taskAlreadySubmitted` flicker truthy and hiding TaskForm.
+      const taskTitle = (task as { title?: string }).title?.trim() ?? "";
+      const replayArtifacts =
+        taskTitle.length > 0
+          ? artifacts
+          : Object.fromEntries(
+              Object.entries(artifacts).filter(([k]) => k !== "task")
+            );
+      bus.emit("artifact:update", undefined, { artifacts: replayArtifacts });
       // Push per-attempt history so the dashboard's RetryHistory renders
       // immediately on resume instead of waiting for an attempts:request.
       if (saved.attempts && saved.attempts.length > 0) {
@@ -443,7 +548,12 @@ export async function runCommand(opts: RunOpts): Promise<void> {
           attempts: saved.attempts,
         });
       }
-      bus.emit("task:accepted", "task", { task });
+      // Only confirm acceptance for genuinely-populated tasks. The supervisor
+      // seeds a placeholder run row before the engine boots, so an empty
+      // title means "first boot, still waiting for UI submission".
+      if (taskTitle.length > 0) {
+        bus.emit("task:accepted", "task", { task });
+      }
     }
   }
 
@@ -500,11 +610,26 @@ export async function runCommand(opts: RunOpts): Promise<void> {
   try {
     await engine.run(ctx, opts.startFrom);
   } catch (err) {
-    ctx.log(`Pipeline aborted: ${err instanceof Error ? err.message : String(err)}`, "error");
-    bus?.emit("pipeline:abort", undefined, {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    process.exitCode = 1;
+    if (err instanceof SessionBusyError) {
+      // Another run holds the session lock. This shouldn't happen during
+      // normal Phase 1 single-engine operation — it means a prior crash
+      // left state behind that recoverStaleSessions didn't clear, OR a
+      // future Phase 3 supervisor double-spawned. Surface the message
+      // without polluting the log with a stack trace.
+      // eslint-disable-next-line no-console
+      console.error(`\x1b[31m[byne] ${err.message}\x1b[0m`);
+      bus?.emit("pipeline:abort", undefined, { error: err.message });
+      process.exitCode = 2;
+    } else {
+      ctx.log(
+        `Pipeline aborted: ${err instanceof Error ? err.message : String(err)}`,
+        "error"
+      );
+      bus?.emit("pipeline:abort", undefined, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      process.exitCode = 1;
+    }
   } finally {
     bus?.close();
     state.close();
@@ -515,4 +640,38 @@ function inferCheckpoint(msg: string): "pipeline" | CheckpointId {
   const m = msg.match(/^\[(\w+)\]/);
   if (!m) return "pipeline";
   return m[1] as CheckpointId;
+}
+
+/**
+ * Tells the parent supervisor to respawn this engine with the given intent
+ * by printing a recognized marker line on stdout, then releases the session
+ * lock and exits cleanly.
+ *
+ * The marker MUST be the literal `__BYNE_RESPAWN__ <json>` so the supervisor's
+ * line-buffered stdout parser picks it up. The JSON payload accepts:
+ *   - `runId?: string`   — re-use this run row (resume); supervisor skips enqueueRun
+ *   - `startFrom?: string` — start the resumed run at this checkpoint id
+ * An empty `{}` means "fresh run" (supervisor enqueues a new run).
+ *
+ * The lock release with status='cancelled' lets the next claim succeed even
+ * if the supervisor's reaper hasn't ticked yet — we own the cancellation
+ * decision here, so we record it deterministically rather than waiting for
+ * heartbeat-based recovery.
+ */
+async function emitRespawnAndExit(
+  state: StateManager,
+  sessionId: string,
+  runId: string,
+  intent: { runId?: string; startFrom?: CheckpointId }
+): Promise<void> {
+  // eslint-disable-next-line no-console
+  console.log(`__BYNE_RESPAWN__ ${JSON.stringify(intent)}`);
+  try {
+    state.releaseSession(sessionId, runId, "cancelled");
+  } catch {
+    /* best-effort — supervisor reaper will catch leftovers */
+  }
+  // Small beat so the bus can flush any pending acks to the dashboard, then
+  // exit cleanly. The supervisor sees the exit and respawns.
+  setTimeout(() => process.exit(0), 100);
 }

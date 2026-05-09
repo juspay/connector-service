@@ -72,7 +72,16 @@ export const PIPELINE: Array<{ id: string; name: string; type: "auto" | "human" 
 
 export type PipelineStatus = "idle" | "running" | "complete" | "aborted";
 
-export function usePipeline(wsUrl: string) {
+/**
+ * usePipeline opens a WebSocket to the supervisor's control port (Phase 5
+ * multiplex architecture) and registers as a dashboard client subscribed
+ * to `sessionId`. The supervisor only forwards events tagged with that
+ * sessionId, plus pipeline events from the matching engine. If `sessionId`
+ * is omitted (legacy callers), the hook still opens the WS but won't
+ * receive pipeline events — the supervisor only routes session-scoped
+ * traffic.
+ */
+export function usePipeline(wsUrl: string, sessionId?: string) {
   const [runId, setRunId] = useState<string | undefined>();
   const [states, setStates] = useState<Record<string, CheckpointState>>(() => {
     const o: Record<string, CheckpointState> = {};
@@ -118,10 +127,27 @@ export function usePipeline(wsUrl: string) {
       setWsStatus("connecting");
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
-      ws.onopen = () => setWsStatus("open");
+      ws.onopen = () => {
+        if (wsRef.current !== ws) return;
+        setWsStatus("open");
+        // Phase 5: tell the supervisor which session we're subscribing to
+        // so it scopes pipeline events accordingly.
+        try {
+          ws.send(
+            JSON.stringify({
+              type: "hello",
+              payload: { role: "dashboard", sessionId },
+            })
+          );
+        } catch {
+          /* ws will close + reconnect via the standard retry path */
+        }
+      };
       ws.onclose = () => {
-        setWsStatus("closed");
-        retryTimer = window.setTimeout(connect, 1500);
+        if (wsRef.current === ws) {
+          setWsStatus("closed");
+          retryTimer = window.setTimeout(connect, 1500);
+        }
       };
       ws.onerror = () => {
         try {
@@ -377,7 +403,7 @@ export function usePipeline(wsUrl: string) {
       if (retryTimer) window.clearTimeout(retryTimer);
       wsRef.current?.close();
     };
-  }, [wsUrl]);
+  }, [wsUrl, sessionId]);
 
   // Whenever the WS reaches "open" with a known runId (initial connect, or
   // reconnect after a drop), ask the engine to replay attempt history from
