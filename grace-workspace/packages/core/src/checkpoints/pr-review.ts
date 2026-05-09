@@ -50,6 +50,7 @@ export const prReviewCheckpoint: Checkpoint = {
   description:
     "LLM reviews for spec compliance; human confirms on non-approved output.",
   retryFrom: "pr_review",
+  timeout: 25 * 60 * 1000,
   async run(ctx) {
     const implementation = ctx.artifacts.implementation;
     if (!implementation)
@@ -91,6 +92,8 @@ export const prReviewCheckpoint: Checkpoint = {
           l2: ctx.artifacts.l2,
           l3: ctx.artifacts.l3,
           implementation: ctx.artifacts.implementation,
+          grpcTest: ctx.artifacts.grpcTest,
+          grpcurlOutput: ctx.artifacts.grpcurlOutput,
           files,
           cypressReport: ctx.artifacts.cypressReport,
           playwrightReport: ctx.artifacts.playwrightReport,
