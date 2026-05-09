@@ -233,7 +233,7 @@ fn fetch_payment_instrument<
                     .map(|c| c.to_string());
                 Ok(PaymentInstrument::ApmWallet(ApmPaymentInstrument {
                     instrument_type: ApmInstrumentType::Direct,
-                    method: Some("swish".to_string()),
+                    method: None,
                     country,
                     billing_address: None,
                 }))
@@ -348,7 +348,7 @@ fn fetch_payment_instrument<
                         }
                     });
                 Ok(PaymentInstrument::BankAccountUS(BankAccountUSPayment {
-                    instrument_type: "bankAccountUS".to_string(),
+                    instrument_type: "direct".to_string(),
                     account_type: account_type.to_string(),
                     account_number: account_number.clone(),
                     routing_number: routing_number.clone(),
@@ -699,8 +699,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Wallet(WalletDataPaymentMethod::SwishQr(_))
         );
 
+        let is_alipay = matches!(
+            &item.router_data.request.payment_method_data,
+            PaymentMethodData::Wallet(
+                WalletDataPaymentMethod::AliPayRedirect(_)
+                | WalletDataPaymentMethod::AliPayQr(_)
+                | WalletDataPaymentMethod::AliPayHkRedirect(_)
+            )
+        );
+
         let (method, is_apm) = if is_bank_debit_ach {
-            (None, false)
+            (Some(InstructionMethod::Apm("achDirectDebit".to_string())), false)
         } else if is_bank_redirect {
             let br_method = match &item.router_data.request.payment_method_data {
                 PaymentMethodData::BankRedirect(br) => match br {
@@ -725,7 +734,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 true,
             )
         } else if is_swish {
-            (None, true)
+            (Some(InstructionMethod::Apm("swish".to_string())), true)
         } else {
             let m = PaymentMethod::try_from((
                 item.router_data.resource_common_data.payment_method,
@@ -771,8 +780,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let (success_url, failure_url, pending_url, cancel_url) =
-            if is_apm && !is_bank_redirect && !is_pay_later_klarna {
-            // Wallet APMs (PayPal, AliPay, WeChatPay, Swish) use top-level URL fields.
+            if is_apm && !is_bank_redirect && !is_pay_later_klarna && !is_alipay && !is_swish {
+            // Wallet APMs (PayPal, WeChatPay) use top-level URL fields.
             let return_url = item
                 .router_data
                 .request
@@ -788,10 +797,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             (None, None, None, None)
         };
 
-        // BankRedirect APMs and Klarna require result URLs inside the instruction object.
+        // BankRedirect APMs, Klarna, AliPay, and Swish require result URLs inside the instruction object.
         // Worldpay applies per-APM schema validation — each APM accepts a different
         // subset of resultUrls and customer fields.
-        let result_urls = if is_bank_redirect || is_pay_later_klarna {
+        let result_urls = if is_bank_redirect || is_pay_later_klarna || is_alipay || is_swish {
             let return_url = item
                 .router_data
                 .request
@@ -821,27 +830,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let billing = item.router_data.resource_common_data.get_optional_billing();
-        let is_bizum = matches!(
-            &item.router_data.request.payment_method_data,
-            PaymentMethodData::BankRedirect(BankRedirectData::Bizum { .. })
-        );
-        let apm_customer = if is_bizum {
-            let phone = billing
-                .and_then(|a| a.phone.as_ref())
-                .and_then(|p| p.get_number_with_country_code().ok())
-                .map(|ph| Secret::new(ph.peek().replace('+', "")));
-            Some(ApmCustomer { email: None, first_name: None, last_name: None, phone })
-        } else if is_pay_later_klarna {
-            let email = billing
-                .and_then(|a| a.email.as_ref())
-                .map(|e| Secret::new(e.peek().clone()));
-            let first_name = billing
-                .and_then(|a| a.address.as_ref())
-                .and_then(|d| d.get_optional_first_name());
-            let last_name = billing
-                .and_then(|a| a.address.as_ref())
-                .and_then(|d| d.get_optional_last_name());
-            Some(ApmCustomer { email, first_name, last_name, phone: None })
+        let apm_customer = if is_pay_later_klarna {
+            None
         } else if is_bank_redirect {
             let email = billing
                 .and_then(|a| a.email.as_ref())
