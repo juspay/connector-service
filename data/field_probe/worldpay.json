@@ -8,8 +8,39 @@
     },
     "authorize": {
       "Ach": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "ach": {
+              "account_number": "000123456789",
+              "routing_number": "110000000",
+              "bank_account_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"achDirectDebit\",\"paymentInstrument\":{\"type\":\"direct\",\"accountType\":\"checking\",\"accountNumber\":\"000123456789\",\"routingNumber\":\"110000000\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"}}}"
+        }
       },
       "AchBankTransfer": {
         "status": "not_implemented",
@@ -28,12 +59,39 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "AliPayRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "ali_pay_redirect": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"alipay_cn\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"failure\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"}}}"
+        }
       },
       "AmazonPayRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "ApplePay": {
         "status": "supported",
@@ -73,7 +131,7 @@
             "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
-          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"applepay\",\"paymentInstrument\":{\"type\":\"encrypted\",\"walletToken\":\"{\\\"version\\\":\\\"EC_v1\\\",\\\"data\\\":\\\"probe\\\",\\\"signature\\\":\\\"probe\\\"}\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"applepay\",\"paymentInstrument\":{\"type\":\"encrypted\",\"walletToken\":\"{\\\"version\\\":\\\"EC_v1\\\",\\\"data\\\":\\\"probe\\\",\\\"signature\\\":\\\"probe\\\"}\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"}}}"
         }
       },
       "ApplePayDecrypted": {
@@ -93,8 +151,40 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "BancontactCard": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bancontact_card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"bancontact\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"},\"customer\":{}}}"
+        }
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
@@ -105,20 +195,76 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "BillDeskRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Bizum": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "bizum": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"bizum\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"failure\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"},\"customer\":{}}}"
+        }
       },
       "Blik": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "blik": {
+              "blik_code": "777124"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"blik\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"},\"customer\":{},\"termsAccepted\":true}}"
+        }
       },
       "Bluecode": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
@@ -166,16 +312,16 @@
             "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
-          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"plain\",\"cardNumber\":\"4111111111111111\",\"expiryDate\":{\"month\":3,\"year\":2030},\"cvc\":\"737\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"plain\",\"cardNumber\":\"4111111111111111\",\"expiryDate\":{\"month\":3,\"year\":2030},\"cvc\":\"737\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"}}}"
         }
       },
       "CashappQr": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "CashfreeRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
@@ -190,8 +336,8 @@
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "Dana": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
@@ -206,16 +352,16 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "EaseBuzzRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Efecty": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Eft": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Eps": {
         "status": "not_implemented",
@@ -226,8 +372,8 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "GCash": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Giropay": {
         "status": "not_implemented",
@@ -238,8 +384,8 @@
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "GoPay": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "GooglePay": {
         "status": "supported",
@@ -282,7 +428,7 @@
             "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
-          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"googlepay\",\"paymentInstrument\":{\"type\":\"encrypted\",\"walletToken\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"googlepay\",\"paymentInstrument\":{\"type\":\"encrypted\",\"walletToken\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"}}}"
         }
       },
       "GooglePayDecrypted": {
@@ -294,8 +440,35 @@
         "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Ideal": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "ideal": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"ideal\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"failure\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"},\"customer\":{}}}"
+        }
       },
       "Indomaret": {
         "status": "not_implemented",
@@ -322,24 +495,51 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "KakaoPay": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Klarna": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "klarna": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"klarna_network\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"failure\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"}}}"
+        }
       },
       "Lawson": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "LazyPayRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "LocalBankRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
@@ -350,12 +550,12 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "MbWay": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Mifinity": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "MiniStop": {
         "status": "not_implemented",
@@ -366,52 +566,79 @@
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "Momo": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Netbanking": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "OnlineBankingCzechRepublic": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "OnlineBankingFinland": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "OnlineBankingFpx": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "OnlineBankingPoland": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "OnlineBankingSlovakia": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "OnlineBankingThailand": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "OpenBanking": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "OpenBankingPis": {
         "status": "not_supported",
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "open_banking_uk": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"open_banking\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"failure\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"},\"customer\":{}}}"
+        }
       },
       "Oxxo": {
         "status": "not_implemented",
@@ -430,16 +657,74 @@
         "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PayURedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "PaypalRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "paypal_redirect": {
+              "email": "test@example.com"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"paypal\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"}},\"successURL\":\"https://example.com/return\",\"failureURL\":\"https://example.com/return\",\"pendingURL\":\"https://example.com/return\",\"cancelURL\":\"https://example.com/return\"}"
+        }
       },
       "PaypalSdk": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "paypal_sdk": {
+              "token": "probe_paypal_sdk_token"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"paypal\",\"paymentInstrument\":{\"type\":\"sdk\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"}},\"successURL\":\"https://example.com/return\",\"failureURL\":\"https://example.com/return\",\"pendingURL\":\"https://example.com/return\",\"cancelURL\":\"https://example.com/return\"}"
+        }
       },
       "Paysera": {
         "status": "not_supported",
@@ -454,16 +739,43 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "PhonePeRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Pix": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Przelewy24": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "przelewy24": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"przelewy\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"},\"customer\":{}}}"
+        }
       },
       "Pse": {
         "status": "not_implemented",
@@ -478,16 +790,16 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "RevolutPay": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "SamsungPay": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Satispay": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Seicomart": {
         "status": "not_implemented",
@@ -518,20 +830,74 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Swish": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "swish_qr": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"swish\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"failure\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"}}}"
+        }
       },
       "TouchNGo": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "Trustly": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "trustly": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"trustly\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"resultUrls\":{\"success\":\"https://example.com/return\",\"pending\":\"https://example.com/return\",\"cancel\":\"https://example.com/return\"},\"customer\":{}}}"
+        }
       },
       "Twint": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "UpiCollect": {
         "status": "not_implemented",
@@ -546,16 +912,43 @@
         "error": "This feature is not implemented: Selected payment method through worldpay"
       },
       "Vipps": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       },
       "WeChatPayQr": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "we_chat_pay_qr": {}
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://try.access.worldpay.com/apmPayments",
+          "method": "Post",
+          "headers": {
+            "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-07-01"
+          },
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"method\":\"wechatpay\",\"paymentInstrument\":{\"type\":\"direct\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"}},\"successURL\":\"https://example.com/return\",\"failureURL\":\"https://example.com/return\",\"pendingURL\":\"https://example.com/return\",\"cancelURL\":\"https://example.com/return\"}"
+        }
       },
       "Wero": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through worldpay"
+        "status": "not_supported",
+        "error": "Selected payment method through worldpay is not supported by Worldpay"
       }
     },
     "capture": {
@@ -610,12 +1003,14 @@
     },
     "dispute_accept": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "AcceptDispute flow not supported by worldpay connector"
       }
     },
     "dispute_defend": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "DefendDispute flow not supported by worldpay connector"
       }
     },
     "dispute_get": {
@@ -625,7 +1020,8 @@
     },
     "dispute_submit_evidence": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "SubmitEvidence flow not supported by worldpay connector"
       }
     },
     "eligibility": {
@@ -660,7 +1056,22 @@
     },
     "handle_event": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "merchant_event_id": "probe_event_001",
+          "request_details": {
+            "method": "HTTP_METHOD_POST",
+            "uri": "https://example.com/webhook",
+            "headers": {},
+            "body": "{\"eventId\":\"probe-evt-001\",\"eventTimestamp\":\"2024-01-01T00:00:00.000Z\",\"eventDetails\":{\"type\":\"authorized\",\"transactionReference\":\"probe-txn-001\"}}"
+          }
+        },
+        "sample": {
+          "url": "",
+          "method": "Post",
+          "headers": {},
+          "body": "{\"eventId\":\"probe-evt-001\",\"eventTimestamp\":\"2024-01-01T00:00:00.000Z\",\"eventDetails\":{\"type\":\"authorized\",\"transactionReference\":\"probe-txn-001\"}}"
+        }
       }
     },
     "incremental_authorization": {
@@ -690,7 +1101,21 @@
     },
     "parse_event": {
       "default": {
-        "status": "not_implemented"
+        "status": "supported",
+        "proto_request": {
+          "request_details": {
+            "method": "HTTP_METHOD_POST",
+            "uri": "https://example.com/webhook",
+            "headers": {},
+            "body": "{\"eventId\":\"probe-evt-001\",\"eventTimestamp\":\"2024-01-01T00:00:00.000Z\",\"eventDetails\":{\"type\":\"authorized\",\"transactionReference\":\"probe-txn-001\"}}"
+          }
+        },
+        "sample": {
+          "url": "",
+          "method": "Post",
+          "headers": {},
+          "body": "{\"eventId\":\"probe-evt-001\",\"eventTimestamp\":\"2024-01-01T00:00:00.000Z\",\"eventDetails\":{\"type\":\"authorized\",\"transactionReference\":\"probe-txn-001\"}}"
+        }
       }
     },
     "post_authenticate": {
@@ -738,13 +1163,14 @@
             "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
-          "body": "{\"transactionReference\":\"probe_proxy_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"plain\",\"cardNumber\":\"4111111111111111\",\"expiryDate\":{\"month\":3,\"year\":2030},\"cvc\":\"123\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
+          "body": "{\"transactionReference\":\"probe_proxy_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"plain\",\"cardNumber\":\"4111111111111111\",\"expiryDate\":{\"month\":3,\"year\":2030},\"cvc\":\"123\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"}}}"
         }
       }
     },
     "proxy_setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "SetupMandate flow not supported by worldpay connector"
       }
     },
     "recurring_charge": {
@@ -782,13 +1208,14 @@
             "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
-          "body": "{\"transactionReference\":\"\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"token\",\"href\":\"probe-mandate-123\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":{\"type\":\"subscription\",\"storedCardUsage\":\"subsequent\"}}}"
+          "body": "{\"transactionReference\":\"\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"token\",\"href\":\"probe-mandate-123\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"customerAgreement\":{\"type\":\"subscription\",\"storedCardUsage\":\"subsequent\"}}}"
         }
       }
     },
     "recurring_revoke": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "MandateRevoke flow not supported by worldpay connector"
       }
     },
     "refund": {
@@ -847,7 +1274,8 @@
     },
     "setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "SetupMandate flow not supported by worldpay connector"
       }
     },
     "token_authorize": {
@@ -858,7 +1286,8 @@
     },
     "token_setup_recurring": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "SetupMandate flow not supported by worldpay connector"
       }
     },
     "tokenize": {

@@ -222,7 +222,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Touch 'n Go | ⚠ |
 | Twint | ⚠ |
 | Vipps | ⚠ |
-| Swish | ⚠ |
+| Swish | ✓ |
 | Affirm | ✓ |
 | Afterpay | ✓ |
 | Klarna | ✓ |
@@ -258,7 +258,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Instant | ⚠ |
 | Instant FI | ⚠ |
 | Instant PL | ⚠ |
-| Pix | ⚠ |
+| Pix | ✓ |
 | Permata | ⚠ |
 | BCA | ⚠ |
 | BNI VA | ⚠ |
@@ -278,7 +278,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Givex | x |
 | PaySafeCard | x |
 | E-Voucher | ⚠ |
-| Boleto | ⚠ |
+| Boleto | ? |
 | Efecty | ⚠ |
 | Pago Efectivo | ⚠ |
 | Red Compra | ⚠ |

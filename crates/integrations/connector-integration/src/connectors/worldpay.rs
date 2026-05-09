@@ -15,9 +15,9 @@ use self::response::{
 };
 use common_enums as enums;
 use common_utils::{
-    errors::CustomResult, events, ext_traits::ByteSliceExt, ext_traits::BytesExt,
-    request::Request,
+    errors::CustomResult, events, ext_traits::ByteSliceExt, ext_traits::BytesExt, request::Request,
 };
+use domain_types::errors::WebhookError;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
@@ -29,25 +29,25 @@ use domain_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorWebhookSecrets,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, EventContext,
         EventType as CtEventType, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentWebhookReference, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundWebhookReference,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentWebhookReference, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundWebhookReference, RefundsData,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
         WebhookResourceReference,
     },
-    payment_method_data::{BankDebitData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes, WalletData},
+    payment_method_data::{
+        BankDebitData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes, WalletData,
+    },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
-use domain_types::errors::WebhookError;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -178,15 +178,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         match event_type {
             response::EventType::SentForRefund
             | response::EventType::Refunded
-            | response::EventType::RefundFailed => {
-                Ok(Some(WebhookResourceReference::Refund(RefundWebhookReference {
+            | response::EventType::RefundFailed => Ok(Some(WebhookResourceReference::Refund(
+                RefundWebhookReference {
                     connector_refund_id: None,
                     merchant_refund_id: None,
                     connector_transaction_id: Some(
                         event.event_details.transaction_reference.clone(),
                     ),
-                })))
-            }
+                },
+            ))),
             _ => Ok(Some(WebhookResourceReference::Payment(
                 PaymentWebhookReference {
                     connector_transaction_id: None,
@@ -224,9 +224,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_code: None,
             error_message: None,
             error_reason: None,
-            raw_connector_response: Some(
-                String::from_utf8_lossy(&request_body_copy).to_string(),
-            ),
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
             mandate_reference: None,
             minor_amount_captured: None,
@@ -253,14 +251,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(RefundWebhookDetailsResponse {
             connector_refund_id: None,
             status,
-            connector_response_reference_id: Some(
-                event.event_details.transaction_reference,
-            ),
+            connector_response_reference_id: Some(event.event_details.transaction_reference),
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(
-                String::from_utf8_lossy(&request_body_copy).to_string(),
-            ),
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
         })
@@ -991,12 +985,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     fn get_url(
         &self,
-        _req: &RouterDataV2<
-            DefendDispute,
-            DisputeFlowData,
-            DisputeDefendData,
-            DisputeResponseData,
-        >,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
     ) -> CustomResult<String, IntegrationError> {
         Err(IntegrationError::FlowNotSupported {
             flow: "DefendDispute".to_string(),
@@ -1008,12 +997,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn build_request_v2(
         &self,
-        _req: &RouterDataV2<
-            DefendDispute,
-            DisputeFlowData,
-            DisputeDefendData,
-            DisputeResponseData,
-        >,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
     ) -> CustomResult<Option<Request>, IntegrationError> {
         Err(IntegrationError::FlowNotSupported {
             flow: "DefendDispute".to_string(),
@@ -1030,12 +1014,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     fn get_url(
         &self,
-        _req: &RouterDataV2<
-            Accept,
-            DisputeFlowData,
-            AcceptDisputeData,
-            DisputeResponseData,
-        >,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<String, IntegrationError> {
         Err(IntegrationError::FlowNotSupported {
             flow: "AcceptDispute".to_string(),
@@ -1047,12 +1026,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn build_request_v2(
         &self,
-        _req: &RouterDataV2<
-            Accept,
-            DisputeFlowData,
-            AcceptDisputeData,
-            DisputeResponseData,
-        >,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<Option<Request>, IntegrationError> {
         Err(IntegrationError::FlowNotSupported {
             flow: "AcceptDispute".to_string(),

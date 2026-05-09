@@ -5,9 +5,9 @@
 // Worldpay — all integration scenarios and flows in one file.
 // Run a scenario:  npx tsx worldpay.ts checkout_autocapture
 
-import { PaymentClient, RecurringPaymentClient, RefundClient, types } from 'hyperswitch-prism';
-const { Environment, AuthenticationType, CaptureMethod, Currency, PaymentMethodType } = types;
-export const SUPPORTED_FLOWS = ["authorize", "capture", "get", "incremental_authorization", "proxy_authorize", "recurring_charge", "refund", "refund_get", "void"];
+import { PaymentClient, EventClient, RecurringPaymentClient, RefundClient, types } from 'hyperswitch-prism';
+const { Environment, AuthenticationType, CaptureMethod, Currency, HttpMethod, PaymentMethodType } = types;
+export const SUPPORTED_FLOWS = ["authorize", "capture", "get", "incremental_authorization", "parse_event", "proxy_authorize", "recurring_charge", "refund", "refund_get", "void"];
 
 const _defaultConfig: types.IConnectorConfig = {
     options: {
@@ -73,6 +73,19 @@ function _buildGetRequest(connectorTransactionId: string): types.IPaymentService
     };
 }
 
+function _buildHandleEventRequest(): types.IEventServiceHandleRequest {
+    return {
+        "merchantEventId": "probe_event_001",  // Caller-supplied correlation key, echoed in the response. Not used by UCS for processing.
+        "requestDetails": {
+            "method": HttpMethod.HTTP_METHOD_POST,  // HTTP method of the request (e.g., GET, POST).
+            "uri": "https://example.com/webhook",  // URI of the request.
+            "headers": {  // Headers of the HTTP request.
+            },
+            "body": new Uint8Array(Buffer.from("{\"eventId\":\"probe-evt-001\",\"eventTimestamp\":\"2024-01-01T00:00:00.000Z\",\"eventDetails\":{\"type\":\"authorized\",\"transactionReference\":\"probe-txn-001\"}}", "utf-8"))  // Body of the HTTP request.
+        }
+    };
+}
+
 function _buildIncrementalAuthorizationRequest(): types.IPaymentServiceIncrementalAuthorizationRequest {
     return {
         "merchantAuthorizationId": "probe_auth_001",  // Identification.
@@ -82,6 +95,18 @@ function _buildIncrementalAuthorizationRequest(): types.IPaymentServiceIncrement
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
         "reason": "incremental_auth_probe"  // Optional Fields.
+    };
+}
+
+function _buildParseEventRequest(): types.IEventServiceParseRequest {
+    return {
+        "requestDetails": {
+            "method": HttpMethod.HTTP_METHOD_POST,  // HTTP method of the request (e.g., GET, POST).
+            "uri": "https://example.com/webhook",  // URI of the request.
+            "headers": {  // Headers of the HTTP request.
+            },
+            "body": new Uint8Array(Buffer.from("{\"eventId\":\"probe-evt-001\",\"eventTimestamp\":\"2024-01-01T00:00:00.000Z\",\"eventDetails\":{\"type\":\"authorized\",\"transactionReference\":\"probe-txn-001\"}}", "utf-8"))  // Body of the HTTP request.
+        }
     };
 }
 
@@ -301,6 +326,15 @@ async function get(merchantTransactionId: string, config: types.IConnectorConfig
     return getResponse;
 }
 
+// Flow: EventService.HandleEvent
+async function handleEvent(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const eventClient = new EventClient(config);
+
+    const handleResponse = await eventClient.handleEvent(_buildHandleEventRequest());
+
+    return handleResponse;
+}
+
 // Flow: PaymentService.IncrementalAuthorization
 async function incrementalAuthorization(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -308,6 +342,15 @@ async function incrementalAuthorization(merchantTransactionId: string, config: t
     const incrementalResponse = await paymentClient.incrementalAuthorization(_buildIncrementalAuthorizationRequest());
 
     return incrementalResponse;
+}
+
+// Flow: EventService.ParseEvent
+async function parseEvent(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const eventClient = new EventClient(config);
+
+    const parseResponse = await eventClient.parseEvent(_buildParseEventRequest());
+
+    return parseResponse;
 }
 
 // Flow: PaymentService.ProxyAuthorize
@@ -358,7 +401,7 @@ async function voidPayment(merchantTransactionId: string, config: types.IConnect
 
 // Export all process* functions for the smoke test
 export {
-    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, incrementalAuthorization, proxyAuthorize, recurringCharge, refund, refundGet, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildIncrementalAuthorizationRequest, _buildProxyAuthorizeRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildVoidRequest
+    processCheckoutAutocapture, processCheckoutCard, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, handleEvent, incrementalAuthorization, parseEvent, proxyAuthorize, recurringCharge, refund, refundGet, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildHandleEventRequest, _buildIncrementalAuthorizationRequest, _buildParseEventRequest, _buildProxyAuthorizeRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildRefundGetRequest, _buildVoidRequest
 };
 
 // CLI runner

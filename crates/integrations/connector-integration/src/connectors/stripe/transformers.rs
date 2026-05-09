@@ -1550,13 +1550,12 @@ fn create_stripe_payment_method<
 
         PaymentMethodData::Voucher(voucher_data) => match voucher_data {
             VoucherData::Boleto(boleto_data) => {
-                let tax_id = boleto_data
-                    .social_security_number
-                    .clone()
-                    .ok_or(IntegrationError::MissingRequiredField {
+                let tax_id = boleto_data.social_security_number.clone().ok_or(
+                    IntegrationError::MissingRequiredField {
                         field_name: "voucher_data.boleto.social_security_number",
                         context: Default::default(),
-                    })?;
+                    },
+                )?;
                 Ok((
                     StripePaymentMethodData::Voucher(StripeBoletoData {
                         payment_method_data_type: StripePaymentMethodType::Boleto,
@@ -3390,9 +3389,7 @@ impl Serialize for StripeNextActionResponse {
             Self::MultibancoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::BoletoDisplayDetails(ref i) => Serialize::serialize(i, serializer),
             Self::PixDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
-            Self::SwishHandleRedirectOrDisplayQrCode(ref i) => {
-                Serialize::serialize(i, serializer)
-            }
+            Self::SwishHandleRedirectOrDisplayQrCode(ref i) => Serialize::serialize(i, serializer),
             Self::NoNextActionBody => Serialize::serialize("NoNextActionBody", serializer),
         }
     }

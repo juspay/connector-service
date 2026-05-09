@@ -610,7 +610,7 @@ examples_python: none
 connector_id: stripe
 doc: docs/connectors/stripe.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
-payment_methods: Ach, AchBankTransfer, Affirm, Afterpay, AliPayRedirect, AmazonPayRedirect, ApplePay, ApplePayDecrypted, Bacs, BacsBankTransfer, BancontactCard, Becs, Blik, Card, CashappQr, Eps, Giropay, GooglePay, Ideal, Klarna, MultibancoBankTransfer, Przelewy24, RevolutPay, Sepa, SepaBankTransfer, WeChatPayQr
+payment_methods: Ach, AchBankTransfer, Affirm, Afterpay, AliPayRedirect, AmazonPayRedirect, ApplePay, ApplePayDecrypted, Bacs, BacsBankTransfer, BancontactCard, Becs, Blik, Card, CashappQr, Eps, Giropay, GooglePay, Ideal, Klarna, MultibancoBankTransfer, Pix, Przelewy24, RevolutPay, Sepa, SepaBankTransfer, Swish, WeChatPayQr
 flows: authorize, capture, create_client_authentication_token, create_customer, get, incremental_authorization, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, token_authorize, tokenize, void
 examples_python: examples/stripe/stripe.py
 
@@ -674,8 +674,8 @@ examples_python: examples/wellsfargo/wellsfargo.py
 connector_id: worldpay
 doc: docs/connectors/worldpay.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
-payment_methods: ApplePay, Card, GooglePay
-flows: authorize, capture, get, incremental_authorization, proxy_authorize, recurring_charge, refund, refund_get, void
+payment_methods: Ach, AliPayRedirect, ApplePay, BancontactCard, Bizum, Blik, Card, GooglePay, Ideal, Klarna, OpenBankingUk, PaypalRedirect, PaypalSdk, Przelewy24, Swish, Trustly, WeChatPayQr
+flows: authorize, capture, get, handle_event, incremental_authorization, parse_event, proxy_authorize, recurring_charge, refund, refund_get, void
 examples_python: examples/worldpay/worldpay.py
 
 ## Worldpayvantiv

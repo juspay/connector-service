@@ -703,13 +703,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item.router_data.request.payment_method_data,
             PaymentMethodData::Wallet(
                 WalletDataPaymentMethod::AliPayRedirect(_)
-                | WalletDataPaymentMethod::AliPayQr(_)
-                | WalletDataPaymentMethod::AliPayHkRedirect(_)
+                    | WalletDataPaymentMethod::AliPayQr(_)
+                    | WalletDataPaymentMethod::AliPayHkRedirect(_)
             )
         );
 
         let (method, is_apm) = if is_bank_debit_ach {
-            (Some(InstructionMethod::Apm("achDirectDebit".to_string())), false)
+            (
+                Some(InstructionMethod::Apm("achDirectDebit".to_string())),
+                false,
+            )
         } else if is_bank_redirect {
             let br_method = match &item.router_data.request.payment_method_data {
                 PaymentMethodData::BankRedirect(br) => match br {
@@ -742,9 +745,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ))?;
             match m {
                 PaymentMethod::Paypal => (Some(InstructionMethod::Apm("paypal".to_string())), true),
-                PaymentMethod::WeChatPay => (Some(InstructionMethod::Apm("wechatpay".to_string())), true),
-                PaymentMethod::AliPayCn => (Some(InstructionMethod::Apm("alipay_cn".to_string())), true),
-                PaymentMethod::AliPayUni => (Some(InstructionMethod::Apm("alipay_uni".to_string())), true),
+                PaymentMethod::WeChatPay => {
+                    (Some(InstructionMethod::Apm("wechatpay".to_string())), true)
+                }
+                PaymentMethod::AliPayCn => {
+                    (Some(InstructionMethod::Apm("alipay_cn".to_string())), true)
+                }
+                PaymentMethod::AliPayUni => {
+                    (Some(InstructionMethod::Apm("alipay_uni".to_string())), true)
+                }
                 _ => (Some(InstructionMethod::Standard(m)), false),
             }
         };
@@ -781,31 +790,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let (success_url, failure_url, pending_url, cancel_url) =
             if is_apm && !is_bank_redirect && !is_pay_later_klarna && !is_alipay && !is_swish {
-            // Wallet APMs (PayPal, WeChatPay) use top-level URL fields.
-            let return_url = item
-                .router_data
-                .request
-                .get_router_return_url()
-                .ok();
-            (
-                return_url.clone(),
-                return_url.clone(),
-                return_url.clone(),
-                return_url,
-            )
-        } else {
-            (None, None, None, None)
-        };
+                // Wallet APMs (PayPal, WeChatPay) use top-level URL fields.
+                let return_url = item.router_data.request.get_router_return_url().ok();
+                (
+                    return_url.clone(),
+                    return_url.clone(),
+                    return_url.clone(),
+                    return_url,
+                )
+            } else {
+                (None, None, None, None)
+            };
 
         // BankRedirect APMs, Klarna, AliPay, and Swish require result URLs inside the instruction object.
         // Worldpay applies per-APM schema validation — each APM accepts a different
         // subset of resultUrls and customer fields.
         let result_urls = if is_bank_redirect || is_pay_later_klarna || is_alipay || is_swish {
-            let return_url = item
-                .router_data
-                .request
-                .get_router_return_url()
-                .ok();
+            let return_url = item.router_data.request.get_router_return_url().ok();
             let pmd = &item.router_data.request.payment_method_data;
             let (failure_url, pending_url) = match pmd {
                 PaymentMethodData::BankRedirect(BankRedirectData::Ideal { .. }) => {
@@ -841,12 +842,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let phone = billing
                     .and_then(|a| a.phone.as_ref())
                     .and_then(|p| p.get_number_with_country_code().ok());
-                Some(ApmCustomer { email: None, first_name: None, last_name: None, phone })
+                Some(ApmCustomer {
+                    email: None,
+                    first_name: None,
+                    last_name: None,
+                    phone,
+                })
             } else {
                 let email = billing
                     .and_then(|a| a.email.as_ref())
                     .map(|e| Secret::new(e.peek().clone()));
-                Some(ApmCustomer { email, first_name: None, last_name: None, phone: None })
+                Some(ApmCustomer {
+                    email,
+                    first_name: None,
+                    last_name: None,
+                    phone: None,
+                })
             }
         } else {
             None
