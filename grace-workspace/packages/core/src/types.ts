@@ -705,6 +705,8 @@ export interface FeatureResearchReport {
 
 export interface PipelineArtifacts {
   task?: TaskDefinition;
+  /** Run-scoped feature branch created by preflight, e.g. feat/grace-cybersource-bankdebit-3f69a1. */
+  branch?: string;
   /** GRACE: Requirements discovery results */
   requirements?: TaskDefinition["requirements"];
   productAlignment?: ProductAlignmentDoc;

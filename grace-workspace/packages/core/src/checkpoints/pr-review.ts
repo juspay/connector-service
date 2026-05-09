@@ -18,8 +18,8 @@ STRICTLY FOLLOW the workflow defined in:
 - Local: /Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/2.4_pr.md
 
 Additional checks:
-- Branch naming: Must follow pattern \`feat/grace-{connector}-{flow}-{runId6}\` (lowercase, kebab-case; the trailing 6-hex is the last six chars of the engine's runId, already on the branch checked out by preflight). Read the actual current branch with \`git branch --show-current\` rather than reconstructing it.
-- If branch already exists from a previous run, skip branch creation verification
+- Branch naming: the run-scoped branch is provided in \`userPayload.branch\` (pattern: \`feat/grace-{connector}-{flow}-{runId6}\`, where the trailing 6-hex is the last six chars of the engine's runId). Preflight already created and checked out this branch — verify with \`git branch --show-current\`. **Do NOT create a new branch and do NOT cherry-pick onto a fresh branch off origin/main.** Commit and push directly on the preflight branch.
+- If \`git branch --show-current\` does not match \`userPayload.branch\`, run \`git checkout {userPayload.branch}\` (it should already exist locally from preflight).
 
 ## Output contract
 
@@ -94,6 +94,7 @@ export const prReviewCheckpoint: Checkpoint = {
           implementation: ctx.artifacts.implementation,
           grpcTest: ctx.artifacts.grpcTest,
           grpcurlOutput: ctx.artifacts.grpcurlOutput,
+          branch: ctx.artifacts.branch,
           files,
           cypressReport: ctx.artifacts.cypressReport,
           playwrightReport: ctx.artifacts.playwrightReport,
