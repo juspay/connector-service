@@ -30,9 +30,10 @@ use domain_types::{
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_address::Address,
     payment_method_data::{
-        self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
-        GooglePayDecryptedData, GooglePayWalletData, NetworkTokenData, PaymentMethodData,
-        PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
+        self, ApplePayDecryptedData, ApplePayWalletData, BankDebitData,
+        CardDetailsForNetworkTransactionId, GooglePayDecryptedData, GooglePayWalletData,
+        NetworkTokenData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        SamsungPayWalletData, WalletData,
     },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorSpecificConfig, ErrorResponse,
@@ -824,12 +825,65 @@ pub enum PaymentInformation<
     NetworkToken(Box<NetworkTokenPaymentInformation>),
     /// Used when payment info comes from tokenInformation.transientTokenJwt
     CardToken(Box<CardTokenPaymentInformation>),
+    BankDebit(Box<BankDebitPaymentInformation>),
 }
 
 /// Empty payment information used when a transient token JWT is provided
 /// via token_information. The token contains all card details.
 #[derive(Debug, Serialize)]
 pub struct CardTokenPaymentInformation {}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankDebitPaymentInformation {
+    bank: CybersourceBankAccount,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceBankAccount {
+    account: CybersourceBankAccountDetails,
+    #[serde(rename = "routingNumber")]
+    routing_number: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceBankAccountDetails {
+    number: Secret<String>,
+    #[serde(rename = "type")]
+    account_type: CybersourceBankAccountType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    encoder_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum CybersourceBankAccountType {
+    #[serde(rename = "C")]
+    Checking,
+    #[serde(rename = "S")]
+    Savings,
+    #[serde(rename = "X")]
+    CorporateChecking,
+    #[serde(rename = "V")]
+    CorporateSavings,
+}
+
+fn derive_cybersource_bank_account_type(
+    bank_type: Option<common_enums::BankType>,
+    bank_holder_type: Option<common_enums::BankHolderType>,
+) -> CybersourceBankAccountType {
+    match (bank_type, bank_holder_type) {
+        (Some(common_enums::BankType::Savings), Some(common_enums::BankHolderType::Business)) => {
+            CybersourceBankAccountType::CorporateSavings
+        }
+        (Some(common_enums::BankType::Savings), _) => CybersourceBankAccountType::Savings,
+        (Some(common_enums::BankType::Checking), Some(common_enums::BankHolderType::Business)) => {
+            CybersourceBankAccountType::CorporateChecking
+        }
+        _ => CybersourceBankAccountType::Checking,
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CybersoucrePaymentInstrument {
@@ -2264,12 +2318,79 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }),
                 })
             }
+            PaymentMethodData::BankDebit(bank_debit_data) => match bank_debit_data {
+                BankDebitData::AchBankDebit {
+                    account_number,
+                    routing_number,
+                    bank_type,
+                    bank_holder_type,
+                    ..
+                } => {
+                    let email = item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_email()
+                        .or(item.router_data.request.get_email())?;
+                    let bill_to = build_bill_to(
+                        item.router_data.resource_common_data.get_optional_billing(),
+                        email,
+                    )?;
+                    let order_information =
+                        OrderInformationWithBill::try_from((&item, Some(bill_to)))?;
+                    let processing_information = ProcessingInformation {
+                        capture: Some(false),
+                        capture_options: None,
+                        action_list: None,
+                        action_token_types: None,
+                        authorization_options: None,
+                        commerce_indicator: "internet".to_string(),
+                        payment_solution: None,
+                    };
+                    let client_reference_information = ClientReferenceInformation::from(&item);
+                    let account_type =
+                        derive_cybersource_bank_account_type(bank_type, bank_holder_type);
+                    let payment_information =
+                        PaymentInformation::BankDebit(Box::new(BankDebitPaymentInformation {
+                            bank: CybersourceBankAccount {
+                                account: CybersourceBankAccountDetails {
+                                    number: account_number,
+                                    account_type,
+                                    encoder_id: Some("001".to_string()),
+                                },
+                                routing_number,
+                            },
+                        }));
+                    let merchant_defined_information = convert_metadata_to_merchant_defined_info(
+                        item.router_data
+                            .request
+                            .metadata
+                            .clone()
+                            .map(|m| m.expose()),
+                        item.router_data.request.merchant_order_id.clone(),
+                    );
+                    Ok(Self {
+                        processing_information,
+                        payment_information,
+                        order_information,
+                        client_reference_information,
+                        consumer_authentication_information: None,
+                        merchant_defined_information,
+                        token_information: None,
+                    })
+                }
+                _ => Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: domain_types::utils::get_unimplemented_payment_method_error_message(
+                        "Cybersource",
+                    ),
+                    connector: "Cybersource",
+                    context: Default::default(),
+                })),
+            },
             PaymentMethodData::MandatePayment
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::BankDebit(_)
             | PaymentMethodData::BankTransfer(_)
             | PaymentMethodData::Crypto(_)
             | PaymentMethodData::Reward
