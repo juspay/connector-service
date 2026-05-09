@@ -17,6 +17,14 @@ pub struct WorldpayAuthorizeRequest<
     pub instruction: Instruction<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub customer: Option<Customer>,
+    #[serde(rename = "successURL", skip_serializing_if = "Option::is_none")]
+    pub success_url: Option<String>,
+    #[serde(rename = "failureURL", skip_serializing_if = "Option::is_none")]
+    pub failure_url: Option<String>,
+    #[serde(rename = "pendingURL", skip_serializing_if = "Option::is_none")]
+    pub pending_url: Option<String>,
+    #[serde(rename = "cancelURL", skip_serializing_if = "Option::is_none")]
+    pub cancel_url: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -27,6 +35,15 @@ pub struct Merchant {
     pub mcc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_facilitator: Option<PaymentFacilitator>,
+}
+
+/// Untagged union so both `PaymentMethod` enum variants (for card/wallet flows)
+/// and raw APM method strings (for bank-redirect flows) serialise as plain JSON strings.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum InstructionMethod {
+    Standard(PaymentMethod),
+    Apm(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -41,7 +58,8 @@ pub struct Instruction<
 > {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settlement: Option<AutoSettlement>,
-    pub method: PaymentMethod,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<InstructionMethod>,
     pub payment_instrument: PaymentInstrument<T>,
     pub narrative: InstructionNarrative,
     pub value: PaymentValue,
@@ -49,10 +67,21 @@ pub struct Instruction<
     pub debt_repayment: Option<bool>,
     #[serde(rename = "threeDS", skip_serializing_if = "Option::is_none")]
     pub three_ds: Option<ThreeDSRequest>,
-    /// For setting up mandates
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_auto_settlement: Option<RequestAutoSettlement>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token_creation: Option<TokenCreation>,
-    /// For specifying CIT vs MIT
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_agreement: Option<CustomerAgreement>,
+    /// Redirect result URLs inside instruction — required by most BankRedirect APMs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result_urls: Option<ResultUrls>,
+    /// Customer (email) inside instruction — required by most BankRedirect APMs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer: Option<ApmCustomer>,
+    /// BLIK-specific: must be true to accept terms before redirect.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terms_accepted: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -107,6 +136,8 @@ pub enum PaymentInstrument<
     RawCardForNTI(RawCardDetails<domain_types::payment_method_data::DefaultPCIHolder>),
     Googlepay(WalletPayment),
     Applepay(WalletPayment),
+    ApmWallet(ApmPaymentInstrument),
+    BankAccountUS(BankAccountUSPayment),
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -162,6 +193,91 @@ pub struct WalletPayment {
     pub wallet_token: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub billing_address: Option<BillingAddress>,
+}
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankAccountUSPayment {
+    #[serde(rename = "type")]
+    pub instrument_type: String,
+    pub account_type: String,
+    pub account_number: Secret<String>,
+    pub routing_number: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub billing_address: Option<BillingAddress>,
+}
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct ApmPaymentInstrument {
+    #[serde(rename = "type")]
+    pub instrument_type: ApmInstrumentType,
+    /// APM method string — only used when method is carried inside the paymentInstrument
+    /// (rare; most APMs place method at instruction level instead).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
+    /// ISO 3166-1 alpha-2 country code — required by most BankRedirect APMs and Klarna.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
+    /// Billing address inside paymentInstrument — required by Klarna.
+    #[serde(rename = "billingAddress", skip_serializing_if = "Option::is_none")]
+    pub billing_address: Option<ApmBillingAddress>,
+}
+
+/// Billing address embedded inside the APM paymentInstrument.
+/// Used by Klarna which requires name + phone + address inside the instrument.
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApmBillingAddress {
+    pub first_name: Secret<String>,
+    pub last_name: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Secret<String>>,
+    pub address1: Secret<String>,
+    pub postal_code: Secret<String>,
+    pub city: Secret<String>,
+    pub state: Secret<String>,
+    pub country_code: common_enums::CountryAlpha2,
+}
+
+/// Redirect URLs inside the instruction — required by most BankRedirect APMs.
+/// Field names follow Worldpay's convention: "success", "failure", "pending", "cancel".
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct ResultUrls {
+    #[serde(rename = "success", skip_serializing_if = "Option::is_none")]
+    pub success_url: Option<String>,
+    #[serde(rename = "failure", skip_serializing_if = "Option::is_none")]
+    pub failure_url: Option<String>,
+    #[serde(rename = "pending", skip_serializing_if = "Option::is_none")]
+    pub pending_url: Option<String>,
+    #[serde(rename = "cancel", skip_serializing_if = "Option::is_none")]
+    pub cancel_url: Option<String>,
+}
+
+/// Customer object inside the instruction — required by most BankRedirect APMs and Klarna.
+/// Worldpay uses "email" (not "shopperEmailAddress") inside instruction.customer.
+/// Klarna additionally requires firstName and lastName.
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApmCustomer {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Secret<String>>,
+}
+
+#[derive(
+    Clone, Copy, Debug, Eq, Default, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
+pub enum ApmInstrumentType {
+    #[default]
+    #[serde(rename = "direct")]
+    Direct,
+    #[serde(rename = "sdk")]
+    Sdk,
 }
 
 #[derive(
@@ -275,6 +391,12 @@ pub struct AutoSettlement {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RequestAutoSettlement {
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ThreeDSRequest {
     #[serde(rename = "type")]
     pub three_ds_type: String,
@@ -320,6 +442,16 @@ pub enum PaymentMethod {
     Card,
     ApplePay,
     GooglePay,
+    #[serde(rename = "paypal")]
+    Paypal,
+    #[serde(rename = "wechatpay")]
+    WeChatPay,
+    #[serde(rename = "alipay_cn")]
+    AliPayCn,
+    #[serde(rename = "alipay_uni")]
+    AliPayUni,
+    #[serde(rename = "swish")]
+    Swish,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
