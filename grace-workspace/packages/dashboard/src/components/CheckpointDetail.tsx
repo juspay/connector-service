@@ -177,7 +177,14 @@ export function CheckpointDetail({
   const isTaskStep = checkpointId === "task";
   const isDesignGate = checkpointId === "design_gate";
   const isProductAlignment = checkpointId === "product_alignment";
-  const taskAlreadySubmitted = !!artifacts.task;
+  // The supervisor pre-enqueues a placeholder run (empty title) before the
+  // child engine boots, so `artifacts.task` can be a truthy object even
+  // before the user has submitted anything. Mirror the engine's heuristic
+  // at packages/core/src/checkpoints/task.ts:26 — a real task has a
+  // non-empty title — so the dashboard and engine agree on what "submitted"
+  // means.
+  const taskAlreadySubmitted =
+    !!(artifacts.task as { title?: string } | undefined)?.title?.trim();
 
   const pmWaiting = Boolean(
     isProductAlignment &&

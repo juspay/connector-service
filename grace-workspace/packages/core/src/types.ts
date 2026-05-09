@@ -114,8 +114,19 @@ export interface TaskDefinition {
   connectorDocUrls?: string[];
   /** Target file paths */
   targetFiles?: string[];
-  /** Project root */
+  /**
+   * Project root. For a session-scoped run this is the per-session worktree
+   * path resolved by SessionManager — checkpoints stay agnostic to sessions
+   * and just consume this field.
+   */
   projectRoot: string;
+  /**
+   * Owning session. Defaults to "default" for runs created before the
+   * session-management migration. Stored on the run row via
+   * StateManager.save() and used by engine.run() for the claim/release
+   * lock dance.
+   */
+  sessionId?: string;
   /** Files uploaded with the task */
   attachments?: TaskAttachment[];
 
@@ -753,6 +764,11 @@ export interface InboundBus {
 
 export interface PipelineContext {
   runId: string;
+  /**
+   * Owning session id — engine.run() uses this to claim a per-session lock
+   * and release it on completion. Defaults to "default" for legacy paths.
+   */
+  sessionId: string;
   task: TaskDefinition;
   artifacts: PipelineArtifacts;
   retryCount: Record<string, number>;
@@ -786,5 +802,19 @@ export class PipelineAbortError extends Error {
   constructor(public checkpointId: CheckpointId, message: string) {
     super(`[${checkpointId}] ${message}`);
     this.name = "PipelineAbortError";
+  }
+}
+
+/**
+ * Thrown by engine.run() when a different run already holds the session's
+ * lock. Caller should surface this as a "session busy" message to the user
+ * rather than treating it as a generic pipeline failure.
+ */
+export class SessionBusyError extends Error {
+  constructor(public sessionId: string, public holderRunId?: string) {
+    super(
+      `Session ${sessionId} is busy${holderRunId ? ` (held by run ${holderRunId})` : ""}`
+    );
+    this.name = "SessionBusyError";
   }
 }

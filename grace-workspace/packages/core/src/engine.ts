@@ -4,8 +4,10 @@ import {
   type CheckpointResult,
   PipelineAbortError,
   type PipelineContext,
+  SessionBusyError,
 } from "./types.js";
 import type { StateManager } from "./state.js";
+import { DEFAULT_SESSION_ID } from "./state.js";
 import { withTimeout } from "./utils.js";
 import type { PipelineEventBus } from "./logger.js";
 
@@ -17,12 +19,55 @@ export class PipelineEngine {
   ) {}
 
   async run(ctx: PipelineContext, startFrom?: CheckpointId): Promise<void> {
+    const sessionId = ctx.sessionId ?? DEFAULT_SESSION_ID;
+    if (!this.state.claimSession(sessionId, ctx.runId)) {
+      const session = this.state.getSession(sessionId);
+      throw new SessionBusyError(sessionId, session?.currentRunId ?? undefined);
+    }
+    this.state.markRunRunning(ctx.runId);
+
+    // Default to "failed" so any throw releases the lock with a non-success
+    // status. Successful completion explicitly bumps this to "succeeded".
+    // User-initiated aborts come through run.ts's IPC path and are stamped
+    // as "cancelled" before we ever return here, so this branch always
+    // resolves to either succeeded or failed.
+    let final: "succeeded" | "failed" | "cancelled" = "failed";
+
+    // Periodic background heartbeat. Without this, UI-blocking checkpoints
+    // (task, human-review, design-gate) stop emitting beats — they sit on
+    // `bus.waitFor(...)` for minutes — and the supervisor's stale-lock
+    // reaper would mistakenly mark the session as `error`. The Node event
+    // loop will skip the timer if it's truly wedged, so this still
+    // distinguishes a live-but-waiting engine from a stuck one.
+    const heartbeatTimer = setInterval(() => {
+      try {
+        this.state.heartbeat(ctx.runId);
+      } catch {
+        /* swallow — we don't want a transient DB hiccup to crash the engine */
+      }
+    }, 15_000);
+    heartbeatTimer.unref?.();
+
+    try {
+      await this.runCheckpoints(ctx, startFrom);
+      final = "succeeded";
+    } finally {
+      clearInterval(heartbeatTimer);
+      this.state.releaseSession(sessionId, ctx.runId, final);
+    }
+  }
+
+  private async runCheckpoints(
+    ctx: PipelineContext,
+    startFrom?: CheckpointId
+  ): Promise<void> {
     let i = startFrom
       ? this.checkpoints.findIndex((c) => c.id === startFrom)
       : 0;
     if (i === -1) throw new Error(`Unknown checkpoint: ${startFrom}`);
 
     while (i < this.checkpoints.length) {
+      this.state.heartbeat(ctx.runId);
       const checkpoint = this.checkpoints[i]!;
       const retries = ctx.retryCount[checkpoint.id] ?? 0;
       const maxRetries = checkpoint.maxRetries ?? ctx.options.maxRetries ?? 3;
