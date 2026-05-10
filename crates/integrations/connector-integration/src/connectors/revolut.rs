@@ -388,6 +388,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             response
         })
     }
+
+    fn get_webhook_integrity_check_flags(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> (bool, bool, bool) {
+        let has_merchant_ref = webhook_details
+            .connector_response_reference_id
+            .as_deref()
+            .is_some_and(|s| !s.is_empty());
+        let has_amount   = webhook_details.minor_amount_captured.is_some();
+        let has_currency = webhook_details.currency.is_some();
+
+        (has_merchant_ref, has_amount, has_currency)
+    }
+
+    fn get_psync_integrity_check_flags(&self) -> (bool, bool, bool) {
+        (true, false, false)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

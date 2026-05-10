@@ -317,8 +317,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             response_headers: None,
             amount_captured: None,
             minor_amount_captured: None,
+            currency: None,
             network_txn_id: None,
             payment_method_update: None,
+            integrity_check_flags: None,
         })
     }
 

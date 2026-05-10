@@ -2137,6 +2137,14 @@ message PaymentServiceGetResponse {
   optional bool incremental_authorization_allowed = 27;
   // Payment method updates
   optional PaymentMethodUpdate payment_method_update = 29; // Updated payment method details, if present
+
+  // Webhook integrity check flags from the connector.
+  // true  = the connector provided this field in the webhook → include it in the integrity comparison.
+  // false = the connector did NOT provide this field        → skip this dimension's integrity check.
+  // Absent (None) on non-webhook flows (Get/Sync).
+  optional bool integrity_check_gateway_txn_id = 30;
+  optional bool integrity_check_amount = 31;
+  optional bool integrity_check_currency = 32;
 }
 
 // Request message for voiding a payment

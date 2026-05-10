@@ -19,7 +19,7 @@ use domain_types::{
         RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
         ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
+        ResponseId, SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
         WebhookDetailsResponse, WebhookResourceReference,
     },
     errors::WebhookError,
@@ -379,6 +379,23 @@ pub trait IncomingWebhook {
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<WebhookError>> {
         Ok(false)
+    }
+
+    fn get_webhook_integrity_check_flags(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> (bool, bool, bool) {
+        let has_gateway_txn_id = matches!(
+            &webhook_details.resource_id,
+            Some(ResponseId::ConnectorTransactionId(id)) if !id.is_empty()
+        );
+        let has_amount = webhook_details.minor_amount_captured.is_some();
+        let has_currency = webhook_details.currency.is_some();
+        (has_gateway_txn_id, has_amount, has_currency)
+    }
+
+    fn get_psync_integrity_check_flags(&self) -> (bool, bool, bool) {
+        (true, true, true)
     }
 
     /// fn get_webhook_source_verification_signature
