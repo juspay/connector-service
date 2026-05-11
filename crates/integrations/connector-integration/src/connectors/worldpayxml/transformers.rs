@@ -2,11 +2,11 @@ use std::fmt::Debug;
 
 use common_enums::{AttemptStatus, CaptureMethod, RefundStatus};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsCancelPostCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -1194,5 +1194,128 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
                 })
             }
         }
+    }
+}
+
+// VoidPostCapture (Reverse) flow transformers
+// Uses <cancelOrRefund/> element which acts as cancel if pre-settlement, refund if post-settlement
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        WorldpayxmlRouterData<
+            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::WorldpayxmlVoidPCRequest
+{
+    type Error = Report<IntegrationError>;
+
+    fn try_from(
+        item: WorldpayxmlRouterData<
+            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_config)?;
+
+        // connector_transaction_id is a String directly in PaymentsCancelPostCaptureData
+        let order_code = router_data.request.connector_transaction_id.clone();
+
+        Ok(Self {
+            version: API_VERSION.to_string(),
+            merchant_code: auth.merchant_code,
+            modify: requests::WorldpayxmlVoidPCModify {
+                order_modification: requests::WorldpayxmlVoidPCOrderModification {
+                    order_code,
+                    cancel_or_refund: requests::WorldpayxmlCancelOrRefund {},
+                },
+            },
+        })
+    }
+}
+
+// Response transformer - VoidPostCapture
+impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidPCResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<responses::WorldpayxmlVoidPCResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let router_data = &item.router_data;
+
+        // Check for top-level error first
+        if let Some(error) = &response.reply.error {
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Failure,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Err(ErrorResponse {
+                    code: error.code.clone(),
+                    message: error.message.clone(),
+                    reason: Some(error.message.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Extract ok response
+        let ok_response = response.reply.ok.as_ref().ok_or(
+            crate::utils::response_deserialization_fail(item.http_code, "worldpayxml: response body did not match the expected format; confirm API version and connector documentation."),
+        )?;
+
+        // Extract order_code from ok element — WorldpayXML may return it as:
+        // 1. An attribute on <ok> itself: <ok orderCode="..."/>
+        // 2. Inside <cancelOrRefundReceived orderCode="..."/>
+        // 3. Inside <cancelReceived orderCode="..."/>
+        // 4. Or <ok/> with no orderCode (use connector_transaction_id as fallback)
+        let order_code = ok_response
+            .order_code
+            .clone()
+            .or_else(|| {
+                ok_response
+                    .cancel_or_refund_received
+                    .as_ref()
+                    .map(|r| r.order_code.clone())
+            })
+            .or_else(|| {
+                ok_response
+                    .cancel_received
+                    .as_ref()
+                    .map(|r| r.order_code.clone())
+            })
+            .unwrap_or_else(|| router_data.request.connector_transaction_id.clone());
+
+        // Build success response
+        // Status is VoidPostCaptureInitiated (cancellation confirmed but not yet processed)
+        // Actual completion must be verified via PSync
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(order_code.clone()),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: Some(order_code),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::VoidPostCaptureInitiated,
+                ..router_data.resource_common_data.clone()
+            },
+            response: Ok(payments_response_data),
+            ..router_data.clone()
+        })
     }
 }
