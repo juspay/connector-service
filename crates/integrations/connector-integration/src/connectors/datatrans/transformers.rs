@@ -4,14 +4,14 @@ use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::MinorUnit;
 use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse,
         DatatransClientAuthenticationResponse as DatatransClientAuthenticationResponseDomain,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsCancelPostCaptureData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -789,6 +789,102 @@ impl TryFrom<ResponseRouterData<DatatransVoidResponse, Self>>
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Voided, // Successful void/cancel means payment is voided
+                ..item.router_data.resource_common_data.clone()
+            },
+            response: Ok(payments_response_data),
+            ..item.router_data.clone()
+        })
+    }
+}
+
+// ===== VOID POST CAPTURE (REVERSE) FLOW STRUCTURES =====
+
+// VoidPC Request structure based on tech spec POST /v1/transactions/{transactionId}/cancel
+// Datatrans cancel endpoint works on both authorized and settled (captured) transactions.
+// The request body is empty — same as the regular Void flow.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransVoidPCRequest {
+    // Empty struct - serializes as {}
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::DatatransRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for DatatransVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        _item: super::DatatransRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Empty request body for cancel endpoint — same as regular Void
+        Ok(Self {})
+    }
+}
+
+// VoidPC Response
+// Datatrans cancel returns 200 with JSON body or 204 No Content on success.
+// Fields are optional to handle both cases.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransVoidPCResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acquirer_authorization_code: Option<String>,
+}
+
+impl TryFrom<ResponseRouterData<DatatransVoidPCResponse, Self>>
+    for RouterDataV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<DatatransVoidPCResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Use transaction_id from response if available, otherwise fall back to request
+        let transaction_id = item
+            .response
+            .transaction_id
+            .clone()
+            .unwrap_or_else(|| item.router_data.request.connector_transaction_id.clone());
+
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(transaction_id),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: item.response.acquirer_authorization_code.clone(),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::Voided, // Successful post-capture cancel means payment is voided
                 ..item.router_data.resource_common_data.clone()
             },
             response: Ok(payments_response_data),
