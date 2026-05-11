@@ -120,6 +120,7 @@ message PaymentMethod {
     
     // MOBILE PAYMENTS (60-69) - Direct variants
     DuitNow duit_now = 60;
+    PromptPay prompt_pay = 61;
     
     // CRYPTOCURRENCY (70-79) - Direct variant
     CryptoCurrency crypto = 70;

@@ -40,6 +40,7 @@ use domain_types::{
     types::Connectors,
 };
 
+use common_utils::types::AmountConvertor;
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
@@ -55,8 +56,9 @@ use transformers::{
     PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,
     PaymentsCaptureResponse, PaymentsVoidResponse, RefundResponse,
     RefundResponse as RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,
-    StripeClientAuthRequest, StripeClientAuthResponse, StripeRefundRequest, StripeTokenResponse,
-    TokenRequest,
+    StripeAcceptDisputeResponse, StripeClientAuthRequest, StripeClientAuthResponse,
+    StripeDefendDisputeRequest, StripeDefendDisputeResponse, StripeRefundRequest,
+    StripeSubmitEvidenceRequest, StripeSubmitEvidenceResponse, StripeTokenResponse, TokenRequest,
 };
 
 use super::macros;
@@ -188,6 +190,404 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Stripe<T>
 {
+    fn verify_webhook_source(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<bool, error_stack::Report<domain_types::errors::WebhookError>> {
+        use common_utils::crypto::VerifySignature;
+
+        let connector_webhook_secrets = connector_webhook_secret
+            .ok_or(domain_types::errors::WebhookError::WebhookVerificationSecretNotFound)
+            .attach_printable("Stripe webhook signing secret not configured")?;
+
+        let signature_header = request
+            .headers
+            .get("stripe-signature")
+            .ok_or(domain_types::errors::WebhookError::WebhookSignatureNotFound)
+            .attach_printable("Missing Stripe-Signature header")?;
+
+        let mut timestamp = None;
+        let mut v1_signatures: Vec<String> = Vec::new();
+        for part in signature_header.split(',') {
+            if let Some((key, value)) = part.split_once('=') {
+                match key.trim() {
+                    "t" => timestamp = Some(value.to_string()),
+                    "v1" => v1_signatures.push(value.to_string()),
+                    _ => {}
+                }
+            }
+        }
+
+        let timestamp = timestamp
+            .ok_or(domain_types::errors::WebhookError::WebhookSignatureNotFound)
+            .attach_printable("Missing timestamp in Stripe-Signature header")?;
+
+        let timestamp_secs: i64 = timestamp
+            .parse()
+            .map_err(|_| domain_types::errors::WebhookError::WebhookSourceVerificationFailed)
+            .attach_printable("Invalid timestamp in Stripe-Signature header")?;
+        let now_secs = i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|_| {
+                    domain_types::errors::WebhookError::WebhookSourceVerificationFailed
+                })
+                .attach_printable("System clock is before UNIX epoch")?
+                .as_secs(),
+        )
+        .map_err(|_| domain_types::errors::WebhookError::WebhookSourceVerificationFailed)
+        .attach_printable("System time value out of range")?;
+        if (now_secs - timestamp_secs).abs() > 300 {
+            return Err(error_stack::Report::new(
+                domain_types::errors::WebhookError::WebhookSourceVerificationFailed,
+            )
+            .attach_printable("Webhook timestamp outside 5-minute tolerance window"));
+        }
+
+        if v1_signatures.is_empty() {
+            return Err(domain_types::errors::WebhookError::WebhookSignatureNotFound.into());
+        }
+
+        let body_str = String::from_utf8_lossy(&request.body);
+        let signed_payload = format!("{timestamp}.{body_str}");
+
+        let is_valid = v1_signatures.iter().any(|sig| {
+            hex::decode(sig)
+                .ok()
+                .and_then(|decoded| {
+                    common_utils::crypto::HmacSha256
+                        .verify_signature(
+                            &connector_webhook_secrets.secret,
+                            &decoded,
+                            signed_payload.as_bytes(),
+                        )
+                        .ok()
+                })
+                .unwrap_or(false)
+        });
+
+        Ok(is_valid)
+    }
+
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::WebhookError>> {
+        let signature_header = request
+            .headers
+            .get("stripe-signature")
+            .ok_or(domain_types::errors::WebhookError::WebhookSignatureNotFound)?;
+
+        for part in signature_header.split(',') {
+            if let Some((key, value)) = part.split_once('=') {
+                if key.trim() == "v1" {
+                    return hex::decode(value)
+                        .change_context(
+                            domain_types::errors::WebhookError::WebhookSignatureNotFound,
+                        )
+                        .attach_printable("Failed to decode v1 hex signature");
+                }
+            }
+        }
+
+        Err(domain_types::errors::WebhookError::WebhookSignatureNotFound.into())
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::WebhookError>> {
+        let signature_header = request
+            .headers
+            .get("stripe-signature")
+            .ok_or(domain_types::errors::WebhookError::WebhookSignatureNotFound)?;
+
+        let timestamp = signature_header
+            .split(',')
+            .find_map(|part| {
+                part.split_once('=').and_then(|(key, value)| {
+                    if key.trim() == "t" {
+                        Some(value.to_string())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .ok_or(domain_types::errors::WebhookError::WebhookSignatureNotFound)
+            .attach_printable("Missing timestamp in Stripe-Signature header")?;
+
+        let body_str = String::from_utf8_lossy(&request.body);
+        Ok(format!("{timestamp}.{body_str}").into_bytes())
+    }
+
+    fn sample_webhook_body(&self) -> &'static [u8] {
+        br#"{"id":"evt_test_001","object":"event","type":"payment_intent.succeeded","data":{"object":{"id":"pi_test_001","object":"payment_intent","amount":2000,"currency":"usd","status":"succeeded","created":1686089970,"metadata":{}}},"livemode":false,"created":1686089970,"pending_webhooks":0}"#
+    }
+
+    fn get_event_type(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        domain_types::connector_types::EventType,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let event: stripe::WebhookEventTypeBody = serde_json::from_slice(&request.body)
+            .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)
+            .attach_printable("Failed to deserialize Stripe webhook event")?;
+
+        Ok(stripe::map_webhook_event_to_event_type(
+            &event.event_type,
+            &event.event_data.event_object.status,
+        ))
+    }
+
+    fn get_webhook_event_reference(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Option<domain_types::connector_types::WebhookResourceReference>,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let event: stripe::WebhookEvent = serde_json::from_slice(&request.body)
+            .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
+
+        let obj = &event.event_data.event_object;
+
+        match obj.object {
+            stripe::WebhookEventObjectType::PaymentIntent => Ok(Some(
+                domain_types::connector_types::WebhookResourceReference::Payment(
+                    domain_types::connector_types::PaymentWebhookReference {
+                        connector_transaction_id: Some(obj.id.clone()),
+                        merchant_transaction_id: obj
+                            .metadata
+                            .as_ref()
+                            .and_then(|m| m.order_id.clone()),
+                    },
+                ),
+            )),
+            stripe::WebhookEventObjectType::Charge
+            | stripe::WebhookEventObjectType::Source => {
+                let connector_transaction_id = obj
+                    .payment_intent
+                    .clone()
+                    .unwrap_or_else(|| obj.id.clone());
+                Ok(Some(
+                    domain_types::connector_types::WebhookResourceReference::Payment(
+                        domain_types::connector_types::PaymentWebhookReference {
+                            connector_transaction_id: Some(connector_transaction_id),
+                            merchant_transaction_id: obj
+                                .metadata
+                                .as_ref()
+                                .and_then(|m| m.order_id.clone()),
+                        },
+                    ),
+                ))
+            }
+            stripe::WebhookEventObjectType::Refund => Ok(Some(
+                domain_types::connector_types::WebhookResourceReference::Refund(
+                    domain_types::connector_types::RefundWebhookReference {
+                        connector_refund_id: Some(obj.id.clone()),
+                        merchant_refund_id: None,
+                        connector_transaction_id: obj.payment_intent.clone(),
+                    },
+                ),
+            )),
+            stripe::WebhookEventObjectType::Dispute => Ok(Some(
+                domain_types::connector_types::WebhookResourceReference::Dispute(
+                    domain_types::connector_types::DisputeWebhookReference {
+                        connector_dispute_id: Some(obj.id.clone()),
+                        connector_transaction_id: obj.payment_intent.clone(),
+                    },
+                ),
+            )),
+        }
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+        event_context: Option<domain_types::connector_types::EventContext>,
+    ) -> Result<
+        domain_types::connector_types::WebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let raw_body = String::from_utf8_lossy(&request.body).to_string();
+        let event_type_body: stripe::WebhookEventTypeBody =
+            serde_json::from_slice(&request.body)
+                .change_context(
+                    domain_types::errors::WebhookError::WebhookBodyDecodingFailed,
+                )?;
+        let event: stripe::WebhookEvent = serde_json::from_slice(&request.body)
+            .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
+
+        let status = stripe::get_payment_attempt_status_from_webhook(
+            &event_type_body.event_type,
+            &event_type_body.event_data.event_object.status,
+            &event_context,
+        );
+
+        let obj = &event.event_data.event_object;
+
+        let connector_transaction_id = match obj.object {
+            stripe::WebhookEventObjectType::PaymentIntent => Some(obj.id.clone()),
+            stripe::WebhookEventObjectType::Charge
+            | stripe::WebhookEventObjectType::Source => {
+                obj.payment_intent.clone().or_else(|| Some(obj.id.clone()))
+            }
+            _ => None,
+        };
+
+        let resource_id = connector_transaction_id.map(
+            domain_types::connector_types::ResponseId::ConnectorTransactionId,
+        );
+
+        let (error_code, error_message, error_reason) =
+            if status == common_enums::AttemptStatus::Failure {
+                let err = obj.last_payment_error.as_ref();
+                (
+                    err.and_then(|e| e.code.clone()),
+                    err.and_then(|e| e.message.clone()),
+                    err.and_then(|e| e.message.clone()),
+                )
+            } else {
+                (None, None, None)
+            };
+
+        Ok(domain_types::connector_types::WebhookDetailsResponse {
+            resource_id,
+            status,
+            connector_response_reference_id: obj
+                .metadata
+                .as_ref()
+                .and_then(|m| m.order_id.clone()),
+            mandate_reference: None,
+            error_code,
+            error_message,
+            error_reason,
+            raw_connector_response: Some(raw_body),
+            status_code: 200,
+            response_headers: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            network_txn_id: None,
+            payment_method_update: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<
+        domain_types::connector_types::RefundWebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let raw_body = String::from_utf8_lossy(&request.body).to_string();
+        let event_type_body: stripe::WebhookEventTypeBody =
+            serde_json::from_slice(&request.body)
+                .change_context(
+                    domain_types::errors::WebhookError::WebhookBodyDecodingFailed,
+                )?;
+        let event: stripe::WebhookEvent = serde_json::from_slice(&request.body)
+            .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
+
+        let status = stripe::get_refund_status_from_webhook(
+            &event_type_body.event_data.event_object.status,
+        );
+
+        Ok(
+            domain_types::connector_types::RefundWebhookDetailsResponse {
+                connector_refund_id: Some(event.event_data.event_object.id.clone()),
+                status,
+                connector_response_reference_id: None,
+                error_code: None,
+                error_message: None,
+                raw_connector_response: Some(raw_body),
+                status_code: 200,
+                response_headers: None,
+            },
+        )
+    }
+
+    fn process_dispute_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<
+        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let raw_body = String::from_utf8_lossy(&request.body).to_string();
+        let event_type_body: stripe::WebhookEventTypeBody =
+            serde_json::from_slice(&request.body)
+                .change_context(
+                    domain_types::errors::WebhookError::WebhookBodyDecodingFailed,
+                )?;
+        let event: stripe::WebhookEvent = serde_json::from_slice(&request.body)
+            .change_context(domain_types::errors::WebhookError::WebhookBodyDecodingFailed)?;
+
+        let obj = &event.event_data.event_object;
+        let (stage, dispute_status) = stripe::get_dispute_stage_and_status(
+            &event_type_body.event_type,
+            &event_type_body.event_data.event_object.status,
+        );
+
+        let amount = obj
+            .amount
+            .ok_or(domain_types::errors::WebhookError::WebhookProcessingFailed)
+            .attach_printable("Missing amount in Stripe dispute webhook")?;
+
+        let amount_string = common_utils::types::StringMinorUnitForConnector
+            .convert(amount, obj.currency)
+            .change_context(
+                domain_types::errors::WebhookError::WebhookAmountConversionFailed {
+                    reason: format!(
+                        "Failed to convert dispute amount: {}",
+                        amount.get_amount_as_i64()
+                    ),
+                },
+            )?;
+
+        Ok(
+            domain_types::connector_types::DisputeWebhookDetailsResponse {
+                amount: amount_string,
+                currency: obj.currency,
+                dispute_id: obj.id.clone(),
+                status: dispute_status,
+                stage,
+                connector_response_reference_id: obj.payment_intent.clone(),
+                dispute_message: obj.reason.clone(),
+                raw_connector_response: Some(raw_body),
+                status_code: 200,
+                response_headers: None,
+                connector_reason_code: None,
+            },
+        )
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let event: stripe::WebhookEventObjectResource =
+            serde_json::from_slice(&request.body)
+                .change_context(
+                    domain_types::errors::WebhookError::WebhookBodyDecodingFailed,
+                )?;
+
+        Ok(Box::new(event.data.object))
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -312,6 +712,23 @@ macros::create_all_prerequisites!(
             request_body: StripeClientAuthRequest,
             response_body: StripeClientAuthResponse,
             router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ),
+        (
+            flow: Accept,
+            response_body: StripeAcceptDisputeResponse,
+            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ),
+        (
+            flow: SubmitEvidence,
+            request_body: StripeSubmitEvidenceRequest,
+            response_body: StripeSubmitEvidenceResponse,
+            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: StripeDefendDisputeRequest,
+            response_body: StripeDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         )
     ],
     amount_converters: [],
@@ -339,6 +756,13 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.stripe.base_url
+        }
+
+        pub fn connector_base_url_disputes<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, DisputeFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.stripe.base_url
         }
@@ -1024,21 +1448,103 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Stripe<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Stripe<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Stripe<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Stripe,
+    curl_response: StripeAcceptDisputeResponse,
+    flow_name: Accept,
+    resource_common_data: DisputeFlowData,
+    flow_request: AcceptDisputeData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let dispute_id = &req.resource_common_data.connector_dispute_id;
+            Ok(format!(
+                "{}v1/disputes/{}/close",
+                self.connector_base_url_disputes(req),
+                dispute_id
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Stripe,
+    curl_request: FormUrlEncoded(StripeSubmitEvidenceRequest),
+    curl_response: StripeSubmitEvidenceResponse,
+    flow_name: SubmitEvidence,
+    resource_common_data: DisputeFlowData,
+    flow_request: SubmitEvidenceData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let dispute_id = &req.resource_common_data.connector_dispute_id;
+            Ok(format!(
+                "{}v1/disputes/{}",
+                self.connector_base_url_disputes(req),
+                dispute_id
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Stripe,
+    curl_request: FormUrlEncoded(StripeDefendDisputeRequest),
+    curl_response: StripeDefendDisputeResponse,
+    flow_name: DefendDispute,
+    resource_common_data: DisputeFlowData,
+    flow_request: DisputeDefendData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let dispute_id = &req.resource_common_data.connector_dispute_id;
+            Ok(format!(
+                "{}v1/disputes/{}",
+                self.connector_base_url_disputes(req),
+                dispute_id
+            ))
+        }
+    }
+);
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,

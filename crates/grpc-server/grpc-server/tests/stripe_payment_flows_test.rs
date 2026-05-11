@@ -9,22 +9,32 @@ mod common;
 mod utils;
 
 use std::{
+    fmt::Write as FmtWrite,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use cards::CardNumber;
+use common_utils::crypto::{HmacSha256, SignMessage};
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        payment_method, payment_service_client::PaymentServiceClient,
+        dispute_service_client::DisputeServiceClient,
+        event_service_client::EventServiceClient, payment_method,
+        payment_service_client::PaymentServiceClient,
         refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
-        Currency, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
-        RefundStatus,
+        Currency, DisputeServiceAcceptRequest, DisputeServiceDefendRequest,
+        DisputeServiceSubmitEvidenceRequest, DisputeStatus, EvidenceDocument, EvidenceType,
+        EventServiceHandleRequest, EventServiceHandleResponse, MobilePayRedirectWallet,
+        OpenBankingUk, Oxxo, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
+        PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceVoidRequest,
+        PaymentStatus, PaypalRedirectWallet, PromptPay, RefundResponse, RefundServiceGetRequest,
+        RefundStatus, RequestDetails, Satispay, SevenEleven, TwintRedirectWallet, WebhookSecrets,
+        Wero,
     },
 };
+use serde_json::json;
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -565,5 +575,576 @@ async fn test_refund_sync() {
                 "Refund Sync should be in RefundSuccess state"
             );
         });
+    });
+}
+
+// ============================================================================
+// Payment Method Authorize Tests
+// ============================================================================
+
+fn create_authorize_request_for_method(
+    payment_method_variant: payment_method::PaymentMethod,
+    currency: Currency,
+    amount: i64,
+) -> PaymentServiceAuthorizeRequest {
+    PaymentServiceAuthorizeRequest {
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: amount,
+            currency: i32::from(currency),
+        }),
+        payment_method: Some(PaymentMethod {
+            payment_method: Some(payment_method_variant),
+        }),
+        return_url: Some("https://hyperswitch.io/redirect/complete".to_string()),
+        webhook_url: Some("https://hyperswitch.io/webhooks/stripe".to_string()),
+        customer: Some(grpc_api_types::payments::Customer {
+            email: Some(TEST_EMAIL.to_string().into()),
+            name: Some("Test User".to_string()),
+            id: Some("cus_test_pm".to_string()),
+            connector_customer_id: None,
+            phone_number: None,
+            phone_country_code: None,
+        }),
+        address: Some(grpc_api_types::payments::PaymentAddress::default()),
+        auth_type: i32::from(AuthenticationType::NoThreeDs),
+        merchant_transaction_id: Some(generate_unique_id("stripe_pm_test")),
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
+        capture_method: Some(i32::from(CaptureMethod::Automatic)),
+        ..Default::default()
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_oxxo() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::Oxxo(Oxxo {}),
+            Currency::Mxn,
+            50000, // 500.00 MXN
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for Oxxo")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "Oxxo payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_konbini() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::SevenEleven(SevenEleven {}),
+            Currency::Jpy,
+            1000, // 1000 JPY (zero-decimal currency)
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for Konbini (SevenEleven)")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "Konbini payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_promptpay() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::PromptPay(PromptPay {}),
+            Currency::Thb,
+            2000, // 20.00 THB
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for PromptPay")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "PromptPay payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_mobilepay() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::MobilePayRedirect(MobilePayRedirectWallet {}),
+            Currency::Dkk,
+            5000, // 50.00 DKK
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for MobilePay")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "MobilePay payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_twint() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::TwintRedirect(TwintRedirectWallet {}),
+            Currency::Chf,
+            2000, // 20.00 CHF
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for Twint")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "Twint payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_satispay() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::Satispay(Satispay {}),
+            Currency::Eur,
+            1000, // 10.00 EUR
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for Satispay")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "Satispay payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_wero() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::Wero(Wero {}),
+            Currency::Eur,
+            1500, // 15.00 EUR
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for Wero")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "Wero payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_paypal() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::PaypalRedirect(PaypalRedirectWallet {
+                email: Some(Secret::new(TEST_EMAIL.to_string())),
+            }),
+            Currency::Eur,
+            2000, // 20.00 EUR
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for PayPal")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "PayPal payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials"]
+async fn test_authorize_openbanking_uk() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        let request = create_authorize_request_for_method(
+            payment_method::PaymentMethod::OpenBankingUk(OpenBankingUk {
+                country: Some("GB".to_string()),
+                issuer: None,
+            }),
+            Currency::Gbp,
+            1000, // 10.00 GBP
+        );
+        let mut grpc_request = Request::new(request);
+        add_stripe_metadata(&mut grpc_request);
+
+        let response = client
+            .authorize(grpc_request)
+            .await
+            .expect("gRPC authorize call failed for OpenBankingUk")
+            .into_inner();
+
+        assert!(
+            response.status == i32::from(PaymentStatus::AuthenticationPending)
+                || response.status == i32::from(PaymentStatus::Pending),
+            "OpenBankingUk payment should be in pending/authentication-pending state, got: {}",
+            response.status
+        );
+    });
+}
+
+// ============================================================================
+// Dispute Flow Tests
+// ============================================================================
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials and an active dispute"]
+async fn test_dispute_accept() {
+    grpc_test!(client, DisputeServiceClient<Channel>, {
+        let mut request = Request::new(DisputeServiceAcceptRequest {
+            connector_transaction_id: "pi_test_dispute_accept".to_string(),
+            dispute_id: "dp_test_accept".to_string(),
+            merchant_dispute_id: Some(generate_unique_id("accept_dispute")),
+        });
+        add_stripe_metadata(&mut request);
+
+        let response = client
+            .accept(request)
+            .await
+            .expect("gRPC accept dispute call failed")
+            .into_inner();
+
+        assert_eq!(
+            DisputeStatus::try_from(response.dispute_status)
+                .expect("Failed to convert dispute status"),
+            DisputeStatus::DisputeAccepted,
+            "AcceptDispute should yield DisputeAccepted (Lost → DisputeAccepted in accept flow)"
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials and an active dispute"]
+async fn test_dispute_submit_evidence() {
+    grpc_test!(client, DisputeServiceClient<Channel>, {
+        let mut request = Request::new(DisputeServiceSubmitEvidenceRequest {
+            dispute_id: "dp_test_evidence".to_string(),
+            connector_transaction_id: Some("pi_test_dispute_evidence".to_string()),
+            evidence_documents: vec![EvidenceDocument {
+                evidence_type: i32::from(EvidenceType::Receipt),
+                file_content: None,
+                file_mime_type: None,
+                provider_file_id: None,
+                text_content: Some("Order delivered on 2024-01-15".to_string()),
+            }],
+            ..Default::default()
+        });
+        add_stripe_metadata(&mut request);
+
+        let response = client
+            .submit_evidence(request)
+            .await
+            .expect("gRPC submit evidence call failed")
+            .into_inner();
+
+        assert!(
+            response.dispute_status == i32::from(DisputeStatus::DisputeChallenged)
+                || response.dispute_status == i32::from(DisputeStatus::DisputeOpened),
+            "SubmitEvidence should yield DisputeChallenged or DisputeOpened, got: {}",
+            response.dispute_status
+        );
+    });
+}
+
+#[tokio::test]
+#[ignore = "requires live Stripe credentials and an active dispute"]
+async fn test_dispute_defend() {
+    grpc_test!(client, DisputeServiceClient<Channel>, {
+        let mut request = Request::new(DisputeServiceDefendRequest {
+            connector_transaction_id: "pi_test_dispute_defend".to_string(),
+            dispute_id: "dp_test_defend".to_string(),
+            merchant_dispute_id: Some(generate_unique_id("defend_dispute")),
+            reason_code: Some("product_delivered".to_string()),
+        });
+        add_stripe_metadata(&mut request);
+
+        let response = client
+            .defend(request)
+            .await
+            .expect("gRPC defend dispute call failed")
+            .into_inner();
+
+        assert!(
+            response.dispute_status == i32::from(DisputeStatus::DisputeChallenged)
+                || response.dispute_status == i32::from(DisputeStatus::DisputeOpened),
+            "DefendDispute (submit: true) should yield DisputeChallenged or DisputeOpened, got: {}",
+            response.dispute_status
+        );
+    });
+}
+
+// ============================================================================
+// Webhook HMAC-SHA256 Tests
+// ============================================================================
+
+const STRIPE_TEST_WEBHOOK_SECRET: &str = "whsec_test_secret_for_hmac_verification";
+
+fn stripe_sample_webhook_body() -> serde_json::Value {
+    json!({
+        "id": "evt_test_001",
+        "object": "event",
+        "type": "payment_intent.succeeded",
+        "data": {
+            "object": {
+                "id": "pi_test_001",
+                "object": "payment_intent",
+                "amount": 2000,
+                "currency": "usd",
+                "status": "succeeded",
+                "created": 1686089970,
+                "metadata": {}
+            }
+        },
+        "livemode": false,
+        "created": 1686089970,
+        "pending_webhooks": 0
+    })
+}
+
+fn generate_stripe_webhook_signature(body: &[u8], secret: &str, timestamp: i64) -> String {
+    let body_str = String::from_utf8_lossy(body);
+    let signed_payload = format!("{timestamp}.{body_str}");
+    let sig = HmacSha256
+        .sign_message(secret.as_bytes(), signed_payload.as_bytes())
+        .expect("Failed to compute HMAC-SHA256");
+    let mut hex_sig = String::with_capacity(sig.len() * 2);
+    for b in sig {
+        write!(&mut hex_sig, "{b:02x}").expect("hex write failed");
+    }
+    format!("t={timestamp},v1={hex_sig}")
+}
+
+async fn process_stripe_webhook(
+    client: &mut EventServiceClient<Channel>,
+    body_bytes: Vec<u8>,
+    signature_header: Option<String>,
+    webhook_secret: &str,
+) -> Result<EventServiceHandleResponse, String> {
+    let mut headers = std::collections::HashMap::new();
+    if let Some(sig) = signature_header {
+        headers.insert("stripe-signature".to_string(), sig);
+    }
+
+    let mut request = Request::new(EventServiceHandleRequest {
+        merchant_event_id: Some("stripe_webhook_test".to_string()),
+        request_details: Some(RequestDetails {
+            method: grpc_api_types::payments::HttpMethod::Post.into(),
+            headers,
+            uri: Some("/webhooks/stripe".to_string()),
+            query_params: None,
+            body: body_bytes,
+        }),
+        webhook_secrets: Some(WebhookSecrets {
+            secret: webhook_secret.to_string(),
+            additional_secret: None,
+        }),
+        access_token: None,
+        event_context: None,
+    });
+
+    add_stripe_metadata(&mut request);
+
+    client
+        .handle_event(request)
+        .await
+        .map(|r| r.into_inner())
+        .map_err(|e| format!("{e}"))
+}
+
+#[tokio::test]
+async fn test_stripe_webhook_valid_signature() {
+    grpc_test!(client, EventServiceClient<Channel>, {
+        let body = stripe_sample_webhook_body();
+        let body_bytes = serde_json::to_vec(&body).expect("serialize webhook body");
+        let now = i64::try_from(get_timestamp()).expect("timestamp fits i64");
+        let signature =
+            generate_stripe_webhook_signature(&body_bytes, STRIPE_TEST_WEBHOOK_SECRET, now);
+
+        let result = process_stripe_webhook(
+            &mut client,
+            body_bytes,
+            Some(signature),
+            STRIPE_TEST_WEBHOOK_SECRET,
+        )
+        .await;
+
+        assert!(result.is_ok(), "Valid HMAC-SHA256 webhook should succeed");
+        let response = result.unwrap();
+        assert!(
+            response.source_verified,
+            "Valid signature should set source_verified = true"
+        );
+    });
+}
+
+#[tokio::test]
+async fn test_stripe_webhook_expired_timestamp() {
+    grpc_test!(client, EventServiceClient<Channel>, {
+        let body = stripe_sample_webhook_body();
+        let body_bytes = serde_json::to_vec(&body).expect("serialize webhook body");
+        let expired_ts =
+            i64::try_from(get_timestamp()).expect("timestamp fits i64") - 600;
+        let signature = generate_stripe_webhook_signature(
+            &body_bytes,
+            STRIPE_TEST_WEBHOOK_SECRET,
+            expired_ts,
+        );
+
+        let result = process_stripe_webhook(
+            &mut client,
+            body_bytes,
+            Some(signature),
+            STRIPE_TEST_WEBHOOK_SECRET,
+        )
+        .await;
+
+        match result {
+            Ok(response) => {
+                assert!(
+                    !response.source_verified,
+                    "Expired timestamp (>300s) should set source_verified = false"
+                );
+            }
+            Err(_) => {
+                // Some implementations may reject outright — also acceptable
+            }
+        }
+    });
+}
+
+#[tokio::test]
+async fn test_stripe_webhook_tampered_body() {
+    grpc_test!(client, EventServiceClient<Channel>, {
+        let original_body = stripe_sample_webhook_body();
+        let original_bytes =
+            serde_json::to_vec(&original_body).expect("serialize original body");
+        let now = i64::try_from(get_timestamp()).expect("timestamp fits i64");
+        let signature = generate_stripe_webhook_signature(
+            &original_bytes,
+            STRIPE_TEST_WEBHOOK_SECRET,
+            now,
+        );
+
+        let tampered_body = json!({
+            "id": "evt_test_001",
+            "object": "event",
+            "type": "payment_intent.succeeded",
+            "data": {
+                "object": {
+                    "id": "pi_TAMPERED",
+                    "object": "payment_intent",
+                    "amount": 999999,
+                    "currency": "usd",
+                    "status": "succeeded",
+                    "created": 1686089970,
+                    "metadata": {}
+                }
+            },
+            "livemode": false,
+            "created": 1686089970,
+            "pending_webhooks": 0
+        });
+        let tampered_bytes =
+            serde_json::to_vec(&tampered_body).expect("serialize tampered body");
+
+        let result = process_stripe_webhook(
+            &mut client,
+            tampered_bytes,
+            Some(signature),
+            STRIPE_TEST_WEBHOOK_SECRET,
+        )
+        .await;
+
+        match result {
+            Ok(response) => {
+                assert!(
+                    !response.source_verified,
+                    "Tampered body should set source_verified = false"
+                );
+            }
+            Err(_) => {
+                // Some implementations may reject outright — also acceptable
+            }
+        }
     });
 }
