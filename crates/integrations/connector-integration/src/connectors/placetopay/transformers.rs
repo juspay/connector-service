@@ -2,8 +2,8 @@ use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Void, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsCancelPostCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
