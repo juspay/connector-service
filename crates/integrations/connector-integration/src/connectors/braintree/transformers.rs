@@ -8,7 +8,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, PSync, PaymentMethodToken, RSync,
-        RepeatPayment, Void,
+        RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
@@ -22,7 +22,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, PaypalClientAuthenticationResponse,
         PaypalTransactionInfo, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SdkNextAction, SecretInfoToInitiateSdk,
-        ThirdPartySdkSessionResponse,
+        SetupMandateRequestData, ThirdPartySdkSessionResponse,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
@@ -54,6 +54,7 @@ pub mod constants {
     pub const DELETE_PAYMENT_METHOD_FROM_VAULT_MUTATION: &str = "mutation deletePaymentMethodFromVault($input: DeletePaymentMethodFromVaultInput!) { deletePaymentMethodFromVault(input: $input) { clientMutationId } }";
     pub const TRANSACTION_QUERY: &str = "query($input: TransactionSearchInput!) { search { transactions(input: $input) { edges { node { id status } } } } }";
     pub const REFUND_QUERY: &str = "query($input: RefundSearchInput!) { search { refunds(input: $input, first: 1) { edges { node { id status createdAt amount { value currencyCode } orderId } } } } }";
+    pub const VERIFY_PAYMENT_METHOD_MUTATION: &str = "mutation VerifyPaymentMethod($input: VerifyPaymentMethodInput!) { verifyPaymentMethod(input: $input) { verification { id status amount { value currencyCode } paymentMethod { id } processorResponse { legacyCode message } } } }";
     pub const CHARGE_GOOGLE_PAY_MUTATION: &str = "mutation ChargeGPay($input: ChargePaymentMethodInput!) { chargePaymentMethod(input: $input) { transaction { id status amount { value currencyCode } } } }";
     pub const AUTHORIZE_GOOGLE_PAY_MUTATION: &str = "mutation authorizeGPay($input: AuthorizePaymentMethodInput!) { authorizePaymentMethod(input: $input) { transaction { id legacyId amount { value currencyCode } status } } }";
     pub const CHARGE_APPLE_PAY_MUTATION: &str = "mutation ChargeApplepay($input: ChargePaymentMethodInput!) { chargePaymentMethod(input: $input) { transaction { id status amount { value currencyCode } } } }";
@@ -73,6 +74,9 @@ pub type BraintreeRefundRequest = GenericBraintreeRequest<BraintreeRefundVariabl
 pub type BraintreePSyncRequest = GenericBraintreeRequest<PSyncInput>;
 pub type BraintreeRSyncRequest = GenericBraintreeRequest<RSyncInput>;
 pub type BraintreeWalletRequest = GenericBraintreeRequest<GenericVariableInput<WalletPaymentInput>>;
+pub type BraintreeVerifyVariableInput = GenericVariableInput<BraintreeVerifyInput>;
+pub type BraintreeSetupMandateRequest = GenericBraintreeRequest<BraintreeVerifyVariableInput>;
+pub type BraintreeSetupMandateResponse = GenericBraintreeResponse<BraintreeVerifyResponseData>;
 
 pub type BraintreeRefundResponse = GenericBraintreeResponse<RefundResponse>;
 pub type BraintreeCaptureResponse = GenericBraintreeResponse<CaptureResponse>;
@@ -2912,6 +2916,184 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
                         redirection_data: None,
                         mandate_reference: transaction_data.payment_method.as_ref().map(|pm| {
+                            Box::new(MandateReference {
+                                connector_mandate_id: Some(pm.id.clone().expose()),
+                                payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
+                            })
+                        }),
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    })
+                };
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response,
+                    ..item.router_data
+                })
+            }
+        }
+    }
+}
+
+// ============================================================
+// SetupMandate (ZeroDollarAuth) flow
+// ============================================================
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BraintreeVerifyInput {
+    payment_method_id: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    merchant_account_id: Option<Secret<String>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BraintreeVerifyResponseData {
+    pub data: BraintreeVerifyPaymentMethodData,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BraintreeVerifyPaymentMethodData {
+    pub verify_payment_method: BraintreeVerificationWrapper,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BraintreeVerificationWrapper {
+    pub verification: BraintreeVerification,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BraintreeVerification {
+    pub id: String,
+    pub status: BraintreeVerificationStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_method: Option<PaymentMethodInfo>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, strum::Display)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum BraintreeVerificationStatus {
+    Verified,
+    ProcessorDeclined,
+    GatewayRejected,
+    Failed,
+}
+
+impl From<BraintreeVerificationStatus> for enums::AttemptStatus {
+    fn from(item: BraintreeVerificationStatus) -> Self {
+        match item {
+            BraintreeVerificationStatus::Verified => Self::Charged,
+            BraintreeVerificationStatus::ProcessorDeclined
+            | BraintreeVerificationStatus::GatewayRejected
+            | BraintreeVerificationStatus::Failed => Self::Failure,
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BraintreeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BraintreeSetupMandateRequest
+{
+    type Error = Report<IntegrationError>;
+    fn try_from(
+        item: BraintreeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let payment_method_id = match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::PaymentMethodToken(t) => t.token.clone(),
+            PaymentMethodData::Card(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::MobilePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                return Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: utils::get_unimplemented_payment_method_error_message("braintree"),
+                    connector: "Braintree",
+                    context: Default::default(),
+                }))
+            }
+        };
+        let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
+        let merchant_account_id = auth.merchant_account_id;
+        Ok(Self {
+            query: constants::VERIFY_PAYMENT_METHOD_MUTATION.to_string(),
+            variables: BraintreeVerifyVariableInput {
+                input: BraintreeVerifyInput {
+                    payment_method_id,
+                    merchant_account_id,
+                },
+            },
+        })
+    }
+}
+
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<BraintreeSetupMandateResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+{
+    type Error = Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BraintreeSetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            BraintreeSetupMandateResponse::ErrorResponse(error_response) => Ok(Self {
+                response: build_error_response(&error_response.errors, item.http_code)
+                    .map_err(|err| *err),
+                ..item.router_data
+            }),
+            BraintreeSetupMandateResponse::SuccessResponse(success_response) => {
+                let verification = success_response.data.verify_payment_method.verification;
+                let status = enums::AttemptStatus::from(verification.status.clone());
+                let response = if domain_types::utils::is_payment_failure(status) {
+                    Err(create_failure_error_response(
+                        verification.status,
+                        Some(verification.id),
+                        item.http_code,
+                    ))
+                } else {
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(verification.id),
+                        redirection_data: None,
+                        mandate_reference: verification.payment_method.as_ref().map(|pm| {
                             Box::new(MandateReference {
                                 connector_mandate_id: Some(pm.id.clone().expose()),
                                 payment_method_id: None,
