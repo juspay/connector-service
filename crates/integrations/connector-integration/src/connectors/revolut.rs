@@ -321,10 +321,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let signature =
-            connector_types::IncomingWebhook::get_webhook_source_verification_signature(self, &request, &connector_webhook_secrets)?;
+            connector_types::IncomingWebhook::get_webhook_source_verification_signature(
+                self,
+                &request,
+                &connector_webhook_secrets,
+            )?;
 
-        let message =
-            connector_types::IncomingWebhook::get_webhook_source_verification_message(self, &request, &connector_webhook_secrets)?;
+        let message = connector_types::IncomingWebhook::get_webhook_source_verification_message(
+            self,
+            &request,
+            &connector_webhook_secrets,
+        )?;
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)

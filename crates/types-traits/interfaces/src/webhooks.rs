@@ -270,10 +270,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         )
     }
 
-    fn get_webhook_integrity_check_amount(
-        &self,
-        webhook_details: &WebhookDetailsResponse,
-    ) -> bool {
+    fn get_webhook_integrity_check_amount(&self, webhook_details: &WebhookDetailsResponse) -> bool {
         webhook_details.minor_amount_captured.is_some()
     }
 

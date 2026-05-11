@@ -16,10 +16,10 @@ use domain_types::{
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
         RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
         ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
-        ResponseId, SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
+        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
         WebhookDetailsResponse, WebhookResourceReference,
     },
     errors::WebhookError,
@@ -393,10 +393,7 @@ pub trait IncomingWebhook {
     }
 
     /// Whether the connector includes a captured amount in its payment webhook.
-    fn get_webhook_integrity_check_amount(
-        &self,
-        webhook_details: &WebhookDetailsResponse,
-    ) -> bool {
+    fn get_webhook_integrity_check_amount(&self, webhook_details: &WebhookDetailsResponse) -> bool {
         webhook_details.minor_amount_captured.is_some()
     }
 

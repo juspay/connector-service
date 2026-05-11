@@ -133,13 +133,19 @@ pub fn get_payments_webhook_content<
         .attach_printable("Failed to process payment webhook from connector")?;
 
     webhook_details.integrity_check_gateway_txn_id = Some(
-        connector_data.connector.get_webhook_integrity_check_gateway_txn_id(&webhook_details),
+        connector_data
+            .connector
+            .get_webhook_integrity_check_gateway_txn_id(&webhook_details),
     );
     webhook_details.integrity_check_amount = Some(
-        connector_data.connector.get_webhook_integrity_check_amount(&webhook_details),
+        connector_data
+            .connector
+            .get_webhook_integrity_check_amount(&webhook_details),
     );
     webhook_details.integrity_check_currency = Some(
-        connector_data.connector.get_webhook_integrity_check_currency(&webhook_details),
+        connector_data
+            .connector
+            .get_webhook_integrity_check_currency(&webhook_details),
     );
 
     let response = PaymentServiceGetResponse::foreign_try_from(webhook_details)

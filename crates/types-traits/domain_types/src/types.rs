@@ -6118,14 +6118,26 @@ pub fn generate_payment_sync_response(
                     })
                     .transpose()?;
 
-                let has_amount   = amount.as_ref().map(|m| m.minor_amount != 0).unwrap_or(false);
+                let has_amount = amount
+                    .as_ref()
+                    .map(|m| m.minor_amount != 0)
+                    .unwrap_or(false);
                 let has_currency = amount.as_ref().map(|m| m.currency != 0).unwrap_or(false);
 
                 // Gate flags by connector capability: suppress checks for fields the
                 // connector never sends in PSync (e.g. Revolut omits amount/currency).
-                let cap_txn_id  = router_data_v2.request.integrity_check_gateway_txn_id.unwrap_or(true);
-                let cap_amount  = router_data_v2.request.integrity_check_amount.unwrap_or(true);
-                let cap_currency = router_data_v2.request.integrity_check_currency.unwrap_or(true);
+                let cap_txn_id = router_data_v2
+                    .request
+                    .integrity_check_gateway_txn_id
+                    .unwrap_or(true);
+                let cap_amount = router_data_v2
+                    .request
+                    .integrity_check_amount
+                    .unwrap_or(true);
+                let cap_currency = router_data_v2
+                    .request
+                    .integrity_check_currency
+                    .unwrap_or(true);
 
                 Ok(PaymentServiceGetResponse {
                     connector_transaction_id: extract_connector_request_reference_id(
@@ -6226,12 +6238,24 @@ pub fn generate_payment_sync_response(
                     .transpose()?;
 
                 let has_resource_id = resource_id.is_some();
-                let has_amount   = amount.as_ref().map(|m| m.minor_amount != 0).unwrap_or(false);
+                let has_amount = amount
+                    .as_ref()
+                    .map(|m| m.minor_amount != 0)
+                    .unwrap_or(false);
                 let has_currency = amount.as_ref().map(|m| m.currency != 0).unwrap_or(false);
 
-                let cap_txn_id  = router_data_v2.request.integrity_check_gateway_txn_id.unwrap_or(true);
-                let cap_amount  = router_data_v2.request.integrity_check_amount.unwrap_or(true);
-                let cap_currency = router_data_v2.request.integrity_check_currency.unwrap_or(true);
+                let cap_txn_id = router_data_v2
+                    .request
+                    .integrity_check_gateway_txn_id
+                    .unwrap_or(true);
+                let cap_amount = router_data_v2
+                    .request
+                    .integrity_check_amount
+                    .unwrap_or(true);
+                let cap_currency = router_data_v2
+                    .request
+                    .integrity_check_currency
+                    .unwrap_or(true);
 
                 Ok(PaymentServiceGetResponse {
                     connector_transaction_id: resource_id.unwrap_or_default(),
@@ -7171,9 +7195,11 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                 .change_context(ConnectorError::ResponseDeserializationFailed {
                     context: ResponseTransformationErrorContext {
                         http_status_code: None,
-                        additional_context: Some("Failed to convert currency for webhook amount".to_owned()),
+                        additional_context: Some(
+                            "Failed to convert currency for webhook amount".to_owned(),
+                        ),
                     },
-                })?,  
+                })?,
             captured_amount: {
                 // Suppress when amount flag is false (same guard as above).
                 if check_amount {
