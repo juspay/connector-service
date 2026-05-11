@@ -4242,10 +4242,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(
-        item: DummyRouterData<
-            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: DummyRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let refund_amount = DummyAmountConvertor::convert(
             item.router_data.request.minor_refund_amount,
