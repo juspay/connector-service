@@ -14,11 +14,12 @@ use crate::{connectors::bankofamerica::BankofamericaRouterData, types::ResponseR
 use cards;
 use common_enums;
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void, VoidPC},
     connector_types::{
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_address::Address,
@@ -921,6 +922,9 @@ pub type BankOfAmericaPaymentsResponseForSetupMandate = BankofamericaPaymentsRes
 
 pub type BankofamericaVoidRequestForVoid = BankofamericaVoidRequest;
 pub type BankOfAmericaPaymentsResponseForVoid = BankofamericaPaymentsResponse;
+
+pub type BankofamericaVoidPCRequestForVoidPC = BankofamericaVoidPCRequest;
+pub type BankOfAmericaPaymentsResponseForVoidPC = BankofamericaPaymentsResponse;
 
 pub type BankOfAmericaRefundRequestForRefund = BankOfAmericaRefundRequest;
 pub type BankOfAmericaRefundResponseForRefund = BankOfAmericaRefundResponse;
@@ -2415,5 +2419,100 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             merchant_defined_information,
         })
+    }
+}
+
+// VoidPC (post-capture reversal) request — used with PaymentsCancelPostCaptureData.
+// Amount is not included because PaymentsCancelPostCaptureData does not carry amount/currency;
+// BankOfAmerica will reverse the full captured amount when amountDetails is omitted.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankofamericaVoidPCRequest {
+    client_reference_information: ClientReferenceInformation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reversal_information: Option<BankofamericaVoidPCReversalInformation>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankofamericaVoidPCReversalInformation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BankofamericaRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BankofamericaVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: BankofamericaRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let reversal_information =
+            item.router_data
+                .request
+                .cancellation_reason
+                .clone()
+                .map(|reason| BankofamericaVoidPCReversalInformation {
+                    reason: Some(reason),
+                });
+
+        Ok(Self {
+            client_reference_information: ClientReferenceInformation {
+                code: Some(
+                    item.router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+            },
+            reversal_information,
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
+                let status = map_boa_attempt_status((info_response.status.clone(), false));
+                let response = get_payment_response((&info_response, status, item.http_code))
+                    .map_err(|err| *err);
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response,
+                    ..item.router_data
+                })
+            }
+            BankofamericaPaymentsResponse::ErrorInformation(ref error_response) => {
+                Ok(map_error_response(&error_response.clone(), item, None))
+            }
+        }
     }
 }
