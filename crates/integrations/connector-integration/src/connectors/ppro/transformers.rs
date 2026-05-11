@@ -7,11 +7,13 @@ use super::PproRouterData;
 use crate::types::ResponseRouterData;
 use domain_types::errors::{ConnectorError, IntegrationError, WebhookError};
 use domain_types::{
-    connector_flow::{Capture, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{Capture, ClientAuthenticationToken, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, EventType, MandateReference, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData,
     },
     mandates::MandateDataType,
     payment_method_data::PaymentMethodDataTypes,
@@ -1555,6 +1557,157 @@ where
             ),
             initiator,
             payment_descriptor: router_data.resource_common_data.description.clone(),
+        })
+    }
+}
+
+// ========== CreateClientAuthenticationToken (POST /v1/payment-sessions) ==========
+
+/// Consumer object for PPRO payment session creation request
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PproSessionConsumer {
+    pub merchant_consumer_id: String,
+}
+
+/// Request payload for CreateClientAuthenticationToken flow to PPRO POST /v1/payment-sessions endpoint
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PproClientAuthRequest {
+    pub amount: Amount,
+    pub consumer: PproSessionConsumer,
+    /// Set true for recurring/subscription payments. Hardcoded to false for ClientAuthenticationToken
+    /// flow as recurring context is not available in ClientAuthenticationTokenRequestData.
+    pub recurring: bool,
+    /// webhooksUrl is marked REQUIRED by PPRO but is not available in ClientAuthenticationTokenRequestData.
+    /// Omitted here; relies on the account-level webhook URL configured with PPRO technical account manager.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webhooks_url: Option<String>,
+    /// Amount type: MAX | EXACT | VARIABLE. Omitted here; PPRO will use EXACT default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub amount_type: Option<String>,
+    /// Soft descriptor shown to consumer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_descriptor: Option<String>,
+    /// Merchant-side idempotency/reference key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_payment_charge_reference: Option<String>,
+}
+
+/// Response body from PPRO POST /v1/payment-sessions — the session id is the client authentication token
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PproClientAuthResponse {
+    pub id: String,
+    pub status: String,
+}
+
+impl<T>
+    TryFrom<
+        PproRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PproClientAuthRequest
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: PproRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+        let amount = Amount {
+            currency: router_data.request.currency.to_string(),
+            value: router_data.request.amount,
+        };
+
+        // Derive merchantConsumerId from customer_id if present, otherwise fall back to payment_id.
+        // This ensures PPRO always has a consumer identifier, but note that using payment_id
+        // creates a new synthetic consumer per payment rather than per customer.
+        let merchant_consumer_id = router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .map(|id| id.get_string_repr().to_owned())
+            .unwrap_or_else(|| router_data.resource_common_data.payment_id.clone());
+
+        Ok(Self {
+            amount,
+            consumer: PproSessionConsumer { merchant_consumer_id },
+            recurring: false,
+            webhooks_url: None,
+            amount_type: None,
+            payment_descriptor: router_data.resource_common_data.description.clone(),
+            merchant_payment_charge_reference: Some(
+                router_data.resource_common_data.connector_request_reference_id.clone(),
+            ),
+        })
+    }
+}
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            PproClientAuthResponse,
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            PproClientAuthResponse,
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        use domain_types::connector_types::PproClientAuthenticationResponse;
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Ppro(PproClientAuthenticationResponse {
+                session_id: item.response.id,
+            }),
+        ));
+
+        let response = Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+            session_data,
+            status_code: item.http_code,
+        });
+
+        Ok(Self {
+            response,
+            ..item.router_data
         })
     }
 }

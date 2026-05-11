@@ -11256,13 +11256,24 @@ ConnectorSpecificClientAuthenticationResponse::Cybersource(cybersource_data) => 
                 ),
             }
         }
-                ConnectorSpecificClientAuthenticationResponse::Revolut(revolut_data) => {
+        ConnectorSpecificClientAuthenticationResponse::Revolut(revolut_data) => {
             grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
                 connector: Some(
                     grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Revolut(
                         grpc_api_types::payments::RevolutClientAuthenticationResponse {
                             order_id: revolut_data.order_id,
                             token: Some(revolut_data.token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Ppro(ppro_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Ppro(
+                        grpc_api_types::payments::PproClientAuthenticationResponse {
+                            session_id: ppro_data.session_id,
                         },
                     ),
                 ),

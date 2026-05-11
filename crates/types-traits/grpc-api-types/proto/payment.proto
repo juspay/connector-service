@@ -1568,7 +1568,13 @@ message ConnectorSpecificClientAuthenticationResponse {
     NexinetsClientAuthenticationResponse nexinets = 24;
     NexixpayClientAuthenticationResponse nexixpay = 25;
     RevolutClientAuthenticationResponse revolut = 26;
+    PproClientAuthenticationResponse ppro = 27;
   }
+}
+
+// PPRO session ID returned as client authentication token for LPM checkout flows
+message PproClientAuthenticationResponse {
+  string session_id = 1;
 }
 
 // Adyen SDK initialization data — session_id + session_data for Adyen Drop-in/Components
