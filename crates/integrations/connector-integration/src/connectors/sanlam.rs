@@ -211,8 +211,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-// Explicit not implemented flow placeholders
-
 macros::macro_connector_flow_status_impls!(
     connector: Sanlam,
     generic_type: T,

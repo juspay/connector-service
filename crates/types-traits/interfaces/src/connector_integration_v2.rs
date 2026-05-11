@@ -101,7 +101,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         .into())
     }
 
-    /// returns kafka key; default returns Ok(None) since the key is optional in Kafka semantics.
+    /// returns kafka key
     fn get_kafka_key(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,

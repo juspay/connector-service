@@ -43,8 +43,6 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 use error_stack::ResultExt;
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Imerchantsolutions<T>
 {
@@ -460,8 +458,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// Stub implementations for unsupported flows (required by macro system)
 
 macros::macro_connector_flow_status_impls!(
     connector: Imerchantsolutions,

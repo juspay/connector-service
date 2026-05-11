@@ -573,8 +573,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// SourceVerification implementations for all flows
-
 // RepeatPayment (MIT / Merchant-Initiated Transaction) uses the same Nexinets
 // payments endpoint as Authorize but substitutes the card panel with a stored
 // `paymentInstrument.paymentInstrumentId` reference. Auto-capture flows hit

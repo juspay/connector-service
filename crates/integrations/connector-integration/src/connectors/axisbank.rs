@@ -421,8 +421,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// Stub implementations for unsupported flows
-
 macros::macro_connector_flow_status_impls!(
     connector: Axisbank,
     generic_type: T,

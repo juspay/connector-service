@@ -545,8 +545,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-// Stub implementations for flows not yet implemented
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for RazorpayV2<T>
@@ -859,8 +857,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         self.build_error_response(res, event_builder)
     }
 }
-
-// SourceVerification implementations for all flows
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     domain_types::connector_types::ConnectorSpecifications for RazorpayV2<T>

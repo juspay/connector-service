@@ -56,8 +56,6 @@ use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 use error_stack::ResultExt;
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Worldpay<T>
 {
@@ -675,11 +673,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Stub implementations for unsupported flows - removed conflicting ones that are now macro-generated
-
-// Authenticate flow is replaced by PreAuthenticate and PostAuthenticate, but we need this stub for trait bounds
-
-// SourceVerification implementations for all flows
 
 macros::macro_connector_flow_status_impls!(
     connector: Worldpay,

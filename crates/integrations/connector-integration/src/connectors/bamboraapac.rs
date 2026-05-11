@@ -465,8 +465,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Explicit not implemented flow placeholders
-
 macros::macro_connector_flow_status_impls!(
     connector: Bamboraapac,
     generic_type: T,

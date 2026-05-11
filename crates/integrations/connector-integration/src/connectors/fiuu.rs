@@ -56,8 +56,6 @@ use crate::{
 use domain_types::errors::ConnectorError;
 use domain_types::errors::{IntegrationError, WebhookError};
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Fiuu<T>
 {
@@ -1005,18 +1003,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// Implementation for empty stubs - these will need to be properly implemented later
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
     for Fiuu<T>
 {
 }
-
-// SourceVerification implementations for all flows
-
-// Authentication flow ConnectorIntegrationV2 implementations
-
-// Authentication flow SourceVerification implementations
 
 fn parse_response<T>(
     data: &[u8],

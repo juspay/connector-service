@@ -44,8 +44,6 @@ use domain_types::errors::IntegrationError;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Paysafe<T>
 {
@@ -553,10 +551,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// SourceVerification implementations for all flows
-
-// Explicit not implemented flow placeholders
 
 // SourceVerification implementations for PaymentMethodToken and PreAuthenticate
 

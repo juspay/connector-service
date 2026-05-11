@@ -410,10 +410,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Empty implementations for flows not yet implemented
-
-// Authentication flow ConnectorIntegrationV2 implementations
-
 macros::macro_connector_flow_status_impls!(
     connector: Paytm,
     generic_type: T,

@@ -609,8 +609,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// SourceVerification implementations for all flows
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
     for Nuvei<T>
 {

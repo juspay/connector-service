@@ -63,8 +63,6 @@ pub(crate) mod headers {
     pub(crate) const X_NN_ACCESS_KEY: &str = "X-NN-Access-Key";
 }
 
-// Trait implementations with generic type parameters
-
 macros::macro_connector_payout_implementation!(
     connector: Novalnet,
     generic_type: T,
@@ -836,10 +834,6 @@ fn get_webhook_object_from_body(
     body.parse_struct("NovalnetWebhookNotificationResponse")
         .change_context(WebhookError::WebhookBodyDecodingFailed)
 }
-
-// Explicit not implemented flow placeholders
-
-// Authentication flow implementations
 
 macros::macro_connector_flow_status_impls!(
     connector: Novalnet,

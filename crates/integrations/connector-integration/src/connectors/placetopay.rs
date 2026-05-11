@@ -122,8 +122,6 @@ macros::create_all_prerequisites!(
     }
 );
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Placetopay<T>
 {
@@ -417,10 +415,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// Explicit not implemented flow placeholders
-
-// SourceVerification implementations for all flows
 
 macros::macro_connector_flow_status_impls!(
     connector: Placetopay,

@@ -947,8 +947,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// SourceVerification implementations for all flows
-
 macros::macro_connector_flow_status_impls!(
     connector: Stripe,
     generic_type: T,

@@ -45,8 +45,6 @@ use domain_types::errors::IntegrationError;
 
 const VERSION: &str = "2.1";
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Dlocal<T>
 {
@@ -531,10 +529,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// Explicit not implemented flow placeholders
-
-// SourceVerification implementations for all flows
 
 macros::macro_connector_flow_status_impls!(
     connector: Dlocal,

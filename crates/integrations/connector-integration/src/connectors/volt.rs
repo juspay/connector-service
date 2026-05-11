@@ -66,8 +66,6 @@ const X_VOLT_INITIATION_CHANNEL: &str = "X-Volt-Initiation-Channel";
 const VOLT_VERSION: &str = "1";
 const VOLT_INITIATION_CHANNEL: &str = "hosted";
 
-// Trait implementations with generic type parameters
-
 macros::macro_connector_payout_implementation!(
     connector: Volt,
     generic_type: T,
@@ -414,8 +412,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// Explicit not implemented flow placeholders (required by macro system)
 
 macros::macro_connector_flow_status_impls!(
     connector: Volt,

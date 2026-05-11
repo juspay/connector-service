@@ -73,8 +73,6 @@ use error_stack::ResultExt;
 
 const TL_SIGNATURE: &str = "Tl-Signature";
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Truelayer<T>
 {
@@ -624,8 +622,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// Explicit not implemented flow placeholders (required by macro system)
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyWebhookSourceV2 for Truelayer<T>

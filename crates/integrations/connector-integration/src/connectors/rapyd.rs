@@ -51,8 +51,6 @@ pub(crate) mod headers {
 pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
     base64::engine::general_purpose::URL_SAFE;
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ClientAuthentication for Rapyd<T>
 {
@@ -687,11 +685,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Stub implementations for unsupported flows
-
-// ConnectorIntegrationV2 for SetupMandate and RepeatPayment are implemented
-// via macros::macro_connector_implementation! blocks below.
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
@@ -725,8 +718,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// SourceVerification implementations for all flows
 
 macros::macro_connector_flow_status_impls!(
     connector: Rapyd,

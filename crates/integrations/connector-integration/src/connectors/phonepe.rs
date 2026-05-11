@@ -37,8 +37,6 @@ use crate::types::ResponseRouterData;
 use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Phonepe<T>
 {
@@ -672,10 +670,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         None // TODO: Add connector info
     }
 }
-
-// Default empty implementations for unsupported flows - the traits will use default implementations
-
-// Stub implementations for missing flows
 
 macros::macro_connector_flow_status_impls!(
     connector: Phonepe,

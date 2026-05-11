@@ -45,8 +45,6 @@ use super::macros;
 use crate::types::ResponseRouterData;
 use domain_types::errors::ConnectorError;
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Payu<T>
 {
@@ -686,17 +684,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         Ok(vec![])
     }
 }
-
-// Connector integration implementations for not implemented flows
-// Capture flow implemented via macro below
-
-// Add stub implementation for ServerSessionAuthenticationToken
-
-// Add stub implementation for ServerAuthenticationToken
-
-// Add stub implementation for CreateConnectorCustomer
-
-// Authentication flow implementations
 
 static PAYU_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyLock::new(|| {
     let payu_supported_capture_methods = vec![CaptureMethod::Automatic];

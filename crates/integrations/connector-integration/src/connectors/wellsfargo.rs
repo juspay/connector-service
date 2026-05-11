@@ -70,7 +70,6 @@ use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
 use error_stack::{Report, ResultExt};
 
-// Trait implementations with generic type parameters
 // SourceVerification markers for not implemented flows
 
 // Explicit ConnectorIntegrationV2 implementations for not implemented flows
@@ -717,12 +716,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// Explicit not implemented flow placeholders
-
-// SourceVerification implementations for all flows
-
-// SourceVerification implementations for flows converted to macros
 
 macros::macro_connector_flow_status_impls!(
     connector: Wellsfargo,

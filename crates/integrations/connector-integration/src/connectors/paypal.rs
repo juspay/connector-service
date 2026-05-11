@@ -1428,8 +1428,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// SourceVerification implementations for all flows
-
 // VerifyWebhookSource implementation using ConnectorIntegrationV2
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<

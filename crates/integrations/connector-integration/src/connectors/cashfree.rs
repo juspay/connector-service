@@ -47,8 +47,6 @@ pub(crate) mod headers {
     pub(crate) const X_API_VERSION: &str = "x-api-version";
 }
 
-// Trait implementations will be added after the macro creates the struct
-
 macros::macro_connector_payout_implementation!(
     connector: Cashfree,
     generic_type: T,
@@ -69,7 +67,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Trait implementations for all flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Cashfree<T>
 {
@@ -106,7 +103,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
     for Cashfree<T>
 {
 }
-// Trait implementations after the macro creates the struct
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Cashfree<T>
 {
@@ -518,12 +514,6 @@ macros::macro_connector_implementation!(
 // ServerAuthenticationToken stub implementation
 
 // CreateConnectorCustomer stub implementation
-
-// Trait implementations for all flows
-
-// Default ConnectorIntegrationV2 implementations for not implemented flows
-
-// Authentication flow ConnectorIntegrationV2 implementations
 
 // ============================================================================
 // Supported Payment Methods

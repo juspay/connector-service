@@ -69,8 +69,6 @@ pub(crate) mod headers {
     pub(crate) const CONNECTOR_UNAUTHORIZED_ERROR: &str = "Authentication Error from the connector";
 }
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ClientAuthentication for Cybersource<T>
 {
@@ -1217,12 +1215,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         self.build_error_response(res, event_builder)
     }
 }
-
-// Explicit not implemented flow placeholders
-
-// SourceVerification implementations for all flows
-
-// Authentication flow SourceVerification implementations
 
 macros::macro_connector_flow_status_impls!(
     connector: Cybersource,

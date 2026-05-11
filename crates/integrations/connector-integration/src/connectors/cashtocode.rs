@@ -36,8 +36,6 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-// Trait implementations with generic type parameters
-
 macros::macro_connector_payout_implementation!(
     connector: Cashtocode,
     generic_type: T,
@@ -288,16 +286,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         })
     }
 }
-
-// Explicit not implemented flow placeholders
-
-// Authentication flow implementations
-
-//marker traits
-
-// Duplicate create_all_prerequisites! call removed - already defined above
-
-// Duplicate macro_connector_implementation! for Authorize flow removed - already defined above
 
 fn get_b64_auth_cashtocode(
     payment_method_type: Option<common_enums::PaymentMethodType>,

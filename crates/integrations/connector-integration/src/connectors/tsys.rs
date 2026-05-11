@@ -116,9 +116,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ===== SOURCE VERIFICATION STUB =====
-// Empty SourceVerification implementations for all flows
-
 // macros::create_amount_converter_wrapper!(connector_name: Tsys, amount_type: StringMinorUnit);
 macros::create_all_prerequisites!(
     connector_name: Tsys,

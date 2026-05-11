@@ -48,8 +48,6 @@ use domain_types::errors::{IntegrationError, WebhookError};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-// Trait implementations with generic type parameters
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Payload<T>
 {
@@ -523,8 +521,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Explicit not implemented flow placeholders
-
 // RepeatPayment flow implementation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -591,8 +587,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// SourceVerification implementations for all flows
 
 // Webhook implementation
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

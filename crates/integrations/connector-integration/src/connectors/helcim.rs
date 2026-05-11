@@ -51,8 +51,6 @@ pub(crate) mod headers {
     pub(crate) const IDEMPOTENCY_KEY: &str = "idempotency-key";
 }
 
-// Trait implementations with generic type parameters
-
 macros::macro_connector_payout_implementation!(
     connector: Helcim,
     generic_type: T,
@@ -451,10 +449,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-// Explicit not implemented flow placeholders
-
-// SourceVerification implementations for all flows
 
 macros::macro_connector_flow_status_impls!(
     connector: Helcim,
