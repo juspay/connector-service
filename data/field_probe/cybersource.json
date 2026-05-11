@@ -838,38 +838,32 @@
     },
     "create_customer": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: create_connector_customer flow for cybersource"
+        "status": "not_implemented"
       }
     },
     "create_order": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: create_order flow for cybersource"
+        "status": "not_implemented"
       }
     },
     "create_server_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: server_authentication_token flow for cybersource"
+        "status": "not_implemented"
       }
     },
     "create_server_session_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: server_session_authentication_token flow for cybersource"
+        "status": "not_implemented"
       }
     },
     "dispute_accept": {
       "default": {
-        "status": "not_supported",
-        "error": "accept_dispute flow not supported by cybersource connector"
+        "status": "not_implemented"
       }
     },
     "dispute_defend": {
       "default": {
-        "status": "not_supported",
-        "error": "defend_dispute flow not supported by cybersource connector"
+        "status": "not_implemented"
       }
     },
     "dispute_get": {
@@ -879,8 +873,7 @@
     },
     "dispute_submit_evidence": {
       "default": {
-        "status": "not_supported",
-        "error": "submit_evidence flow not supported by cybersource connector"
+        "status": "not_implemented"
       }
     },
     "eligibility": {
@@ -1210,8 +1203,26 @@
     },
     "reverse": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: void_post_capture flow for cybersource"
+        "status": "supported",
+        "proto_request": {
+          "merchant_reverse_id": "probe_reverse_001",
+          "connector_transaction_id": "probe_connector_txn_001"
+        },
+        "sample": {
+          "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001/reversals",
+          "method": "Post",
+          "headers": {
+            "accept": "application/hal+json;charset=utf-8",
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"clientReferenceInformation\":{\"code\":\"probe_reverse_001\"}}"
+        }
       }
     },
     "setup_recurring": {
@@ -1264,8 +1275,7 @@
     },
     "tokenize": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: payment_method_token flow for cybersource"
+        "status": "not_implemented"
       }
     },
     "verify_redirect": {
