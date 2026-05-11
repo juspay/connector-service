@@ -194,6 +194,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
         run: |
+          if [ "$(wc -c < release-notes.md)" -gt 124000 ]; then
+            truncate -s 124000 release-notes.md
+            printf '\n\n_Full changelog available in the release artifact._\n' >> release-notes.md
+          fi
           gh release create "${{ steps.version.outputs.next_tag }}" \
             --title "${{ steps.version.outputs.next_tag }}" \
             --notes-file release-notes.md \
