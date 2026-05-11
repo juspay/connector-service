@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import url from "node:url";
 
@@ -23,6 +24,8 @@ interface SupervisorOpts {
 export async function supervisorCommand(opts: SupervisorOpts): Promise<void> {
   const cfg = loadConfig(opts.config);
   setConfig(cfg);
+
+  assertProjectRoot(cfg.projectRoot);
 
   const state = new StateManager();
   state.ensureDefaultSession(cfg.projectRoot);
@@ -61,4 +64,24 @@ function resolveCliEntry(): string {
   const here = url.fileURLToPath(import.meta.url);
   // here = .../packages/cli/dist/commands/supervisor.js
   return path.resolve(path.dirname(here), "..", "index.js");
+}
+
+function assertProjectRoot(projectRoot: string): void {
+  if (!projectRoot || !projectRoot.trim()) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "\x1b[31m[supervisor] projectRoot is not configured.\x1b[0m\n" +
+        "  Set BYNE_PROJECT_ROOT to the absolute path of the target repo, " +
+        "or set `projectRoot:` in config.yml."
+    );
+    process.exit(1);
+  }
+  if (!fs.existsSync(projectRoot)) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `\x1b[31m[supervisor] projectRoot does not exist:\x1b[0m ${projectRoot}\n` +
+        "  Check BYNE_PROJECT_ROOT or `projectRoot:` in config.yml."
+    );
+    process.exit(1);
+  }
 }
