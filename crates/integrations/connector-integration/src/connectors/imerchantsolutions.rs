@@ -51,7 +51,10 @@ use serde::Serialize;
 use transformers::{
     self as imerchantsolutions, ForeignTryFrom, ImerchantsolutionsCaptureRequestData,
     ImerchantsolutionsCaptureResponseData, ImerchantsolutionsPaymentSyncResponse,
-    ImerchantsolutionsPaymentsRequestData, ImerchantsolutionsPaymentsResponseData,
+    ImerchantsolutionsPaymentsRequestData,
+    ImerchantsolutionsPaymentsRequestData as ImerchantsolutionsRepeatPaymentRequest,
+    ImerchantsolutionsPaymentsResponseData,
+    ImerchantsolutionsPaymentsResponseData as ImerchantsolutionsRepeatPaymentResponse,
     ImerchantsolutionsRefundRequestData, ImerchantsolutionsRefundResponseData,
     ImerchantsolutionsRefundSyncResponse, ImerchantsolutionsVoidRequestData,
     ImerchantsolutionsVoidResponseData, ImerchantsolutionsWebhookData,
@@ -236,6 +239,12 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
+            flow: RepeatPayment,
+            request_body: ImerchantsolutionsRepeatPaymentRequest<T>,
+            response_body: ImerchantsolutionsRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
             flow: Capture,
             request_body: ImerchantsolutionsCaptureRequestData,
             response_body: ImerchantsolutionsCaptureResponseData,
@@ -389,6 +398,35 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::IntegrationError> {
+            let base_url = self.connector_base_url_payments(req);
+            Ok(format!("{base_url}/payments"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Imerchantsolutions,
+    curl_request: Json(ImerchantsolutionsRepeatPaymentRequest),
+    curl_response: ImerchantsolutionsRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::IntegrationError> {
             let base_url = self.connector_base_url_payments(req);
             Ok(format!("{base_url}/payments"))
@@ -808,16 +846,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
         PaymentsResponseData,
     > for Imerchantsolutions<T>
 {
