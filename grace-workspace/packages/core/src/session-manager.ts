@@ -242,7 +242,7 @@ function slugifyTaskName(name: string): string {
   return slug || "task";
 }
 
-function branchTimestamp(d: Date = new Date()): string {
+export function branchTimestamp(d: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
     `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +

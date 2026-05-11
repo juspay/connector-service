@@ -19,7 +19,8 @@ export const preflightCheckpoint: Checkpoint = {
     const flow = task.paymentMethod || "unknown";
     // Append the trailing 6-hex of ctx.runId so every run gets a unique branch
     // and `git checkout -b` below never collides with a leftover from a prior
-    // aborted run.
+    // aborted run. Also lets pr-review.ts cross-reference the branch back to
+    // its originating run via ctx.artifacts.branch.
     const runSuffix = ctx.runId.slice(-6);
     const branchName = `feat/grace-${connector.toLowerCase()}-${flow.toLowerCase()}-${runSuffix}`;
 
