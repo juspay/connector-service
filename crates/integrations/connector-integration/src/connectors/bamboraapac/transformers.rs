@@ -1,10 +1,10 @@
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, RepeatPayment},
+    connector_flow::{Authorize, Capture, PSync, RSync, RepeatPayment, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -81,6 +81,18 @@ struct CaptureXml {
 struct RefundXml {
     #[serde(rename = "CustRef")]
     cust_ref: String,
+    #[serde(rename = "Receipt")]
+    receipt: String,
+    #[serde(rename = "Amount")]
+    amount: i64,
+    #[serde(rename = "Security")]
+    security: SecurityXml,
+}
+
+// VoidPC (SubmitSingleVoid) XML structure
+#[derive(Debug, Serialize)]
+#[serde(rename = "Void")]
+struct VoidXml {
     #[serde(rename = "Receipt")]
     receipt: String,
     #[serde(rename = "Amount")]
@@ -1122,6 +1134,180 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
 }
 
 // ============================================================================
+// VOIDPC FLOW STRUCTURES
+// ============================================================================
+
+// VoidPC Request Structure
+#[derive(Debug, Clone)]
+pub struct BamboraapacVoidPCRequest {
+    pub receipt: String,
+    pub amount: MinorUnit,
+    pub username: Secret<String>,
+    pub password: Secret<String>,
+}
+
+// VoidPC Response Structure (outer SOAP envelope)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct BamboraapacVoidPCResponse {
+    pub body: VoidPCBodyResponse,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VoidPCBodyResponse {
+    pub submit_single_void_response: SubmitSingleVoidResponse,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct SubmitSingleVoidResponse {
+    pub submit_single_void_result: String, // HTML-encoded XML string
+}
+
+// Inner VoidPC response structure (after decoding HTML entities)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct VoidPCResponseInner {
+    pub response_code: u8,
+    pub timestamp: Option<String>,
+    pub receipt: String,
+    pub settlement_date: Option<String>,
+    pub declined_code: Option<String>,
+    pub declined_message: Option<String>,
+}
+
+// ============================================================================
+// VOIDPC FLOW TRANSFORMERS
+// ============================================================================
+
+// VoidPC Request Transformation
+impl
+    TryFrom<
+        &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+    > for BamboraapacVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        router_data: &RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
+
+        // Get the connector transaction ID (receipt) from the request
+        let receipt = router_data.request.connector_transaction_id.clone();
+
+        // Use the captured amount from PaymentFlowData
+        let amount = router_data
+            .resource_common_data
+            .minor_amount_captured
+            .ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name: "minor_amount_captured",
+                    context: Default::default(),
+                })
+            })?;
+
+        Ok(Self {
+            receipt,
+            amount,
+            username: auth.username,
+            password: auth.password,
+        })
+    }
+}
+
+// VoidPC Response Transformation
+impl TryFrom<ResponseRouterData<BamboraapacVoidPCResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BamboraapacVoidPCResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        use common_utils::ext_traits::XmlExt;
+
+        let router_data = &item.router_data;
+
+        // Decode the HTML-encoded inner XML
+        let inner_xml = item
+            .response
+            .body
+            .submit_single_void_response
+            .submit_single_void_result
+            .replace("&lt;", "<")
+            .replace("&gt;", ">");
+
+        // Parse the inner Response XML
+        let response: VoidPCResponseInner = inner_xml.as_str().parse_xml().change_context(
+            crate::utils::response_handling_fail_for_connector(item.http_code, "bamboraapac"),
+        )?;
+
+        // Map Bambora response code to standard status (0 = Approved)
+        let status = if response.response_code == 0 {
+            common_enums::AttemptStatus::VoidPostCaptureInitiated
+        } else {
+            common_enums::AttemptStatus::Failure
+        };
+
+        // Handle error responses
+        if status == common_enums::AttemptStatus::Failure {
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Err(ErrorResponse {
+                    code: response
+                        .declined_code
+                        .clone()
+                        .unwrap_or_else(|| "DECLINED".to_string()),
+                    message: response
+                        .declined_message
+                        .clone()
+                        .unwrap_or_else(|| "Void declined".to_string()),
+                    reason: response.declined_message.clone(),
+                    status_code: item.http_code,
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
+                    connector_transaction_id: Some(response.receipt.clone()),
+                    network_decline_code: response.declined_code.clone(),
+                    network_advice_code: None,
+                    network_error_message: response.declined_message.clone(),
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Success response
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(response.receipt.clone()),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: Some(response.receipt.clone()),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data.clone()
+            },
+            response: Ok(payments_response_data),
+            ..router_data.clone()
+        })
+    }
+}
+
+// ============================================================================
 // SETUP MANDATE FLOW STRUCTURES
 // ============================================================================
 
@@ -1612,6 +1798,35 @@ impl GetSoapXml for BamboraapacRefundRequest {
     }
 }
 
+impl GetSoapXml for BamboraapacVoidPCRequest {
+    fn to_soap_xml(&self) -> String {
+        // Build the inner Void XML using quick-xml
+        let void_xml = VoidXml {
+            receipt: self.receipt.clone(),
+            amount: self.amount.get_amount_as_i64(),
+            security: SecurityXml {
+                username: self.username.peek().to_string(),
+                password: self.password.peek().to_string(),
+            },
+        };
+
+        // Serialize using quick-xml
+        let void_xml_string =
+            quick_xml::se::to_string(&void_xml).unwrap_or_else(|_| String::from("<Void/>"));
+
+        // Wrap in SOAP envelope
+        format!(
+            r#"<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:dts="http://www.ippayments.com.au/interface/api/dts">
+<soapenv:Body>
+<dts:SubmitSingleVoid>
+<dts:trnXML><![CDATA[{void_xml_string}]]></dts:trnXML>
+</dts:SubmitSingleVoid>
+</soapenv:Body>
+</soapenv:Envelope>"#
+        )
+    }
+}
+
 impl GetSoapXml for BamboraapacSyncRequest {
     fn to_soap_xml(&self) -> String {
         // Build the inner QueryTransaction XML using quick-xml
@@ -1908,6 +2123,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 RepeatPayment,
                 PaymentFlowData,
                 RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&data.router_data)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::BamboraapacRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BamboraapacVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        data: super::BamboraapacRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
                 PaymentsResponseData,
             >,
             T,

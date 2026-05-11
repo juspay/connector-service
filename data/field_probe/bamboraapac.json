@@ -756,7 +756,8 @@
     },
     "reverse": {
       "default": {
-        "status": "not_implemented"
+        "status": "error",
+        "error": "Stuck on field: minor_amount_captured — Missing required field: minor_amount_captured"
       }
     },
     "setup_recurring": {
