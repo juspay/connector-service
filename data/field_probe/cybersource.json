@@ -1209,7 +1209,7 @@
           "connector_transaction_id": "probe_connector_txn_001"
         },
         "sample": {
-          "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001/reversals",
+          "url": "https://apitest.cybersource.com/pts/v2/captures/probe_connector_txn_001/voids",
           "method": "Post",
           "headers": {
             "accept": "application/hal+json;charset=utf-8",
