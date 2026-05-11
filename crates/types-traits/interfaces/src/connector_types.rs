@@ -381,17 +381,31 @@ pub trait IncomingWebhook {
         Ok(false)
     }
 
-    fn get_webhook_integrity_check_flags(
+    /// Whether the connector includes a gateway transaction id in its payment webhook.
+    fn get_webhook_integrity_check_gateway_txn_id(
         &self,
         webhook_details: &WebhookDetailsResponse,
-    ) -> (bool, bool, bool) {
-        let has_gateway_txn_id = matches!(
+    ) -> bool {
+        matches!(
             &webhook_details.resource_id,
             Some(ResponseId::ConnectorTransactionId(id)) if !id.is_empty()
-        );
-        let has_amount = webhook_details.minor_amount_captured.is_some();
-        let has_currency = webhook_details.currency.is_some();
-        (has_gateway_txn_id, has_amount, has_currency)
+        )
+    }
+
+    /// Whether the connector includes a captured amount in its payment webhook.
+    fn get_webhook_integrity_check_amount(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        webhook_details.minor_amount_captured.is_some()
+    }
+
+    /// Whether the connector includes a currency in its payment webhook.
+    fn get_webhook_integrity_check_currency(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        webhook_details.currency.is_some()
     }
 
     fn configure_psync_integrity_checks(&self, data: &mut PaymentsSyncData) {

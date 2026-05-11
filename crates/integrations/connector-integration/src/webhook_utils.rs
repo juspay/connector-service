@@ -132,12 +132,15 @@ pub fn get_payments_webhook_content<
         )
         .attach_printable("Failed to process payment webhook from connector")?;
 
-    let (check_gtw_txn_id, check_amount, check_currency) = connector_data
-        .connector
-        .get_webhook_integrity_check_flags(&webhook_details);
-    webhook_details.integrity_check_gateway_txn_id = Some(check_gtw_txn_id);
-    webhook_details.integrity_check_amount = Some(check_amount);
-    webhook_details.integrity_check_currency = Some(check_currency);
+    webhook_details.integrity_check_gateway_txn_id = Some(
+        connector_data.connector.get_webhook_integrity_check_gateway_txn_id(&webhook_details),
+    );
+    webhook_details.integrity_check_amount = Some(
+        connector_data.connector.get_webhook_integrity_check_amount(&webhook_details),
+    );
+    webhook_details.integrity_check_currency = Some(
+        connector_data.connector.get_webhook_integrity_check_currency(&webhook_details),
+    );
 
     let response = PaymentServiceGetResponse::foreign_try_from(webhook_details)
         .change_context(WebhookError::WebhookProcessingFailed)?;

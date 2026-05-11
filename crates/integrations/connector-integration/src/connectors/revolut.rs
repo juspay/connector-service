@@ -51,6 +51,7 @@ use interfaces::{
     connector_types,
     decode::BodyDecoding,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
+    webhooks::IncomingWebhook,
 };
 use serde::Serialize;
 use transformers as revolut;
@@ -320,10 +321,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let signature =
-            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+            connector_types::IncomingWebhook::get_webhook_source_verification_signature(self, &request, &connector_webhook_secrets)?;
 
         let message =
-            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+            connector_types::IncomingWebhook::get_webhook_source_verification_message(self, &request, &connector_webhook_secrets)?;
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
@@ -389,18 +390,28 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         })
     }
 
-    fn get_webhook_integrity_check_flags(
+    fn get_webhook_integrity_check_gateway_txn_id(
         &self,
         webhook_details: &WebhookDetailsResponse,
-    ) -> (bool, bool, bool) {
-        let has_merchant_ref = webhook_details
+    ) -> bool {
+        webhook_details
             .connector_response_reference_id
             .as_deref()
-            .is_some_and(|s| !s.is_empty());
-        let has_amount   = webhook_details.minor_amount_captured.is_some();
-        let has_currency = webhook_details.currency.is_some();
+            .is_some_and(|s| !s.is_empty())
+    }
 
-        (has_merchant_ref, has_amount, has_currency)
+    fn get_webhook_integrity_check_amount(
+        &self,
+        _webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        false
+    }
+
+    fn get_webhook_integrity_check_currency(
+        &self,
+        _webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        false
     }
 
     fn configure_psync_integrity_checks(&self, data: &mut PaymentsSyncData) {
