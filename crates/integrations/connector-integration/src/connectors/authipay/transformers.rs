@@ -12,8 +12,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, ResponseId,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -1073,12 +1073,7 @@ pub struct AuthipayVoidPCRequest {
 
 impl
     TryFrom<
-        &RouterDataV2<
-            VoidPC,
-            PaymentFlowData,
-            PaymentsCancelPostCaptureData,
-            PaymentsResponseData,
-        >,
+        &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
     > for AuthipayVoidPCRequest
 {
     type Error = error_stack::Report<IntegrationError>;
@@ -1103,12 +1098,7 @@ impl
 // Status mapping reuses the existing map_void_status function
 
 impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
-    for RouterDataV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    >
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 

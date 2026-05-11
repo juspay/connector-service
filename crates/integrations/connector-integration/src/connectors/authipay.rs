@@ -28,8 +28,8 @@ use transformers as authipay;
 use transformers::{
     AuthipayAuthorizeResponse, AuthipayCaptureRequest, AuthipayCaptureResponse,
     AuthipayPaymentsRequest, AuthipayRefundRequest, AuthipayRefundResponse,
-    AuthipayRefundSyncResponse, AuthipaySyncResponse, AuthipayVoidPCRequest, AuthipayVoidPCResponse,
-    AuthipayVoidRequest, AuthipayVoidResponse,
+    AuthipayRefundSyncResponse, AuthipaySyncResponse, AuthipayVoidPCRequest,
+    AuthipayVoidPCResponse, AuthipayVoidRequest, AuthipayVoidResponse,
 };
 
 use super::macros;
