@@ -3,8 +3,7 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: authenticate flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "authorize": {
@@ -482,38 +481,32 @@
     },
     "create_customer": {
       "default": {
-        "status": "not_supported",
-        "error": "create_connector_customer flow not supported by nexixpay connector"
+        "status": "not_implemented"
       }
     },
     "create_order": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: create_order flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "create_server_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: server_authentication_token flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "create_server_session_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: server_session_authentication_token flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "dispute_accept": {
       "default": {
-        "status": "not_supported",
-        "error": "accept_dispute flow not supported by nexixpay connector"
+        "status": "not_implemented"
       }
     },
     "dispute_defend": {
       "default": {
-        "status": "not_supported",
-        "error": "defend_dispute flow not supported by nexixpay connector"
+        "status": "not_implemented"
       }
     },
     "dispute_get": {
@@ -523,8 +516,7 @@
     },
     "dispute_submit_evidence": {
       "default": {
-        "status": "not_supported",
-        "error": "submit_evidence flow not supported by nexixpay connector"
+        "status": "not_implemented"
       }
     },
     "eligibility": {
@@ -562,8 +554,7 @@
     },
     "incremental_authorization": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: incremental_authorization flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "parse_event": {
@@ -621,20 +612,17 @@
     },
     "proxy_setup_recurring": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: setup_mandate flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "recurring_charge": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: repeat_payment flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "recurring_revoke": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: mandate_revoke flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -686,14 +674,28 @@
     },
     "reverse": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: void_post_capture flow for nexixpay"
+        "status": "supported",
+        "proto_request": {
+          "merchant_reverse_id": "probe_reverse_001",
+          "connector_transaction_id": "probe_connector_txn_001"
+        },
+        "sample": {
+          "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/operations/probe_connector_txn_001/cancels",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "idempotency-key": "HS_probe00000000000000000",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
+          },
+          "body": "{}"
+        }
       }
     },
     "setup_recurring": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: setup_mandate flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "token_authorize": {
@@ -704,14 +706,12 @@
     },
     "token_setup_recurring": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: setup_mandate flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "tokenize": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: payment_method_token flow for nexixpay"
+        "status": "not_implemented"
       }
     },
     "verify_redirect": {
