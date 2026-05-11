@@ -595,12 +595,12 @@ macros::macro_connector_implementation!(
         &self,
         req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
     ) -> CustomResult<String, IntegrationError> {
-        let connector_payment_id = &req.request.connector_transaction_id;
-        if connector_payment_id.is_empty() {
+        let capture_id = &req.request.connector_transaction_id;
+        if capture_id.is_empty() {
             return Err(IntegrationError::MissingConnectorTransactionID { context: Default::default() }.into());
         }
         Ok(format!(
-            "{}pts/v2/payments/{connector_payment_id}/reversals",
+            "{}pts/v2/captures/{capture_id}/voids",
             self.connector_base_url_payments(req)
         ))
     }

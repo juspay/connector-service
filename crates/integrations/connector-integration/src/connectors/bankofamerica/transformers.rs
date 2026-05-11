@@ -2422,22 +2422,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// VoidPC (post-capture reversal) request — used with PaymentsCancelPostCaptureData.
-// Amount is not included because PaymentsCancelPostCaptureData does not carry amount/currency;
-// BankOfAmerica will reverse the full captured amount when amountDetails is omitted.
+// VoidPC (post-capture void) request — used with PaymentsCancelPostCaptureData.
+// Uses the POST /pts/v2/captures/{capture_id}/voids endpoint which only requires
+// clientReferenceInformation. No lineItems or amountDetails needed.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BankofamericaVoidPCRequest {
     client_reference_information: ClientReferenceInformation,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    reversal_information: Option<BankofamericaVoidPCReversalInformation>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BankofamericaVoidPCReversalInformation {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    reason: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -2466,15 +2457,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let reversal_information =
-            item.router_data
-                .request
-                .cancellation_reason
-                .clone()
-                .map(|reason| BankofamericaVoidPCReversalInformation {
-                    reason: Some(reason),
-                });
-
         Ok(Self {
             client_reference_information: ClientReferenceInformation {
                 code: Some(
@@ -2484,7 +2466,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .clone(),
                 ),
             },
-            reversal_information,
         })
     }
 }
