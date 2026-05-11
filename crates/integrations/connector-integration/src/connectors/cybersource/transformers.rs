@@ -14,15 +14,15 @@ use cards;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, ClientAuthenticationToken, IncrementalAuthorization,
-        PostAuthenticate, PreAuthenticate, RepeatPayment, SetupMandate, Void,
+        PostAuthenticate, PreAuthenticate, RepeatPayment, SetupMandate, Void, VoidPC,
     },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse,
         CybersourceClientAuthenticationResponse as CybersourceClientAuthenticationResponseDomain,
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RecurringMandateData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId, SetupMandateRequestData,
@@ -2770,6 +2770,101 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })?,
             },
             merchant_defined_information,
+        })
+    }
+}
+
+// VoidPC (post-capture reversal) request — used with PaymentsCancelPostCaptureData.
+// Amount is optional because PaymentsCancelPostCaptureData does not carry amount/currency;
+// Cybersource will reverse the full captured amount when amountDetails is omitted.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CybersourceVoidPCRequest {
+    client_reference_information: ClientReferenceInformation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reversal_information: Option<VoidPCReversalInformation>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoidPCReversalInformation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        CybersourceRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for CybersourceVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        value: CybersourceRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let reversal_information =
+            value
+                .router_data
+                .request
+                .cancellation_reason
+                .clone()
+                .map(|reason| VoidPCReversalInformation {
+                    reason: Some(reason),
+                });
+
+        Ok(Self {
+            client_reference_information: ClientReferenceInformation {
+                code: Some(
+                    value
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+            },
+            reversal_information,
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<CybersourcePaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_cybersource_attempt_status(
+            item.response
+                .status
+                .clone()
+                .unwrap_or(CybersourcePaymentStatus::StatusNotReceived),
+            false,
+        );
+        let response =
+            get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response,
+            ..item.router_data
         })
     }
 }
