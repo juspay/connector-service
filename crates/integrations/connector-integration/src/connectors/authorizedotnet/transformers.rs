@@ -3,12 +3,14 @@ use common_utils::{consts, pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
         Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment, SetupMandate,
+        VoidPC,
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError, WebhookError},
     payment_method_data::{
@@ -1274,6 +1276,157 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+// VoidPostCapture (Reverse) Flow — reuses the same API structure as Void
+// Authorize.net's voidTransaction works on captured-but-not-yet-settled transactions
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetTransactionVoidPCDetails {
+    // Transaction details for VoidPostCapture (same structure as Void)
+    transaction_type: TransactionType,
+    ref_trans_id: String,
+    amount: Option<f64>,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTransactionVoidPCRequest {
+    // Wraps VoidPostCapture transaction details
+    merchant_authentication: AuthorizedotnetAuthType,
+    ref_id: Option<String>,
+    transaction_request: AuthorizedotnetTransactionVoidPCDetails,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetVoidPCRequest {
+    // Top-level wrapper for VoidPostCapture Flow
+    create_transaction_request: CreateTransactionVoidPCRequest,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct AuthorizedotnetVoidPCResponse(pub AuthorizedotnetPaymentsResponse);
+
+impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetVoidPCResponse {
+    fn from(response: AuthorizedotnetPaymentsResponse) -> Self {
+        Self(response)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AuthorizedotnetVoidPCRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Extract transaction ID from the connector_transaction_id string
+        // This is the captured transaction ID to be reversed
+        let transaction_id = match router_data.request.connector_transaction_id.as_str() {
+            "" => {
+                return Err(error_stack::report!(
+                    HsInterfacesConnectorRequestError::MissingRequiredField {
+                        field_name: "connector_transaction_id",
+                        context: Default::default()
+                    }
+                ));
+            }
+            id => id.to_string(),
+        };
+
+        let ref_id = Some(
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        )
+        .filter(|id| id.len() <= MAX_ID_LENGTH);
+
+        let transaction_void_pc_details = AuthorizedotnetTransactionVoidPCDetails {
+            transaction_type: TransactionType::VoidTransaction,
+            ref_trans_id: transaction_id,
+            amount: None,
+        };
+
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&router_data.connector_config)?;
+
+        let create_transaction_void_pc_request = CreateTransactionVoidPCRequest {
+            merchant_authentication,
+            ref_id,
+            transaction_request: transaction_void_pc_details,
+        };
+
+        Ok(Self {
+            create_transaction_request: create_transaction_void_pc_request,
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidPCResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetVoidPCResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        // Use our helper function to convert the response
+        let (status, response_result, connector_response_data) =
+            convert_to_payments_response_data_or_error(
+                &response.0,
+                http_code,
+                Operation::VoidPostCapture,
+                None,
+                router_data
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
+            );
+
+        // Create a new RouterDataV2 with updated fields
+        let mut new_router_data = router_data;
+
+        // Update the status and connector_response in resource_common_data
+        let mut resource_common_data = new_router_data.resource_common_data.clone();
+        resource_common_data.status = status;
+        resource_common_data.connector_response = connector_response_data;
+        new_router_data.resource_common_data = resource_common_data;
+
+        // Set the response
+        new_router_data.response = response_result;
+
+        Ok(new_router_data)
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransactionDetails {
@@ -2309,6 +2462,7 @@ pub enum Operation {
     Authorize,
     Capture,
     Void,
+    VoidPostCapture,
     Refund,
 }
 
@@ -2327,6 +2481,7 @@ fn get_hs_status(
     if response.transaction_response.is_none() {
         return match operation {
             Operation::Void => AttemptStatus::Voided,
+            Operation::VoidPostCapture => AttemptStatus::VoidedPostCapture,
             Operation::Authorize | Operation::Capture => AttemptStatus::Pending,
             Operation::Refund => AttemptStatus::Failure,
         };
@@ -2356,6 +2511,7 @@ fn get_hs_status(
                             },
                             Operation::Capture | Operation::Refund => AttemptStatus::Charged,
                             Operation::Void => AttemptStatus::Voided,
+                            Operation::VoidPostCapture => AttemptStatus::VoidedPostCapture,
                         }
                     }
                 }
@@ -2429,6 +2585,7 @@ pub fn convert_to_payments_response_data_or_error(
             | AttemptStatus::AuthenticationPending
             | AttemptStatus::Charged
             | AttemptStatus::Voided
+            | AttemptStatus::VoidedPostCapture
     );
 
     // Extract connector response data from transaction response if available
@@ -2504,6 +2661,20 @@ pub fn convert_to_payments_response_data_or_error(
             ))
         }
         None if status == AttemptStatus::Voided && operation == Operation::Void => {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::NoResponseId,
+                redirection_data: None,
+                connector_metadata: None,
+                mandate_reference: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: http_status_code,
+            })
+        }
+        None if status == AttemptStatus::VoidedPostCapture
+            && operation == Operation::VoidPostCapture =>
+        {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::NoResponseId,
                 redirection_data: None,
