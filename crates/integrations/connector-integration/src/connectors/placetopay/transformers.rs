@@ -1,10 +1,10 @@
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Void, VoidPC},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsCancelPostCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -250,6 +250,61 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             auth,
             internal_reference,
             action,
+            authorization: None,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PlacetopayRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PlacetopayNextActionRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: PlacetopayRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
+        let internal_reference = item
+            .router_data
+            .request
+            .connector_transaction_id
+            .parse::<u64>()
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
+        let action = PlacetopayNextAction::Reverse;
+        // Extract the authorization code stored during the original payment
+        let authorization = match item
+            .router_data
+            .resource_common_data
+            .connector_feature_data
+            .clone()
+        {
+            Some(metadata) => metadata.expose().as_str().map(|auth| auth.to_string()),
+            None => None,
+        };
+        Ok(Self {
+            auth,
+            internal_reference,
+            action,
+            authorization: authorization.map(Secret::new),
         })
     }
 }
@@ -377,6 +432,8 @@ pub struct PlacetopayNextActionRequest {
     auth: PlacetopayAuth,
     internal_reference: u64,
     action: PlacetopayNextAction,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    authorization: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -418,6 +475,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             auth,
             internal_reference,
             action,
+            authorization: None,
         })
     }
 }
