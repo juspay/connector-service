@@ -14,13 +14,13 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, PSync, PaymentMethodToken, RSync, Refund,
-        RepeatPayment, Void,
+        RepeatPayment, Void, VoidPC,
     },
     connector_types::{
         ClientAuthenticationTokenRequestData, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -42,7 +42,7 @@ use transformers::{
     BraintreePaymentsResponse, BraintreeRSyncRequest, BraintreeRSyncResponse,
     BraintreeRefundRequest, BraintreeRefundResponse, BraintreeRepeatPaymentRequest,
     BraintreeRepeatPaymentResponse, BraintreeSessionResponse, BraintreeTokenRequest,
-    BraintreeTokenResponse,
+    BraintreeTokenResponse, BraintreeVoidPCRequest, BraintreeVoidPCResponse,
 };
 
 use super::macros;
@@ -183,6 +183,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Braintree<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Braintree<T>
 {
 }
@@ -256,6 +260,12 @@ macros::create_all_prerequisites!(
             request_body: BraintreeCancelRequest,
             response_body: BraintreeCancelResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: VoidPC,
+            request_body: BraintreeVoidPCRequest,
+            response_body: BraintreeVoidPCResponse,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ),
         (
             flow: ClientAuthenticationToken,
@@ -559,6 +569,34 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Braintree,
+    curl_request: Json(BraintreeVoidPCRequest),
+    curl_response: BraintreeVoidPCResponse,
+    flow_name: VoidPC,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCancelPostCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Braintree,
     curl_request: Json(BraintreeClientTokenRequest),
     curl_response: BraintreeSessionResponse,
     flow_name: ClientAuthenticationToken,
@@ -690,6 +728,5 @@ macros::macro_connector_flow_status_impls!(
         PreAuthenticate,
         Authenticate,
         PostAuthenticate,
-        VoidPC,
     ],
 );
