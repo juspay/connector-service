@@ -1,4 +1,3 @@
-use base64::{engine::general_purpose, Engine as _};
 use common_utils::errors::CustomResult;
 use domain_types::{
     errors::{IntegrationError, IntegrationErrorContext},
@@ -19,7 +18,7 @@ pub fn merge_config_with_override(
     match config_override.trim().is_empty() {
         true => Ok(Arc::new(config)),
         false => {
-            let mut override_patch: ConfigPatch = serde_json::from_str(config_override.trim())
+            let override_patch: ConfigPatch = serde_json::from_str(config_override.trim())
                 .map_err(|e| {
                     Report::new(IntegrationError::InvalidDataFormat {
                         field_name: "config_override",
@@ -31,55 +30,6 @@ pub fn merge_config_with_override(
                         },
                     })
                 })?;
-
-            if let Some(proxy_patch) = override_patch.proxy.as_mut() {
-                if let Some(mitm_patch) = proxy_patch.mitm.as_mut().and_then(|m| m.as_mut()) {
-                    if let Some(cert_input) = mitm_patch.ca_cert.as_ref().and_then(|v| v.as_ref()) {
-                        let cert_trimmed = cert_input.trim();
-
-                        let cert = if cert_trimmed.is_empty() {
-                            Err(Report::new(IntegrationError::InvalidDataFormat {
-                                field_name: "proxy.mitm.ca_cert",
-                                context: IntegrationErrorContext {
-                                    additional_context: Some(
-                                        "proxy.mitm.ca_cert must be base64-encoded".to_string(),
-                                    ),
-                                    ..Default::default()
-                                },
-                            }))
-                        } else {
-                            let sanitized: String = cert_trimmed.split_whitespace().collect();
-                            let decoded = general_purpose::STANDARD
-                                .decode(sanitized.as_bytes())
-                                .map_err(|e| {
-                                    Report::new(IntegrationError::InvalidDataFormat {
-                                        field_name: "proxy.mitm.ca_cert",
-                                        context: IntegrationErrorContext {
-                                            additional_context: Some(format!(
-                                                "Invalid base64 for proxy.mitm.ca_cert: {e}"
-                                            )),
-                                            ..Default::default()
-                                        },
-                                    })
-                                })?;
-
-                            String::from_utf8(decoded).map_err(|e| {
-                                Report::new(IntegrationError::InvalidDataFormat {
-                                    field_name: "proxy.mitm.ca_cert",
-                                    context: IntegrationErrorContext {
-                                        additional_context: Some(format!(
-                                            "Decoded proxy.mitm.ca_cert is not valid UTF-8: {e}"
-                                        )),
-                                        ..Default::default()
-                                    },
-                                })
-                            })
-                        }?;
-
-                        mitm_patch.ca_cert = Some(Some(cert));
-                    }
-                }
-            }
 
             let mut merged_config = config;
             merged_config.apply(override_patch);
@@ -113,7 +63,6 @@ pub fn connectors_with_connector_config_overrides_on_connectors(
 ) -> CustomResult<Connectors, IntegrationError> {
     match connector_config.connector_config_override_patch() {
         Some(config_override) => {
-            // Parse the override patch from JSON Value
             let override_patch: ConfigPatch = serde_json::from_value(config_override.clone())
                 .map_err(|e| {
                     Report::new(IntegrationError::InvalidDataFormat {
@@ -127,7 +76,6 @@ pub fn connectors_with_connector_config_overrides_on_connectors(
                     })
                 })?;
 
-            // If there's a connectors patch, apply it
             if let Some(connectors_patch) = override_patch.connectors {
                 let mut merged_connectors = base_connectors;
                 merged_connectors.apply(connectors_patch);
@@ -150,7 +98,6 @@ pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
             }
             Value::Object(merged)
         }
-        // override replaces base for primitive, null, or array
         (_, override_val) => override_val.clone(),
     }
 }

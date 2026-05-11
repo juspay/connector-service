@@ -580,73 +580,65 @@ impl Connectors {
     }
 }
 
-#[derive(
-    Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, Default, config_patch_derive::Patch,
-)]
-pub struct MitmProxy {
+/// A single named proxy entry — URL(s) and optional CA cert for TLS verification.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, Default)]
+pub struct Proxy {
     pub https_url: Option<String>,
     pub http_url: Option<String>,
-    #[serde(default)]
-    pub enabled: bool,
     pub ca_cert: Option<String>,
 }
 
-impl MitmProxy {
-    /// Returns the CA cert PEM if MITM is enabled and a non-empty cert is configured.
-    pub fn active_ca_cert(&self) -> Option<&str> {
-        if self.enabled {
-            self.ca_cert
-                .as_deref()
-                .filter(|c| !c.trim().is_empty())
-                .map(str::trim)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, config_patch_derive::Patch)]
-pub struct Proxy {
-    pub http_url: Option<String>,
-    pub https_url: Option<String>,
-    pub idle_pool_connection_timeout: Option<u64>,
-    pub bypass_proxy_urls: Vec<String>,
-    #[serde(default)]
-    pub mitm: Option<MitmProxy>,
-}
-
 impl Proxy {
-    /// Returns the effective proxy URL for the given shadow_mode.
-    /// Shadow mode uses the mitm proxy; primary mode uses the direct squid proxy.
-    pub fn effective_https_url(&self, shadow_mode: bool) -> Option<&str> {
-        if shadow_mode {
-            self.mitm.as_ref().and_then(|m| m.https_url.as_deref())
-        } else {
-            self.https_url.as_deref()
-        }
+    pub fn active_ca_cert(&self) -> Option<&str> {
+        self.ca_cert
+            .as_deref()
+            .filter(|c| !c.trim().is_empty())
+            .map(str::trim)
+    }
+}
+
+/// Top-level proxy configuration. Named proxy entries live under `proxies`.
+/// Selection at runtime: `shadow_mode=true` → `proxies["shadow"]`, else `proxies["primary"]`.
+#[derive(
+    Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Default, config_patch_derive::Patch,
+)]
+pub struct ProxyConfig {
+    pub idle_pool_connection_timeout: Option<u64>,
+    #[serde(default)]
+    pub bypass_urls: Vec<String>,
+    /// Named proxy entries. Treated as a full replacement on config override (same as api_tags.tags).
+    #[serde(default)]
+    pub proxies: HashMap<String, Proxy>,
+}
+
+impl ProxyConfig {
+    pub fn get(&self, name: &str) -> Option<&Proxy> {
+        self.proxies.get(name)
     }
 
-    pub fn effective_http_url(&self, shadow_mode: bool) -> Option<&str> {
-        if shadow_mode {
-            self.mitm.as_ref().and_then(|m| m.http_url.as_deref())
-        } else {
-            self.http_url.as_deref()
-        }
+    pub fn effective_https_url(&self, proxy_name: &str) -> Option<&str> {
+        self.get(proxy_name).and_then(|e| e.https_url.as_deref())
     }
 
-    pub fn cache_key(&self, should_bypass_proxy: bool, shadow_mode: bool) -> Option<(Self, bool)> {
-        if should_bypass_proxy
-            || (self.effective_https_url(shadow_mode).is_none()
-                && self.effective_http_url(shadow_mode).is_none())
-        {
-            None
-        } else {
-            Some((self.clone(), shadow_mode))
-        }
+    pub fn effective_http_url(&self, proxy_name: &str) -> Option<&str> {
+        self.get(proxy_name).and_then(|e| e.http_url.as_deref())
     }
 
-    pub fn is_proxy_configured(&self, should_bypass_proxy: bool) -> bool {
-        should_bypass_proxy || (self.http_url.is_none() && self.https_url.is_none())
+    /// Cache key for the reqwest client cache: keyed on the resolved `Proxy` entry + its name.
+    /// Returns `None` if bypassing or no URL configured for the given proxy name.
+    pub fn cache_key(
+        &self,
+        should_bypass_proxy: bool,
+        proxy_name: &str,
+    ) -> Option<(Proxy, String)> {
+        if should_bypass_proxy {
+            return None;
+        }
+        let entry = self.get(proxy_name)?;
+        if entry.https_url.is_none() && entry.http_url.is_none() {
+            return None;
+        }
+        Some((entry.clone(), proxy_name.to_string()))
     }
 }
 

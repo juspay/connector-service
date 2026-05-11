@@ -144,7 +144,6 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod unit {
-    use base64::{engine::general_purpose, Engine as _};
     use common_utils::{config_patch::Patch, consts, metadata::MaskedMetadata};
     use config_patch_derive::Patch as PatchDerive;
     use grpc_server::utils::merge_config_with_override;
@@ -298,76 +297,42 @@ mod unit {
     }
 
     #[test]
-    fn test_proxy_mitm_cert_override_base64() {
-        let pem = "-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----\n";
-        let encoded = general_purpose::STANDARD.encode(pem.as_bytes());
+    fn test_proxy_basic_override() {
         let override_json = json!({
             "proxy": {
-                "mitm": {
-                    "ca_cert": encoded
-                }
-            }
+                "idle_pool_connection_timeout": 45,
+                "bypass_urls": ["http://no-proxy.local"],
+            },
         });
         let new_config = apply_override(override_json);
+        assert_eq!(new_config.proxy.idle_pool_connection_timeout, Some(45));
         assert_eq!(
-            new_config
-                .proxy
-                .mitm
-                .as_ref()
-                .and_then(|m| m.ca_cert.as_deref()),
-            Some(pem)
+            new_config.proxy.bypass_urls,
+            vec!["http://no-proxy.local".to_string()]
         );
     }
 
     #[test]
-    fn test_proxy_mitm_cert_override_rejects_pem() {
-        let base_config = base_config();
-        let override_json = json!({
-            "proxy": {
-                "mitm": {
-                    "ca_cert": "-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----\n"
-                }
-            }
-        });
-        let result = merge_config_with_override(override_json.to_string(), base_config.clone());
-        assert!(
-            result.is_err(),
-            "config_from_metadata should reject raw PEM in proxy.mitm.ca_cert override"
-        );
-    }
-
-    #[test]
-    fn test_proxy_basic_override() {
+    fn test_proxy_named_entry_override() {
         let pem = "-----BEGIN CERTIFICATE-----\nTEST_CERT\n-----END CERTIFICATE-----\n";
-        let encoded = general_purpose::STANDARD.encode(pem.as_bytes());
         let override_json = json!({
             "proxy": {
-                "http_url": "http://proxy.local",
-                "https_url": null,
-                "idle_pool_connection_timeout": 45,
-                "bypass_proxy_urls": ["http://no-proxy.local"],
-                "mitm": {
-                    "enabled": true,
-                    "https_url": "http://mitm.local",
-                    "ca_cert": encoded
+                "proxies": {
+                    "shadow": {
+                        "https_url": "http://shadow.local",
+                        "ca_cert": pem
+                    }
                 }
             },
         });
         let new_config = apply_override(override_json);
-        assert_eq!(
-            new_config.proxy.http_url.as_deref(),
-            Some("http://proxy.local")
-        );
-        assert_eq!(new_config.proxy.https_url, None);
-        assert_eq!(new_config.proxy.idle_pool_connection_timeout, Some(45));
-        assert_eq!(
-            new_config.proxy.bypass_proxy_urls,
-            vec!["http://no-proxy.local".to_string()]
-        );
-        let mitm = new_config.proxy.mitm.as_ref().expect("mitm should be set");
-        assert!(mitm.enabled);
-        assert_eq!(mitm.https_url.as_deref(), Some("http://mitm.local"));
-        assert_eq!(mitm.ca_cert.as_deref(), Some(pem));
+        let shadow = new_config
+            .proxy
+            .proxies
+            .get("shadow")
+            .expect("shadow proxy should be set");
+        assert_eq!(shadow.https_url.as_deref(), Some("http://shadow.local"));
+        assert_eq!(shadow.ca_cert.as_deref(), Some(pem));
     }
 
     #[test]

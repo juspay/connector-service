@@ -18,7 +18,7 @@ use domain_types::{
     errors::ApiErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::Proxy,
+    types::{Proxy, ProxyConfig},
     ConnectorError,
 };
 #[cfg(feature = "injector-client")]
@@ -371,7 +371,7 @@ pub struct EventProcessingParams<'a> {
 )]
 #[allow(clippy::too_many_arguments)]
 pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Resp>(
-    proxy: &Proxy,
+    proxy: &ProxyConfig,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
@@ -394,6 +394,11 @@ where
         + AdditionalHeaders,
 {
     let start = tokio::time::Instant::now();
+    let proxy_name = if event_params.shadow_mode {
+        "shadow"
+    } else {
+        "primary"
+    };
     let transport_type = connector.get_transport_type();
     let result = match (call_connector_action, transport_type) {
         // handle_response removed from proto (PaymentServiceGetRequest field 5 reserved)
@@ -549,8 +554,8 @@ where
                             token_data,
                             headers,
                             proxy
-                                .effective_https_url(event_params.shadow_mode)
-                                .or(proxy.effective_http_url(event_params.shadow_mode))
+                                .effective_https_url(proxy_name)
+                                .or(proxy.effective_http_url(proxy_name))
                                 .map(|url| Secret::new(url.to_string())),
                             vault_headers,
                         );
@@ -861,7 +866,7 @@ pub type RouterResult<T> = CustomResult<T, ApiErrorResponse>;
 pub type RouterResponse<T> = CustomResult<ApplicationResponse<T>, ApiErrorResponse>;
 
 pub async fn call_connector_api(
-    proxy: &Proxy,
+    proxy: &ProxyConfig,
     request: Request,
     _flow_name: &str,
     test_mode: bool,
@@ -869,12 +874,14 @@ pub async fn call_connector_api(
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url = Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
-    let should_bypass_proxy = proxy.bypass_proxy_urls.contains(&url.to_string());
+    let should_bypass_proxy = proxy.bypass_urls.contains(&url.to_string());
+
+    let proxy_name = if shadow_mode { "shadow" } else { "primary" };
 
     let client = create_client(
         proxy,
         should_bypass_proxy,
-        shadow_mode,
+        proxy_name,
         request.certificate,
         request.certificate_key,
         test_mode,
@@ -1031,9 +1038,9 @@ pub async fn call_connector_api(
 }
 
 pub fn create_client(
-    proxy_config: &Proxy,
+    proxy_config: &ProxyConfig,
     should_bypass_proxy: bool,
-    shadow_mode: bool,
+    proxy_name: &str,
     client_certificate: Option<Secret<String>>,
     client_certificate_key: Option<Secret<String>>,
     test_mode: bool,
@@ -1041,7 +1048,7 @@ pub fn create_client(
     match (client_certificate.clone(), client_certificate_key.clone()) {
         (Some(encoded_certificate), Some(encoded_certificate_key)) => {
             let client_builder =
-                get_client_builder(proxy_config, should_bypass_proxy, shadow_mode, test_mode)?;
+                get_client_builder(proxy_config, should_bypass_proxy, proxy_name, test_mode)?;
 
             let identity = create_identity_from_certificate_and_key(
                 encoded_certificate.clone(),
@@ -1060,19 +1067,19 @@ pub fn create_client(
                 .change_context(ApiClientError::ClientConstructionFailed)
                 .attach_printable("Failed to construct client with certificate and certificate key")
         }
-        _ => get_base_client(proxy_config, should_bypass_proxy, shadow_mode, test_mode),
+        _ => get_base_client(proxy_config, should_bypass_proxy, proxy_name, test_mode),
     }
 }
 
 static DEFAULT_CLIENT: OnceCell<Client> = OnceCell::new();
-static PROXY_CLIENT_CACHE: OnceCell<RwLock<HashMap<(Proxy, bool), Client>>> = OnceCell::new();
+static PROXY_CLIENT_CACHE: OnceCell<RwLock<HashMap<(Proxy, String), Client>>> = OnceCell::new();
 
 fn get_or_create_proxy_client(
-    cache: &RwLock<HashMap<(Proxy, bool), Client>>,
-    cache_key: (Proxy, bool),
-    proxy_config: &Proxy,
+    cache: &RwLock<HashMap<(Proxy, String), Client>>,
+    cache_key: (Proxy, String),
+    proxy_config: &ProxyConfig,
     should_bypass_proxy: bool,
-    shadow_mode: bool,
+    proxy_name: &str,
     test_mode: bool,
 ) -> CustomResult<Client, ApiClientError> {
     let read_result = cache
@@ -1104,7 +1111,7 @@ fn get_or_create_proxy_client(
                     let new_client = get_client_builder(
                         proxy_config,
                         should_bypass_proxy,
-                        shadow_mode,
+                        proxy_name,
                         test_mode,
                     )?
                     .build()
@@ -1123,12 +1130,12 @@ fn get_or_create_proxy_client(
 }
 
 fn get_base_client(
-    proxy_config: &Proxy,
+    proxy_config: &ProxyConfig,
     should_bypass_proxy: bool,
-    shadow_mode: bool,
+    proxy_name: &str,
     test_mode: bool,
 ) -> CustomResult<Client, ApiClientError> {
-    if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy, shadow_mode) {
+    if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy, proxy_name) {
         tracing::debug!(
             "Using proxy-specific client cache with key: {:?}",
             cache_key
@@ -1141,7 +1148,7 @@ fn get_base_client(
             cache_key,
             proxy_config,
             should_bypass_proxy,
-            shadow_mode,
+            proxy_name,
             test_mode,
         )?;
 
@@ -1152,7 +1159,7 @@ fn get_base_client(
         let client = DEFAULT_CLIENT
             .get_or_try_init(|| {
                 tracing::info!("Initializing DEFAULT_CLIENT (no proxy configuration)");
-                get_client_builder(proxy_config, should_bypass_proxy, shadow_mode, test_mode)?
+                get_client_builder(proxy_config, should_bypass_proxy, proxy_name, test_mode)?
                     .build()
                     .change_context(ApiClientError::ClientConstructionFailed)
                     .attach_printable("Failed to construct default client")
@@ -1175,9 +1182,9 @@ fn load_custom_ca_certificate_from_content(
 }
 
 fn get_client_builder(
-    proxy_config: &Proxy,
+    proxy_config: &ProxyConfig,
     should_bypass_proxy: bool,
-    shadow_mode: bool,
+    proxy_name: &str,
     test_mode: bool,
 ) -> CustomResult<reqwest::ClientBuilder, ApiClientError> {
     let mut client_builder = Client::builder()
@@ -1198,15 +1205,14 @@ fn get_client_builder(
         return Ok(client_builder);
     }
 
-    if let Some(cert) = shadow_mode
-        .then_some(proxy_config.mitm.as_ref())
-        .flatten()
-        .and_then(|m| m.active_ca_cert())
+    if let Some(cert) = proxy_config
+        .get(proxy_name)
+        .and_then(|p| p.active_ca_cert())
     {
         client_builder = load_custom_ca_certificate_from_content(client_builder, cert)?;
     }
 
-    if let Some(url) = proxy_config.effective_https_url(shadow_mode) {
+    if let Some(url) = proxy_config.effective_https_url(proxy_name) {
         client_builder = client_builder.proxy(
             reqwest::Proxy::https(url)
                 .change_context(ApiClientError::InvalidProxyConfiguration)
@@ -1219,7 +1225,7 @@ fn get_client_builder(
         );
     }
 
-    if let Some(url) = proxy_config.effective_http_url(shadow_mode) {
+    if let Some(url) = proxy_config.effective_http_url(proxy_name) {
         client_builder = client_builder.proxy(
             reqwest::Proxy::http(url)
                 .change_context(ApiClientError::InvalidProxyConfiguration)
