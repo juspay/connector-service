@@ -673,7 +673,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-
 macros::macro_connector_flow_status_impls!(
     connector: Worldpay,
     generic_type: T,
