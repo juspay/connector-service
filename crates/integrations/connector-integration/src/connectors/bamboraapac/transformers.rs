@@ -1182,13 +1182,20 @@ pub struct VoidPCResponseInner {
 // ============================================================================
 
 // VoidPC Request Transformation
-impl TryFrom<&RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>>
-    for BamboraapacVoidPCRequest
+impl
+    TryFrom<
+        &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+    > for BamboraapacVoidPCRequest
 {
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
-        router_data: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        router_data: &RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
         let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
