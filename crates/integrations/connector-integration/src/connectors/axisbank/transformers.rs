@@ -34,6 +34,10 @@ use serde::Serialize;
 pub use crate::connectors::juspay_upi_stack::crypto::get_current_timestamp_ms;
 pub use crate::connectors::juspay_upi_stack::transformers::build_error_response;
 pub use crate::connectors::juspay_upi_stack::transformers::extract_merchant_identifiers_from_metadata;
+pub use crate::connectors::juspay_upi_stack::transformers::{map_refund_status, map_transaction_status};
+pub use crate::connectors::juspay_upi_stack::types::{
+    GatewayResponseCode, OuterResponseCode, PayCallbackPayload, RefundCallbackPayload,
+};
 
 /// Auth configuration for Axis Bank.
 /// This struct extracts Axis-specific fields from ConnectorSpecificConfig.
@@ -312,4 +316,39 @@ impl TryFrom<ResponseRouterData<AxisbankRefundSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         handle_rsync_response(resp.response, resp.http_code, resp.router_data)
     }
+}
+
+// ============================================================
+// WEBHOOK — Helper types and status mapping
+// ============================================================
+
+/// Distinguishes a payment callback from a refund callback by probing field presence.
+///
+/// A payment callback always has `merchantRequestId` and `gatewayTransactionId`.
+/// A refund callback always has `refundRequestId` (absent in payment callbacks).
+#[derive(Debug, serde::Deserialize)]
+pub struct AxisbankWebhookTypeProbe {
+    #[serde(rename = "refundRequestId")]
+    pub refund_request_id: Option<String>,
+}
+
+/// Map an Axis Bank gateway response code (from a payment callback) to `AttemptStatus`.
+///
+/// Axis Bank uses the same `gatewayResponseCode` values as in PSync responses,
+/// so we reuse the shared `GatewayResponseCode` + `map_transaction_status` logic.
+pub fn webhook_gateway_code_to_attempt_status(
+    gateway_response_code: &str,
+) -> common_enums::AttemptStatus {
+    use crate::connectors::juspay_upi_stack::types::OuterResponseCode;
+    // Payment callbacks do not carry the outer responseCode; map directly from gateway code.
+    map_transaction_status(OuterResponseCode::Success, Some(gateway_response_code))
+}
+
+/// Map an Axis Bank gateway response code (from a refund callback) to `RefundStatus`.
+pub fn webhook_gateway_code_to_refund_status(
+    refund_type: &str,
+    gateway_response_code: &str,
+    gateway_response_status: &str,
+) -> common_enums::RefundStatus {
+    map_refund_status(refund_type, gateway_response_code, gateway_response_status)
 }
