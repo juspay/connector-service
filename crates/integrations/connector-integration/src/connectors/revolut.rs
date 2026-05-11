@@ -403,8 +403,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         (has_merchant_ref, has_amount, has_currency)
     }
 
-    fn get_psync_integrity_check_flags(&self) -> (bool, bool, bool) {
-        (true, false, false)
+    fn configure_psync_integrity_checks(&self, data: &mut PaymentsSyncData) {
+        data.integrity_check_gateway_txn_id = Some(true);
+        data.integrity_check_amount = Some(false);
+        data.integrity_check_currency = Some(false);
     }
 }
 

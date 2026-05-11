@@ -382,7 +382,9 @@ pub struct PaymentsSyncData {
     pub integrity_object: Option<PaymentSynIntegrityObject>,
     pub split_payments: Option<SplitPaymentsRequest>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
-    pub integrity_check_flags: Option<(bool, bool, bool)>,
+    pub integrity_check_gateway_txn_id: Option<bool>,
+    pub integrity_check_amount: Option<bool>,
+    pub integrity_check_currency: Option<bool>,
 }
 
 impl PaymentsSyncData {
@@ -1868,9 +1870,9 @@ pub struct WebhookDetailsResponse {
     pub currency: Option<Currency>,
     pub network_txn_id: Option<String>,
     pub payment_method_update: Option<PaymentMethodUpdate>,
-    /// Tuple of (has_gateway_txn_id, has_amount, has_currency) integrity check flags.
-    /// Indicates which fields are present in the webhook payload for downstream integrity checks.
-    pub integrity_check_flags: Option<(bool, bool, bool)>,
+    pub integrity_check_gateway_txn_id: Option<bool>,
+    pub integrity_check_amount: Option<bool>,
+    pub integrity_check_currency: Option<bool>,
 }
 
 /// Typed reference extracted from a webhook payload during the stateless ParseEvent phase.

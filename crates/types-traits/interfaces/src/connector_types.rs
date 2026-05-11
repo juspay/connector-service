@@ -394,8 +394,10 @@ pub trait IncomingWebhook {
         (has_gateway_txn_id, has_amount, has_currency)
     }
 
-    fn get_psync_integrity_check_flags(&self) -> (bool, bool, bool) {
-        (true, true, true)
+    fn configure_psync_integrity_checks(&self, data: &mut PaymentsSyncData) {
+        data.integrity_check_gateway_txn_id = Some(true);
+        data.integrity_check_amount = Some(true);
+        data.integrity_check_currency = Some(true);
     }
 
     /// fn get_webhook_source_verification_signature

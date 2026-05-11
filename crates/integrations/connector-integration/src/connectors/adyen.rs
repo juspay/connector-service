@@ -1041,7 +1041,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_reason,
             network_txn_id,
             payment_method_update,
-            integrity_check_flags: None,
+            integrity_check_gateway_txn_id: None,
+            integrity_check_amount: None,
+            integrity_check_currency: None,
         })
     }
 

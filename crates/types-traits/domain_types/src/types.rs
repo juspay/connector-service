@@ -5567,7 +5567,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             all_keys_required: None, // Field not available in new proto structure
             split_payments: None,
             setup_future_usage,
-            integrity_check_flags: None,
+            integrity_check_gateway_txn_id: None,
+            integrity_check_amount: None,
+            integrity_check_currency: None,
         })
     }
 }
@@ -6120,9 +6122,10 @@ pub fn generate_payment_sync_response(
                 let has_currency = amount.as_ref().map(|m| m.currency != 0).unwrap_or(false);
 
                 // Gate flags by connector capability: suppress checks for fields the
-                // connector never sends in webhooks (e.g. Revolut omits amount/currency).
-                let (cap_txn_id, cap_amount, cap_currency) =
-                    router_data_v2.request.integrity_check_flags.unwrap_or((true, true, true));
+                // connector never sends in PSync (e.g. Revolut omits amount/currency).
+                let cap_txn_id  = router_data_v2.request.integrity_check_gateway_txn_id.unwrap_or(true);
+                let cap_amount  = router_data_v2.request.integrity_check_amount.unwrap_or(true);
+                let cap_currency = router_data_v2.request.integrity_check_currency.unwrap_or(true);
 
                 Ok(PaymentServiceGetResponse {
                     connector_transaction_id: extract_connector_request_reference_id(
@@ -6226,8 +6229,9 @@ pub fn generate_payment_sync_response(
                 let has_amount   = amount.as_ref().map(|m| m.minor_amount != 0).unwrap_or(false);
                 let has_currency = amount.as_ref().map(|m| m.currency != 0).unwrap_or(false);
 
-                let (cap_txn_id, cap_amount, cap_currency) =
-                    router_data_v2.request.integrity_check_flags.unwrap_or((true, true, true));
+                let cap_txn_id  = router_data_v2.request.integrity_check_gateway_txn_id.unwrap_or(true);
+                let cap_amount  = router_data_v2.request.integrity_check_amount.unwrap_or(true);
+                let cap_currency = router_data_v2.request.integrity_check_currency.unwrap_or(true);
 
                 Ok(PaymentServiceGetResponse {
                     connector_transaction_id: resource_id.unwrap_or_default(),
@@ -7066,11 +7070,9 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
     fn foreign_try_from(
         value: WebhookDetailsResponse,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // Extract integrity flags once — used both for field suppression and for
-        // emitting the explicit flags downstream so euler-api-txns can configure
-        // per-dimension skip in its IntegrityService.
-        let (check_gtw_txn_id, check_amount, check_currency) =
-            value.integrity_check_flags.unwrap_or((true, true, true));
+        let check_gtw_txn_id = value.integrity_check_gateway_txn_id.unwrap_or(true);
+        let check_amount = value.integrity_check_amount.unwrap_or(true);
+        let check_currency = value.integrity_check_currency.unwrap_or(true);
 
         let status = grpc_api_types::payments::PaymentStatus::foreign_from(value.status);
         let response_headers = value
