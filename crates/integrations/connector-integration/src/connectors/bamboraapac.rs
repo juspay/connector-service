@@ -46,7 +46,7 @@ use transformers::{
     BamboraapacPaymentRequest, BamboraapacRSyncRequest, BamboraapacRSyncResponse,
     BamboraapacRefundRequest, BamboraapacRefundResponse, BamboraapacRepeatPaymentRequest,
     BamboraapacRepeatPaymentResponse, BamboraapacSetupMandateRequest,
-    BamboraapacSetupMandateResponse,
+    BamboraapacSetupMandateResponse, BamboraapacVoidPCRequest, BamboraapacVoidPCResponse,
 };
 
 use super::macros;
@@ -274,6 +274,13 @@ macros::create_all_prerequisites!(
             response_body: BamboraapacRepeatPaymentResponse,
             response_format: xml,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: VoidPC,
+            request_body: BamboraapacVoidPCRequest,
+            response_body: BamboraapacVoidPCResponse,
+            response_format: xml,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -570,6 +577,30 @@ macros::macro_connector_implementation!(
     }
 );
 
+// Implement VoidPC (VoidPostCapture / Reverse) flow using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_headers, get_error_response_v2, get_content_type],
+    connector: Bamboraapac,
+    curl_request: SoapXml(BamboraapacVoidPCRequest),
+    curl_response: BamboraapacVoidPCResponse,
+    flow_name: VoidPC,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCancelPostCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_url(
+            &self,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}/dts.asmx", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
 // Empty implementations for unsupported flows
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -633,16 +664,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Bamboraapac<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Bamboraapac<T>
 {
 }
 
