@@ -89,7 +89,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         TransportType::Http
     }
 
-    /// returns kafka topic
+    /// returns kafka topic; default returns Err(NotImplemented).
     fn get_kafka_topic(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
@@ -101,7 +101,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         .into())
     }
 
-    /// returns kafka key
+    /// returns kafka key; default returns Ok(None) since the key is optional in Kafka semantics.
     fn get_kafka_key(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
@@ -109,6 +109,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         Ok(None)
     }
 
+    /// returns kafka record; default returns Err(NotImplemented).
     fn build_kafka_record(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
@@ -138,7 +139,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         ))
     }
 
-    /// accepts the raw api response and decodes it
+    /// accepts the raw api response and decodes it; default returns Err(ResponseHandlingFailed).
     fn handle_response_v2(
         &self,
         _data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,

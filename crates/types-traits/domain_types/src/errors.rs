@@ -258,7 +258,10 @@ impl IntegrationError {
     }
 
     /// Connector flow not implemented; formats a canonical `{flow} flow for {connector}` message.
-    pub fn connector_flow_not_implemented(connector: &str, flow: impl Into<String>) -> Self {
+    pub fn connector_flow_not_implemented(
+        connector: impl Into<String>,
+        flow: impl Into<String>,
+    ) -> Self {
         Self::connector_flow_not_implemented_with_context(
             connector,
             flow,
@@ -268,10 +271,11 @@ impl IntegrationError {
 
     /// Like [`Self::connector_flow_not_implemented`], but allows connector-specific context.
     pub fn connector_flow_not_implemented_with_context(
-        connector: &str,
+        connector: impl Into<String>,
         flow: impl Into<String>,
         context: IntegrationErrorContext,
     ) -> Self {
+        let connector = connector.into();
         let flow = flow.into();
         Self::not_implemented_with_context(format!("{flow} flow for {connector}"), context)
     }

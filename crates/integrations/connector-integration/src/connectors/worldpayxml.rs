@@ -86,11 +86,6 @@ macros::macro_connector_payout_implementation!(
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Worldpayxml<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Worldpayxml<T>
 {
 }
@@ -123,31 +118,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Worldpayxml<T>
 {
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::Accept,
-        domain_types::connector_types::DisputeFlowData,
-        domain_types::connector_types::AcceptDisputeData,
-        domain_types::connector_types::DisputeResponseData,
-    > for Worldpayxml<T>
-{
-    fn get_url(
-        &self,
-        _req: &RouterDataV2<
-            domain_types::connector_flow::Accept,
-            domain_types::connector_types::DisputeFlowData,
-            domain_types::connector_types::AcceptDisputeData,
-            domain_types::connector_types::DisputeResponseData,
-        >,
-    ) -> CustomResult<String, IntegrationError> {
-        Err(error_stack::report!(IntegrationError::FlowNotSupported {
-            flow: "accept_dispute".to_string(),
-            connector: "Worldpayxml".to_string(),
-            context: Default::default(),
-        }))
-    }
 }
 
 macros::create_all_prerequisites!(
@@ -542,5 +512,8 @@ macros::macro_connector_flow_status_impls!(
         ClientAuthenticationToken,
         MandateRevoke,
         CreateOrder,
+    ],
+    not_supported: [
+        Accept,
     ],
 );

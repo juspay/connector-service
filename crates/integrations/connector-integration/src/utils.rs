@@ -101,31 +101,35 @@ pub fn missing_field_err(
     })
 }
 
-pub fn flow_not_implemented(connector: &str, flow: impl Into<String>) -> Report<IntegrationError> {
+/// Stub helper for flows the connector hasn't wired up yet; returns `IntegrationError::NotImplemented`.
+pub fn flow_not_implemented(
+    connector: impl Into<String>,
+    flow: impl Into<String>,
+) -> Report<IntegrationError> {
     Report::new(IntegrationError::connector_flow_not_implemented(
-        connector,
-        flow.into(),
+        connector, flow,
     ))
 }
 
+/// Stub helper for flows the connector will never support; returns `IntegrationError::FlowNotSupported`.
 pub fn flow_not_supported(
     connector: impl Into<String>,
     flow: impl Into<String>,
 ) -> Report<IntegrationError> {
     Report::new(IntegrationError::connector_flow_not_supported(
-        connector,
-        flow.into(),
+        connector, flow,
     ))
 }
 
-/// Sentinel for flows whose transport is not HTTP (e.g. Kafka-only paths).
-/// Returns `FlowNotSupported` instead of panicking, so a stray `get_url`
-/// caller surfaces a structured error rather than crashing the process.
+/// Sentinel for flows that issue no HTTP request (Kafka-only transports such as
+/// `sanlam` Authorize, or the `verify_webhook_source` no-call adapter). Returns
+/// `FlowNotSupported` instead of panicking so a stray `get_url` call surfaces a
+/// structured error rather than crashing the process.
 pub fn no_request_url(
-    connector: &str,
+    connector: impl Into<String>,
     flow: impl Into<String>,
 ) -> CustomResult<String, IntegrationError> {
-    Err(flow_not_supported(connector.to_string(), flow))
+    Err(flow_not_supported(connector, flow))
 }
 
 /// Build [`errors::IntegrationErrorContext`] with explicit `additional_context` and `suggested_action`
