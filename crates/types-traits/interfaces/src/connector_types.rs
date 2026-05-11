@@ -34,6 +34,9 @@ use domain_types::{
     router_data::ConnectorSpecificConfig,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
+    surcharge::surcharge_types::{
+        SurchargeCalculateRequest, SurchargeCalculateResponse, SurchargeFlowData,
+    },
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
@@ -89,6 +92,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PayoutCreateLinkV2
     + PayoutCreateRecipientV2
     + PayoutEnrollDisburseAccountV2
+    + SurchargeCalculateV2
 {
 }
 
@@ -734,6 +738,16 @@ pub trait PayoutEnrollDisburseAccountV2:
     PayoutFlowData,
     PayoutEnrollDisburseAccountRequest,
     PayoutEnrollDisburseAccountResponse,
+>
+{
+}
+
+pub trait SurchargeCalculateV2:
+    ConnectorIntegrationV2<
+    connector_flow::SurchargeCalculate,
+    SurchargeFlowData,
+    SurchargeCalculateRequest,
+    SurchargeCalculateResponse,
 >
 {
 }
