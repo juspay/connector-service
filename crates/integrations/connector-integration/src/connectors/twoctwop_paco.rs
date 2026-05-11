@@ -944,8 +944,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// ---------- IncomingWebhook stub ----------
-
+// ---------- IncomingWebhook ----------
+//
+// PACO supports backend webhook notifications (JOSE-encrypted, same wire
+// envelope as API responses) for hosted-page wallet flows and async
+// settlement state changes. The verification path needs the merchant's
+// encryption private key, which is per-merchant and reaches us via
+// `ConnectorSpecificConfig::TwoctwopPaco` — i.e. the same auth bundle
+// the API flows use.
+//
+// Intentionally left as the default empty impl for now: the trait's
+// default `verify_webhook_source` returns Ok(false), which rejects
+// every incoming webhook as unverified. That is fail-closed by design.
+// Until a wired implementation lands, merchants should poll
+// `/Inquiry/transactionStatus` (PSync) to get final state for the
+// hosted-page and post-3DS flows.
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for TwoctwopPaco<T>
 {

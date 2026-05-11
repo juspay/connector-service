@@ -39,6 +39,11 @@ const PACO_PREFERRED_PAYMENT_TYPE_GCASH: &str = "WALLET-GCASH";
 const PACO_REFUND_MAKER_ID: &str = "merchant";
 const PACO_KID_HEX_LEN: usize = 32;
 const PACO_OFFICE_ID_MAX_LEN: usize = 20;
+/// Audience claim PACO requires on every JWT envelope.
+pub const PACO_AUDIENCE: &str = "PacoAudience";
+/// TTL applied to outgoing JWT envelopes. PACO's published sample script
+/// uses 5 minutes; anything past that returns a "JWT expired" error.
+const PACO_JWT_TTL_SECONDS: i64 = 300;
 
 /// PACO finalised-status response code prefix used by every successful response.
 pub const PACO_RESPONSE_CODE_SUCCESS: &str = "PC-B050000";
@@ -753,8 +758,10 @@ pub enum PacoPaymentStep {
     ST,
     /// Voided.
     VD,
-    /// Refunded.
+    /// Refunded (final).
     RF,
+    /// Refund Requested (in flight).
+    RR,
     /// Awaiting Challenge.
     AC,
     /// Initiated / Pending.
@@ -775,21 +782,44 @@ fn map_attempt_status(status: &PacoPaymentStatus, step: &PacoPaymentStep) -> Att
         (PacoPaymentStatus::S, PacoPaymentStep::ST) => AttemptStatus::Charged,
         (PacoPaymentStatus::V, PacoPaymentStep::VD) => AttemptStatus::Voided,
         (PacoPaymentStatus::R, PacoPaymentStep::RF) => AttemptStatus::Charged,
+        (PacoPaymentStatus::R, PacoPaymentStep::RR) => AttemptStatus::Charged,
         (PacoPaymentStatus::I, PacoPaymentStep::AC) => AttemptStatus::AuthenticationPending,
         (PacoPaymentStatus::Pcps, PacoPaymentStep::GP) => AttemptStatus::AuthenticationPending,
         (PacoPaymentStatus::P, PacoPaymentStep::IN) => AttemptStatus::Authorizing,
         (PacoPaymentStatus::P, PacoPaymentStep::RP) => AttemptStatus::Pending,
         (PacoPaymentStatus::F, _) => AttemptStatus::Failure,
-        _ => AttemptStatus::Pending,
+        // Unknown PACO (status, step) pairs MUST map to Failure, not Pending:
+        // an indefinite "Pending" leaves the merchant unable to retry safely
+        // and risks a double-debit when PACO has actually finalised the
+        // payment in a state we don't yet model. New PACO state codes should
+        // be added explicitly above.
+        (s, st) => {
+            tracing::warn!(
+                target: "twoctwop_paco",
+                paymentStatus = ?s,
+                paymentStep = ?st,
+                "twoctwop_paco: unknown (paymentStatus, paymentStep) pair — defaulting to Failure"
+            );
+            AttemptStatus::Failure
+        }
     }
 }
 
 fn map_refund_status(status: &PacoPaymentStatus, step: &PacoPaymentStep) -> RefundStatus {
     match (status, step) {
         (PacoPaymentStatus::R, PacoPaymentStep::RF) => RefundStatus::Success,
+        (PacoPaymentStatus::R, PacoPaymentStep::RR) => RefundStatus::Pending,
         (PacoPaymentStatus::P, PacoPaymentStep::RP) => RefundStatus::Pending,
         (PacoPaymentStatus::F, _) => RefundStatus::Failure,
-        _ => RefundStatus::Pending,
+        (s, st) => {
+            tracing::warn!(
+                target: "twoctwop_paco",
+                paymentStatus = ?s,
+                paymentStep = ?st,
+                "twoctwop_paco: unknown (paymentStatus, paymentStep) pair — defaulting refund to Failure"
+            );
+            RefundStatus::Failure
+        }
     }
 }
 
@@ -1665,11 +1695,11 @@ impl<'a> PacoJoseClaims<'a> {
         let now = time::OffsetDateTime::now_utc().unix_timestamp();
         Self {
             iss: access_token,
-            aud: "PacoAudience",
+            aud: PACO_AUDIENCE,
             company_api_key: access_token,
             iat: now,
             nbf: now,
-            exp: now + 5 * 60,
+            exp: now + PACO_JWT_TTL_SECONDS,
             request,
         }
     }
@@ -1723,15 +1753,27 @@ pub fn decode_jose_response<R: for<'de> Deserialize<'de>>(
         )
     })?;
     let trimmed = compact.trim().trim_matches('"');
-    let claims = common_utils::crypto::jose::decrypt_then_verify(trimmed, &auth.jose_cfg)
-        .map_err(|err| {
-            error_stack::report!(
-                errors::ConnectorError::response_deserialization_failed_with_context(
-                    status_code,
-                    Some(format!("JOSE decrypt+verify failed: {err}")),
-                )
+    // PACO's response JWT carries the merchant's access_token as aud (the
+    // mirror of our request's iss). Validate aud + temporal claims so a
+    // captured response can't be replayed indefinitely. 60s skew tolerates
+    // clock drift between us and PACO.
+    let validation = common_utils::crypto::jose::JoseClaimValidation {
+        expected_audience: Some(auth.access_token.peek().clone()),
+        clock_skew_seconds: 60,
+    };
+    let claims = common_utils::crypto::jose::decrypt_then_verify_with_claims(
+        trimmed,
+        &auth.jose_cfg,
+        Some(&validation),
+    )
+    .map_err(|err| {
+        error_stack::report!(
+            errors::ConnectorError::response_deserialization_failed_with_context(
+                status_code,
+                Some(format!("JOSE decrypt+verify failed: {err}")),
             )
-        })?;
+        )
+    })?;
     let inner = match claims.get("response") {
         Some(value) => value.clone(),
         None => claims,

@@ -1,20 +1,35 @@
 //! JOSE (JSON Object Signing and Encryption) helpers for connectors that
 //! wrap requests in a PS256 JWS inside an RSA-OAEP / A128CBC-HS256 JWE.
 //!
-//! Used by 2C2P PACO and reusable for any future connector with the same
-//! envelope shape. Two non-obvious facts are isolated here so they don't
-//! leak into every consumer:
+//! Reusable across any JOSE-using connector with the same envelope shape
+//! (request: PS256 JWS → RSA-OAEP/A128CBC-HS256 JWE; response: inverse).
+//! Two non-obvious facts are isolated here so they don't leak into every
+//! consumer:
 //!
 //! 1. **josekit 0.8.7's `RsassaPssJwsAlgorithm::from_pem` rejects PKCS#8
 //!    PEMs with the generic-RSA OID** (`1.2.840.113549.1.1.1`). Real
-//!    RSA-4096 keys we receive from PACO carry that OID rather than the
+//!    RSA-4096 keys we see in practice carry that OID rather than the
 //!    `id-RSASSA-PSS` OID josekit looks for, so we reach for `openssl`
 //!    directly with explicit PSS padding parameters.
 //!
-//! 2. **PACO's published public PEMs ship without a newline before
-//!    `-----END...-----`.** OpenSSL refuses to parse those. We fix it once
-//!    at [`JoseConfig::new`] so callers don't have to think about it on
-//!    every request.
+//! 2. **Some counterparties publish PEMs without the newline before
+//!    `-----END...-----`.** OpenSSL refuses to parse those. We fix it
+//!    once at [`JoseConfig::new`] so callers don't have to think about
+//!    it on every request.
+//!
+//! ### Threat model
+//!
+//! - **Algorithm confusion**: enforced. The JWE `alg` is hard-coded to
+//!   RSA-OAEP and `enc` to A128CBC-HS256; the JWS `alg` is hard-coded to
+//!   PS256. We do not negotiate or accept alternate algorithms from a
+//!   response header.
+//! - **Weak keys**: enforced at [`JoseConfig::new`]. All four RSA keys
+//!   must be ≥ 2048 bits, matching NIST SP 800-131A acceptance.
+//! - **Replay**: optionally enforced via [`JoseClaimValidation`].
+//!   Callers that want replay protection on response JWTs must pass an
+//!   expected `aud` and the helper will then validate `exp` / `nbf`.
+//!   Without that, the decrypted payload is returned verbatim and the
+//!   caller takes responsibility for any temporal checks.
 
 use base64::Engine;
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -29,11 +44,28 @@ use serde::Serialize;
 
 use crate::consts::BASE64_ENGINE_URL_SAFE_NO_PAD;
 
+/// Minimum RSA key size (in bits) acceptable for any of the four PEMs.
+/// Matches the NIST SP 800-131A floor; OpenSSL otherwise accepts 1024.
+const MIN_RSA_BITS: u32 = 2048;
+
+/// Hard-coded JWS algorithm header. We never accept anything else.
+const JWS_ALG: &str = "PS256";
+/// Hard-coded JWE key-wrap algorithm header. We never accept anything else.
+const JWE_ALG: &str = "RSA-OAEP";
+/// Hard-coded JWE content encryption header.
+const JWE_ENC: &str = "A128CBC-HS256";
+
 /// Errors raised by the JOSE pipeline.
 #[derive(Debug, thiserror::Error)]
 pub enum JoseError {
     #[error("Invalid PEM key material for {context}")]
     InvalidKey { context: &'static str },
+    #[error("RSA key for {context} is shorter than {min_bits} bits ({actual_bits} bits)")]
+    KeyTooSmall {
+        context: &'static str,
+        min_bits: u32,
+        actual_bits: u32,
+    },
     #[error("Failed to sign JWS")]
     SigningFailed,
     #[error("Failed to verify JWS signature")]
@@ -44,77 +76,164 @@ pub enum JoseError {
     DecryptionFailed,
     #[error("Failed to serialise claims to JSON")]
     SerdeSerializeFailed,
-    #[error("Decrypted JWS payload is not valid JSON")]
-    SerdeDeserializeFailed,
+    /// Catch-all for any failure after the JWE/JWS layers have completed —
+    /// includes invalid UTF-8 in the JWS payload, malformed JSON, missing
+    /// or wrong-type claim fields, etc. Distinguishable variants here would
+    /// leak which post-decryption stage failed.
+    #[error("Decrypted payload could not be parsed")]
+    PayloadParseFailed,
     #[error("Compact JWS does not have three dot-separated segments")]
     MalformedJws,
+    #[error("JWE protected header algorithm {got} does not match expected {expected}")]
+    UnexpectedJweAlgorithm {
+        got: String,
+        expected: &'static str,
+    },
+    #[error("JWE protected header content encryption {got} does not match expected {expected}")]
+    UnexpectedJweContentEncryption {
+        got: String,
+        expected: &'static str,
+    },
+    #[error("JWT claim validation failed: {reason}")]
+    ClaimValidationFailed { reason: &'static str },
 }
 
-/// Bundle of credentials needed by [`sign_then_encrypt`] / [`decrypt_then_verify`].
+/// Bundle of credentials needed by [`sign_then_encrypt`] /
+/// [`decrypt_then_verify`].
 ///
-/// Generic over connectors — naming is deliberately non-PACO-specific so
-/// other JOSE-using connectors (e.g. Juspay UPI Stack, future Paymob /
-/// Geidea) can adopt the same struct with their own `kid` + key set.
-/// PEM normalisation runs once at [`JoseConfig::new`] time.
+/// Field names are deliberately generic — the four PEMs carry the
+/// signer/encrypter roles, not the institution names. PEM normalisation
+/// runs once at [`JoseConfig::new`] time and the minimum RSA key size is
+/// enforced at the same point.
+///
+/// Naming convention:
+/// - `*_signing_private_key` — signs outbound JWS (sender role).
+/// - `*_encryption_private_key` — decrypts inbound JWE (receiver role).
+/// - `*_signing_public_key` — verifies inbound JWS.
+/// - `*_encryption_public_key` — seals outbound JWE against.
+///
+/// "self" is this side; "peer" is the counterparty.
 #[derive(Debug, Clone)]
 pub struct JoseConfig {
     /// Environment-specific JWE key id placed in the JWE protected header.
-    /// PACO uses this to pick which decryption key to apply on the gateway side.
+    /// The peer uses this to pick which decryption key to apply on its side.
     pub kid: String,
-    /// Merchant-side RSA private key that signs the JWS.
-    pub merchant_signing_private_key: Secret<String>,
-    /// Merchant-side RSA private key that decrypts the response JWE.
-    pub merchant_encryption_private_key: Secret<String>,
-    /// Counterparty (PACO) public key that verifies the response JWS.
-    pub paco_signing_public_key: Secret<String>,
-    /// Counterparty (PACO) public key that the request JWE is sealed against.
-    pub paco_encryption_public_key: Secret<String>,
+    /// This side's RSA private key that signs the outbound JWS.
+    pub self_signing_private_key: Secret<String>,
+    /// This side's RSA private key that decrypts the inbound JWE.
+    pub self_encryption_private_key: Secret<String>,
+    /// Counterparty public key used to verify the inbound JWS.
+    pub peer_signing_public_key: Secret<String>,
+    /// Counterparty public key the outbound JWE is sealed against.
+    pub peer_encryption_public_key: Secret<String>,
+}
+
+/// Optional JWT claim assertions applied after JWS verification.
+///
+/// Callers that care about replay protection on signed responses pass an
+/// expected `aud` (or leave it `None` to skip the audience check) and the
+/// helper enforces `exp` / `nbf` against `clock_skew_seconds`. Pass the
+/// whole struct as `None` to skip these checks entirely (appropriate for
+/// envelopes whose freshness is gated by an outer transport, but document
+/// the threat model when doing so).
+#[derive(Debug, Clone)]
+pub struct JoseClaimValidation {
+    /// Required `aud` claim value. `None` skips the audience check while
+    /// still enforcing `exp` / `nbf`. Some counterparties (PACO) emit a
+    /// response `aud` equal to the merchant's access-token — a value
+    /// known only at runtime — so a `String` is more flexible than
+    /// `&'static str`.
+    pub expected_audience: Option<String>,
+    /// Clock skew tolerance for `exp` / `nbf` checks.
+    pub clock_skew_seconds: i64,
+}
+
+impl JoseClaimValidation {
+    pub fn new(expected_audience: impl Into<String>) -> Self {
+        Self {
+            expected_audience: Some(expected_audience.into()),
+            clock_skew_seconds: 30,
+        }
+    }
+
+    /// Skip the `aud` check entirely — still enforces `exp` / `nbf`.
+    pub fn temporal_only() -> Self {
+        Self {
+            expected_audience: None,
+            clock_skew_seconds: 30,
+        }
+    }
 }
 
 impl JoseConfig {
-    /// Construct a [`JoseConfig`], normalising the four PEMs and verifying
-    /// every key parses with OpenSSL. Fails fast on bad credentials so the
-    /// gRPC response is a precise validation error instead of a vague
-    /// runtime "request encoding failed".
+    /// Construct a [`JoseConfig`], normalising the four PEMs, verifying
+    /// every key parses with OpenSSL, and rejecting any RSA key under
+    /// [`MIN_RSA_BITS`].
     pub fn new(
         kid: String,
-        merchant_signing_private_key: Secret<String>,
-        merchant_encryption_private_key: Secret<String>,
-        paco_signing_public_key: Secret<String>,
-        paco_encryption_public_key: Secret<String>,
+        self_signing_private_key: Secret<String>,
+        self_encryption_private_key: Secret<String>,
+        peer_signing_public_key: Secret<String>,
+        peer_encryption_public_key: Secret<String>,
     ) -> Result<Self, JoseError> {
         let cfg = Self {
             kid,
-            merchant_signing_private_key: normalise_pem_secret(merchant_signing_private_key),
-            merchant_encryption_private_key: normalise_pem_secret(merchant_encryption_private_key),
-            paco_signing_public_key: normalise_pem_secret(paco_signing_public_key),
-            paco_encryption_public_key: normalise_pem_secret(paco_encryption_public_key),
+            self_signing_private_key: normalise_pem_secret(self_signing_private_key),
+            self_encryption_private_key: normalise_pem_secret(self_encryption_private_key),
+            peer_signing_public_key: normalise_pem_secret(peer_signing_public_key),
+            peer_encryption_public_key: normalise_pem_secret(peer_encryption_public_key),
         };
         cfg.validate_keys()?;
         Ok(cfg)
     }
 
     fn validate_keys(&self) -> Result<(), JoseError> {
-        PKey::private_key_from_pem(self.merchant_signing_private_key.peek().as_bytes())
-            .map_err(|_| JoseError::InvalidKey {
-                context: "merchant_signing_private_key",
-            })?;
-        PKey::private_key_from_pem(self.merchant_encryption_private_key.peek().as_bytes())
-            .map_err(|_| JoseError::InvalidKey {
-                context: "merchant_encryption_private_key",
-            })?;
-        PKey::public_key_from_pem(self.paco_signing_public_key.peek().as_bytes()).map_err(|_| {
-            JoseError::InvalidKey {
-                context: "paco_signing_public_key",
-            }
-        })?;
-        PKey::public_key_from_pem(self.paco_encryption_public_key.peek().as_bytes()).map_err(
-            |_| JoseError::InvalidKey {
-                context: "paco_encryption_public_key",
-            },
+        validate_private_pem(
+            self.self_signing_private_key.peek(),
+            "self_signing_private_key",
+        )?;
+        validate_private_pem(
+            self.self_encryption_private_key.peek(),
+            "self_encryption_private_key",
+        )?;
+        validate_public_pem(
+            self.peer_signing_public_key.peek(),
+            "peer_signing_public_key",
+        )?;
+        validate_public_pem(
+            self.peer_encryption_public_key.peek(),
+            "peer_encryption_public_key",
         )?;
         Ok(())
     }
+}
+
+fn validate_private_pem(pem: &str, context: &'static str) -> Result<(), JoseError> {
+    let pkey =
+        PKey::private_key_from_pem(pem.as_bytes()).map_err(|_| JoseError::InvalidKey { context })?;
+    let bits = pkey.bits();
+    if bits < MIN_RSA_BITS {
+        return Err(JoseError::KeyTooSmall {
+            context,
+            min_bits: MIN_RSA_BITS,
+            actual_bits: bits,
+        });
+    }
+    Ok(())
+}
+
+fn validate_public_pem(pem: &str, context: &'static str) -> Result<(), JoseError> {
+    let pkey =
+        PKey::public_key_from_pem(pem.as_bytes()).map_err(|_| JoseError::InvalidKey { context })?;
+    let bits = pkey.bits();
+    if bits < MIN_RSA_BITS {
+        return Err(JoseError::KeyTooSmall {
+            context,
+            min_bits: MIN_RSA_BITS,
+            actual_bits: bits,
+        });
+    }
+    Ok(())
 }
 
 /// Sign a serialisable claim set with PS256, then seal the resulting JWS
@@ -122,24 +241,75 @@ impl JoseConfig {
 /// compact JWE — five dot-separated base64url segments.
 pub fn sign_then_encrypt<T: Serialize>(claims: &T, cfg: &JoseConfig) -> Result<String, JoseError> {
     let payload = serde_json::to_vec(claims).map_err(|_| JoseError::SerdeSerializeFailed)?;
-    let jws = sign_jws_ps256(&payload, cfg.merchant_signing_private_key.peek())?;
+    let jws = sign_jws_ps256(&payload, cfg.self_signing_private_key.peek())?;
     encrypt_jwe_rsa_oaep(
         jws.as_bytes(),
         &cfg.kid,
-        cfg.paco_encryption_public_key.peek(),
+        cfg.peer_encryption_public_key.peek(),
     )
 }
 
-/// Inverse of [`sign_then_encrypt`]: decrypt the compact JWE, verify the
-/// inner JWS signature, and return the inner JSON payload.
+/// Inverse of [`sign_then_encrypt`] without temporal claim checks: decrypt
+/// the compact JWE, verify the inner JWS signature, return the inner JSON
+/// payload verbatim.
+///
+/// Use [`decrypt_then_verify_with_claims`] when the envelope's `aud` /
+/// `exp` / `nbf` claims must be validated for replay protection.
 pub fn decrypt_then_verify(
     jwe_compact: &str,
     cfg: &JoseConfig,
 ) -> Result<serde_json::Value, JoseError> {
-    let jws_bytes = decrypt_jwe_rsa_oaep(jwe_compact, cfg.merchant_encryption_private_key.peek())?;
-    let jws = std::str::from_utf8(&jws_bytes).map_err(|_| JoseError::DecryptionFailed)?;
-    let payload = verify_jws_ps256(jws, cfg.paco_signing_public_key.peek())?;
-    serde_json::from_slice(&payload).map_err(|_| JoseError::SerdeDeserializeFailed)
+    decrypt_then_verify_with_claims(jwe_compact, cfg, None)
+}
+
+/// Same as [`decrypt_then_verify`] but additionally validates the JWT
+/// claims when `validation` is provided.
+pub fn decrypt_then_verify_with_claims(
+    jwe_compact: &str,
+    cfg: &JoseConfig,
+    validation: Option<&JoseClaimValidation>,
+) -> Result<serde_json::Value, JoseError> {
+    let jws_bytes = decrypt_jwe_rsa_oaep(jwe_compact, cfg.self_encryption_private_key.peek())?;
+    let jws = std::str::from_utf8(&jws_bytes).map_err(|_| JoseError::PayloadParseFailed)?;
+    let payload = verify_jws_ps256(jws, cfg.peer_signing_public_key.peek())?;
+    let value: serde_json::Value =
+        serde_json::from_slice(&payload).map_err(|_| JoseError::PayloadParseFailed)?;
+    if let Some(v) = validation {
+        enforce_claim_validation(&value, v)?;
+    }
+    Ok(value)
+}
+
+fn enforce_claim_validation(
+    payload: &serde_json::Value,
+    v: &JoseClaimValidation,
+) -> Result<(), JoseError> {
+    let now = time::OffsetDateTime::now_utc().unix_timestamp();
+    let obj = payload
+        .as_object()
+        .ok_or(JoseError::ClaimValidationFailed { reason: "claims-not-object" })?;
+
+    if let Some(expected) = v.expected_audience.as_deref() {
+        let aud = obj
+            .get("aud")
+            .and_then(|v| v.as_str())
+            .ok_or(JoseError::ClaimValidationFailed { reason: "missing-aud" })?;
+        if aud != expected {
+            return Err(JoseError::ClaimValidationFailed { reason: "aud-mismatch" });
+        }
+    }
+
+    if let Some(exp) = obj.get("exp").and_then(|v| v.as_i64()) {
+        if now > exp + v.clock_skew_seconds {
+            return Err(JoseError::ClaimValidationFailed { reason: "exp-elapsed" });
+        }
+    }
+    if let Some(nbf) = obj.get("nbf").and_then(|v| v.as_i64()) {
+        if now + v.clock_skew_seconds < nbf {
+            return Err(JoseError::ClaimValidationFailed { reason: "nbf-not-yet" });
+        }
+    }
+    Ok(())
 }
 
 // ---------- PEM normalisation ----------
@@ -149,7 +319,7 @@ fn normalise_pem_secret(secret: Secret<String>) -> Secret<String> {
     Secret::new(normalise_pem(&raw))
 }
 
-/// PACO's published public PEMs sometimes drop the newline before
+/// Some counterparties publish PEMs without the newline before
 /// `-----END-----`. OpenSSL rejects that. Fix it idempotently.
 fn normalise_pem(pem: &str) -> String {
     let trimmed = pem.trim();
@@ -161,8 +331,8 @@ fn normalise_pem(pem: &str) -> String {
     let mut chars = trimmed.chars().peekable();
     while let Some(ch) = chars.next() {
         out.push(ch);
-        // Insert a newline before any `-----END` that didn't already
-        // start a new line.
+        // Insert a newline before any `-----END` that didn't already start
+        // a new line.
         if ch != '\n' && chars.peek() == Some(&'-') {
             let lookahead: String = chars.clone().take(8).collect();
             if lookahead.starts_with("-----END") {
@@ -179,14 +349,14 @@ fn normalise_pem(pem: &str) -> String {
 // ---------- PS256 JWS via OpenSSL ----------
 
 fn sign_jws_ps256(payload: &[u8], private_key_pem: &str) -> Result<String, JoseError> {
-    let header = serde_json::json!({ "alg": "PS256", "typ": "JWT" });
+    let header = serde_json::json!({ "alg": JWS_ALG, "typ": "JWT" });
     let header_b64 = BASE64_ENGINE_URL_SAFE_NO_PAD.encode(header.to_string());
     let payload_b64 = BASE64_ENGINE_URL_SAFE_NO_PAD.encode(payload);
     let signing_input = format!("{header_b64}.{payload_b64}");
 
     let pkey = PKey::private_key_from_pem(private_key_pem.as_bytes()).map_err(|_| {
         JoseError::InvalidKey {
-            context: "merchant_signing_private_key",
+            context: "self_signing_private_key",
         }
     })?;
 
@@ -215,6 +385,22 @@ fn verify_jws_ps256(jws_compact: &str, public_key_pem: &str) -> Result<Vec<u8>, 
     if parts.len() != 3 {
         return Err(JoseError::MalformedJws);
     }
+
+    // Assert the protected header announces PS256 — defence in depth against
+    // an attacker that swaps `alg` to `none` or downgrades to HMAC.
+    let header_bytes = BASE64_ENGINE_URL_SAFE_NO_PAD
+        .decode(parts[0])
+        .map_err(|_| JoseError::VerificationFailed)?;
+    let header: serde_json::Value =
+        serde_json::from_slice(&header_bytes).map_err(|_| JoseError::VerificationFailed)?;
+    let alg = header
+        .get("alg")
+        .and_then(|v| v.as_str())
+        .ok_or(JoseError::VerificationFailed)?;
+    if alg != JWS_ALG {
+        return Err(JoseError::VerificationFailed);
+    }
+
     let signing_input = format!("{}.{}", parts[0], parts[1]);
     let sig = BASE64_ENGINE_URL_SAFE_NO_PAD
         .decode(parts[2])
@@ -225,7 +411,7 @@ fn verify_jws_ps256(jws_compact: &str, public_key_pem: &str) -> Result<Vec<u8>, 
 
     let pkey =
         PKey::public_key_from_pem(public_key_pem.as_bytes()).map_err(|_| JoseError::InvalidKey {
-            context: "paco_signing_public_key",
+            context: "peer_signing_public_key",
         })?;
 
     let mut verifier =
@@ -260,13 +446,13 @@ fn encrypt_jwe_rsa_oaep(
     public_key_pem: &str,
 ) -> Result<String, JoseError> {
     let mut header = JweHeader::new();
-    header.set_content_encryption("A128CBC-HS256");
+    header.set_content_encryption(JWE_ENC);
     header.set_key_id(kid);
 
     let encrypter = RsaesJweAlgorithm::RsaOaep
         .encrypter_from_pem(public_key_pem.as_bytes())
         .map_err(|_| JoseError::InvalidKey {
-            context: "paco_encryption_public_key",
+            context: "peer_encryption_public_key",
         })?;
 
     josekit::jwe::serialize_compact(plaintext, &header, &encrypter)
@@ -277,10 +463,44 @@ fn decrypt_jwe_rsa_oaep(
     jwe_compact: &str,
     private_key_pem: &str,
 ) -> Result<Vec<u8>, JoseError> {
+    // Parse the protected header explicitly so we can assert alg / enc
+    // before handing it to josekit. This rejects an attacker that flips
+    // the JWE to e.g. `alg: dir` (direct encryption) or
+    // `enc: A256GCM` and counts on josekit's default behaviour.
+    let first_dot = jwe_compact
+        .find('.')
+        .ok_or(JoseError::DecryptionFailed)?;
+    let header_b64 = &jwe_compact[..first_dot];
+    let header_bytes = BASE64_ENGINE_URL_SAFE_NO_PAD
+        .decode(header_b64)
+        .map_err(|_| JoseError::DecryptionFailed)?;
+    let header: serde_json::Value =
+        serde_json::from_slice(&header_bytes).map_err(|_| JoseError::DecryptionFailed)?;
+    let alg = header
+        .get("alg")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    if alg != JWE_ALG {
+        return Err(JoseError::UnexpectedJweAlgorithm {
+            got: alg.to_string(),
+            expected: JWE_ALG,
+        });
+    }
+    let enc = header
+        .get("enc")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default();
+    if enc != JWE_ENC {
+        return Err(JoseError::UnexpectedJweContentEncryption {
+            got: enc.to_string(),
+            expected: JWE_ENC,
+        });
+    }
+
     let decrypter = RsaesJweAlgorithm::RsaOaep
         .decrypter_from_pem(private_key_pem.as_bytes())
         .map_err(|_| JoseError::InvalidKey {
-            context: "merchant_encryption_private_key",
+            context: "self_encryption_private_key",
         })?;
 
     let (plaintext, _header) = josekit::jwe::deserialize_compact(jwe_compact, &decrypter)
@@ -291,16 +511,17 @@ fn decrypt_jwe_rsa_oaep(
 #[cfg(test)]
 mod tests {
     #![allow(clippy::expect_used, clippy::unwrap_used)]
-    use hyperswitch_masking::Secret;
+    use hyperswitch_masking::{PeekInterface, Secret};
     use openssl::{pkey::PKey, rsa::Rsa};
     use serde::{Deserialize, Serialize};
 
     use super::{
-        decrypt_then_verify, normalise_pem, sign_then_encrypt, JoseConfig, JoseError,
+        decrypt_then_verify, decrypt_then_verify_with_claims, normalise_pem, sign_then_encrypt,
+        JoseClaimValidation, JoseConfig, JoseError,
     };
 
-    fn keypair_pems() -> (String, String) {
-        let rsa = Rsa::generate(2048).expect("generate rsa");
+    fn keypair_pems(bits: u32) -> (String, String) {
+        let rsa = Rsa::generate(bits).expect("generate rsa");
         let pkey = PKey::from_rsa(rsa).expect("pkey");
         let priv_pem = pkey.private_key_to_pem_pkcs8().expect("priv pem");
         let pub_pem = pkey.public_key_to_pem().expect("pub pem");
@@ -310,71 +531,57 @@ mod tests {
         )
     }
 
-    fn config_from(
-        merchant_priv: String,
-        paco_pub_sign: String,
-        paco_pub_enc: String,
-        merchant_priv_dec: String,
-    ) -> JoseConfig {
-        JoseConfig::new(
-            "test-kid-32-hex-chars-deadbeefcafe".to_string(),
-            Secret::new(merchant_priv),
-            Secret::new(merchant_priv_dec),
-            Secret::new(paco_pub_sign),
-            Secret::new(paco_pub_enc),
-        )
-        .expect("config")
-    }
-
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
     struct Claims {
         iss: String,
+        aud: String,
+        exp: i64,
+        nbf: i64,
         n: u32,
+    }
+
+    fn sender_config() -> (JoseConfig, String) {
+        let (self_sign_priv, self_sign_pub) = keypair_pems(2048);
+        let (peer_enc_priv, peer_enc_pub) = keypair_pems(2048);
+        let cfg = JoseConfig::new(
+            "test-kid".into(),
+            Secret::new(self_sign_priv),
+            Secret::new(peer_enc_priv),
+            Secret::new(self_sign_pub.clone()),
+            Secret::new(peer_enc_pub),
+        )
+        .expect("cfg");
+        (cfg, self_sign_pub)
     }
 
     #[test]
     fn round_trip_sign_encrypt_then_decrypt_verify() {
-        // Two distinct keypairs, one for signing-side, one for encryption-side.
-        let (merchant_sign_priv, merchant_sign_pub) = keypair_pems();
-        let (counterparty_enc_priv, counterparty_enc_pub) = keypair_pems();
-
-        // Sender encrypts with the receiver's encryption public key + signs
-        // with its own signing private key.
-        let sender_cfg = JoseConfig::new(
-            "kid".into(),
-            Secret::new(merchant_sign_priv.clone()),
-            Secret::new(counterparty_enc_priv.clone()),
-            Secret::new(merchant_sign_pub.clone()),
-            Secret::new(counterparty_enc_pub.clone()),
-        )
-        .expect("sender cfg");
-
+        let (cfg, _) = sender_config();
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
         let claims = Claims {
             iss: "test".into(),
+            aud: "TestAudience".into(),
+            exp: now + 300,
+            nbf: now,
             n: 7,
         };
-        let jwe = sign_then_encrypt(&claims, &sender_cfg).expect("sign+encrypt");
-        assert_eq!(jwe.split('.').count(), 5, "JWE compact has five segments");
-
-        let decoded = decrypt_then_verify(&jwe, &sender_cfg).expect("decrypt+verify");
+        let jwe = sign_then_encrypt(&claims, &cfg).expect("encrypt");
+        assert_eq!(jwe.split('.').count(), 5);
+        let decoded = decrypt_then_verify(&jwe, &cfg).expect("decrypt");
         let recovered: Claims = serde_json::from_value(decoded).expect("claims");
         assert_eq!(recovered, claims);
     }
 
     #[test]
     fn pem_without_trailing_end_newline_is_repaired() {
-        let (_, pub_pem) = keypair_pems();
-        // Strip the `\n` that comes right before `-----END`.
+        let (_, pub_pem) = keypair_pems(2048);
         let mut broken = pub_pem.replace("\n-----END", "-----END");
-        // And drop the trailing newline so the only `\n` left is between
-        // header line and body.
         if broken.ends_with('\n') {
             broken.pop();
         }
         assert!(!broken.contains("\n-----END"));
         let fixed = normalise_pem(&broken);
         assert!(fixed.contains("\n-----END"));
-        // Re-parses cleanly with OpenSSL.
         PKey::public_key_from_pem(fixed.as_bytes()).expect("parse fixed pem");
     }
 
@@ -391,12 +598,32 @@ mod tests {
     }
 
     #[test]
-    fn wrong_signing_key_fails_verify() {
-        let (sign_priv_a, _sign_pub_a) = keypair_pems();
-        let (_sign_priv_b, sign_pub_b) = keypair_pems();
-        let (enc_priv, enc_pub) = keypair_pems();
+    fn rsa_key_below_minimum_bits_is_rejected() {
+        // 1024-bit RSA is too weak; must be rejected even though OpenSSL
+        // parses it.
+        let (weak_priv, weak_pub) = keypair_pems(1024);
+        let (ok_priv, ok_pub) = keypair_pems(2048);
+        let res = JoseConfig::new(
+            "kid".into(),
+            Secret::new(weak_priv),
+            Secret::new(ok_priv),
+            Secret::new(weak_pub),
+            Secret::new(ok_pub),
+        );
+        assert!(matches!(
+            res,
+            Err(JoseError::KeyTooSmall {
+                context: "self_signing_private_key",
+                ..
+            })
+        ));
+    }
 
-        // Sender signs with key A, but the verifier expects key B.
+    #[test]
+    fn wrong_signing_key_fails_verify() {
+        let (sign_priv_a, _) = keypair_pems(2048);
+        let (_, sign_pub_b) = keypair_pems(2048);
+        let (enc_priv, enc_pub) = keypair_pems(2048);
         let cfg = JoseConfig::new(
             "kid".into(),
             Secret::new(sign_priv_a),
@@ -406,14 +633,113 @@ mod tests {
         )
         .expect("cfg");
 
-        let jwe = sign_then_encrypt(&Claims { iss: "x".into(), n: 1 }, &cfg).expect("encrypt");
-        let err = decrypt_then_verify(&jwe, &cfg).expect_err("must fail verification");
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let jwe = sign_then_encrypt(
+            &Claims {
+                iss: "x".into(),
+                aud: "y".into(),
+                exp: now + 60,
+                nbf: now,
+                n: 1,
+            },
+            &cfg,
+        )
+        .expect("encrypt");
+        let err = decrypt_then_verify(&jwe, &cfg).expect_err("must fail verify");
         assert!(matches!(err, JoseError::VerificationFailed));
     }
 
-    // Suppress unused-import warning when this helper is not exercised.
-    #[allow(dead_code)]
-    fn _force_use_config_from() {
-        let _ = config_from;
+    #[test]
+    fn tampered_jws_signature_fails_verify() {
+        let (cfg, _) = sender_config();
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let claims = Claims {
+            iss: "x".into(),
+            aud: "y".into(),
+            exp: now + 60,
+            nbf: now,
+            n: 9,
+        };
+        let _ = sign_then_encrypt(&claims, &cfg).expect("encrypt");
+
+        // The compact-JWE-then-JWS pipeline runs the JWS verify inside the
+        // decrypted payload. Construct a deliberately broken JWS by hand
+        // and re-encrypt it with the peer's encryption key.
+        let broken_jws = "eyJhbGciOiJQUzI1NiJ9.eyJpc3MiOiJ4In0.AAA";
+        let enc_pub = cfg.peer_encryption_public_key.peek().clone();
+        let mut header = josekit::jwe::JweHeader::new();
+        header.set_content_encryption("A128CBC-HS256");
+        header.set_key_id(&cfg.kid);
+        let encrypter = josekit::jwe::alg::rsaes::RsaesJweAlgorithm::RsaOaep
+            .encrypter_from_pem(enc_pub.as_bytes())
+            .expect("enc");
+        let tampered =
+            josekit::jwe::serialize_compact(broken_jws.as_bytes(), &header, &encrypter)
+                .expect("ser");
+        let err = decrypt_then_verify(&tampered, &cfg).expect_err("must fail");
+        assert!(matches!(err, JoseError::VerificationFailed));
+    }
+
+    #[test]
+    fn jwe_alg_mismatch_is_rejected() {
+        // Hand-craft a JWE header that announces `dir` (direct encryption)
+        // and confirm decrypt_then_verify refuses it before handing off to
+        // josekit.
+        use base64::Engine;
+        use crate::consts::BASE64_ENGINE_URL_SAFE_NO_PAD;
+        let header = serde_json::json!({"alg": "dir", "enc": "A128CBC-HS256"});
+        let header_b64 = BASE64_ENGINE_URL_SAFE_NO_PAD.encode(header.to_string());
+        let fake = format!("{header_b64}.AAA.AAA.AAA.AAA");
+        let (cfg, _) = sender_config();
+        let err = decrypt_then_verify(&fake, &cfg).expect_err("must fail");
+        assert!(matches!(err, JoseError::UnexpectedJweAlgorithm { .. }));
+    }
+
+    #[test]
+    fn claim_validation_rejects_wrong_audience() {
+        let (cfg, _) = sender_config();
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let jwe = sign_then_encrypt(
+            &Claims {
+                iss: "x".into(),
+                aud: "Wrong".into(),
+                exp: now + 60,
+                nbf: now,
+                n: 1,
+            },
+            &cfg,
+        )
+        .expect("encrypt");
+        let validation = JoseClaimValidation::new("Expected");
+        let err =
+            decrypt_then_verify_with_claims(&jwe, &cfg, Some(&validation)).expect_err("must fail");
+        assert!(matches!(
+            err,
+            JoseError::ClaimValidationFailed { reason: "aud-mismatch" }
+        ));
+    }
+
+    #[test]
+    fn claim_validation_rejects_expired() {
+        let (cfg, _) = sender_config();
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let jwe = sign_then_encrypt(
+            &Claims {
+                iss: "x".into(),
+                aud: "Aud".into(),
+                exp: now - 3600,
+                nbf: now - 7200,
+                n: 1,
+            },
+            &cfg,
+        )
+        .expect("encrypt");
+        let validation = JoseClaimValidation::new("Aud");
+        let err =
+            decrypt_then_verify_with_claims(&jwe, &cfg, Some(&validation)).expect_err("must fail");
+        assert!(matches!(
+            err,
+            JoseError::ClaimValidationFailed { reason: "exp-elapsed" }
+        ));
     }
 }
