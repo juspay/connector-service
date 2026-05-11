@@ -19,6 +19,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.11.0
+
+### Features
+
+- **connector:** Implement BankDebit for cybersource (review fixes) ([#1190](https://github.com/juspay/connector-service/pull/1190)) ([`6b353b7`](https://github.com/juspay/connector-service/commit/6b353b777cf53dc60a7700e8fa92a92621cdeff0))
+- **framework:** Webhook auth flexibility trait parser ([#1200](https://github.com/juspay/connector-service/pull/1200)) ([`79fd1b4`](https://github.com/juspay/connector-service/commit/79fd1b4adc637a9e043ea06556a04fc8712070a4))
+
+### Bug Fixes
+
+- **ci:** Add missing actions and id-token permissions to release workflow ([#1268](https://github.com/juspay/connector-service/pull/1268)) ([`442f9c9`](https://github.com/juspay/connector-service/commit/442f9c9846a6ada2049a0539ac67e00752cc526d))
+
+### Documentation
+
+- **grace:** Tighten hardening and test workflow guidance ([#1237](https://github.com/juspay/connector-service/pull/1237)) ([`85a233e`](https://github.com/juspay/connector-service/commit/85a233eff4c2f3a7c2991bfc08431afb16eac19d))
+
+**Full Changelog:** [`2026.05.08.0...2026.05.11.0`](https://github.com/juspay/connector-service/compare/2026.05.08.0...2026.05.11.0)
+
+- - -
+
 ## 2026.05.08.0
 
 ### Bug Fixes
