@@ -3,8 +3,7 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: authenticate flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "authorize": {
@@ -517,44 +516,37 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: client_authentication_token flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "create_customer": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: create_connector_customer flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "create_order": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: create_order flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "create_server_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: server_authentication_token flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "create_server_session_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: server_session_authentication_token flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "dispute_accept": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: accept_dispute flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "dispute_defend": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: defend_dispute flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "dispute_get": {
@@ -564,8 +556,7 @@
     },
     "dispute_submit_evidence": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: submit_evidence flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "eligibility": {
@@ -607,8 +598,7 @@
     },
     "incremental_authorization": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: incremental_authorization flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "parse_event": {
@@ -618,14 +608,12 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: post_authenticate flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: pre_authenticate flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "proxy_authorize": {
@@ -717,14 +705,12 @@
     },
     "recurring_charge": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: repeat_payment flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "recurring_revoke": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: mandate_revoke flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -783,8 +769,26 @@
     },
     "reverse": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: void_post_capture flow for bankofamerica"
+        "status": "supported",
+        "proto_request": {
+          "merchant_reverse_id": "probe_reverse_001",
+          "connector_transaction_id": "probe_connector_txn_001"
+        },
+        "sample": {
+          "url": "https://apitest.merchant-services.bankofamerica.com/pts/v2/captures/probe_connector_txn_001/voids",
+          "method": "Post",
+          "headers": {
+            "accept": "application/hal+json;charset=utf-8",
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.merchant-services.bankofamerica.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"clientReferenceInformation\":{\"code\":\"probe_reverse_001\"}}"
+        }
       }
     },
     "setup_recurring": {
@@ -849,8 +853,7 @@
     },
     "tokenize": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: payment_method_token flow for bankofamerica"
+        "status": "not_implemented"
       }
     },
     "verify_redirect": {
