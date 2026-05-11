@@ -190,7 +190,7 @@ export const l3AnalysisCheckpoint: Checkpoint = {
   description:
     "Phase 4 from 2.3_codegen.md: Read and analyze 6 reference files (tech spec, patterns, macros, domain types, existing connector code, transformers).",
   retryFrom: "l3_analysis",
-  timeout: 30 * 60 * 1000, // 30 min for reading and analyzing files
+  timeout: 40 * 60 * 1000, // 50 min for reading and analyzing files
 
   async run(ctx) {
     const l2 = ctx.artifacts.l2;
@@ -296,7 +296,7 @@ export const l3AnalysisCheckpoint: Checkpoint = {
         userPayload: payload,
         cwd: projectRoot,
         label: "l3:analysis",
-        timeoutMs: 25 * 60 * 1000, // 25 min (leaving buffer for checkpoint overhead)
+        timeoutMs: 35 * 60 * 1000, // 35 min (5 min buffer below the 40 min checkpoint wrapper)
       });
       result = rawResult;
 

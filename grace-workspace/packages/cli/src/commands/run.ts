@@ -270,6 +270,13 @@ export async function runCommand(opts: RunOpts): Promise<void> {
   const session = state.getSession(sessionId);
   if (session?.projectRoot) {
     task.projectRoot = session.projectRoot;
+    // `task` and `artifacts.task` are deserialized from separate DB columns
+    // in the resume block above, so they are distinct object refs. L3 reads
+    // ctx.artifacts.task.projectRoot — without this propagation, writes
+    // land in the original source repo instead of the session worktree.
+    if (artifacts.task) {
+      (artifacts.task as TaskDefinition).projectRoot = session.projectRoot;
+    }
   }
 
   // Phase 5: bus is now a *client* that connects outbound to the supervisor's
