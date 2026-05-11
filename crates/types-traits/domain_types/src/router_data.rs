@@ -2081,6 +2081,13 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
+            ConnectorEnum::Dummy => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Stripe {
+                    api_key: api_key.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
             ConnectorEnum::Calida => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Calida {
                     api_key: api_key.clone(),

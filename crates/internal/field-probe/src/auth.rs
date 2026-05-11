@@ -36,6 +36,10 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             api_key: k(),
             base_url: None,
         },
+        ConnectorEnum::Dummy => ConnectorSpecificConfig::Stripe {
+            api_key: k(),
+            base_url: None,
+        },
         ConnectorEnum::Calida => ConnectorSpecificConfig::Calida {
             api_key: k(),
             base_url: None,

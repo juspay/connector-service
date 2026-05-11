@@ -338,6 +338,7 @@ pub struct Connectors {
     pub aci: ConnectorParams,
     pub trustpay: ConnectorParamsWithMoreUrls,
     pub stripe: ConnectorParams,
+    pub dummy: ConnectorParams,
     pub cybersource: ConnectorParams,
     pub worldpay: ConnectorParams,
     pub worldpayvantiv: ConnectorParams,
