@@ -7318,22 +7318,23 @@ impl
             .map(|m| ForeignTryFrom::foreign_try_from((m, "connector_feature_data")))
             .transpose()?;
 
-        let access_token = connector_feature_data
-            .as_ref()
-            .and_then(|serde_val: &SecretSerdeValue| {
-                let obj = serde_val.peek();
-                let token_str = obj.get("access_token").and_then(|v| v.as_str())?;
-                let token_type = obj
-                    .get("token_type")
-                    .and_then(|v| v.as_str())
-                    .map(str::to_string);
-                let expires_in = obj.get("expires_in").and_then(|v| v.as_i64());
-                Some(ServerAuthenticationTokenResponseData {
-                    access_token: Secret::new(token_str.to_string()),
-                    token_type,
-                    expires_in,
-                })
-            });
+        let access_token =
+            connector_feature_data
+                .as_ref()
+                .and_then(|serde_val: &SecretSerdeValue| {
+                    let obj = serde_val.peek();
+                    let token_str = obj.get("access_token").and_then(|v| v.as_str())?;
+                    let token_type = obj
+                        .get("token_type")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string);
+                    let expires_in = obj.get("expires_in").and_then(|v| v.as_i64());
+                    Some(ServerAuthenticationTokenResponseData {
+                        access_token: Secret::new(token_str.to_string()),
+                        token_type,
+                        expires_in,
+                    })
+                });
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
