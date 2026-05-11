@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { usePipeline, PIPELINE } from "../hooks/usePipeline";
 import type { JourneyEvent } from "../hooks/usePipeline";
 import { useSessions, type SessionRecord } from "../hooks/useSessions";
@@ -25,6 +25,14 @@ const CONTROL_WS_URL = `ws://${location.hostname}:${CONTROL_WS_PORT}`;
 export function WorkflowPage() {
   const { sessionId = "default" } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Phase 8: distinguish "just-created session — auto-spawn an engine"
+  // from "navigated in to inspect prior state — leave the page alone".
+  // location.state is wiped by a hard refresh, which is exactly what we
+  // want: refreshes should not re-trigger an autostart and destroy the
+  // session's post-run replay buffer view.
+  const autostartRequested =
+    (location.state as { autostart?: boolean } | null)?.autostart === true;
   const {
     sessions,
     controlStatus,
@@ -42,8 +50,14 @@ export function WorkflowPage() {
   // Auto-start a child engine when this page mounts on an idle session.
   // Phase 5: liveness is signalled by `session.pid` (no per-session ws_port
   // anymore — everything multiplexes through the supervisor's control WS).
+  // Phase 8: only auto-spawn when the user *intends* a fresh run — signaled
+  // by `location.state.autostart` set by Homepage's create-flow navigate.
+  // Click-throughs and refreshes don't pass autostart, so prior-run state
+  // survives. The user can still kick off a new run via the explicit
+  // "Start run" / "Start new run" button in TopBar.
   const startedRef = useRef(false);
   useEffect(() => {
+    if (!autostartRequested) return;
     if (controlStatus !== "open") return;
     if (!session) return;
     if (session.status === "running" && session.pid != null) return;
@@ -51,7 +65,7 @@ export function WorkflowPage() {
     if (startedRef.current) return;
     startedRef.current = true;
     void startSession(sessionId);
-  }, [controlStatus, session, sessionId, startSession]);
+  }, [autostartRequested, controlStatus, session, sessionId, startSession]);
 
   // The pipeline-event WS is the supervisor's control port, same one
   // useSessions uses. usePipeline sends a `hello {role:'dashboard',
@@ -630,12 +644,14 @@ function TopBar({
           </span>
         </button>
         {runsPicker}
-        {!engineAlive &&
-        (pipelineStatus === "complete" || pipelineStatus === "aborted") ? (
-          // Phase 7: post-run state with no live engine. Replace the
-          // Cancel-run slot with a primary "Start new run" CTA so the user
-          // can recover from a failure (or kick off another run after a
-          // successful completion) without leaving the page.
+        {!engineAlive ? (
+          // Phase 7 + 8: any "no live engine" state surfaces a Start CTA.
+          // - idle (Phase 8): "Start run" — session has no prior run, user
+          //   navigated in without autostart intent.
+          // - complete (Phase 7): "Start new run" — pipeline succeeded.
+          // - aborted (Phase 7): "Start new run" — pipeline failed; user
+          //   wants to retry.
+          // Clicking spawns a fresh engine via supervisor.startSession.
           <button
             onClick={onStartNewRun}
             style={{
@@ -649,7 +665,7 @@ function TopBar({
               cursor: "pointer",
             }}
           >
-            Start new run
+            {pipelineStatus === "idle" ? "Start run" : "Start new run"}
           </button>
         ) : (
           <button

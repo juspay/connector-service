@@ -5,7 +5,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "predev": "pnpm build",
-    "dev": "concurrently -n core,cli,dashboard,supervisor -c cyan,magenta,green,yellow \"pnpm -C packages/core dev\" \"pnpm -C packages/cli dev\" \"pnpm -C packages/dashboard dev\" \"node packages/cli/dist/index.js supervisor\"",
+    "dev": "concurrently --kill-others-on-fail -n core,cli,dashboard,supervisor -c cyan,magenta,green,yellow \"pnpm -C packages/core dev\" \"pnpm -C packages/cli dev\" \"pnpm -C packages/dashboard dev\" \"node packages/cli/dist/index.js supervisor\"",
     "supervisor": "node packages/cli/dist/index.js supervisor",
     "engine": "node packages/cli/dist/index.js run",
     "clear": "rm -f ~/.byne/pipeline.sqlite ~/.byne/pipeline.sqlite-wal ~/.byne/pipeline.sqlite-shm ~/.byne/resume.json && rm -rf ~/.byne/sessions && echo '✓ Cleared local DB and per-session worktrees. Restart pnpm dev.'",

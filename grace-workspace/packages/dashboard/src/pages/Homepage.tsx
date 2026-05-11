@@ -35,7 +35,14 @@ export function Homepage() {
   useEffect(() => {
     if (newlyCreated) {
       setPendingCreateName(null);
-      navigate(`/sessions/${newlyCreated.sessionId}`);
+      // Phase 8: signal "user just created this session and expects to
+      // start running immediately." WorkflowPage reads location.state.
+      // autostart to decide whether to auto-spawn an engine on mount.
+      // Click-throughs from session cards intentionally omit this state
+      // so they don't wipe prior-run results.
+      navigate(`/sessions/${newlyCreated.sessionId}`, {
+        state: { autostart: true },
+      });
     }
   }, [newlyCreated, navigate]);
 
