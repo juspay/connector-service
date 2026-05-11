@@ -23,9 +23,9 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePostAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceCreateOrderRequest,
-    PaymentServiceCreateOrderResponse, PaymentServiceGetResponse, PaymentServiceRefundRequest,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
+    PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
+    PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RefundResponse, RefundServiceGetRequest,
 };
 
 use crate::transformers::ForeignFrom;
@@ -365,43 +365,6 @@ where
         Ok(create_customer_response)
     }
 
-    async fn create_order(
-        &self,
-        connector: &ConnectorEnum,
-        payload: &CompositeAuthorizeRequest,
-        access_token_response: Option<
-            &MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
-        >,
-        metadata: &tonic::metadata::MetadataMap,
-        extensions: &tonic::Extensions,
-    ) -> Result<Option<PaymentServiceCreateOrderResponse>, tonic::Status> {
-        let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
-        let should_create_order = connector_data.connector.should_do_order_create();
-
-        let create_order_response = match should_create_order {
-            true => {
-                let create_order_payload = PaymentServiceCreateOrderRequest::foreign_from((
-                    payload,
-                    access_token_response,
-                ));
-                let mut create_order_request = tonic::Request::new(create_order_payload);
-                *create_order_request.metadata_mut() = metadata.clone();
-                *create_order_request.extensions_mut() = extensions.clone();
-
-                let create_order_response = self
-                    .payment_service
-                    .create_order(create_order_request)
-                    .await?
-                    .into_inner();
-
-                Some(create_order_response)
-            }
-            false => None,
-        };
-
-        Ok(create_order_response)
-    }
-
     async fn authorize(
         &self,
         payload: &CompositeAuthorizeRequest,
@@ -409,7 +372,6 @@ where
             &MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse,
         >,
         create_customer_response: Option<&CustomerServiceCreateResponse>,
-        create_order_response: Option<&PaymentServiceCreateOrderResponse>,
         authenticate_response: Option<&PaymentMethodAuthenticationServiceAuthenticateResponse>,
         post_authenticate_response: Option<
             &PaymentMethodAuthenticationServicePostAuthenticateResponse,
@@ -421,7 +383,6 @@ where
             payload,
             access_token_response,
             create_customer_response,
-            create_order_response,
             authenticate_response,
             post_authenticate_response,
         ));
@@ -535,7 +496,6 @@ where
 
         match stage {
             AuthNStage::FreshNoPreAuth => {
-                // Standard non-3DS flow: AccessToken → Customer → Order → Authorize
                 let access_token_response = self
                     .create_server_authentication_token(
                         &connector,
@@ -547,21 +507,11 @@ where
                 let create_customer_response = self
                     .create_connector_customer(&connector, &payload, &metadata, &extensions)
                     .await?;
-                let create_order_response = self
-                    .create_order(
-                        &connector,
-                        &payload,
-                        access_token_response.as_ref(),
-                        &metadata,
-                        &extensions,
-                    )
-                    .await?;
                 let authorize_response = self
                     .authorize(
                         &payload,
                         access_token_response.as_ref(),
                         create_customer_response.as_ref(),
-                        create_order_response.as_ref(),
                         None,
                         None,
                         &metadata,
@@ -572,7 +522,6 @@ where
                 Ok(tonic::Response::new(CompositeAuthorizeResponse {
                     access_token_response,
                     create_customer_response,
-                    create_order_response,
                     authorize_response: Some(authorize_response),
                     composite_status: CompositeStatus::Completed.into(),
                 }))
@@ -608,7 +557,6 @@ where
                     return Ok(tonic::Response::new(CompositeAuthorizeResponse {
                         access_token_response,
                         create_customer_response: None,
-                        create_order_response: None,
                         authorize_response: Some(authorize_response),
                         composite_status: CompositeStatus::RedirectRequired.into(),
                     }));
@@ -636,7 +584,6 @@ where
                     return Ok(tonic::Response::new(CompositeAuthorizeResponse {
                         access_token_response,
                         create_customer_response: None,
-                        create_order_response: None,
                         authorize_response: Some(authorize_response),
                         composite_status: CompositeStatus::RedirectRequired.into(),
                     }));
@@ -654,18 +601,8 @@ where
                     None
                 };
 
-                // Now do Customer, Order, Authorize
                 let create_customer_response = self
                     .create_connector_customer(&connector, &payload, &metadata, &extensions)
-                    .await?;
-                let create_order_response = self
-                    .create_order(
-                        &connector,
-                        &payload,
-                        access_token_response.as_ref(),
-                        &metadata,
-                        &extensions,
-                    )
                     .await?;
 
                 let authorize_response = self
@@ -673,7 +610,6 @@ where
                         &payload,
                         access_token_response.as_ref(),
                         create_customer_response.as_ref(),
-                        create_order_response.as_ref(),
                         // For Redsys: pass auth_response directly; for CyberSource: pass None
                         if requires_post_auth {
                             None
@@ -689,7 +625,6 @@ where
                 Ok(tonic::Response::new(CompositeAuthorizeResponse {
                     access_token_response,
                     create_customer_response,
-                    create_order_response,
                     authorize_response: Some(authorize_response),
                     composite_status: CompositeStatus::Completed.into(),
                 }))
@@ -729,22 +664,12 @@ where
                     let create_customer_response = self
                         .create_connector_customer(&connector, &payload, &metadata, &extensions)
                         .await?;
-                    let create_order_response = self
-                        .create_order(
-                            &connector,
-                            &payload,
-                            access_token_response.as_ref(),
-                            &metadata,
-                            &extensions,
-                        )
-                        .await?;
 
                     let authorize_response = self
                         .authorize(
                             &payload,
                             access_token_response.as_ref(),
                             create_customer_response.as_ref(),
-                            create_order_response.as_ref(),
                             None,
                             Some(&post_auth_response),
                             &metadata,
@@ -755,7 +680,6 @@ where
                     Ok(tonic::Response::new(CompositeAuthorizeResponse {
                         access_token_response,
                         create_customer_response,
-                        create_order_response,
                         authorize_response: Some(authorize_response),
                         composite_status: CompositeStatus::Completed.into(),
                     }))
@@ -780,22 +704,12 @@ where
                             &extensions,
                         )
                         .await?;
-                    let create_order_response = self
-                        .create_order(
-                            &connector,
-                            &payload_with_auth,
-                            access_token_response.as_ref(),
-                            &metadata,
-                            &extensions,
-                        )
-                        .await?;
 
                     let authorize_response = self
                         .authorize(
                             &payload_with_auth,
                             access_token_response.as_ref(),
                             create_customer_response.as_ref(),
-                            create_order_response.as_ref(),
                             None,
                             None,
                             &metadata,
@@ -806,7 +720,6 @@ where
                     Ok(tonic::Response::new(CompositeAuthorizeResponse {
                         access_token_response,
                         create_customer_response,
-                        create_order_response,
                         authorize_response: Some(authorize_response),
                         composite_status: CompositeStatus::Completed.into(),
                     }))
@@ -826,22 +739,12 @@ where
                 let create_customer_response = self
                     .create_connector_customer(&connector, &payload, &metadata, &extensions)
                     .await?;
-                let create_order_response = self
-                    .create_order(
-                        &connector,
-                        &payload,
-                        access_token_response.as_ref(),
-                        &metadata,
-                        &extensions,
-                    )
-                    .await?;
 
                 let authorize_response = self
                     .authorize(
                         &payload,
                         access_token_response.as_ref(),
                         create_customer_response.as_ref(),
-                        create_order_response.as_ref(),
                         None,
                         None,
                         &metadata,
@@ -852,7 +755,6 @@ where
                 Ok(tonic::Response::new(CompositeAuthorizeResponse {
                     access_token_response,
                     create_customer_response,
-                    create_order_response,
                     authorize_response: Some(authorize_response),
                     composite_status: CompositeStatus::Completed.into(),
                 }))

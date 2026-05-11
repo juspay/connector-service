@@ -11,8 +11,7 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePostAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
-    PaymentServiceCreateOrderResponse, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+    PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
     PaymentServiceVoidRequest, RefundServiceGetRequest,
 };
 
@@ -62,48 +61,6 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
             metadata: item.metadata.clone(),
             connector_feature_data: item.connector_feature_data.clone(),
             test_mode: item.test_mode,
-        }
-    }
-}
-
-impl
-    ForeignFrom<(
-        &CompositeAuthorizeRequest,
-        Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
-    )> for PaymentServiceCreateOrderRequest
-{
-    fn foreign_from(
-        (item, access_token_response): (
-            &CompositeAuthorizeRequest,
-            Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
-        ),
-    ) -> Self {
-        let access_token_from_req = item
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.clone());
-
-        let access_token = get_access_token(access_token_from_req, access_token_response);
-
-        let connector_customer_id = item
-            .state
-            .as_ref()
-            .and_then(|state| state.connector_customer_id.clone());
-
-        let resolved_state = Some(ConnectorState {
-            access_token,
-            connector_customer_id,
-        });
-
-        Self {
-            merchant_order_id: item.merchant_order_id.clone(),
-            amount: item.amount,
-            webhook_url: item.webhook_url.clone(),
-            metadata: item.metadata.clone(),
-            connector_feature_data: item.connector_feature_data.clone(),
-            state: resolved_state,
-            test_mode: item.test_mode,
-            payment_method_type: None,
         }
     }
 }
@@ -197,7 +154,6 @@ impl
         &CompositeAuthorizeRequest,
         Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
         Option<&CustomerServiceCreateResponse>,
-        Option<&PaymentServiceCreateOrderResponse>,
         Option<&PaymentMethodAuthenticationServiceAuthenticateResponse>,
         Option<&PaymentMethodAuthenticationServicePostAuthenticateResponse>,
     )> for PaymentServiceAuthorizeRequest
@@ -207,14 +163,12 @@ impl
             item,
             access_token_response,
             create_customer_response,
-            create_order_response,
             authenticate_response,
             post_authenticate_response,
         ): (
             &CompositeAuthorizeRequest,
             Option<&MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>,
             Option<&CustomerServiceCreateResponse>,
-            Option<&PaymentServiceCreateOrderResponse>,
             Option<&PaymentMethodAuthenticationServiceAuthenticateResponse>,
             Option<&PaymentMethodAuthenticationServicePostAuthenticateResponse>,
         ),
@@ -294,9 +248,7 @@ impl
             redirection_response: item.redirection_response.clone(),
             continue_redirection_url: item.continue_redirection_url.clone(),
             l2_l3_data: item.l2_l3_data.clone(),
-            connector_order_id: create_order_response
-                .and_then(|r| r.connector_order_id.clone())
-                .or_else(|| item.connector_order_id.clone()),
+            connector_order_id: item.connector_order_id.clone(),
         }
     }
 }
