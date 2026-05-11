@@ -3,13 +3,19 @@ pub mod headers;
 pub mod transformers;
 
 use common_enums as enums;
-use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, types::MinorUnit};
+use common_utils::{
+    errors::CustomResult,
+    events,
+    ext_traits::{ByteSliceExt, BytesExt},
+    types::MinorUnit,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        ConnectorSpecifications, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData,
+        ConnectorSpecifications, ConnectorWebhookSecrets, EventType, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RequestDetails, ResponseId, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -36,6 +42,7 @@ use super::macros;
 use crate::types::ResponseRouterData;
 use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
+use domain_types::errors::WebhookError;
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Phonepe<T>
@@ -74,6 +81,195 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Phonepe<T>
 {
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        let signature_str = request
+            .headers
+            .get("x-verify")
+            .ok_or(WebhookError::WebhookSignatureNotFound)?;
+        Ok(signature_str.as_bytes().to_vec())
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        use hyperswitch_masking::Secret;
+
+        let webhook_request: phonepe::PhonepeWebhookRequest = request
+            .body
+            .parse_struct("PhonepeWebhookRequest")
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+
+        let base64_body = &webhook_request.response;
+        let api_path = request.uri.as_deref().unwrap_or("");
+        let key_index = request
+            .headers
+            .get("x-verify")
+            .and_then(|v| v.split("###").nth(1))
+            .unwrap_or("1");
+
+        let salt_key =
+            Secret::new(String::from_utf8_lossy(&connector_webhook_secret.secret).to_string());
+
+        let expected_checksum =
+            phonepe::compute_phonepe_webhook_checksum(base64_body, api_path, &salt_key, key_index)?;
+
+        Ok(expected_checksum.into_bytes())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
+        use hyperswitch_masking::Secret;
+
+        let connector_webhook_secret = match connector_webhook_secret {
+            Some(secret) => secret,
+            None => {
+                tracing::warn!("PhonePe webhook: no webhook secret configured");
+                return Ok(false);
+            }
+        };
+
+        // Extract the incoming X-VERIFY header value
+        let incoming_verify = match request.headers.get("x-verify") {
+            Some(v) => v.clone(),
+            None => {
+                tracing::warn!("PhonePe webhook: X-VERIFY header missing");
+                return Ok(false);
+            }
+        };
+
+        // Extract key_index from incoming X-VERIFY (format: hash###keyIndex)
+        let key_index = incoming_verify.split("###").nth(1).unwrap_or("1");
+
+        // Parse the webhook body to get the base64-encoded payload
+        let webhook_request: phonepe::PhonepeWebhookRequest =
+            match request.body.parse_struct("PhonepeWebhookRequest") {
+                Ok(req) => req,
+                Err(e) => {
+                    tracing::warn!("PhonePe webhook: failed to parse body: {}", e);
+                    return Ok(false);
+                }
+            };
+
+        let base64_body = &webhook_request.response;
+        let api_path = request.uri.as_deref().unwrap_or("");
+        let salt_key =
+            Secret::new(String::from_utf8_lossy(&connector_webhook_secret.secret).to_string());
+
+        // Compute expected checksum
+        let expected_checksum = match phonepe::compute_phonepe_webhook_checksum(
+            base64_body,
+            api_path,
+            &salt_key,
+            key_index,
+        ) {
+            Ok(checksum) => checksum,
+            Err(e) => {
+                tracing::warn!("PhonePe webhook: failed to compute checksum: {}", e);
+                return Ok(false);
+            }
+        };
+
+        // Constant-time comparison to prevent timing attacks on webhook signature.
+        #[allow(deprecated)] // ring 0.17 renamed the module; function is still sound
+        Ok(ring::constant_time::verify_slices_are_equal(
+            incoming_verify.as_bytes(),
+            expected_checksum.as_bytes(),
+        )
+        .is_ok())
+    }
+
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        let payload = phonepe::decode_phonepe_webhook_payload(&request.body)?;
+        Ok(phonepe::map_phonepe_webhook_state_to_event_type(
+            &payload.state,
+        ))
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+        _event_context: Option<domain_types::connector_types::EventContext>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        let payload = phonepe::decode_phonepe_webhook_payload(&request.body)?;
+
+        let status = phonepe::map_phonepe_webhook_state_to_attempt_status(&payload.state);
+
+        let (error_code, error_message, error_reason) = if status == enums::AttemptStatus::Failure {
+            let code = payload.response_code.clone();
+            let message = code.clone();
+            (code.clone(), message, code)
+        } else {
+            (None, None, None)
+        };
+
+        Ok(WebhookDetailsResponse {
+            resource_id: Some(ResponseId::ConnectorTransactionId(
+                payload.transaction_id.clone(),
+            )),
+            status,
+            connector_response_reference_id: Some(payload.merchant_transaction_id),
+            mandate_reference: None,
+            error_code,
+            error_message,
+            error_reason,
+            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
+            status_code: 200,
+            response_headers: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            network_txn_id: None,
+            payment_method_update: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        _request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        Err(error_stack::report!(WebhookError::WebhooksNotImplemented {
+            operation: "process_refund_webhook",
+        }))
+    }
+
+    fn process_dispute_webhook(
+        &self,
+        _request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<
+        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        error_stack::Report<WebhookError>,
+    > {
+        Err(error_stack::report!(WebhookError::WebhooksNotImplemented {
+            operation: "process_dispute_webhook",
+        }))
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> Result<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, error_stack::Report<WebhookError>>
+    {
+        let payload = phonepe::decode_phonepe_webhook_payload(&request.body)?;
+        Ok(Box::new(payload))
+    }
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Phonepe<T>
