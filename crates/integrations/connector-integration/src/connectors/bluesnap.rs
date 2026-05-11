@@ -393,6 +393,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+macros::macro_connector_surcharge_implementation!(
+    connector: Bluesnap,
+    generic_type: T,
+    [Debug + Sync + Send + 'static + Serialize]
+);
+
 macros::create_all_prerequisites!(
     connector_name: Bluesnap,
     generic_type: T,

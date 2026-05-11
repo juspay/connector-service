@@ -592,6 +592,12 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize]
 );
 
+macros::macro_connector_surcharge_implementation!(
+    connector: RazorpayV2,
+    generic_type: T,
+    [std::fmt::Debug + Sync + Send + 'static + Serialize]
+);
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for RazorpayV2<T>
 {

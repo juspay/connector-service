@@ -884,3 +884,9 @@ macros::macro_connector_payout_implementation!(
         PayoutEnrollDisburseAccount
     ]
 );
+
+macros::macro_connector_surcharge_implementation!(
+    connector: PinelabsOnline,
+    generic_type: T,
+    [Debug + Sync + Send + 'static + Serialize]
+);

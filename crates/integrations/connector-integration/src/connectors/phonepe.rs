@@ -396,6 +396,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 // Define connector prerequisites
+macros::macro_connector_surcharge_implementation!(
+    connector: Phonepe,
+    generic_type: T,
+    [std::fmt::Debug + Sync + Send + 'static + Serialize]
+);
+
 macros::create_all_prerequisites!(
     connector_name: Phonepe,
     generic_type: T,

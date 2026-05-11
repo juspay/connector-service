@@ -468,6 +468,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Define connector prerequisites for payment flows (XML-based)
 // Group flows by unique request/response combinations to avoid duplicate templating structs
+macros::macro_connector_surcharge_implementation!(
+    connector: Worldpayvantiv,
+    generic_type: T,
+    [std::fmt::Debug + Sync + Send + 'static + Serialize]
+);
+
 macros::create_all_prerequisites!(
     connector_name: Worldpayvantiv,
     generic_type: T,

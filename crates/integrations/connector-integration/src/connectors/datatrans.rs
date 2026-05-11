@@ -223,6 +223,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+macros::macro_connector_surcharge_implementation!(
+    connector: Datatrans,
+    generic_type: T,
+    [Debug + Sync + Send + 'static + Serialize]
+);
+
 macros::create_all_prerequisites!(
     connector_name: Datatrans,
     generic_type: T,

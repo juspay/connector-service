@@ -210,6 +210,12 @@ macros::create_amount_converter_wrapper!(
     amount_type: StringMajorUnit
 );
 
+macros::macro_connector_surcharge_implementation!(
+    connector: Axisbank,
+    generic_type: T,
+    [std::fmt::Debug + Sync + Send + 'static + Serialize]
+);
+
 macros::create_all_prerequisites!(
     connector_name: Axisbank,
     generic_type: T,

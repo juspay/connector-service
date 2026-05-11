@@ -348,6 +348,12 @@ macros::create_amount_converter_wrapper!(connector_name: Billwerk, amount_type: 
 use super::macros;
 use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
+macros::macro_connector_surcharge_implementation!(
+    connector: Billwerk,
+    generic_type: T,
+    [Debug + Sync + Send + 'static + Serialize]
+);
+
 macros::create_all_prerequisites!(
     connector_name: Billwerk,
     generic_type: T,

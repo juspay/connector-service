@@ -394,6 +394,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== MACRO PREREQUISITES =====
+macros::macro_connector_surcharge_implementation!(
+    connector: Celero,
+    generic_type: T,
+    [Debug + Sync + Send + 'static + Serialize]
+);
+
 macros::create_all_prerequisites!(
     connector_name: Celero,
     generic_type: T,

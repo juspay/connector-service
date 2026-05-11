@@ -169,6 +169,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+macros::macro_connector_surcharge_implementation!(
+    connector: Loonio,
+    generic_type: T,
+    [Debug + Sync + Send + 'static + Serialize]
+);
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Loonio<T>
 {
