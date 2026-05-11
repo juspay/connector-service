@@ -2774,22 +2774,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// VoidPC (post-capture reversal) request — used with PaymentsCancelPostCaptureData.
-// Amount is optional because PaymentsCancelPostCaptureData does not carry amount/currency;
-// Cybersource will reverse the full captured amount when amountDetails is omitted.
+// VoidPC (post-capture void) request — used with PaymentsCancelPostCaptureData.
+//
+// This targets the CyberSource capture-void endpoint:
+//   POST /pts/v2/captures/{capture_id}/voids
+//
+// This is distinct from the authorization-reversal endpoint
+// (/pts/v2/payments/{id}/reversals) which requires reversalInformation.amountDetails.
+// The capture-void endpoint requires only clientReferenceInformation.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceVoidPCRequest {
     client_reference_information: ClientReferenceInformation,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    reversal_information: Option<VoidPCReversalInformation>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct VoidPCReversalInformation {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    reason: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -2817,16 +2813,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let reversal_information =
-            value
-                .router_data
-                .request
-                .cancellation_reason
-                .clone()
-                .map(|reason| VoidPCReversalInformation {
-                    reason: Some(reason),
-                });
-
         Ok(Self {
             client_reference_information: ClientReferenceInformation {
                 code: Some(
@@ -2837,7 +2823,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .clone(),
                 ),
             },
-            reversal_information,
         })
     }
 }

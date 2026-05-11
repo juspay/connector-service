@@ -820,9 +820,14 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
-            let connector_payment_id = req.request.connector_transaction_id.clone();
+            // VoidPostCapture voids a CAPTURE (not an authorization).
+            // CyberSource uses a dedicated endpoint for capture voids:
+            //   POST /pts/v2/captures/{capture_id}/voids
+            // The authorization-reversal endpoint (/pts/v2/payments/{id}/reversals)
+            // is for pre-capture reversals only and requires reversalInformation.amountDetails.
+            let capture_id = req.request.connector_transaction_id.clone();
             Ok(format!(
-                "{}pts/v2/payments/{connector_payment_id}/reversals",
+                "{}pts/v2/captures/{capture_id}/voids",
                 self.connector_base_url_payments(req),
             ))
         }
