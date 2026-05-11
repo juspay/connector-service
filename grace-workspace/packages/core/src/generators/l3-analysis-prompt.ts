@@ -372,6 +372,33 @@ Set \`implementationType\` field in output:
 7. **Validate completeness** - Every field in spec must have mapping specified
 8. **Detect implementation type** - Use decision table above to set implementationType correctly
 
+## Prerequisites — strict definition
+
+A "prerequisite" is a piece of code that MUST ALREADY EXIST in the codebase before this task can be implemented, and that THIS TASK WILL NOT CREATE.
+
+**Positive examples — these ARE prerequisites (real external gaps):**
+- A shared base trait (e.g. \`ConnectorIntegrationV2\`) that the framework requires. If it's missing entirely from \`crates/core/\`, that is a real prerequisite gap.
+- A domain-types enum (e.g. \`ConnectorSpecificClientAuthenticationResponse\`) whose definition must exist before connector-specific arms can be added. The new arm itself is in-scope work; the enum being absent entirely is a prerequisite.
+- A macro definition (e.g. \`create_all_prerequisites!\`) that does not exist yet at all.
+
+**Negative examples — these are NOT prerequisites (they are in-scope work):**
+- Any file or symbol listed in \`specification.filesChangedPreview\`.
+- Any struct named in \`specification.requestStruct\`, \`specification.responseStruct\`, or \`specification.supportingTypes\`.
+- Any path in \`analysis.filesToModify\`.
+- Anything described in \`TASK_DESCRIPTION\` or \`TASK_ACCEPTANCE_CRITERIA\` as work to be done — those items are by definition in-scope.
+- The new connector/flow entry in an existing macro like \`create_all_prerequisites!\` — adding that entry IS part of this task, not a prerequisite.
+- The struct definitions, \`TryFrom\` impls, and proto messages this task is specifying — those are the work, not preconditions for the work.
+- Empty stub impls already present in the target connector that this task will replace — they are not blockers, they are the starting point of the work.
+
+**Decision procedure for \`prerequisitesStatus\`:**
+
+1. List candidate prerequisites (things that look missing in the codebase).
+2. For each candidate, check: is it listed in \`specification.filesChangedPreview\`, \`analysis.filesToModify\`, \`specification.requestStruct\`, \`specification.responseStruct\`, \`specification.supportingTypes\`, \`specification.connectorChanges\`, or implied by \`TASK_DESCRIPTION\` / \`TASK_ACCEPTANCE_CRITERIA\`? If yes — REMOVE from the list. It is in-scope work, not a prerequisite.
+3. After filtering, if the list is empty → set \`prerequisitesStatus: "complete"\` and \`missingPrerequisites: []\`. This is the typical case for "add a new flow" or "add a new payment method" tasks.
+4. If non-empty → set \`prerequisitesStatus: "incomplete"\` and list ONLY the remaining real external gaps in \`missingPrerequisites\`.
+
+**Enum constraint:** \`prerequisitesStatus\` MUST be exactly one of \`"complete"\` or \`"incomplete"\`. Do NOT use \`"missing"\`, \`"stub_only"\`, \`"partial"\`, or any other string — values outside the allowlist will be rejected and the run will fail.
+
 ## JSON VALIDATION CHECKLIST
 
 Before returning, verify:
@@ -407,7 +434,12 @@ export function buildL3AnalysisPayload(
   projectRoot: string,
   codegenWorkflowPath: string,
   l2?: L2Plan,
-  options?: L3AnalysisOptions
+  options?: L3AnalysisOptions,
+  // Explicit task-scope fields so the LLM can distinguish in-scope work
+  // (described here) from genuine external prerequisites. See the
+  // "Prerequisites — strict definition" section in L3_ANALYSIS_SYSTEM.
+  taskDescription?: string,
+  taskAcceptanceCriteria?: string[]
 ): Record<string, unknown> {
   return {
     CONNECTOR: connector,
@@ -418,6 +450,9 @@ export function buildL3AnalysisPayload(
     TECHSPEC_PATH: techSpecPath,
     PROJECT_ROOT: projectRoot,
     CODEGEN_WORKFLOW_PATH: codegenWorkflowPath,
+    // Task scope — anything described here is in-scope work, NOT a prerequisite.
+    TASK_DESCRIPTION: taskDescription ?? "",
+    TASK_ACCEPTANCE_CRITERIA: taskAcceptanceCriteria ?? [],
     // L2 analysis data for richer context
     RESEARCH_FINDINGS: l2?.researchFindings
       ? JSON.stringify(l2.researchFindings, null, 2)

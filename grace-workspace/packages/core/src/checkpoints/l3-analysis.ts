@@ -276,6 +276,8 @@ export const l3AnalysisCheckpoint: Checkpoint = {
       "/Users/tushar.shukla/Downloads/Work/euler-ucs/hyperswitch-prism/grace/workflow/2.3_codegen.md",
       l2,
       options,
+      task.description,
+      task.acceptanceCriteria,
     );
 
     ctx.log(
