@@ -260,7 +260,6 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
     PaymentServiceGetRequest {
         connector_transaction_id: transaction_id.to_string(),
         capture_method: None,
-        handle_response: None,
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
             currency: i32::from(Currency::Usd),
@@ -325,6 +324,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
     RefundServiceGetRequest {
         connector_transaction_id: transaction_id.to_string(),
         refund_id: refund_id.to_string(),
+        connector_refund_id: refund_id.to_string(),
         refund_reason: None,
         merchant_refund_id: Some(format!("rsync_ref_{}", get_timestamp_micros())),
         browser_info: None,
@@ -333,6 +333,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         state: None,
         connector_feature_data: None,
         payment_method_type: None,
+        refund_amount: None,
     }
 }
 

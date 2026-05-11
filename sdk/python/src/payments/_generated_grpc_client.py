@@ -159,8 +159,15 @@ class GrpcEventClient:
         self._ffi    = ffi
         self._config = config
 
+    def parse_event(self, req: payment_pb2.EventServiceParseRequest) -> payment_pb2.EventServiceParseResponse:
+        """EventService.ParseEvent — Parse a raw webhook payload without credentials. Returns resource reference and event type — sufficient to resolve secrets or early-exit."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "event/parse_event",
+            req, payment_pb2.EventServiceParseResponse,
+        )
     def handle_event(self, req: payment_pb2.EventServiceHandleRequest) -> payment_pb2.EventServiceHandleResponse:
-        """EventService.HandleEvent — Process webhook notifications from connectors. Translates connector events into standardized responses for asynchronous payment state updates."""
+        """EventService.HandleEvent — Verify webhook source and return a unified typed response. Response mirrors PaymentService.Get / RefundService.Get / DisputeService.Get."""
         return _call_grpc(
             self._ffi, self._config,
             "event/handle_event",
@@ -454,6 +461,21 @@ class GrpcRefundClient:
             req, payment_pb2.RefundResponse,
         )
 
+class GrpcSurchargeClient:
+    """SurchargeService — gRPC sub-client."""
+
+    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
+        self._ffi    = ffi
+        self._config = config
+
+    def calculate(self, req: payment_pb2.SurchargeServiceCalculateRequest) -> payment_pb2.SurchargeServiceCalculateResponse:
+        """SurchargeService.Calculate — Calculate surcharge fees for a payment amount before processing."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "surcharge/calculate",
+            req, payment_pb2.SurchargeServiceCalculateResponse,
+        )
+
 # ── Top-level GrpcClient ──────────────────────────────────────────────────────
 
 
@@ -472,7 +494,7 @@ class GrpcClient:
         ))
         res = client.customer.create(...)
         res = client.dispute.submit_evidence(...)
-        res = client.event.handle_event(...)
+        res = client.event.parse_event(...)
         res = client.merchant_authentication.create_server_authentication_token(...)
     """
 
@@ -486,6 +508,7 @@ class GrpcClient:
     payout: GrpcPayoutClient
     recurring_payment: GrpcRecurringPaymentClient
     refund: GrpcRefundClient
+    surcharge: GrpcSurchargeClient
 
     def __init__(self, config: GrpcConfig, lib_path: Optional[str] = None) -> None:
         ffi = _GrpcFfi(lib_path)
@@ -499,3 +522,4 @@ class GrpcClient:
         self.payout = GrpcPayoutClient(ffi, config)
         self.recurring_payment = GrpcRecurringPaymentClient(ffi, config)
         self.refund = GrpcRefundClient(ffi, config)
+        self.surcharge = GrpcSurchargeClient(ffi, config)

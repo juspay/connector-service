@@ -6,9 +6,13 @@ type CompositePaymentsService = composite_service::payments::Payments<
     crate::server::payments::PaymentMethodAuthentication,
 >;
 
+type CompositeEventService =
+    composite_service::events::CompositeEvents<crate::server::events::EventServiceImpl>;
+
 #[derive(Clone)]
 pub struct AppState {
     pub composite_payments_service: CompositePaymentsService,
+    pub composite_event_service: CompositeEventService,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
@@ -24,6 +28,7 @@ pub struct AppState {
 impl AppState {
     pub fn new(
         composite_payments_service: CompositePaymentsService,
+        composite_event_service: CompositeEventService,
         payments_service: crate::server::payments::Payments,
         refund_service: crate::server::refunds::Refunds,
         dispute_service: crate::server::disputes::Disputes,
@@ -36,6 +41,7 @@ impl AppState {
     ) -> Self {
         Self {
             composite_payments_service,
+            composite_event_service,
             payments_service,
             refunds_service: refund_service,
             disputes_service: dispute_service,

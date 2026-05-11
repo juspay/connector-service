@@ -83,10 +83,10 @@ impl PaymentMethodDataTypes for DefaultPCIHolder {
 }
 
 impl PaymentMethodDataTypes for VaultTokenHolder {
-    type Inner = String; //Token
+    type Inner = Secret<String>; //Token
 
     fn peek_inner(inner: &Self::Inner) -> &str {
-        inner
+        inner.peek()
     }
 
     fn is_cobadged_inner(_inner: &Self::Inner) -> Result<bool, IntegrationError> {
@@ -100,42 +100,53 @@ impl<T: PaymentMethodDataTypes> Card<T> {
     pub fn get_card_expiry_year_2_digit(&self) -> Result<Secret<String>, IntegrationError> {
         let binding = self.card_exp_year.clone();
         let year = binding.peek();
-        Ok(Secret::new(
-            year.get(year.len() - 2..)
-                .ok_or(IntegrationError::InvalidDataFormat {
-                    field_name: "payment_method_data.card.card_exp_year",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Expected format: YY or YYYY".to_owned()),
-                        ..Default::default()
-                    },
-                })?
-                .to_string(),
-        ))
+        // If the value is a vault template token (e.g. {{$card_exp_year}}), pass it through as-is
+        // so that the injector template substitution works correctly.
+        match year {
+            y if y.contains("{{") => Ok(Secret::new(y.to_string())),
+            y => Ok(Secret::new(
+                y.get(y.len() - 2..)
+                    .ok_or(IntegrationError::InvalidDataFormat {
+                        field_name: "payment_method_data.card.card_exp_year",
+                        context: IntegrationErrorContext {
+                            additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                            ..Default::default()
+                        },
+                    })?
+                    .to_string(),
+            )),
+        }
     }
 
     pub fn get_card_expiry_month_2_digit(&self) -> Result<Secret<String>, IntegrationError> {
-        let exp_month = self
-            .card_exp_month
-            .peek()
-            .to_string()
-            .parse::<u8>()
-            .map_err(|_| IntegrationError::InvalidDataFormat {
-                field_name: "payment_method_data.card.card_exp_month",
-                context: IntegrationErrorContext {
-                    additional_context: Some("Expected format: MM".to_owned()),
-                    ..Default::default()
-                },
-            })?;
-        let month = cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
-            IntegrationError::InvalidDataFormat {
-                field_name: "payment_method_data.card.card_exp_month",
-                context: IntegrationErrorContext {
-                    additional_context: Some("Expected format: MM".to_owned()),
-                    ..Default::default()
-                },
+        let month_str = self.card_exp_month.peek();
+        // If the value is a vault template token (e.g. {{$card_exp_month}}), pass it through as-is
+        // so that the injector template substitution works correctly.
+        match month_str {
+            m if m.contains("{{") => Ok(Secret::new(m.to_string())),
+            m => {
+                let exp_month =
+                    m.parse::<u8>()
+                        .map_err(|_| IntegrationError::InvalidDataFormat {
+                            field_name: "payment_method_data.card.card_exp_month",
+                            context: IntegrationErrorContext {
+                                additional_context: Some("Expected format: MM".to_owned()),
+                                ..Default::default()
+                            },
+                        })?;
+                let month =
+                    cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
+                        IntegrationError::InvalidDataFormat {
+                            field_name: "payment_method_data.card.card_exp_month",
+                            context: IntegrationErrorContext {
+                                additional_context: Some("Expected format: MM".to_owned()),
+                                ..Default::default()
+                            },
+                        }
+                    })?;
+                Ok(Secret::new(month.two_digits()))
             }
-        })?;
-        Ok(Secret::new(month.two_digits()))
+        }
     }
 
     pub fn get_card_expiry_month_year_2_digit_with_delimiter(
@@ -174,6 +185,21 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .map(Secret::new)
     }
 
+    pub fn get_expiry_year_as_i32(&self) -> Result<Secret<i32>, Error> {
+        self.card_exp_year
+            .peek()
+            .clone()
+            .parse::<i32>()
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "payment_method_data.card.card_exp_year",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                    ..Default::default()
+                },
+            })
+            .map(Secret::new)
+    }
+
     pub fn get_expiry_date_as_yyyymm(&self, delimiter: &str) -> Secret<String> {
         let year = self.get_expiry_year_4_digit();
         Secret::new(format!(
@@ -188,6 +214,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         let year = self.get_card_expiry_year_2_digit()?;
         let month = self.get_card_expiry_month_2_digit()?;
         Ok(Secret::new(format!("{}{}", month.peek(), year.peek())))
+    }
+
+    pub fn get_expiry_date_as_yymm(&self) -> Result<Secret<String>, IntegrationError> {
+        let year = self.get_card_expiry_year_2_digit()?;
+        let month = self.get_card_expiry_month_2_digit()?;
+        Ok(Secret::new(format!("{}{}", year.peek(), month.peek())))
     }
 
     pub fn get_card_expiry_year_month_2_digit_with_delimiter(
@@ -208,6 +240,10 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .clone()
             .ok_or_else(missing_field_err("card.card_holder_name"))
     }
+
+    pub fn get_optional_cardholder_name(&self) -> Option<Secret<String>> {
+        self.card_holder_name.clone()
+    }
 }
 
 impl Card<DefaultPCIHolder> {
@@ -222,25 +258,6 @@ impl Card<DefaultPCIHolder> {
             delimiter,
             year.peek()
         ))
-    }
-    pub fn get_expiry_date_as_yymm(&self) -> Result<Secret<String>, IntegrationError> {
-        let year = self.get_card_expiry_year_2_digit()?.expose();
-        let month = self.card_exp_month.clone().expose();
-        Ok(Secret::new(format!("{year}{month}")))
-    }
-    pub fn get_expiry_year_as_i32(&self) -> Result<Secret<i32>, Error> {
-        self.card_exp_year
-            .peek()
-            .clone()
-            .parse::<i32>()
-            .change_context(IntegrationError::InvalidDataFormat {
-                field_name: "payment_method_data.card.card_exp_year",
-                context: IntegrationErrorContext {
-                    additional_context: Some("Expected format: YY or YYYY".to_owned()),
-                    ..Default::default()
-                },
-            })
-            .map(Secret::new)
     }
 }
 
@@ -578,6 +595,13 @@ pub enum BankDebitData {
         bank_type: Option<common_enums::BankType>,
         bank_holder_type: Option<common_enums::BankHolderType>,
     },
+    EftBankDebit {
+        account_number: Secret<String>,
+        branch_code: Secret<String>,
+        bank_account_holder_name: Option<Secret<String>>,
+        bank_name: Option<common_enums::BankNames>,
+        bank_type: Option<common_enums::BankType>,
+    },
     SepaBankDebit {
         iban: Secret<String>,
         bank_account_holder_name: Option<Secret<String>>,
@@ -716,6 +740,12 @@ pub enum WalletData {
     MbWay(MbWayData),
     Satispay(SatispayData),
     Wero(WeroData),
+    LazyPayRedirect(LazyPayRedirection),
+    PhonePeRedirect(PhonePeRedirection),
+    BillDeskRedirect(BillDeskRedirection),
+    CashfreeRedirect(CashfreeRedirection),
+    PayURedirect(PayURedirection),
+    EaseBuzzRedirect(EaseBuzzRedirection),
 }
 
 impl WalletData {
@@ -756,9 +786,11 @@ impl WalletData {
                 let encoded_token = base64::engine::general_purpose::STANDARD.encode(token_as_vec);
                 Ok(encoded_token)
             }
-            _ => {
-                Err(IntegrationError::not_implemented("SELECTED PAYMENT METHOD".to_owned()).into())
-            }
+            _ => Err(IntegrationError::NotImplemented(
+                "SELECTED PAYMENT METHOD".to_owned(),
+                Default::default(),
+            )
+            .into()),
         }
     }
 }
@@ -774,6 +806,24 @@ pub struct SatispayData {}
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct WeroData {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct LazyPayRedirection {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct PhonePeRedirection {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct BillDeskRedirection {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct CashfreeRedirection {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct PayURedirection {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct EaseBuzzRedirection {}
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct MifinityData {
@@ -1206,6 +1256,20 @@ impl ApplePayDecryptedData {
         let month = self.application_expiration_month.clone().expose();
         Ok(Secret::new(format!("{month}{year}")))
     }
+
+    /// Get the expiry date in YYYY{separator}MM format from the Apple Pay pre-decrypt data
+    pub fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
+        let year = self.get_four_digit_expiry_year();
+        let month = self.application_expiration_month.clone().expose();
+        Secret::new(format!("{}{}{:0>2}", year.peek(), separator, month))
+    }
+
+    /// Get the expiry date in MM{separator}YYYY format from the Apple Pay pre-decrypt data
+    pub fn get_expiry_date_as_mmyyyy(&self, separator: &str) -> Secret<String> {
+        let year = self.get_four_digit_expiry_year();
+        let month = self.application_expiration_month.clone().expose();
+        Secret::new(format!("{month}{separator}{}", year.peek()))
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
@@ -1478,19 +1542,23 @@ pub struct CardDetailsForNetworkTransactionId {
 
 impl CardDetailsForNetworkTransactionId {
     pub fn get_card_expiry_year_2_digit(&self) -> Result<Secret<String>, IntegrationError> {
-        let binding = self.card_exp_year.clone();
-        let year = binding.peek();
-        Ok(Secret::new(
-            year.get(year.len() - 2..)
-                .ok_or(IntegrationError::InvalidDataFormat {
-                    field_name: "payment_method_data.card.card_exp_year",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Expected format: YY or YYYY".to_owned()),
-                        ..Default::default()
-                    },
-                })?
-                .to_string(),
-        ))
+        let year = self.card_exp_year.peek();
+        // If the value is a vault template token (e.g. {{$card_exp_year}}), pass it through as-is
+        // so that the injector template substitution works correctly.
+        match year {
+            y if y.contains("{{") => Ok(Secret::new(y.to_string())),
+            y => Ok(Secret::new(
+                y.get(y.len() - 2..)
+                    .ok_or(IntegrationError::InvalidDataFormat {
+                        field_name: "payment_method_data.card.card_exp_year",
+                        context: IntegrationErrorContext {
+                            additional_context: Some("Expected format: YY or YYYY".to_owned()),
+                            ..Default::default()
+                        },
+                    })?
+                    .to_string(),
+            )),
+        }
     }
     pub fn get_card_issuer(&self) -> Result<CardIssuer, error_stack::Report<IntegrationError>> {
         get_card_issuer(self.card_number.peek())

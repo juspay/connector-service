@@ -15,6 +15,7 @@ use grpc_api_types::payments::{
     payout_service_client::PayoutServiceClient,
     recurring_payment_service_client::RecurringPaymentServiceClient,
     refund_service_client::RefundServiceClient,
+    surcharge_service_client::SurchargeServiceClient,
     // request / response types (all unique types across all services)
     CustomerServiceCreateRequest,
     CustomerServiceCreateResponse,
@@ -28,6 +29,8 @@ use grpc_api_types::payments::{
     DisputeServiceSubmitEvidenceResponse,
     EventServiceHandleRequest,
     EventServiceHandleResponse,
+    EventServiceParseRequest,
+    EventServiceParseResponse,
     MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest,
     MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse,
     MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
@@ -89,6 +92,8 @@ use grpc_api_types::payments::{
     RecurringPaymentServiceRevokeResponse,
     RefundResponse,
     RefundServiceGetRequest,
+    SurchargeServiceCalculateRequest,
+    SurchargeServiceCalculateResponse,
 };
 use tonic::{
     metadata::{MetadataKey, MetadataValue},
@@ -185,6 +190,12 @@ impl_grpc_client!(
 impl_grpc_client!(
     GrpcEventClient,
     EventServiceClient,
+    (
+        parse_event,
+        parse_event,
+        EventServiceParseRequest,
+        EventServiceParseResponse
+    ),
     (
         handle_event,
         handle_event,
@@ -423,6 +434,18 @@ impl_grpc_client!(
     (refund_get, get, RefundServiceGetRequest, RefundResponse),
 );
 
+// SurchargeService
+impl_grpc_client!(
+    GrpcSurchargeClient,
+    SurchargeServiceClient,
+    (
+        calculate,
+        calculate,
+        SurchargeServiceCalculateRequest,
+        SurchargeServiceCalculateResponse
+    ),
+);
+
 // ── GrpcClient ────────────────────────────────────────────────────────────────
 
 /// Top-level gRPC client for the connector-service.
@@ -442,7 +465,7 @@ impl_grpc_client!(
 ///
 /// let _ = client.customer.create(Default::default()).await;
 /// let _ = client.dispute.submit_evidence(Default::default()).await;
-/// let _ = client.event.handle_event(Default::default()).await;
+/// let _ = client.event.parse_event(Default::default()).await;
 /// let _ = client.merchant_authentication.create_server_authentication_token(Default::default()).await;
 /// # Ok(()) }
 /// ```
@@ -457,6 +480,7 @@ pub struct GrpcClient {
     pub payout: GrpcPayoutClient,
     pub recurring_payment: GrpcRecurringPaymentClient,
     pub refund: GrpcRefundClient,
+    pub surcharge: GrpcSurchargeClient,
 }
 
 impl GrpcClient {
@@ -494,6 +518,7 @@ impl GrpcClient {
                 Arc::clone(&headers),
             ),
             refund: GrpcRefundClient::new(channel.clone(), Arc::clone(&headers)),
+            surcharge: GrpcSurchargeClient::new(channel.clone(), Arc::clone(&headers)),
         })
     }
 }

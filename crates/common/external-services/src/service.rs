@@ -1,10 +1,12 @@
 use std::{collections::HashMap, str::FromStr, sync::RwLock, time::Duration};
 
+use base64::Engine;
 use common_enums::ApiClientError;
 #[cfg(feature = "injector-client")]
 use common_utils::{
     consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     events::{EventStage, MaskedSerdeValue},
+    request::TransportType,
 };
 use common_utils::{
     ext_traits::AsyncExt,
@@ -23,19 +25,80 @@ use domain_types::{
 use domain_types::{
     errors::{
         report_common_api_client_to_flow, report_connector_request_to_flow,
-        report_connector_response_to_flow, ConnectorFlowError, ResponseTransformationErrorContext,
+        report_connector_response_to_flow, report_kafka_client_to_flow, ConnectorFlowError,
+        ResponseTransformationErrorContext,
     },
     IntegrationError,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 #[cfg(feature = "injector-client")]
 use injector;
+pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
+use url::Url;
 
 /// Test context for mock server integration
 #[derive(Debug, Clone)]
 pub struct TestContext {
     pub session_id: String,
     pub mock_server_url: String,
+}
+
+/// Type of the vault connector
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VaultConnectorType {
+    /// Proxy vault - forwards requests through a proxy (e.g., VGS forward proxy)
+    Proxy,
+    /// Transformation vault - transforms/tokenizes data (e.g., HyperswitchVault)
+    Transformation,
+}
+
+/// Authentication credentials for vault connectors
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct VaultConnectorAuth {
+    /// API key for authenticating with the vault connector
+    pub api_key: Secret<String>,
+    /// profile ID for authenticating with the vault connector
+    pub profile_id: Secret<String>,
+}
+
+/// External Vault Proxy Related Metadata
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(untagged)]
+pub enum ExternalVaultProxyMetadata {
+    /// VGS proxy data variant
+    VgsMetadata(VgsMetadata),
+    /// HyperswitchVault data variant
+    HyperswitchVaultMetadata(HyperswitchVaultMetadata),
+}
+
+/// Complete external vault proxy configuration to be serialized and sent to UCS
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct ExternalVaultProxyConfig {
+    /// Type of the vault connector (e.g., Proxy or Transformation)
+    pub vault_connector_type: VaultConnectorType,
+    /// Name/ID of the vault connector (e.g., "vgs", "hyperswitch_vault")
+    pub vault_connector_id: Option<String>,
+    /// Metadata specific to the vault connector type
+    pub metadata: ExternalVaultProxyMetadata,
+}
+
+/// VGS proxy data
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct VgsMetadata {
+    /// External vault url
+    pub proxy_url: Url,
+    /// CA certificates to verify the vault server
+    pub certificate: Secret<String>,
+}
+
+/// HyperswitchVault proxy data
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct HyperswitchVaultMetadata {
+    /// External vault url
+    pub vault_endpoint: Url,
+    /// Authentication data for the vault connector
+    pub vault_auth_data: VaultConnectorAuth,
 }
 
 pub trait ConnectorRequestReference {
@@ -114,8 +177,6 @@ use common_utils::{consts, emit_event_with_config};
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::Maskable;
 #[cfg(feature = "injector-client")]
-use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface};
-#[cfg(feature = "injector-client")]
 use injector::{injector_core, HttpMethod, TokenData};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 #[cfg(feature = "injector-client")]
@@ -129,6 +190,19 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+#[cfg(not(feature = "connector-request-kafka"))]
+use common_enums::KafkaClientError;
+#[cfg(not(feature = "connector-request-kafka"))]
+use common_utils::request::KafkaRecord;
+#[cfg(feature = "connector-request-kafka")]
+pub use connector_request_kafka::publish_to_kafka;
+#[cfg(not(feature = "connector-request-kafka"))]
+pub async fn publish_to_kafka(
+    _kafka_record: KafkaRecord,
+) -> CustomResult<Result<Response, Response>, KafkaClientError> {
+    Err(KafkaClientError::NotEnabled)?
+}
+
 /// Handles the connector response, processing both successful and error responses
 #[allow(clippy::too_many_arguments)]
 pub fn handle_connector_response<F, ResourceCommonData, Req, Resp>(
@@ -137,7 +211,7 @@ pub fn handle_connector_response<F, ResourceCommonData, Req, Resp>(
     connector: &BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
     mut event: Option<&mut Event>,
     all_keys_required: Option<bool>,
-    method: Method,
+    method: &str,
     url: String,
     event_params: Option<&EventProcessingParams<'_>>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
@@ -147,6 +221,7 @@ where
     Resp: Clone + 'static + std::fmt::Debug,
     ResourceCommonData: Clone + RawConnectorRequestResponse + ConnectorResponseHeaders,
 {
+    let return_raw = event_params.is_none_or(|p| p.return_raw_connector_data);
     match response {
         Ok(body) => {
             let response = match body {
@@ -155,7 +230,7 @@ where
                     tracing::Span::current()
                         .record("status_code", tracing::field::display(status_code));
 
-                    if all_keys_required.unwrap_or(true) {
+                    if all_keys_required.unwrap_or(true) && return_raw {
                         let raw_response_string = strip_bom_and_convert_to_string(&body.response);
                         updated_router_data
                             .resource_common_data
@@ -194,7 +269,7 @@ where
                     if let Some(params) = event_params {
                         metrics::EXTERNAL_SERVICE_API_CALLS_ERRORS
                             .with_label_values(&[
-                                &method.to_string(),
+                                method,
                                 params.service_name,
                                 params.connector_name,
                                 body.status_code.to_string().as_str(),
@@ -202,7 +277,7 @@ where
                             .inc();
                     }
 
-                    if all_keys_required.unwrap_or(true) {
+                    if all_keys_required.unwrap_or(true) && return_raw {
                         let raw_response_string = strip_bom_and_convert_to_string(&body.response);
                         updated_router_data
                             .resource_common_data
@@ -213,9 +288,14 @@ where
                     }
 
                     let error_response = match body.status_code {
-                        500..=511 => connector.get_5xx_error_response(body.clone(), event)?,
-                        _ => connector.get_error_response_v2(body.clone(), event)?,
+                        500..=511 => {
+                            connector.get_5xx_error_response(body.clone(), event.as_deref_mut())?
+                        }
+                        _ => connector.get_error_response_v2(body.clone(), event.as_deref_mut())?,
                     };
+                    if let Some(evt) = event {
+                        evt.set_error_response(&error_response);
+                    }
                     tracing::Span::current().record(
                         "response.error_message",
                         tracing::field::display(&error_response.message),
@@ -268,6 +348,8 @@ pub struct EventProcessingParams<'a> {
     pub reference_id: &'a Option<String>,
     pub resource_id: &'a Option<String>,
     pub shadow_mode: bool,
+    pub tenant_id: &'a str,
+    pub return_raw_connector_data: bool,
 }
 
 #[cfg(feature = "injector-client")]
@@ -312,56 +394,29 @@ where
         + AdditionalHeaders,
 {
     let start = tokio::time::Instant::now();
-    let result = match call_connector_action {
-        common_enums::CallConnectorAction::HandleResponse(res) => {
-            let body = Response {
-                headers: None,
-                response: res.into(),
-                status_code: 200,
-            };
-
-            let status_code = body.status_code;
-            tracing::Span::current().record("status_code", tracing::field::display(status_code));
-            if let Ok(response) = parse_json_with_bom_handling(&body.response) {
-                tracing::Span::current().record(
-                    "response.body",
-                    tracing::field::display(response.masked_serialize().unwrap_or(
-                        json!({ "error": "failed to mask serialize connector response"}),
-                    )),
-                );
-            }
-
-            // Set raw_connector_response BEFORE calling the transformer
-            let mut updated_router_data = router_data.clone();
-            if all_keys_required.unwrap_or(true) {
-                let raw_response_string = strip_bom_and_convert_to_string(&body.response);
-                updated_router_data
-                    .resource_common_data
-                    .set_raw_connector_response(raw_response_string.map(Into::into));
-            }
-
-            let handle_response_result =
-                connector.handle_response_v2(&updated_router_data, None, body.clone());
-
-            let response = match handle_response_result {
-                Ok(data) => {
-                    tracing::info!("Transformer completed successfully");
-                    Ok(data)
+    let transport_type = connector.get_transport_type();
+    let result = match (call_connector_action, transport_type) {
+        // handle_response removed from proto (PaymentServiceGetRequest field 5 reserved)
+        (common_enums::CallConnectorAction::HandleResponse(_), _) => {
+            return Err(error_stack::report!(ConnectorFlowError::from(
+                IntegrationError::NotSupported {
+                    message:
+                        "The handle_response field has been removed from PaymentServiceGetRequest \
+                              (proto field 5 reserved). This flow is no longer supported."
+                            .into(),
+                    connector: "N/A",
+                    context: Default::default(),
                 }
-                Err(err) => Err(err),
-            }
-            .map_err(report_connector_response_to_flow)?;
-
-            Ok(response)
+            )));
         }
-        common_enums::CallConnectorAction::Trigger => {
+        (common_enums::CallConnectorAction::Trigger, TransportType::Http) => {
             let mut connector_request = connector
                 .build_request_v2(&router_data.clone())
                 .map_err(report_connector_request_to_flow)?;
 
             let mut updated_router_data = router_data.clone();
             updated_router_data = match &connector_request {
-                Some(request) => {
+                Some(request) if event_params.return_raw_connector_data => {
                     updated_router_data
                         .resource_common_data
                         .set_raw_connector_request(Some(
@@ -369,7 +424,7 @@ where
                         ));
                     updated_router_data
                 }
-                None => updated_router_data,
+                _ => updated_router_data,
             };
             connector_request = connector_request.map(|mut req| {
                 if event_params.shadow_mode {
@@ -421,52 +476,6 @@ where
                 req
             });
 
-            let headers = connector_request
-                .as_ref()
-                .map(|connector_request| connector_request.headers.clone())
-                .unwrap_or_default();
-            tracing::info!(?headers, "headers of connector request");
-
-            let event_headers: HashMap<String, String> = headers
-                .iter()
-                .map(|(k, v)| (k.clone(), format!("{v:?}")))
-                .collect();
-
-            let masked_headers = headers
-                .iter()
-                .fold(serde_json::Map::new(), |mut acc, (k, v)| {
-                    let value = match v {
-                        Maskable::Masked(_) => {
-                            serde_json::Value::String("*** alloc::string::String ***".to_string())
-                        }
-                        Maskable::Normal(iv) => serde_json::Value::String(iv.to_owned()),
-                    };
-                    acc.insert(k.clone(), value);
-                    acc
-                });
-            let headers = serde_json::Value::Object(masked_headers);
-            tracing::Span::current().record("request.headers", tracing::field::display(&headers));
-
-            let req = connector_request.as_ref().map(|connector_request| {
-                let masked_request = match connector_request.body.as_ref() {
-                    Some(request) => match request {
-                        RequestContent::Json(i)
-                        | RequestContent::FormUrlEncoded(i)
-                        | RequestContent::Xml(i) => (**i).masked_serialize().unwrap_or(
-                            json!({ "error": "failed to mask serialize connector request"}),
-                        ),
-                        RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
-                        RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
-                    },
-                    None => serde_json::Value::Null,
-                };
-                tracing::info!(request=?masked_request, "request of connector");
-                tracing::Span::current()
-                    .record("request.body", tracing::field::display(&masked_request));
-
-                masked_request
-            });
-
             match connector_request {
                 Some(request) => {
                     let url = request.url.clone();
@@ -482,7 +491,16 @@ where
                     tracing::Span::current().record("request.url", tracing::field::display(&url));
                     tracing::Span::current()
                         .record("request.method", tracing::field::display(method));
-                    let request_id = event_params.request_id.to_string();
+
+                    let masked_headers = request.headers.clone();
+                    tracing::info!(headers=?masked_headers, "headers of connector request");
+                    tracing::Span::current()
+                        .record("request.headers", tracing::field::debug(&masked_headers));
+
+                    let masked_request = mask_connector_request(&request.body);
+                    tracing::info!(request=?masked_request, "request of connector");
+                    tracing::Span::current()
+                        .record("request.body", tracing::field::display(&masked_request));
 
                     let response = if let Some(token_data) = token_data {
                         tracing::debug!(
@@ -502,7 +520,8 @@ where
                             .expose()
                             .to_string();
 
-                        let headers = request
+                        // Collect connector request headers (excluding vault metadata)
+                        let headers: HashMap<String, Secret<String>> = request
                             .headers
                             .iter()
                             .map(|(key, value)| {
@@ -514,33 +533,28 @@ where
                                     }),
                                 )
                             })
-                            .chain(
-                                updated_router_data
-                                    .resource_common_data
-                                    .get_vault_headers()
-                                    .map(|headers| {
-                                        headers.iter().map(|(k, v)| (k.clone(), v.clone()))
-                                    })
-                                    .into_iter()
-                                    .flatten(),
-                            )
                             .collect();
 
-                        // Create injector request
-                        let injector_request = injector::InjectorRequest::new(
-                            request.url.clone(),
+                        // Parse vault metadata and build injector request
+                        let vault_headers =
+                            updated_router_data.resource_common_data.get_vault_headers();
+                        let backup_proxy_url = proxy
+                            .https_url
+                            .as_ref()
+                            .or(proxy.http_url.as_ref())
+                            .map(|url| Secret::new(url.clone()));
+                        let injector_request = build_injector_request(
+                            Url::parse(&request.url).change_context(ConnectorFlowError::from(
+                                IntegrationError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                },
+                            ))?,
                             request.method.to_http_method(),
                             template,
                             token_data,
-                            Some(headers),
-                            proxy
-                                .https_url
-                                .as_ref()
-                                .or(proxy.http_url.as_ref())
-                                .map(|url| Secret::new(url.clone())),
-                            None,
-                            None,
-                            None,
+                            headers,
+                            backup_proxy_url,
+                            vault_headers,
                         );
 
                         // New injector handles HTTP request internally and returns enhanced response
@@ -552,12 +566,27 @@ where
                             )?;
 
                         // Convert injector response to connector service Response format
-                        let response_bytes = serde_json::to_vec(&injector_response.response)
-                            .map_err(|_| {
+                        let actual_response = injector_response
+                            .response
+                            .get("response")
+                            .cloned()
+                            .unwrap_or(injector_response.response.clone());
+
+                        let response_bytes =
+                            serde_json::to_vec(&actual_response).map_err(|_| {
                                 ConnectorFlowError::from(
                                     ConnectorError::response_handling_failed_http_status_unknown(),
                                 )
                             })?;
+
+                        // Extract the actual connector status_code from the wrapper if present,
+                        // otherwise fall back to the injector-level status_code
+                        let actual_status_code = injector_response
+                            .response
+                            .get("status_code")
+                            .and_then(|v| v.as_u64())
+                            .and_then(|v| u16::try_from(v).ok())
+                            .unwrap_or(injector_response.status_code);
 
                         // Convert headers from HashMap<String, String> to reqwest::HeaderMap if present
                         let headers = injector_response.headers.map(|h| {
@@ -576,7 +605,7 @@ where
                         Ok(Ok(Response {
                             headers,
                             response: response_bytes.into(),
-                            status_code: injector_response.status_code, // Use actual status code from connector
+                            status_code: actual_status_code, // Use actual status code from connector
                         }))
                     } else {
                         let test_mode = test_context.is_some();
@@ -606,41 +635,24 @@ where
                             event_params.connector_name,
                         ])
                         .observe(external_service_elapsed.as_secs_f64());
-                    tracing::info!(?response, "response from connector");
-
                     // Extract status code BEFORE creating event - one liner
                     let status_code = response.as_ref().ok().map(|result| match result {
                         Ok(body) | Err(body) => i32::from(body.status_code),
-                    });
-
-                    // Construct masked request for event
-                    let masked_request_data = req.as_ref().and_then(|r| {
-                        MaskedSerdeValue::from_masked_optional(r, "connector_request")
                     });
 
                     let latency =
                         u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
 
                     // Create single event (response_data will be set by connector)
-                    let mut event = Event {
-                        request_id: request_id.to_string(),
-                        timestamp: chrono::Utc::now().timestamp().into(),
-                        flow_type: event_params.flow_name,
-                        connector: event_params.connector_name.to_string(),
-                        url: Some(url.clone()),
-                        stage: EventStage::ConnectorCall,
-                        latency_ms: Some(latency),
+                    let mut event = create_event(
+                        &event_params,
+                        Some(url.clone()),
+                        Some(method.to_string()),
+                        Some(latency),
+                        &masked_headers,
                         status_code,
-                        request_data: masked_request_data,
-                        response_data: None, // Will be set by connector via set_response_body
-                        headers: event_headers,
-                        additional_fields: HashMap::new(),
-                        lineage_ids: event_params.lineage_ids.to_owned(),
-                    };
-                    event.add_reference_id(event_params.reference_id.as_deref());
-                    event.add_resource_id(event_params.resource_id.as_deref());
-                    event.add_service_type(event_params.service_type);
-                    event.add_service_name(event_params.service_name);
+                        &masked_request,
+                    );
 
                     let result = handle_connector_response(
                         response.change_context(
@@ -650,8 +662,99 @@ where
                         &connector,
                         Some(&mut event),
                         all_keys_required,
-                        method,
-                        url.clone(),
+                        &method.to_string(),
+                        url,
+                        Some(&event_params),
+                    )
+                    .map_err(report_connector_response_to_flow);
+
+                    emit_event_with_config(event, event_params.event_config);
+                    result
+                }
+                None => Ok(router_data),
+            }
+        }
+        (common_enums::CallConnectorAction::Trigger, TransportType::Kafka) => {
+            let kafka_record = connector
+                .build_kafka_record(&router_data.clone())
+                .map_err(report_connector_request_to_flow)?;
+
+            match kafka_record {
+                Some(record) => {
+                    metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
+                        .with_label_values(&[
+                            "PUBLISH",
+                            event_params.service_name,
+                            event_params.connector_name,
+                        ])
+                        .inc();
+                    let external_service_start_latency = tokio::time::Instant::now();
+
+                    let topic = record.topic.clone();
+                    tracing::Span::current().record("request.url", tracing::field::display(&topic));
+
+                    let masked_headers = record.headers.clone();
+                    tracing::info!(headers=?masked_headers, "headers of connector request");
+                    tracing::Span::current()
+                        .record("request.headers", tracing::field::debug(&record.headers));
+
+                    let masked_request = mask_connector_request(&record.payload);
+                    tracing::info!(request=?masked_request, "request of connector");
+                    tracing::Span::current()
+                        .record("request.body", tracing::field::display(&masked_request));
+
+                    let response = publish_to_kafka(record)
+                        .await
+                        .map_err(report_kafka_client_to_flow)
+                        .inspect_err(|err| {
+                            info_log(
+                                "NETWORK_ERROR",
+                                &json!(format!(
+                                    "Failed to publish connector message to Kafka. Error: {:?}",
+                                    err
+                                )),
+                            );
+                        });
+
+                    let external_service_elapsed = external_service_start_latency.elapsed();
+                    metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
+                        .with_label_values(&[
+                            "PUBLISH",
+                            event_params.service_name,
+                            event_params.connector_name,
+                        ])
+                        .observe(external_service_elapsed.as_secs_f64());
+                    tracing::info!(?response, "response from connector");
+
+                    // Extract status code BEFORE creating event - one liner
+                    let status_code = response.as_ref().ok().map(|result| match result {
+                        Ok(body) | Err(body) => i32::from(body.status_code),
+                    });
+
+                    let latency =
+                        u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
+
+                    // Create single event (response_data will be set by connector)
+                    let mut event = create_event(
+                        &event_params,
+                        Some(topic.clone()),
+                        None,
+                        Some(latency),
+                        &masked_headers,
+                        status_code,
+                        &masked_request,
+                    );
+
+                    let result = handle_connector_response(
+                        response.change_context(
+                            ConnectorError::response_handling_failed_http_status_unknown(),
+                        ),
+                        router_data,
+                        &connector,
+                        Some(&mut event),
+                        all_keys_required,
+                        "PUBLISH",
+                        topic,
                         Some(&event_params),
                     )
                     .map_err(report_connector_response_to_flow);
@@ -691,6 +794,65 @@ where
     result_with_integrity_check
 }
 
+#[cfg(feature = "injector-client")]
+fn mask_connector_request(request_content: &Option<RequestContent>) -> serde_json::Value {
+    match request_content {
+        Some(request) => match request {
+            RequestContent::Json(i)
+            | RequestContent::FormUrlEncoded(i)
+            | RequestContent::Xml(i) => (**i)
+                .masked_serialize()
+                .unwrap_or(json!({ "error": "failed to mask serialize connector request"})),
+            RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
+            RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
+        },
+        None => serde_json::Value::Null,
+    }
+}
+
+#[cfg(feature = "injector-client")]
+fn create_event(
+    event_params: &EventProcessingParams<'_>,
+    url: Option<String>,
+    method: Option<String>,
+    latency_ms: Option<u64>,
+    headers: &Headers,
+    status_code: Option<i32>,
+    masked_request: &serde_json::Value,
+) -> Event {
+    let request_id = event_params.request_id.to_string();
+    let event_headers = headers
+        .iter()
+        .map(|(k, v)| (k.clone(), format!("{v:?}")))
+        .collect();
+
+    let mut event = Event {
+        request_id: request_id.to_string(),
+        timestamp: chrono::Utc::now().timestamp_millis().into(),
+        flow_type: event_params.flow_name,
+        connector: event_params.connector_name.to_string(),
+        url,
+        method,
+        stage: EventStage::ConnectorCall,
+        latency_ms,
+        status_code,
+        request_data: MaskedSerdeValue::from_masked_optional(masked_request, "connector_request"),
+        response_data: None, // Will be set by connector via set_response_body
+        error: None,
+        headers: event_headers,
+        additional_fields: HashMap::new(),
+        lineage_ids: event_params.lineage_ids.to_owned(),
+    };
+
+    event.add_reference_id(event_params.reference_id.as_deref());
+    event.add_resource_id(event_params.resource_id.as_deref());
+    event.add_service_type(event_params.service_type);
+    event.add_service_name(event_params.service_name);
+    event.add_tenant_id(event_params.tenant_id);
+
+    event
+}
+
 pub enum ApplicationResponse<R> {
     Json(R),
 }
@@ -705,8 +867,7 @@ pub async fn call_connector_api(
     _flow_name: &str,
     test_mode: bool,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
-    let url =
-        reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
+    let url = Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
     let should_bypass_proxy = proxy.bypass_proxy_urls.contains(&url.to_string());
 
@@ -871,42 +1032,33 @@ pub async fn call_connector_api(
 pub fn create_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
-    _client_certificate: Option<Secret<String>>,
-    _client_certificate_key: Option<Secret<String>>,
+    client_certificate: Option<Secret<String>>,
+    client_certificate_key: Option<Secret<String>>,
     test_mode: bool,
 ) -> CustomResult<Client, ApiClientError> {
-    get_base_client(proxy_config, should_bypass_proxy, test_mode)
-    // match (client_certificate, client_certificate_key) {
-    //     (Some(encoded_certificate), Some(encoded_certificate_key)) => {
-    //         let client_builder = get_client_builder(proxy_config, should_bypass_proxy)?;
+    match (client_certificate.clone(), client_certificate_key.clone()) {
+        (Some(encoded_certificate), Some(encoded_certificate_key)) => {
+            let client_builder = get_client_builder(proxy_config, should_bypass_proxy, test_mode)?;
 
-    //         let identity = create_identity_from_certificate_and_key(
-    //             encoded_certificate.clone(),
-    //             encoded_certificate_key,
-    //         )?;
-    //         let certificate_list = create_certificate(encoded_certificate)?;
-    //         let client_builder = certificate_list
-    //             .into_iter()
-    //             .fold(client_builder, |client_builder, certificate| {
-    //                 client_builder.add_root_certificate(certificate)
-    //             });
-    //         client_builder
-    //             .identity(identity)
-    //             .use_rustls_tls()
-    //             .build()
-    //             .change_context(ApiClientError::ClientConstructionFailed)
-    //             .inspect_err(|err| {
-    //                 info_log(
-    //                     "ERROR",
-    //                     &json!(format!(
-    //                         "Failed to construct client with certificate and certificate key. Error: {:?}",
-    //                         err
-    //                     )),
-    //                 );
-    //             })
-    //     }
-    //     _ => ,
-    // }
+            let identity = create_identity_from_certificate_and_key(
+                encoded_certificate.clone(),
+                encoded_certificate_key,
+            )?;
+            let certificate_list = create_certificate(encoded_certificate)?;
+            let client_builder = certificate_list
+                .into_iter()
+                .fold(client_builder, |client_builder, certificate| {
+                    client_builder.add_root_certificate(certificate)
+                });
+            client_builder
+                .identity(identity)
+                .use_rustls_tls()
+                .build()
+                .change_context(ApiClientError::ClientConstructionFailed)
+                .attach_printable("Failed to construct client with certificate and certificate key")
+        }
+        _ => get_base_client(proxy_config, should_bypass_proxy, test_mode),
+    }
 }
 
 static DEFAULT_CLIENT: OnceCell<Client> = OnceCell::new();
@@ -1078,41 +1230,41 @@ fn get_client_builder(
     Ok(client_builder)
 }
 
-// pub fn create_identity_from_certificate_and_key(
-//     encoded_certificate: hyperswitch_masking::Secret<String>,
-//     encoded_certificate_key: hyperswitch_masking::Secret<String>,
-// ) -> Result<reqwest::Identity, error_stack::Report<ApiClientError>> {
-//     let decoded_certificate = BASE64_ENGINE
-//         .decode(encoded_certificate.expose())
-//         .change_context(ApiClientError::CertificateDecodeFailed)?;
+pub fn create_identity_from_certificate_and_key(
+    encoded_certificate: Secret<String>,
+    encoded_certificate_key: Secret<String>,
+) -> Result<reqwest::Identity, error_stack::Report<ApiClientError>> {
+    let decoded_certificate = BASE64_ENGINE
+        .decode(encoded_certificate.expose())
+        .change_context(ApiClientError::CertificateDecodeFailed)?;
 
-//     let decoded_certificate_key = BASE64_ENGINE
-//         .decode(encoded_certificate_key.expose())
-//         .change_context(ApiClientError::CertificateDecodeFailed)?;
+    let decoded_certificate_key = BASE64_ENGINE
+        .decode(encoded_certificate_key.expose())
+        .change_context(ApiClientError::CertificateDecodeFailed)?;
 
-//     let certificate = String::from_utf8(decoded_certificate)
-//         .change_context(ApiClientError::CertificateDecodeFailed)?;
+    let certificate = String::from_utf8(decoded_certificate)
+        .change_context(ApiClientError::CertificateDecodeFailed)?;
 
-//     let certificate_key = String::from_utf8(decoded_certificate_key)
-//         .change_context(ApiClientError::CertificateDecodeFailed)?;
+    let certificate_key = String::from_utf8(decoded_certificate_key)
+        .change_context(ApiClientError::CertificateDecodeFailed)?;
 
-//     let key_chain = format!("{}{}", certificate_key, certificate);
-//     reqwest::Identity::from_pem(key_chain.as_bytes())
-//         .change_context(ApiClientError::CertificateDecodeFailed)
-// }
+    let key_chain = format!("{}{}", certificate_key, certificate);
+    reqwest::Identity::from_pem(key_chain.as_bytes())
+        .change_context(ApiClientError::CertificateDecodeFailed)
+}
 
-// pub fn create_certificate(
-//     encoded_certificate: hyperswitch_masking::Secret<String>,
-// ) -> Result<Vec<reqwest::Certificate>, error_stack::Report<ApiClientError>> {
-//     let decoded_certificate = BASE64_ENGINE
-//         .decode(encoded_certificate.expose())
-//         .change_context(ApiClientError::CertificateDecodeFailed)?;
+pub fn create_certificate(
+    encoded_certificate: Secret<String>,
+) -> Result<Vec<reqwest::Certificate>, error_stack::Report<ApiClientError>> {
+    let decoded_certificate = BASE64_ENGINE
+        .decode(encoded_certificate.expose())
+        .change_context(ApiClientError::CertificateDecodeFailed)?;
 
-//     let certificate = String::from_utf8(decoded_certificate)
-//         .change_context(ApiClientError::CertificateDecodeFailed)?;
-//     reqwest::Certificate::from_pem_bundle(certificate.as_bytes())
-//         .change_context(ApiClientError::CertificateDecodeFailed)
-// }
+    let certificate = String::from_utf8(decoded_certificate)
+        .change_context(ApiClientError::CertificateDecodeFailed)?;
+    reqwest::Certificate::from_pem_bundle(certificate.as_bytes())
+        .change_context(ApiClientError::CertificateDecodeFailed)
+}
 
 async fn handle_response(
     response: CustomResult<reqwest::Response, ApiClientError>,
@@ -1228,28 +1380,6 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
     .to_string()
 }
 
-#[cfg(feature = "injector-client")]
-/// Helper function to parse JSON from response bytes with BOM handling
-fn parse_json_with_bom_handling(
-    response_bytes: &[u8],
-) -> Result<serde_json::Value, serde_json::Error> {
-    // Try direct parsing first (most common case)
-    match serde_json::from_slice::<serde_json::Value>(response_bytes) {
-        Ok(value) => Ok(value),
-        Err(_) => {
-            // If direct parsing fails, try after removing BOM
-            let cleaned_response = if response_bytes.starts_with(&[0xEF, 0xBB, 0xBF]) {
-                // UTF-8 BOM detected, remove it
-                #[allow(clippy::indexing_slicing)]
-                &response_bytes[3..]
-            } else {
-                response_bytes
-            };
-            serde_json::from_slice::<serde_json::Value>(cleaned_response)
-        }
-    }
-}
-
 pub(super) trait HeaderExt {
     fn construct_header_map(self) -> CustomResult<reqwest::header::HeaderMap, ApiClientError>;
 }
@@ -1282,6 +1412,126 @@ impl RequestBuilderExt for reqwest::RequestBuilder {
         self = self.headers(headers);
         self
     }
+}
+
+/// Parse the `x-external-vault-metadata` header from vault headers and return the config.
+///
+/// The header value is expected to be a **base64-encoded** JSON string representing
+/// an [`ExternalVaultProxyConfig`]. This function decodes the base64 payload, converts
+/// it to a UTF-8 string, and then deserializes the JSON.
+#[cfg(feature = "injector-client")]
+fn parse_external_vault_config(
+    vault_headers: Option<&HashMap<String, Secret<String>>>,
+) -> Option<ExternalVaultProxyConfig> {
+    use base64::{engine::general_purpose::STANDARD as BASE64_ENGINE, Engine};
+
+    vault_headers
+        .and_then(|vh| vh.get(consts::X_EXTERNAL_VAULT_METADATA))
+        .and_then(|header_value| {
+            let encoded = header_value.clone().expose();
+            let decoded_bytes = BASE64_ENGINE
+                .decode(&encoded)
+                .inspect_err(|e| {
+                    tracing::warn!("Failed to base64-decode external vault metadata: {:?}", e);
+                })
+                .ok()?;
+
+            let json_str = String::from_utf8(decoded_bytes)
+                .inspect_err(|e| {
+                    tracing::warn!("External vault metadata is not valid UTF-8: {:?}", e);
+                })
+                .ok()?;
+
+            serde_json::from_str::<ExternalVaultProxyConfig>(&json_str)
+                .inspect_err(|e| {
+                    tracing::warn!("Failed to parse external vault metadata JSON: {:?}", e);
+                })
+                .ok()
+        })
+}
+
+#[cfg(feature = "injector-client")]
+/// Apply parsed external vault proxy config to the injector request's connection config.
+fn apply_vault_config_to_injector(
+    injector_request: &mut injector::InjectorRequest,
+    vault_cfg: ExternalVaultProxyConfig,
+) {
+    tracing::info!(
+        vault_connector_type = ?vault_cfg.vault_connector_type,
+        vault_connector_id = ?vault_cfg.vault_connector_id,
+        "Applying external vault proxy config to injector request"
+    );
+
+    // Map local VaultConnectorType to injector's VaultConnectorType
+    injector_request.connection_config.vault_connector_type =
+        Some(match vault_cfg.vault_connector_type {
+            VaultConnectorType::Proxy => injector::VaultConnectorType::Proxy,
+            VaultConnectorType::Transformation => injector::VaultConnectorType::Transformation,
+        });
+
+    // Map vault_connector_id string to injector's VaultConnectors enum
+    injector_request.connection_config.vault_connector_id = vault_cfg
+        .vault_connector_id
+        .as_deref()
+        .and_then(|id| match id.to_lowercase().as_str() {
+            "vgs" => Some(injector::VaultConnectors::VGS),
+            "hyperswitch_vault" => Some(injector::VaultConnectors::HyperswitchVault),
+            _ => {
+                tracing::warn!("Unknown vault_connector_id: {}", id);
+                None
+            }
+        });
+
+    // Apply metadata-specific config (proxy_url/ca_cert or vault_endpoint/auth)
+    match vault_cfg.metadata {
+        ExternalVaultProxyMetadata::VgsMetadata(vgs) => {
+            injector_request.connection_config.proxy_url =
+                Some(Secret::new(vgs.proxy_url.to_string()));
+            injector_request.connection_config.ca_cert = Some(vgs.certificate);
+        }
+        ExternalVaultProxyMetadata::HyperswitchVaultMetadata(hsv) => {
+            injector_request.connection_config.vault_endpoint = Some(hsv.vault_endpoint);
+            injector_request.connection_config.vault_auth_data =
+                Some(injector::VaultConnectorAuth {
+                    api_key: hsv.vault_auth_data.api_key,
+                    profile_id: hsv.vault_auth_data.profile_id,
+                });
+        }
+    }
+}
+
+/// Build an `InjectorRequest` from connector request components and vault metadata.
+///
+/// Constructs the base request and enriches the `connection_config` with external vault
+/// proxy metadata (VGS proxy_url/ca_cert, or HyperswitchVault endpoint/auth) if the
+/// `x-external-vault-metadata` header is present in vault headers.
+#[cfg(feature = "injector-client")]
+fn build_injector_request(
+    endpoint: Url,
+    http_method: HttpMethod,
+    template: String,
+    token_data: TokenData,
+    headers: HashMap<String, Secret<String>>,
+    backup_proxy_url: Option<Secret<String>>,
+    vault_headers: Option<&HashMap<String, Secret<String>>>,
+) -> injector::InjectorRequest {
+    let mut injector_request = injector::InjectorRequest::new(
+        endpoint,
+        http_method,
+        template,
+        token_data,
+        Some(headers),
+        backup_proxy_url,
+        None,
+        None,
+        None,
+    );
+
+    if let Some(vault_cfg) = parse_external_vault_config(vault_headers) {
+        apply_vault_config_to_injector(&mut injector_request, vault_cfg);
+    }
+
+    injector_request
 }
 
 #[derive(Debug, Default, serde::Deserialize, Clone, strum::EnumString)]

@@ -349,7 +349,7 @@ impl
             merchant_transaction_id: item.merchant_transaction_id.clone(),
             encoded_data: item.encoded_data.clone(),
             capture_method: item.capture_method,
-            handle_response: item.handle_response.clone(),
+            // handle_response: item.handle_response.clone(), // field removed from proto (field 5 reserved)
             amount: item.amount,
             setup_future_usage: item.setup_future_usage,
             state: resolved_state,
@@ -474,6 +474,7 @@ impl
             merchant_refund_id: item.merchant_refund_id.clone(),
             connector_transaction_id: item.connector_transaction_id.clone(),
             refund_id: item.refund_id.clone(),
+            connector_refund_id: item.connector_refund_id.clone(),
             refund_reason: item.refund_reason.clone(),
             browser_info: item.browser_info.clone(),
             refund_metadata: item.refund_metadata.clone(),
@@ -481,6 +482,7 @@ impl
             test_mode: item.test_mode,
             payment_method_type: item.payment_method_type,
             connector_feature_data: item.connector_feature_data.clone(),
+            refund_amount: item.refund_amount,
         }
     }
 }

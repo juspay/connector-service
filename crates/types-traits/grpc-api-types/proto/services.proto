@@ -32,6 +32,9 @@
 //   │ RecurringPaymentService              │ Charge and revoke recurring payments. Process subscription billing and      │
 //   │                                      │ cancel mandates when customers end their recurring agreements.              │
 //   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
+//   │ SurchargeService                     │ Calculate additional fees for payment processing based on payment method,   │
+//   │                                      │ network, or regional regulations to ensure accurate cost recovery.          │
+//   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
 //   │ RefundService                        │ Retrieve and synchronize refund statuses. Track refund progress across      │
 //   │                                      │ payment processors to ensure accurate settlement of customer refunds.       │
 //   ├──────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────┤
@@ -65,6 +68,7 @@ package types;
 
 import "payment.proto";
 import "payouts.proto";
+import "surcharge.proto";
 
 option go_package = "github.com/juspay/connector-service/crates/types-traits/grpc-api-types/proto;proto";
 
@@ -73,13 +77,19 @@ option go_package = "github.com/juspay/connector-service/crates/types-traits/grp
 // ============================================================================
 
 // ============================================================================
-// EVENT SERVICE — Common event handler for processing inbound connector
-//                  webhooks across all services.
+// EVENT SERVICE — Two-phase inbound webhook processing.
+//   1. ParseEvent   — parse payload, return reference + event type (no credentials).
+//   2. HandleEvent  — verify source, return unified typed response (PSync/RSync/Dispute shape).
+// For single-call processing when secrets are known upfront, use CompositeEventService.
 // ============================================================================
 
 service EventService {
-  // Process webhook notifications from connectors. Translates connector events
-  // into standardized responses for asynchronous payment state updates.
+  // Parse a raw webhook payload without credentials.
+  // Returns resource reference and event type — sufficient to resolve secrets or early-exit.
+  rpc ParseEvent(EventServiceParseRequest) returns (EventServiceParseResponse);
+
+  // Verify webhook source and return a unified typed response.
+  // Response mirrors PaymentService.Get / RefundService.Get / DisputeService.Get.
   rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 }
 
@@ -319,5 +329,14 @@ service PayoutService {
 
   // Enroll disburse account.
   rpc EnrollDisburseAccount(PayoutServiceEnrollDisburseAccountRequest) returns (PayoutServiceEnrollDisburseAccountResponse);
+}
+
+// ============================================================================
+// SURCHARGE SERVICE — Calculates payment processing fees 
+// ============================================================================
+
+service SurchargeService {
+  // Calculate surcharge fees for a payment amount before processing.
+  rpc Calculate(SurchargeServiceCalculateRequest) returns (SurchargeServiceCalculateResponse);
 }
 

@@ -67,6 +67,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
+      "BillDeskRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
       "Bizum": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
@@ -133,6 +137,10 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
+      "CashfreeRedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
@@ -143,7 +151,11 @@
       },
       "Crypto": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Dana": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
@@ -151,9 +163,13 @@
       },
       "DuitNow": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "EVoucher": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
+      "EaseBuzzRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
@@ -173,13 +189,21 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
+      "GCash": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
       "Giropay": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
       "Givex": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "GoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "GooglePay": {
         "status": "not_implemented",
@@ -221,11 +245,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
+      "KakaoPay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
       "Klarna": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
       "Lawson": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
+      "LazyPayRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
@@ -253,7 +285,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
+      "MobilePayRedirect": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "Momo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
       "MultibancoBankTransfer": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
+      "Netbanking": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
@@ -287,7 +331,7 @@
       },
       "OpenBankingPis": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "OpenBankingUk": {
         "status": "not_implemented",
@@ -307,7 +351,11 @@
       },
       "PaySafeCard": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
+      "PayURedirect": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
       },
       "PaypalRedirect": {
         "status": "not_implemented",
@@ -317,11 +365,19 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
+      "Paysera": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Paze": {
         "status": "not_supported",
-        "error": "Invalid data format: unknown. Unsupported payment method"
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
       },
       "PermataBankTransfer": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
+      "PhonePeRedirect": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
@@ -377,11 +433,27 @@
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
+      "Skrill": {
+        "status": "not_supported",
+        "error": "Invalid data format: payment_method. The provided payment method variant is not supported by Razorpay"
+      },
       "Sofort": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
+      "Swish": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
+      "TouchNGo": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
       "Trustly": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
+      "Twint": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
@@ -394,6 +466,10 @@
         "error": "This feature is not implemented: Only card payments are supported"
       },
       "UpiQr": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: Only card payments are supported"
+      },
+      "Vipps": {
         "status": "not_implemented",
         "error": "This feature is not implemented: Only card payments are supported"
       },
@@ -518,6 +594,11 @@
         "status": "not_implemented"
       }
     },
+    "parse_event": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "post_authenticate": {
       "default": {
         "status": "not_implemented"
@@ -542,7 +623,8 @@
             "card_exp_month": "03",
             "card_exp_year": "2030",
             "card_cvc": "123",
-            "card_holder_name": "John Doe"
+            "card_holder_name": "John Doe",
+            "card_network": "VISA"
           },
           "address": {
             "billing_address": {}
@@ -562,7 +644,7 @@
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"requestType\":\"PaymentCardSaleTransaction\",\"merchantTransactionId\":\"probe_proxy_txn_001\",\"transactionAmount\":{\"total\":\"10.00\",\"currency\":\"USD\"},\"order\":{\"orderId\":\"probe_proxy_txn_001\"},\"paymentMethod\":{\"paymentCard\":{\"number\":\"4111111111111111\",\"expiryDate\":{\"month\":\"03\",\"year\":\"30\"},\"securityCode\":\"123\"}}}"
+          "body": "{\"requestType\":\"PaymentCardSaleTransaction\",\"merchantTransactionId\":\"probe_proxy_txn_001\",\"transactionAmount\":{\"total\":\"10.00\",\"currency\":\"USD\"},\"order\":{\"orderId\":\"probe_proxy_txn_001\"},\"paymentMethod\":{\"paymentCard\":{\"number\":\"{{$card_number}}\",\"expiryDate\":{\"month\":\"{{$card_exp_month}}\",\"year\":\"{{$card_exp_year}}\"},\"securityCode\":\"{{$card_cvc}}\"}}}"
         }
       }
     },

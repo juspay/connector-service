@@ -110,6 +110,7 @@ pub enum ConnectorEnum {
     Globalpay,
     Nuvei,
     Iatapay,
+    Imerchantsolutions,
     Nmi,
     Shift4,
     Paybox,
@@ -138,6 +139,10 @@ pub enum ConnectorEnum {
     Finix,
     Trustly,
     Itaubank,
+    Sanlam,
+    PinelabsOnline,
+    Easebuzz,
+    Axisbank,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -225,6 +230,10 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
             grpc_api_types::payments::Connector::Trustly => Ok(Self::Trustly),
             grpc_api_types::payments::Connector::Itaubank => Ok(Self::Itaubank),
+            grpc_api_types::payments::Connector::PinelabsOnline => Ok(Self::PinelabsOnline),
+            grpc_api_types::payments::Connector::Easebuzz => Ok(Self::Easebuzz),
+            grpc_api_types::payments::Connector::Imerchantsolutions => Ok(Self::Imerchantsolutions),
+            grpc_api_types::payments::Connector::Axisbank => Ok(Self::Axisbank),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -1414,6 +1423,7 @@ pub enum PaymentsResponseData {
     },
     MultipleCaptureResponse {
         capture_sync_response_list: HashMap<String, CaptureSyncResponse>,
+        status_code: u16,
     },
     IncrementalAuthorizationResponse {
         status: AuthorizationStatus,
@@ -1601,6 +1611,9 @@ pub struct ClientAuthenticationTokenRequestData {
     pub shipping_cost: Option<MinorUnit>,
     /// The specific payment method type for which the session token is being generated
     pub payment_method_type: Option<PaymentMethodType>,
+    /// Connector-specific permissions for client authentication token
+    /// e.g., ["PMT_POST_Create_Single"] for GlobalPay hosted fields
+    pub permissions: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1744,6 +1757,7 @@ pub struct RefundSyncData {
     /// Charges associated with the payment
     pub split_refunds: Option<SplitRefundsRequest>,
     pub connector_feature_data: Option<SecretSerdeValue>,
+    pub refund_money: Option<common_utils::types::Money>,
 }
 
 impl RefundSyncData {
@@ -1852,12 +1866,68 @@ pub struct WebhookDetailsResponse {
     pub raw_connector_response: Option<String>,
     pub status_code: u16,
     pub response_headers: Option<http::HeaderMap>,
-    pub transformation_status: common_enums::WebhookTransformationStatus,
     pub amount_captured: Option<i64>,
     // minor amount for amount framework
     pub minor_amount_captured: Option<MinorUnit>,
     pub network_txn_id: Option<String>,
     pub payment_method_update: Option<PaymentMethodUpdate>,
+}
+
+/// Typed reference extracted from a webhook payload during the stateless ParseEvent phase.
+///
+/// Mirrors the proto `EventReference` oneof. Each variant carries only the IDs that are
+/// meaningful for that resource type — no status, no credentials, no context.
+///
+/// `connector_*_id` — the PSP-assigned identifier (always present when applicable).
+/// `merchant_*_id` — the caller-assigned identifier (order ID, invoice ID, etc.) when
+///                   the connector echoes it back in the webhook payload.
+#[derive(Debug, Clone)]
+pub enum WebhookResourceReference {
+    Payment(PaymentWebhookReference),
+    Refund(RefundWebhookReference),
+    Dispute(DisputeWebhookReference),
+    Mandate(MandateWebhookReference),
+    Payout(PayoutWebhookReference),
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentWebhookReference {
+    /// PSP-assigned transaction ID.
+    pub connector_transaction_id: Option<String>,
+    /// Caller-assigned order / invoice ID echoed back by the connector.
+    pub merchant_transaction_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RefundWebhookReference {
+    /// PSP-assigned refund ID.
+    pub connector_refund_id: Option<String>,
+    /// Caller-assigned refund reference echoed back by the connector.
+    pub merchant_refund_id: Option<String>,
+    /// PSP-assigned ID of the original payment this refund belongs to.
+    pub connector_transaction_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DisputeWebhookReference {
+    /// PSP-assigned dispute / chargeback ID.
+    pub connector_dispute_id: Option<String>,
+    /// PSP-assigned ID of the original payment this dispute belongs to.
+    pub connector_transaction_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MandateWebhookReference {
+    /// PSP-assigned mandate ID.
+    pub connector_mandate_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PayoutWebhookReference {
+    /// PSP-assigned payout ID.
+    pub connector_payout_id: Option<String>,
+    /// Caller-assigned payout reference echoed back by the connector.
+    pub merchant_payout_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -1914,6 +1984,11 @@ pub struct RequestDetails {
 pub struct ConnectorWebhookSecrets {
     pub secret: Vec<u8>,
     pub additional_secret: Option<Secret<String>>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct EventContext {
+    pub capture_method: Option<common_enums::CaptureMethod>,
 }
 
 #[derive(Debug, Clone)]
@@ -2254,7 +2329,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::HttpMethod> for HttpMethod {
-    type Error = IntegrationError;
+    type Error = WebhookError;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::HttpMethod,
@@ -2270,7 +2345,7 @@ impl ForeignTryFrom<grpc_api_types::payments::HttpMethod> for HttpMethod {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::RequestDetails> for RequestDetails {
-    type Error = IntegrationError;
+    type Error = WebhookError;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::RequestDetails,
@@ -2288,7 +2363,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RequestDetails> for RequestDetails
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebhookSecrets {
-    type Error = IntegrationError;
+    type Error = WebhookError;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::WebhookSecrets,
@@ -2297,6 +2372,38 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebho
             secret: value.secret.into(),
             additional_secret: value.additional_secret.map(Secret::new),
         })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::EventContext> for EventContext {
+    type Error = WebhookError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::EventContext,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        use grpc_api_types::payments::event_context::EventContext as EventContextOneof;
+
+        let capture_method = match value.event_context {
+            Some(EventContextOneof::Payment(payment_ctx)) => payment_ctx
+                .capture_method
+                .map(|cm| {
+                    grpc_api_types::payments::CaptureMethod::try_from(cm)
+                        .change_context(WebhookError::WebhookBodyDecodingFailed)
+                        .and_then(|cm| {
+                            common_enums::CaptureMethod::foreign_try_from(cm)
+                                .change_context(WebhookError::WebhookBodyDecodingFailed)
+                        })
+                })
+                .transpose()?,
+            // Other resource contexts carry no fields that map to domain EventContext today.
+            Some(EventContextOneof::Refund(_))
+            | Some(EventContextOneof::Dispute(_))
+            | Some(EventContextOneof::Mandate(_))
+            | Some(EventContextOneof::Payout(_))
+            | None => None,
+        };
+
+        Ok(Self { capture_method })
     }
 }
 
@@ -2881,6 +2988,12 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::WalletData::MbWay(_) => Self::MbWay,
                 payment_method_data::WalletData::Satispay(_) => Self::Satispay,
                 payment_method_data::WalletData::Wero(_) => Self::Wero,
+                payment_method_data::WalletData::LazyPayRedirect(_) => Self::LazyPayRedirect,
+                payment_method_data::WalletData::PhonePeRedirect(_) => Self::PhonePeRedirect,
+                payment_method_data::WalletData::BillDeskRedirect(_) => Self::BillDeskRedirect,
+                payment_method_data::WalletData::CashfreeRedirect(_) => Self::CashfreeRedirect,
+                payment_method_data::WalletData::PayURedirect(_) => Self::PayURedirect,
+                payment_method_data::WalletData::EaseBuzzRedirect(_) => Self::EaseBuzzRedirect,
             },
             PaymentMethodData::PayLater(pay_later_data) => match pay_later_data {
                 payment_method_data::PayLaterData::KlarnaRedirect { .. } => Self::KlarnaRedirect,
@@ -2941,6 +3054,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
                     Self::SepaGuaranteedBankDebit
                 }
+                payment_method_data::BankDebitData::EftBankDebit { .. } => Self::EftBankDebit,
             },
             PaymentMethodData::BankTransfer(bank_transfer_data) => match *bank_transfer_data {
                 payment_method_data::BankTransferData::AchBankTransfer { .. } => {
@@ -3467,6 +3581,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Nexinets(NexinetsClientAuthenticationResponse),
     /// Nexixpay SDK initialization data — security_token and hosted_page URL for HPP initialization
     Nexixpay(NexixpayClientAuthenticationResponse),
+    /// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
+    Revolut(RevolutClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3500,6 +3616,10 @@ pub struct CheckoutClientAuthenticationResponse {
 pub struct CybersourceClientAuthenticationResponse {
     /// The capture context JWT token for client-side Flex Microform SDK
     pub capture_context: Secret<String>,
+    /// URL to the Flex Microform JavaScript library (extracted from JWT payload)
+    pub client_library: String,
+    /// Subresource Integrity hash for the client library (extracted from JWT payload)
+    pub client_library_integrity: String,
 }
 
 /// Nuvei's session_token for client-side SDK operations
@@ -3661,6 +3781,15 @@ pub struct NexixpayClientAuthenticationResponse {
     pub security_token: Secret<String>,
     /// The hosted payment page URL for client-side redirect
     pub hosted_page: String,
+}
+
+/// Revolut's order_id and token for client-side Revolut Pay widget initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RevolutClientAuthenticationResponse {
+    /// The order ID created on Revolut
+    pub order_id: String,
+    /// The client authentication token for SDK initialization
+    pub token: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4009,6 +4138,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Elavon(_) => Ok(Self::Elavon),
             AuthType::Fiserv(_) => Ok(Self::Fiserv),
             AuthType::Fiservemea(_) => Ok(Self::Fiservemea),
+            AuthType::Sanlam(_) => Ok(Self::Sanlam),
             AuthType::Forte(_) => Ok(Self::Forte),
             AuthType::Getnet(_) => Ok(Self::Getnet),
             AuthType::Globalpay(_) => Ok(Self::Globalpay),
@@ -4064,6 +4194,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Truelayer(_) => Ok(Self::Truelayer),
             AuthType::Fiservcommercehub(_) => Ok(Self::Fiservcommercehub),
             AuthType::Itaubank(_) => Ok(Self::Itaubank),
+            AuthType::Axisbank(_) => Ok(Self::Axisbank),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -4098,6 +4229,9 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Revolv3(_) => Ok(Self::Revolv3),
             AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),
             AuthType::Ppro(_) => Ok(Self::Ppro),
+            AuthType::PinelabsOnline(_) => Ok(Self::PinelabsOnline),
+            AuthType::Easebuzz(_) => Ok(Self::Easebuzz),
+            AuthType::Imerchantsolutions(_) => Ok(Self::Imerchantsolutions),
         }
     }
 }

@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use common_utils::{
+    connector_request_kafka::{ConnectorRequestKafkaConfig, ConnectorRequestKafkaConfigPatch},
     consts,
     events::{EventConfig, EventConfigPatch},
     metadata::{HeaderMaskingConfig, HeaderMaskingConfigPatch},
@@ -39,6 +40,8 @@ pub struct Config {
     pub api_tags: ApiTagConfig,
     #[serde(default)]
     pub webhook_source_verification_call: WebhookSourceVerificationCall,
+    #[serde(default)]
+    pub connector_request_kafka: ConnectorRequestKafkaConfig,
     /// Superposition configuration for connector URL resolution
     /// This is loaded at startup from config/superposition.toml
     #[serde(skip)]
@@ -64,6 +67,10 @@ fn default_lineage_header() -> String {
 
 fn default_lineage_prefix() -> String {
     consts::LINEAGE_FIELD_PREFIX.to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// Test mode configuration for mock server integration
@@ -165,19 +172,22 @@ impl ApiTagConfig {
 #[derive(Clone, Deserialize, Debug, Serialize, PartialEq, config_patch_derive::Patch)]
 pub struct Common {
     pub environment: consts::Env,
+    #[serde(default = "default_true")]
+    pub return_raw_connector_data: bool,
 }
 
 impl Default for Common {
     fn default() -> Self {
         Self {
             environment: consts::Env::Development,
+            return_raw_connector_data: true,
         }
     }
 }
 
 impl Common {
     pub fn validate(&self) -> Result<(), config::ConfigError> {
-        let Self { environment } = self;
+        let environment = &self.environment;
         match environment {
             consts::Env::Development | consts::Env::Production | consts::Env::Sandbox => Ok(()),
         }
@@ -307,6 +317,7 @@ impl Config {
                     .with_list_parse_key("database.tenants")
                     .with_list_parse_key("log.kafka.brokers")
                     .with_list_parse_key("events.brokers")
+                    .with_list_parse_key("connector_request_kafka.brokers")
                     .with_list_parse_key("unmasked_headers.keys"),
             )
             .build()?;

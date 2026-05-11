@@ -205,6 +205,10 @@ impl PaysafePaymentMethodDetails {
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub enum ConnectorSpecificConfig {
+    /// No credentials required.
+    /// Used for webhook flows where authentication is deferred to later stages.
+    NoKey,
+
     // --- Single-field (HeaderKey) connectors ---
     Stripe {
         api_key: Secret<String>,
@@ -253,6 +257,11 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         base_url: Option<String>,
     },
+    Imerchantsolutions {
+        api_key: Secret<String>,
+        merchant_id: Option<Secret<String>>,
+        base_url: Option<String>,
+    },
     Bambora {
         merchant_id: Secret<String>,
         api_key: Secret<String>,
@@ -267,6 +276,12 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         merchant_id: Secret<String>,
         base_url: Option<String>,
+    },
+    Easebuzz {
+        api_key: Secret<String>,
+        api_salt: Secret<String>,
+        base_url: Option<String>,
+        secondary_base_url: Option<String>,
     },
 
     // --- Two-field connectors ---
@@ -709,6 +724,25 @@ pub enum ConnectorSpecificConfig {
     Itaubank {
         client_id: Secret<String>,
         client_secret: Secret<String>,
+        certificates: Option<Secret<String>>,
+        private_key: Option<Secret<String>>,
+        base_url: Option<String>,
+    },
+    Sanlam {
+        api_key: Secret<String>,
+        merchant_id: Secret<String>,
+        base_url: Option<String>,
+    },
+    PinelabsOnline {
+        client_id: Secret<String>,
+        client_secret: Secret<String>,
+        base_url: Option<String>,
+    },
+    Axisbank {
+        merchant_kid: Secret<String>,
+        juspay_kid: Secret<String>,
+        merchant_private_key: Secret<String>,
+        juspay_public_key: Secret<String>,
         base_url: Option<String>,
     },
 }
@@ -719,6 +753,7 @@ impl ConnectorSpecificConfig {
         macro_rules! extract_base_url {
             ($($variant:ident { $($field:ident),* $(,)? }),* $(,)?) => {
                 match self {
+                    Self::NoKey => None,
                     $(Self::$variant { base_url, .. } => base_url.as_deref(),)*
                 }
             };
@@ -825,6 +860,7 @@ impl ConnectorSpecificConfig {
                 merchant_account,
                 api_secret
             },
+            Sanlam { api_key, base_url },
             Bamboraapac {
                 username,
                 password,
@@ -996,6 +1032,7 @@ impl ConnectorSpecificConfig {
                 api_key,
                 merchant_id
             },
+            Easebuzz { api_key, api_salt },
             Fiservcommercehub {
                 api_key,
                 secret,
@@ -1010,7 +1047,18 @@ impl ConnectorSpecificConfig {
             Itaubank {
                 client_id,
                 client_secret
-            }
+            },
+            Axisbank {
+                merchant_kid,
+                juspay_kid,
+                merchant_private_key,
+                juspay_public_key
+            },
+            PinelabsOnline {
+                client_id,
+                client_secret
+            },
+            Imerchantsolutions { api_key },
         )
     }
 
@@ -1059,6 +1107,9 @@ impl ConnectorSpecificConfig {
             }
             | Self::Worldpayvantiv {
                 secondary_base_url, ..
+            }
+            | Self::Easebuzz {
+                secondary_base_url, ..
             } => {
                 if let Some(secondary_base_url) = secondary_base_url {
                     connector_patch.insert(
@@ -1102,12 +1153,13 @@ impl ConnectorSpecificConfig {
         }
 
         macro_rules! connector_key {
-            ($($variant:ident { $($field:ident),* $(,)? }),* $(,)?) => {
-                match self {
-                    $(Self::$variant { .. } => stringify!($variant).to_ascii_lowercase(),)*
-                }
-            };
-        }
+                ($($variant:ident { $($field:ident),* $(,)? }),* $(,)?) => {
+                    match self {
+                        Self::NoKey => "nokey".to_string(),
+                        $(Self::$variant { .. } => stringify!($variant).to_ascii_lowercase(),)*
+                    }
+                };
+            }
 
         let mut connectors = serde_json::Map::new();
         connectors.insert(
@@ -1304,6 +1356,7 @@ impl ConnectorSpecificConfig {
                     api_secret,
                     merchant_acceptor_key
                 },
+                Sanlam { api_key, base_url },
                 Trustpay {
                     api_key,
                     project_id,
@@ -1384,6 +1437,7 @@ impl ConnectorSpecificConfig {
                     api_key,
                     merchant_id
                 },
+                Easebuzz { api_key, api_salt },
                 Fiservcommercehub {
                     api_key,
                     secret,
@@ -1398,7 +1452,19 @@ impl ConnectorSpecificConfig {
                 Itaubank {
                     client_id,
                     client_secret
-                }
+                },
+                Axisbank {
+                    merchant_kid,
+                    juspay_kid,
+                    merchant_private_key,
+                    juspay_public_key,
+                    base_url
+                },
+                PinelabsOnline {
+                    client_id,
+                    client_secret
+                },
+                Imerchantsolutions { api_key },
             ),
             serde_json::Value::Object(connector_patch),
         );
@@ -1648,6 +1714,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 secret_key: rapyd.secret_key.ok_or_else(err)?,
                 base_url: rapyd.base_url,
             }),
+            AuthType::Sanlam(sanlam) => Ok(Self::Sanlam {
+                api_key: sanlam.api_key.ok_or_else(err)?,
+                merchant_id: sanlam.merchant_id.ok_or_else(err)?,
+                base_url: sanlam.base_url,
+            }),
             AuthType::Redsys(redsys) => Ok(Self::Redsys {
                 merchant_id: redsys.merchant_id.ok_or_else(err)?,
                 terminal_id: redsys.terminal_id.ok_or_else(err)?,
@@ -1875,6 +1946,13 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 private_key: trustly.private_key.ok_or_else(err)?,
                 base_url: trustly.base_url,
             }),
+            AuthType::Axisbank(axisbank) => Ok(Self::Axisbank {
+                merchant_kid: axisbank.merchant_kid.ok_or_else(err)?,
+                juspay_kid: axisbank.juspay_kid.ok_or_else(err)?,
+                merchant_private_key: axisbank.merchant_private_key.ok_or_else(err)?,
+                juspay_public_key: axisbank.juspay_public_key.ok_or_else(err)?,
+                base_url: axisbank.base_url,
+            }),
             AuthType::Truelayer(truelayer) => Ok(Self::Truelayer {
                 client_id: truelayer.client_id.ok_or_else(err)?,
                 client_secret: truelayer.client_secret.ok_or_else(err)?,
@@ -1895,12 +1973,30 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
             AuthType::Itaubank(itaubank) => Ok(Self::Itaubank {
                 client_secret: itaubank.client_secret.ok_or_else(err)?,
                 client_id: itaubank.client_id.ok_or_else(err)?,
+                certificates: itaubank.certificates,
+                private_key: itaubank.private_key,
                 base_url: itaubank.base_url,
             }),
             AuthType::Ppro(ppro) => Ok(Self::Ppro {
                 api_key: ppro.api_key.ok_or_else(err)?,
                 merchant_id: ppro.merchant_id.ok_or_else(err)?,
                 base_url: ppro.base_url,
+            }),
+            AuthType::PinelabsOnline(pinelabs_online) => Ok(Self::PinelabsOnline {
+                client_id: pinelabs_online.client_id.ok_or_else(err)?,
+                client_secret: pinelabs_online.client_secret.ok_or_else(err)?,
+                base_url: pinelabs_online.base_url,
+            }),
+            AuthType::Easebuzz(easebuzz) => Ok(Self::Easebuzz {
+                api_key: easebuzz.api_key.ok_or_else(err)?,
+                api_salt: easebuzz.api_salt.ok_or_else(err)?,
+                base_url: easebuzz.base_url,
+                secondary_base_url: easebuzz.secondary_base_url,
+            }),
+            AuthType::Imerchantsolutions(imerchantsolutions) => Ok(Self::Imerchantsolutions {
+                api_key: imerchantsolutions.api_key.ok_or_else(err)?,
+                merchant_id: imerchantsolutions.merchant_id,
+                base_url: imerchantsolutions.base_url,
             }),
         }
     }
@@ -2029,6 +2125,19 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
+            ConnectorEnum::Imerchantsolutions => match auth {
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Imerchantsolutions {
+                    api_key: api_key.clone(),
+                    merchant_id: None,
+                    base_url: None,
+                }),
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Imerchantsolutions {
+                    api_key: api_key.clone(),
+                    merchant_id: Some(key1.clone()),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
 
             // --- BodyKey connectors ---
             ConnectorEnum::Aci => match auth {
@@ -2141,6 +2250,15 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     product_name: None,
                     merchant_purchase_description: None,
                     statement_descriptor: None,
+                }),
+                _ => Err(err().into()),
+            },
+
+            ConnectorEnum::Sanlam => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Sanlam {
+                    api_key: api_key.clone(),
+                    merchant_id: key1.clone(),
+                    base_url: None,
                 }),
                 _ => Err(err().into()),
             },
@@ -2873,6 +2991,17 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
+            ConnectorEnum::Easebuzz => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => {
+                    Ok(ConnectorSpecificConfig::Easebuzz {
+                        api_key: api_key.clone(),
+                        api_salt: key1.clone(),
+                        base_url: None,
+                        secondary_base_url: None,
+                    })
+                }
+                _ => Err(err().into()),
+            },
             ConnectorEnum::Fiservcommercehub => match auth {
                 ConnectorAuthType::MultiAuthKey {
                     api_key,
@@ -2892,6 +3021,43 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Itaubank {
                     client_id: api_key.clone(),
                     client_secret: key1.clone(),
+                    certificates: None,
+                    private_key: None,
+                    base_url: None,
+                }),
+                ConnectorAuthType::MultiAuthKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                    key2,
+                } => Ok(Self::Itaubank {
+                    client_id: api_key.clone(),
+                    client_secret: key1.clone(),
+                    certificates: Some(api_secret.clone()),
+                    private_key: Some(key2.clone()),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::PinelabsOnline => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::PinelabsOnline {
+                    client_id: api_key.clone(),
+                    client_secret: key1.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Axisbank => match auth {
+                ConnectorAuthType::MultiAuthKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                    key2,
+                } => Ok(Self::Axisbank {
+                    merchant_kid: api_key.clone(),
+                    juspay_kid: key1.clone(),
+                    merchant_private_key: api_secret.clone(),
+                    juspay_public_key: key2.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

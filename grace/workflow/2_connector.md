@@ -7,6 +7,7 @@ You are the **sole owner** of implementing **{FLOW}** for **{CONNECTOR}**. You h
 You coordinate by **spawning subagents via the Task tool** for heavy work (links discovery, tech spec generation, code implementation, committing and PR creation). You handle lightweight phases yourself (setup, file discovery).
 
 **HARD GUARDRAIL — MANDATORY SUBAGENT DELEGATION**: You MUST use the Task tool to spawn separate subagents for Phases 1, 2, 4, and 5. Do NOT read the subagent workflow files (`2.1_links.md`, `2.2_techspec.md`, `2.3_codegen.md`, `2.4_pr.md`) yourself — each subagent reads its own file. You are FORBIDDEN from doing the following yourself:
+
 - **Phase 1 (Links)**: Do NOT use WebFetch to search for documentation URLs. Do NOT browse connector websites. Do NOT write to `integration-source-links.json`. ONLY spawn the Links Agent (`2.1_links.md`) via Task tool.
 - **Phase 2 (Tech Spec)**: Do NOT read `integration-source-links.json` to extract URLs. Do NOT create URL files. Do NOT run `grace techspec`. Do NOT activate the virtualenv. ONLY spawn the Tech Spec Agent (`2.2_techspec.md`) via Task tool.
 - **Phase 4 (Codegen)**: Do NOT read pattern guides or tech specs for implementation. Do NOT write connector code. Do NOT run `cargo build`. Do NOT run `grpcurl`. ONLY spawn the Code Generation Agent (`2.3_codegen.md`) via Task tool.
@@ -24,12 +25,12 @@ Follow the phases below in order. Do not skip or reorder. Do not run phases in p
 
 ## Inputs
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `{CONNECTOR}` | Connector name (exact casing from JSON) | `Adyen` |
-| `{FLOW}` | Payment flow being implemented | `BankDebit` |
-| `{CONNECTORS_FILE}` | JSON file with connector names | `connectors.json` |
-| `{BRANCH}` | Git branch all work happens on | `feat/bank-debit` |
+| Parameter           | Description                             | Example           |
+| ------------------- | --------------------------------------- | ----------------- |
+| `{CONNECTOR}`       | Connector name (exact casing from JSON) | `Adyen`           |
+| `{FLOW}`            | Payment flow being implemented          | `BankDebit`       |
+| `{CONNECTORS_FILE}` | JSON file with connector names          | `connectors.json` |
+| `{BRANCH}`          | Git branch all work happens on          | `feat/bank-debit` |
 
 ---
 
@@ -40,6 +41,7 @@ Follow the phases below in order. Do not skip or reorder. Do not run phases in p
 You MUST use the **Task tool** to spawn a **Links Agent** for documentation discovery. Do NOT search for documentation links yourself. Do NOT read the workflow file yourself — the subagent reads it on its own.
 
 **Spawn a Task with these parameters:**
+
 ```
 Task(
   subagent_type="general",
@@ -63,6 +65,7 @@ Variables:
 You MUST use the **Task tool** to spawn a **Tech Spec Agent**. Do NOT extract URLs, run grace techspec, or do any tech spec work yourself. Do NOT read the workflow file yourself — the subagent reads it on its own.
 
 **Spawn a Task with these parameters:**
+
 ```
 Task(
   subagent_type="general",
@@ -123,6 +126,7 @@ Store `{TECHSPEC_PATH}` and `{CONNECTOR_SOURCE_FILES}` for the next phase.
 You MUST use the **Task tool** to spawn a **Code Generation Agent**. Do NOT read pattern guides, write implementation code, run cargo build, or run grpcurl yourself. Do NOT read the workflow file yourself — the subagent reads it on its own.
 
 **Spawn a Task with these parameters:**
+
 ```
 Task(
   subagent_type="general",
@@ -140,9 +144,10 @@ Variables:
 **Gate**: If the Code Generation Agent returns FAILED, proceed to Phase 5 (Commit & PR) anyway — the PR Agent will commit the incomplete code and create a "do not merge" PR for visibility.
 
 Store the codegen result:
+
 - `{CODEGEN_STATUS}` = `SUCCESS` or `FAILED`
 - `{CODEGEN_FAILURE_REASON}` = reason string (empty if SUCCESS)
-- `{CODEGEN_GRPCURL_OUTPUT}` = full grpcurl output (may be partial/error output for FAILED)
+- `{CODEGEN_GRPCURL_OUTPUT}` = the full `GRPCURL_OUTPUT` section from the codegen agent's output — this MUST include the complete grpcurl command(s) with headers and payload, plus the complete response JSON. This is passed to the PR Agent for the PR description. If the codegen agent did not return `GRPCURL_OUTPUT`, extract whatever grpcurl output is visible in the agent's response.
 
 ---
 
@@ -155,6 +160,7 @@ Store the codegen result:
 You MUST use the **Task tool** to spawn a **PR Agent**. Do NOT read the workflow file yourself — the subagent reads it on its own.
 
 **Spawn a Task with these parameters:**
+
 ```
 Task(
   subagent_type="general",
@@ -183,6 +189,7 @@ git branch --show-current
 ```
 
 If not on `{BRANCH}`, switch back:
+
 ```bash
 git checkout {BRANCH}
 ```
@@ -202,6 +209,7 @@ REASON: <if not SUCCESS, explain why>
 ```
 
 **STATUS definitions (strict):**
+
 - **SUCCESS**: Build passed AND grpcurl Authorize passed AND code was committed AND PR was created. All must be true. No exceptions.
 - **FAILED**: Any phase failed after attempting it (build errors, test errors, service won't start, credentials rejected, PR creation failed, etc.)
 - **SKIPPED**: Connector was skipped before implementation (no tech spec found, no source files, already implemented, no credentials)
@@ -210,9 +218,9 @@ REASON: <if not SUCCESS, explain why>
 
 ## Subagent Reference
 
-| Agent | File | Purpose |
-|-------|------|---------|
-| Links Agent | `2.1_links.md` | Find and verify backend API documentation links |
-| Tech Spec Agent | `2.2_techspec.md` | Generate tech spec via grace CLI |
-| Code Generation Agent | `2.3_codegen.md` | Read, analyze, implement, build, and grpcurl test |
-| PR Agent | `2.4_pr.md` | Commit on dev branch, cherry-pick to clean branch, scrub creds, create PR in juspay/connector-service |
+| Agent                 | File              | Purpose                                                                                               |
+| --------------------- | ----------------- | ----------------------------------------------------------------------------------------------------- |
+| Links Agent           | `2.1_links.md`    | Find and verify backend API documentation links                                                       |
+| Tech Spec Agent       | `2.2_techspec.md` | Generate tech spec via grace CLI                                                                      |
+| Code Generation Agent | `2.3_codegen.md`  | Read, analyze, implement, build, and grpcurl test                                                     |
+| PR Agent              | `2.4_pr.md`       | Commit on dev branch, cherry-pick to clean branch, scrub creds, create PR in juspay/hyperswitch-prism |
