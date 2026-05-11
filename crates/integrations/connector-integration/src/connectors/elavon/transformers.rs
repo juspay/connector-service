@@ -12,8 +12,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, VoidPC},
     connector_types::{
         MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, ResponseId as DomainResponseId,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId as DomainResponseId,
     },
     payment_address::PaymentAddress,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
