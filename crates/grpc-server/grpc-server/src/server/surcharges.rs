@@ -3,8 +3,10 @@ use std::fmt::Debug;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{FlowName as DomainFlowName, SurchargeCalculate},
+    surcharge::surcharge_types::{
+        SurchargeCalculateRequest, SurchargeCalculateResponse, SurchargeFlowData,
+    },
     utils::ForeignTryFrom,
-    surcharge::surcharge_types::{SurchargeFlowData, SurchargeCalculateRequest, SurchargeCalculateResponse},
 };
 use grpc_api_types::surcharge::{
     surcharge_service_server::SurchargeService, SurchargeServiceCalculateRequest,

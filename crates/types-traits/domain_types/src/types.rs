@@ -5,7 +5,9 @@ use crate::{
     connector_flow::{MandateRevoke, SurchargeCalculate},
     connector_types::{self, CaptureSyncResponse, ConnectorEnum},
     payment_method_data::SamsungPayWalletCredentials,
-    surcharge::surcharge_types::{SurchargeCalculateRequest, SurchargeCalculateResponse, SurchargeFlowData},
+    surcharge::surcharge_types::{
+        SurchargeCalculateRequest, SurchargeCalculateResponse, SurchargeFlowData,
+    },
     utils::extract_connector_request_reference_id,
 };
 use common_enums::{
@@ -13588,7 +13590,10 @@ pub fn generate_surcharge_calculate_response(
         SurchargeCalculateRequest,
         SurchargeCalculateResponse,
     >,
-) -> Result<grpc_api_types::surcharge::SurchargeServiceCalculateResponse, error_stack::Report<ConnectorError>> {
+) -> Result<
+    grpc_api_types::surcharge::SurchargeServiceCalculateResponse,
+    error_stack::Report<ConnectorError>,
+> {
     let surcharge_response = router_data_v2.response;
     match surcharge_response {
         Ok(response) => {
@@ -13597,17 +13602,19 @@ pub fn generate_surcharge_calculate_response(
                 currency: response.currency as i32,
             };
 
-            Ok(grpc_api_types::surcharge::SurchargeServiceCalculateResponse {
-                merchant_surcharge_id: response.connector_response_reference_id,
-                surcharge_amount: Some(surcharge_amount),
-                surcharge_percentage: Some(response.surcharge_rate_percent),
-                connector_surcharge_id: Some(response.connector_surcharge_id),
-                status_code: response.status_code.into(),
-                error: None,
-            })
+            Ok(
+                grpc_api_types::surcharge::SurchargeServiceCalculateResponse {
+                    merchant_surcharge_id: response.connector_response_reference_id,
+                    surcharge_amount: Some(surcharge_amount),
+                    surcharge_percentage: Some(response.surcharge_rate_percent),
+                    connector_surcharge_id: Some(response.connector_surcharge_id),
+                    status_code: response.status_code.into(),
+                    error: None,
+                },
+            )
         }
-        Err(e) => {
-            Ok(grpc_api_types::surcharge::SurchargeServiceCalculateResponse {
+        Err(e) => Ok(
+            grpc_api_types::surcharge::SurchargeServiceCalculateResponse {
                 merchant_surcharge_id: None,
                 surcharge_amount: None,
                 surcharge_percentage: None,
@@ -13623,8 +13630,8 @@ pub fn generate_surcharge_calculate_response(
                     }),
                     issuer_details: None,
                 }),
-            })
-        }
+            },
+        ),
     }
 }
 

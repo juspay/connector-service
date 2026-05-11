@@ -86,29 +86,30 @@ impl ForeignTryFrom<grpc_api_types::surcharge::SurchargeServiceCalculateRequest>
             .transpose()?;
 
         let surcharge_strategy = value.surcharge_strategy.map(|surcharge_strategy| {
-            let grpc_strategy = grpc_api_types::surcharge::SurchargeStrategy::try_from(surcharge_strategy)
-                .unwrap_or(grpc_api_types::surcharge::SurchargeStrategy::Unspecified);
-            
+            let grpc_strategy =
+                grpc_api_types::surcharge::SurchargeStrategy::try_from(surcharge_strategy)
+                    .unwrap_or(grpc_api_types::surcharge::SurchargeStrategy::Unspecified);
+
             match grpc_strategy {
                 grpc_api_types::surcharge::SurchargeStrategy::Apply => SurchargeStrategy::Apply,
                 grpc_api_types::surcharge::SurchargeStrategy::Waive => SurchargeStrategy::Waive,
-                grpc_api_types::surcharge::SurchargeStrategy::Unspecified => SurchargeStrategy::Unspecified,
+                grpc_api_types::surcharge::SurchargeStrategy::Unspecified => {
+                    SurchargeStrategy::Unspecified
+                }
             }
         });
 
-        let postal_code = value
-            .postal_code
-            .ok_or_else(|| {
-                error_stack::report!(IntegrationError::MissingRequiredField {
-                    field_name: "postal_code",
-                    context: IntegrationErrorContext {
-                        additional_context: Some(
-                            "Postal code is required for surcharge calculation".to_owned()
-                        ),
-                        ..Default::default()
-                    },
-                })
-            })?;
+        let postal_code = value.postal_code.ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "postal_code",
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "Postal code is required for surcharge calculation".to_owned()
+                    ),
+                    ..Default::default()
+                },
+            })
+        })?;
 
         Ok(Self {
             connector_request_reference_id: value.merchant_surcharge_id,

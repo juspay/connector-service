@@ -55,7 +55,6 @@ pub enum SurchargeStrategy {
     Waive,
 }
 
-
 /// Request data for surcharge calculation
 #[derive(Debug, Clone)]
 pub struct SurchargeCalculateRequest {
