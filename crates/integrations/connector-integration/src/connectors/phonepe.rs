@@ -42,6 +42,7 @@ use super::macros;
 use crate::types::ResponseRouterData;
 use domain_types::errors::ConnectorError;
 use domain_types::errors::IntegrationError;
+use domain_types::errors::IntegrationErrorContext;
 use domain_types::errors::WebhookError;
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -801,7 +802,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
         let _auth = phonepe::PhonepeAuthType::try_from(auth_type).change_context(
             IntegrationError::FailedToObtainAuthType {
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Pass PhonePe credentials via x-connector-config with merchant_id, salt_key, and salt_index"
+                            .to_string(),
+                    ),
+                    doc_url: Some(
+                        "https://developer.phonepe.com/v1/reference/credentials".to_string(),
+                    ),
+                    additional_context: Some(
+                        "Expected ConnectorSpecificConfig::Phonepe with merchant_id, salt_key, and salt_index"
+                            .to_string(),
+                    ),
+                },
             },
         )?;
         Ok(vec![(
