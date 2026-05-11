@@ -63,7 +63,7 @@ export class SessionManager {
     try {
       switch (strategy) {
         case "git-worktree":
-          await this.provisionGitWorktree(sessionId, sourcePath, projectRoot);
+          await this.provisionGitWorktree(sourcePath, projectRoot, input.name);
           break;
         case "shallow":
           await this.provisionShallowClone(sourcePath, projectRoot);
@@ -181,9 +181,9 @@ export class SessionManager {
   // ─── Provisioning strategies ────────────────────────────────────────────
 
   private async provisionGitWorktree(
-    sessionId: string,
     sourcePath: string,
-    projectRoot: string
+    projectRoot: string,
+    taskName: string
   ): Promise<void> {
     const isGit = fs.existsSync(path.join(sourcePath, ".git"));
     if (!isGit) {
@@ -191,7 +191,7 @@ export class SessionManager {
         `git-worktree strategy requires a git repo at ${sourcePath}`
       );
     }
-    const branch = `session/${sessionId}`;
+    const branch = `grace/${slugifyTaskName(taskName)}-${branchTimestamp()}`;
     execSync(
       `git worktree add -b ${quote(branch)} ${quote(projectRoot)} HEAD`,
       { cwd: sourcePath, stdio: "ignore" }
@@ -228,6 +228,26 @@ export class SessionManager {
 
 function quote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+
+function slugifyTaskName(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/, "");
+  return slug || "task";
+}
+
+function branchTimestamp(d: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
+    `-${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`
+  );
 }
 
 function du(dir: string): number {

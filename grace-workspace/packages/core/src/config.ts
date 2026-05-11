@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import dotenv from "dotenv";
 import YAML from "yaml";
 
 export type LlmProtocol = "openai" | "anthropic";
@@ -151,6 +152,11 @@ function deepMerge<T>(base: T, over: Partial<T>): T {
 }
 
 export function loadConfig(explicitPath?: string): CsddConfig {
+  // Load .env from cwd before reading process.env so contributors can set
+  // BYNE_PROJECT_ROOT / BYNE_LLM_API_KEY without touching their shell rc.
+  // Existing process.env values win (override: false).
+  dotenv.config({ path: path.resolve(process.cwd(), ".env"), override: false });
+
   const candidates = [
     explicitPath,
     path.resolve(process.cwd(), "config.yml"),
@@ -175,6 +181,7 @@ export function loadConfig(explicitPath?: string): CsddConfig {
   if (process.env.BYNE_LLM_API_KEY) merged.llm.apiKey = process.env.BYNE_LLM_API_KEY;
   if (process.env.BYNE_LLM_BASE_URL) merged.llm.baseUrl = process.env.BYNE_LLM_BASE_URL;
   if (process.env.BYNE_LLM_MODEL) merged.llm.model = process.env.BYNE_LLM_MODEL;
+  if (process.env.BYNE_PROJECT_ROOT) merged.projectRoot = process.env.BYNE_PROJECT_ROOT;
 
   if (usedPath) {
     // eslint-disable-next-line no-console
