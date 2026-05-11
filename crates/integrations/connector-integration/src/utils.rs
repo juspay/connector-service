@@ -118,15 +118,14 @@ pub fn flow_not_supported(
     ))
 }
 
-#[allow(clippy::panic, clippy::panic_in_result_fn, clippy::missing_panics_doc)]
+/// Sentinel for flows whose transport is not HTTP (e.g. Kafka-only paths).
+/// Returns `FlowNotSupported` instead of panicking, so a stray `get_url`
+/// caller surfaces a structured error rather than crashing the process.
 pub fn no_request_url(
     connector: &str,
     flow: impl Into<String>,
 ) -> CustomResult<String, IntegrationError> {
-    panic!(
-        "{connector}:{} does not build an HTTP URL; use the explicit no-request transport path",
-        flow.into()
-    )
+    Err(flow_not_supported(connector.to_string(), flow))
 }
 
 /// Build [`errors::IntegrationErrorContext`] with explicit `additional_context` and `suggested_action`
