@@ -255,6 +255,64 @@ pub struct PacoCreditCardDetails {
 
 // ---------- /Payment/nonUi (Card S2S) ----------
 
+/// EMV 3DS 2.0 device-fingerprint payload PACO threads through to the
+/// issuer's ACS. Populated from prism's `BrowserInformation` for the
+/// browser channel; the issuer uses it to make the frictionless-vs-
+/// challenge decision via Risk-Based Authentication. Omitting it
+/// effectively forces a step-up challenge every time, because the ACS
+/// has nothing to evaluate.
+///
+/// All fields here are optional in PACO's schema, but populating the
+/// EMV 3DS 2.0 minimum set (acceptHeader, javaEnabled, javascriptEnabled,
+/// language, colorDepth, screenH/W, timeZone, userAgent, ip) gives the
+/// best chance of frictionless on a recognised cardholder device.
+#[derive(Debug, Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PacoBrowserInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accept_header: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ip: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub javascript_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub java_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    /// PACO accepts numeric values as strings here (the EMV 3DS 2.0 wire
+    /// format encodes everything as strings). Match that convention.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_depth: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screen_height: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screen_width: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_zone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_agent: Option<String>,
+}
+
+impl PacoBrowserInfo {
+    /// Lift a prism `BrowserInformation` into PACO's expected shape. Any
+    /// missing fields stay None and are skipped at serialisation — the
+    /// issuer ACS then evaluates whatever's present.
+    pub fn from_browser_info(bi: &domain_types::router_request_types::BrowserInformation) -> Self {
+        Self {
+            accept_header: bi.accept_header.clone(),
+            ip: bi.ip_address.map(|ip| ip.to_string()),
+            javascript_enabled: bi.java_script_enabled,
+            java_enabled: bi.java_enabled,
+            language: bi.language.clone(),
+            color_depth: bi.color_depth.map(|d| d.to_string()),
+            screen_height: bi.screen_height.map(|h| h.to_string()),
+            screen_width: bi.screen_width.map(|w| w.to_string()),
+            time_zone: bi.time_zone.map(|tz| tz.to_string()),
+            user_agent: bi.user_agent.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TwoctwopPacoCardAuthorizeRequest {
@@ -271,6 +329,16 @@ pub struct TwoctwopPacoCardAuthorizeRequest {
     /// "Y" / "N" — card-level 3DS toggle.
     #[serde(rename = "request3dsFlag")]
     pub request3ds_flag: &'static str,
+    /// EMV 3DS 2.0 device fingerprint. Required for the issuer ACS to
+    /// have any chance of evaluating frictionless. PACO accepts the body
+    /// without it but then always escalates to challenge.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_info: Option<PacoBrowserInfo>,
+    /// Maps to PACO's `deviceDetails` — distinct from `browserInfo`, used
+    /// by PACO's own routing (mobile vs PC); also influences hosted-page
+    /// rendering for the wallet flow.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_details: Option<PacoDeviceDetails>,
 }
 
 // ---------- /Payment/prepaymentUi (GCash hosted) ----------
@@ -290,6 +358,22 @@ impl PacoDeviceDetails {
         Self {
             device_category: "P",
             user_agent: "Mozilla/5.0 hyperswitch-prism".to_string(),
+        }
+    }
+
+    /// Derive deviceCategory from the user-agent string. Mobile UAs that
+    /// contain "Mobile" / "Android" / "iPhone" / "iPad" map to "M", everything
+    /// else to "P". Used by PACO to decide whether to generate a mobile
+    /// deep-link or a desktop payment page for hosted-redirect flows.
+    pub fn from_user_agent(user_agent: String) -> Self {
+        let lower = user_agent.to_ascii_lowercase();
+        let is_mobile = lower.contains("mobile")
+            || lower.contains("android")
+            || lower.contains("iphone")
+            || lower.contains("ipad");
+        Self {
+            device_category: if is_mobile { "M" } else { "P" },
+            user_agent,
         }
     }
 }
@@ -356,6 +440,17 @@ where
             } else {
                 "N"
             };
+            let browser_info = item
+                .request
+                .browser_info
+                .as_ref()
+                .map(PacoBrowserInfo::from_browser_info);
+            let device_details = item
+                .request
+                .browser_info
+                .as_ref()
+                .and_then(|bi| bi.user_agent.clone())
+                .map(PacoDeviceDetails::from_user_agent);
             let body = TwoctwopPacoCardAuthorizeRequest {
                 api_request: ApiRequestEnvelope::new(),
                 office_id: auth.office_id.clone(),
@@ -372,6 +467,8 @@ where
                     card_type,
                 },
                 request3ds_flag,
+                browser_info,
+                device_details,
             };
             Ok(AuthorizeRequest {
                 route: AuthorizeRoute::CardNonUi,
@@ -465,6 +562,18 @@ where
             .map(|u| u.to_string()),
     };
 
+    let browser_info = item
+        .request
+        .browser_info
+        .as_ref()
+        .map(PacoBrowserInfo::from_browser_info);
+    let device_details = item
+        .request
+        .browser_info
+        .as_ref()
+        .and_then(|bi| bi.user_agent.clone())
+        .map(PacoDeviceDetails::from_user_agent);
+
     match item.request.payment_method_data.as_ref() {
         Some(PaymentMethodData::Card(card)) => {
             let card_type = match card.card_type.as_deref() {
@@ -490,6 +599,8 @@ where
                 // Authenticate is the explicit 3DS-enrolment leg, so always
                 // request a 3DS challenge regardless of the upstream flag.
                 request3ds_flag: "Y",
+                browser_info,
+                device_details,
             })
         }
         _ => Err(errors::IntegrationError::NotImplemented(
@@ -786,7 +897,10 @@ fn map_attempt_status(status: &PacoPaymentStatus, step: &PacoPaymentStep) -> Att
         (PacoPaymentStatus::I, PacoPaymentStep::AC) => AttemptStatus::AuthenticationPending,
         (PacoPaymentStatus::Pcps, PacoPaymentStep::GP) => AttemptStatus::AuthenticationPending,
         (PacoPaymentStatus::P, PacoPaymentStep::IN) => AttemptStatus::Authorizing,
-        (PacoPaymentStatus::P, PacoPaymentStep::RP) => AttemptStatus::Pending,
+        // Per the PACO Solution Doc, P/RP (Pending Refund) is treated as
+        // AUTHORIZING — the in-flight refund hasn't yet detached funds, so
+        // the original auth is still effectively the canonical state.
+        (PacoPaymentStatus::P, PacoPaymentStep::RP) => AttemptStatus::Authorizing,
         (PacoPaymentStatus::F, _) => AttemptStatus::Failure,
         // Unknown PACO (status, step) pairs MUST map to Failure, not Pending:
         // an indefinite "Pending" leaves the merchant unable to retry safely
