@@ -139,10 +139,16 @@ jobs:
         run: |
           PREVIOUS_TAG="${{ steps.version.outputs.previous_tag }}"
           NEXT_TAG="${{ steps.version.outputs.next_tag }}"
+          NEXT_VERSION="${{ steps.version.outputs.version }}"
 
           export GIT_CLIFF__GIT__TAG_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+$'
 
-          if git rev-parse "${PREVIOUS_TAG}" >/dev/null 2>&1; then
+          # Use manually written release notes if present (e.g. for v0.1.0 first release)
+          MANUAL_NOTES=".github/releases/${NEXT_TAG}.md"
+          if [ -f "${MANUAL_NOTES}" ]; then
+            echo "Using manual release notes: ${MANUAL_NOTES}"
+            cp "${MANUAL_NOTES}" release-notes.md
+          elif git rev-parse "${PREVIOUS_TAG}" >/dev/null 2>&1; then
             git-cliff \
               --config '.github/git-cliff-changelog.toml' \
               --strip all \
@@ -168,7 +174,7 @@ jobs:
           path: release-notes.md
 
       - name: Create SemVer tag on CalVer SHA
-        if: ${{ inputs.dry_run == false }}
+        if: ${{ !inputs.dry_run }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
@@ -183,7 +189,7 @@ jobs:
             --raw-field "sha=${CALVER_SHA}"
 
       - name: Create GitHub release (draft)
-        if: ${{ inputs.dry_run == false }}
+        if: ${{ !inputs.dry_run }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
@@ -197,7 +203,7 @@ jobs:
   publish-sdks:
     name: Publish SDKs
     needs: [tag-release]
-    if: ${{ inputs.dry_run == false && needs.tag-release.result == 'success' }}
+    if: ${{ !inputs.dry_run && needs.tag-release.result == 'success' }}
     uses: ./.github/workflows/release-sdks.yml
     with:
       publish_java: true
