@@ -67,11 +67,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_url(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<String, IntegrationError> {
-        // metrics::UNIMPLEMENTED_FLOW
-        //     .add(1, router_env::metric_attributes!(("connector", self.id()))); // TODO: discuss env
-        Ok(String::new())
-    }
+    ) -> CustomResult<String, IntegrationError>;
 
     /// returns request body
     fn get_request_body(
@@ -98,7 +94,11 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
     ) -> CustomResult<String, IntegrationError> {
-        Ok(String::new())
+        Err(IntegrationError::connector_flow_not_implemented(
+            self.id(),
+            std::any::type_name::<Flow>(),
+        )
+        .into())
     }
 
     /// returns kafka key
@@ -113,7 +113,11 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
     ) -> CustomResult<Option<KafkaRecord>, IntegrationError> {
-        Ok(None)
+        Err(IntegrationError::connector_flow_not_implemented(
+            self.id(),
+            std::any::type_name::<Flow>(),
+        )
+        .into())
     }
 
     /// builds the request and returns it
@@ -137,7 +141,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     /// accepts the raw api response and decodes it
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
+        _data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
         event_builder: Option<&mut events::Event>,
         _res: domain_types::router_response_types::Response,
     ) -> CustomResult<RouterDataV2<Flow, ResourceCommonData, Req, Resp>, ConnectorError>
@@ -150,7 +154,17 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         if let Some(e) = event_builder {
             e.set_connector_response(&json!({"error": "Not Implemented"}))
         }
-        Ok(data.clone())
+        Err(ConnectorError::ResponseHandlingFailed {
+            context: domain_types::errors::ResponseTransformationErrorContext {
+                http_status_code: None,
+                additional_context: Some(format!(
+                    "{}: handle_response_v2 not implemented for flow {}",
+                    self.id(),
+                    std::any::type_name::<Flow>()
+                )),
+            },
+        }
+        .into())
     }
 
     /// accepts the raw api error response and decodes it

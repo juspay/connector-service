@@ -8,10 +8,11 @@
 //! If a connector needs a real implementation, add it in the connector's own file.
 
 use crate::connectors::*;
+use common_utils::{request::Request, CustomResult};
 use domain_types::{
     connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
-    payment_method_data::PaymentMethodDataTypes,
-    router_request_types::VerifyWebhookSourceRequestData,
+    errors::IntegrationError, payment_method_data::PaymentMethodDataTypes,
+    router_data_v2::RouterDataV2, router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
 };
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
@@ -40,6 +41,31 @@ macro_rules! default_impl_verify_webhook_source_v2 {
                     VerifyWebhookSourceResponseData,
                 > for $connector<T>
             {
+                fn get_url(
+                    &self,
+                    _req: &RouterDataV2<
+                        VerifyWebhookSource,
+                        VerifyWebhookSourceFlowData,
+                        VerifyWebhookSourceRequestData,
+                        VerifyWebhookSourceResponseData,
+                    >,
+                ) -> CustomResult<String, IntegrationError> {
+                    $crate::utils::no_request_url(::interfaces::api::ConnectorCommon::id(self),
+                        "verify_webhook_source",
+                    )
+                }
+
+                fn build_request_v2(
+                    &self,
+                    _req: &RouterDataV2<
+                        VerifyWebhookSource,
+                        VerifyWebhookSourceFlowData,
+                        VerifyWebhookSourceRequestData,
+                        VerifyWebhookSourceResponseData,
+                    >,
+                ) -> CustomResult<Option<Request>, IntegrationError> {
+                    Ok(None)
+                }
             }
         )*
     };
@@ -49,6 +75,8 @@ macro_rules! default_impl_verify_webhook_source_v2 {
 // Connectors with real implementations (like PayPal) will override these
 default_impl_verify_webhook_source_v2!(
     Adyen,
+    Axisbank,
+    Easebuzz,
     Aci,
     Airwallex,
     Authipay,
@@ -83,6 +111,7 @@ default_impl_verify_webhook_source_v2!(
     Hyperpg,
     Iatapay,
     Imerchantsolutions,
+    Itaubank,
     Jpmorgan,
     Loonio,
     Mifinity,
@@ -100,6 +129,7 @@ default_impl_verify_webhook_source_v2!(
     Paysafe,
     Paytm,
     Payu,
+    Peachpayments,
     Phonepe,
     Placetopay,
     Powertranz,

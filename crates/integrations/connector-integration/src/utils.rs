@@ -101,6 +101,34 @@ pub fn missing_field_err(
     })
 }
 
+pub fn flow_not_implemented(connector: &str, flow: impl Into<String>) -> Report<IntegrationError> {
+    Report::new(IntegrationError::connector_flow_not_implemented(
+        connector,
+        flow.into(),
+    ))
+}
+
+pub fn flow_not_supported(
+    connector: impl Into<String>,
+    flow: impl Into<String>,
+) -> Report<IntegrationError> {
+    Report::new(IntegrationError::connector_flow_not_supported(
+        connector,
+        flow.into(),
+    ))
+}
+
+#[allow(clippy::panic, clippy::panic_in_result_fn, clippy::missing_panics_doc)]
+pub fn no_request_url(
+    connector: &str,
+    flow: impl Into<String>,
+) -> CustomResult<String, IntegrationError> {
+    panic!(
+        "{connector}:{} does not build an HTTP URL; use the explicit no-request transport path",
+        flow.into()
+    )
+}
+
 /// Build [`errors::IntegrationErrorContext`] with explicit `additional_context` and `suggested_action`
 /// at the call site (no hidden defaults).
 pub fn integration_ctx(

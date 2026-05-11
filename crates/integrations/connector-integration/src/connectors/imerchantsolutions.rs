@@ -2,37 +2,19 @@ pub mod transformers;
 
 use std::{self, fmt::Debug};
 
-use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
+use common_enums::CurrencyUnit;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    crypto::{self, VerifySignature},
     errors::CustomResult,
     events,
     ext_traits::ByteSliceExt,
 };
 use domain_types::{
-    connector_flow::{
-        Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
-        CreateConnectorCustomer, CreateOrder, DefendDispute, IncrementalAuthorization,
-        MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        RepeatPayment, ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate,
-        SubmitEvidence, Void,
-    },
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, EventContext, EventType, MandateRevokeRequestData,
-        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentWebhookReference, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundWebhookReference, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
-        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
-        ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
-        WebhookResourceReference,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -41,7 +23,6 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::report;
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -49,13 +30,12 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as imerchantsolutions, ForeignTryFrom, ImerchantsolutionsCaptureRequestData,
+    self as imerchantsolutions, ImerchantsolutionsCaptureRequestData,
     ImerchantsolutionsCaptureResponseData, ImerchantsolutionsPaymentSyncResponse,
     ImerchantsolutionsPaymentsRequestData, ImerchantsolutionsPaymentsResponseData,
     ImerchantsolutionsRefundRequestData, ImerchantsolutionsRefundResponseData,
     ImerchantsolutionsRefundSyncResponse, ImerchantsolutionsVoidRequestData,
-    ImerchantsolutionsVoidResponseData, ImerchantsolutionsWebhookData,
-    ImerchantsolutionsWebhookEventType,
+    ImerchantsolutionsVoidResponseData,
 };
 
 use super::macros;
@@ -64,21 +44,6 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 use error_stack::ResultExt;
 
 // Trait implementations with generic type parameters
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ClientAuthentication for Imerchantsolutions<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Imerchantsolutions<T>
@@ -97,15 +62,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentIncrementalAuthorization for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -121,27 +78,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Imerchantsolutions<T>
+    connector_types::IncomingWebhook for Imerchantsolutions<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -156,57 +93,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
     for Imerchantsolutions<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ServerSessionAuthentication for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ServerAuthentication for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Imerchantsolutions<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::VoidPC,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ClientAuthenticationToken,
-        PaymentFlowData,
-        ClientAuthenticationTokenRequestData,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
 
 macros::macro_connector_payout_implementation!(
     connector: Imerchantsolutions,
@@ -214,15 +100,9 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Imerchantsolutions<T>
-{
-}
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
-    pub(crate) const X_MERCHANT_ID: &str = "X-Merchant-Id";
 }
 
 macros::create_all_prerequisites!(
@@ -320,18 +200,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
-        let auth = imerchantsolutions::ImerchantsolutionsAuthType::try_from(auth_type)?;
-
-        let mut auth_header = vec![(headers::X_API_KEY.to_string(), auth.api_key.into_masked())];
-
-        if let Some(merchant_id) = auth.merchant_id {
-            auth_header.push((
-                headers::X_MERCHANT_ID.to_string(),
-                merchant_id.into_masked(),
-            ));
-        }
-
-        Ok(auth_header)
+        let auth =
+            imerchantsolutions::ImerchantsolutionsAuthType::try_from(auth_type).map_err(|_| {
+                errors::IntegrationError::FailedToObtainAuthType {
+                    context: errors::IntegrationErrorContext {
+                        suggested_action: Some("Provide AuthType as HeaderKey".to_string()),
+                        doc_url: Some(
+                            "https://imerchantsolutions.com/docs#authentication".to_string(),
+                        ),
+                        additional_context: Some(
+                            "Provided AuthType is incorrect. AuthType should be HeaderKey."
+                                .to_string(),
+                        ),
+                    },
+                }
+            })?;
+        Ok(vec![(
+            headers::X_API_KEY.to_string(),
+            auth.api_key.into_masked(),
+        )])
     }
 
     fn build_error_response(
@@ -574,331 +461,31 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Imerchantsolutions<T>
-{
-    fn sample_webhook_body(&self) -> &'static [u8] {
-        br#"{"type": "payment.completed","paymentId": "cmml1234abcd","pspReference": "ABC123DEF456","reference": "order-12345","amount": 5000,"currency": "USD","status": "captured","processor": "Adyen","cardLast4": "1111","cardBrand": "visa","customerEmail": "customer@example.com","partnerId": "your_partner_id","merchantId": "merchant_id","timestamp": "2026-03-30T15:45:00.000Z"}}}"#
-    }
-
-    fn get_webhook_source_verification_signature(
-        &self,
-        request: &RequestDetails,
-        _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<errors::WebhookError>> {
-        let signature = request
-            .headers
-            .get("x-webhook-signature")
-            .ok_or_else(|| report!(errors::WebhookError::WebhookSignatureNotFound))
-            .attach_printable(
-                "Missing incoming webhook signature for imerchantsolutions connector",
-            )?;
-
-        hex::decode(signature).change_context(errors::WebhookError::WebhookSourceVerificationFailed)
-    }
-
-    fn get_webhook_source_verification_message(
-        &self,
-        request: &RequestDetails,
-        _connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<errors::WebhookError>> {
-        let message = std::str::from_utf8(&request.body)
-            .change_context(errors::WebhookError::WebhookSourceVerificationFailed)
-            .attach_printable("Webhook source verification message parsing failed for imerchantsolutions connector")?;
-
-        Ok(message.to_string().into_bytes())
-    }
-
-    fn verify_webhook_source(
-        &self,
-        request: RequestDetails,
-        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<errors::WebhookError>> {
-        let algorithm = crypto::HmacSha256;
-
-        let connector_webhook_secrets = match connector_webhook_secret {
-            Some(secrets) => secrets,
-            None => {
-                return Err(error_stack::report!(
-                    errors::WebhookError::WebhookVerificationSecretNotFound
-                ));
-            }
-        };
-
-        let signature =
-            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
-
-        let message =
-            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
-
-        algorithm
-            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(errors::WebhookError::WebhookSourceVerificationFailed)
-            .attach_printable("Webhook source verification failed for imerchantsolutions connector")
-    }
-
-    fn get_event_type(
-        &self,
-        request: RequestDetails,
-    ) -> Result<EventType, error_stack::Report<errors::WebhookError>> {
-        let webhook_body: ImerchantsolutionsWebhookData = request
-            .body
-            .parse_struct("ImerchantsolutionsWebhookData")
-            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
-
-        EventType::foreign_try_from((webhook_body.event_type, webhook_body.status))
-    }
-
-    fn get_webhook_resource_object(
-        &self,
-        request: RequestDetails,
-    ) -> Result<
-        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<errors::WebhookError>,
-    > {
-        let webhook_body: ImerchantsolutionsWebhookData = request
-            .body
-            .parse_struct("ImerchantsolutionsWebhookData")
-            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
-
-        Ok(Box::new(webhook_body))
-    }
-
-    fn get_webhook_event_reference(
-        &self,
-        request: RequestDetails,
-    ) -> Result<Option<WebhookResourceReference>, error_stack::Report<errors::WebhookError>> {
-        let webhook_body: ImerchantsolutionsWebhookData = request
-            .body
-            .parse_struct("ImerchantsolutionsWebhookData")
-            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
-
-        let webhook_resource_reference = match webhook_body.event_type {
-            ImerchantsolutionsWebhookEventType::PaymentCompleted
-            | ImerchantsolutionsWebhookEventType::PaymentCancelled
-            | ImerchantsolutionsWebhookEventType::PaymentFailed => {
-                WebhookResourceReference::Payment(PaymentWebhookReference {
-                    connector_transaction_id: Some(webhook_body.psp_reference),
-                    merchant_transaction_id: webhook_body.merchant_reference,
-                })
-            }
-            ImerchantsolutionsWebhookEventType::PaymentRefunded => {
-                WebhookResourceReference::Refund(RefundWebhookReference {
-                    connector_refund_id: Some(webhook_body.psp_reference.clone()),
-                    merchant_refund_id: Some(webhook_body.psp_reference),
-                    connector_transaction_id: webhook_body.original_reference,
-                })
-            }
-        };
-
-        Ok(Some(webhook_resource_reference))
-    }
-
-    fn process_payment_webhook(
-        &self,
-        request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificConfig>,
-        _event_context: Option<EventContext>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::WebhookError>> {
-        let webhook_body: ImerchantsolutionsWebhookData = request
-            .body
-            .parse_struct("ImerchantsolutionsWebhookData")
-            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
-
-        let status: AttemptStatus = webhook_body.status.into();
-
-        let (error_code, error_message, error_reason) = if status == AttemptStatus::Failure {
-            (None, webhook_body.error, webhook_body.reason)
-        } else {
-            (None, None, None)
-        };
-
-        let minor_amount_captured = match status {
-            AttemptStatus::Charged => webhook_body.amount,
-            AttemptStatus::PartialCharged => webhook_body.total_captured,
-            _ => None,
-        };
-
-        Ok(WebhookDetailsResponse {
-            resource_id: Some(ResponseId::ConnectorTransactionId(
-                webhook_body.psp_reference,
-            )),
-            status,
-            connector_response_reference_id: Some(webhook_body.payment_id),
-            mandate_reference: None,
-            error_code,
-            error_message,
-            error_reason,
-            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
-            status_code: 200,
-            response_headers: None,
-            amount_captured: minor_amount_captured
-                .map(|minor_amount| minor_amount.get_amount_as_i64()),
-            minor_amount_captured,
-            network_txn_id: None,
-            payment_method_update: None,
-        })
-    }
-
-    fn process_refund_webhook(
-        &self,
-        request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::WebhookError>> {
-        let webhook_body: ImerchantsolutionsWebhookData = request
-            .body
-            .parse_struct("ImerchantsolutionsWebhookData")
-            .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
-
-        let status = RefundStatus::try_from(webhook_body.status)?;
-
-        let (error_code, error_message) = if status == RefundStatus::Failure {
-            (webhook_body.error.clone(), webhook_body.error)
-        } else {
-            (None, None)
-        };
-
-        Ok(RefundWebhookDetailsResponse {
-            connector_refund_id: Some(webhook_body.psp_reference.clone()),
-            status,
-            connector_response_reference_id: Some(webhook_body.psp_reference),
-            error_code,
-            error_message,
-            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
-            status_code: 200,
-            response_headers: None,
-        })
-    }
-}
-
 // Stub implementations for unsupported flows (required by macro system)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
+
+macros::macro_connector_flow_status_impls!(
+    connector: Imerchantsolutions,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    not_implemented: [
         CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ServerSessionAuthenticationToken,
-        PaymentFlowData,
-        ServerSessionAuthenticationTokenRequestData,
-        ServerSessionAuthenticationTokenResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         ServerAuthenticationToken,
-        PaymentFlowData,
-        ServerAuthenticationTokenRequestData,
-        ServerAuthenticationTokenResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Imerchantsolutions<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
         MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Imerchantsolutions<T>
-{
-}
+        VoidPC,
+    ],
+    not_supported: [
+        IncrementalAuthorization,
+        ClientAuthenticationToken,
+        SubmitEvidence,
+        DefendDispute,
+        Accept,
+        ServerSessionAuthenticationToken,
+        CreateConnectorCustomer,
+        PreAuthenticate,
+        Authenticate,
+        PostAuthenticate,
+    ],
+);
