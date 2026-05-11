@@ -290,7 +290,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PayoutServiceGetRequest: ["accessToken"],
   PayoutServiceVoidRequest: ["connectorFeatureData", "accessToken"],
   PayoutServiceCreateLinkRequest: ["connectorFeatureData", "accessToken"],
-  PayoutServiceCreateRecipientRequest: ["accessToken"],
+  PayoutServiceCreateRecipientRequest: ["accessToken", "phone", "ssnLast_4", "idNumber", "firstName", "lastName", "dobDay", "dobMonth", "dobYear", "businessProfileUrl", "businessProfileName", "statementDescriptor", "tosAcceptanceIp"],
   PayoutServiceEnrollDisburseAccountRequest: ["accessToken"],
   PayoutMethodEligibilityRequest: ["connectorFeatureData", "accessToken"],
   SurchargeServiceCalculateRequest: ["postalCode"],

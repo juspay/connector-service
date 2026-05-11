@@ -12,7 +12,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, CreateConnectorCustomer,
-        IncrementalAuthorization, PaymentMethodToken, RepeatPayment, SetupMandate, Void,
+        IncrementalAuthorization, PaymentMethodToken, PayoutCreate, PayoutCreateRecipient,
+        PayoutEnrollDisburseAccount, PayoutGet, PayoutTransfer, PayoutVoid, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
@@ -32,6 +34,13 @@ use domain_types::{
         PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
         WalletData,
     },
+    payouts::payout_method_data::{Bank, PayoutMethodData},
+    payouts::payouts_types::{
+        PayoutCreateRecipientRequest, PayoutCreateRecipientResponse, PayoutCreateRequest,
+        PayoutCreateResponse, PayoutEnrollDisburseAccountRequest,
+        PayoutEnrollDisburseAccountResponse, PayoutFlowData, PayoutGetRequest, PayoutGetResponse,
+        PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
+    },
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
         ExtendedAuthorizationResponseData,
@@ -44,7 +53,7 @@ use domain_types::{
     router_response_types::RedirectForm,
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -5426,4 +5435,943 @@ impl TryFrom<ResponseRouterData<StripeClientAuthResponse, Self>>
             ..item.router_data
         })
     }
+}
+
+// =============================================================================
+// PAYOUT STATUS ENUMS
+// =============================================================================
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StripeConnectPayoutStatus {
+    Canceled,
+    Failed,
+    InTransit,
+    Paid,
+    Pending,
+}
+
+impl From<StripeConnectPayoutStatus> for common_enums::PayoutStatus {
+    fn from(status: StripeConnectPayoutStatus) -> Self {
+        match status {
+            StripeConnectPayoutStatus::Paid => Self::Success,
+            StripeConnectPayoutStatus::Pending => Self::Pending,
+            StripeConnectPayoutStatus::InTransit => Self::Pending,
+            StripeConnectPayoutStatus::Failed => Self::Failure,
+            StripeConnectPayoutStatus::Canceled => Self::Cancelled,
+        }
+    }
+}
+
+// =============================================================================
+// PAYOUT CREATE (TRANSFER CREATE)
+// =============================================================================
+
+#[derive(Clone, Debug, Serialize)]
+pub struct StripeConnectPayoutCreateRequest {
+    pub amount: MinorUnit,
+
+    pub currency: String,
+
+    pub destination: String,
+    #[serde(rename = "transfer_group")]
+    pub transfer_group: Option<String>,
+}
+
+impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>,
+            T,
+        >,
+    > for StripeConnectPayoutCreateRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let amount = StripeAmountConvertor::convert(
+            item.router_data.request.amount,
+            item.router_data.request.source_currency,
+        )?;
+
+        let currency = item
+            .router_data
+            .request
+            .source_currency
+            .to_string()
+            .to_lowercase();
+
+        let destination = item
+            .router_data
+            .request
+            .connector_payout_method_id
+            .clone()
+            .ok_or_else(|| {
+                report!(IntegrationError::MissingRequiredField {
+                    field_name: "connector_payout_method_id",
+                    context: Default::default(),
+                })
+            })?;
+
+        let transfer_group = Some(
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        );
+
+        Ok(Self {
+            amount,
+            currency,
+            destination,
+            transfer_group,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StripeConnectPayoutCreateResponse {
+    pub id: String,
+
+    pub description: Option<String>,
+
+    #[serde(rename = "source_transaction")]
+    pub source_transaction: Option<String>,
+}
+
+impl TryFrom<ResponseRouterData<StripeConnectPayoutCreateResponse, Self>>
+    for RouterDataV2<PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<StripeConnectPayoutCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PayoutCreateResponse {
+                merchant_payout_id: item.router_data.request.merchant_payout_id.clone(),
+                payout_status: common_enums::PayoutStatus::RequiresFulfillment,
+                connector_payout_id: Some(item.response.id.clone()),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// =============================================================================
+// PAYOUT FULFILL (PAYOUT CREATE)
+// =============================================================================
+
+#[derive(Clone, Debug, Serialize)]
+pub struct StripeConnectPayoutFulfillRequest {
+    pub amount: MinorUnit,
+
+    pub currency: String,
+}
+
+impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                PayoutTransfer,
+                PayoutFlowData,
+                PayoutTransferRequest,
+                PayoutTransferResponse,
+            >,
+            T,
+        >,
+    > for StripeConnectPayoutFulfillRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                PayoutTransfer,
+                PayoutFlowData,
+                PayoutTransferRequest,
+                PayoutTransferResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let amount = StripeAmountConvertor::convert(
+            item.router_data.request.amount,
+            item.router_data.request.source_currency,
+        )?;
+
+        let currency = item
+            .router_data
+            .request
+            .source_currency
+            .to_string()
+            .to_lowercase();
+
+        Ok(Self { amount, currency })
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StripeConnectPayoutFulfillResponse {
+    pub id: String,
+
+    pub currency: String,
+
+    pub description: Option<String>,
+
+    #[serde(rename = "failure_balance_transaction")]
+    pub failure_balance_transaction: Option<String>,
+
+    #[serde(rename = "failure_code")]
+    pub failure_code: Option<String>,
+
+    #[serde(rename = "failure_message")]
+    pub failure_message: Option<String>,
+
+    #[serde(rename = "original_payout")]
+    pub original_payout: Option<String>,
+
+    #[serde(rename = "statement_descriptor")]
+    pub statement_descriptor: Option<String>,
+
+    pub status: StripeConnectPayoutStatus,
+}
+
+impl TryFrom<ResponseRouterData<StripeConnectPayoutFulfillResponse, Self>>
+    for RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<StripeConnectPayoutFulfillResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PayoutTransferResponse {
+                merchant_payout_id: item.router_data.request.merchant_payout_id.clone(),
+                payout_status: item.response.status.into(),
+                connector_payout_id: Some(item.response.id.clone()),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// =============================================================================
+// PAYOUT VOID (TRANSFER REVERSAL)
+// =============================================================================
+
+#[derive(Clone, Debug, Serialize)]
+pub struct StripeConnectReversalRequest {
+    pub amount: Option<MinorUnit>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StripeConnectReversalResponse {
+    pub id: String,
+
+    #[serde(rename = "source_refund")]
+    pub source_refund: Option<String>,
+}
+
+impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<PayoutVoid, PayoutFlowData, PayoutVoidRequest, PayoutVoidResponse>,
+            T,
+        >,
+    > for StripeConnectReversalRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        _item: StripeRouterData<
+            RouterDataV2<PayoutVoid, PayoutFlowData, PayoutVoidRequest, PayoutVoidResponse>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self { amount: None })
+    }
+}
+
+impl TryFrom<ResponseRouterData<StripeConnectReversalResponse, Self>>
+    for RouterDataV2<PayoutVoid, PayoutFlowData, PayoutVoidRequest, PayoutVoidResponse>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<StripeConnectReversalResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PayoutVoidResponse {
+                merchant_payout_id: item.router_data.request.merchant_payout_id.clone(),
+                payout_status: common_enums::PayoutStatus::Cancelled,
+                connector_payout_id: item.router_data.request.connector_payout_id.clone(),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// =============================================================================
+// PAYOUT GET (PAYOUT RETRIEVE)
+// =============================================================================
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StripeConnectPayoutRetrieveResponse {
+    pub id: String,
+
+    pub amount: MinorUnit,
+
+    pub currency: String,
+
+    pub status: StripeConnectPayoutStatus,
+
+    pub description: Option<String>,
+
+    #[serde(rename = "failure_code")]
+    pub failure_code: Option<String>,
+
+    #[serde(rename = "failure_message")]
+    pub failure_message: Option<String>,
+}
+
+impl TryFrom<ResponseRouterData<StripeConnectPayoutRetrieveResponse, Self>>
+    for RouterDataV2<PayoutGet, PayoutFlowData, PayoutGetRequest, PayoutGetResponse>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<StripeConnectPayoutRetrieveResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PayoutGetResponse {
+                merchant_payout_id: item.router_data.request.merchant_payout_id.clone(),
+                payout_status: item.response.status.into(),
+                connector_payout_id: Some(item.response.id.clone()),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// =============================================================================
+// RECIPIENT CREATE (CONNECTED ACCOUNT)
+// =============================================================================
+
+#[derive(Clone, Debug, Serialize)]
+pub struct StripeConnectRecipientCreateRequest {
+    #[serde(rename = "type")]
+    pub account_type: String,
+
+    pub country: Option<common_enums::CountryAlpha2>,
+
+    pub email: Option<String>,
+
+    #[serde(rename = "capabilities[card_payments][requested]")]
+    pub capabilities_card_payments: Option<bool>,
+
+    #[serde(rename = "capabilities[transfers][requested]")]
+    pub capabilities_transfers: Option<bool>,
+
+    #[serde(rename = "tos_acceptance[date]")]
+    pub tos_acceptance_date: Option<i64>,
+
+    #[serde(rename = "tos_acceptance[ip]")]
+    pub tos_acceptance_ip: Option<Secret<String>>,
+
+    #[serde(rename = "business_type")]
+    pub business_type: String,
+
+    #[serde(rename = "business_profile[mcc]")]
+    pub business_profile_mcc: Option<i32>,
+
+    #[serde(rename = "business_profile[url]")]
+    pub business_profile_url: Option<Secret<String>>,
+
+    #[serde(rename = "business_profile[name]")]
+    pub business_profile_name: Option<Secret<String>>,
+
+    #[serde(rename = "company[name]")]
+    pub company_name: Option<Secret<String>>,
+
+    #[serde(rename = "company[address][line1]")]
+    pub company_address_line1: Option<Secret<String>>,
+
+    #[serde(rename = "company[address][line2]")]
+    pub company_address_line2: Option<Secret<String>>,
+
+    #[serde(rename = "company[address][postal_code]")]
+    pub company_address_postal_code: Option<Secret<String>>,
+
+    #[serde(rename = "company[address][city]")]
+    pub company_address_city: Option<Secret<String>>,
+
+    #[serde(rename = "company[address][state]")]
+    pub company_address_state: Option<Secret<String>>,
+
+    #[serde(rename = "company[phone]")]
+    pub company_phone: Option<Secret<String>>,
+
+    #[serde(rename = "company[tax_id]")]
+    pub company_tax_id: Option<Secret<String>>,
+
+    #[serde(rename = "company[owners_provided]")]
+    pub company_owners_provided: Option<bool>,
+
+    #[serde(rename = "individual[first_name]")]
+    pub individual_first_name: Option<Secret<String>>,
+
+    #[serde(rename = "individual[last_name]")]
+    pub individual_last_name: Option<Secret<String>>,
+
+    #[serde(rename = "individual[dob][day]")]
+    pub individual_dob_day: Option<Secret<String>>,
+
+    #[serde(rename = "individual[dob][month]")]
+    pub individual_dob_month: Option<Secret<String>>,
+
+    #[serde(rename = "individual[dob][year]")]
+    pub individual_dob_year: Option<Secret<String>>,
+
+    #[serde(rename = "individual[address][line1]")]
+    pub individual_address_line1: Option<Secret<String>>,
+
+    #[serde(rename = "individual[address][line2]")]
+    pub individual_address_line2: Option<Secret<String>>,
+
+    #[serde(rename = "individual[address][postal_code]")]
+    pub individual_address_postal_code: Option<Secret<String>>,
+
+    #[serde(rename = "individual[address][city]")]
+    pub individual_address_city: Option<Secret<String>>,
+
+    #[serde(rename = "individual[address][state]")]
+    pub individual_address_state: Option<Secret<String>>,
+
+    #[serde(rename = "individual[email]")]
+    pub individual_email: Option<Secret<String>>,
+
+    #[serde(rename = "individual[phone]")]
+    pub individual_phone: Option<Secret<String>>,
+
+    #[serde(rename = "individual[id_number]")]
+    pub individual_id_number: Option<Secret<String>>,
+
+    #[serde(rename = "individual[ssn_last_4]")]
+    pub individual_ssn_last_4: Option<Secret<String>>,
+
+    #[serde(rename = "settings[payments][statement_descriptor]")]
+    pub statement_descriptor: Option<Secret<String>>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StripeConnectRecipientCreateResponse {
+    pub id: String,
+}
+
+// =============================================================================
+// RECIPIENT ACCOUNT CREATE (EXTERNAL ACCOUNT)
+// =============================================================================
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum StripeConnectRecipientAccountCreateRequest {
+    Bank(RecipientBankAccountRequest),
+
+    Token(RecipientTokenRequest),
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct RecipientBankAccountRequest {
+    #[serde(rename = "external_account[object]")]
+    pub external_account_object: String,
+
+    #[serde(rename = "external_account[country]")]
+    pub external_account_country: common_enums::CountryAlpha2,
+
+    #[serde(rename = "external_account[currency]")]
+    pub external_account_currency: String,
+
+    #[serde(rename = "external_account[account_holder_name]")]
+    pub external_account_account_holder_name: Secret<String>,
+
+    #[serde(rename = "external_account[account_holder_type]")]
+    pub external_account_account_holder_type: String,
+
+    #[serde(rename = "external_account[account_number]")]
+    pub external_account_account_number: Secret<String>,
+
+    #[serde(rename = "external_account[routing_number]")]
+    pub external_account_routing_number: Secret<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct RecipientTokenRequest {
+    #[serde(rename = "external_account")]
+    pub external_account: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StripeConnectRecipientAccountCreateResponse {
+    pub id: String,
+}
+
+impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                PayoutCreateRecipient,
+                PayoutFlowData,
+                PayoutCreateRecipientRequest,
+                PayoutCreateRecipientResponse,
+            >,
+            T,
+        >,
+    > for StripeConnectRecipientCreateRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        _item: StripeRouterData<
+            RouterDataV2<
+                PayoutCreateRecipient,
+                PayoutFlowData,
+                PayoutCreateRecipientRequest,
+                PayoutCreateRecipientResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        use domain_types::errors::IntegrationErrorContext;
+
+        let request = &_item.router_data.request;
+
+        let tos_acceptance_date = Some(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|_| IntegrationError::InvalidDataFormat {
+                    field_name: "system_time",
+                    context: IntegrationErrorContext::default(),
+                })?
+                .as_secs() as i64,
+        );
+
+        let tos_acceptance_ip = request.tos_acceptance_ip.clone().ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
+                field_name: "tos_acceptance_ip",
+                context: IntegrationErrorContext::default(),
+            }
+        })?;
+
+        let individual_phone =
+            request
+                .phone
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "phone",
+                    context: IntegrationErrorContext::default(),
+                })?;
+
+        let (individual_id_number, individual_ssn_last_4) = match &request.id_number {
+            Some(id_num) => (Some(id_num.clone()), None),
+            None => {
+                let ssn_last_4 = request.ssn_last_4.clone().ok_or_else(|| {
+                    IntegrationError::MissingRequiredField {
+                        field_name: "ssn_last_4 or id_number",
+                        context: IntegrationErrorContext::default(),
+                    }
+                })?;
+                (None, Some(ssn_last_4))
+            }
+        };
+
+        let individual_first_name =
+            request
+                .first_name
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "first_name",
+                    context: IntegrationErrorContext::default(),
+                })?;
+
+        let individual_last_name =
+            request
+                .last_name
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "last_name",
+                    context: IntegrationErrorContext::default(),
+                })?;
+
+        let individual_dob_day =
+            request
+                .dob_day
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "dob_day",
+                    context: IntegrationErrorContext::default(),
+                })?;
+
+        let individual_dob_month =
+            request
+                .dob_month
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "dob_month",
+                    context: IntegrationErrorContext::default(),
+                })?;
+
+        let individual_dob_year =
+            request
+                .dob_year
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "dob_year",
+                    context: IntegrationErrorContext::default(),
+                })?;
+
+        let business_profile_mcc_i32: i32 = request
+            .business_profile_mcc
+            .as_deref()
+            .ok_or_else(|| IntegrationError::MissingRequiredField {
+                field_name: "business_profile_mcc",
+                context: IntegrationErrorContext::default(),
+            })?
+            .parse()
+            .map_err(|_| IntegrationError::InvalidDataFormat {
+                field_name: "business_profile_mcc",
+                context: IntegrationErrorContext::default(),
+            })?;
+
+        let business_profile_url = request.business_profile_url.clone().ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
+                field_name: "business_profile_url",
+                context: IntegrationErrorContext::default(),
+            }
+        })?;
+
+        let business_profile_name = request.business_profile_name.clone().ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
+                field_name: "business_profile_name",
+                context: IntegrationErrorContext::default(),
+            }
+        })?;
+
+        let statement_descriptor = request.statement_descriptor.clone().ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
+                field_name: "statement_descriptor",
+                context: IntegrationErrorContext::default(),
+            }
+        })?;
+
+        let individual_email: Option<Secret<String>> = request
+            .customer
+            .as_ref()
+            .and_then(|c| {
+                c.customer_email
+                    .as_ref()
+                    .map(|e| Secret::new(e.peek().to_string()))
+            })
+            .or_else(|| {
+                request
+                    .address
+                    .as_ref()
+                    .and_then(|a| a.email.as_ref().map(|e| Secret::new(e.peek().to_string())))
+            });
+
+        let (
+            individual_address_line1,
+            individual_address_line2,
+            individual_address_postal_code,
+            individual_address_city,
+            individual_address_state,
+            individual_address_country,
+        ) = request
+            .address
+            .as_ref()
+            .and_then(|a| a.address.as_ref())
+            .map_or((None, None, None, None, None, None), |addr| {
+                (
+                    addr.line1.clone(),
+                    addr.line2.clone(),
+                    addr.zip.clone(),
+                    addr.city.clone(),
+                    addr.state.clone(),
+                    addr.country.clone(),
+                )
+            });
+
+        let account_type =
+            request
+                .account_type
+                .clone()
+                .ok_or_else(|| IntegrationError::MissingRequiredField {
+                    field_name: "account_type",
+                    context: IntegrationErrorContext::default(),
+                })?;
+
+        let is_company = matches!(
+            request.recipient_type,
+            common_enums::PayoutRecipientType::Company
+        );
+        let business_type = if is_company {
+            "company".to_string()
+        } else {
+            "individual".to_string()
+        };
+
+        let (
+            company_name,
+            company_address_line1,
+            company_address_line2,
+            company_address_postal_code,
+            company_address_city,
+            company_address_state,
+            company_tax_id,
+        ) = if is_company {
+            (
+                Some(business_profile_name.clone()),
+                individual_address_line1.clone(),
+                individual_address_line2.clone(),
+                individual_address_postal_code.clone(),
+                individual_address_city.clone(),
+                individual_address_state.clone(),
+                individual_id_number.clone(),
+            )
+        } else {
+            (None, None, None, None, None, None, None)
+        };
+
+        let (
+            individual_first_name_opt,
+            individual_last_name_opt,
+            individual_dob_day_opt,
+            individual_dob_month_opt,
+            individual_dob_year_opt,
+            individual_address_line1_opt,
+            individual_address_line2_opt,
+            individual_address_postal_code_opt,
+            individual_address_city_opt,
+            individual_address_state_opt,
+            individual_id_number_opt,
+            individual_ssn_last_4_opt,
+        ) = if !is_company {
+            (
+                Some(individual_first_name),
+                Some(individual_last_name),
+                Some(individual_dob_day),
+                Some(individual_dob_month),
+                Some(individual_dob_year),
+                individual_address_line1.clone(),
+                individual_address_line2.clone(),
+                individual_address_postal_code.clone(),
+                individual_address_city.clone(),
+                individual_address_state.clone(),
+                individual_id_number.clone(),
+                individual_ssn_last_4.clone(),
+            )
+        } else {
+            (
+                None, None, None, None, None, None, None, None, None, None, None, None,
+            )
+        };
+
+        Ok(Self {
+            account_type,
+            country: individual_address_country.or(Some(common_enums::CountryAlpha2::US)),
+            email: individual_email.as_ref().map(|e| e.peek().clone()),
+            capabilities_card_payments: Some(true),
+            capabilities_transfers: Some(true),
+            tos_acceptance_date,
+            tos_acceptance_ip: Some(tos_acceptance_ip),
+            business_type,
+            business_profile_mcc: Some(business_profile_mcc_i32),
+            business_profile_url: Some(business_profile_url),
+            business_profile_name: Some(business_profile_name),
+            company_name,
+            company_address_line1,
+            company_address_line2,
+            company_address_postal_code,
+            company_address_city,
+            company_address_state,
+            company_phone: if is_company {
+                Some(individual_phone.clone())
+            } else {
+                None
+            },
+            company_tax_id,
+            company_owners_provided: None,
+            individual_first_name: individual_first_name_opt,
+            individual_last_name: individual_last_name_opt,
+            individual_dob_day: individual_dob_day_opt,
+            individual_dob_month: individual_dob_month_opt,
+            individual_dob_year: individual_dob_year_opt,
+            individual_address_line1: individual_address_line1_opt,
+            individual_address_line2: individual_address_line2_opt,
+            individual_address_postal_code: individual_address_postal_code_opt,
+            individual_address_city: individual_address_city_opt,
+            individual_address_state: individual_address_state_opt,
+            individual_email,
+            individual_phone: if !is_company {
+                Some(individual_phone)
+            } else {
+                None
+            },
+            individual_id_number: individual_id_number_opt,
+            individual_ssn_last_4: individual_ssn_last_4_opt,
+            statement_descriptor: Some(statement_descriptor),
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<StripeConnectRecipientCreateResponse, Self>>
+    for RouterDataV2<
+        PayoutCreateRecipient,
+        PayoutFlowData,
+        PayoutCreateRecipientRequest,
+        PayoutCreateRecipientResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<StripeConnectRecipientCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PayoutCreateRecipientResponse {
+                merchant_payout_id: item.router_data.request.merchant_payout_id.clone(),
+                payout_status: common_enums::PayoutStatus::RequiresCreation,
+                connector_payout_id: Some(item.response.id.clone()),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+impl<T: Clone + Serialize + Debug + Sync + Send + 'static + PaymentMethodDataTypes>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                PayoutEnrollDisburseAccount,
+                PayoutFlowData,
+                PayoutEnrollDisburseAccountRequest,
+                PayoutEnrollDisburseAccountResponse,
+            >,
+            T,
+        >,
+    > for StripeConnectRecipientAccountCreateRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                PayoutEnrollDisburseAccount,
+                PayoutFlowData,
+                PayoutEnrollDisburseAccountRequest,
+                PayoutEnrollDisburseAccountResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        use domain_types::errors::IntegrationErrorContext;
+
+        let payout_method_data = item.router_data.request.payout_method_data.ok_or_else(|| {
+            IntegrationError::MissingRequiredField {
+                field_name: "payout_method_data",
+                context: IntegrationErrorContext::default(),
+            }
+        })?;
+
+        match payout_method_data {
+            PayoutMethodData::Bank(Bank::Ach(ach)) => {
+                let country = ach
+                    .bank_country_code
+                    .unwrap_or(common_enums::CountryAlpha2::US);
+
+                let currency = item
+                    .router_data
+                    .request
+                    .source_currency
+                    .to_string()
+                    .to_lowercase();
+
+                let account_holder_name = item
+                    .router_data
+                    .request
+                    .customer
+                    .as_ref()
+                    .and_then(|c| c.customer_name.clone())
+                    .unwrap_or_else(|| Secret::new("Account Holder".to_string()));
+
+                Ok(Self::Bank(RecipientBankAccountRequest {
+                    external_account_object: "bank_account".to_string(),
+                    external_account_country: country,
+                    external_account_currency: currency,
+                    external_account_account_holder_name: account_holder_name,
+                    external_account_account_holder_type: "individual".to_string(),
+                    external_account_account_number: ach.bank_account_number,
+                    external_account_routing_number: ach.bank_routing_number,
+                }))
+            }
+            _ => Err(IntegrationError::NotImplemented(
+                "Only ACH bank transfers are supported for external account enrollment".to_string(),
+                IntegrationErrorContext::default(),
+            )
+            .into()),
+        }
+    }
+}
+
+impl TryFrom<ResponseRouterData<StripeConnectRecipientAccountCreateResponse, Self>>
+    for RouterDataV2<
+        PayoutEnrollDisburseAccount,
+        PayoutFlowData,
+        PayoutEnrollDisburseAccountRequest,
+        PayoutEnrollDisburseAccountResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<StripeConnectRecipientAccountCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PayoutEnrollDisburseAccountResponse {
+                merchant_payout_id: item.router_data.request.merchant_payout_id.clone(),
+                payout_status: common_enums::PayoutStatus::RequiresCreation,
+                connector_payout_id: Some(item.response.id.clone()),
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// =============================================================================
+// ERROR RESPONSE
+// =============================================================================
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StripeConnectErrorResponse {
+    pub error: StripeConnectError,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StripeConnectError {
+    pub code: Option<String>,
+
+    pub message: String,
+
+    pub decline_code: Option<String>,
 }
