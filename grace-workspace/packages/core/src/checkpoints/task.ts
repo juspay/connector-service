@@ -56,9 +56,18 @@ export const taskCheckpoint: Checkpoint = {
             ? payload.connectorDocUrls
             : undefined,
           targetFiles: payload.targetFiles,
+          // Phase 9: prefer the session-scoped projectRoot already on
+          // ctx.task (set by run.ts:272 from session.projectRoot at engine
+          // boot). The UI's TaskForm sends `projectRoot: undefined` when the
+          // user leaves the (advanced) field blank, and without this guard
+          // we'd silently fall back to cfg.projectRoot — the global main
+          // repo — and every checkpoint downstream would write there
+          // instead of into the per-session worktree.
           projectRoot: path.isAbsolute(payload.projectRoot ?? "")
             ? (payload.projectRoot as string)
-            : path.resolve(payload.projectRoot || cfg.projectRoot),
+            : path.resolve(
+                payload.projectRoot || ctx.task.projectRoot || cfg.projectRoot
+              ),
           attachments: Array.isArray(payload.attachments)
             ? payload.attachments
             : undefined,
@@ -139,10 +148,14 @@ export const taskCheckpoint: Checkpoint = {
       ? targetRaw.split(",").map((s) => s.trim()).filter(Boolean)
       : undefined;
 
+    // Phase 9: same fallback precedence as the UI submit path —
+    // session-scoped > prompt input > global config.
     const projectRootInput = await ask(
-      `Project root [${cfg.projectRoot}]: `
+      `Project root [${ctx.task.projectRoot || cfg.projectRoot}]: `
     );
-    const projectRoot = path.resolve(projectRootInput || cfg.projectRoot);
+    const projectRoot = path.resolve(
+      projectRootInput || ctx.task.projectRoot || cfg.projectRoot
+    );
 
     const task: TaskDefinition = {
       title,
