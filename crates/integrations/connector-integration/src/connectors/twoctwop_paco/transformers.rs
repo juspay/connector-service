@@ -600,14 +600,30 @@ pub fn build_void_pc_request(
 }
 
 // ---------- Refund ----------
+//
+// Body shape per PACO's official OpenAPI spec at
+// https://devzone.2c2p.com/reference/refund:
+//
+//   { officeId, orderNo, productDescription?,
+//     refundAmount: AmountCompound,
+//     localMakerChecker: { maker: { username }, checker? } }
+//
+// `orderNo` is the ORIGINAL transaction's order number (a.k.a. invoice no),
+// NOT a new refund identifier. There is no `refundDetails` wrapper and no
+// `invoiceNo2C2P` body field. `localMakerChecker.maker.username` is what
+// PACO records in its audit log; the office config decides whether a
+// checker (approver) is also required.
+
+/// PACO HumanActor — used for both maker (requestor) and checker (approver)
+/// inside the localMakerChecker / pspMakerChecker workflow objects.
+#[derive(Debug, Clone, Serialize)]
+pub struct PacoHumanActor {
+    pub username: &'static str,
+}
 
 #[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PacoRefundDetails {
-    pub maker_id: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reason: Option<String>,
-    pub refund_amount: PacoTransactionAmount,
+pub struct PacoMakerChecker {
+    pub maker: PacoHumanActor,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -615,13 +631,14 @@ pub struct PacoRefundDetails {
 pub struct TwoctwopPacoRefundRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
+    /// PACO requires the ORIGINAL transaction's orderNo here. Callers must
+    /// set `x-connector-request-reference-id` to the original auth's order
+    /// reference when invoking Refund.
     pub order_no: String,
-    /// PACO field is `invoiceNo2C2P` — serde camelCase would emit
-    /// `invoiceNo2c2p`, which fails server-side validation.
-    #[serde(rename = "invoiceNo2C2P")]
-    pub invoice_no2c2p: String,
-    pub product_description: String,
-    pub refund_details: PacoRefundDetails,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub product_description: Option<String>,
+    pub refund_amount: PacoTransactionAmount,
+    pub local_maker_checker: PacoMakerChecker,
 }
 
 pub fn build_refund_request(
@@ -630,22 +647,77 @@ pub fn build_refund_request(
 ) -> Result<TwoctwopPacoRefundRequest, error_stack::Report<errors::IntegrationError>> {
     let amount =
         PacoTransactionAmount::new(item.request.minor_refund_amount, item.request.currency)?;
+    // PACO's /Refund/refund matches the original payment by the merchant's
+    // original orderNo (the value the merchant supplied to Authorize as
+    // `merchant_transaction_id` / `x-connector-request-reference-id`). The
+    // refund's own `merchant_refund_id` is recorded by PACO as a new
+    // `refundNo`, not as the lookup key.
+    //
+    // RefundFlowData.connector_request_reference_id is forcibly overridden
+    // by the orchestrator to carry the refund_id, so we cannot recover the
+    // original orderNo from there. The caller must pass it through one of
+    // the SecretString metadata fields. We look in two places:
+    //   1. `refund_connector_metadata` (RefundsData) — preferred
+    //   2. PaymentFlowData not available here, so no fallback to payment metadata
+    // The value can be either a plain string (treated as the orderNo) or a
+    // JSON object with key `original_order_no`.
+    let original_order_no = item
+        .request
+        .refund_connector_metadata
+        .as_ref()
+        .and_then(|m| extract_paco_original_order_no(m))
+        .ok_or_else(|| {
+            errors::IntegrationError::MissingRequiredField {
+                field_name: "refund_connector_metadata.original_order_no",
+                context: errors::IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Pass the original Authorize orderNo as refund_metadata, e.g. \
+                         {\"original_order_no\":\"<auth orderNo>\"}, when calling \
+                         PaymentService/Refund."
+                            .to_string(),
+                    ),
+                    doc_url: Some("https://devzone.2c2p.com/reference/refund".to_string()),
+                    additional_context: Some(
+                        "PACO matches refunds against the original transaction's \
+                         orderNo, which is not derivable from connector_transaction_id."
+                            .to_string(),
+                    ),
+                },
+            }
+        })?;
     Ok(TwoctwopPacoRefundRequest {
         api_request: ApiRequestEnvelope::new(),
         office_id: auth.office_id.clone(),
-        order_no: item.request.refund_id.clone(),
-        invoice_no2c2p: item.request.connector_transaction_id.clone(),
-        product_description: item
-            .request
-            .reason
-            .clone()
-            .unwrap_or_else(|| item.request.refund_id.clone()),
-        refund_details: PacoRefundDetails {
-            maker_id: PACO_REFUND_MAKER_ID,
-            reason: item.request.reason.clone(),
-            refund_amount: amount,
+        order_no: original_order_no,
+        product_description: item.request.reason.clone(),
+        refund_amount: amount,
+        local_maker_checker: PacoMakerChecker {
+            maker: PacoHumanActor {
+                username: PACO_REFUND_MAKER_ID,
+            },
         },
     })
+}
+
+/// Pull the original orderNo from a metadata SecretSerdeValue. Accepts either
+/// a bare JSON string ("auth_xxx") or an object ({"original_order_no":"..."}).
+fn extract_paco_original_order_no(
+    meta: &common_utils::SecretSerdeValue,
+) -> Option<String> {
+    let value = meta.peek();
+    if let Some(s) = value.as_str() {
+        if !s.is_empty() {
+            return Some(s.to_string());
+        }
+    }
+    if let Some(obj) = value.as_object() {
+        if let Some(s) = obj.get("original_order_no").and_then(|v| v.as_str()) {
+            if !s.is_empty() {
+                return Some(s.to_string());
+            }
+        }
+    }
+    None
 }
 
 // ---------- Status enums ----------
@@ -835,6 +907,20 @@ pub struct PacoData {
     /// checks both locations.
     #[serde(default)]
     pub payment_page: Option<PacoPaymentPage>,
+    /// `/Refund/refund` flattens the result fields onto `data` directly —
+    /// there is no `paymentResult`/`paymentIncompleteResult` wrapper. Catch
+    /// the flat shape with the same field set so `merged_result()` can fall
+    /// back to it.
+    #[serde(default)]
+    pub payment_status_info: Option<PacoPaymentStatusInfo>,
+    #[serde(default, rename = "invoiceNo2C2P")]
+    pub invoice_no2c2p: Option<String>,
+    #[serde(default)]
+    pub order_no: Option<String>,
+    #[serde(default)]
+    pub refund_no: Option<String>,
+    #[serde(default)]
+    pub psp_response: Option<PacoPriorPaymentResponseDetails>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -857,6 +943,35 @@ impl TwoctwopPacoNonUiResponse {
         self.data
             .as_ref()
             .and_then(|d| d.payment_result.as_ref().or(d.payment_incomplete_result.as_ref()))
+    }
+
+    /// Refund / Settlement / Void responses flatten the result fields onto
+    /// `data` directly instead of nesting them under `paymentResult` /
+    /// `paymentIncompleteResult`. Use this when the flat shape is expected.
+    pub fn flat_data_block(&self) -> Option<PacoPaymentResultBlock> {
+        let data = self.data.as_ref()?;
+        // Prefer the wrapper shapes if present.
+        if let Some(b) = data
+            .payment_result
+            .as_ref()
+            .or(data.payment_incomplete_result.as_ref())
+        {
+            return Some(b.clone());
+        }
+        if data.payment_status_info.is_some() {
+            return Some(PacoPaymentResultBlock {
+                invoice_no2c2p: data.invoice_no2c2p.clone(),
+                order_no: data.order_no.clone(),
+                controller_internal_id: None,
+                payment_status_info: data.payment_status_info.clone(),
+                prior_payment_response_details: data.psp_response.clone(),
+                payment_page: None,
+                payment_page_url: None,
+                ares_acs_challenge: None,
+                credit_card_authenticated_details: None,
+            });
+        }
+        None
     }
 }
 
@@ -1227,21 +1342,25 @@ impl
             router_data,
             http_code,
         } = item;
-        let result = response.merged_result();
+        // PACO's `/Refund/refund` returns the result fields flat on `data`,
+        // not nested under `paymentResult`. Use `flat_data_block()` so the
+        // shared status-mapping helpers still work on that shape.
+        let result = response.flat_data_block();
 
-        let refund_status = match result.and_then(|b| b.payment_status_info.as_ref()) {
+        let refund_status = match result.as_ref().and_then(|b| b.payment_status_info.as_ref()) {
             Some(info) => map_refund_status(&info.payment_status, &info.payment_step),
             None => RefundStatus::Pending,
         };
 
         let connector_refund_id = result
+            .as_ref()
             .and_then(|b| b.invoice_no2c2p.clone())
             .unwrap_or_else(|| router_data.request.refund_id.clone());
 
         if refund_status == RefundStatus::Failure {
             let (code, message) = error_code_message(
                 &response.api_response,
-                &result.and_then(|b| b.prior_payment_response_details.clone()),
+                &result.and_then(|b| b.prior_payment_response_details),
             );
             let error = ErrorResponse {
                 code,
