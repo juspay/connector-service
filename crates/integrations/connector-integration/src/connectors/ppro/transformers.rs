@@ -7,13 +7,15 @@ use super::PproRouterData;
 use crate::types::ResponseRouterData;
 use domain_types::errors::{ConnectorError, IntegrationError, WebhookError};
 use domain_types::{
-    connector_flow::{Capture, ClientAuthenticationToken, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Capture, ClientAuthenticationToken, RSync, Refund, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse, EventType, MandateReference, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        ConnectorSpecificClientAuthenticationResponse, EventType, MandateReference,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     mandates::MandateDataType,
     payment_method_data::PaymentMethodDataTypes,
@@ -1648,13 +1650,18 @@ where
 
         Ok(Self {
             amount,
-            consumer: PproSessionConsumer { merchant_consumer_id },
+            consumer: PproSessionConsumer {
+                merchant_consumer_id,
+            },
             recurring: false,
             webhooks_url: None,
             amount_type: None,
             payment_descriptor: router_data.resource_common_data.description.clone(),
             merchant_payment_charge_reference: Some(
-                router_data.resource_common_data.connector_request_reference_id.clone(),
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
             ),
         })
     }
