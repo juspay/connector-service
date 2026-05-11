@@ -471,7 +471,7 @@ macros::macro_connector_implementation!(
                     header.append(&mut customer_account_header);
                 }
             }
-            // if request doesn't have transfer_account_id, but stripe_split_payment_metadata has it, append it
+            // if request doesn't have transfer_account_id, but split_payment_metadata has it, append it
             else if let Some(transfer_account_id) =
                 stripe_split_payment_metadata.transfer_account_id.clone()
             {

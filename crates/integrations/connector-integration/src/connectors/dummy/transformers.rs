@@ -248,7 +248,7 @@ pub struct StripeMetadata {
     pub order_id: Option<String>,
     // to check whether the order_id is refund_id or payment_id
     // before deployment, order id is set to payment_id in refunds but now it is set as refund_id
-    // it is set as string instead of bool because stripe pass it as string even if we set it as bool
+    // it is set as string instead of bool because the upstream API passes it as string even if we set it as bool
     #[serde(rename(serialize = "metadata[is_refund_id_as_reference]"))]
     pub is_refund_id_as_reference: Option<String>,
 }
@@ -590,7 +590,7 @@ pub struct StripeBillingAddressCardToken {
     pub city: Option<Secret<String>>,
 }
 
-// Struct to call the Stripe tokens API to create a PSP token for the card details provided.
+// Struct to call the tokens API to create a PSP token for the card details provided.
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct StripeCardToken<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
@@ -760,9 +760,8 @@ pub struct GooglepayPayment {
     pub payment_method_types: StripePaymentMethodType,
 }
 
-// All supported payment_method_types in stripe
-// This enum goes in payment_method_types[] field in stripe request body
-// https://stripe.com/docs/api/payment_intents/create#create_payment_intent-payment_method_types
+// All supported payment_method_types
+// This enum goes in the payment_method_types[] field in the request body
 #[derive(Eq, PartialEq, Serialize, Clone, Debug, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum StripePaymentMethodType {
@@ -831,7 +830,7 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             common_enums::PaymentMethodType::AliPay => Ok(Self::Alipay),
             common_enums::PaymentMethodType::Przelewy24 => Ok(Self::Przelewy24),
             common_enums::PaymentMethodType::RevolutPay => Ok(Self::RevolutPay),
-            // Stripe expects PMT as Card for Recurring Mandates Payments
+            // The connector expects PMT as Card for Recurring Mandates Payments
             common_enums::PaymentMethodType::GooglePay => Ok(Self::Card),
             common_enums::PaymentMethodType::Boleto
             | common_enums::PaymentMethodType::CardRedirect
@@ -2046,7 +2045,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             })
             .transpose()?
             .or_else(|| {
-                //stripe requires us to send mandate_data while making recurring payment through saved bank debit
+                // mandate_data must be sent while making recurring payment through saved bank debit
                 if payment_method.is_some() {
                     //check if payment is done through saved payment method
                     match &payment_method_types {
@@ -2144,7 +2143,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .router_return_url
                 .clone()
                 .unwrap_or_else(|| "https://juspay.in/".to_string()),
-            confirm: true, // Stripe requires confirm to be true if return URL is present
+            confirm: true, // confirm must be true if return URL is present
             description: item.resource_common_data.description.clone(),
             shipping: shipping_address,
             billing: billing_address,
@@ -2250,7 +2249,7 @@ pub struct PaymentIntentResponse {
     pub object: String,
     pub amount: MinorUnit,
     #[serde(default, deserialize_with = "deserialize_zero_minor_amount_as_none")]
-    // stripe gives amount_captured as 0 for payment intents instead of null
+    // upstream returns amount_captured as 0 for payment intents instead of null
     pub amount_received: Option<MinorUnit>,
     pub amount_capturable: Option<MinorUnit>,
     pub currency: String,
@@ -2440,7 +2439,7 @@ pub enum StripeExtendedAuthorizationStatus {
 pub struct StripeOvercaptureResponse {
     status: Option<StripeOvercaptureStatus>,
     #[serde(default, deserialize_with = "deserialize_zero_minor_amount_as_none")]
-    // stripe gives amount_captured as 0 for payment intents instead of null
+    // upstream returns amount_captured as 0 for payment intents instead of null
     maximum_amount_capturable: Option<MinorUnit>,
 }
 
@@ -2454,7 +2453,7 @@ pub enum StripeOvercaptureStatus {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum StripePaymentMethodDetailsResponse {
-    //only ideal and bancontact is supported by stripe for recurring payment in bank redirect
+    // only ideal and bancontact are supported for recurring payment in bank redirect
     Ideal {
         ideal: StripeBankRedirectDetails,
     },
@@ -2462,7 +2461,7 @@ pub enum StripePaymentMethodDetailsResponse {
         bancontact: StripeBankRedirectDetails,
     },
 
-    //other payment method types supported by stripe. To avoid deserialization error.
+    // other payment method types supported. To avoid deserialization error.
     Blik,
     Eps,
     Fpx,
@@ -2690,7 +2689,7 @@ where
 
         let mandate_reference = item.response.payment_method.map(|payment_method_id| {
             // Implemented Save and re-use payment information for recurring charges
-            // For more info: https://docs.stripe.com/recurring-payments#accept-recurring-payments
+            // For more info: see upstream recurring-payments documentation.
             // For backward compatibility payment_method_id & connector_mandate_id is being populated with the same value
             let connector_mandate_id = Some(payment_method_id.clone().expose());
             let payment_method_id = Some(payment_method_id.expose());
@@ -2983,7 +2982,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
             .clone()
             .map(|payment_method_id| {
                 // Implemented Save and re-use payment information for recurring charges
-                // For more info: https://docs.stripe.com/recurring-payments#accept-recurring-payments
+                // For more info: see upstream recurring-payments documentation.
                 // For backward compatibility payment_method_id & connector_mandate_id is being populated with the same value
                 let payment_method_id =
                     get_payment_method_id(item.response.latest_charge.clone(), payment_method_id);
@@ -3113,7 +3112,7 @@ impl<F, T> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
 
         let mandate_reference = item.response.payment_method.map(|payment_method_id| {
             // Implemented Save and re-use payment information for recurring charges
-            // For more info: https://docs.stripe.com/recurring-payments#accept-recurring-payments
+            // For more info: see upstream recurring-payments documentation.
             // For backward compatibility payment_method_id & connector_mandate_id is being populated with the same value
             let connector_mandate_id = Some(payment_method_id.clone());
             let payment_method_id = Some(payment_method_id);
@@ -3221,7 +3220,7 @@ impl StripeNextActionResponse {
     }
 }
 
-// This impl is required because Stripe's response is of the below format, which is externally
+// This impl is required because the response is of the below format, which is externally
 // tagged, but also with an extra 'type' field specifying the enum variant name:
 // "next_action": {
 //   "redirect_to_url": { "return_url": "...", "url": "..." },
@@ -3238,7 +3237,7 @@ impl<'de> Deserialize<'de> for StripeNextActionResponse {
             inner: StripeNextActionResponse,
         }
 
-        // There is some exception in the stripe next action, it usually sends :
+        // There is some exception in the next_action, it usually sends:
         // "next_action": {
         //   "redirect_to_url": { "return_url": "...", "url": "..." },
         //   "type": "redirect_to_url"
@@ -3379,7 +3378,7 @@ pub struct BacsFinancialDetails {
 }
 
 // REFUND :
-// Type definition for Stripe RefundRequest
+// Type definition for RefundRequest
 
 #[derive(Debug, Serialize)]
 pub struct RefundRequest {
@@ -3398,7 +3397,7 @@ pub struct ChargeRefundRequest {
     #[serde(flatten)]
     pub meta_data: StripeMetadata,
 }
-// Type definition for Stripe Refund Response
+// Type definition for Refund Response
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -3582,10 +3581,10 @@ pub struct LatestPaymentAttempt {
 pub struct StripeMandateOptions {
     reference: Secret<String>, // Extendable, But only important field to be captured
 }
-/// Represents the capture request body for stripe connector.
+/// Represents the capture request body.
 #[derive(Debug, Serialize, Clone, Copy)]
 pub struct CaptureRequest {
-    /// If amount_to_capture is None stripe captures the amount in the payment intent.
+    /// If amount_to_capture is None the connector captures the amount in the payment intent.
     amount_to_capture: Option<MinorUnit>,
 }
 
@@ -3842,7 +3841,7 @@ pub struct Evidence {
     pub submit: bool,
 }
 
-// Mandates for bank redirects - ideal happens through sepa direct debit in stripe
+// Mandates for bank redirects - ideal happens through sepa direct debit
 fn mandatory_parameters_for_sepa_bank_debit_mandates(
     billing_details: &Option<StripeBillingAddress>,
     is_customer_initiated_mandate_payment: Option<bool>,
@@ -5152,7 +5151,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .router_return_url
                 .clone()
                 .unwrap_or_else(|| "https://juspay.in/".to_string()),
-            confirm: true, // Stripe requires confirm to be true if return URL is present
+            confirm: true, // confirm must be true if return URL is present
             description: item.resource_common_data.description.clone(),
             shipping: shipping_address,
             billing: billing_address,
@@ -5182,7 +5181,7 @@ fn get_payment_method_type_for_saved_payment_method_payment<
     item: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
 ) -> Result<Option<StripePaymentMethodType>, error_stack::Report<IntegrationError>> {
     if item.resource_common_data.payment_method == common_enums::PaymentMethod::Card {
-        Ok(Some(StripePaymentMethodType::Card)) //stripe takes ["Card"] as default
+        Ok(Some(StripePaymentMethodType::Card)) // upstream takes ["Card"] as default
     } else {
         let stripe_payment_method_type = match item
             .resource_common_data
@@ -5208,7 +5207,7 @@ fn get_payment_method_type_for_saved_payment_method_payment<
             .into()),
         }?;
         match stripe_payment_method_type {
-            //Stripe converts Ideal, Bancontact & Sofort Bank redirect methods to Sepa direct debit and attaches to the customer for future usage
+            // Ideal, Bancontact & Sofort Bank redirect methods are converted to Sepa direct debit and attached to the customer for future usage
             StripePaymentMethodType::Ideal
             | StripePaymentMethodType::Bancontact
             | StripePaymentMethodType::Sofort => Ok(Some(StripePaymentMethodType::Sepa)),
@@ -5324,7 +5323,7 @@ impl<F, T> TryFrom<ResponseRouterData<StripeTokenResponse, Self>>
 // ---- ClientAuthenticationToken flow types ----
 
 /// Creates an unconfirmed PaymentIntent. `confirm` is intentionally omitted —
-/// confirmation happens browser-side via `stripe.confirmPayment()` using the
+/// confirmation happens browser-side via the upstream SDK's confirmPayment() using the
 /// returned `client_secret`.
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Eq, PartialEq, Serialize)]
