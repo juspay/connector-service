@@ -8,16 +8,16 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, PSync, PostAuthenticate, PreAuthenticate,
-        RSync, Refund, Void,
+        RSync, Refund, Void, VoidPC,
     },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse, MandateReferenceId,
         NexixpayClientAuthenticationResponse as NexixpayClientAuthenticationResponseDomain,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsCancelPostCaptureData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -956,6 +956,108 @@ impl TryFrom<ResponseRouterData<NexixpayVoidResponse, Self>>
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Voided, // Void succeeded
+                connector_feature_data: connector_metadata.clone().map(Secret::new),
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== VOID POST CAPTURE (VoidPC / Reverse) FLOW STRUCTURES =====
+// NEXIXPAY supports post-capture cancellation via POST /operations/{operationId}/cancels
+// This cancels a captured payment before settlement (roll back of a capture)
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayVoidPCRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        NexixpayRouterData<
+            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for NexixpayVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        value: NexixpayRouterData<
+            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let item = &value.router_data;
+        Ok(Self {
+            description: item.request.cancellation_reason.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayVoidPCResponse {
+    pub operation_id: String,
+    pub operation_time: String,
+}
+
+impl TryFrom<ResponseRouterData<NexixpayVoidPCResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<NexixpayVoidPCResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // VoidPC response is minimal (only operationId and time)
+        // A 200 OK response indicates the cancellation was accepted
+        // Map to VoidPostCaptureInitiated — actual completion must be verified via PSync
+
+        // Build connector metadata - preserve existing structural data and add cancel response data
+        let mut metadata_map = item
+            .router_data
+            .resource_common_data
+            .connector_feature_data
+            .as_ref()
+            .and_then(|meta| meta.peek().as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        // Add cancel operation data
+        metadata_map.insert(
+            "cancelOperationId".to_string(),
+            serde_json::Value::String(item.response.operation_id.clone()),
+        );
+
+        // Update psync flow to Cancel for subsequent PSync calls
+        metadata_map.insert(
+            "psyncFlow".to_string(),
+            serde_json::Value::String(NexixpayPaymentIntent::Cancel.to_string()),
+        );
+
+        let connector_metadata = if !metadata_map.is_empty() {
+            Some(serde_json::Value::Object(metadata_map))
+        } else {
+            None
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.operation_id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: connector_metadata.clone(),
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::VoidPostCaptureInitiated,
                 connector_feature_data: connector_metadata.clone().map(Secret::new),
                 ..item.router_data.resource_common_data
             },
