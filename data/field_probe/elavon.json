@@ -694,8 +694,9 @@
       "default": {
         "status": "supported",
         "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
           "merchant_reverse_id": "probe_reverse_001",
-          "connector_transaction_id": "probe_connector_txn_001"
+          "cancellation_reason": "requested_by_customer"
         },
         "sample": {
           "url": "https://api.demo.convergepay.com/VirtualMerchantDemo/processxml.do",
