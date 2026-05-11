@@ -323,7 +323,7 @@ connector_id: imerchantsolutions
 doc: docs/connectors/imerchantsolutions.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
 payment_methods: Card
-flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
+flows: authorize, capture, get, handle_event, parse_event, proxy_authorize, refund, refund_get, void
 examples_python: examples/imerchantsolutions/imerchantsolutions.py
 
 ## Itaubank
@@ -491,7 +491,7 @@ connector_id: phonepe
 doc: docs/connectors/phonepe.md
 scenarios: none
 payment_methods: UpiCollect, UpiIntent, UpiQr
-flows: authorize, capture, get, refund, refund_get, void
+flows: authorize, capture, get, handle_event, parse_event, refund, refund_get, void
 examples_python: none
 
 ## Pinelabsonline
