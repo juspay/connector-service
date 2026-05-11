@@ -9,11 +9,11 @@ use common_utils::{
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -1058,12 +1058,105 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
     }
 }
 
+// ===== VOIDPC REQUEST STRUCTURE =====
+// VoidPostCapture (Reverse) — cancels a captured (PostAuth) transaction before settlement
+// Uses requestType: VoidTransaction (distinct from Void which uses VoidPreAuthTransactions)
+// AUTHIPAY always voids the full original amount; partial void is not supported
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthipayVoidPCRequest {
+    pub request_type: AuthipayRequestType,
+}
+
+// ===== VOIDPC REQUEST TRANSFORMATION =====
+
+impl
+    TryFrom<
+        &RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
+    > for AuthipayVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        _item: &RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // VoidTransaction requires no amount — AUTHIPAY always voids the full original amount
+        Ok(Self {
+            request_type: AuthipayRequestType::VoidTransaction,
+        })
+    }
+}
+
+// ===== VOIDPC RESPONSE TRANSFORMATION =====
+// VoidPostCapture reuses AuthipayPaymentsResponse structure (same format as all other flows)
+// Status mapping reuses the existing map_void_status function
+
+impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
+    for RouterDataV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Map void status with CRITICAL validation of ALL fields
+        // Reuse the existing map_void_status function — same response format as Void flow
+        let status = map_void_status(
+            item.response.transaction_type.clone(),
+            item.response.transaction_status.clone(),
+            item.response.transaction_result.clone(),
+            item.response.transaction_state.clone(),
+        );
+
+        // Extract network-specific fields from processor object using helper function
+        let (network_txn_id, _network_decline_code, _network_error_message) =
+            extract_network_fields(item.response.processor.as_ref());
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
+                connector_response_reference_id: item.response.client_request_id.clone(),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
 // ===== TYPE ALIASES FOR MACRO COMPATIBILITY =====
 // Each flow needs its own response type for the macro system
 // Even though they all use the same underlying AuthipayPaymentsResponse struct
 pub type AuthipayAuthorizeResponse = AuthipayPaymentsResponse;
 pub type AuthipaySyncResponse = AuthipayPaymentsResponse;
 pub type AuthipayVoidResponse = AuthipayPaymentsResponse;
+pub type AuthipayVoidPCResponse = AuthipayPaymentsResponse;
 pub type AuthipayCaptureResponse = AuthipayPaymentsResponse;
 pub type AuthipayRefundResponse = AuthipayPaymentsResponse;
 pub type AuthipayRefundSyncResponse = AuthipayPaymentsResponse;
@@ -1157,6 +1250,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: AuthipayRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&item.router_data)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AuthipayRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AuthipayVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: AuthipayRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
