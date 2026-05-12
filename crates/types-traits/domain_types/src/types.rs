@@ -628,6 +628,8 @@ impl<'de> Deserialize<'de> for ProxyConfig {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let raw = ProxyConfigRaw::deserialize(deserializer)?;
         let mut proxies = raw.proxies;
+        // New format: [proxy.proxies.<name>] — proxies map populated directly, nothing to do.
+        // Old format: flat https_url/http_url at [proxy] level — promote to proxies["shadow"].
         if proxies.is_empty() && (raw.https_url.is_some() || raw.http_url.is_some()) {
             proxies.insert(
                 "shadow".to_string(),
