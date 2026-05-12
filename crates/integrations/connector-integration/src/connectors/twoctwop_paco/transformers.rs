@@ -9,14 +9,12 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        Void, VoidPC,
+        Authenticate, Authorize, Capture, PSync, RSync, Refund, Void, VoidPC,
     },
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
@@ -1590,6 +1588,30 @@ pub struct PacoInquiryData {
     pub credit_card_authenticated_details: Option<PacoCreditCardAuthenticatedDetails>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoPSyncInquiryResponse(pub TwoctwopPacoInquiryResponse);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoRSyncInquiryResponse(pub TwoctwopPacoInquiryResponse);
+
+impl TryFrom<ResponseRouterData<TwoctwopPacoPSyncInquiryResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TwoctwopPacoPSyncInquiryResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
+
 impl TryFrom<ResponseRouterData<TwoctwopPacoInquiryResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
@@ -1662,6 +1684,22 @@ impl TryFrom<ResponseRouterData<TwoctwopPacoInquiryResponse, Self>>
                 status_code: http_code,
             }),
             ..router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<TwoctwopPacoRSyncInquiryResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TwoctwopPacoRSyncInquiryResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
         })
     }
 }
@@ -1941,37 +1979,6 @@ fn build_authentication_data_from_paco(
     }
 }
 
-/// PACO has no DDC step — `/Payment/nonUi` performs both enrolment lookup and
-/// challenge issuance in a single call, so PreAuthenticate is a non-network
-/// no-op. This helper shapes the synthetic router-data response.
-pub fn build_preauthenticate_passthrough<T: PaymentMethodDataTypes>(
-    data: &RouterDataV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    >,
-) -> RouterDataV2<
-    PreAuthenticate,
-    PaymentFlowData,
-    PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData,
-> {
-    let mut clone = data.clone();
-    let connector_response_reference_id = Some(
-        data.resource_common_data
-            .connector_request_reference_id
-            .clone(),
-    );
-    clone.resource_common_data.status = AttemptStatus::AuthenticationPending;
-    clone.response = Ok(PaymentsResponseData::PreAuthenticateResponse {
-        authentication_data: None,
-        redirection_data: None,
-        connector_response_reference_id,
-        status_code: 200,
-    });
-    clone
-}
 
 // ---------- Authenticate response → RouterDataV2 ----------
 
@@ -2083,8 +2090,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwoctwopPacoNonUiResp
             AttemptStatus::AuthenticationSuccessful
         } else {
             // No challenge AND no CAVV — keep the prism state machine on
-            // AuthenticationPending so the orchestrator can fall through to
-            // PostAuthenticate (which polls the inquiry endpoint).
+            // AuthenticationPending so the orchestrator can fall through
+            // to PSync (which polls the Inquiry endpoint) to retrieve the
+            // final post-3DS state.
             AttemptStatus::AuthenticationPending
         };
 
@@ -2110,106 +2118,3 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwoctwopPacoNonUiResp
     }
 }
 
-// ---------- PostAuthenticate response → RouterDataV2 ----------
-
-impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwoctwopPacoInquiryResponse, Self>>
-    for RouterDataV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    >
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<TwoctwopPacoInquiryResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-
-        let info = response
-            .data
-            .as_ref()
-            .and_then(|d| d.payment_status_info.as_ref());
-        let mapped_status = info
-            .map(|i| map_attempt_status(&i.payment_status, &i.payment_step))
-            .unwrap_or(AttemptStatus::Pending);
-
-        let order = response.data.as_ref().and_then(|d| d.order_no.clone());
-        let invoice = response
-            .data
-            .as_ref()
-            .and_then(|d| d.invoice_no2c2p.clone());
-
-        if matches!(mapped_status, AttemptStatus::Failure) {
-            let (code, message) = error_code_message(&response.api_response, &None);
-            tracing::warn!(
-                code = %code,
-                message = %message,
-                "twoctwop_paco: PostAuthenticate inquiry returned failure"
-            );
-            let error = ErrorResponse {
-                code,
-                message: message.clone(),
-                reason: Some(message),
-                status_code: http_code,
-                attempt_status: Some(AttemptStatus::AuthenticationFailed),
-                connector_transaction_id: invoice,
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            };
-            return Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status: AttemptStatus::AuthenticationFailed,
-                    ..router_data.resource_common_data
-                },
-                response: Err(error),
-                ..router_data
-            });
-        }
-
-        let authentication_data = response
-            .data
-            .as_ref()
-            .and_then(|d| d.credit_card_authenticated_details.as_ref())
-            .map(build_authentication_data_from_paco);
-
-        // The PACO transaction is considered "authenticated" once the inquiry
-        // shows the post-challenge step (PA/Authorized) or any non-failure
-        // terminal state. Any other state keeps the orchestrator in
-        // AuthenticationPending.
-        let status = match info.map(|i| (&i.payment_status, &i.payment_step)) {
-            Some((PacoPaymentStatus::A, PacoPaymentStep::PA))
-            | Some((PacoPaymentStatus::S, PacoPaymentStep::ST)) => {
-                AttemptStatus::AuthenticationSuccessful
-            }
-            _ => AttemptStatus::AuthenticationPending,
-        };
-
-        tracing::debug!(
-            cavv_present = authentication_data
-                .as_ref()
-                .map(|a| a.cavv.is_some())
-                .unwrap_or(false),
-            "twoctwop_paco: PostAuthenticate inquiry decoded"
-        );
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response: Ok(PaymentsResponseData::PostAuthenticateResponse {
-                authentication_data,
-                connector_response_reference_id: order,
-                status_code: http_code,
-            }),
-            ..router_data
-        })
-    }
-}

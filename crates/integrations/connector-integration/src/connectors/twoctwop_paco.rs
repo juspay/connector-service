@@ -73,7 +73,7 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as twoctwop_paco, AuthorizeRoute, TwoctwopPacoAuthType, TwoctwopPacoErrorResponse,
-    TwoctwopPacoInquiryResponse, TwoctwopPacoNonUiResponse,
+    TwoctwopPacoNonUiResponse, TwoctwopPacoPSyncInquiryResponse, TwoctwopPacoRSyncInquiryResponse,
 };
 
 use super::macros;
@@ -335,8 +335,13 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: PSync,
-            response_body: TwoctwopPacoInquiryResponse,
+            response_body: TwoctwopPacoPSyncInquiryResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: RSync,
+            response_body: TwoctwopPacoRSyncInquiryResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [],
@@ -536,7 +541,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
-    curl_response: TwoctwopPacoInquiryResponse,
+    curl_response: TwoctwopPacoPSyncInquiryResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -576,93 +581,48 @@ macros::macro_connector_implementation!(
     }
 );
 
-// RSync — same Inquiry endpoint as PSync. Hand-rolled because the bridge
-// templating struct would clash with PSync's (same response_body type).
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for TwoctwopPaco<T>
-{
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Get
-    }
+// RSync — same Inquiry endpoint as PSync. Uses a distinct
+// `TwoctwopPacoRSyncInquiryResponse` newtype so the macro's templating
+// struct doesn't collide with PSync's.
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_error_response_v2],
+    connector: TwoctwopPaco,
+    curl_response: TwoctwopPacoRSyncInquiryResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
+            let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
+            Ok(self.build_inquiry_headers(&auth))
+        }
 
-    fn get_content_type(&self) -> &'static str {
-        CONTENT_TYPE_JSON
-    }
+        fn get_content_type(&self) -> &'static str {
+            CONTENT_TYPE_JSON
+        }
 
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
-        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
-        Ok(self.build_inquiry_headers(&auth))
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::IntegrationError> {
+            let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
+            let base_url = self.connector_base_url_refunds(req);
+            let order_no = req.request.connector_refund_id.clone();
+            Ok(format!(
+                "{base_url}/api/2.0/Inquiry/transactionStatus?merchantId={}&orderNo={}",
+                urlencoding::encode(auth.merchant_id.peek()),
+                urlencoding::encode(&order_no),
+            ))
+        }
     }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::IntegrationError> {
-        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
-        let base_url = self.connector_base_url_refunds(req);
-        let order_no = req.request.connector_refund_id.clone();
-        Ok(format!(
-            "{base_url}/api/2.0/Inquiry/transactionStatus?merchantId={}&orderNo={}",
-            urlencoding::encode(auth.merchant_id.peek()),
-            urlencoding::encode(&order_no),
-        ))
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-        connector_config: &ConnectorSpecificConfig,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder, connector_config)
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        errors::ConnectorError,
-    > {
-        let parsed: TwoctwopPacoInquiryResponse = if res.response.is_empty() {
-            serde_json::from_str("{}").change_context(
-                errors::ConnectorError::response_deserialization_failed_with_context(
-                    res.status_code,
-                    Some("twoctwop_paco rsync: empty response".to_string()),
-                ),
-            )?
-        } else {
-            serde_json::from_slice(&res.response).change_context(
-                errors::ConnectorError::response_deserialization_failed_with_context(
-                    res.status_code,
-                    Some(
-                        "twoctwop_paco rsync: response shape mismatch on Inquiry endpoint"
-                            .to_string(),
-                    ),
-                ),
-            )?
-        };
-        with_error_response_body!(event_builder, parsed);
-
-        let router_data = <ResponseRouterData<
-            TwoctwopPacoInquiryResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        > as TryInto<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >>::try_into(ResponseRouterData {
-            response: parsed,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })?;
-        Ok(router_data)
-    }
-}
+);
 
 // ---------- Hand-rolled JOSE flows ----------
 
@@ -1116,10 +1076,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ---------- 3DS trio ----------
 //
-// PACO is native 3DS. The handshake collapses into:
-//   PreAuthenticate (no-op — PACO has no DDC step)
-//   Authenticate    (POST /Payment/nonUi with request3dsFlag=Y → ACS challenge or CAVV)
-//   PostAuthenticate (GET /Inquiry/transactionStatus to confirm completion)
+// PACO is native 3DS. The merchant-facing surface collapses to:
+//   PreAuthenticate  empty marker — PACO has no DDC endpoint
+//   Authenticate     POST /Payment/nonUi with request3dsFlag=Y → either an
+//                    ACS challenge (RedirectForm) or inline CAVV/ECI
+//   PostAuthenticate empty marker — PACO has no CRes-submit endpoint; the
+//                    challenge result flows back via ACS callback into
+//                    PACO's underlying 3DSS, server-side. Merchants call
+//                    PSync after the browser challenge to fetch the final
+//                    state from /Inquiry/transactionStatus (PSync surfaces
+//                    `authenticationData` + post-3DS payment status).
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -1129,52 +1095,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for TwoctwopPaco<T>
 {
-    // No build_request_v2: PACO has no DDC step. Returning None from the
-    // default implementation tells the orchestrator there is no network call,
-    // and handle_response_v2 below shapes the response router data.
-    fn build_request_v2(
-        &self,
-        _req: &RouterDataV2<
-            PreAuthenticate,
-            PaymentFlowData,
-            PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, errors::IntegrationError> {
-        tracing::debug!("twoctwop_paco: PreAuthenticate is a no-op (no DDC step)");
-        Ok(None)
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            PreAuthenticate,
-            PaymentFlowData,
-            PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-        _event_builder: Option<&mut events::Event>,
-        _res: Response,
-    ) -> CustomResult<
-        RouterDataV2<
-            PreAuthenticate,
-            PaymentFlowData,
-            PaymentsPreAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-        errors::ConnectorError,
-    > {
-        Ok(transformers::build_preauthenticate_passthrough(data))
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-        connector_config: &ConnectorSpecificConfig,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder, connector_config)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -1279,6 +1199,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
+// PostAuthenticate — empty marker. The prism convention for this flow is
+// "merchant submits the CRes / 3DS challenge result, gateway returns the
+// final auth state" (POST with body — Cybersource / Nexixpay / Worldpay).
+// PACO doesn't expose a merchant-facing endpoint to push a CRes — the
+// challenge result flows back through PACO's underlying 3DSS via the ACS
+// callback, server-to-server, transparent to the merchant. After the
+// browser challenge completes, merchants should call PSync to retrieve
+// the final state from `/Inquiry/transactionStatus`; PSync already
+// surfaces `authenticationData` and the post-3DS payment status.
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PostAuthenticate,
@@ -1287,142 +1216,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for TwoctwopPaco<T>
 {
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Get
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        CONTENT_TYPE_JSON
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-        connector_config: &ConnectorSpecificConfig,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder, connector_config)
-    }
-
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            PostAuthenticate,
-            PaymentFlowData,
-            PaymentsPostAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
-        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
-        Ok(self.build_inquiry_headers(&auth))
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            PostAuthenticate,
-            PaymentFlowData,
-            PaymentsPostAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::IntegrationError> {
-        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
-        let base_url = self.connector_base_url_payments(req);
-        let order_no = req
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-        Ok(format!(
-            "{base_url}/api/2.0/Inquiry/transactionStatus?merchantId={}&orderNo={}",
-            urlencoding::encode(auth.merchant_id.peek()),
-            urlencoding::encode(&order_no),
-        ))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<
-            PostAuthenticate,
-            PaymentFlowData,
-            PaymentsPostAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, errors::IntegrationError> {
-        let auth = TwoctwopPacoAuthType::try_from(&req.connector_config)?;
-        let url = self.get_url(req)?;
-        let headers = self.build_inquiry_headers(&auth);
-        tracing::debug!(url = %url, "twoctwop_paco: PostAuthenticate inquiry request built");
-        Ok(Some(
-            common_utils::request::RequestBuilder::new()
-                .method(common_utils::request::Method::Get)
-                .url(&url)
-                .attach_default_headers()
-                .headers(headers)
-                .build(),
-        ))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            PostAuthenticate,
-            PaymentFlowData,
-            PaymentsPostAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<
-            PostAuthenticate,
-            PaymentFlowData,
-            PaymentsPostAuthenticateData<T>,
-            PaymentsResponseData,
-        >,
-        errors::ConnectorError,
-    > {
-        let parsed: TwoctwopPacoInquiryResponse = if res.response.is_empty() {
-            serde_json::from_str("{}").change_context(
-                errors::ConnectorError::response_deserialization_failed_with_context(
-                    res.status_code,
-                    Some("twoctwop_paco PostAuthenticate: empty response".to_string()),
-                ),
-            )?
-        } else {
-            serde_json::from_slice(&res.response).change_context(
-                errors::ConnectorError::response_deserialization_failed_with_context(
-                    res.status_code,
-                    Some(
-                        "twoctwop_paco PostAuthenticate: response shape mismatch on Inquiry endpoint"
-                            .to_string(),
-                    ),
-                ),
-            )?
-        };
-        with_error_response_body!(event_builder, parsed);
-
-        let router_data = <ResponseRouterData<
-            TwoctwopPacoInquiryResponse,
-            RouterDataV2<
-                PostAuthenticate,
-                PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        > as TryInto<
-            RouterDataV2<
-                PostAuthenticate,
-                PaymentFlowData,
-                PaymentsPostAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-        >>::try_into(ResponseRouterData {
-            response: parsed,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })?;
-        Ok(router_data)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
