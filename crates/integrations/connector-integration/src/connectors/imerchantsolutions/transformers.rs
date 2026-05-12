@@ -93,6 +93,7 @@ pub struct ImerchantsolutionsPaymentsRequestData<T: PaymentMethodDataTypes> {
     amount: MinorUnit,
     currency: Currency,
     reference: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     card: Option<CardDetails<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     shopper_email: Option<pii::Email>,
