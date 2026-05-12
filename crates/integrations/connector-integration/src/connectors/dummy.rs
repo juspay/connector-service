@@ -188,11 +188,123 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Dummy<T>
 {
+    fn verify_webhook_source(
+        &self,
+        _request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<bool, error_stack::Report<domain_types::errors::WebhookError>> {
+        Ok(true)
+    }
+
+    fn sample_webhook_body(&self) -> &'static [u8] {
+        br#"{"event":"payment_succeeded","payment_id":"DUMMY-probe-001","merchant_reference_id":"probe-ref-001"}"#
+    }
+
+    fn get_event_type(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        domain_types::connector_types::EventType,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        Ok(dummy::DummyWebhookPayload::parse(&request.body)?.event.into())
+    }
+
+    fn get_webhook_event_reference(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Option<domain_types::connector_types::WebhookResourceReference>,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        Ok(dummy::DummyWebhookPayload::parse(&request.body)?.webhook_reference())
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+        _event_context: Option<domain_types::connector_types::EventContext>,
+    ) -> Result<
+        domain_types::connector_types::WebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let payload = dummy::DummyWebhookPayload::parse(&request.body)?;
+        let mut response =
+            domain_types::connector_types::WebhookDetailsResponse::try_from(payload)?;
+        response.raw_connector_response = Some(String::from_utf8_lossy(&request.body).to_string());
+        Ok(response)
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<
+        domain_types::connector_types::RefundWebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let payload = dummy::DummyWebhookPayload::parse(&request.body)?;
+        let mut response =
+            domain_types::connector_types::RefundWebhookDetailsResponse::try_from(payload)?;
+        response.raw_connector_response = Some(String::from_utf8_lossy(&request.body).to_string());
+        Ok(response)
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<domain_types::errors::WebhookError>,
+    > {
+        let payload = dummy::DummyWebhookPayload::parse(&request.body)?;
+        Ok(Box::new(payload))
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::VerifyRedirectResponse for Dummy<T>
 {
+    fn verify_redirect_response_source(
+        &self,
+        _request: &domain_types::connector_types::RequestDetails,
+        _secrets: Option<interfaces::verification::ConnectorSourceVerificationSecrets>,
+    ) -> CustomResult<bool, IntegrationError> {
+        Ok(true)
+    }
+
+    fn process_redirect_response(
+        &self,
+        request: &domain_types::connector_types::RequestDetails,
+    ) -> CustomResult<
+        domain_types::connector_types::RedirectDetailsResponse,
+        IntegrationError,
+    > {
+        let query = request.query_params.as_deref().unwrap_or("");
+        let (status, dummy_id) = dummy::parse_dummy_redirect_query(query);
+
+        let status = status.ok_or(IntegrationError::MissingRequiredField {
+            field_name: "dummy_status",
+            context: Default::default(),
+        })?;
+
+        Ok(domain_types::connector_types::RedirectDetailsResponse {
+            resource_id: dummy_id
+                .clone()
+                .map(domain_types::connector_types::ResponseId::ConnectorTransactionId),
+            status: Some(status.to_attempt_status()),
+            response_amount: None,
+            connector_response_reference_id: dummy_id,
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            raw_connector_response: Some(query.to_string()),
+        })
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification

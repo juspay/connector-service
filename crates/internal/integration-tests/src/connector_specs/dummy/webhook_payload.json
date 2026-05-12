@@ -1,34 +1,21 @@
 {
   "_webhook_config": {
-    "signature_header": "Stripe-Signature",
-    "signature_algorithm": "stripe_hmac_sha256",
-    "signature_format": "t={timestamp},v1={signature}",
-    "webhook_secret_key": "webhook_secret"
+    "signature_header": null,
+    "signature_algorithm": "none",
+    "webhook_secret_key": null
   },
   "payment_succeeded": {
     "grpc_req": {
       "request_details": {
         "headers": {},
         "body": {
-          "id": "evt_1MqLnJHfXbQ8wWVU6JZvN3Cd",
-          "object": "event",
-          "api_version": "2022-11-15",
-          "created": 1680614399,
-          "data": {
-            "object": {
-              "id": "pi_3MqLnJHfXbQ8wWVU0K8m5V6p",
-              "object": "payment_intent",
-              "amount": 2000,
-              "amount_capturable": 0,
-              "amount_received": 2000,
-              "currency": "usd",
-              "status": "succeeded"
-            }
-          },
-          "type": "payment_intent.succeeded"
+          "event": "payment_succeeded",
+          "payment_id": "DUMMY-pi_succeeded_001",
+          "merchant_reference_id": "dummy_webhook_payment_succeeded",
+          "amount": 2000
         }
       },
-      "merchant_event_id": "stripe_webhook_payment_succeeded"
+      "merchant_event_id": "dummy_webhook_payment_succeeded"
     }
   },
   "payment_failed": {
@@ -36,29 +23,13 @@
       "request_details": {
         "headers": {},
         "body": {
-          "id": "evt_1MqLnJHfXbQ8wWVU6JZvN3Ce",
-          "object": "event",
-          "api_version": "2022-11-15",
-          "created": 1680614400,
-          "data": {
-            "object": {
-              "id": "pi_3MqLnJHfXbQ8wWVU0K8m5V6q",
-              "object": "payment_intent",
-              "amount": 2000,
-              "amount_capturable": 0,
-              "amount_received": 0,
-              "currency": "usd",
-              "status": "failed",
-              "last_payment_error": {
-                "code": "card_declined",
-                "message": "Your card was declined."
-              }
-            }
-          },
-          "type": "payment_intent.payment_failed"
+          "event": "payment_failed",
+          "payment_id": "DUMMY-pi_failed_001",
+          "merchant_reference_id": "dummy_webhook_payment_failed",
+          "amount": 2000
         }
       },
-      "merchant_event_id": "stripe_webhook_payment_failed"
+      "merchant_event_id": "dummy_webhook_payment_failed"
     }
   },
   "refund_succeeded": {
@@ -66,45 +37,14 @@
       "request_details": {
         "headers": {},
         "body": {
-          "id": "evt_refund_123",
-          "object": "event",
-          "api_version": "2022-11-15",
-          "created": 1680614500,
-          "data": {
-            "object": {
-              "id": "re_1234567890",
-              "object": "refund",
-              "amount": 2000,
-              "currency": "usd",
-              "status": "succeeded",
-              "charge": "ch_1234567890"
-            }
-          },
-          "type": "charge.refunded"
+          "event": "refund_succeeded",
+          "payment_id": "DUMMY-pi_succeeded_001",
+          "refund_id": "DUMMY-re_succeeded_001",
+          "merchant_reference_id": "dummy_webhook_refund",
+          "amount": 2000
         }
       },
-      "merchant_event_id": "stripe_webhook_refund"
-    }
-  },
-  "invalid_signature": {
-    "grpc_req": {
-      "request_details": {
-        "headers": {
-          "Stripe-Signature": "t=1234567890,v1=0000000000000000000000000000000000000000000000000000000000000000"
-        },
-        "body": {
-          "id": "evt_invalid",
-          "object": "event",
-          "type": "payment_intent.succeeded",
-          "data": {
-            "object": {
-              "id": "pi_invalid",
-              "status": "succeeded"
-            }
-          }
-        }
-      },
-      "merchant_event_id": "stripe_webhook_invalid_sig"
+      "merchant_event_id": "dummy_webhook_refund"
     }
   }
 }

@@ -425,6 +425,15 @@ pub enum StripeBankRedirectData {
     StripeEps(Box<StripeEps>),
     StripeBlik(Box<StripeBlik>),
     StripeOnlineBankingFpx(Box<StripeOnlineBankingFpx>),
+    StripeTrustly(Box<StripeTrustly>),
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeTrustly {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+    #[serde(rename = "payment_method_data[trustly][country]")]
+    pub country: Option<common_enums::CountryAlpha2>,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -569,6 +578,28 @@ pub enum StripePaymentMethodData<
     BankRedirect(StripeBankRedirectData),
     BankDebit(StripeBankDebitData),
     BankTransfer(StripeBankTransferData),
+    Upi(StripeUpi),
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum DummyUpiFlow {
+    Collect,
+    Intent,
+    Qr,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeUpi {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_data_type: StripePaymentMethodType,
+    #[serde(rename = "payment_method_data[upi][flow]")]
+    pub flow: DummyUpiFlow,
+    #[serde(
+        rename = "payment_method_data[upi][vpa]",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub vpa: Option<Secret<String, pii::UpiVpaMaskingStrategy>>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -673,6 +704,9 @@ pub enum StripeWallet {
     Cashapp(CashappPayment),
     RevolutPay(RevolutpayPayment),
     ApplePayPredecryptToken(Box<StripeApplePayPredecrypt>),
+    MbWayPayment(MbWayPayment),
+    SatispayPayment(SatispayPayment),
+    WeroPayment(WeroPayment),
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -726,6 +760,25 @@ pub struct RevolutpayPayment {
     #[serde(rename = "payment_method_data[type]")]
     pub payment_method_types: StripePaymentMethodType,
 }
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct MbWayPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_types: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct SatispayPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_types: StripePaymentMethodType,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct WeroPayment {
+    #[serde(rename = "payment_method_data[type]")]
+    pub payment_method_types: StripePaymentMethodType,
+}
+
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct AlipayPayment {
     #[serde(rename = "payment_method_data[type]")]
@@ -794,6 +847,12 @@ pub enum StripePaymentMethodType {
     #[serde(rename = "cashapp")]
     Cashapp,
     RevolutPay,
+    Trustly,
+    #[serde(rename = "mb_way")]
+    MbWay,
+    Satispay,
+    Wero,
+    Upi,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -830,6 +889,13 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             common_enums::PaymentMethodType::AliPay => Ok(Self::Alipay),
             common_enums::PaymentMethodType::Przelewy24 => Ok(Self::Przelewy24),
             common_enums::PaymentMethodType::RevolutPay => Ok(Self::RevolutPay),
+            common_enums::PaymentMethodType::Trustly => Ok(Self::Trustly),
+            common_enums::PaymentMethodType::MbWay => Ok(Self::MbWay),
+            common_enums::PaymentMethodType::Satispay => Ok(Self::Satispay),
+            common_enums::PaymentMethodType::Wero => Ok(Self::Wero),
+            common_enums::PaymentMethodType::UpiCollect
+            | common_enums::PaymentMethodType::UpiIntent
+            | common_enums::PaymentMethodType::UpiQr => Ok(Self::Upi),
             // The connector expects PMT as Card for Recurring Mandates Payments
             common_enums::PaymentMethodType::GooglePay => Ok(Self::Card),
             common_enums::PaymentMethodType::Boleto
@@ -839,9 +905,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::OnlineBankingFpx
             | common_enums::PaymentMethodType::Paypal
             | common_enums::PaymentMethodType::Pix
-            | common_enums::PaymentMethodType::UpiCollect
-            | common_enums::PaymentMethodType::UpiIntent
-            | common_enums::PaymentMethodType::UpiQr
             | common_enums::PaymentMethodType::Cashapp
             | common_enums::PaymentMethodType::Bluecode
             | common_enums::PaymentMethodType::SepaGuaranteedDebit
@@ -865,7 +928,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::Interac
             | common_enums::PaymentMethodType::KakaoPay
             | common_enums::PaymentMethodType::LocalBankRedirect
-            | common_enums::PaymentMethodType::MbWay
             | common_enums::PaymentMethodType::MobilePay
             | common_enums::PaymentMethodType::Momo
             | common_enums::PaymentMethodType::MomoAtm
@@ -885,7 +947,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::SamsungPay
             | common_enums::PaymentMethodType::Swish
             | common_enums::PaymentMethodType::TouchNGo
-            | common_enums::PaymentMethodType::Trustly
             | common_enums::PaymentMethodType::Twint
             | common_enums::PaymentMethodType::Vipps
             | common_enums::PaymentMethodType::Venmo
@@ -922,8 +983,6 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::VietQr
             | common_enums::PaymentMethodType::NetworkToken
             | common_enums::PaymentMethodType::Mifinity
-            | common_enums::PaymentMethodType::Satispay
-            | common_enums::PaymentMethodType::Wero
             | common_enums::PaymentMethodType::LazyPay
             | common_enums::PaymentMethodType::PhonePe
             | common_enums::PaymentMethodType::BillDesk
@@ -1164,6 +1223,7 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             BankRedirectData::Przelewy24 { .. } => Ok(Self::Przelewy24),
             BankRedirectData::Eps { .. } => Ok(Self::Eps),
             BankRedirectData::Blik { .. } => Ok(Self::Blik),
+            BankRedirectData::Trustly { .. } => Ok(Self::Trustly),
             BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("dummy"),
                 Default::default(),
@@ -1177,7 +1237,6 @@ impl TryFrom<&BankRedirectData> for StripePaymentMethodType {
             | BankRedirectData::OnlineBankingSlovakia { .. }
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::OpenBankingUk { .. }
-            | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::OpenBanking {}
             | BankRedirectData::Netbanking { .. } => Err(IntegrationError::NotImplemented(
@@ -1199,6 +1258,11 @@ fn get_stripe_payment_method_type_from_wallet_data(
         WalletData::CashappQr(_) => Ok(Some(StripePaymentMethodType::Cashapp)),
         WalletData::AmazonPayRedirect(_) => Ok(Some(StripePaymentMethodType::AmazonPay)),
         WalletData::RevolutPay(_) => Ok(Some(StripePaymentMethodType::RevolutPay)),
+        WalletData::MbWay(_) | WalletData::MbWayRedirect(_) => {
+            Ok(Some(StripePaymentMethodType::MbWay))
+        }
+        WalletData::Satispay(_) => Ok(Some(StripePaymentMethodType::Satispay)),
+        WalletData::Wero(_) => Ok(Some(StripePaymentMethodType::Wero)),
         WalletData::MobilePayRedirect(_) => Err(IntegrationError::NotImplemented(
             get_unimplemented_payment_method_error_message("dummy"),
             Default::default(),
@@ -1216,7 +1280,6 @@ fn get_stripe_payment_method_type_from_wallet_data(
         | WalletData::DanaRedirect {}
         | WalletData::GooglePayRedirect(_)
         | WalletData::GooglePayThirdPartySdk(_)
-        | WalletData::MbWayRedirect(_)
         | WalletData::PaypalSdk(_)
         | WalletData::Paze(_)
         | WalletData::SamsungPay(_)
@@ -1226,9 +1289,6 @@ fn get_stripe_payment_method_type_from_wallet_data(
         | WalletData::SwishQr(_)
         | WalletData::WeChatPayRedirect(_)
         | WalletData::Mifinity(_)
-        | WalletData::MbWay(_)
-        | WalletData::Satispay(_)
-        | WalletData::Wero(_)
         | WalletData::LazyPayRedirect(_)
         | WalletData::PhonePeRedirect(_)
         | WalletData::BillDeskRedirect(_)
@@ -1541,8 +1601,26 @@ fn create_stripe_payment_method<
             .into()),
         },
 
-        PaymentMethodData::Upi(_)
-        | PaymentMethodData::RealTimePayment(_)
+        PaymentMethodData::Upi(upi_data) => {
+            let (flow, vpa) = match upi_data {
+                payment_method_data::UpiData::UpiCollect(collect) => {
+                    (DummyUpiFlow::Collect, collect.vpa_id.clone())
+                }
+                payment_method_data::UpiData::UpiIntent(_) => (DummyUpiFlow::Intent, None),
+                payment_method_data::UpiData::UpiQr(_) => (DummyUpiFlow::Qr, None),
+            };
+            Ok((
+                StripePaymentMethodData::Upi(StripeUpi {
+                    payment_method_data_type: StripePaymentMethodType::Upi,
+                    flow,
+                    vpa,
+                }),
+                Some(StripePaymentMethodType::Upi),
+                payment_request_details.billing_address,
+            ))
+        }
+
+        PaymentMethodData::RealTimePayment(_)
         | PaymentMethodData::MobilePayment(_)
         | PaymentMethodData::MandatePayment
         | PaymentMethodData::OpenBanking(_)
@@ -1683,6 +1761,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
                     payment_method_types: StripePaymentMethodType::RevolutPay,
                 })))
             }
+            WalletData::MbWay(_) | WalletData::MbWayRedirect(_) => {
+                Ok(Self::Wallet(StripeWallet::MbWayPayment(MbWayPayment {
+                    payment_method_types: StripePaymentMethodType::MbWay,
+                })))
+            }
+            WalletData::Satispay(_) => Ok(Self::Wallet(StripeWallet::SatispayPayment(
+                SatispayPayment {
+                    payment_method_types: StripePaymentMethodType::Satispay,
+                },
+            ))),
+            WalletData::Wero(_) => Ok(Self::Wallet(StripeWallet::WeroPayment(WeroPayment {
+                payment_method_types: StripePaymentMethodType::Wero,
+            }))),
             WalletData::GooglePay(gpay_data) => Ok(Self::try_from(gpay_data)?),
             WalletData::PaypalRedirect(_) | WalletData::MobilePayRedirect(_) => {
                 Err(IntegrationError::NotImplemented(
@@ -1703,7 +1794,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             | WalletData::DanaRedirect {}
             | WalletData::GooglePayRedirect(_)
             | WalletData::GooglePayThirdPartySdk(_)
-            | WalletData::MbWayRedirect(_)
             | WalletData::PaypalSdk(_)
             | WalletData::Paze(_)
             | WalletData::SamsungPay(_)
@@ -1713,9 +1803,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
             | WalletData::SwishQr(_)
             | WalletData::WeChatPayRedirect(_)
             | WalletData::Mifinity(_)
-            | WalletData::MbWay(_)
-            | WalletData::Satispay(_)
-            | WalletData::Wero(_)
             | WalletData::LazyPayRedirect(_)
             | WalletData::PhonePeRedirect(_)
             | WalletData::BillDeskRedirect(_)
@@ -1788,6 +1875,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     })),
                 ))
             }
+            BankRedirectData::Trustly { country } => Ok(Self::BankRedirect(
+                StripeBankRedirectData::StripeTrustly(Box::new(StripeTrustly {
+                    payment_method_data_type,
+                    country: *country,
+                })),
+            )),
             BankRedirectData::OnlineBankingFpx { .. } => Err(IntegrationError::NotImplemented(
                 get_unimplemented_payment_method_error_message("dummy"),
                 Default::default(),
@@ -1803,7 +1896,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::OpenBankingUk { .. }
             | BankRedirectData::Sofort { .. }
-            | BankRedirectData::Trustly { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::OpenBanking {}
             | BankRedirectData::Netbanking { .. } => Err(IntegrationError::NotImplemented(
@@ -5422,4 +5514,181 @@ impl TryFrom<ResponseRouterData<StripeClientAuthResponse, Self>>
             ..item.router_data
         })
     }
+}
+
+// ---------------------------------------------------------------------------
+// Webhooks (mock)
+// ---------------------------------------------------------------------------
+
+/// Webhook event names accepted by the Dummy connector.
+///
+/// The dummy gateway has no real signing or source-of-truth, so the event name
+/// in the body drives the outcome end-to-end.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DummyWebhookEvent {
+    PaymentSucceeded,
+    PaymentFailed,
+    PaymentProcessing,
+    PaymentCancelled,
+    RefundSucceeded,
+    RefundFailed,
+}
+
+impl From<DummyWebhookEvent> for domain_types::connector_types::EventType {
+    fn from(e: DummyWebhookEvent) -> Self {
+        match e {
+            DummyWebhookEvent::PaymentSucceeded => Self::PaymentIntentSuccess,
+            DummyWebhookEvent::PaymentFailed => Self::PaymentIntentFailure,
+            DummyWebhookEvent::PaymentProcessing => Self::PaymentIntentProcessing,
+            DummyWebhookEvent::PaymentCancelled => Self::PaymentIntentCancelled,
+            DummyWebhookEvent::RefundSucceeded => Self::RefundSuccess,
+            DummyWebhookEvent::RefundFailed => Self::RefundFailure,
+        }
+    }
+}
+
+/// Mock webhook payload accepted by the Dummy connector.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DummyWebhookPayload {
+    pub event: DummyWebhookEvent,
+    pub payment_id: Option<String>,
+    pub refund_id: Option<String>,
+    pub merchant_reference_id: Option<String>,
+    pub amount: Option<MinorUnit>,
+}
+
+impl DummyWebhookPayload {
+    pub fn parse(
+        body: &[u8],
+    ) -> Result<Self, error_stack::Report<domain_types::errors::WebhookError>> {
+        serde_json::from_slice::<Self>(body)
+            .map_err(|_| domain_types::errors::WebhookError::WebhookBodyDecodingFailed.into())
+    }
+
+    pub fn webhook_reference(
+        &self,
+    ) -> Option<domain_types::connector_types::WebhookResourceReference> {
+        use domain_types::connector_types::{
+            PaymentWebhookReference, RefundWebhookReference, WebhookResourceReference,
+        };
+        match self.event {
+            DummyWebhookEvent::RefundSucceeded | DummyWebhookEvent::RefundFailed => {
+                Some(WebhookResourceReference::Refund(RefundWebhookReference {
+                    connector_refund_id: self.refund_id.clone(),
+                    merchant_refund_id: self.merchant_reference_id.clone(),
+                    connector_transaction_id: self.payment_id.clone(),
+                }))
+            }
+            _ => Some(WebhookResourceReference::Payment(PaymentWebhookReference {
+                connector_transaction_id: self.payment_id.clone(),
+                merchant_transaction_id: self.merchant_reference_id.clone(),
+            })),
+        }
+    }
+}
+
+impl TryFrom<DummyWebhookPayload> for domain_types::connector_types::WebhookDetailsResponse {
+    type Error = error_stack::Report<domain_types::errors::WebhookError>;
+    fn try_from(p: DummyWebhookPayload) -> Result<Self, Self::Error> {
+        use common_enums::AttemptStatus;
+        let status = match p.event {
+            DummyWebhookEvent::PaymentSucceeded => AttemptStatus::Charged,
+            DummyWebhookEvent::PaymentFailed => AttemptStatus::Failure,
+            DummyWebhookEvent::PaymentProcessing => AttemptStatus::Pending,
+            DummyWebhookEvent::PaymentCancelled => AttemptStatus::Voided,
+            DummyWebhookEvent::RefundSucceeded | DummyWebhookEvent::RefundFailed => {
+                return Err(domain_types::errors::WebhookError::WebhookEventTypeNotFound.into());
+            }
+        };
+
+        Ok(Self {
+            resource_id: p.payment_id.map(ResponseId::ConnectorTransactionId),
+            status,
+            connector_response_reference_id: p.merchant_reference_id,
+            mandate_reference: None,
+            error_code: None,
+            error_message: None,
+            error_reason: None,
+            raw_connector_response: None,
+            status_code: 200,
+            response_headers: None,
+            amount_captured: None,
+            minor_amount_captured: p.amount,
+            network_txn_id: None,
+            payment_method_update: None,
+        })
+    }
+}
+
+impl TryFrom<DummyWebhookPayload> for domain_types::connector_types::RefundWebhookDetailsResponse {
+    type Error = error_stack::Report<domain_types::errors::WebhookError>;
+    fn try_from(p: DummyWebhookPayload) -> Result<Self, Self::Error> {
+        use common_enums::RefundStatus;
+        let status = match p.event {
+            DummyWebhookEvent::RefundSucceeded => RefundStatus::Success,
+            DummyWebhookEvent::RefundFailed => RefundStatus::Failure,
+            _ => {
+                return Err(domain_types::errors::WebhookError::WebhookEventTypeNotFound.into());
+            }
+        };
+        Ok(Self {
+            connector_refund_id: p.refund_id,
+            status,
+            connector_response_reference_id: p.merchant_reference_id,
+            error_code: None,
+            error_message: None,
+            raw_connector_response: None,
+            status_code: 200,
+            response_headers: None,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Redirect-response verification (mock)
+// ---------------------------------------------------------------------------
+
+/// Outcome carried back on the redirect return URL via the `dummy_status` query param.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DummyRedirectStatus {
+    Success,
+    Failure,
+    Pending,
+}
+
+impl FromStr for DummyRedirectStatus {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "success" => Ok(Self::Success),
+            "failure" => Ok(Self::Failure),
+            "pending" => Ok(Self::Pending),
+            _ => Err(()),
+        }
+    }
+}
+
+impl DummyRedirectStatus {
+    pub fn to_attempt_status(self) -> common_enums::AttemptStatus {
+        match self {
+            Self::Success => common_enums::AttemptStatus::Charged,
+            Self::Failure => common_enums::AttemptStatus::Failure,
+            Self::Pending => common_enums::AttemptStatus::Pending,
+        }
+    }
+}
+
+/// Parses `dummy_status` and `dummy_id` out of a redirect callback's query string.
+pub fn parse_dummy_redirect_query(query: &str) -> (Option<DummyRedirectStatus>, Option<String>) {
+    let mut status = None;
+    let mut id = None;
+    for (k, v) in url::form_urlencoded::parse(query.as_bytes()) {
+        match k.as_ref() {
+            "dummy_status" => status = DummyRedirectStatus::from_str(v.as_ref()).ok(),
+            "dummy_id" => id = Some(v.into_owned()),
+            _ => {}
+        }
+    }
+    (status, id)
 }

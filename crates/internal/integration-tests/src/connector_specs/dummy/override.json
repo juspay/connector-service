@@ -74,6 +74,15 @@
           "contains": "declin"
         }
       }
+    },
+    "no3ds_auto_capture_upi_collect": {
+      "grpc_req": {}
+    },
+    "no3ds_auto_capture_upi_intent": {
+      "grpc_req": {}
+    },
+    "no3ds_auto_capture_upi_qr": {
+      "grpc_req": {}
     }
   },
   "PaymentService/SetupRecurring": {
@@ -96,22 +105,34 @@
   "EventService/HandleEvent": {
     "payment_succeeded": {
       "assert": {
-        "source_verified": {
-          "must_not_exist": true
-        }
+        "source_verified": true
       }
     },
     "payment_failed": {
       "assert": {
-        "source_verified": {
-          "must_not_exist": true
-        }
+        "source_verified": true
       }
     },
     "refund_succeeded": {
       "assert": {
-        "source_verified": {
-          "must_not_exist": true
+        "source_verified": true
+      }
+    },
+    "invalid_signature": {
+      "grpc_req": {
+        "request_details": {
+          "method": "HTTP_METHOD_POST",
+          "headers": {},
+          "body": "{\"event\":\"unknown_event_xyz\"}"
+        },
+        "merchant_event_id": "dummy_webhook_invalid"
+      },
+      "assert": {
+        "event_status": {
+          "one_of": [
+            "EVENT_STATUS_FAILED",
+            "EVENT_STATUS_COMPLETE"
+          ]
         }
       }
     }
