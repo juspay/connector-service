@@ -245,10 +245,7 @@ impl IntegrationError {
 
     /// Connector feature not implemented. Pass `IntegrationErrorContext::default()`
     /// when no connector-specific guidance is needed.
-    pub fn not_implemented(
-        message: impl Into<String>,
-        context: IntegrationErrorContext,
-    ) -> Self {
+    pub fn not_implemented(message: impl Into<String>, context: IntegrationErrorContext) -> Self {
         Self::NotImplemented(message.into(), context)
     }
 
