@@ -1,11 +1,12 @@
 use common_enums::{self, AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii::IpAddress, Email};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, ServerAuthenticationToken, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{
@@ -479,139 +480,178 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// PayU Sync/Verify Payment Request structure
+// ============================================================
+// OAuth2 Access Token (ServerAuthenticationToken) Flow
+// PayU International uses OAuth2 client_credentials grant
+// ============================================================
+
 #[derive(Debug, Serialize)]
-pub struct PayuSyncRequest {
-    pub key: String,     // Merchant key
-    pub command: String, // "verify_payment"
-    pub var1: String,    // Transaction ID to verify
-    pub hash: String,    // SHA-512 signature
+pub struct PayuTokenRequest {
+    pub grant_type: String,
+    pub client_id: Secret<String>,
+    pub client_secret: Secret<String>,
 }
 
-// PayU Sync Response structure based on Haskell implementation
 #[derive(Debug, Deserialize, Serialize)]
-pub struct PayuSyncResponse {
-    pub status: Option<i32>, // 0 = error, non-zero = success
-    pub msg: Option<String>, // Status message
-    pub transaction_details: Option<std::collections::HashMap<String, PayuTransactionDetail>>, // Map of txnId -> details
-    pub result: Option<serde_json::Value>, // Optional result field
-    #[serde(alias = "field3")]
-    pub field3: Option<String>, // Additional field
+pub struct PayuTokenResponse {
+    pub access_token: Secret<String>,
+    pub token_type: String,
+    pub expires_in: i64,
+    pub grant_type: String,
 }
 
-// PayU Transaction Detail structure from sync response
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PayuTransactionDetail {
-    pub mihpayid: Option<String>,         // PayU transaction ID
-    pub txnid: Option<String>,            // Merchant transaction ID
-    pub amount: Option<String>,           // Transaction amount
-    pub status: String, // Transaction status: "success", "failure", "pending", "cancel"
-    pub firstname: Option<String>, // Customer first name
-    pub lastname: Option<String>, // Customer last name
-    pub email: Option<Secret<String>>, // Customer email
-    pub phone: Option<Secret<String>>, // Customer phone
-    pub productinfo: Option<String>, // Product description
-    pub hash: Option<String>, // Response hash for verification
-    pub field1: Option<String>, // UPI transaction ID
-    pub field2: Option<String>, // Bank reference number
-    pub field3: Option<String>, // Payment source
-    pub field9: Option<String>, // Additional field
-    pub error_code: Option<String>, // Error code if failed
-    pub error_message: Option<String>, // Error message if failed
-    pub card_token: Option<String>, // Card token if applicable
-    pub card_category: Option<String>, // Card category
-    pub offer_key: Option<String>, // Offer key used
-    pub discount: Option<String>, // Discount applied
-    pub net_amount_debit: Option<String>, // Net amount debited
-    pub addedon: Option<String>, // Transaction timestamp
-    pub payment_source: Option<String>, // Payment method used
-    pub bank_ref_num: Option<String>, // Bank reference number
-    pub upi_va: Option<String>, // UPI virtual address
-    pub cardnum: Option<String>, // Masked card number
-    pub issuing_bank: Option<String>, // Card issuing bank
-}
-
-// PayU Sync Request conversion from RouterData
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::PayuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            RouterDataV2<
+                ServerAuthenticationToken,
+                PaymentFlowData,
+                ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
+            >,
             T,
         >,
-    > for PayuSyncRequest
+    > for PayuTokenRequest
 {
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
         item: super::PayuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            RouterDataV2<
+                ServerAuthenticationToken,
+                PaymentFlowData,
+                ServerAuthenticationTokenRequestData,
+                ServerAuthenticationTokenResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let router_data = &item.router_data;
-
-        // Extract authentication
-        let auth = PayuAuthType::try_from(&router_data.connector_config)?;
-
-        // PayU verify_payment expects var1 = merchant txnid, not mihpayid.
-        // The connector_request_reference_id carries the merchant's original txnid.
-        let transaction_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-
-        let command = constants::COMMAND;
-
-        // Build sync request
-        let mut request = Self {
-            key: auth.api_key.peek().to_string(),
-            command: command.to_string(),
-            var1: transaction_id,
-            hash: String::new(), // Will be calculated below
-        };
-
-        // Generate hash signature for verification request
-        // PayU verify hash: SHA512(key|command|var1|salt)
-        request.hash = generate_payu_verify_hash(&request, &auth.api_secret)?;
-
-        Ok(request)
+        let auth = PayuAuthType::try_from(&item.router_data.connector_config)?;
+        Ok(Self {
+            grant_type: "client_credentials".to_string(),
+            client_id: auth.api_secret.clone(),
+            client_secret: auth.api_key.clone(),
+        })
     }
 }
 
-// Hash generation for PayU verify payment request
-// Based on Haskell: makePayuVerifyHash payuDetails txnId command
-fn generate_payu_verify_hash(
-    request: &PayuSyncRequest,
-    merchant_salt: &Secret<String>,
-) -> Result<String, IntegrationError> {
-    use sha2::{Digest, Sha512};
+impl TryFrom<ResponseRouterData<PayuTokenResponse, Self>>
+    for RouterDataV2<
+        ServerAuthenticationToken,
+        PaymentFlowData,
+        ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
 
-    // PayU verify hash format: key|command|var1|salt
-    let hash_fields = [
-        request.key.clone(),
-        request.command.clone(),
-        request.var1.clone(),
-        merchant_salt.peek().to_string(),
-    ];
+    fn try_from(item: ResponseRouterData<PayuTokenResponse, Self>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(ServerAuthenticationTokenResponseData {
+                access_token: item.response.access_token,
+                token_type: Some(item.response.token_type),
+                expires_in: Some(item.response.expires_in),
+            }),
+            ..item.router_data
+        })
+    }
+}
 
-    // Join with pipe separator
-    let hash_string = hash_fields.join("|");
+// ============================================================
+// PSync (Payment Sync) — PayU International REST API v2.1
+// GET /api/v2_1/orders/{orderId} with Bearer auth
+// ============================================================
 
-    // Log hash string for debugging (remove in production)
-    #[cfg(debug_assertions)]
-    {
-        if let Some(fields_without_last) = hash_fields.get(..hash_fields.len().saturating_sub(1)) {
-            let masked_hash = format!("{}|***MASKED***", fields_without_last.join("|"));
-            tracing::debug!("PayU verify hash string (salt masked): {}", masked_hash);
-            tracing::debug!("PayU verify expected format: key|command|var1|salt");
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum OrderStatus {
+    New,
+    Canceled,
+    Completed,
+    WaitingForConfirmation,
+    Pending,
+}
+
+impl From<OrderStatus> for AttemptStatus {
+    fn from(item: OrderStatus) -> Self {
+        match item {
+            OrderStatus::Completed => Self::Charged,
+            OrderStatus::WaitingForConfirmation => Self::Authorized,
+            OrderStatus::Pending | OrderStatus::New => Self::Pending,
+            OrderStatus::Canceled => Self::Voided,
         }
     }
+}
 
-    // Generate SHA-512 hash
-    let mut hasher = Sha512::new();
-    hasher.update(hash_string.as_bytes());
-    let result = hasher.finalize();
-    Ok(hex::encode(result))
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PayuPaymentStatusData {
+    pub status_code: String,
+    #[serde(default)]
+    pub severity: Option<String>,
+    pub status_desc: String,
+    pub code: Option<String>,
+    pub code_literal: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PayuOrderResponseData {
+    pub order_id: String,
+    pub ext_order_id: Option<String>,
+    pub total_amount: String,
+    pub currency_code: Currency,
+    pub status: OrderStatus,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct PayuOrderResponseProperty {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct PayuPaymentsSyncResponse {
+    pub orders: Vec<PayuOrderResponseData>,
+    pub status: PayuPaymentStatusData,
+    pub properties: Option<Vec<PayuOrderResponseProperty>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayuIntlErrorResponse {
+    pub status: PayuPaymentStatusData,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuTransactionDetail {
+    pub mihpayid: Option<String>,
+    pub txnid: Option<String>,
+    pub amount: Option<String>,
+    pub status: String,
+    pub firstname: Option<String>,
+    pub lastname: Option<String>,
+    pub email: Option<Secret<String>>,
+    pub phone: Option<Secret<String>>,
+    pub productinfo: Option<String>,
+    pub hash: Option<String>,
+    pub field1: Option<String>,
+    pub field2: Option<String>,
+    pub field3: Option<String>,
+    pub field9: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub card_token: Option<String>,
+    pub card_category: Option<String>,
+    pub offer_key: Option<String>,
+    pub discount: Option<String>,
+    pub net_amount_debit: Option<String>,
+    pub addedon: Option<String>,
+    pub payment_source: Option<String>,
+    pub bank_ref_num: Option<String>,
+    pub upi_va: Option<String>,
+    pub cardnum: Option<String>,
+    pub issuing_bank: Option<String>,
 }
 
 // UDF field generation based on Haskell implementation
@@ -1057,133 +1097,45 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// PayU Sync Response conversion to RouterData
-impl TryFrom<ResponseRouterData<PayuSyncResponse, Self>>
+// PayU International PSync Response conversion to RouterData
+impl TryFrom<ResponseRouterData<PayuPaymentsSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PayuSyncResponse, Self>) -> Result<Self, Self::Error> {
-        let response = item.response;
-        let error_message = response
-            .msg
-            .unwrap_or_else(|| "PayU PSync error".to_string());
-        // Check PayU status field - 0 means error, 1 means success response structure
-        match (response.status, response.transaction_details) {
-            (Some(1), Some(transaction_details)) => {
-                // PayU returned success status, check transaction_details
-                // Try to find the transaction in the response by iterating through all transactions
-                // Since PayU returns transaction details as a map with txnid as key
-                let txn_detail = transaction_details.values().next();
+    fn try_from(
+        item: ResponseRouterData<PayuPaymentsSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let order = item
+            .response
+            .orders
+            .first()
+            .ok_or(ConnectorError::response_handling_failed(item.http_code))?;
 
-                let connector_transaction_id = txn_detail.and_then(|detail| detail.txnid.clone());
-                match (txn_detail, connector_transaction_id) {
-                    (Some(txn_detail), Some(connector_transaction_id)) => {
-                        // Found transaction details, map status
-                        let attempt_status = map_payu_sync_status(&txn_detail.status, txn_detail);
+        let attempt_status = AttemptStatus::from(order.status.clone());
 
-                        let payment_response_data = PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                connector_transaction_id.clone(),
-                            ),
-                            redirection_data: None,
-                            mandate_reference: None,
-                            connector_metadata: None,
-                            network_txn_id: txn_detail.field1.clone(), // UPI transaction ID
-                            connector_response_reference_id: txn_detail.mihpayid.clone(),
-                            incremental_authorization_allowed: None,
-                            status_code: item.http_code,
-                        };
+        let payment_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(order.order_id.clone()),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: order
+                .ext_order_id
+                .clone()
+                .or(Some(order.order_id.clone())),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
 
-                        Ok(Self {
-                            response: Ok(payment_response_data),
-                            resource_common_data: PaymentFlowData {
-                                status: attempt_status,
-                                ..item.router_data.resource_common_data
-                            },
-                            ..item.router_data
-                        })
-                    }
-                    _ => {
-                        // Transaction not found in PayU response
-                        let error_response = ErrorResponse {
-                            status_code: item.http_code,
-                            code: "TRANSACTION_NOT_FOUND".to_string(),
-                            message: error_message,
-                            reason: None,
-                            attempt_status: Some(AttemptStatus::Failure),
-                            connector_transaction_id: None,
-                            network_error_message: None,
-                            network_advice_code: None,
-                            network_decline_code: None,
-                        };
-
-                        Ok(Self {
-                            response: Err(error_response),
-                            resource_common_data: PaymentFlowData {
-                                status: AttemptStatus::Failure,
-                                ..item.router_data.resource_common_data
-                            },
-                            ..item.router_data
-                        })
-                    }
-                }
-            }
-            _ => {
-                // PayU returned error status
-                let error_response = ErrorResponse {
-                    status_code: item.http_code,
-                    code: "PAYU_SYNC_ERROR".to_string(),
-                    message: error_message,
-                    reason: None,
-                    attempt_status: Some(AttemptStatus::Failure),
-                    connector_transaction_id: None,
-                    network_error_message: None,
-                    network_advice_code: None,
-                    network_decline_code: None,
-                };
-
-                Ok(Self {
-                    response: Err(error_response),
-                    resource_common_data: PaymentFlowData {
-                        status: AttemptStatus::Failure,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
-            }
-        }
-    }
-}
-
-// Map PayU transaction status to internal AttemptStatus
-// Based on Haskell implementation analysis
-fn map_payu_sync_status(payu_status: &str, txn_detail: &PayuTransactionDetail) -> AttemptStatus {
-    match payu_status.to_lowercase().as_str() {
-        "success" => {
-            // For success, check if it's captured or just authorized
-            // Based on Haskell: "success" + "captured" -> CHARGED, "success" + "auth" -> AUTHORIZED
-            if txn_detail.field3.as_deref() == Some("captured") {
-                AttemptStatus::Charged
-            } else if txn_detail.field3.as_deref() == Some("auth") {
-                AttemptStatus::Authorized
-            } else {
-                // Default success case - treat as charged for UPI
-                AttemptStatus::Charged
-            }
-        }
-        "pending" => {
-            // Pending status - typically for UPI Collect waiting for customer approval
-            AttemptStatus::AuthenticationPending
-        }
-        "failure" | "failed" | "cancel" | "cancelled" => {
-            // Transaction failed
-            AttemptStatus::Failure
-        }
-        _ => {
-            // Unknown status - treat as failure for safety
-            AttemptStatus::Failure
-        }
+        Ok(Self {
+            response: Ok(payment_response_data),
+            resource_common_data: PaymentFlowData {
+                status: attempt_status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
     }
 }
 

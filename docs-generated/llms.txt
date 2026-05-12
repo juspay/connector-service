@@ -475,7 +475,7 @@ connector_id: payu
 doc: docs/connectors/payu.md
 scenarios: none
 payment_methods: none
-flows: capture, get, refund, refund_get, void
+flows: capture, create_server_authentication_token, refund, refund_get, void
 examples_python: none
 
 ## Peachpayments

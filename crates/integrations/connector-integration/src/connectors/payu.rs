@@ -29,7 +29,7 @@ use domain_types::{
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
     },
-    errors::IntegrationError,
+    errors::{IntegrationError, IntegrationErrorContext},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -40,7 +40,7 @@ use domain_types::{
     },
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -51,9 +51,10 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 use transformers::{
     is_netbanking_redirect_flow, is_upi_collect_flow, is_wallet_redirect_flow, PayuAuthType,
-    PayuCaptureRequest, PayuCaptureResponse, PayuPaymentRequest, PayuPaymentResponse,
-    PayuRefundRequest, PayuRefundResponse, PayuRefundSyncRequest, PayuRefundSyncResponse,
-    PayuSyncRequest, PayuSyncResponse, PayuVoidRequest, PayuVoidResponse,
+    PayuCaptureRequest, PayuCaptureResponse, PayuIntlErrorResponse, PayuPaymentRequest,
+    PayuPaymentResponse, PayuPaymentsSyncResponse, PayuRefundRequest, PayuRefundResponse,
+    PayuRefundSyncRequest, PayuRefundSyncResponse, PayuTokenRequest, PayuTokenResponse,
+    PayuVoidRequest, PayuVoidResponse,
 };
 
 use super::macros;
@@ -155,6 +156,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Payu<T>
 {
+    fn should_do_access_token(&self, _payment_method: Option<PaymentMethod>) -> bool {
+        true
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Payu<T>
@@ -224,9 +228,14 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
+            flow: ServerAuthenticationToken,
+            request_body: PayuTokenRequest,
+            response_body: PayuTokenResponse,
+            router_data: RouterDataV2<ServerAuthenticationToken, PaymentFlowData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData>,
+        ),
+        (
             flow: PSync,
-            request_body: PayuSyncRequest,
-            response_body: PayuSyncResponse,
+            response_body: PayuPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
@@ -355,27 +364,83 @@ macros::create_all_prerequisites!(
     }
 );
 
-// Implement PSync flow using macro framework
+// Implement ServerAuthenticationToken (OAuth2 access token) flow
 macros::macro_connector_implementation!(
     connector_default_implementations: [],
     connector: Payu,
-    curl_request: FormUrlEncoded(PayuSyncRequest),
-    curl_response: PayuSyncResponse,
-    flow_name: PSync,
+    curl_request: FormUrlEncoded(PayuTokenRequest),
+    curl_response: PayuTokenResponse,
+    flow_name: ServerAuthenticationToken,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
+    flow_request: ServerAuthenticationTokenRequestData,
+    flow_response: ServerAuthenticationTokenResponseData,
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            _req: &RouterDataV2<ServerAuthenticationToken, PaymentFlowData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
             Ok(vec![
                 ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
-                ("Accept".to_string(), "application/json".into()),
+            ])
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ServerAuthenticationToken, PaymentFlowData, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let base_url = self.base_url(&req.resource_common_data.connectors);
+            Ok(format!("{base_url}pl/standard/user/oauth/authorize"))
+        }
+
+        fn get_content_type(&self) -> &'static str {
+            "application/x-www-form-urlencoded"
+        }
+    }
+);
+
+// Implement PSync flow — PayU International REST API v2.1
+// GET /api/v2_1/orders/{orderId} with Bearer auth, JSON content-type, no body
+macros::macro_connector_implementation!(
+    connector_default_implementations: [],
+    connector: Payu,
+    curl_response: PayuPaymentsSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            let access_token = req
+                .resource_common_data
+                .access_token
+                .as_ref()
+                .ok_or(IntegrationError::FailedToObtainAuthType {
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Ensure PayU OAuth2 access token is obtained before PSync.".to_owned(),
+                        ),
+                        ..Default::default()
+                    },
+                })?;
+            Ok(vec![
+                (
+                    "Content-Type".to_string(),
+                    "application/json".into(),
+                ),
+                (
+                    "Authorization".to_string(),
+                    format!("Bearer {}", access_token.access_token.peek())
+                        .into_masked(),
+                ),
             ])
         }
 
@@ -383,14 +448,25 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
-            // Based on Haskell implementation: uses /merchant/postservice.php?form=2 for verification
-            // Test: https://test.payu.in/merchant/postservice.php?form=2
+            let connector_payment_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(IntegrationError::MissingConnectorTransactionID {
+                    context: IntegrationErrorContext {
+                        additional_context: Some(
+                            "PayU PSync requires the order ID from the original payment."
+                                .to_owned(),
+                        ),
+                        ..Default::default()
+                    },
+                })?;
             let base_url = self.base_url(&req.resource_common_data.connectors);
-            Ok(format!("{base_url}/merchant/postservice.php?form=2"))
+            Ok(format!("{base_url}api/v2_1/orders/{connector_payment_id}"))
         }
 
         fn get_content_type(&self) -> &'static str {
-            "application/x-www-form-urlencoded"
+            "application/json"
         }
 
         fn get_error_response_v2(
@@ -398,39 +474,22 @@ macros::macro_connector_implementation!(
             res: Response,
             _event_builder: Option<&mut events::Event>,
         ) -> CustomResult<ErrorResponse, ConnectorError> {
-            // PayU sync may return error responses in different formats
-            let response: PayuSyncResponse = res
+            let response: PayuIntlErrorResponse = res
                 .response
-                .parse_struct("PayU Sync ErrorResponse")
+                .parse_struct("PayU PSync ErrorResponse")
                 .change_context(crate::utils::response_handling_fail_for_connector(res.status_code, "payu"))?;
 
-            // Check if PayU returned error status (0 = error)
-            if response.status == Some(0) {
-                Ok(ErrorResponse {
-                    status_code: res.status_code,
-                    code: "PAYU_SYNC_ERROR".to_string(),
-                    message: response.msg.unwrap_or_default(),
-                    reason: None,
-                    attempt_status: Some(enums::AttemptStatus::Failure),
-                    connector_transaction_id: None,
-                    network_error_message: None,
-                    network_advice_code: None,
-                    network_decline_code: None
-})
-            } else {
-                // Generic error response
-                Ok(ErrorResponse {
-                    status_code: res.status_code,
-                    code: "SYNC_UNKNOWN_ERROR".to_string(),
-                    message: "Unknown PayU sync error".to_string(),
-                    reason: None,
-                    attempt_status: Some(enums::AttemptStatus::Failure),
-                    connector_transaction_id: None,
-                    network_error_message: None,
-                    network_advice_code: None,
-                    network_decline_code: None
-})
-            }
+            Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: response.status.status_code,
+                message: response.status.status_desc,
+                reason: response.status.code_literal,
+                attempt_status: Some(enums::AttemptStatus::Failure),
+                connector_transaction_id: None,
+                network_error_message: None,
+                network_advice_code: None,
+                network_decline_code: None,
+            })
         }
     }
 );
@@ -859,17 +918,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Ser
         PaymentFlowData,
         ServerSessionAuthenticationTokenRequestData,
         ServerSessionAuthenticationTokenResponseData,
-    > for Payu<T>
-{
-}
-
-// Add stub implementation for ServerAuthenticationToken
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Serialize>
-    ConnectorIntegrationV2<
-        ServerAuthenticationToken,
-        PaymentFlowData,
-        ServerAuthenticationTokenRequestData,
-        ServerAuthenticationTokenResponseData,
     > for Payu<T>
 {
 }
