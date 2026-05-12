@@ -5928,7 +5928,7 @@ pub fn generate_payment_void_post_capture_response(
                         grpc_api_types::payments::PaymentStatus::VoidedPostCapture
                     }
                     common_enums::PostCaptureVoidStatus::Pending => {
-                        grpc_api_types::payments::PaymentStatus::Processing
+                        grpc_api_types::payments::PaymentStatus::Pending
                     }
                     common_enums::PostCaptureVoidStatus::Failed => {
                         grpc_api_types::payments::PaymentStatus::Failure
