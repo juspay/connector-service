@@ -57,39 +57,62 @@ export const preflightCheckpoint: Checkpoint = {
         );
       }
 
-      // Phase 10: rewrite <projectRoot>/config/development.toml's
-      // `dummyconnector.base_url` to use this session's allocated port
-      // (8080 + portSlot). Snapshot the original first so the supervisor
-      // can restore on engine exit via SessionManager.restoreSessionConfigs.
-      const dummyConnectorPort = task.dummyConnectorPort;
-      if (dummyConnectorPort !== undefined) {
+      // Phase 11: rewrite the two `port = N` lines that govern this
+      // worktree's grpc-server bind targets so concurrent sessions don't
+      // fight for ports 8000/8080.
+      //
+      //   [server].port  → grpcPort  (8000 + slot — gRPC service)
+      //   [metrics].port → metricsPort (8080 + slot — HTTP metrics/health)
+      //
+      // The regex captures `[section]` + everything-but-the-next-section-
+      // header up through the first `port = ` line within that section,
+      // then substitutes the integer. `[^\[]*?` is a non-greedy bound
+      // limited to "no section-opening bracket" so a [server] match can't
+      // accidentally rewrite the [metrics].port line, and vice versa.
+      //
+      // Snapshot the unmodified file once per worktree so the supervisor's
+      // restoreSessionConfigs can return things to byte-identical state on
+      // engine exit.
+      //
+      // NOTE: `task.dummyConnectorPort` is semantically the [metrics] port
+      // in this codebase — kept under the Phase-10 field name to avoid a
+      // wider rename. Renaming is a hygiene follow-up.
+      const grpcPort = task.grpcPort;
+      const metricsPort = task.dummyConnectorPort;
+      if (grpcPort !== undefined || metricsPort !== undefined) {
         const devTomlPath = path.join(projectRoot, "config", "development.toml");
         if (existsSync(devTomlPath)) {
           try {
             const original = readFileSync(devTomlPath, "utf-8");
             const snapshotPath = devTomlPath + ".byne-original";
-            // Only snapshot the FIRST edit per worktree — on re-runs after
-            // a clean restoreSessionConfigs, the file is already at its
-            // pristine state and we want to capture that, not the
-            // already-patched version.
             if (!existsSync(snapshotPath)) {
               writeFileSync(snapshotPath, original, "utf-8");
             }
-            const updated = original.replace(
-              /(dummyconnector\.base_url\s*=\s*"http:\/\/localhost:)\d+(\/dummy-connector")/,
-              `$1${dummyConnectorPort}$2`
-            );
+            let updated = original;
+            if (grpcPort !== undefined) {
+              updated = updated.replace(
+                /(\[server\][^[]*?\n\s*port\s*=\s*)\d+/,
+                `$1${grpcPort}`
+              );
+            }
+            if (metricsPort !== undefined) {
+              updated = updated.replace(
+                /(\[metrics\][^[]*?\n\s*port\s*=\s*)\d+/,
+                `$1${metricsPort}`
+              );
+            }
             if (updated !== original) {
               writeFileSync(devTomlPath, updated, "utf-8");
               ctx.log(
-                `[preflight] Rewrote dummyconnector.base_url → localhost:${dummyConnectorPort}`,
+                `[preflight] development.toml ports → server:${grpcPort} metrics:${metricsPort}`,
                 "info"
               );
             }
           } catch (tomlErr) {
-            // Non-fatal — log and continue. The dummy connector either
-            // works on the default port (slot=0 default session) or the
-            // pipeline fails downstream with a more actionable error.
+            // Non-fatal — log and continue. Default session (slot=0) uses
+            // unshifted 8000/8080 either way; non-default sessions will
+            // fail downstream with a more actionable error if their ports
+            // weren't actually shifted.
             ctx.log(
               `[preflight] Could not template development.toml: ${tomlErr instanceof Error ? tomlErr.message : String(tomlErr)}`,
               "warn"

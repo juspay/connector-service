@@ -94,8 +94,14 @@ async function runShell(
  * Phase 10: ports are session-scoped. Without that scoping, session 2's
  * preflight would `lsof -ti:8000 | kill -9` and murder session 1's live
  * grpc-server (the actual bug the user hit running 3 sessions in parallel).
- * The `pkill -9 -f target/debug/grpc-server` line stays global because
- * those orphaned binaries can't be attributed to a session.
+ *
+ * Phase 11: dropped the global `pkill -9 -f 'target/debug/grpc-server'`.
+ * Every worktree builds the binary at the same `target/debug/grpc-server`
+ * path so pkill -f matched ALL sibling sessions' live servers — exactly
+ * the cross-session murder the per-port scoping was supposed to prevent.
+ * The two port-scoped lsof lines above remain authoritative; any orphan
+ * binary still bound to one of our ports gets reaped, and orphans not
+ * bound to our ports are harmless (won't compete).
  */
 export async function killStaleProcesses(
   log: Logger = noopLog,
@@ -106,7 +112,6 @@ export async function killStaleProcesses(
   const cmds = [
     `lsof -ti:${grpcPort} | xargs -r kill -9 2>/dev/null || true`,
     `lsof -ti:${dummyConnectorPort} | xargs -r kill -9 2>/dev/null || true`,
-    "pkill -9 -f 'target/debug/grpc-server' 2>/dev/null || true",
   ];
   for (const cmd of cmds) {
     await runShell(cmd, log);
@@ -131,27 +136,23 @@ export async function startGrpcServer(
   const grpcPort = opts.grpcPort ?? 8000;
   const dummyConnectorPort = opts.dummyConnectorPort ?? 8080;
   try {
-    // Phase 10: pass the per-session ports to cargo via env vars so each
-    // session's grpc-server listens on its allocated slot's ports. The
-    // env keys follow hyperswitch's `__`-separated nested config pattern
-    // — if the binary doesn't pick these up at runtime we have a
-    // belt-and-suspenders backup via preflight's development.toml rewrite
-    // for the dummy connector. Confirm the exact key names against
-    // `crates/grpc-server` config setup when the listen port actually
-    // needs to move; for slot=0 (default session, unshifted 8000/8080)
-    // these are no-ops.
-    const childEnv = {
-      ...process.env,
-      GRPC_SERVER__SERVER__PORT: String(grpcPort),
-      DUMMY_CONNECTOR__PORT: String(dummyConnectorPort),
-    };
+    // Phase 11: dropped GRPC_SERVER__SERVER__PORT / DUMMY_CONNECTOR__PORT
+    // env overrides. The hyperswitch-prism binary loads its bind ports
+    // from `config/development.toml` directly (see ucs_env::configs) and
+    // ignores those keys, so they were dead code that gave a false sense
+    // of per-session isolation. The real per-session port shift now
+    // happens in preflight by templating `[server].port` and
+    // `[metrics].port` in the worktree's development.toml before this
+    // spawn runs; the grpc/dummy port options here are retained purely
+    // so the kill block at the bottom of this function can scope its
+    // `lsof -ti:${port}` reaps to this session's slot.
     const child: ChildProcess = spawn(
       "cargo",
       ["run", "--bin", "grpc-server"],
       {
         cwd: opts.projectRoot,
         stdio: ["ignore", fd, fd],
-        env: childEnv,
+        env: process.env,
       }
     );
 
