@@ -175,7 +175,12 @@ export const grpcTestCheckpoint: Checkpoint = {
     ctx.log(`[grpc_test] Connector: ${connector}`, "info");
     ctx.log(`[grpc_test] Flow: ${flow}`, "info");
 
-    const serverHost = "localhost:8000";
+    // Phase 10: resolve per-session ports set by run.ts at engine boot.
+    // Default session uses unshifted 8000/8080; new sessions get
+    // 8000+portSlot / 8080+portSlot so parallel runs don't collide.
+    const grpcPort = task.grpcPort ?? 8000;
+    const dummyConnectorPort = task.dummyConnectorPort ?? 8080;
+    const serverHost = `localhost:${grpcPort}`;
     const credsPath = path.join(projectRoot, "creds.json");
     const logFile = path.join(
       projectRoot,
@@ -221,11 +226,14 @@ export const grpcTestCheckpoint: Checkpoint = {
       ctx.log(`[grpc_test] ${msg}`, level);
 
     try {
-      tsLog("preflight: killing stale processes on :8000/:8080");
-      await killStaleProcesses(tsLog);
+      tsLog(`preflight: killing stale processes on :${grpcPort}/:${dummyConnectorPort}`);
+      await killStaleProcesses(tsLog, grpcPort, dummyConnectorPort);
 
-      tsLog(`starting grpc-server, log → ${logFile}`);
-      server = await startGrpcServer({ projectRoot, logFile }, tsLog);
+      tsLog(`starting grpc-server (gRPC :${grpcPort}, dummy :${dummyConnectorPort}), log → ${logFile}`);
+      server = await startGrpcServer(
+        { projectRoot, logFile, grpcPort, dummyConnectorPort },
+        tsLog
+      );
 
       // Cold cargo builds can take 10-20 min on this tree (diesel + macros);
       // the TCP probe's 45s budget is only correct once the binary is exec'd.
@@ -239,7 +247,7 @@ export const grpcTestCheckpoint: Checkpoint = {
 
       tsLog(`waiting for ${serverHost} to become healthy (≤45s)`);
       await waitForHealthy(
-        { host: "localhost", port: 8000, timeoutMs: 45_000 },
+        { host: "localhost", port: grpcPort, timeoutMs: 45_000 },
         tsLog
       );
 

@@ -11,6 +11,7 @@ import {
   type SessionMetadata,
   type SessionRecord,
 } from "./state.js";
+import { getConfig } from "./config.js";
 
 export interface CreateSessionInput {
   name: string;
@@ -85,6 +86,7 @@ export class SessionManager {
               originalPath: sourcePath,
               copyStrategy: "legacy",
             },
+            portSlot: this.state.allocateNextPortSlot(),
           });
         default: {
           const _exhaustive: never = strategy;
@@ -104,13 +106,78 @@ export class SessionManager {
       originalPath: sourcePath,
       copyStrategy: strategy,
     };
+
+    // Phase 10A: symlink the user-configured creds.json into this worktree
+    // so the grpc-server (and any agent that reads it) finds creds at the
+    // path preflight.ts already checks: <projectRoot>/creds.json. Using a
+    // symlink rather than a copy means credential rotations propagate to
+    // every existing session instantly without re-creating them.
+    try {
+      const cfg = getConfig();
+      if (cfg.credsPath) {
+        const absSource = path.resolve(cfg.credsPath);
+        const link = path.join(projectRoot, "creds.json");
+        if (fs.existsSync(absSource) && !fs.existsSync(link)) {
+          try {
+            fs.symlinkSync(absSource, link);
+          } catch {
+            // Filesystems that don't support symlinks (some Windows
+            // configurations, network mounts) fall back to a copy.
+            // User loses live-rotation but the pipeline still works.
+            fs.copyFileSync(absSource, link);
+          }
+        }
+      }
+    } catch {
+      // getConfig() can throw if called before setConfig — non-fatal here
+      // because preflight already warns on missing creds.json.
+    }
+
+    // Phase 10B: allocate the smallest unused port_slot so the supervisor
+    // can compute non-colliding gRPC/dummy-connector ports for this session.
+    const portSlot = this.state.allocateNextPortSlot();
     return this.state.createSession({
       sessionId,
       name: input.name,
       description: input.description ?? null,
       projectRoot,
       metadata,
+      portSlot,
     });
+  }
+
+  /**
+   * Phase 10: undo session-scoped config rewrites that preflight did at
+   * run start. Currently restores `<projectRoot>/config/development.toml`
+   * from the sibling `.byne-original` snapshot if present. Called from
+   * SessionSupervisor.onChildExit so the worktree returns to a clean
+   * state after each run. Idempotent — safe to call multiple times.
+   */
+  async restoreSessionConfigs(sessionId: string): Promise<void> {
+    const session = this.state.getSession(sessionId);
+    if (!session) return;
+    const devTomlPath = path.join(
+      session.projectRoot,
+      "config",
+      "development.toml"
+    );
+    const snapshotPath = devTomlPath + ".byne-original";
+    if (fs.existsSync(snapshotPath)) {
+      try {
+        const original = fs.readFileSync(snapshotPath, "utf-8");
+        fs.writeFileSync(devTomlPath, original, "utf-8");
+        fs.unlinkSync(snapshotPath);
+      } catch (err) {
+        // Non-fatal — next run's preflight will write a fresh snapshot if
+        // the file is missing, so worst case the revert just no-ops on
+        // the next exit.
+        // eslint-disable-next-line no-console
+        console.error(
+          `[sm] failed to restore development.toml for ${sessionId}:`,
+          err
+        );
+      }
+    }
   }
 
   /**

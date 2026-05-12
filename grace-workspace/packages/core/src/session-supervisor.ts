@@ -665,6 +665,15 @@ export class SessionSupervisor {
       `[supervisor] session=${sessionId} exited code=${code ?? "null"} (${reason})`
     );
     this.broadcastControl("sessions:exited", { sessionId, code });
+
+    // Phase 10: revert per-session config rewrites that preflight did at
+    // run start (currently <projectRoot>/config/development.toml's
+    // dummyconnector.base_url). Fire-and-forget — failures are logged but
+    // don't block the exit path.
+    void this.sessions.restoreSessionConfigs(sessionId).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error(`[supervisor] restoreSessionConfigs failed:`, err);
+    });
   }
 
   private reapTick(): void {

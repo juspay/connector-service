@@ -87,6 +87,14 @@ export const taskCheckpoint: Checkpoint = {
           estimatedComplexity: payload.estimatedComplexity,
           runner: payload.runner,
           runnerModel: payload.runnerModel,
+          // Phase 10: preserve the per-session ports run.ts set at engine
+          // boot. The TaskForm doesn't expose these fields so payload.X is
+          // always undefined; fall back to ctx.task.X (session-scoped value)
+          // before evaporating into the 8000/8080 defaults the checkpoints
+          // assume when ports are unset.
+          grpcPort: payload.grpcPort ?? ctx.task.grpcPort,
+          dummyConnectorPort:
+            payload.dummyConnectorPort ?? ctx.task.dummyConnectorPort,
         };
         if (!validTask(candidate)) {
           ctx.bus.emit("task:rejected", "task", {

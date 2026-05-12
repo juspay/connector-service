@@ -278,6 +278,19 @@ export async function runCommand(opts: RunOpts): Promise<void> {
       (artifacts.task as TaskDefinition).projectRoot = session.projectRoot;
     }
   }
+  // Phase 10: derive per-session gRPC + dummy-connector ports from the
+  // session's portSlot so concurrent sessions don't collide. Default
+  // session is slot 0 → unshifted 8000/8080 (back-compat).
+  if (session) {
+    const grpcPort = 8000 + session.portSlot;
+    const dummyConnectorPort = 8080 + session.portSlot;
+    task.grpcPort = grpcPort;
+    task.dummyConnectorPort = dummyConnectorPort;
+    if (artifacts.task) {
+      (artifacts.task as TaskDefinition).grpcPort = grpcPort;
+      (artifacts.task as TaskDefinition).dummyConnectorPort = dummyConnectorPort;
+    }
+  }
 
   // Phase 5: bus is now a *client* that connects outbound to the supervisor's
   // control WS. Multiple engines share the same control port; the supervisor

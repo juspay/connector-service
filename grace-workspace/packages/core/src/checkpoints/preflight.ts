@@ -1,6 +1,6 @@
 import type { Checkpoint } from "../types.js";
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export const preflightCheckpoint: Checkpoint = {
@@ -43,12 +43,59 @@ export const preflightCheckpoint: Checkpoint = {
       ctx.log(`[preflight] Creating and checking out branch: ${branchName}`, "info");
       execSync(`git checkout -b ${branchName}`, { cwd: projectRoot, stdio: "pipe" });
 
-      // Verify creds.json exists
+      // Verify creds.json exists. Phase 10: SessionManager.create()
+      // symlinks BYNE_CREDS_PATH into <projectRoot>/creds.json at session
+      // creation, so for sessions created post-fix this resolves through
+      // the symlink. Older sessions may still warn here.
       const credsPath = path.join(projectRoot, "creds.json");
       if (existsSync(credsPath)) {
         ctx.log("[preflight] Credentials file found", "info");
       } else {
-        ctx.log("[preflight] Warning: creds.json not found", "warn");
+        ctx.log(
+          "[preflight] Warning: creds.json not found. Set BYNE_CREDS_PATH in your env so future sessions get a symlink.",
+          "warn"
+        );
+      }
+
+      // Phase 10: rewrite <projectRoot>/config/development.toml's
+      // `dummyconnector.base_url` to use this session's allocated port
+      // (8080 + portSlot). Snapshot the original first so the supervisor
+      // can restore on engine exit via SessionManager.restoreSessionConfigs.
+      const dummyConnectorPort = task.dummyConnectorPort;
+      if (dummyConnectorPort !== undefined) {
+        const devTomlPath = path.join(projectRoot, "config", "development.toml");
+        if (existsSync(devTomlPath)) {
+          try {
+            const original = readFileSync(devTomlPath, "utf-8");
+            const snapshotPath = devTomlPath + ".byne-original";
+            // Only snapshot the FIRST edit per worktree — on re-runs after
+            // a clean restoreSessionConfigs, the file is already at its
+            // pristine state and we want to capture that, not the
+            // already-patched version.
+            if (!existsSync(snapshotPath)) {
+              writeFileSync(snapshotPath, original, "utf-8");
+            }
+            const updated = original.replace(
+              /(dummyconnector\.base_url\s*=\s*"http:\/\/localhost:)\d+(\/dummy-connector")/,
+              `$1${dummyConnectorPort}$2`
+            );
+            if (updated !== original) {
+              writeFileSync(devTomlPath, updated, "utf-8");
+              ctx.log(
+                `[preflight] Rewrote dummyconnector.base_url → localhost:${dummyConnectorPort}`,
+                "info"
+              );
+            }
+          } catch (tomlErr) {
+            // Non-fatal — log and continue. The dummy connector either
+            // works on the default port (slot=0 default session) or the
+            // pipeline fails downstream with a more actionable error.
+            ctx.log(
+              `[preflight] Could not template development.toml: ${tomlErr instanceof Error ? tomlErr.message : String(tomlErr)}`,
+              "warn"
+            );
+          }
+        }
       }
 
       ctx.log(`[preflight] ✓ Ready on branch: ${branchName}`, "success");

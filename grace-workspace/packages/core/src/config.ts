@@ -61,6 +61,15 @@ export interface ClaudeCodeConfig {
 
 export interface CsddConfig {
   projectRoot: string;
+  /**
+   * Absolute path to the connector `creds.json` file. When set,
+   * SessionManager.create() symlinks this into each new session's
+   * worktree as `<projectRoot>/creds.json` so credentials propagate
+   * to every isolated workspace without copy-and-rotate. Override
+   * via BYNE_CREDS_PATH env var (recommended — keeps secrets out of
+   * the committed config.yml).
+   */
+  credsPath?: string;
   devServerUrl: string;
   designMatchThreshold: number;
   maxRetries: number;
@@ -182,6 +191,14 @@ export function loadConfig(explicitPath?: string): CsddConfig {
   if (process.env.BYNE_LLM_BASE_URL) merged.llm.baseUrl = process.env.BYNE_LLM_BASE_URL;
   if (process.env.BYNE_LLM_MODEL) merged.llm.model = process.env.BYNE_LLM_MODEL;
   if (process.env.BYNE_PROJECT_ROOT) merged.projectRoot = process.env.BYNE_PROJECT_ROOT;
+  // Phase 10: BYNE_CREDS_PATH points at the user's connector creds.json so
+  // SessionManager can symlink it into every new session worktree. Resolve
+  // to absolute path so consumers don't need to know the supervisor's cwd.
+  if (process.env.BYNE_CREDS_PATH) {
+    merged.credsPath = path.resolve(process.env.BYNE_CREDS_PATH);
+  } else if (merged.credsPath && !path.isAbsolute(merged.credsPath)) {
+    merged.credsPath = path.resolve(merged.credsPath);
+  }
 
   if (usedPath) {
     // eslint-disable-next-line no-console

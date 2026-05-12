@@ -62,6 +62,14 @@ export interface SessionRecord {
   status: SessionStatus;
   wsPort: number | null;
   pid: number | null;
+  /**
+   * Phase 10: per-session offset for gRPC/dummy-connector ports so parallel
+   * sessions don't fight for the same listeners. Session N uses 8000+N for
+   * gRPC and 8080+N for dummy-connector. Default session keeps slot 0 so it
+   * uses the original unshifted ports (8000/8080) for back-compat. Assigned
+   * at SessionManager.create() via StateManager.allocateNextPortSlot().
+   */
+  portSlot: number;
   createdAt: number;
   updatedAt: number;
   metadata: SessionMetadata;
@@ -203,87 +211,127 @@ export class StateManager {
    * - v0 → v1: session-management tables, ALTER runs to add session_id +
    *   lifecycle columns, backfill a default session row, mark legacy runs
    *   as `succeeded`.
+   * - v1 → v2 (Phase 10): ALTER sessions to add `port_slot` column,
+   *   backfill default session to slot 0 and existing extra sessions to
+   *   sequential slots in created_at order so they stop fighting for the
+   *   same gRPC/dummy ports.
    *
    * Wrapped in BEGIN IMMEDIATE so concurrent boots can't half-apply.
    */
   private runMigrations(): void {
     const current = (this.db.pragma("user_version", { simple: true }) as number) ?? 0;
-    if (current >= 1) return;
+    if (current >= 2) return;
 
     const tx = this.db.transaction(() => {
-      // 1. Sessions tables + indexes (idempotent on re-run).
-      this.db.exec(SESSION_SCHEMA);
+      if (current < 1) {
+        // ─── v0 → v1 ────────────────────────────────────────────────────
+        // 1. Sessions tables + indexes (idempotent on re-run).
+        this.db.exec(SESSION_SCHEMA);
 
-      // 2. Add columns to runs only if they don't already exist.
-      const cols = (this.db.prepare(`PRAGMA table_info(runs)`).all() as {
-        name: string;
-      }[]).map((c) => c.name);
-      const addColumn = (name: string, def: string) => {
-        if (!cols.includes(name)) {
-          this.db.exec(`ALTER TABLE runs ADD COLUMN ${name} ${def}`);
+        // 2. Add columns to runs only if they don't already exist.
+        const cols = (this.db.prepare(`PRAGMA table_info(runs)`).all() as {
+          name: string;
+        }[]).map((c) => c.name);
+        const addColumn = (name: string, def: string) => {
+          if (!cols.includes(name)) {
+            this.db.exec(`ALTER TABLE runs ADD COLUMN ${name} ${def}`);
+          }
+        };
+        addColumn("session_id", "TEXT");
+        addColumn("status", "TEXT DEFAULT 'pending'");
+        addColumn("heartbeat_at", "INTEGER");
+        addColumn("started_at", "INTEGER");
+        addColumn("completed_at", "INTEGER");
+        addColumn("duration_ms", "INTEGER");
+
+        // 2b. Now that the new columns exist, create their indexes.
+        this.db.exec(RUNS_SESSION_INDEXES);
+
+        // 3. Backfill: create default session pointing at the existing
+        //    config.projectRoot. We don't have access to the config from
+        //    inside StateManager, so we plant a placeholder; the caller
+        //    (run.ts) overwrites it on boot once config is loaded.
+        const existing = this.db
+          .prepare(`SELECT 1 FROM sessions WHERE session_id = ?`)
+          .get(DEFAULT_SESSION_ID);
+        if (!existing) {
+          const now = Date.now();
+          this.db
+            .prepare(
+              `INSERT INTO sessions (
+                session_id, name, description, project_root,
+                current_run_id, status, ws_port, pid,
+                created_at, updated_at, metadata_json
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            )
+            .run(
+              DEFAULT_SESSION_ID,
+              "Default Session",
+              "Auto-created during session-management migration. Pre-existing runs are linked here.",
+              "", // populated by ensureDefaultSession() at boot
+              null,
+              "idle",
+              null,
+              null,
+              now,
+              now,
+              JSON.stringify({
+                originalPath: "",
+                copyStrategy: "legacy",
+              } satisfies SessionMetadata)
+            );
         }
-      };
-      addColumn("session_id", "TEXT");
-      addColumn("status", "TEXT DEFAULT 'pending'");
-      addColumn("heartbeat_at", "INTEGER");
-      addColumn("started_at", "INTEGER");
-      addColumn("completed_at", "INTEGER");
-      addColumn("duration_ms", "INTEGER");
 
-      // 2b. Now that the new columns exist, create their indexes.
-      this.db.exec(RUNS_SESSION_INDEXES);
+        // 4. Backfill: link orphan runs to default session, mark them succeeded
+        //    (we can't tell from on-disk state whether they finished cleanly,
+        //    but treating prior runs as historical avoids spurious "running"
+        //    states blocking the default session lock).
+        this.db.exec(`
+          UPDATE runs
+             SET session_id = '${DEFAULT_SESSION_ID}'
+           WHERE session_id IS NULL OR session_id = '';
+        `);
+        this.db.exec(`
+          UPDATE runs
+             SET status = 'succeeded'
+           WHERE status IS NULL OR status = '' OR status = 'pending';
+        `);
 
-      // 3. Backfill: create default session pointing at the existing
-      //    config.projectRoot. We don't have access to the config from
-      //    inside StateManager, so we plant a placeholder; the caller
-      //    (run.ts) overwrites it on boot once config is loaded.
-      const existing = this.db
-        .prepare(`SELECT 1 FROM sessions WHERE session_id = ?`)
-        .get(DEFAULT_SESSION_ID);
-      if (!existing) {
-        const now = Date.now();
-        this.db
-          .prepare(
-            `INSERT INTO sessions (
-              session_id, name, description, project_root,
-              current_run_id, status, ws_port, pid,
-              created_at, updated_at, metadata_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .run(
-            DEFAULT_SESSION_ID,
-            "Default Session",
-            "Auto-created during session-management migration. Pre-existing runs are linked here.",
-            "", // populated by ensureDefaultSession() at boot
-            null,
-            "idle",
-            null,
-            null,
-            now,
-            now,
-            JSON.stringify({
-              originalPath: "",
-              copyStrategy: "legacy",
-            } satisfies SessionMetadata)
-          );
+        this.db.pragma("user_version = 1");
       }
 
-      // 4. Backfill: link orphan runs to default session, mark them succeeded
-      //    (we can't tell from on-disk state whether they finished cleanly,
-      //    but treating prior runs as historical avoids spurious "running"
-      //    states blocking the default session lock).
+      // ─── v1 → v2 ──────────────────────────────────────────────────────
+      // Phase 10: add per-session port_slot column so parallel sessions
+      // get distinct gRPC + dummy-connector ports.
+      const sessCols = (this.db.prepare(`PRAGMA table_info(sessions)`).all() as {
+        name: string;
+      }[]).map((c) => c.name);
+      if (!sessCols.includes("port_slot")) {
+        this.db.exec(`ALTER TABLE sessions ADD COLUMN port_slot INTEGER`);
+      }
+      // Default session always gets slot 0 (so it keeps the original
+      // unshifted 8000/8080 ports for backward compatibility).
+      this.db
+        .prepare(
+          `UPDATE sessions SET port_slot = 0 WHERE session_id = ? AND (port_slot IS NULL OR port_slot != 0)`
+        )
+        .run(DEFAULT_SESSION_ID);
+      // Backfill every other existing session with sequential slots in
+      // created_at order. ROW_NUMBER() is available since SQLite 3.25
+      // which better-sqlite3 ships with.
       this.db.exec(`
-        UPDATE runs
-           SET session_id = '${DEFAULT_SESSION_ID}'
-         WHERE session_id IS NULL OR session_id = '';
-      `);
-      this.db.exec(`
-        UPDATE runs
-           SET status = 'succeeded'
-         WHERE status IS NULL OR status = '' OR status = 'pending';
+        WITH ordered AS (
+          SELECT session_id, ROW_NUMBER() OVER (ORDER BY created_at) AS slot
+            FROM sessions
+           WHERE session_id != '${DEFAULT_SESSION_ID}'
+             AND port_slot IS NULL
+        )
+        UPDATE sessions
+           SET port_slot = (SELECT slot FROM ordered WHERE ordered.session_id = sessions.session_id)
+         WHERE session_id IN (SELECT session_id FROM ordered);
       `);
 
-      this.db.pragma("user_version = 1");
+      this.db.pragma("user_version = 2");
     });
     tx.immediate();
   }
@@ -323,9 +371,9 @@ export class StateManager {
       .prepare(
         `INSERT INTO sessions (
           session_id, name, description, project_root,
-          current_run_id, status, ws_port, pid,
+          current_run_id, status, ws_port, pid, port_slot,
           created_at, updated_at, metadata_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         DEFAULT_SESSION_ID,
@@ -336,6 +384,7 @@ export class StateManager {
         "idle",
         null,
         null,
+        0, // Phase 10: default session keeps slot 0 (unshifted 8000/8080)
         now,
         now,
         JSON.stringify({
@@ -354,15 +403,17 @@ export class StateManager {
     description?: string | null;
     projectRoot: string;
     metadata: SessionMetadata;
+    /** Phase 10: allocated by SessionManager via allocateNextPortSlot. */
+    portSlot: number;
   }): SessionRecord {
     const now = Date.now();
     this.db
       .prepare(
         `INSERT INTO sessions (
           session_id, name, description, project_root,
-          current_run_id, status, ws_port, pid,
+          current_run_id, status, ws_port, pid, port_slot,
           created_at, updated_at, metadata_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         input.sessionId,
@@ -373,6 +424,7 @@ export class StateManager {
         "idle",
         null,
         null,
+        input.portSlot,
         now,
         now,
         JSON.stringify(input.metadata)
@@ -397,6 +449,7 @@ export class StateManager {
           status: SessionStatus;
           ws_port: number | null;
           pid: number | null;
+          port_slot: number | null;
           created_at: number;
           updated_at: number;
           metadata_json: string;
@@ -404,6 +457,25 @@ export class StateManager {
       | undefined;
     if (!row) return null;
     return rowToSession(row);
+  }
+
+  /**
+   * Phase 10: allocate the smallest non-negative integer not currently in
+   * use as a port_slot. Called by SessionManager.create() right before
+   * insert. Bounded at 1000 to keep the search cheap — realistic worst
+   * case is a few dozen concurrent sessions.
+   */
+  allocateNextPortSlot(): number {
+    const rows = this.db
+      .prepare(`SELECT port_slot FROM sessions WHERE port_slot IS NOT NULL`)
+      .all() as { port_slot: number }[];
+    const used = new Set(rows.map((r) => r.port_slot));
+    for (let i = 0; i < 1000; i++) {
+      if (!used.has(i)) return i;
+    }
+    throw new Error(
+      "Port slot pool exhausted (>1000 sessions). Delete old sessions before creating more."
+    );
   }
 
   listSessions(): SessionRecord[] {
@@ -991,6 +1063,7 @@ function rowToSession(row: {
   status: SessionStatus;
   ws_port: number | null;
   pid: number | null;
+  port_slot: number | null;
   created_at: number;
   updated_at: number;
   metadata_json: string;
@@ -1013,6 +1086,9 @@ function rowToSession(row: {
     status: row.status,
     wsPort: row.ws_port,
     pid: row.pid,
+    // Phase 10: null means "pre-v2 row that the migration hasn't touched yet";
+    // fall back to slot 0 (unshifted ports) for safety.
+    portSlot: row.port_slot ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     metadata,

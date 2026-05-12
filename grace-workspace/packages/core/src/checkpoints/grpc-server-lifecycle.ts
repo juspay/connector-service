@@ -27,6 +27,17 @@ export interface StartGrpcServerOptions {
   projectRoot: string;
   /** Absolute path; this function ensures the parent directory exists. */
   logFile: string;
+  /**
+   * Phase 10: gRPC listen port. Forwarded to cargo via env so parallel
+   * sessions get distinct listeners. Defaults to 8000 when omitted for
+   * callers that haven't been updated to the session-aware API.
+   */
+  grpcPort?: number;
+  /**
+   * Phase 10: dummy-connector HTTP port. Forwarded to cargo via env so
+   * parallel sessions get distinct listeners. Defaults to 8080.
+   */
+  dummyConnectorPort?: number;
 }
 
 export interface WaitForHealthyOptions {
@@ -76,15 +87,25 @@ async function runShell(
 }
 
 /**
- * Kill anything bound to ports 8000/8080 and any leftover grpc-server binary
- * processes from previous runs. Idempotent and best-effort: if nothing is
- * running, succeeds silently.
+ * Kill anything bound to this session's gRPC + dummy-connector ports and any
+ * leftover grpc-server binary processes from previous runs. Idempotent and
+ * best-effort: if nothing is running, succeeds silently.
+ *
+ * Phase 10: ports are session-scoped. Without that scoping, session 2's
+ * preflight would `lsof -ti:8000 | kill -9` and murder session 1's live
+ * grpc-server (the actual bug the user hit running 3 sessions in parallel).
+ * The `pkill -9 -f target/debug/grpc-server` line stays global because
+ * those orphaned binaries can't be attributed to a session.
  */
-export async function killStaleProcesses(log: Logger = noopLog): Promise<void> {
+export async function killStaleProcesses(
+  log: Logger = noopLog,
+  grpcPort: number = 8000,
+  dummyConnectorPort: number = 8080
+): Promise<void> {
   // lsof emits non-zero when nothing matches; swallow with `|| true`.
   const cmds = [
-    "lsof -ti:8000 | xargs -r kill -9 2>/dev/null || true",
-    "lsof -ti:8080 | xargs -r kill -9 2>/dev/null || true",
+    `lsof -ti:${grpcPort} | xargs -r kill -9 2>/dev/null || true`,
+    `lsof -ti:${dummyConnectorPort} | xargs -r kill -9 2>/dev/null || true`,
     "pkill -9 -f 'target/debug/grpc-server' 2>/dev/null || true",
   ];
   for (const cmd of cmds) {
@@ -107,14 +128,30 @@ export async function startGrpcServer(
   await fs.mkdir(path.dirname(opts.logFile), { recursive: true });
   // Truncate the log on each start so the agent reads only this run's output.
   const fd = openSync(opts.logFile, "w");
+  const grpcPort = opts.grpcPort ?? 8000;
+  const dummyConnectorPort = opts.dummyConnectorPort ?? 8080;
   try {
+    // Phase 10: pass the per-session ports to cargo via env vars so each
+    // session's grpc-server listens on its allocated slot's ports. The
+    // env keys follow hyperswitch's `__`-separated nested config pattern
+    // — if the binary doesn't pick these up at runtime we have a
+    // belt-and-suspenders backup via preflight's development.toml rewrite
+    // for the dummy connector. Confirm the exact key names against
+    // `crates/grpc-server` config setup when the listen port actually
+    // needs to move; for slot=0 (default session, unshifted 8000/8080)
+    // these are no-ops.
+    const childEnv = {
+      ...process.env,
+      GRPC_SERVER__SERVER__PORT: String(grpcPort),
+      DUMMY_CONNECTOR__PORT: String(dummyConnectorPort),
+    };
     const child: ChildProcess = spawn(
       "cargo",
       ["run", "--bin", "grpc-server"],
       {
         cwd: opts.projectRoot,
         stdio: ["ignore", fd, fd],
-        env: process.env,
+        env: childEnv,
       }
     );
 
@@ -153,13 +190,14 @@ export async function startGrpcServer(
       }
       // Also clean up the bound ports — `cargo run` spawns a child binary
       // (target/debug/grpc-server) which may outlive the cargo wrapper if
-      // SIGTERM only reached the wrapper.
+      // SIGTERM only reached the wrapper. Phase 10: scoped to this
+      // session's slot so we don't murder a sibling session's server.
       await runShell(
-        "lsof -ti:8000 | xargs -r kill -9 2>/dev/null || true",
+        `lsof -ti:${grpcPort} | xargs -r kill -9 2>/dev/null || true`,
         log
       );
       await runShell(
-        "lsof -ti:8080 | xargs -r kill -9 2>/dev/null || true",
+        `lsof -ti:${dummyConnectorPort} | xargs -r kill -9 2>/dev/null || true`,
         log
       );
     };

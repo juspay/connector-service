@@ -127,6 +127,20 @@ export interface TaskDefinition {
    * lock dance.
    */
   sessionId?: string;
+  /**
+   * Phase 10: per-session gRPC server port. Computed at engine boot from
+   * session.portSlot as `8000 + portSlot`. Checkpoints (grpc-test,
+   * grpc-server-lifecycle) read this so concurrent sessions don't fight
+   * for the same listener. Defaults to 8000 if unset.
+   */
+  grpcPort?: number;
+  /**
+   * Phase 10: per-session dummy-connector HTTP port. Computed at engine
+   * boot from session.portSlot as `8080 + portSlot`. Preflight rewrites
+   * `<projectRoot>/config/development.toml` so the connector's
+   * `base_url` points at this port. Defaults to 8080 if unset.
+   */
+  dummyConnectorPort?: number;
   /** Files uploaded with the task */
   attachments?: TaskAttachment[];
 
