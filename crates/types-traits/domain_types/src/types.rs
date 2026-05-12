@@ -599,7 +599,7 @@ impl Proxy {
 
 /// Top-level proxy configuration. Named proxy entries live under `proxies`.
 ///
-/// Deserialization is handled by a custom `impl Deserialize` (via `ProxyConfigRaw`) that also
+/// Deserialization is handled by a custom `impl Deserialize` (via `ProxyConfigLegacy`) that also
 /// accepts old flat `https_url`/`http_url` keys, promoting them to `proxies["shadow"]` so old
 /// infra configs keep working after a binary-only deploy.
 #[derive(Debug, Serialize, Clone, PartialEq, Eq, Default, config_patch_derive::Patch)]
@@ -610,23 +610,24 @@ pub struct ProxyConfig {
     pub proxies: HashMap<String, Proxy>,
 }
 
-/// Raw deserialization target for `ProxyConfig` — accepts both old flat keys and new `proxies` map.
+/// Legacy deserialization target for `ProxyConfig` — accepts old flat keys at `[proxy]` level.
 /// Remove once all infra configs are migrated to `[proxy.proxies.<name>]`.
 #[derive(Deserialize)]
-struct ProxyConfigRaw {
+struct ProxyConfigLegacy {
     idle_pool_connection_timeout: Option<u64>,
     #[serde(default)]
     bypass_urls: Vec<String>,
     #[serde(default)]
     proxies: HashMap<String, Proxy>,
-    // Legacy flat keys — promoted to proxies["shadow"] if proxies is empty
+    // Legacy flat keys — promoted to proxies["primary"] and proxies["shadow"] if proxies is empty
     https_url: Option<String>,
     http_url: Option<String>,
+    ca_cert: Option<String>,
 }
 
 impl<'de> Deserialize<'de> for ProxyConfig {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let raw = ProxyConfigRaw::deserialize(deserializer)?;
+        let raw = ProxyConfigLegacy::deserialize(deserializer)?;
         let mut proxies = raw.proxies;
         // New format: [proxy.proxies.<name>] — proxies map populated directly, nothing to do.
         // Old format: flat https_url/http_url at [proxy] level — old behavior was a single proxy
@@ -635,7 +636,7 @@ impl<'de> Deserialize<'de> for ProxyConfig {
             let entry = Proxy {
                 https_url: raw.https_url,
                 http_url: raw.http_url,
-                ca_cert: None,
+                ca_cert: raw.ca_cert,
             };
             proxies.insert("primary".to_string(), entry.clone());
             proxies.insert("shadow".to_string(), entry);

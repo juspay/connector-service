@@ -615,7 +615,6 @@ where
                             request,
                             "execute_connector_processing_step",
                             test_mode,
-                            event_params.shadow_mode,
                             event_params.proxy_name,
                         )
                         .await
@@ -869,7 +868,6 @@ pub async fn call_connector_api(
     request: Request,
     _flow_name: &str,
     test_mode: bool,
-    shadow_mode: bool,
     header_proxy_name: Option<&str>,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url = Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
