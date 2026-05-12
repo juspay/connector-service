@@ -553,6 +553,132 @@ impl Connectors {
             ConnectorEnum::Novalnet => {
                 patched.novalnet.apply(params_patch);
             }
+            ConnectorEnum::Forte => {
+                patched.forte.apply(params_patch);
+            }
+            ConnectorEnum::Bambora => {
+                patched.bambora.apply(params_patch);
+            }
+            ConnectorEnum::Bamboraapac => {
+                patched.bamboraapac.apply(params_patch);
+            }
+            ConnectorEnum::Barclaycard => {
+                patched.barclaycard.apply(params_patch);
+            }
+            ConnectorEnum::Billwerk => {
+                patched.billwerk.apply(params_patch);
+            }
+            ConnectorEnum::Bluesnap => {
+                patched.bluesnap.apply(params_patch);
+            }
+            ConnectorEnum::Calida => {
+                patched.calida.apply(params_patch);
+            }
+            ConnectorEnum::Cashfree => {
+                patched.cashfree.apply(params_patch);
+            }
+            ConnectorEnum::Celero => {
+                patched.celero.apply(params_patch);
+            }
+            ConnectorEnum::Cryptopay => {
+                patched.cryptopay.apply(params_patch);
+            }
+            ConnectorEnum::Datatrans => {
+                patched.datatrans.apply(params_patch);
+            }
+            ConnectorEnum::Finix => {
+                patched.finix.apply(params_patch);
+            }
+            ConnectorEnum::Fiservcommercehub => {
+                patched.fiservcommercehub.apply(params_patch);
+            }
+            ConnectorEnum::Fiservemea => {
+                patched.fiservemea.apply(params_patch);
+            }
+            ConnectorEnum::Globalpay => {
+                patched.globalpay.apply(params_patch);
+            }
+            ConnectorEnum::Helcim => {
+                patched.helcim.apply(params_patch);
+            }
+            ConnectorEnum::Hipay => {
+                patched.hipay.apply(params_patch);
+            }
+            ConnectorEnum::Imerchantsolutions => {
+                patched.imerchantsolutions.apply(params_patch);
+            }
+            ConnectorEnum::Jpmorgan => {
+                patched.jpmorgan.apply(params_patch);
+            }
+            ConnectorEnum::Loonio => {
+                patched.loonio.apply(params_patch);
+            }
+            ConnectorEnum::Mifinity => {
+                patched.mifinity.apply(params_patch);
+            }
+            ConnectorEnum::Mollie => {
+                patched.mollie.apply(params_patch);
+            }
+            ConnectorEnum::Multisafepay => {
+                patched.multisafepay.apply(params_patch);
+            }
+            ConnectorEnum::Nexixpay => {
+                patched.nexixpay.apply(params_patch);
+            }
+            ConnectorEnum::Payload => {
+                patched.payload.apply(params_patch);
+            }
+            ConnectorEnum::Payme => {
+                patched.payme.apply(params_patch);
+            }
+            ConnectorEnum::Placetopay => {
+                patched.placetopay.apply(params_patch);
+            }
+            ConnectorEnum::Powertranz => {
+                patched.powertranz.apply(params_patch);
+            }
+            ConnectorEnum::Revolv3 => {
+                patched.revolv3.apply(params_patch);
+            }
+            ConnectorEnum::Sanlam => {
+                patched.sanlam.apply(params_patch);
+            }
+            ConnectorEnum::Shift4 => {
+                patched.shift4.apply(params_patch);
+            }
+            ConnectorEnum::Silverflow => {
+                patched.silverflow.apply(params_patch);
+            }
+            ConnectorEnum::Stax => {
+                patched.stax.apply(params_patch);
+            }
+            ConnectorEnum::Truelayer => {
+                patched.truelayer.apply(params_patch);
+            }
+            ConnectorEnum::Trustly => {
+                patched.trustly.apply(params_patch);
+            }
+            ConnectorEnum::Trustpayments => {
+                patched.trustpayments.apply(params_patch);
+            }
+            ConnectorEnum::Tsys => {
+                patched.tsys.apply(params_patch);
+            }
+            ConnectorEnum::Wellsfargo => {
+                patched.wellsfargo.apply(params_patch);
+            }
+            ConnectorEnum::Worldpayvantiv => {
+                patched.worldpayvantiv.apply(params_patch);
+            }
+            ConnectorEnum::Worldpayxml => {
+                patched.worldpayxml.apply(params_patch);
+            }
+            ConnectorEnum::Zift => {
+                patched.zift.apply(params_patch);
+            }
+            ConnectorEnum::Gigadat => {
+                patched.gigadat.apply(params_patch);
+            }
             ConnectorEnum::Trustpay => {
                 // TrustPay uses ConnectorParamsWithMoreUrls which has different fields
                 let trustpay_patch = ConnectorParamsWithMoreUrlsPatch {
@@ -568,7 +694,7 @@ impl Connectors {
                     context: IntegrationErrorContext {
                         additional_context: Some(format!(
                             "Connector '{}' is not supported for dynamic URL patching from superposition. \
-                             Supported connectors: stripe, adyen, paypal, braintree, checkout, cybersource, revolut, worldpay, rapyd, fiserv, nexinets, elavon, novalnet, trustpay",
+                             Supported connectors: stripe, adyen, paypal, braintree, checkout, cybersource, revolut, worldpay, rapyd, fiserv, nexinets, elavon, novalnet, trustpay, forte, bambora, bamboraapac, barclaycard, billwerk, bluesnap, calida, cashfree, celero, cryptopay, datatrans, finix, fiservcommercehub, fiservemea, globalpay, helcim, hipay, imerchantsolutions, jpmorgan, loonio, mifinity, mollie, multisafepay, nexixpay, payload, payme, placetopay, powertranz, revolv3, sanlam, shift4, silverflow, stax, truelayer, trustly, trustpayments, tsys, wellsfargo, worldpayvantiv, worldpayxml, zift, gigadat",
                             connector
                         )),
                         ..Default::default()
