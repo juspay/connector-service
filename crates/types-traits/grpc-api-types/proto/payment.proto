@@ -57,7 +57,8 @@ option go_package = "github.com/juspay/connector-service/crates/types-traits/grp
 // All amounts are in minor units (e.g., cents for USD)
 message Money {
   int64 minor_amount = 1; // Amount in minor units (e.g., 1000 = $10.00)
-  Currency currency = 2; // ISO 4217 currency code (e.g., "USD", "EUR")
+  reserved 2;
+  reserved "currency";
 }
 
 // Permissions wraps a repeated string field to allow optional presence
