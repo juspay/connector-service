@@ -678,9 +678,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data
                 .request
                 .connector_mandate_id()
-                .ok_or_else(|| errors::IntegrationError::MissingRequiredField {
+                .ok_or_else(|| {
+                    errors::IntegrationError::MissingRequiredField {
                     field_name: "connector_mandate_id",
-                    context: Default::default(),
+                    context: errors::IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Pass a valid `connector_mandate_id` for recurring or mandate payments."
+                                .to_string(),
+                        ),
+                        doc_url: Some(
+                            "https://imerchantsolutions.com/docs/api#post--payments"
+                                .to_string(),
+                        ),
+                        additional_context: Some(
+                            "Expected connector mandate ID not found".to_string(),
+                        ),
+                    },
+                }
                 })?;
         Ok(Self {
             amount,
