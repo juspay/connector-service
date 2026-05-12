@@ -1699,42 +1699,34 @@ impl<F> TryFrom<ResponseRouterData<ElavonVoidPCResponse, Self>>
         let (attempt_status, error_response) =
             get_elavon_attempt_status(&response.result, http_code);
 
-        // Override the attempt status for a successful void — use VoidPostCaptureInitiated
-        let final_status = match &response.result {
-            ElavonResult::Success(_) => HyperswitchAttemptStatus::VoidPostCaptureInitiated,
-            _ => attempt_status,
-        };
-
-        let response_data = match (&response.result, error_response) {
-            (ElavonResult::Success(payment_resp_struct), None) => {
-                Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: DomainResponseId::ConnectorTransactionId(
-                        payment_resp_struct.ssl_txn_id.clone(),
-                    ),
-                    redirection_data: None,
-                    connector_metadata: None,
-                    network_txn_id: payment_resp_struct.ssl_approval_code.clone(),
-                    connector_response_reference_id: None,
-                    incremental_authorization_allowed: None,
-                    mandate_reference: None,
+        let (final_status, response_data) = match (&response.result, error_response) {
+            (ElavonResult::Success(payment_resp_struct), None) => (
+                HyperswitchAttemptStatus::VoidedPostCapture,
+                Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                    post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+                    connector_reference_id: payment_resp_struct.ssl_approval_code.clone(),
+                    description: None,
                     status_code: http_code,
-                })
-            }
-            (_, Some(err_resp)) => Err(err_resp),
-            (ElavonResult::Error(error_payload), None) => Err(ErrorResponse {
-                status_code: http_code,
-                code: error_payload
-                    .error_code
-                    .clone()
-                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-                message: error_payload.error_message.clone(),
-                reason: error_payload.error_name.clone(),
-                attempt_status: Some(HyperswitchAttemptStatus::Failure),
-                connector_transaction_id: error_payload.ssl_txn_id.clone(),
-                network_decline_code: None,
-                network_advice_code: None,
-                network_error_message: None,
-            }),
+                }),
+            ),
+            (_, Some(err_resp)) => (attempt_status, Err(err_resp)),
+            (ElavonResult::Error(error_payload), None) => (
+                attempt_status,
+                Err(ErrorResponse {
+                    status_code: http_code,
+                    code: error_payload
+                        .error_code
+                        .clone()
+                        .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                    message: error_payload.error_message.clone(),
+                    reason: error_payload.error_name.clone(),
+                    attempt_status: Some(HyperswitchAttemptStatus::Failure),
+                    connector_transaction_id: error_payload.ssl_txn_id.clone(),
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+            ),
         };
 
         Ok(Self {
