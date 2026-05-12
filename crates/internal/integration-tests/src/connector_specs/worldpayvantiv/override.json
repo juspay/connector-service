@@ -41,13 +41,6 @@
           "minor_amount": 120,
           "currency": "USD"
         }
-      },
-      "assert": {
-        "status": {
-          "one_of": ["FAILURE", "AUTHORIZATION_FAILED", "ROUTER_DECLINED", "UNRESOLVED", "PENDING"]
-        },
-        "error": null,
-        "error.connector_details.message": null
       }
     },
     "no3ds_auto_capture_ideal": {
