@@ -1568,6 +1568,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     NexinetsClientAuthenticationResponse nexinets = 24;
     NexixpayClientAuthenticationResponse nexixpay = 25;
     RevolutClientAuthenticationResponse revolut = 26;
+    BarclaycardClientAuthenticationResponse barclaycard = 27;
   }
 }
 
@@ -1701,6 +1702,11 @@ message NexinetsClientAuthenticationResponse {
 message NexixpayClientAuthenticationResponse {
   SecretString security_token = 1;
   string hosted_page = 2;
+}
+
+// Barclaycard SDK initialization data — capture_context JWT for Flex Microform SDK
+message BarclaycardClientAuthenticationResponse {
+  SecretString capture_context = 1;
 }
 
 // Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization

@@ -11256,6 +11256,17 @@ ConnectorSpecificClientAuthenticationResponse::Cybersource(cybersource_data) => 
                 ),
             }
         }
+                ConnectorSpecificClientAuthenticationResponse::Barclaycard(barclaycard_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Barclaycard(
+                        grpc_api_types::payments::BarclaycardClientAuthenticationResponse {
+                            capture_context: Some(barclaycard_data.capture_context),
+                        },
+                    ),
+                ),
+            }
+        }
                 ConnectorSpecificClientAuthenticationResponse::Revolut(revolut_data) => {
             grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
                 connector: Some(

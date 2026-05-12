@@ -2,12 +2,17 @@ use std::fmt::Debug;
 
 use common_utils::types::StringMajorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, RepeatPayment,
+        SetupMandate, Void,
+    },
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        BarclaycardClientAuthenticationResponse as BarclaycardClientAuthenticationResponseDomain,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, MandateReference, MandateReferenceId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -945,6 +950,88 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRsyncResponse, Self>>
     }
 }
 
+// ---- ClientAuthenticationToken flow types ----
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BarclaycardRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for requests::BarclaycardClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: BarclaycardRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        // Barclaycard's Flex Microform requires a target_origins value derived
+        // from the merchant's return_url so the SDK can be loaded into that origin.
+        // Both the return_url itself and a parseable origin are mandatory; we
+        // surface a clear error rather than substitute a placeholder host.
+        let return_url = router_data
+            .resource_common_data
+            .return_url
+            .as_deref()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: Default::default(),
+            })?;
+
+        let parsed_url =
+            url::Url::parse(return_url).map_err(|_| IntegrationError::InvalidDataFormat {
+                field_name: "return_url",
+                context: Default::default(),
+            })?;
+        let host = parsed_url
+            .host_str()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "return_url.host",
+                context: Default::default(),
+            })?;
+        let target_origin = format!("{}://{}", parsed_url.scheme(), host);
+
+        Ok(Self {
+            target_origins: vec![target_origin],
+            client_version: "0.11".to_string(),
+            allowed_card_networks: Some(vec![
+                "VISA".to_string(),
+                "MASTERCARD".to_string(),
+                "AMEX".to_string(),
+                "DISCOVER".to_string(),
+            ]),
+            // Empty objects under `paymentInformation.card.{number,securityCode}` are
+            // not placeholders — Barclaycard's Flex v2 contract uses an empty object
+            // to *declare* a tokenizable field. The SDK then collects the actual
+            // value client-side from a hosted Microform iframe; the server never
+            // sees raw PAN/CVV. Adding any value here would be rejected.
+            fields: serde_json::json!({
+                "paymentInformation": {
+                    "card": {
+                        "number": {},
+                        "securityCode": {}
+                    }
+                }
+            }),
+        })
+    }
+}
+
 // --- SetupMandate (Zero-dollar auth for TMS token creation) transformers ---
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -1056,6 +1143,39 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_information,
             order_information,
             client_reference_information,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<responses::BarclaycardClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<responses::BarclaycardClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let capture_context = Secret::new(response.capture_context);
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Barclaycard(
+                BarclaycardClientAuthenticationResponseDomain { capture_context },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
         })
     }
 }

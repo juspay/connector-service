@@ -225,6 +225,45 @@ pub struct AuthenticationErrorInformation {
     pub rmsg: String,
 }
 
+/// Barclaycard Flex session response — the capture context JWT for SDK initialization.
+///
+/// The Flex v2 `/flex/v2/sessions` endpoint returns either:
+///   - a raw JWT string body (Content-Type: application/jwt), or
+///   - a JSON object of the form `{ "keyId": "<jwt>", ... }`.
+///
+/// We model both shapes with an untagged enum and project the JWT into a single
+/// `capture_context` field. If neither shape matches (e.g., a JSON object without
+/// `keyId`), serde surfaces the error instead of silently producing an empty string.
+#[derive(Debug, Serialize)]
+pub struct BarclaycardClientAuthResponse {
+    pub capture_context: String,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum BarclaycardClientAuthWire {
+    /// Raw JWT body returned with `Content-Type: application/jwt`.
+    Jwt(String),
+    /// JSON object form: `{ "keyId": "<jwt>", ... }`.
+    Object {
+        #[serde(rename = "keyId")]
+        key_id: String,
+    },
+}
+
+impl<'de> Deserialize<'de> for BarclaycardClientAuthResponse {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let capture_context = match BarclaycardClientAuthWire::deserialize(deserializer)? {
+            BarclaycardClientAuthWire::Jwt(jwt) => jwt,
+            BarclaycardClientAuthWire::Object { key_id } => key_id,
+        };
+        Ok(Self { capture_context })
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum BarclaycardErrorResponse {
