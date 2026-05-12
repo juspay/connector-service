@@ -1355,6 +1355,7 @@ macro_rules! expand_payout_implementation {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     "payout_create",
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -1386,6 +1387,7 @@ macro_rules! expand_payout_implementation {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     "payout_transfer",
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -1417,6 +1419,7 @@ macro_rules! expand_payout_implementation {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     "payout_get",
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -1448,6 +1451,7 @@ macro_rules! expand_payout_implementation {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     "payout_void",
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -1479,6 +1483,7 @@ macro_rules! expand_payout_implementation {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     "payout_stage",
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -1510,6 +1515,7 @@ macro_rules! expand_payout_implementation {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     "payout_create_link",
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -1541,6 +1547,7 @@ macro_rules! expand_payout_implementation {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     "payout_create_recipient",
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -1572,6 +1579,7 @@ macro_rules! expand_payout_implementation {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     "payout_enroll_disburse_account",
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -2005,6 +2013,7 @@ macro_rules! flow_status_emit {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
                     ::interfaces::api::ConnectorCommon::id(self),
                     $name,
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }
@@ -2031,6 +2040,7 @@ macro_rules! flow_status_emit {
                 Err(::domain_types::errors::IntegrationError::connector_flow_not_supported(
                     ::interfaces::api::ConnectorCommon::id(self),
                     $name,
+                    ::domain_types::errors::IntegrationErrorContext::default(),
                 ).into())
             }
         }

@@ -53,6 +53,7 @@ macro_rules! default_impl_verify_webhook_source_v2 {
                     Err(::domain_types::errors::IntegrationError::connector_flow_not_supported(
                         ::interfaces::api::ConnectorCommon::id(self),
                         "verify_webhook_source",
+                        ::domain_types::errors::IntegrationErrorContext::default(),
                     ).into())
                 }
 

@@ -6,7 +6,7 @@ use common_utils::{
     CustomResult,
 };
 use domain_types::{
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
 };
@@ -97,6 +97,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         Err(IntegrationError::connector_flow_not_implemented(
             self.id(),
             std::any::type_name::<Flow>(),
+            IntegrationErrorContext::default(),
         )
         .into())
     }
@@ -117,6 +118,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         Err(IntegrationError::connector_flow_not_implemented(
             self.id(),
             std::any::type_name::<Flow>(),
+            IntegrationErrorContext::default(),
         )
         .into())
     }

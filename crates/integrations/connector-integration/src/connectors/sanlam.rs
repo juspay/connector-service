@@ -11,7 +11,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
-    errors::IntegrationError,
+    errors::{IntegrationError, IntegrationErrorContext},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -137,7 +137,12 @@ macros::macro_connector_implementation!(
             &self,
             _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
-            Err(IntegrationError::connector_flow_not_supported(self.id(), "authorize").into())
+            Err(IntegrationError::connector_flow_not_supported(
+                self.id(),
+                "authorize",
+                IntegrationErrorContext::default(),
+            )
+            .into())
         }
 
         fn get_kafka_topic(

@@ -243,14 +243,9 @@ impl IntegrationError {
         }
     }
 
-    /// Connector feature not implemented; uses default empty [`IntegrationErrorContext`].
-    pub fn not_implemented(message: impl Into<String>) -> Self {
-        Self::not_implemented_with_context(message, IntegrationErrorContext::default())
-    }
-
-    /// Like [`Self::not_implemented`], but allows connector-specific [`IntegrationErrorContext`]
-    /// (merged with central defaults in `ucs_env`).
-    pub fn not_implemented_with_context(
+    /// Connector feature not implemented. Pass `IntegrationErrorContext::default()`
+    /// when no connector-specific guidance is needed.
+    pub fn not_implemented(
         message: impl Into<String>,
         context: IntegrationErrorContext,
     ) -> Self {
@@ -261,39 +256,16 @@ impl IntegrationError {
     pub fn connector_flow_not_implemented(
         connector: impl Into<String>,
         flow: impl Into<String>,
-    ) -> Self {
-        Self::connector_flow_not_implemented_with_context(
-            connector,
-            flow,
-            IntegrationErrorContext::default(),
-        )
-    }
-
-    /// Like [`Self::connector_flow_not_implemented`], but allows connector-specific context.
-    pub fn connector_flow_not_implemented_with_context(
-        connector: impl Into<String>,
-        flow: impl Into<String>,
         context: IntegrationErrorContext,
     ) -> Self {
-        let connector = connector.into();
-        let flow = flow.into();
-        Self::not_implemented_with_context(format!("{flow} flow for {connector}"), context)
-    }
-
-    /// Connector flow not supported; uses default empty [`IntegrationErrorContext`].
-    pub fn connector_flow_not_supported(
-        connector: impl Into<String>,
-        flow: impl Into<String>,
-    ) -> Self {
-        Self::connector_flow_not_supported_with_context(
-            connector,
-            flow,
-            IntegrationErrorContext::default(),
+        Self::not_implemented(
+            format!("{} flow for {}", flow.into(), connector.into()),
+            context,
         )
     }
 
-    /// Like [`Self::connector_flow_not_supported`], but allows connector-specific context.
-    pub fn connector_flow_not_supported_with_context(
+    /// Connector flow not supported.
+    pub fn connector_flow_not_supported(
         connector: impl Into<String>,
         flow: impl Into<String>,
         context: IntegrationErrorContext,
@@ -305,20 +277,8 @@ impl IntegrationError {
         }
     }
 
-    /// Connector feature not supported; uses default empty [`IntegrationErrorContext`].
+    /// Connector feature not supported.
     pub fn connector_feature_not_supported(
-        connector: &'static str,
-        message: impl Into<String>,
-    ) -> Self {
-        Self::connector_feature_not_supported_with_context(
-            connector,
-            message,
-            IntegrationErrorContext::default(),
-        )
-    }
-
-    /// Like [`Self::connector_feature_not_supported`], but allows connector-specific context.
-    pub fn connector_feature_not_supported_with_context(
         connector: &'static str,
         message: impl Into<String>,
         context: IntegrationErrorContext,
