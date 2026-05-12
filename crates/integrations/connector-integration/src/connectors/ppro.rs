@@ -10,13 +10,14 @@ use common_utils::{
     ext_traits::ByteSliceExt,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        ConnectorSpecifications, ConnectorWebhookSecrets, EventContext, EventType, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
-        SetupMandateRequestData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        ClientAuthenticationTokenRequestData, ConnectorSpecifications, ConnectorWebhookSecrets,
+        EventContext, EventType, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RedirectDetailsResponse,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, ResponseId, SetupMandateRequestData, SupportedPaymentMethodsExt,
+        WebhookDetailsResponse,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -200,6 +201,41 @@ macros::macro_connector_implementation!(
                 self.base_url(&req.resource_common_data.connectors),
                 agr_id
             ))
+        }
+    }
+);
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ClientAuthentication for Ppro<T>
+{
+}
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Ppro,
+    curl_request: Json(PproClientAuthRequest),
+    curl_response: PproClientAuthResponse,
+    flow_name: ClientAuthenticationToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: ClientAuthenticationTokenRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, IntegrationError> {
+            let mut header = self.get_auth_header(&req.connector_config)?;
+            header.push((headers::CONTENT_TYPE.to_string(), self.common_get_content_type().to_string().into()));
+            Ok(header)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(format!("{}/v1/sessions", self.base_url(&req.resource_common_data.connectors)))
         }
     }
 );
@@ -625,6 +661,12 @@ macros::create_all_prerequisites!(
             request_body: PproAgreementChargeRequest,
             response_body: PproPaymentsResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: PproClientAuthRequest,
+            response_body: PproClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -984,7 +1026,6 @@ macros::macro_connector_flow_status_impls!(
     not_implemented: [
         CreateOrder,
         ServerSessionAuthenticationToken,
-        ClientAuthenticationToken,
         ServerAuthenticationToken,
         PaymentMethodToken,
         MandateRevoke,

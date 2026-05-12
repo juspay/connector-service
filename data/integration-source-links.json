@@ -65,5 +65,16 @@
     "https://developer.peachpayments.com/docs/dashboard-response-codes",
     "https://developer.peachpayments.com/docs/reference-webhooks",
     "https://peachpayments.docs.oppwa.com/reference/parameters"
+  ],
+  "Ppro": [
+    "https://developerhub.ppro.com/global-api/docs/welcome",
+    "https://developerhub.ppro.com/global-api/docs/get-started",
+    "https://developerhub.ppro.com/global-api/reference/api-authentication",
+    "https://developerhub.ppro.com/global-api/docs/payment-authentication",
+    "https://developerhub.ppro.com/global-api/reference/create-session",
+    "https://developerhub.ppro.com/global-api/docs/drop-in-checkout",
+    "https://developerhub.ppro.com/global-api/docs/quickstart-drop-in-checkout",
+    "https://developerhub.ppro.com/global-api/docs/webhooks",
+    "https://developerhub.ppro.com/global-api/docs/quickstart-card-payments"
   ]
 }

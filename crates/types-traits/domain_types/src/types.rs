@@ -11268,6 +11268,17 @@ ConnectorSpecificClientAuthenticationResponse::Cybersource(cybersource_data) => 
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Ppro(ppro_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Ppro(
+                        grpc_api_types::payments::PproClientAuthenticationResponse {
+                            session_id: Some(ppro_data.session_id),
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(
