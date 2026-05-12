@@ -185,7 +185,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let signature = request
             .headers
             .get("x-signature")
-            .ok_or_else(|| WebhookError::WebhookSignatureNotFound)
+            .ok_or(WebhookError::WebhookSignatureNotFound)
             .attach_printable("Missing incoming webhook signature for Sanlam")?;
 
         hex::decode(signature).change_context(WebhookError::WebhookSourceVerificationFailed)
