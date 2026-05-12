@@ -6,7 +6,7 @@
 // Run a scenario:  npx tsx cybersource.ts checkout_autocapture
 
 import { PaymentClient, PaymentMethodAuthenticationClient, RecurringPaymentClient, RefundClient, types } from 'hyperswitch-prism';
-const { Environment, AuthenticationType, CaptureMethod, Currency, PaymentMethodType } = types;
+const { Environment, AuthenticationType, CaptureMethod, CardNetwork, Currency, PaymentMethodType } = types;
 export const SUPPORTED_FLOWS = ["authenticate", "authorize", "capture", "get", "incremental_authorization", "post_authenticate", "pre_authenticate", "proxy_authorize", "recurring_charge", "recurring_revoke", "refund", "refund_get", "token_authorize", "void"];
 
 const _defaultConfig: types.IConnectorConfig = {
@@ -184,7 +184,8 @@ function _buildProxyAuthorizeRequest(): types.IPaymentServiceProxyAuthorizeReque
             "cardExpMonth": {"value": "03"},
             "cardExpYear": {"value": "2030"},
             "cardCvc": {"value": "123"},
-            "cardHolderName": {"value": "John Doe"}  // Cardholder Information.
+            "cardHolderName": {"value": "John Doe"},  // Cardholder Information.
+            "cardNetwork": CardNetwork.VISA
         },
         "customer": {
             "email": {"value": "test@example.com"}  // Customer's email address.

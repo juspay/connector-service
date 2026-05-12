@@ -2390,7 +2390,8 @@
             "card_exp_month": "03",
             "card_exp_year": "2030",
             "card_cvc": "123",
-            "card_holder_name": "John Doe"
+            "card_holder_name": "John Doe",
+            "card_network": "VISA"
           },
           "address": {
             "billing_address": {}
@@ -2420,7 +2421,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"123\"},\"reference\":\"probe_proxy_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"{{$card_number}}\",\"expiryMonth\":\"{{$card_exp_month}}\",\"expiryYear\":\"{{$card_exp_year}}\",\"cvc\":\"{{$card_cvc}}\"},\"reference\":\"probe_proxy_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
         }
       }
     },
@@ -2438,7 +2439,8 @@
             "card_exp_month": "03",
             "card_exp_year": "2030",
             "card_cvc": "123",
-            "card_holder_name": "John Doe"
+            "card_holder_name": "John Doe",
+            "card_network": "VISA"
           },
           "customer": {
             "connector_customer_id": "probe_customer_001"
@@ -2475,7 +2477,7 @@
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":0},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"123\"},\"reference\":\"probe_proxy_mandate_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"recurringProcessingModel\":\"UnscheduledCardOnFile\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperReference\":\"probe_customer_001\",\"storePaymentMethod\":true,\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":0},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"{{$card_number}}\",\"expiryMonth\":\"{{$card_exp_month}}\",\"expiryYear\":\"{{$card_exp_year}}\",\"cvc\":\"{{$card_cvc}}\"},\"reference\":\"probe_proxy_mandate_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"recurringProcessingModel\":\"UnscheduledCardOnFile\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperReference\":\"probe_customer_001\",\"storePaymentMethod\":true,\"shopperName\":{},\"shopperIP\":\"1.2.3.4\"}"
         }
       }
     },
