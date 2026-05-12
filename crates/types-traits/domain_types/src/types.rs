@@ -5598,6 +5598,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             all_keys_required: None, // Field not available in new proto structure
             split_payments: None,
             setup_future_usage,
+            integrity_check_gateway_txn_id: None,
+            integrity_check_amount: None,
+            integrity_check_currency: None,
         })
     }
 }
@@ -6146,6 +6149,27 @@ pub fn generate_payment_sync_response(
                     })
                     .transpose()?;
 
+                let has_amount = amount
+                    .as_ref()
+                    .map(|m| m.minor_amount != 0)
+                    .unwrap_or(false);
+                let has_currency = amount.as_ref().map(|m| m.currency != 0).unwrap_or(false);
+
+                // Gate flags by connector capability: suppress checks for fields the
+                // connector never sends in PSync (e.g. Revolut omits amount/currency).
+                let cap_txn_id = router_data_v2
+                    .request
+                    .integrity_check_gateway_txn_id
+                    .unwrap_or(true);
+                let cap_amount = router_data_v2
+                    .request
+                    .integrity_check_amount
+                    .unwrap_or(true);
+                let cap_currency = router_data_v2
+                    .request
+                    .integrity_check_currency
+                    .unwrap_or(true);
+
                 Ok(PaymentServiceGetResponse {
                     connector_transaction_id: extract_connector_request_reference_id(
                         &grpc_resource_id,
@@ -6182,6 +6206,9 @@ pub fn generate_payment_sync_response(
                     connector_response,
                     incremental_authorization_allowed,
                     payment_method_update: None,
+                    integrity_check_gateway_txn_id: Some(grpc_resource_id.is_some() && cap_txn_id),
+                    integrity_check_amount: Some(has_amount && cap_amount),
+                    integrity_check_currency: Some(has_currency && cap_currency),
                 })
             }
             PaymentsResponseData::MultipleCaptureResponse {
@@ -6241,6 +6268,26 @@ pub fn generate_payment_sync_response(
                     })
                     .transpose()?;
 
+                let has_resource_id = resource_id.is_some();
+                let has_amount = amount
+                    .as_ref()
+                    .map(|m| m.minor_amount != 0)
+                    .unwrap_or(false);
+                let has_currency = amount.as_ref().map(|m| m.currency != 0).unwrap_or(false);
+
+                let cap_txn_id = router_data_v2
+                    .request
+                    .integrity_check_gateway_txn_id
+                    .unwrap_or(true);
+                let cap_amount = router_data_v2
+                    .request
+                    .integrity_check_amount
+                    .unwrap_or(true);
+                let cap_currency = router_data_v2
+                    .request
+                    .integrity_check_currency
+                    .unwrap_or(true);
+
                 Ok(PaymentServiceGetResponse {
                     connector_transaction_id: resource_id.unwrap_or_default(),
                     merchant_transaction_id: connector_response_reference_id,
@@ -6273,6 +6320,9 @@ pub fn generate_payment_sync_response(
                     connector_response,
                     incremental_authorization_allowed: None,
                     payment_method_update: None,
+                    integrity_check_gateway_txn_id: Some(has_resource_id && cap_txn_id),
+                    integrity_check_amount: Some(has_amount && cap_amount),
+                    integrity_check_currency: Some(has_currency && cap_currency),
                 })
             }
             _ => Err(report!(ConnectorError::UnexpectedResponseError {
@@ -6363,6 +6413,9 @@ pub fn generate_payment_sync_response(
                 redirection_data: None,
                 incremental_authorization_allowed: None,
                 payment_method_update: None,
+                integrity_check_gateway_txn_id: None,
+                integrity_check_amount: None,
+                integrity_check_currency: None,
             })
         }
     }
@@ -7076,6 +7129,10 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
     fn foreign_try_from(
         value: WebhookDetailsResponse,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let check_gtw_txn_id = value.integrity_check_gateway_txn_id.unwrap_or(true);
+        let check_amount = value.integrity_check_amount.unwrap_or(true);
+        let check_currency = value.integrity_check_currency.unwrap_or(true);
+
         let status = grpc_api_types::payments::PaymentStatus::foreign_from(value.status);
         let response_headers = value
             .response_headers
@@ -7128,13 +7185,19 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             }
         });
         Ok(Self {
-            connector_transaction_id: extract_connector_request_reference_id(
-                &value
-                    .resource_id
-                    .map(Option::foreign_try_from)
-                    .transpose()?
-                    .unwrap_or_default(),
-            ),
+            connector_transaction_id: {
+                if check_gtw_txn_id {
+                    extract_connector_request_reference_id(
+                        &value
+                            .resource_id
+                            .map(Option::foreign_try_from)
+                            .transpose()?
+                            .unwrap_or_default(),
+                    )
+                } else {
+                    String::new()
+                }
+            },
             merchant_transaction_id: value.connector_response_reference_id,
             status: status as i32,
             mandate_reference: mandate_reference_grpc,
@@ -7149,10 +7212,39 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                 issuer_details: None,
             }),
             network_transaction_id: value.network_txn_id,
-            amount: None,
-            captured_amount: value
+            // Carry the webhook amount + currency as a Money value so that
+            // downstream (euler-api-txns IntegrityService) can perform the
+            // per-dimension comparison using `whResp.amount`.
+            amount: value
                 .minor_amount_captured
-                .map(|amount_captured| amount_captured.get_amount_as_i64()),
+                .zip(value.currency)
+                .map(|(amt, curr)| {
+                    grpc_api_types::payments::Currency::foreign_try_from(curr).map(|currency| {
+                        grpc_api_types::payments::Money {
+                            minor_amount: amt.get_amount_as_i64(),
+                            currency: currency as i32,
+                        }
+                    })
+                })
+                .transpose()
+                .change_context(ConnectorError::ResponseDeserializationFailed {
+                    context: ResponseTransformationErrorContext {
+                        http_status_code: None,
+                        additional_context: Some(
+                            "Failed to convert currency for webhook amount".to_owned(),
+                        ),
+                    },
+                })?,
+            captured_amount: {
+                // Suppress when amount flag is false (same guard as above).
+                if check_amount {
+                    value
+                        .minor_amount_captured
+                        .map(|amount_captured| amount_captured.get_amount_as_i64())
+                } else {
+                    None
+                }
+            },
             payment_method_type: None,
             capture_method: None,
             auth_type: None,
@@ -7174,6 +7266,11 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             redirection_data: None,
             incremental_authorization_allowed: None,
             payment_method_update: payment_method_update_grpc,
+            // Emit the flags explicitly so euler-api-txns can configure
+            // per-dimension skip in IntegrityService.handleWebhookFlow.
+            integrity_check_gateway_txn_id: Some(check_gtw_txn_id),
+            integrity_check_amount: Some(check_amount),
+            integrity_check_currency: Some(check_currency),
         })
     }
 }

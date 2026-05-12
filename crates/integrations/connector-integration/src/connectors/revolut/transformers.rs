@@ -17,7 +17,7 @@ use domain_types::{
 };
 
 use crate::types::ResponseRouterData;
-use common_enums::AttemptStatus;
+use common_enums::{AttemptStatus, Currency};
 use common_utils::{
     custom_serde,
     types::{MinorUnit, Money},
@@ -36,7 +36,7 @@ pub struct RevolutAuthType {
 #[derive(Debug, Serialize)]
 pub struct RevolutOrderCreateRequest {
     pub amount: MinorUnit,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub settlement_currency: Option<String>,
     pub description: Option<String>,
     pub customer: Option<RevolutCustomer>,
@@ -169,7 +169,7 @@ pub enum RevolutErrorResponse {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RevolutOrderCreateResponse {
     pub id: String,
-    pub token: Secret<String>,
+    pub token: Option<Secret<String>>,
     pub r#type: RevolutOrderType,
     pub state: RevolutOrderState,
     #[serde(with = "custom_serde::iso8601")]
@@ -182,7 +182,7 @@ pub struct RevolutOrderCreateResponse {
     pub amount: MinorUnit,
     pub outstanding_amount: Option<MinorUnit>,
     pub refunded_amount: Option<MinorUnit>,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub settlement_currency: Option<String>,
     pub customer: Option<RevolutCustomer>,
     pub payments: Option<Vec<RevolutPayment>>,
@@ -242,7 +242,7 @@ pub struct RevolutPayment {
     pub updated_at: PrimitiveDateTime,
     pub token: Option<String>,
     pub amount: MinorUnit,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub settled_amount: Option<MinorUnit>,
     pub settled_currency: Option<String>,
     pub payment_method: Option<RevolutPaymentMethod>,
@@ -337,7 +337,7 @@ pub enum RevolutRiskLevel {
 pub struct RevolutFee {
     pub r#type: RevolutFeeType,
     pub amount: MinorUnit,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -768,7 +768,7 @@ pub struct RevolutRefundResponse {
     pub amount: MinorUnit,
     pub outstanding_amount: Option<MinorUnit>,
     pub refunded_amount: Option<MinorUnit>,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub settlement_currency: Option<String>,
     pub customer: Option<RevolutCustomer>,
     pub payments: Option<Vec<RevolutPayment>>,
@@ -789,7 +789,7 @@ pub struct RevolutRefundResponse {
 #[derive(Debug, Serialize)]
 pub struct RevolutRefundRequest {
     pub amount: MinorUnit,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub merchant_order_data: Option<RevolutMerchantOrderData>,
     pub metadata: Option<Secret<serde_json::Value>>,
     pub description: Option<String>,
@@ -1027,8 +1027,12 @@ impl TryFrom<RevolutWebhookBody> for WebhookDetailsResponse {
             response_headers: None,
             minor_amount_captured: None,
             amount_captured: None,
+            currency: None,
             network_txn_id: None,
             payment_method_update: None,
+            integrity_check_gateway_txn_id: None,
+            integrity_check_amount: None,
+            integrity_check_currency: None,
         })
     }
 }

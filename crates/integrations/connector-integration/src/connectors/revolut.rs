@@ -51,6 +51,7 @@ use interfaces::{
     connector_types,
     decode::BodyDecoding,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
+    webhooks::IncomingWebhook,
 };
 use serde::Serialize;
 use transformers as revolut;
@@ -321,10 +322,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let signature =
-            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+            connector_types::IncomingWebhook::get_webhook_source_verification_signature(
+                self,
+                &request,
+                &connector_webhook_secrets,
+            )?;
 
-        let message =
-            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+        let message = connector_types::IncomingWebhook::get_webhook_source_verification_message(
+            self,
+            &request,
+            &connector_webhook_secrets,
+        )?;
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
@@ -388,6 +396,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
+    }
+
+    fn get_webhook_integrity_check_gateway_txn_id(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        webhook_details
+            .connector_response_reference_id
+            .as_deref()
+            .is_some_and(|s| !s.is_empty())
+    }
+
+    fn get_webhook_integrity_check_amount(
+        &self,
+        _webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        false
+    }
+
+    fn get_webhook_integrity_check_currency(
+        &self,
+        _webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        false
+    }
+
+    fn configure_psync_integrity_checks(&self, data: &mut PaymentsSyncData) {
+        data.integrity_check_gateway_txn_id = Some(true);
+        data.integrity_check_amount = Some(false);
+        data.integrity_check_currency = Some(false);
     }
 }
 

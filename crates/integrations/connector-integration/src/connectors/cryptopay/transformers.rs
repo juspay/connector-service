@@ -442,8 +442,12 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                 response_headers: None,
                 minor_amount_captured: None,
                 amount_captured: None,
+                currency: None,
                 network_txn_id: None,
                 payment_method_update: None,
+                integrity_check_gateway_txn_id: None,
+                integrity_check_amount: None,
+                integrity_check_currency: None,
             })
         } else {
             let amount_captured_in_minor_units =
@@ -478,8 +482,12 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                         error_message: None,
                         raw_connector_response: None,
                         response_headers: None,
+                        currency: None,
                         network_txn_id: None,
                         payment_method_update: None,
+                        integrity_check_gateway_txn_id: None,
+                        integrity_check_amount: None,
+                        integrity_check_currency: None,
                     })
                 }
                 _ => Ok(Self {
@@ -494,9 +502,13 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                     response_headers: None,
                     minor_amount_captured: None,
                     amount_captured: None,
+                    currency: None,
                     error_reason: None,
                     network_txn_id: None,
                     payment_method_update: None,
+                    integrity_check_gateway_txn_id: None,
+                    integrity_check_amount: None,
+                    integrity_check_currency: None,
                 }),
             }
         }

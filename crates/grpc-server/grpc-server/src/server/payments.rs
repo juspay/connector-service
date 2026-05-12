@@ -960,8 +960,9 @@ impl PaymentService for Payments {
                     > = connector_data.connector.get_connector_integration_v2();
 
                     // Create connector request data
-                    let payments_sync_data =
+                    let mut payments_sync_data =
                         PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
+                    connector_data.connector.configure_psync_integrity_checks(&mut payments_sync_data);
 
                     let connectors = utils::get_resolved_connectors(
                         &config,

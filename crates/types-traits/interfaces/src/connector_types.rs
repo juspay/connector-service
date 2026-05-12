@@ -16,7 +16,7 @@ use domain_types::{
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
         RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
         ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
@@ -379,6 +379,36 @@ pub trait IncomingWebhook {
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<WebhookError>> {
         Ok(false)
+    }
+
+    /// Whether the connector includes a gateway transaction id in its payment webhook.
+    fn get_webhook_integrity_check_gateway_txn_id(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        matches!(
+            &webhook_details.resource_id,
+            Some(ResponseId::ConnectorTransactionId(id)) if !id.is_empty()
+        )
+    }
+
+    /// Whether the connector includes a captured amount in its payment webhook.
+    fn get_webhook_integrity_check_amount(&self, webhook_details: &WebhookDetailsResponse) -> bool {
+        webhook_details.minor_amount_captured.is_some()
+    }
+
+    /// Whether the connector includes a currency in its payment webhook.
+    fn get_webhook_integrity_check_currency(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        webhook_details.currency.is_some()
+    }
+
+    fn configure_psync_integrity_checks(&self, data: &mut PaymentsSyncData) {
+        data.integrity_check_gateway_txn_id = Some(true);
+        data.integrity_check_amount = Some(true);
+        data.integrity_check_currency = Some(true);
     }
 
     /// fn get_webhook_source_verification_signature

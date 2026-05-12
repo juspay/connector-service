@@ -1,5 +1,5 @@
 use common_utils::{crypto, ext_traits::ValueExt, CustomResult};
-use domain_types::connector_types::ConnectorWebhookSecrets;
+use domain_types::connector_types::{ConnectorWebhookSecrets, ResponseId, WebhookDetailsResponse};
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -258,6 +258,27 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         domain_types::errors::WebhookError,
     > {
         Ok(None)
+    }
+
+    fn get_webhook_integrity_check_gateway_txn_id(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        matches!(
+            &webhook_details.resource_id,
+            Some(ResponseId::ConnectorTransactionId(id)) if !id.is_empty()
+        )
+    }
+
+    fn get_webhook_integrity_check_amount(&self, webhook_details: &WebhookDetailsResponse) -> bool {
+        webhook_details.minor_amount_captured.is_some()
+    }
+
+    fn get_webhook_integrity_check_currency(
+        &self,
+        webhook_details: &WebhookDetailsResponse,
+    ) -> bool {
+        webhook_details.currency.is_some()
     }
 }
 

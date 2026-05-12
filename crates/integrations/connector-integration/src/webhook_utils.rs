@@ -122,7 +122,7 @@ pub fn get_payments_webhook_content<
     connector_config: Option<ConnectorSpecificConfig>,
     event_context: Option<EventContext>,
 ) -> error_stack::Result<EventContent, WebhookError> {
-    let webhook_details = connector_data
+    let mut webhook_details = connector_data
         .connector
         .process_payment_webhook(
             request_details.clone(),
@@ -131,6 +131,22 @@ pub fn get_payments_webhook_content<
             event_context,
         )
         .attach_printable("Failed to process payment webhook from connector")?;
+
+    webhook_details.integrity_check_gateway_txn_id = Some(
+        connector_data
+            .connector
+            .get_webhook_integrity_check_gateway_txn_id(&webhook_details),
+    );
+    webhook_details.integrity_check_amount = Some(
+        connector_data
+            .connector
+            .get_webhook_integrity_check_amount(&webhook_details),
+    );
+    webhook_details.integrity_check_currency = Some(
+        connector_data
+            .connector
+            .get_webhook_integrity_check_currency(&webhook_details),
+    );
 
     let response = PaymentServiceGetResponse::foreign_try_from(webhook_details)
         .change_context(WebhookError::WebhookProcessingFailed)?;
