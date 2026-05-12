@@ -731,7 +731,42 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
-        let response = build_payments_response_result(&item.response, item.http_code, status)?;
+
+        let response = if is_payment_failure(status) {
+            Err(ErrorResponse {
+                attempt_status: Some(status),
+                code: item.response.response_code.clone(),
+                message: item
+                    .response
+                    .response_message
+                    .clone()
+                    .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+                reason: item.response.response_message.clone(),
+                status_code: item.http_code,
+                connector_transaction_id: Some(item.response.transaction_id.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        } else {
+            let post_capture_void_status =
+                match item.response.transaction_state {
+                    responses::JpmorganTransactionState::Voided => {
+                        common_enums::PostCaptureVoidStatus::Succeeded
+                    }
+                    responses::JpmorganTransactionState::Pending => {
+                        common_enums::PostCaptureVoidStatus::Pending
+                    }
+                    _ => common_enums::PostCaptureVoidStatus::Succeeded,
+                };
+
+            Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status,
+                connector_reference_id: Some(item.response.transaction_id.clone()),
+                description: None,
+                status_code: item.http_code,
+            })
+        };
 
         Ok(Self {
             response,
