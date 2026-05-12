@@ -598,17 +598,50 @@ impl Proxy {
 }
 
 /// Top-level proxy configuration. Named proxy entries live under `proxies`.
-/// Selection at runtime: `shadow_mode=true` → `proxies["shadow"]`, else `proxies["primary"]`.
-#[derive(
-    Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Default, config_patch_derive::Patch,
-)]
+///
+/// Backward-compat: old flat `https_url`/`http_url` at `[proxy]` level are promoted to
+/// `proxies["shadow"]` so old infra configs keep working after a binary-only deploy.
+#[derive(Debug, Serialize, Clone, PartialEq, Eq, Default, config_patch_derive::Patch)]
 pub struct ProxyConfig {
     pub idle_pool_connection_timeout: Option<u64>,
-    #[serde(default)]
     pub bypass_urls: Vec<String>,
     /// Named proxy entries. Treated as a full replacement on config override (same as api_tags.tags).
-    #[serde(default)]
     pub proxies: HashMap<String, Proxy>,
+}
+
+/// Raw deserialization target for `ProxyConfig` — accepts both old flat keys and new `proxies` map.
+#[derive(Deserialize)]
+struct ProxyConfigRaw {
+    idle_pool_connection_timeout: Option<u64>,
+    #[serde(default)]
+    bypass_urls: Vec<String>,
+    #[serde(default)]
+    proxies: HashMap<String, Proxy>,
+    // Legacy flat keys — promoted to proxies["shadow"] if proxies is empty
+    https_url: Option<String>,
+    http_url: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for ProxyConfig {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let raw = ProxyConfigRaw::deserialize(deserializer)?;
+        let mut proxies = raw.proxies;
+        if proxies.is_empty() && (raw.https_url.is_some() || raw.http_url.is_some()) {
+            proxies.insert(
+                "shadow".to_string(),
+                Proxy {
+                    https_url: raw.https_url,
+                    http_url: raw.http_url,
+                    ca_cert: None,
+                },
+            );
+        }
+        Ok(ProxyConfig {
+            idle_pool_connection_timeout: raw.idle_pool_connection_timeout,
+            bypass_urls: raw.bypass_urls,
+            proxies,
+        })
+    }
 }
 
 impl ProxyConfig {

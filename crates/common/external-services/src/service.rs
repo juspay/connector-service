@@ -396,13 +396,7 @@ where
         + AdditionalHeaders,
 {
     let start = tokio::time::Instant::now();
-    let proxy_name = event_params
-        .proxy_name
-        .unwrap_or(if event_params.shadow_mode {
-            "shadow"
-        } else {
-            "primary"
-        });
+    let proxy_name = event_params.proxy_name.unwrap_or("primary");
     let transport_type = connector.get_transport_type();
     let result = match (call_connector_action, transport_type) {
         // handle_response removed from proto (PaymentServiceGetRequest field 5 reserved)
@@ -882,7 +876,7 @@ pub async fn call_connector_api(
 
     let should_bypass_proxy = proxy.bypass_urls.contains(&url.to_string());
 
-    let proxy_name = header_proxy_name.unwrap_or(if shadow_mode { "shadow" } else { "primary" });
+    let proxy_name = header_proxy_name.unwrap_or("primary");
 
     let client = create_client(
         proxy,
