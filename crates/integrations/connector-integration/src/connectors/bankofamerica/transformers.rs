@@ -2479,12 +2479,44 @@ impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         match item.response {
             BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
-                let status = map_boa_attempt_status((info_response.status.clone(), false));
-                let response = get_payment_response((&info_response, status, item.http_code))
-                    .map_err(|err| *err);
+                let attempt_status =
+                    map_boa_attempt_status((info_response.status.clone(), false));
+                let error_opt =
+                    get_error_response_if_failure((&info_response, attempt_status, item.http_code));
+                let response = match error_opt {
+                    Some(err) => Err(err),
+                    None => {
+                        let void_status = match info_response.status {
+                            BankofamericaPaymentStatus::Voided
+                            | BankofamericaPaymentStatus::Reversed
+                            | BankofamericaPaymentStatus::Cancelled => {
+                                common_enums::PostCaptureVoidStatus::Succeeded
+                            }
+                            BankofamericaPaymentStatus::Pending
+                            | BankofamericaPaymentStatus::PendingReview
+                            | BankofamericaPaymentStatus::Challenge
+                            | BankofamericaPaymentStatus::Accepted => {
+                                common_enums::PostCaptureVoidStatus::Pending
+                            }
+                            _ => common_enums::PostCaptureVoidStatus::Failed,
+                        };
+                        Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                            post_capture_void_status: void_status,
+                            connector_reference_id: Some(
+                                info_response
+                                    .client_reference_information
+                                    .code
+                                    .clone()
+                                    .unwrap_or(info_response.id.clone()),
+                            ),
+                            description: None,
+                            status_code: item.http_code,
+                        })
+                    }
+                };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: attempt_status,
                         ..item.router_data.resource_common_data
                     },
                     response,
