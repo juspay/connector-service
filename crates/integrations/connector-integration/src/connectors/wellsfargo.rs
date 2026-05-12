@@ -11,11 +11,11 @@ use common_utils::{
     types::StringMajorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, SetupMandate, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, SetupMandateRequestData,
+        ClientAuthenticationTokenRequestData, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
@@ -33,12 +33,13 @@ use serde::Serialize;
 use std::fmt::Debug;
 use time::OffsetDateTime;
 use transformers::{
-    self as wellsfargo, WellsfargoCaptureRequest, WellsfargoPaymentsRequest,
-    WellsfargoPaymentsResponse, WellsfargoPaymentsResponse as WellsfargoCaptureResponse,
-    WellsfargoPaymentsResponse as WellsfargoVoidResponse,
+    self as wellsfargo, WellsfargoCaptureRequest, WellsfargoClientAuthRequest,
+    WellsfargoClientAuthResponse, WellsfargoPaymentsRequest, WellsfargoPaymentsResponse,
+    WellsfargoPaymentsResponse as WellsfargoCaptureResponse,
     WellsfargoPaymentsResponse as WellsfargoPSyncResponse,
     WellsfargoPaymentsResponse as WellsfargoRefundResponse,
     WellsfargoPaymentsResponse as WellsfargoSetupMandateResponse,
+    WellsfargoPaymentsResponse as WellsfargoVoidResponse,
     WellsfargoRSyncResponse as WellsfargoRefundSyncResponse, WellsfargoRefundRequest,
     WellsfargoVoidRequest, WellsfargoZeroMandateRequest,
 };
@@ -134,6 +135,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
     for Wellsfargo<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ClientAuthentication for Wellsfargo<T>
+{
+}
 pub(crate) mod headers {
     pub(crate) const ACCEPT: &str = "Accept";
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -182,6 +187,12 @@ macros::create_all_prerequisites!(
             request_body: WellsfargoZeroMandateRequest<T>,
             response_body: WellsfargoSetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: ClientAuthenticationToken,
+            request_body: WellsfargoClientAuthRequest,
+            response_body: WellsfargoClientAuthResponse,
+            router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -717,6 +728,131 @@ macros::macro_connector_implementation!(
     }
 );
 
+// Manual implementation for ClientAuthenticationToken flow.
+// Cannot use macro_connector_implementation! because Wellsfargo Flex v2 sessions API
+// returns a raw JWT string (content-type: application/jwt), not JSON.
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    > for Wellsfargo<T>
+{
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+        self.build_headers(req)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, IntegrationError> {
+        Ok(format!(
+            "{}microform/v2/sessions",
+            self.connector_base_url(req)
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, IntegrationError> {
+        let request = WellsfargoClientAuthRequest::try_from(req.clone())?;
+        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
+            request,
+        ))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut common_utils::events::Event>,
+        res: domain_types::router_response_types::Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >,
+        ConnectorError,
+    > {
+        let response_bytes = res.response.to_vec();
+        let response_str = String::from_utf8(response_bytes)
+            .map_err(|_| ConnectorError::response_handling_failed(res.status_code))?;
+
+        // Wellsfargo Flex v2 sessions API returns either application/jwt (raw JWT string)
+        // or application/json ({ captureContext: "..." }).
+        let capture_context =
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&response_str) {
+                json.get("captureContext")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or(response_str)
+            } else {
+                response_str
+            };
+
+        let response_body = WellsfargoClientAuthResponse { capture_context };
+        event_builder.map(|i| i.set_connector_response(&response_body));
+
+        let response_router_data = crate::types::ResponseRouterData {
+            response: response_body,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        };
+
+        let result = RouterDataV2::<
+            ClientAuthenticationToken,
+            PaymentFlowData,
+            ClientAuthenticationTokenRequestData,
+            PaymentsResponseData,
+        >::try_from(response_router_data)
+        .map_err(|e| e.change_context(ConnectorError::response_handling_failed(res.status_code)))?;
+
+        Ok(result)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: domain_types::router_response_types::Response,
+        event_builder: Option<&mut common_utils::events::Event>,
+    ) -> CustomResult<domain_types::router_data::ErrorResponse, ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
 macros::macro_connector_flow_status_impls!(
     connector: Wellsfargo,
     generic_type: T,
@@ -734,7 +870,6 @@ macros::macro_connector_flow_status_impls!(
         CreateOrder,
         RepeatPayment,
         ServerSessionAuthenticationToken,
-        ClientAuthenticationToken,
     ],
     not_supported: [
         SubmitEvidence,
