@@ -12,7 +12,14 @@
     },
     "no3ds_fail_payment": {
       "grpc_req": {
-        "merchant_transaction_id": "gp-auth-fail"
+        "merchant_transaction_id": "gp-auth-fail",
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4000120000001154"
+            }
+          }
+        }
       }
     },
     "no3ds_manual_capture_credit_card": {
