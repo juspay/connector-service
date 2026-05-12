@@ -1056,14 +1056,10 @@ impl TryFrom<ResponseRouterData<NexixpayVoidPCResponse, Self>>
         };
 
         Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.operation_id.clone()),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: connector_metadata.clone(),
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
+            response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+                connector_reference_id: Some(item.response.operation_id.clone()),
+                description: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
