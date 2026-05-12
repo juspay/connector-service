@@ -836,25 +836,8 @@
     },
     "reverse": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_reverse_id": "probe_reverse_001",
-          "connector_transaction_id": "CONNECTOR_TXN_ID_FROM_CAPTURE",
-          "connector_feature_data": {
-            "value": "{\"access_token\": \"BEARER_TOKEN_FROM_AUTHORIZE_RESPONSE\", \"token_type\": \"Bearer\", \"expires_in\": 3600}"
-          }
-        },
-        "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments/CONNECTOR_TXN_ID_FROM_CAPTURE",
-          "method": "Patch",
-          "headers": {
-            "authorization": "Bearer BEARER_TOKEN",
-            "content-type": "application/json",
-            "merchant-id": "DefaultMerchantId",
-            "request-id": "probe_reverse_001"
-          },
-          "body": "{\"isVoid\":true}"
-        }
+        "status": "error",
+        "error": "Failed to obtain authentication type"
       }
     },
     "setup_recurring": {
