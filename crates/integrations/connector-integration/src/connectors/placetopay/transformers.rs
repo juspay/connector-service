@@ -386,6 +386,59 @@ impl<F, T> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
     }
 }
 
+/// Dedicated response type for the VoidPC (Reverse) flow so it can have its own
+/// `TryFrom` that returns `PaymentsResponseData::PostCaptureVoidResponse` instead
+/// of the generic `TransactionResponse`.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct PlacetopayVoidPcResponse(PlacetopayPaymentsResponse);
+
+impl TryFrom<ResponseRouterData<PlacetopayVoidPcResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PlacetopayVoidPcResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let inner = item.response.0;
+        let post_capture_void_status = match inner.status.status {
+            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
+                common_enums::PostCaptureVoidStatus::Succeeded
+            }
+            PlacetopayTransactionStatus::Failed
+            | PlacetopayTransactionStatus::Rejected
+            | PlacetopayTransactionStatus::Error => common_enums::PostCaptureVoidStatus::Failed,
+            PlacetopayTransactionStatus::Pending
+            | PlacetopayTransactionStatus::PendingValidation
+            | PlacetopayTransactionStatus::PendingProcess => {
+                common_enums::PostCaptureVoidStatus::Pending
+            }
+        };
+        let attempt_status = match post_capture_void_status {
+            common_enums::PostCaptureVoidStatus::Succeeded => {
+                common_enums::AttemptStatus::VoidedPostCapture
+            }
+            common_enums::PostCaptureVoidStatus::Failed => common_enums::AttemptStatus::Failure,
+            common_enums::PostCaptureVoidStatus::Pending => {
+                common_enums::AttemptStatus::VoidPostCaptureInitiated
+            }
+        };
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: attempt_status,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status,
+                connector_reference_id: Some(inner.internal_reference.to_string()),
+                description: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacetopayPsyncRequest {

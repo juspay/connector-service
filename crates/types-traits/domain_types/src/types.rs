@@ -7308,9 +7308,10 @@ impl
         );
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
         let connector_feature_data = value
             .connector_feature_data
-            .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
+            .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
             .transpose()?;
 
         Ok(Self {

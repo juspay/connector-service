@@ -33,10 +33,9 @@ use transformers::{
     PlacetopayNextActionRequest as PlacetopayVoidPcRequest, PlacetopayPaymentsRequest,
     PlacetopayPaymentsResponse as PlacetopayPSyncResponse, PlacetopayPaymentsResponse,
     PlacetopayPaymentsResponse as PlacetopayCaptureResponse,
-    PlacetopayPaymentsResponse as PlacetopayVoidPcResponse,
     PlacetopayPaymentsResponse as PlacetopayVoidResponse, PlacetopayPsyncRequest,
     PlacetopayRefundRequest, PlacetopayRefundResponse as PlacetopayRSyncResponse,
-    PlacetopayRefundResponse, PlacetopayRsyncRequest,
+    PlacetopayRefundResponse, PlacetopayRsyncRequest, PlacetopayVoidPcResponse,
 };
 
 use super::macros;
