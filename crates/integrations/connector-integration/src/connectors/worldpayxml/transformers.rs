@@ -4,8 +4,8 @@ use common_enums::{AttemptStatus, CaptureMethod, RefundStatus};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsCancelPostCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
@@ -1202,7 +1202,12 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WorldpayxmlRouterData<
-            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for requests::WorldpayxmlVoidPCRequest
@@ -1211,7 +1216,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn try_from(
         item: WorldpayxmlRouterData<
-            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {

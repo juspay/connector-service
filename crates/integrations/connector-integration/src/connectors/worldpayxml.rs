@@ -8,7 +8,9 @@ use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, StringMinorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund, Void, VoidPC},
+    connector_flow::{
+        Authorize, Capture, IncrementalAuthorization, PSync, RSync, Refund, Void, VoidPC,
+    },
     connector_types::{
         MandateRevokeResponseData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
