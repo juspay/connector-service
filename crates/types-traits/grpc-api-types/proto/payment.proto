@@ -4216,6 +4216,16 @@ message TwoctwopPacoConfig {
   SecretString paco_signing_public_key = 7;
   // PACO RSA public key (PEM) — encrypts the request JWE.
   SecretString paco_encryption_public_key = 8;
+  // Identifier recorded in PACO's audit log as `localMakerChecker.maker.username`
+  // on every Refund request. When None the connector defaults to "merchant"
+  // (legacy behaviour). Override per-merchant with operator/ticket id for
+  // a traceable audit trail.
+  optional string refund_maker_id = 9;
+  // Expected `aud` claim on JOSE response JWTs returned by PACO. When None
+  // the connector falls back to the access_token as the expected audience
+  // (current PACO behaviour). Set this if PACO changes the response aud for
+  // a specific office.
+  optional SecretString response_audience = 10;
   optional string base_url = 50;
 }
 

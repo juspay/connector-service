@@ -1,3 +1,30 @@
+//! # 2C2P PACO connector
+//!
+//! JOSE-encrypted (PS256 + RSA-OAEP/A128CBC-HS256) connector for the 2C2P PACO
+//! Payment Orchestration Layer.
+//!
+//! ## Merchant-facing contracts that aren't in the proto types
+//!
+//! ### Refund — original orderNo passthrough
+//!
+//! PACO matches refunds against the *original* transaction's `orderNo`, which
+//! is the value the merchant supplied to Authorize as
+//! `merchant_transaction_id` / `x-connector-request-reference-id`. The prism
+//! orchestrator overrides `RefundFlowData.connector_request_reference_id`
+//! with the refund id, so the connector cannot recover the original orderNo
+//! from there. The merchant **must** pass it through on the Refund request,
+//! in one of these proto fields, in priority order:
+//!
+//! 1. `refund_metadata` (proto field 10) — preferred.
+//! 2. `connector_feature_data` (proto field 11) — fallback.
+//!
+//! Each accepts either a plain JSON string (treated as the orderNo) or an
+//! object: `{"original_order_no":"<auth orderNo>"}`. If neither is supplied,
+//! the connector errors with `MissingRequiredField` and a `suggested_action`
+//! pointing the merchant at the contract.
+//!
+//! See `creds_dummy.json` for an example credentials block.
+
 pub mod transformers;
 
 use std::{self, fmt::Debug};
@@ -418,6 +445,31 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
 
+        // Up to 128 bytes of the wire body, hex-encoded, surfaced into the
+        // error `reason` whenever the connector can't parse a typed error
+        // code out of the response. Lets operators correlate prism errors
+        // with PACO wire captures even without access to server logs.
+        let body_prefix_hex = || {
+            let take = body.len().min(128);
+            let hex: String = body
+                .iter()
+                .take(take)
+                .map(|b| format!("{b:02x}"))
+                .collect::<Vec<_>>()
+                .join("");
+            if body.len() > take {
+                format!("body[0..{take}]=0x{hex}…")
+            } else {
+                format!("body=0x{hex}")
+            }
+        };
+        let fallback = |context: &str| {
+            (
+                NO_ERROR_CODE.to_string(),
+                format!("{NO_ERROR_MESSAGE} ({context}; {})", body_prefix_hex()),
+            )
+        };
+
         let (code, message) = if looks_like_jose {
             match TwoctwopPacoAuthType::try_from(connector_config) {
                 Ok(auth) => {
@@ -441,7 +493,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                                         error = %err,
                                         "twoctwop_paco: failed to parse decrypted error envelope"
                                     );
-                                    (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string())
+                                    fallback("envelope parse failed")
                                 }
                             }
                         }
@@ -450,11 +502,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                                 error = %err,
                                 "twoctwop_paco: JOSE decrypt failed for error response"
                             );
-                            (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string())
+                            fallback("JOSE decrypt failed")
                         }
                     }
                 }
-                Err(_) => (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string()),
+                Err(_) => fallback("connector auth config missing"),
             }
         } else {
             match serde_json::from_slice::<TwoctwopPacoErrorResponse>(&body) {
@@ -462,7 +514,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     with_error_response_body!(event_builder, parsed);
                     parsed.flatten()
                 }
-                Err(_) => (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string()),
+                Err(_) => fallback("response is neither JOSE nor recognised JSON"),
             }
         };
 

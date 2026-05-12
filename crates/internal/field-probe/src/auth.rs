@@ -674,6 +674,8 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             merchant_encryption_private_key: s(),
             paco_signing_public_key: s(),
             paco_encryption_public_key: s(),
+            refund_maker_id: None,
+            response_audience: None,
             base_url: None,
         },
     }

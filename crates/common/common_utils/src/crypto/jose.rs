@@ -681,6 +681,39 @@ mod tests {
     }
 
     #[test]
+    fn jws_alg_none_is_rejected_before_signature_check() {
+        // Defence-in-depth: a forged inner JWS with `{"alg":"none"}` and
+        // *no signature* MUST be refused at the alg-header guard before the
+        // signature verifier ever runs. Without this guard, a downgrade
+        // attack that strips the signature could pass verification on a
+        // permissive `Verifier`. We confirm the same `VerificationFailed`
+        // error fires here as it would for a tampered-signature payload —
+        // the failure mode is symmetric on purpose; what matters is that
+        // the alg check happens *first*.
+        use crate::consts::BASE64_ENGINE_URL_SAFE_NO_PAD;
+        use base64::Engine;
+        let (cfg, _) = sender_config();
+        let none_header = serde_json::json!({"alg": "none"});
+        let header_b64 = BASE64_ENGINE_URL_SAFE_NO_PAD.encode(none_header.to_string());
+        let payload_b64 = BASE64_ENGINE_URL_SAFE_NO_PAD.encode(r#"{"iss":"x"}"#);
+        // Empty signature segment — what an `alg:none` attack would actually
+        // produce. Wrap in a legitimately-encrypted JWE so we get past JWE
+        // decryption and the guard becomes the first thing the verifier sees.
+        let alg_none_jws = format!("{header_b64}.{payload_b64}.");
+        let enc_pub = cfg.peer_encryption_public_key.peek().clone();
+        let mut header = josekit::jwe::JweHeader::new();
+        header.set_content_encryption("A128CBC-HS256");
+        header.set_key_id(&cfg.kid);
+        let encrypter = josekit::jwe::alg::rsaes::RsaesJweAlgorithm::RsaOaep
+            .encrypter_from_pem(enc_pub.as_bytes())
+            .expect("enc");
+        let jwe = josekit::jwe::serialize_compact(alg_none_jws.as_bytes(), &header, &encrypter)
+            .expect("ser");
+        let err = decrypt_then_verify(&jwe, &cfg).expect_err("must fail");
+        assert!(matches!(err, JoseError::VerificationFailed));
+    }
+
+    #[test]
     fn jwe_alg_mismatch_is_rejected() {
         // Hand-craft a JWE header that announces `dir` (direct encryption)
         // and confirm decrypt_then_verify refuses it before handing off to

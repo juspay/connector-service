@@ -55,6 +55,13 @@ pub struct TwoctwopPacoAuthType {
     pub access_token: Secret<String>,
     pub office_id: Secret<String>,
     pub merchant_id: Secret<String>,
+    /// Audit-log human-actor id PACO records under
+    /// `localMakerChecker.maker.username` on Refund. Defaults to "merchant"
+    /// when the per-merchant config doesn't supply one.
+    pub refund_maker_id: String,
+    /// Expected `aud` claim on PACO response JWTs. Defaults to the merchant's
+    /// access_token (current PACO behaviour) when the config doesn't override.
+    pub response_audience: Secret<String>,
     pub jose_cfg: JoseConfig,
 }
 
@@ -72,6 +79,8 @@ impl TryFrom<&ConnectorSpecificConfig> for TwoctwopPacoAuthType {
                 merchant_encryption_private_key,
                 paco_signing_public_key,
                 paco_encryption_public_key,
+                refund_maker_id,
+                response_audience,
                 base_url: _,
             } => {
                 let kid = paco_kid.peek().clone();
@@ -131,6 +140,12 @@ impl TryFrom<&ConnectorSpecificConfig> for TwoctwopPacoAuthType {
                     access_token: access_token.clone(),
                     office_id: office_id.clone(),
                     merchant_id: merchant_id.clone(),
+                    refund_maker_id: refund_maker_id
+                        .clone()
+                        .unwrap_or_else(|| PACO_REFUND_MAKER_ID.to_string()),
+                    response_audience: response_audience
+                        .clone()
+                        .unwrap_or_else(|| access_token.clone()),
                     jose_cfg,
                 })
             }
@@ -746,10 +761,13 @@ pub fn build_void_pc_request(
 // checker (approver) is also required.
 
 /// PACO HumanActor — used for both maker (requestor) and checker (approver)
-/// inside the localMakerChecker / pspMakerChecker workflow objects.
+/// inside the localMakerChecker / pspMakerChecker workflow objects. The
+/// `username` is what PACO records in its audit log; merchants override the
+/// default `"merchant"` via `ConnectorSpecificConfig::TwoctwopPaco.refund_maker_id`
+/// for a traceable operator/ticket id.
 #[derive(Debug, Clone, Serialize)]
 pub struct PacoHumanActor {
-    pub username: &'static str,
+    pub username: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -787,23 +805,34 @@ pub fn build_refund_request(
     // RefundFlowData.connector_request_reference_id is forcibly overridden
     // by the orchestrator to carry the refund_id, so we cannot recover the
     // original orderNo from there. The caller must pass it through one of
-    // the SecretString metadata fields. We look in two places:
-    //   1. `refund_connector_metadata` (RefundsData) — preferred
-    //   2. PaymentFlowData not available here, so no fallback to payment metadata
-    // The value can be either a plain string (treated as the orderNo) or a
-    // JSON object with key `original_order_no`.
+    // the SecretString metadata fields on the proto PaymentServiceRefundRequest.
+    // We check both in priority order:
+    //   1. `refund_metadata` (proto field 10) → routed to
+    //      RefundsData.refund_connector_metadata. Preferred.
+    //   2. `connector_feature_data` (proto field 11) → routed to
+    //      RefundsData.connector_feature_data. Fallback for merchants that
+    //      stash the orderNo there during the Authorize lifecycle.
+    // In both cases the value can be a plain JSON string (treated as the
+    // orderNo) or an object `{"original_order_no":"<orderNo>"}`. See the
+    // connector module docstring for the merchant-facing contract.
     let original_order_no = item
         .request
         .refund_connector_metadata
         .as_ref()
         .and_then(extract_paco_original_order_no)
+        .or_else(|| {
+            item.request
+                .connector_feature_data
+                .as_ref()
+                .and_then(extract_paco_original_order_no)
+        })
         .ok_or_else(|| errors::IntegrationError::MissingRequiredField {
-            field_name: "refund_connector_metadata.original_order_no",
+            field_name: "refund_metadata.original_order_no",
             context: errors::IntegrationErrorContext {
                 suggested_action: Some(
-                    "Pass the original Authorize orderNo as refund_metadata, e.g. \
-                         {\"original_order_no\":\"<auth orderNo>\"}, when calling \
-                         PaymentService/Refund."
+                    "Pass the original Authorize orderNo via either `refund_metadata` \
+                         (preferred) or `connector_feature_data` on the Refund request, \
+                         e.g. {\"original_order_no\":\"<auth orderNo>\"}."
                         .to_string(),
                 ),
                 doc_url: Some("https://devzone.2c2p.com/reference/refund".to_string()),
@@ -822,7 +851,7 @@ pub fn build_refund_request(
         refund_amount: amount,
         local_maker_checker: PacoMakerChecker {
             maker: PacoHumanActor {
-                username: PACO_REFUND_MAKER_ID,
+                username: auth.refund_maker_id.clone(),
             },
         },
     })
@@ -905,7 +934,14 @@ fn map_attempt_status(status: &PacoPaymentStatus, step: &PacoPaymentStep) -> Att
         (PacoPaymentStatus::V, PacoPaymentStep::VD) => AttemptStatus::Voided,
         (PacoPaymentStatus::R, PacoPaymentStep::RF) => AttemptStatus::Charged,
         (PacoPaymentStatus::R, PacoPaymentStep::RR) => AttemptStatus::Charged,
-        (PacoPaymentStatus::I, PacoPaymentStep::AC) => AttemptStatus::AuthenticationPending,
+        // PACO `I` ("Incomplete") means the payment is in-flight from PACO's
+        // perspective — the customer hasn't yet finished the hosted-page or
+        // ACS challenge. Map every (I, *) pair to AuthenticationPending; the
+        // step variant only narrows which sub-stage is pending (AC = ACS
+        // challenge, Unknown = post-hosted-page wallet authorisation, etc.).
+        // Live verified 2026-05-11: PSync on an in-flight GCash returns
+        // I/Unknown — without this fall-through it misclassified as Failure.
+        (PacoPaymentStatus::I, _) => AttemptStatus::AuthenticationPending,
         (PacoPaymentStatus::Pcps, PacoPaymentStep::GP) => AttemptStatus::AuthenticationPending,
         (PacoPaymentStatus::P, PacoPaymentStep::IN) => AttemptStatus::Authorizing,
         // Per the PACO Solution Doc, P/RP (Pending Refund) is treated as
@@ -1840,12 +1876,14 @@ pub fn decode_jose_response<R: for<'de> Deserialize<'de>>(
         )
     })?;
     let trimmed = compact.trim().trim_matches('"');
-    // PACO's response JWT carries the merchant's access_token as aud (the
-    // mirror of our request's iss). Validate aud + temporal claims so a
-    // captured response can't be replayed indefinitely. 60s skew tolerates
-    // clock drift between us and PACO.
+    // PACO's response JWT carries the merchant's access_token as aud by
+    // default — the mirror of our request's iss. `response_audience` lets a
+    // per-merchant config override this if PACO changes the response aud on
+    // a specific office. Validate aud + temporal claims so a captured
+    // response can't be replayed indefinitely. 60s skew tolerates clock
+    // drift between us and PACO.
     let validation = common_utils::crypto::jose::JoseClaimValidation {
-        expected_audience: Some(auth.access_token.peek().clone()),
+        expected_audience: Some(auth.response_audience.peek().clone()),
         clock_skew_seconds: 60,
     };
     let claims = common_utils::crypto::jose::decrypt_then_verify_with_claims(

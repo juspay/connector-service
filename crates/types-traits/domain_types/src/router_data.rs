@@ -745,6 +745,17 @@ pub enum ConnectorSpecificConfig {
     /// Carries a 32-hex `paco_kid`, four RSA PEMs, an access token, an
     /// `office_id` (multi-merchant scoping in PACO) and the acquirer-side
     /// `merchant_id` (used on the Inquiry path).
+    ///
+    /// `refund_maker_id` is the human-actor identifier PACO records in its
+    /// audit log under `localMakerChecker.maker.username` on every Refund
+    /// request. Defaults to `"merchant"` when None — but a merchant SHOULD
+    /// override it with their own operator id / ticket id so refunds can be
+    /// traced back to a human in the audit trail.
+    ///
+    /// `response_audience` is the expected `aud` claim on JOSE response
+    /// JWTs returned by PACO. When None the connector falls back to using
+    /// `access_token` as the expected audience (current PACO behaviour). Set
+    /// this if PACO changes the response `aud` for a specific office.
     TwoctwopPaco {
         access_token: Secret<String>,
         office_id: Secret<String>,
@@ -754,6 +765,8 @@ pub enum ConnectorSpecificConfig {
         merchant_encryption_private_key: Secret<String>,
         paco_signing_public_key: Secret<String>,
         paco_encryption_public_key: Secret<String>,
+        refund_maker_id: Option<String>,
+        response_audience: Option<Secret<String>>,
         base_url: Option<String>,
     },
 }
@@ -2034,6 +2047,8 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 paco_encryption_public_key: twoctwop_paco
                     .paco_encryption_public_key
                     .ok_or_else(err)?,
+                refund_maker_id: twoctwop_paco.refund_maker_id,
+                response_audience: twoctwop_paco.response_audience,
                 base_url: twoctwop_paco.base_url,
             }),
         }
