@@ -1,0 +1,2 @@
+tag_prefix = "v"
+ignore_merge_commits = true

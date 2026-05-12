@@ -137,6 +137,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PayloadClientAuthenticationResponse: ["clientToken"],
   MultisafepayClientAuthenticationResponse: ["apiToken"],
   NexixpayClientAuthenticationResponse: ["securityToken"],
+  RevolutClientAuthenticationResponse: ["token"],
   StripeClientAuthenticationResponse: ["clientSecret"],
   GpayTokenParameters: ["publicKey"],
   SecretInfoToInitiateSdk: ["display", "payment"],
@@ -292,6 +293,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   PayoutServiceCreateRecipientRequest: ["accessToken"],
   PayoutServiceEnrollDisburseAccountRequest: ["accessToken"],
   PayoutMethodEligibilityRequest: ["connectorFeatureData", "accessToken"],
+  SurchargeServiceCalculateRequest: ["postalCode"],
 };
 
 const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
@@ -334,7 +336,7 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   ConnectorResponseData: { "additionalPaymentMethodData": "AdditionalPaymentMethodConnectorResponse", "extendedAuthorizationResponseData": "ExtendedAuthorizationResponseData" },
   PaymentMethodUpdate: { "card": "CardDetailUpdate" },
   ClientAuthenticationTokenData: { "googlePay": "GpayClientAuthenticationResponse", "paypal": "PaypalClientAuthenticationResponse", "applePay": "ApplepayClientAuthenticationResponse", "connectorSpecific": "ConnectorSpecificClientAuthenticationResponse" },
-  ConnectorSpecificClientAuthenticationResponse: { "stripe": "StripeClientAuthenticationResponse", "adyen": "AdyenClientAuthenticationResponse", "checkout": "CheckoutClientAuthenticationResponse", "cybersource": "CybersourceClientAuthenticationResponse", "nuvei": "NuveiClientAuthenticationResponse", "mollie": "MollieClientAuthenticationResponse", "globalpay": "GlobalpayClientAuthenticationResponse", "bluesnap": "BluesnapClientAuthenticationResponse", "rapyd": "RapydClientAuthenticationResponse", "shift4": "Shift4ClientAuthenticationResponse", "bankOfAmerica": "BankOfAmericaClientAuthenticationResponse", "wellsfargo": "WellsfargoClientAuthenticationResponse", "fiserv": "FiservClientAuthenticationResponse", "elavon": "ElavonClientAuthenticationResponse", "noon": "NoonClientAuthenticationResponse", "paysafe": "PaysafeClientAuthenticationResponse", "bamboraapac": "BamboraapacClientAuthenticationResponse", "jpmorgan": "JpmorganClientAuthenticationResponse", "billwerk": "BillwerkClientAuthenticationResponse", "datatrans": "DatatransClientAuthenticationResponse", "bambora": "BamboraClientAuthenticationResponse", "payload": "PayloadClientAuthenticationResponse", "multisafepay": "MultisafepayClientAuthenticationResponse", "nexinets": "NexinetsClientAuthenticationResponse", "nexixpay": "NexixpayClientAuthenticationResponse" },
+  ConnectorSpecificClientAuthenticationResponse: { "stripe": "StripeClientAuthenticationResponse", "adyen": "AdyenClientAuthenticationResponse", "checkout": "CheckoutClientAuthenticationResponse", "cybersource": "CybersourceClientAuthenticationResponse", "nuvei": "NuveiClientAuthenticationResponse", "mollie": "MollieClientAuthenticationResponse", "globalpay": "GlobalpayClientAuthenticationResponse", "bluesnap": "BluesnapClientAuthenticationResponse", "rapyd": "RapydClientAuthenticationResponse", "shift4": "Shift4ClientAuthenticationResponse", "bankOfAmerica": "BankOfAmericaClientAuthenticationResponse", "wellsfargo": "WellsfargoClientAuthenticationResponse", "fiserv": "FiservClientAuthenticationResponse", "elavon": "ElavonClientAuthenticationResponse", "noon": "NoonClientAuthenticationResponse", "paysafe": "PaysafeClientAuthenticationResponse", "bamboraapac": "BamboraapacClientAuthenticationResponse", "jpmorgan": "JpmorganClientAuthenticationResponse", "billwerk": "BillwerkClientAuthenticationResponse", "datatrans": "DatatransClientAuthenticationResponse", "bambora": "BamboraClientAuthenticationResponse", "payload": "PayloadClientAuthenticationResponse", "multisafepay": "MultisafepayClientAuthenticationResponse", "nexinets": "NexinetsClientAuthenticationResponse", "nexixpay": "NexixpayClientAuthenticationResponse", "revolut": "RevolutClientAuthenticationResponse" },
   GpayClientAuthenticationResponse: { "googlePaySession": "GooglePaySessionResponse" },
   GooglePaySessionResponse: { "merchantInfo": "GpayMerchantInfo", "shippingAddressParameters": "GpayShippingAddressParameters", "allowedPaymentMethods": "GpayAllowedPaymentMethods", "transactionInfo": "GpayTransactionInfo", "secrets": "SecretInfoToInitiateSdk" },
   GpayAllowedPaymentMethods: { "parameters": "GpayAllowedMethodsParameters", "tokenizationSpecification": "GpayTokenizationSpecification" },
@@ -444,6 +446,8 @@ const _MSG_FIELD_TYPES: Record<string, Record<string, string>> = {
   FfiConnectorHttpResponse: { "headers": "HeadersEntry" },
   ConnectorError: { "errorInfo": "ErrorInfo" },
   FfiResult: { "httpRequest": "FfiConnectorHttpRequest", "httpResponse": "FfiConnectorHttpResponse", "integrationError": "IntegrationError", "connectorError": "ConnectorError" },
+  SurchargeServiceCalculateRequest: { "amount": "Money" },
+  SurchargeServiceCalculateResponse: { "surchargeAmount": "Money", "error": "ErrorInfo" },
 };
 
 function _wrapSecretStrings(obj: unknown, msgName: string): unknown {
@@ -761,6 +765,17 @@ export class GrpcRefundClient {
   }
 }
 
+// SurchargeService
+export class GrpcSurchargeClient {
+  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
+
+  /** SurchargeService.Calculate — Calculate surcharge fees for a payment amount before processing. */
+  async calculate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "surcharge/calculate",
+      req, types.SurchargeServiceCalculateRequest, types.SurchargeServiceCalculateResponse);
+  }
+}
+
 // ── Top-level GrpcClient ──────────────────────────────────────────────────────
 
 export class GrpcClient {
@@ -774,6 +789,7 @@ export class GrpcClient {
   public payout: GrpcPayoutClient;
   public recurringPayment: GrpcRecurringPaymentClient;
   public refund: GrpcRefundClient;
+  public surcharge: GrpcSurchargeClient;
 
   constructor(config: GrpcConfig, libPath?: string) {
     const ffi = loadGrpcFfi(libPath);
@@ -787,5 +803,6 @@ export class GrpcClient {
     this.payout = new GrpcPayoutClient(ffi, config);
     this.recurringPayment = new GrpcRecurringPaymentClient(ffi, config);
     this.refund = new GrpcRefundClient(ffi, config);
+    this.surcharge = new GrpcSurchargeClient(ffi, config);
   }
 }

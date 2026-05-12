@@ -205,6 +205,10 @@ impl PaysafePaymentMethodDetails {
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub enum ConnectorSpecificConfig {
+    /// No credentials required.
+    /// Used for webhook flows where authentication is deferred to later stages.
+    NoKey,
+
     // --- Single-field (HeaderKey) connectors ---
     Stripe {
         api_key: Secret<String>,
@@ -777,6 +781,7 @@ impl ConnectorSpecificConfig {
         macro_rules! extract_base_url {
             ($($variant:ident { $($field:ident),* $(,)? }),* $(,)?) => {
                 match self {
+                    Self::NoKey => None,
                     $(Self::$variant { base_url, .. } => base_url.as_deref(),)*
                 }
             };
@@ -1182,12 +1187,13 @@ impl ConnectorSpecificConfig {
         }
 
         macro_rules! connector_key {
-            ($($variant:ident { $($field:ident),* $(,)? }),* $(,)?) => {
-                match self {
-                    $(Self::$variant { .. } => stringify!($variant).to_ascii_lowercase(),)*
-                }
-            };
-        }
+                ($($variant:ident { $($field:ident),* $(,)? }),* $(,)?) => {
+                    match self {
+                        Self::NoKey => "nokey".to_string(),
+                        $(Self::$variant { .. } => stringify!($variant).to_ascii_lowercase(),)*
+                    }
+                };
+            }
 
         let mut connectors = serde_json::Map::new();
         connectors.insert(
