@@ -2603,39 +2603,48 @@ pub fn convert_to_payments_response_data_or_error(
         {
             let connector_metadata = build_connector_metadata(trans_res);
 
-            // Extract mandate_reference from profile_response if available
-            let mandate_reference = response.profile_response.as_ref().map(|profile_response| {
-                let payment_profile_id = profile_response
-                    .customer_payment_profile_id_list
-                    .as_ref()
-                    .and_then(|list| list.first().cloned());
+            if operation == Operation::VoidPostCapture {
+                Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                    post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+                    connector_reference_id: Some(trans_res.transaction_id.clone()),
+                    description: None,
+                    status_code: http_status_code,
+                })
+            } else {
+                // Extract mandate_reference from profile_response if available
+                let mandate_reference = response.profile_response.as_ref().map(|profile_response| {
+                    let payment_profile_id = profile_response
+                        .customer_payment_profile_id_list
+                        .as_ref()
+                        .and_then(|list| list.first().cloned());
 
-                MandateReference {
-                    connector_mandate_id: profile_response.customer_profile_id.as_ref().and_then(
-                        |customer_profile_id| {
-                            payment_profile_id.map(|payment_profile_id| {
-                                format!("{customer_profile_id}-{payment_profile_id}")
-                            })
-                        },
-                    ),
-                    payment_method_id: None,
-                    connector_mandate_request_reference_id: None,
-                }
-            });
+                    MandateReference {
+                        connector_mandate_id: profile_response.customer_profile_id.as_ref().and_then(
+                            |customer_profile_id| {
+                                payment_profile_id.map(|payment_profile_id| {
+                                    format!("{customer_profile_id}-{payment_profile_id}")
+                                })
+                            },
+                        ),
+                        payment_method_id: None,
+                        connector_mandate_request_reference_id: None,
+                    }
+                });
 
-            Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(trans_res.transaction_id.clone()),
-                redirection_data: None,
-                connector_metadata,
-                mandate_reference: mandate_reference.map(Box::new),
-                network_txn_id: trans_res
-                    .network_trans_id
-                    .as_ref()
-                    .map(|s| s.peek().clone()),
-                connector_response_reference_id: Some(trans_res.transaction_id.clone()),
-                incremental_authorization_allowed: None,
-                status_code: http_status_code,
-            })
+                Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(trans_res.transaction_id.clone()),
+                    redirection_data: None,
+                    connector_metadata,
+                    mandate_reference: mandate_reference.map(Box::new),
+                    network_txn_id: trans_res
+                        .network_trans_id
+                        .as_ref()
+                        .map(|s| s.peek().clone()),
+                    connector_response_reference_id: Some(trans_res.transaction_id.clone()),
+                    incremental_authorization_allowed: None,
+                    status_code: http_status_code,
+                })
+            }
         }
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
             // Failure status or other non-successful statuses
@@ -2675,14 +2684,10 @@ pub fn convert_to_payments_response_data_or_error(
         None if status == AttemptStatus::VoidedPostCapture
             && operation == Operation::VoidPostCapture =>
         {
-            Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::NoResponseId,
-                redirection_data: None,
-                connector_metadata: None,
-                mandate_reference: None,
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
+            Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+                connector_reference_id: None,
+                description: None,
                 status_code: http_status_code,
             })
         }
