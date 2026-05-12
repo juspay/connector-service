@@ -433,7 +433,7 @@ impl TryFrom<SanlamWebhookEvent> for WebhookDetailsResponse {
             SanlamWebhookEvent::Payment(payment_event) => {
                 let status = AttemptStatus::try_from(&payment_event.payment.status)?;
                 if is_payment_failure(status) {
-                    Ok(WebhookDetailsResponse {
+                    Ok(Self {
                         status,
                         resource_id: Some(ResponseId::ConnectorTransactionId(
                             payment_event.payment.user_reference.clone(),
@@ -452,7 +452,7 @@ impl TryFrom<SanlamWebhookEvent> for WebhookDetailsResponse {
                         status_code: 200,
                     })
                 } else {
-                    Ok(WebhookDetailsResponse {
+                    Ok(Self {
                         status,
                         resource_id: Some(ResponseId::ConnectorTransactionId(
                             payment_event.payment.user_reference.clone(),
