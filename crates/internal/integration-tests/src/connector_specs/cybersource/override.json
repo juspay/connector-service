@@ -158,7 +158,8 @@
         "amount": {
           "minor_amount": 6000,
           "currency": "USD"
-        }
+        },
+        "cancellation_reason": "requested_by_customer"
       }
     }
   },
