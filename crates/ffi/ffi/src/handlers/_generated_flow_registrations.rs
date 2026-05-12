@@ -70,6 +70,10 @@ use grpc_api_types::payouts::{
     PayoutServiceVoidRequest,
     PayoutServiceVoidResponse,
 };
+use grpc_api_types::surcharge::{
+    SurchargeServiceCalculateRequest,
+    SurchargeServiceCalculateResponse,
+};
 
 use crate::services::payments::{
     accept_req_transformer, accept_res_transformer,
@@ -109,6 +113,9 @@ use crate::services::payouts::{
     payout_stage_req_transformer, payout_stage_res_transformer,
     payout_transfer_req_transformer, payout_transfer_res_transformer,
     payout_void_req_transformer, payout_void_res_transformer,
+};
+use crate::services::surcharge::{
+    surcharge_calculate_req_transformer, surcharge_calculate_res_transformer,
 };
 
 // accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
@@ -173,6 +180,8 @@ impl_flow_handlers!(reverse, PaymentServiceReverseRequest, PaymentServiceReverse
 impl_flow_handlers!(setup_recurring, PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse, setup_recurring_req_transformer, setup_recurring_res_transformer);
 // submit_evidence: DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims.
 impl_flow_handlers!(submit_evidence, DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse, submit_evidence_req_transformer, submit_evidence_res_transformer);
+// surcharge_calculate: SurchargeService.Calculate — Calculate surcharge fees for a payment amount before processing.
+impl_flow_handlers!(surcharge_calculate, SurchargeServiceCalculateRequest, SurchargeServiceCalculateResponse, surcharge_calculate_req_transformer, surcharge_calculate_res_transformer);
 // token_authorize: PaymentService.TokenAuthorize — Authorize using a connector-issued payment method token.
 impl_flow_handlers!(token_authorize, PaymentServiceTokenAuthorizeRequest, PaymentServiceAuthorizeResponse, token_authorize_req_transformer, token_authorize_res_transformer);
 // token_setup_recurring: PaymentService.TokenSetupRecurring — Setup a recurring mandate using a connector token.

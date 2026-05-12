@@ -55,6 +55,9 @@ use grpc_api_types::payouts::{
     PayoutServiceStageResponse, PayoutServiceTransferRequest, PayoutServiceTransferResponse,
     PayoutServiceVoidRequest, PayoutServiceVoidResponse,
 };
+use grpc_api_types::surcharge::{
+    SurchargeServiceCalculateRequest, SurchargeServiceCalculateResponse,
+};
 
 /// ConnectorClient — high-level Rust wrapper for the Connector Service.
 ///
@@ -578,6 +581,14 @@ impl ConnectorClient {
         RefundResponse,
         refund_get_req_handler,
         refund_get_res_handler
+    );
+    // ── SurchargeService flows ───────────────────────────────────────────────────
+    impl_flow_method!(
+        calculate,
+        SurchargeServiceCalculateRequest,
+        SurchargeServiceCalculateResponse,
+        surcharge_calculate_req_handler,
+        surcharge_calculate_res_handler
     );
 }
 
