@@ -348,6 +348,8 @@ pub struct EventProcessingParams<'a> {
     pub reference_id: &'a Option<String>,
     pub resource_id: &'a Option<String>,
     pub shadow_mode: bool,
+    /// Explicit proxy name from `x-proxy-name` header. If None, falls back to shadow_mode heuristic.
+    pub proxy_name: Option<&'a str>,
     pub tenant_id: &'a str,
     pub return_raw_connector_data: bool,
 }
@@ -394,11 +396,13 @@ where
         + AdditionalHeaders,
 {
     let start = tokio::time::Instant::now();
-    let proxy_name = if event_params.shadow_mode {
-        "shadow"
-    } else {
-        "primary"
-    };
+    let proxy_name = event_params
+        .proxy_name
+        .unwrap_or(if event_params.shadow_mode {
+            "shadow"
+        } else {
+            "primary"
+        });
     let transport_type = connector.get_transport_type();
     let result = match (call_connector_action, transport_type) {
         // handle_response removed from proto (PaymentServiceGetRequest field 5 reserved)
@@ -618,6 +622,7 @@ where
                             "execute_connector_processing_step",
                             test_mode,
                             event_params.shadow_mode,
+                            event_params.proxy_name,
                         )
                         .await
                         .map_err(report_common_api_client_to_flow)
@@ -871,12 +876,13 @@ pub async fn call_connector_api(
     _flow_name: &str,
     test_mode: bool,
     shadow_mode: bool,
+    header_proxy_name: Option<&str>,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url = Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
     let should_bypass_proxy = proxy.bypass_urls.contains(&url.to_string());
 
-    let proxy_name = if shadow_mode { "shadow" } else { "primary" };
+    let proxy_name = header_proxy_name.unwrap_or(if shadow_mode { "shadow" } else { "primary" });
 
     let client = create_client(
         proxy,
