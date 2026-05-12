@@ -599,8 +599,9 @@ impl Proxy {
 
 /// Top-level proxy configuration. Named proxy entries live under `proxies`.
 ///
-/// Backward-compat: old flat `https_url`/`http_url` at `[proxy]` level are promoted to
-/// `proxies["shadow"]` so old infra configs keep working after a binary-only deploy.
+/// Deserialization is handled by a custom `impl Deserialize` (via `ProxyConfigRaw`) that also
+/// accepts old flat `https_url`/`http_url` keys, promoting them to `proxies["shadow"]` so old
+/// infra configs keep working after a binary-only deploy.
 #[derive(Debug, Serialize, Clone, PartialEq, Eq, Default, config_patch_derive::Patch)]
 pub struct ProxyConfig {
     pub idle_pool_connection_timeout: Option<u64>,
@@ -610,6 +611,7 @@ pub struct ProxyConfig {
 }
 
 /// Raw deserialization target for `ProxyConfig` — accepts both old flat keys and new `proxies` map.
+/// Remove once all infra configs are migrated to `[proxy.proxies.<name>]`.
 #[derive(Deserialize)]
 struct ProxyConfigRaw {
     idle_pool_connection_timeout: Option<u64>,

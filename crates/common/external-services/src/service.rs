@@ -1205,6 +1205,13 @@ fn get_client_builder(
         return Ok(client_builder);
     }
 
+    if !proxy_name.is_empty() && !proxy_config.proxies.contains_key(proxy_name) {
+        tracing::warn!(
+            proxy_name,
+            "x-proxy-name header refers to unknown proxy — falling back to direct connection"
+        );
+    }
+
     if let Some(cert) = proxy_config
         .get(proxy_name)
         .and_then(|p| p.active_ca_cert())
