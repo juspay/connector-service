@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.12.0
+
+### Bug Fixes
+
+- **ci:** Truncate release notes to GitHub 125K release body limit ([#1275](https://github.com/juspay/connector-service/pull/1275)) ([`3e71b54`](https://github.com/juspay/connector-service/commit/3e71b54f2e8511c54017fe9d64de7a4b82c58656))
+
+### Documentation
+
+- Blog for money framework ([#1230](https://github.com/juspay/connector-service/pull/1230)) ([`6282bc8`](https://github.com/juspay/connector-service/commit/6282bc8e03cdcdc3324009d8997d39f5b9b0b231))
+
+**Full Changelog:** [`2026.05.11.0...2026.05.12.0`](https://github.com/juspay/connector-service/compare/2026.05.11.0...2026.05.12.0)
+
+- - -
+
 ## 2026.05.11.0
 
 ### Features
