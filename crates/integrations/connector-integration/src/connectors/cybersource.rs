@@ -135,14 +135,45 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Cybersource<T>
 {
-    fn requires_pre_authentication(&self) -> bool {
-        true
+    fn is_pre_authentication_flow_required(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method: common_enums::PaymentMethod,
+        is_initial_request: bool,
+    ) -> bool {
+        is_initial_request
+            && auth_type == common_enums::AuthenticationType::ThreeDs
+            && payment_method == common_enums::PaymentMethod::Card
     }
 
-    // CyberSource requires a PostAuthenticate call after the 3DS challenge completes
-    // to retrieve the final ECI/CAVV values before Authorize.
-    fn requires_post_authentication(&self) -> bool {
-        true
+    fn is_authentication_flow_required(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method: common_enums::PaymentMethod,
+        is_initial_request: bool,
+        has_redirect_params: bool,
+    ) -> bool {
+        let is_3ds_card = auth_type == common_enums::AuthenticationType::ThreeDs
+            && payment_method == common_enums::PaymentMethod::Card;
+
+        // CyberSource: Initial requests never do Authenticate inline (PreAuth always redirects for DDC)
+        // Redirect callback: Authenticate needed only for DDC callback (has_redirect_params = true)
+        !is_initial_request && is_3ds_card && has_redirect_params
+    }
+
+    fn is_post_authentication_flow_required(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method: common_enums::PaymentMethod,
+        is_initial_request: bool,
+        has_redirect_params: bool,
+    ) -> bool {
+        let is_3ds_card = auth_type == common_enums::AuthenticationType::ThreeDs
+            && payment_method == common_enums::PaymentMethod::Card;
+
+        // Initial request: never called (Authenticate not reached in initial path for CyberSource)
+        // Redirect callback: PostAuthenticate needed for challenge callback (has_redirect_params = false)
+        !is_initial_request && is_3ds_card && !has_redirect_params
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

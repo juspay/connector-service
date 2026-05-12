@@ -10,11 +10,10 @@ use grpc_api_types::payments::{
     merchant_authentication_service_server::MerchantAuthenticationService,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
     payment_service_server::PaymentService, refund_service_server::RefundService,
-    AuthenticationData, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
-    CompositeCaptureRequest, CompositeCaptureResponse, CompositeGetRequest, CompositeGetResponse,
-    CompositeRefundGetRequest, CompositeRefundGetResponse, CompositeRefundRequest,
-    CompositeRefundResponse, CompositeStatus, CompositeVoidRequest, CompositeVoidResponse,
-    ConnectorState, CustomerServiceCreateResponse,
+    CompositeAuthorizeRequest, CompositeAuthorizeResponse, CompositeCaptureRequest,
+    CompositeCaptureResponse, CompositeGetRequest, CompositeGetResponse, CompositeRefundGetRequest,
+    CompositeRefundGetResponse, CompositeRefundRequest, CompositeRefundResponse, CompositeStatus,
+    CompositeVoidRequest, CompositeVoidResponse, ConnectorState, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest,
     MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse, PaymentMethod,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
@@ -29,49 +28,12 @@ use grpc_api_types::payments::{
 };
 
 use crate::transformers::ForeignFrom;
-use crate::utils::connector_from_composite_authorize_metadata;
+use crate::utils::{
+    connector_from_composite_authorize_metadata, is_failure_payment_status,
+    is_terminal_payment_status,
+};
 
 /// Decoded CRes (Challenge Response) from 3DS challenge completion.
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DecodedCRes {
-    /// 3DS Server Transaction ID
-    three_d_s_server_trans_i_d: Option<String>,
-    /// Message version (e.g., "2.1.0", "2.2.0")
-    message_version: Option<String>,
-    /// Transaction status (Y = authenticated, N = not authenticated, etc.)
-    #[allow(dead_code)]
-    trans_status: Option<String>,
-}
-
-/// Extracts authentication data (threeds_server_transaction_id, message_version) from CRes.
-/// The CRes is a base64-encoded JSON payload returned after 3DS challenge completion.
-/// The payload is passed as a map<string, string> in RedirectionResponse.
-fn extract_auth_data_from_cres(
-    redirection_response: Option<&grpc_api_types::payments::RedirectionResponse>,
-) -> Option<AuthenticationData> {
-    let redirect_resp = redirection_response?;
-
-    // The payload is a map<string, string> with {"cres": "<base64-encoded-json>"}
-    let cres_b64 = redirect_resp.payload.get("cres")?;
-
-    // Decode base64
-    use base64::Engine;
-    let decoded_bytes = base64::engine::general_purpose::STANDARD
-        .decode(cres_b64)
-        .ok()?;
-    let decoded_str = String::from_utf8(decoded_bytes).ok()?;
-
-    // Parse as JSON
-    let cres: DecodedCRes = serde_json::from_str(&decoded_str).ok()?;
-
-    Some(AuthenticationData {
-        threeds_server_transaction_id: cres.three_d_s_server_trans_i_d,
-        message_version: cres.message_version,
-        ..Default::default()
-    })
-}
-
 /// Trait for abstracting access to common fields needed for access token creation.
 pub trait CompositeAccessTokenRequest {
     fn payment_method(&self) -> Option<PaymentMethod>;
@@ -194,42 +156,6 @@ impl CompositeAccessTokenRequest for CompositeCaptureRequest {
             self, connector,
         ))
     }
-}
-
-/// Stages of the authentication+authorization flow determined by the stateless decider.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AuthNStage {
-    /// Fresh request with no authN state; connector does NOT require PreAuthenticate.
-    FreshNoPreAuth,
-    /// Fresh request; connector requires PreAuthenticate first.
-    FreshWithPreAuth,
-    /// Redirect response present WITHOUT threeds_completion_indicator — this is a 3DS challenge callback.
-    PostChallengeRedirect,
-    /// Authentication data already provided (from prior Authenticate call that was frictionless).
-    PreAuthed,
-}
-
-/// Determines the current authN stage purely from the request (stateless decider).
-fn decide_authn_stage(payload: &CompositeAuthorizeRequest) -> AuthNStage {
-    let has_redirection = payload.redirection_response.is_some();
-    let has_auth_data = payload.authentication_data.is_some();
-    let has_ddc_indicator = payload.threeds_completion_indicator.is_some();
-
-    // CASE: Post-challenge redirect (3DS challenge completed, browser redirected back)
-    // redirection_response is present but no DDC indicator (DDC is separate step)
-    if has_redirection && !has_ddc_indicator {
-        return AuthNStage::PostChallengeRedirect;
-    }
-
-    // CASE: Pre-authed (authentication data already provided from frictionless flow)
-    if has_auth_data && !has_redirection {
-        return AuthNStage::PreAuthed;
-    }
-
-    // CASE: Fresh start — need to check connector to decide between FreshNoPreAuth vs FreshWithPreAuth
-    // The actual connector check happens in process_composite_authorize after we have the connector enum
-    // For now, return FreshWithPreAuth as default; the caller will adjust if connector doesn't need it
-    AuthNStage::FreshWithPreAuth
 }
 
 #[derive(Clone)]
@@ -365,6 +291,7 @@ where
         Ok(create_customer_response)
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn authorize(
         &self,
         payload: &CompositeAuthorizeRequest,
@@ -424,7 +351,7 @@ where
     async fn authenticate(
         &self,
         payload: &CompositeAuthorizeRequest,
-        pre_auth_response: &PaymentMethodAuthenticationServicePreAuthenticateResponse,
+        pre_auth_response: Option<&PaymentMethodAuthenticationServicePreAuthenticateResponse>,
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<PaymentMethodAuthenticationServiceAuthenticateResponse, tonic::Status> {
@@ -470,7 +397,6 @@ where
         Ok(post_auth_response)
     }
 
-    /// Main composite authorize processor with stateless 3DS authN decider.
     async fn process_composite_authorize(
         &self,
         request: tonic::Request<CompositeAuthorizeRequest>,
@@ -480,286 +406,256 @@ where
         let connector =
             connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
 
-        // Get connector characteristics
-        let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(&connector);
-        let requires_pre_auth = connector_data.connector.requires_pre_authentication();
-        let requires_post_auth = connector_data.connector.requires_post_authentication();
+        let access_token_response = self
+            .create_server_authentication_token(&connector, &payload, &metadata, &extensions)
+            .await?;
+        let create_customer_response = self
+            .create_connector_customer(&connector, &payload, &metadata, &extensions)
+            .await?;
 
-        // Determine authN stage from request fields (stateless decider)
-        let initial_stage = decide_authn_stage(&payload);
+        // Extract request properties for validation
+        let auth_type = common_enums::AuthenticationType::foreign_try_from(
+            grpc_api_types::payments::AuthenticationType::try_from(payload.auth_type)
+                .unwrap_or_default(),
+        )
+        .map_err(|err| tonic::Status::invalid_argument(format!("invalid auth_type: {err}")))?;
+        let payment_method = payload
+            .payment_method()
+            .map(common_enums::PaymentMethod::foreign_try_from)
+            .transpose()
+            .map_err(|err| {
+                tonic::Status::invalid_argument(format!("invalid payment_method: {err}"))
+            })?
+            .ok_or_else(|| tonic::Status::invalid_argument("missing payment_method"))?;
 
-        // Adjust stage based on connector requirements
-        let stage = match initial_stage {
-            AuthNStage::FreshWithPreAuth if !requires_pre_auth => AuthNStage::FreshNoPreAuth,
-            other => other,
-        };
+        // Determine if this is an initial request or a redirect callback
+        let is_initial_request = payload.redirection_response.is_none();
 
-        match stage {
-            AuthNStage::FreshNoPreAuth => {
-                let access_token_response = self
-                    .create_server_authentication_token(
+        let (pre_auth_response, authn_response, post_authn_response, should_proceed_further) =
+            if is_initial_request {
+                let (pre_auth, authn, should_proceed_further) = self
+                    .handle_initial_authorize(
+                        payload.clone(),
                         &connector,
-                        &payload,
+                        auth_type,
+                        payment_method,
                         &metadata,
                         &extensions,
                     )
                     .await?;
-                let create_customer_response = self
-                    .create_connector_customer(&connector, &payload, &metadata, &extensions)
-                    .await?;
-                let authorize_response = self
-                    .authorize(
-                        &payload,
-                        access_token_response.as_ref(),
-                        create_customer_response.as_ref(),
-                        None,
-                        None,
-                        &metadata,
-                        &extensions,
-                    )
-                    .await?;
+                (pre_auth, authn, None, should_proceed_further)
+            } else {
+                let has_redirect_params = payload
+                    .redirection_response
+                    .as_ref()
+                    .and_then(|r| r.params.as_ref())
+                    .map(|p| !p.is_empty())
+                    .unwrap_or(false);
 
-                Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                    access_token_response,
-                    create_customer_response,
-                    authorize_response: Some(authorize_response),
-                    composite_status: CompositeStatus::Completed.into(),
-                }))
-            }
-
-            AuthNStage::FreshWithPreAuth => {
-                // 3DS flow starts with PreAuthenticate
-                let access_token_response = self
-                    .create_server_authentication_token(
+                let (authn, post_authn, should_proceed_further) = self
+                    .handle_post_challenge_authorize(
+                        payload.clone(),
                         &connector,
-                        &payload,
+                        auth_type,
+                        payment_method,
+                        has_redirect_params,
                         &metadata,
                         &extensions,
                     )
                     .await?;
+                (None, authn, post_authn, should_proceed_further)
+            };
 
-                let pre_auth_response = self
-                    .pre_authenticate(&payload, &metadata, &extensions)
-                    .await?;
-
-                // Check if PreAuth returned a redirect (DDC invoke path - not tested)
-                if pre_auth_response.redirection_data.is_some() {
-                    // Return REDIRECT_REQUIRED — caller must handle DDC form submission
-                    // and call again with redirection_response
-                    let authorize_response =
-                        grpc_api_types::payments::PaymentServiceAuthorizeResponse {
-                            status: grpc_api_types::payments::PaymentStatus::AuthenticationPending
-                                .into(),
-                            redirection_data: pre_auth_response.redirection_data,
-                            ..Default::default()
-                        };
-
-                    return Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                        access_token_response,
-                        create_customer_response: None,
-                        authorize_response: Some(authorize_response),
-                        composite_status: CompositeStatus::RedirectRequired.into(),
-                    }));
-                }
-
-                // PreAuth returned authentication_data (exempt path)
-                // Chain into Authenticate immediately (within this same call)
-                let auth_response = self
-                    .authenticate(&payload, &pre_auth_response, &metadata, &extensions)
-                    .await?;
-
-                // Check if Authenticate returned a redirect (3DS challenge)
-                if auth_response.redirection_data.is_some() {
-                    // Return REDIRECT_REQUIRED — caller must complete 3DS challenge
-                    // Include connector_feature_data which contains auth context for second call
-                    let authorize_response =
-                        grpc_api_types::payments::PaymentServiceAuthorizeResponse {
-                            status: grpc_api_types::payments::PaymentStatus::AuthenticationPending
-                                .into(),
-                            redirection_data: auth_response.redirection_data,
-                            connector_feature_data: auth_response.connector_feature_data,
-                            ..Default::default()
-                        };
-
-                    return Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                        access_token_response,
-                        create_customer_response: None,
-                        authorize_response: Some(authorize_response),
-                        composite_status: CompositeStatus::RedirectRequired.into(),
-                    }));
-                }
-
-                // Authenticate returned authentication_data (frictionless)
-                // For Redsys (requires_post_auth=false): go straight to Authorize
-                // For CyberSource (requires_post_auth=true): chain into PostAuthenticate
-                let post_auth_response_opt = if requires_post_auth {
-                    let post_auth_response = self
-                        .post_authenticate(&payload, &auth_response, &metadata, &extensions)
-                        .await?;
-                    Some(post_auth_response)
-                } else {
-                    None
-                };
-
-                let create_customer_response = self
-                    .create_connector_customer(&connector, &payload, &metadata, &extensions)
-                    .await?;
-
-                let authorize_response = self
-                    .authorize(
-                        &payload,
-                        access_token_response.as_ref(),
-                        create_customer_response.as_ref(),
-                        // For Redsys: pass auth_response directly; for CyberSource: pass None
-                        if requires_post_auth {
-                            None
-                        } else {
-                            Some(&auth_response)
-                        },
-                        post_auth_response_opt.as_ref(),
-                        &metadata,
-                        &extensions,
-                    )
-                    .await?;
-
-                Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                    access_token_response,
-                    create_customer_response,
-                    authorize_response: Some(authorize_response),
-                    composite_status: CompositeStatus::Completed.into(),
-                }))
-            }
-
-            AuthNStage::PostChallengeRedirect => {
-                // 3DS challenge completed — caller has provided redirection_response
-                let access_token_response = self
-                    .create_server_authentication_token(
-                        &connector,
-                        &payload,
-                        &metadata,
-                        &extensions,
-                    )
-                    .await?;
-
-                if requires_post_auth {
-                    // CyberSource path: PostAuthenticate → Authorize
-                    // Need to reconstruct an auth_response from the payload's authentication_data
-                    // (which should have been set by the caller from the Authenticate response)
-                    let synthetic_auth_response =
-                        PaymentMethodAuthenticationServiceAuthenticateResponse {
-                            authentication_data: payload.authentication_data.clone(),
-                            connector_feature_data: payload.connector_feature_data.clone(),
-                            ..Default::default()
-                        };
-
-                    let post_auth_response = self
-                        .post_authenticate(
-                            &payload,
-                            &synthetic_auth_response,
-                            &metadata,
-                            &extensions,
-                        )
-                        .await?;
-
-                    let create_customer_response = self
-                        .create_connector_customer(&connector, &payload, &metadata, &extensions)
-                        .await?;
-
-                    let authorize_response = self
-                        .authorize(
-                            &payload,
-                            access_token_response.as_ref(),
-                            create_customer_response.as_ref(),
-                            None,
-                            Some(&post_auth_response),
-                            &metadata,
-                            &extensions,
-                        )
-                        .await?;
-
-                    Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                        access_token_response,
-                        create_customer_response,
-                        authorize_response: Some(authorize_response),
-                        composite_status: CompositeStatus::Completed.into(),
-                    }))
-                } else {
-                    // Redsys path: Authorize directly with cres from redirection_response
-                    // Extract authentication data from the CRes payload
-                    let cres_auth_data =
-                        extract_auth_data_from_cres(payload.redirection_response.as_ref());
-
-                    // Create a modified payload with authentication_data filled in from CRes
-                    let payload_with_auth = CompositeAuthorizeRequest {
-                        authentication_data: cres_auth_data
-                            .or_else(|| payload.authentication_data.clone()),
-                        ..payload.clone()
-                    };
-
-                    let create_customer_response = self
-                        .create_connector_customer(
-                            &connector,
-                            &payload_with_auth,
-                            &metadata,
-                            &extensions,
-                        )
-                        .await?;
-
-                    let authorize_response = self
-                        .authorize(
-                            &payload_with_auth,
-                            access_token_response.as_ref(),
-                            create_customer_response.as_ref(),
-                            None,
-                            None,
-                            &metadata,
-                            &extensions,
-                        )
-                        .await?;
-
-                    Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                        access_token_response,
-                        create_customer_response,
-                        authorize_response: Some(authorize_response),
-                        composite_status: CompositeStatus::Completed.into(),
-                    }))
-                }
-            }
-
-            AuthNStage::PreAuthed => {
-                // Authentication data already provided — skip authN, go straight to Authorize
-                let access_token_response = self
-                    .create_server_authentication_token(
-                        &connector,
-                        &payload,
-                        &metadata,
-                        &extensions,
-                    )
-                    .await?;
-                let create_customer_response = self
-                    .create_connector_customer(&connector, &payload, &metadata, &extensions)
-                    .await?;
-
-                let authorize_response = self
-                    .authorize(
-                        &payload,
-                        access_token_response.as_ref(),
-                        create_customer_response.as_ref(),
-                        None,
-                        None,
-                        &metadata,
-                        &extensions,
-                    )
-                    .await?;
-
-                Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                    access_token_response,
-                    create_customer_response,
-                    authorize_response: Some(authorize_response),
-                    composite_status: CompositeStatus::Completed.into(),
-                }))
-            }
+        // If redirect required or terminal status reached, return early without calling Authorize
+        if !should_proceed_further {
+            let has_redirection = authn_response
+                .as_ref()
+                .map(|r| r.redirection_data.is_some())
+                .unwrap_or(false)
+                || pre_auth_response
+                    .as_ref()
+                    .map(|r| r.redirection_data.is_some())
+                    .unwrap_or(false);
+            let composite_status = if has_redirection {
+                CompositeStatus::RedirectRequired
+            } else {
+                CompositeStatus::Completed
+            };
+            return Ok(tonic::Response::new(CompositeAuthorizeResponse {
+                access_token_response,
+                create_customer_response,
+                pre_auth_response,
+                authn_response,
+                post_authn_response,
+                authorize_response: None,
+                composite_status: composite_status.into(),
+            }));
         }
+
+        // All authentication steps completed - proceed with Authorize
+        let authorize_response = self
+            .authorize(
+                &payload,
+                access_token_response.as_ref(),
+                create_customer_response.as_ref(),
+                authn_response.as_ref(),
+                post_authn_response.as_ref(),
+                &metadata,
+                &extensions,
+            )
+            .await?;
+
+        Ok(tonic::Response::new(CompositeAuthorizeResponse {
+            access_token_response,
+            create_customer_response,
+            pre_auth_response,
+            authn_response,
+            post_authn_response,
+            authorize_response: Some(authorize_response),
+            composite_status: CompositeStatus::Completed.into(),
+        }))
+    }
+
+    /// Handle initial authorize path (no redirection_response present in payload)
+    async fn handle_initial_authorize(
+        &self,
+        payload: CompositeAuthorizeRequest,
+        connector: &ConnectorEnum,
+        auth_type: common_enums::AuthenticationType,
+        payment_method: common_enums::PaymentMethod,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<
+        (
+            Option<PaymentMethodAuthenticationServicePreAuthenticateResponse>,
+            Option<PaymentMethodAuthenticationServiceAuthenticateResponse>,
+            bool,
+        ),
+        tonic::Status,
+    > {
+        // Get connector instance for validation
+        let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
+
+        let mut pre_auth_response_opt = None;
+        let mut auth_response_opt = None;
+
+        if connector_data
+            .connector
+            .is_pre_authentication_flow_required(auth_type, payment_method, true)
+        {
+            let pre_auth_response = self
+                .pre_authenticate(&payload, metadata, extensions)
+                .await?;
+
+            if pre_auth_response.redirection_data.is_some()
+                || is_failure_payment_status(pre_auth_response.status)
+            {
+                // DDC redirect required or pre-auth failed
+                return Ok((Some(pre_auth_response), None, false));
+            }
+
+            pre_auth_response_opt = Some(pre_auth_response);
+        }
+
+        if connector_data.connector.is_authentication_flow_required(
+            auth_type,
+            payment_method,
+            true,
+            false,
+        ) {
+            let auth_response = self
+                .authenticate(
+                    &payload,
+                    pre_auth_response_opt.as_ref(),
+                    metadata,
+                    extensions,
+                )
+                .await?;
+
+            if auth_response.redirection_data.is_some()
+                || is_terminal_payment_status(auth_response.status)
+            {
+                // 3DS challenge redirect required or terminal status reached
+                return Ok((pre_auth_response_opt, Some(auth_response), false));
+            }
+
+            auth_response_opt = Some(auth_response);
+        }
+
+        Ok((pre_auth_response_opt, auth_response_opt, true))
+    }
+
+    /// Handle redirect callback authorize path (redirection_response present in payload)
+    #[allow(clippy::too_many_arguments)]
+    async fn handle_post_challenge_authorize(
+        &self,
+        payload: CompositeAuthorizeRequest,
+        connector: &ConnectorEnum,
+        auth_type: common_enums::AuthenticationType,
+        payment_method: common_enums::PaymentMethod,
+        has_redirect_params: bool,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<
+        (
+            Option<PaymentMethodAuthenticationServiceAuthenticateResponse>,
+            Option<PaymentMethodAuthenticationServicePostAuthenticateResponse>,
+            bool,
+        ),
+        tonic::Status,
+    > {
+        // Get connector instance for validation
+        let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
+
+        let mut auth_response_opt = None;
+        let mut post_auth_response_opt = None;
+
+        if connector_data.connector.is_authentication_flow_required(
+            auth_type,
+            payment_method,
+            false,
+            has_redirect_params,
+        ) {
+            // For redirect callback Authenticate, pass None since there's no pre_auth_response
+            // The ForeignFrom impl will fall back to payload fields
+            let auth_response = self
+                .authenticate(&payload, None, metadata, extensions)
+                .await?;
+
+            if auth_response.redirection_data.is_some()
+                || is_failure_payment_status(auth_response.status)
+            {
+                // Challenge redirect (after DDC) or auth failed
+                return Ok((Some(auth_response), None, false));
+            }
+
+            auth_response_opt = Some(auth_response);
+        }
+
+        if connector_data
+            .connector
+            .is_post_authentication_flow_required(
+                auth_type,
+                payment_method,
+                false,
+                has_redirect_params,
+            )
+        {
+            // Reconstruct auth_response from payload (challenge callback case)
+            let synthetic_auth_response = PaymentMethodAuthenticationServiceAuthenticateResponse {
+                authentication_data: payload.authentication_data.clone(),
+                connector_feature_data: payload.connector_feature_data.clone(),
+                ..Default::default()
+            };
+
+            let post_auth_response = self
+                .post_authenticate(&payload, &synthetic_auth_response, metadata, extensions)
+                .await?;
+
+            post_auth_response_opt = Some(post_auth_response);
+        }
+
+        Ok((auth_response_opt, post_auth_response_opt, true))
     }
 
     async fn get(
@@ -1025,7 +921,7 @@ where
         &self,
         request: tonic::Request<CompositeAuthorizeRequest>,
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
-        self.process_composite_authorize(request).await
+        Box::pin(self.process_composite_authorize(request)).await
     }
 
     async fn get(

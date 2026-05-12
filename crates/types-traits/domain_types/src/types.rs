@@ -4170,7 +4170,8 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             status: common_enums::AttemptStatus::Pending,
             payment_method: PaymentMethod::Card,
             address,
-            auth_type: common_enums::AuthenticationType::default(),
+            auth_type: common_enums::AuthenticationType::foreign_try_from(value.auth_type)
+                .unwrap_or_default(),
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.merchant_transaction_id,
             ),

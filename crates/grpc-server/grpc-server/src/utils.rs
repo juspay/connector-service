@@ -700,8 +700,38 @@ macro_rules! implement_connector_operation {
                 $response_data_type,
             > = connector_data.connector.get_connector_integration_v2();
 
-            // Create connector request data with None for payment_method_data
-            let specific_request_data = $request_data_constructor((payload.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+            // Try to extract payment method data if present, otherwise None
+            let payment_method_data = if let Some(pm) = payload.payment_method.clone() {
+                let action = domain_types::types::PaymentMethodDataAction::get_payment_method_data_action(pm)
+                    .map_err(|err| {
+                        tracing::error!(concat!($log_prefix, "_FLOW: failed to get payment method data action - error: {:?}"), err);
+                        tonic::Status::invalid_argument("Invalid payment method data")
+                    })?;
+                match action {
+                    domain_types::types::PaymentMethodDataAction::Card(card_details) => {
+                        let card = domain_types::payment_method_data::Card::<domain_types::payment_method_data::DefaultPCIHolder>::foreign_try_from(card_details)
+                            .map_err(|err| {
+                                tracing::error!(concat!($log_prefix, "_FLOW: failed to convert card details - error: {:?}"), err);
+                                tonic::Status::invalid_argument("Invalid card details")
+                            })?;
+                        Some(domain_types::payment_method_data::PaymentMethodData::Card(card))
+                    }
+                    domain_types::types::PaymentMethodDataAction::Default => {
+                        Some(domain_types::payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(
+                            payload.payment_method.clone()
+                                .ok_or_else(|| tonic::Status::invalid_argument("missing payment_method"))?
+                        ).map_err(|err| {
+                            tracing::error!("Failed to convert payment method data: {:?}", err);
+                            tonic::Status::invalid_argument("Invalid payment method data")
+                        })?)
+                    }
+                    domain_types::types::PaymentMethodDataAction::CardProxy(_) => None,
+                }
+            } else {
+                None
+            };
+
+            let specific_request_data = $request_data_constructor((payload.clone(), payment_method_data))
                 .into_grpc_status()?;
 
             // Create common request data
