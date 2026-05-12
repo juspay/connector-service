@@ -1107,32 +1107,29 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         // Map void status with CRITICAL validation of ALL fields
         // Reuse the existing map_void_status function — same response format as Void flow
-        let status = map_void_status(
+        let attempt_status = map_void_status(
             item.response.transaction_type.clone(),
             item.response.transaction_status.clone(),
             item.response.transaction_result.clone(),
             item.response.transaction_state.clone(),
         );
 
-        // Extract network-specific fields from processor object using helper function
-        let (network_txn_id, _network_decline_code, _network_error_message) =
-            extract_network_fields(item.response.processor.as_ref());
+        // Convert AttemptStatus to PostCaptureVoidStatus for the new response variant
+        let post_capture_void_status = match attempt_status {
+            AttemptStatus::Voided => common_enums::PostCaptureVoidStatus::Succeeded,
+            AttemptStatus::Pending => common_enums::PostCaptureVoidStatus::Pending,
+            _ => common_enums::PostCaptureVoidStatus::Failed,
+        };
 
         Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.ipg_transaction_id.clone(),
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
-                connector_response_reference_id: item.response.client_request_id.clone(),
-                incremental_authorization_allowed: None,
+            response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status,
+                connector_reference_id: Some(item.response.ipg_transaction_id.clone()),
+                description: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
-                status,
+                status: attempt_status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
