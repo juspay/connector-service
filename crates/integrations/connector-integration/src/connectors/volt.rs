@@ -1,7 +1,7 @@
 pub mod transformers;
 
-use std::fmt::Debug;
 use domain_types::router_data::ConnectorSpecificConfig;
+use std::fmt::Debug;
 
 use common_enums::{AttemptStatus, CurrencyUnit};
 use common_utils::{consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::ByteSliceExt};

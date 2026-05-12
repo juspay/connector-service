@@ -1,7 +1,6 @@
 pub mod transformers;
 
 use base64::Engine;
-use domain_types::router_data::ConnectorSpecificConfig;
 use common_enums::CurrencyUnit;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -11,6 +10,7 @@ use common_utils::{
     request::Method,
     types::StringMajorUnit,
 };
+use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,

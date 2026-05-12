@@ -1,7 +1,6 @@
 pub mod test;
 pub mod transformers;
 use common_enums::AttemptStatus;
-use domain_types::router_data::ConnectorSpecificConfig;
 use common_utils::{
     errors::CustomResult,
     events,
@@ -9,6 +8,7 @@ use common_utils::{
     request::RequestContent,
     types::{AmountConvertor, MinorUnit},
 };
+use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,

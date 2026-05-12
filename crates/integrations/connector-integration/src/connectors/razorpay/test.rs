@@ -12,6 +12,7 @@ mod tests {
         connector_types::{PaymentFlowData, PaymentsAuthorizeData},
         payment_address::{Address, PhoneDetails},
         payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
+        router_data::ConnectorSpecificConfig,
         router_request_types::BrowserInformation,
         router_response_types::Response,
     };
@@ -776,7 +777,16 @@ mod tests {
                     PaymentFlowData,
                     PaymentsAuthorizeData<DefaultPCIHolder>,
                     PaymentsResponseData,
-                >>::get_error_response_v2(&**connector, http_response, None)
+                >>::get_error_response_v2(
+                    &**connector,
+                    http_response,
+                    None,
+                    &ConnectorSpecificConfig::Razorpay {
+                        api_key: "dummy_api_key".to_string().into(),
+                        api_secret: Some("dummy_api_secret".to_string().into()),
+                        base_url: None,
+                    },
+                )
                 .unwrap();
 
             let actual_json = to_value(&result).unwrap();
@@ -825,7 +835,16 @@ mod tests {
                     PaymentFlowData,
                     PaymentsAuthorizeData<DefaultPCIHolder>,
                     PaymentsResponseData,
-                >>::get_error_response_v2(&**connector, http_response, None);
+                >>::get_error_response_v2(
+                    &**connector,
+                    http_response,
+                    None,
+                    &ConnectorSpecificConfig::Razorpay {
+                        api_key: "dummy_api_key".to_string().into(),
+                        api_secret: Some("dummy_api_secret".to_string().into()),
+                        base_url: None,
+                    },
+                );
 
             assert!(
                 result.is_err(),
@@ -866,7 +885,16 @@ mod tests {
                 PaymentFlowData,
                 PaymentsAuthorizeData<DefaultPCIHolder>,
                 PaymentsResponseData,
-            >>::get_error_response_v2(&**connector, http_response, None);
+            >>::get_error_response_v2(
+                &**connector,
+                http_response,
+                None,
+                &ConnectorSpecificConfig::Razorpay {
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_api_secret".to_string().into()),
+                    base_url: None,
+                },
+            );
 
         assert!(
             result.is_err(),
@@ -2080,7 +2108,16 @@ mod tests {
                 PaymentFlowData,
                 domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
-            >>::get_error_response_v2(&**connector, http_response, None)
+            >>::get_error_response_v2(
+                &**connector,
+                http_response,
+                None,
+                &ConnectorSpecificConfig::Razorpay {
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_api_secret".to_string().into()),
+                    base_url: None,
+                },
+            )
             .unwrap();
 
         let actual_json = to_value(&result).unwrap();
@@ -2114,7 +2151,16 @@ mod tests {
                 PaymentFlowData,
                 domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
-            >>::get_error_response_v2(&**connector, http_response, None);
+            >>::get_error_response_v2(
+                &**connector,
+                http_response,
+                None,
+                &ConnectorSpecificConfig::Razorpay {
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_api_secret".to_string().into()),
+                    base_url: None,
+                },
+            );
 
         assert!(result.is_err(), "Expected error for invalid JSON");
     }
@@ -2139,7 +2185,16 @@ mod tests {
                 PaymentFlowData,
                 domain_types::connector_types::PaymentCreateOrderData,
                 domain_types::connector_types::PaymentCreateOrderResponse,
-            >>::get_error_response_v2(&**connector, http_response, None)
+            >>::get_error_response_v2(
+                &**connector,
+                http_response,
+                None,
+                &ConnectorSpecificConfig::Razorpay {
+                    api_key: "dummy_api_key".to_string().into(),
+                    api_secret: Some("dummy_api_secret".to_string().into()),
+                    base_url: None,
+                },
+            )
             .unwrap();
 
         let actual_json = to_value(&result).unwrap();

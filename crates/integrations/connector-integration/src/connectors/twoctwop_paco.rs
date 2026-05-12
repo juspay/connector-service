@@ -239,12 +239,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
-        RouterDataV2<
-            VoidPC,
-            PaymentFlowData,
-            PaymentsCancelPostCaptureData,
-            PaymentsResponseData,
-        >,
+        RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         errors::ConnectorError,
     > {
         let auth = TwoctwopPacoAuthType::try_from(&data.connector_config).change_context(
@@ -425,41 +420,40 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         let (code, message) = if looks_like_jose {
             match TwoctwopPacoAuthType::try_from(connector_config) {
-                Ok(auth) => match common_utils::crypto::jose::decrypt_then_verify(
-                    trimmed,
-                    &auth.jose_cfg,
-                ) {
-                    Ok(value) => {
-                        let inner = value
-                            .get("response")
-                            .cloned()
-                            .unwrap_or_else(|| value.clone());
-                        match serde_json::from_value::<TwoctwopPacoNonUiResponse>(inner) {
-                            Ok(parsed) => {
-                                let prior = parsed
-                                    .merged_result()
-                                    .and_then(|b| b.prior_payment_response_details.clone());
-                                let api = parsed.api_response.clone();
-                                with_error_response_body!(event_builder, parsed);
-                                twoctwop_paco::error_code_message(&api, &prior)
-                            }
-                            Err(err) => {
-                                tracing::warn!(
-                                    error = %err,
-                                    "twoctwop_paco: failed to parse decrypted error envelope"
-                                );
-                                (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string())
+                Ok(auth) => {
+                    match common_utils::crypto::jose::decrypt_then_verify(trimmed, &auth.jose_cfg) {
+                        Ok(value) => {
+                            let inner = value
+                                .get("response")
+                                .cloned()
+                                .unwrap_or_else(|| value.clone());
+                            match serde_json::from_value::<TwoctwopPacoNonUiResponse>(inner) {
+                                Ok(parsed) => {
+                                    let prior = parsed
+                                        .merged_result()
+                                        .and_then(|b| b.prior_payment_response_details.clone());
+                                    let api = parsed.api_response.clone();
+                                    with_error_response_body!(event_builder, parsed);
+                                    twoctwop_paco::error_code_message(&api, &prior)
+                                }
+                                Err(err) => {
+                                    tracing::warn!(
+                                        error = %err,
+                                        "twoctwop_paco: failed to parse decrypted error envelope"
+                                    );
+                                    (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string())
+                                }
                             }
                         }
+                        Err(err) => {
+                            tracing::warn!(
+                                error = %err,
+                                "twoctwop_paco: JOSE decrypt failed for error response"
+                            );
+                            (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string())
+                        }
                     }
-                    Err(err) => {
-                        tracing::warn!(
-                            error = %err,
-                            "twoctwop_paco: JOSE decrypt failed for error response"
-                        );
-                        (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string())
-                    }
-                },
+                }
                 Err(_) => (NO_ERROR_CODE.to_string(), NO_ERROR_MESSAGE.to_string()),
             }
         } else {
@@ -643,8 +637,12 @@ where
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
-    for TwoctwopPaco<T>
+    ConnectorIntegrationV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    > for TwoctwopPaco<T>
 {
     fn get_http_method(&self) -> common_utils::request::Method {
         common_utils::request::Method::Post
@@ -716,9 +714,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let router_data = <ResponseRouterData<
             TwoctwopPacoNonUiResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         > as TryInto<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >>::try_into(ResponseRouterData {
             response: parsed,
             router_data: data.clone(),
@@ -1374,4 +1382,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for TwoctwopPaco<T>
 {
 }
-

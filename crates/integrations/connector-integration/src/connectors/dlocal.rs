@@ -8,6 +8,7 @@ use common_utils::{
     ext_traits::ByteSliceExt,
     types::FloatMajorUnit,
 };
+use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
@@ -37,7 +38,6 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use domain_types::router_data::ConnectorSpecificConfig;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,

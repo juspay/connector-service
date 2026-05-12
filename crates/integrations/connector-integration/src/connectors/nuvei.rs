@@ -1,6 +1,7 @@
 use common_utils::{
     consts, errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit,
 };
+use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, ClientAuthenticationToken,
@@ -30,7 +31,6 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::Report;
-use domain_types::router_data::ConnectorSpecificConfig;
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,

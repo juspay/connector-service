@@ -204,9 +204,8 @@ impl PacoTransactionAmount {
             })?;
         let raw = minor_amount.get_amount_as_i64();
         let amount_text = format!("{raw:0>12}");
-        let amount_decimal = currency
-            .to_currency_base_unit_asf64(raw)
-            .map_err(|_| errors::IntegrationError::InvalidDataFormat {
+        let amount_decimal = currency.to_currency_base_unit_asf64(raw).map_err(|_| {
+            errors::IntegrationError::InvalidDataFormat {
                 field_name: "amount",
                 context: errors::IntegrationErrorContext {
                     suggested_action: None,
@@ -215,7 +214,8 @@ impl PacoTransactionAmount {
                         "Failed to convert minor amount to base currency unit".to_string(),
                     ),
                 },
-            })?;
+            }
+        })?;
         Ok(Self {
             amount_text,
             currency_code: currency,
@@ -414,7 +414,10 @@ pub fn build_authorize_request<T>(
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 {
-    let order_no = item.resource_common_data.connector_request_reference_id.clone();
+    let order_no = item
+        .resource_common_data
+        .connector_request_reference_id
+        .clone();
     let description = item
         .resource_common_data
         .description
@@ -552,9 +555,21 @@ where
         })?;
     let amount = PacoTransactionAmount::new(item.request.amount, currency)?;
     let notification_urls = PacoNotificationUrls {
-        confirmation_url: item.request.router_return_url.as_ref().map(|u| u.to_string()),
-        failed_url: item.request.router_return_url.as_ref().map(|u| u.to_string()),
-        cancellation_url: item.request.router_return_url.as_ref().map(|u| u.to_string()),
+        confirmation_url: item
+            .request
+            .router_return_url
+            .as_ref()
+            .map(|u| u.to_string()),
+        failed_url: item
+            .request
+            .router_return_url
+            .as_ref()
+            .map(|u| u.to_string()),
+        cancellation_url: item
+            .request
+            .router_return_url
+            .as_ref()
+            .map(|u| u.to_string()),
         backend_url: item
             .request
             .continue_redirection_url
@@ -781,25 +796,23 @@ pub fn build_refund_request(
         .request
         .refund_connector_metadata
         .as_ref()
-        .and_then(|m| extract_paco_original_order_no(m))
-        .ok_or_else(|| {
-            errors::IntegrationError::MissingRequiredField {
-                field_name: "refund_connector_metadata.original_order_no",
-                context: errors::IntegrationErrorContext {
-                    suggested_action: Some(
-                        "Pass the original Authorize orderNo as refund_metadata, e.g. \
+        .and_then(extract_paco_original_order_no)
+        .ok_or_else(|| errors::IntegrationError::MissingRequiredField {
+            field_name: "refund_connector_metadata.original_order_no",
+            context: errors::IntegrationErrorContext {
+                suggested_action: Some(
+                    "Pass the original Authorize orderNo as refund_metadata, e.g. \
                          {\"original_order_no\":\"<auth orderNo>\"}, when calling \
                          PaymentService/Refund."
-                            .to_string(),
-                    ),
-                    doc_url: Some("https://devzone.2c2p.com/reference/refund".to_string()),
-                    additional_context: Some(
-                        "PACO matches refunds against the original transaction's \
+                        .to_string(),
+                ),
+                doc_url: Some("https://devzone.2c2p.com/reference/refund".to_string()),
+                additional_context: Some(
+                    "PACO matches refunds against the original transaction's \
                          orderNo, which is not derivable from connector_transaction_id."
-                            .to_string(),
-                    ),
-                },
-            }
+                        .to_string(),
+                ),
+            },
         })?;
     Ok(TwoctwopPacoRefundRequest {
         api_request: ApiRequestEnvelope::new(),
@@ -817,9 +830,7 @@ pub fn build_refund_request(
 
 /// Pull the original orderNo from a metadata SecretSerdeValue. Accepts either
 /// a bare JSON string ("auth_xxx") or an object ({"original_order_no":"..."}).
-fn extract_paco_original_order_no(
-    meta: &common_utils::SecretSerdeValue,
-) -> Option<String> {
+fn extract_paco_original_order_no(meta: &common_utils::SecretSerdeValue) -> Option<String> {
     let value = meta.peek();
     if let Some(s) = value.as_str() {
         if !s.is_empty() {
@@ -1084,9 +1095,11 @@ impl TwoctwopPacoNonUiResponse {
     /// blocks share the same shape; merge them into a single accessor so the
     /// caller does not have to repeat the fallback logic.
     pub fn merged_result(&self) -> Option<&PacoPaymentResultBlock> {
-        self.data
-            .as_ref()
-            .and_then(|d| d.payment_result.as_ref().or(d.payment_incomplete_result.as_ref()))
+        self.data.as_ref().and_then(|d| {
+            d.payment_result
+                .as_ref()
+                .or(d.payment_incomplete_result.as_ref())
+        })
     }
 
     /// Refund / Settlement / Void responses flatten the result fields onto
@@ -1121,23 +1134,15 @@ impl TwoctwopPacoNonUiResponse {
 
 // ---------- Authorize response → RouterDataV2 ----------
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<F, T> TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
+        item: ResponseRouterData<TwoctwopPacoNonUiResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -1249,21 +1254,13 @@ where
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
+        item: ResponseRouterData<TwoctwopPacoNonUiResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -1272,7 +1269,8 @@ impl
         } = item;
         let result = response.merged_result();
         let api_response = response.api_response.clone();
-        let (status, txn_id, ref_id, prior) = extract_status(result, AttemptStatus::CaptureInitiated);
+        let (status, txn_id, ref_id, prior) =
+            extract_status(result, AttemptStatus::CaptureInitiated);
 
         if matches!(status, AttemptStatus::Failure) {
             let (code, message) = error_code_message(&api_response, &prior);
@@ -1321,21 +1319,13 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
-    > for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
+        item: ResponseRouterData<TwoctwopPacoNonUiResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -1393,21 +1383,13 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
+        item: ResponseRouterData<TwoctwopPacoNonUiResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -1465,21 +1447,13 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
+        item: ResponseRouterData<TwoctwopPacoNonUiResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -1548,9 +1522,7 @@ pub struct TwoctwopPacoInquiryResponse {
     pub data: Option<PacoInquiryData>,
 }
 
-fn deserialize_inquiry_data<'de, D>(
-    deserializer: D,
-) -> Result<Option<PacoInquiryData>, D::Error>
+fn deserialize_inquiry_data<'de, D>(deserializer: D) -> Result<Option<PacoInquiryData>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -1748,7 +1720,9 @@ pub fn error_code_message(
     let prior_code = prior.as_ref().and_then(|p| p.response_code.clone());
     let prior_msg = prior.as_ref().and_then(|p| p.response_description.clone());
     let api_code = api_response.as_ref().and_then(|a| a.response_code.clone());
-    let api_msg = api_response.as_ref().and_then(|a| a.response_description.clone());
+    let api_msg = api_response
+        .as_ref()
+        .and_then(|a| a.response_description.clone());
     let code = prior_code
         .or(api_code)
         .unwrap_or_else(|| NO_ERROR_CODE.to_string());
@@ -1836,8 +1810,8 @@ pub fn build_jose_envelope<T: Serialize>(
         })
     })?;
     let claims = PacoJoseClaims::new(auth.access_token.peek(), request_value);
-    let jwe = common_utils::crypto::jose::sign_then_encrypt(&claims, &auth.jose_cfg).map_err(
-        |err| {
+    let jwe =
+        common_utils::crypto::jose::sign_then_encrypt(&claims, &auth.jose_cfg).map_err(|err| {
             error_stack::report!(errors::IntegrationError::FailedToObtainAuthType {
                 context: errors::IntegrationErrorContext {
                     suggested_action: Some(
@@ -1847,8 +1821,7 @@ pub fn build_jose_envelope<T: Serialize>(
                     additional_context: Some(format!("JOSE sign+encrypt failed: {err}")),
                 },
             })
-        },
-    )?;
+        })?;
     Ok(jwe.into_bytes())
 }
 
@@ -1964,13 +1937,7 @@ pub fn build_preauthenticate_passthrough<T: PaymentMethodDataTypes>(
 
 // ---------- Authenticate response → RouterDataV2 ----------
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
     for RouterDataV2<
         Authenticate,
         PaymentFlowData,
@@ -1981,10 +1948,7 @@ impl<T: PaymentMethodDataTypes>
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TwoctwopPacoNonUiResponse,
-            Self,
-        >,
+        item: ResponseRouterData<TwoctwopPacoNonUiResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -2110,13 +2074,7 @@ impl<T: PaymentMethodDataTypes>
 
 // ---------- PostAuthenticate response → RouterDataV2 ----------
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            TwoctwopPacoInquiryResponse,
-            Self,
-        >,
-    >
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwoctwopPacoInquiryResponse, Self>>
     for RouterDataV2<
         PostAuthenticate,
         PaymentFlowData,
@@ -2127,10 +2085,7 @@ impl<T: PaymentMethodDataTypes>
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            TwoctwopPacoInquiryResponse,
-            Self,
-        >,
+        item: ResponseRouterData<TwoctwopPacoInquiryResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -2220,4 +2175,3 @@ impl<T: PaymentMethodDataTypes>
         })
     }
 }
-

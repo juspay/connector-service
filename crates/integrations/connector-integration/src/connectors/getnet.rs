@@ -1,7 +1,7 @@
 pub mod transformers;
 
-use std::fmt::Debug;
 use domain_types::router_data::ConnectorSpecificConfig;
+use std::fmt::Debug;
 
 use base64::Engine;
 use common_enums::CurrencyUnit;

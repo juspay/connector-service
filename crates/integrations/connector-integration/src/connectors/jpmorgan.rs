@@ -2,8 +2,8 @@ mod requests;
 mod responses;
 pub mod transformers;
 
-use requests::{JpmorganClientAuthRequest, *};
 use domain_types::router_data::ConnectorSpecificConfig;
+use requests::{JpmorganClientAuthRequest, *};
 use responses::{JpmorganClientAuthResponse, *};
 
 use std::fmt::Debug;

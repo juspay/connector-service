@@ -1,6 +1,5 @@
 pub mod transformers;
 use super::macros;
-use domain_types::router_data::ConnectorSpecificConfig;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -9,6 +8,7 @@ use common_utils::{
     request::Method,
     types::StringMajorUnit,
 };
+use domain_types::router_data::ConnectorSpecificConfig;
 use std::fmt::Debug;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 const UNAUTHORIZED_STATUS_CODE: u16 = 401;

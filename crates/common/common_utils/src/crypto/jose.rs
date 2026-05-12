@@ -85,15 +85,9 @@ pub enum JoseError {
     #[error("Compact JWS does not have three dot-separated segments")]
     MalformedJws,
     #[error("JWE protected header algorithm {got} does not match expected {expected}")]
-    UnexpectedJweAlgorithm {
-        got: String,
-        expected: &'static str,
-    },
+    UnexpectedJweAlgorithm { got: String, expected: &'static str },
     #[error("JWE protected header content encryption {got} does not match expected {expected}")]
-    UnexpectedJweContentEncryption {
-        got: String,
-        expected: &'static str,
-    },
+    UnexpectedJweContentEncryption { got: String, expected: &'static str },
     #[error("JWT claim validation failed: {reason}")]
     ClaimValidationFailed { reason: &'static str },
 }
@@ -209,8 +203,8 @@ impl JoseConfig {
 }
 
 fn validate_private_pem(pem: &str, context: &'static str) -> Result<(), JoseError> {
-    let pkey =
-        PKey::private_key_from_pem(pem.as_bytes()).map_err(|_| JoseError::InvalidKey { context })?;
+    let pkey = PKey::private_key_from_pem(pem.as_bytes())
+        .map_err(|_| JoseError::InvalidKey { context })?;
     let bits = pkey.bits();
     if bits < MIN_RSA_BITS {
         return Err(JoseError::KeyTooSmall {
@@ -287,26 +281,36 @@ fn enforce_claim_validation(
     let now = time::OffsetDateTime::now_utc().unix_timestamp();
     let obj = payload
         .as_object()
-        .ok_or(JoseError::ClaimValidationFailed { reason: "claims-not-object" })?;
+        .ok_or(JoseError::ClaimValidationFailed {
+            reason: "claims-not-object",
+        })?;
 
     if let Some(expected) = v.expected_audience.as_deref() {
-        let aud = obj
-            .get("aud")
-            .and_then(|v| v.as_str())
-            .ok_or(JoseError::ClaimValidationFailed { reason: "missing-aud" })?;
+        let aud =
+            obj.get("aud")
+                .and_then(|v| v.as_str())
+                .ok_or(JoseError::ClaimValidationFailed {
+                    reason: "missing-aud",
+                })?;
         if aud != expected {
-            return Err(JoseError::ClaimValidationFailed { reason: "aud-mismatch" });
+            return Err(JoseError::ClaimValidationFailed {
+                reason: "aud-mismatch",
+            });
         }
     }
 
     if let Some(exp) = obj.get("exp").and_then(|v| v.as_i64()) {
         if now > exp + v.clock_skew_seconds {
-            return Err(JoseError::ClaimValidationFailed { reason: "exp-elapsed" });
+            return Err(JoseError::ClaimValidationFailed {
+                reason: "exp-elapsed",
+            });
         }
     }
     if let Some(nbf) = obj.get("nbf").and_then(|v| v.as_i64()) {
         if now + v.clock_skew_seconds < nbf {
-            return Err(JoseError::ClaimValidationFailed { reason: "nbf-not-yet" });
+            return Err(JoseError::ClaimValidationFailed {
+                reason: "nbf-not-yet",
+            });
         }
     }
     Ok(())
@@ -382,14 +386,15 @@ fn sign_jws_ps256(payload: &[u8], private_key_pem: &str) -> Result<String, JoseE
 
 fn verify_jws_ps256(jws_compact: &str, public_key_pem: &str) -> Result<Vec<u8>, JoseError> {
     let parts: Vec<&str> = jws_compact.split('.').collect();
-    if parts.len() != 3 {
-        return Err(JoseError::MalformedJws);
-    }
+    let (header_b64, payload_b64, sig_b64) = match parts.as_slice() {
+        [h, p, s] => (*h, *p, *s),
+        _ => return Err(JoseError::MalformedJws),
+    };
 
     // Assert the protected header announces PS256 — defence in depth against
     // an attacker that swaps `alg` to `none` or downgrades to HMAC.
     let header_bytes = BASE64_ENGINE_URL_SAFE_NO_PAD
-        .decode(parts[0])
+        .decode(header_b64)
         .map_err(|_| JoseError::VerificationFailed)?;
     let header: serde_json::Value =
         serde_json::from_slice(&header_bytes).map_err(|_| JoseError::VerificationFailed)?;
@@ -401,18 +406,19 @@ fn verify_jws_ps256(jws_compact: &str, public_key_pem: &str) -> Result<Vec<u8>, 
         return Err(JoseError::VerificationFailed);
     }
 
-    let signing_input = format!("{}.{}", parts[0], parts[1]);
+    let signing_input = format!("{header_b64}.{payload_b64}");
     let sig = BASE64_ENGINE_URL_SAFE_NO_PAD
-        .decode(parts[2])
+        .decode(sig_b64)
         .map_err(|_| JoseError::VerificationFailed)?;
     let payload = BASE64_ENGINE_URL_SAFE_NO_PAD
-        .decode(parts[1])
+        .decode(payload_b64)
         .map_err(|_| JoseError::VerificationFailed)?;
 
-    let pkey =
-        PKey::public_key_from_pem(public_key_pem.as_bytes()).map_err(|_| JoseError::InvalidKey {
+    let pkey = PKey::public_key_from_pem(public_key_pem.as_bytes()).map_err(|_| {
+        JoseError::InvalidKey {
             context: "peer_signing_public_key",
-        })?;
+        }
+    })?;
 
     let mut verifier =
         Verifier::new(MessageDigest::sha256(), &pkey).map_err(|_| JoseError::VerificationFailed)?;
@@ -459,17 +465,12 @@ fn encrypt_jwe_rsa_oaep(
         .map_err(|_| JoseError::EncryptionFailed)
 }
 
-fn decrypt_jwe_rsa_oaep(
-    jwe_compact: &str,
-    private_key_pem: &str,
-) -> Result<Vec<u8>, JoseError> {
+fn decrypt_jwe_rsa_oaep(jwe_compact: &str, private_key_pem: &str) -> Result<Vec<u8>, JoseError> {
     // Parse the protected header explicitly so we can assert alg / enc
     // before handing it to josekit. This rejects an attacker that flips
     // the JWE to e.g. `alg: dir` (direct encryption) or
     // `enc: A256GCM` and counts on josekit's default behaviour.
-    let first_dot = jwe_compact
-        .find('.')
-        .ok_or(JoseError::DecryptionFailed)?;
+    let first_dot = jwe_compact.find('.').ok_or(JoseError::DecryptionFailed)?;
     let header_b64 = &jwe_compact[..first_dot];
     let header_bytes = BASE64_ENGINE_URL_SAFE_NO_PAD
         .decode(header_b64)
@@ -673,9 +674,8 @@ mod tests {
         let encrypter = josekit::jwe::alg::rsaes::RsaesJweAlgorithm::RsaOaep
             .encrypter_from_pem(enc_pub.as_bytes())
             .expect("enc");
-        let tampered =
-            josekit::jwe::serialize_compact(broken_jws.as_bytes(), &header, &encrypter)
-                .expect("ser");
+        let tampered = josekit::jwe::serialize_compact(broken_jws.as_bytes(), &header, &encrypter)
+            .expect("ser");
         let err = decrypt_then_verify(&tampered, &cfg).expect_err("must fail");
         assert!(matches!(err, JoseError::VerificationFailed));
     }
@@ -685,8 +685,8 @@ mod tests {
         // Hand-craft a JWE header that announces `dir` (direct encryption)
         // and confirm decrypt_then_verify refuses it before handing off to
         // josekit.
-        use base64::Engine;
         use crate::consts::BASE64_ENGINE_URL_SAFE_NO_PAD;
+        use base64::Engine;
         let header = serde_json::json!({"alg": "dir", "enc": "A128CBC-HS256"});
         let header_b64 = BASE64_ENGINE_URL_SAFE_NO_PAD.encode(header.to_string());
         let fake = format!("{header_b64}.AAA.AAA.AAA.AAA");
@@ -715,7 +715,9 @@ mod tests {
             decrypt_then_verify_with_claims(&jwe, &cfg, Some(&validation)).expect_err("must fail");
         assert!(matches!(
             err,
-            JoseError::ClaimValidationFailed { reason: "aud-mismatch" }
+            JoseError::ClaimValidationFailed {
+                reason: "aud-mismatch"
+            }
         ));
     }
 
@@ -739,7 +741,9 @@ mod tests {
             decrypt_then_verify_with_claims(&jwe, &cfg, Some(&validation)).expect_err("must fail");
         assert!(matches!(
             err,
-            JoseError::ClaimValidationFailed { reason: "exp-elapsed" }
+            JoseError::ClaimValidationFailed {
+                reason: "exp-elapsed"
+            }
         ));
     }
 }
