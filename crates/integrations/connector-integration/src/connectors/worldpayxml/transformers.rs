@@ -1306,22 +1306,18 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidPCResponse, Self>>
             .unwrap_or_else(|| router_data.request.connector_transaction_id.clone());
 
         // Build success response
-        // Status is VoidPostCaptureInitiated (cancellation confirmed but not yet processed)
-        // Actual completion must be verified via PSync
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(order_code.clone()),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: None,
-            connector_response_reference_id: Some(order_code),
-            incremental_authorization_allowed: None,
+        // WorldpayXML returns cancelReceived/cancelOrRefundReceived synchronously,
+        // so the void is confirmed as Succeeded immediately.
+        let payments_response_data = PaymentsResponseData::PostCaptureVoidResponse {
+            post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+            connector_reference_id: Some(order_code.clone()),
+            description: None,
             status_code: item.http_code,
         };
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::VoidPostCaptureInitiated,
+                status: AttemptStatus::VoidedPostCapture,
                 ..router_data.resource_common_data.clone()
             },
             response: Ok(payments_response_data),
