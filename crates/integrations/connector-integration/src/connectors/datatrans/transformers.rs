@@ -1,6 +1,6 @@
 use crate::types::ResponseRouterData;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use common_enums::{AttemptStatus, Currency, RefundStatus};
+use common_enums::{AttemptStatus, Currency, PostCaptureVoidStatus, RefundStatus};
 use common_utils::MinorUnit;
 use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::{
@@ -868,14 +868,10 @@ impl TryFrom<ResponseRouterData<DatatransVoidPCResponse, Self>>
             .clone()
             .unwrap_or_else(|| item.router_data.request.connector_transaction_id.clone());
 
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(transaction_id),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: None,
-            connector_response_reference_id: item.response.acquirer_authorization_code.clone(),
-            incremental_authorization_allowed: None,
+        let payments_response_data = PaymentsResponseData::PostCaptureVoidResponse {
+            post_capture_void_status: PostCaptureVoidStatus::Succeeded,
+            connector_reference_id: Some(transaction_id),
+            description: None,
             status_code: item.http_code,
         };
 
