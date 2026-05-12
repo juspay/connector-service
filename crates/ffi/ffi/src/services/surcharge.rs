@@ -15,6 +15,10 @@ req_transformer!(
     resource_common_data_type: SurchargeFlowData,
     request_data_type: SurchargeCalculateRequest,
     response_data_type: SurchargeCalculateResponse,
+    connector_data_type: T,
+    request_data_fn: |p: &SurchargeServiceCalculateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
 
 // surcharge calculate response transformer
@@ -27,4 +31,8 @@ res_transformer!(
     request_data_type: SurchargeCalculateRequest,
     response_data_type: SurchargeCalculateResponse,
     generate_response_fn: generate_surcharge_calculate_response,
+    connector_data_type: T,
+    request_data_fn: |p: &SurchargeServiceCalculateRequest| {
+        domain_types::utils::ForeignTryFrom::foreign_try_from(p.clone())
+    },
 );
