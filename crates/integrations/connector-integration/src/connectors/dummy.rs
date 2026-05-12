@@ -208,7 +208,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         domain_types::connector_types::EventType,
         error_stack::Report<domain_types::errors::WebhookError>,
     > {
-        Ok(dummy::DummyWebhookPayload::parse(&request.body)?.event.into())
+        Ok(dummy::DummyWebhookPayload::parse(&request.body)?
+            .event
+            .into())
     }
 
     fn get_webhook_event_reference(
@@ -280,10 +282,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn process_redirect_response(
         &self,
         request: &domain_types::connector_types::RequestDetails,
-    ) -> CustomResult<
-        domain_types::connector_types::RedirectDetailsResponse,
-        IntegrationError,
-    > {
+    ) -> CustomResult<domain_types::connector_types::RedirectDetailsResponse, IntegrationError>
+    {
         let query = request.query_params.as_deref().unwrap_or("");
         let (status, dummy_id) = dummy::parse_dummy_redirect_query(query);
 

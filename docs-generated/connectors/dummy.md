@@ -102,7 +102,7 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/dummy/dummy.py#L264) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L109) · [Rust](../../examples/dummy/dummy.rs#L323)
+**Examples:** [Python](../../examples/dummy/dummy.py#L275) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L111) · [Rust](../../examples/dummy/dummy.rs#L349)
 
 ### Card Payment (Authorize + Capture)
 
@@ -116,25 +116,25 @@ Two-step card payment. First authorize, then capture. Use when you need to verif
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/dummy/dummy.py#L283) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L125) · [Rust](../../examples/dummy/dummy.rs#L339)
+**Examples:** [Python](../../examples/dummy/dummy.py#L294) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L127) · [Rust](../../examples/dummy/dummy.rs#L365)
 
 ### Refund
 
 Return funds to the customer for a completed payment.
 
-**Examples:** [Python](../../examples/dummy/dummy.py#L308) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L147) · [Rust](../../examples/dummy/dummy.rs#L362)
+**Examples:** [Python](../../examples/dummy/dummy.py#L319) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L149) · [Rust](../../examples/dummy/dummy.rs#L388)
 
 ### Void Payment
 
 Cancel an authorized but not-yet-captured payment.
 
-**Examples:** [Python](../../examples/dummy/dummy.py#L333) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L169) · [Rust](../../examples/dummy/dummy.rs#L385)
+**Examples:** [Python](../../examples/dummy/dummy.py#L344) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L171) · [Rust](../../examples/dummy/dummy.rs#L411)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/dummy/dummy.py#L355) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L188) · [Rust](../../examples/dummy/dummy.rs#L404)
+**Examples:** [Python](../../examples/dummy/dummy.py#L366) · [JavaScript](../../examples/dummy/dummy.js) · [Kotlin](../../examples/dummy/dummy.kt#L190) · [Rust](../../examples/dummy/dummy.rs#L430)
 
 ## API Reference
 
@@ -145,7 +145,9 @@ Retrieve current payment status from the connector.
 | [MerchantAuthenticationService.CreateClientAuthenticationToken](#merchantauthenticationservicecreateclientauthenticationtoken) | Authentication | `MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest` |
 | [CustomerService.Create](#customerservicecreate) | Customers | `CustomerServiceCreateRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [EventService.HandleEvent](#eventservicehandleevent) | Events | `EventServiceHandleRequest` |
 | [PaymentService.IncrementalAuthorization](#paymentserviceincrementalauthorization) | Payments | `PaymentServiceIncrementalAuthorizationRequest` |
+| [EventService.ParseEvent](#eventserviceparseevent) | Events | `EventServiceParseRequest` |
 | [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
 | [PaymentService.ProxySetupRecurring](#paymentserviceproxysetuprecurring) | Payments | `PaymentServiceProxySetupRecurringRequest` |
 | [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
@@ -190,9 +192,9 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Bluecode | ⚠ |
 | Paze | x |
 | Samsung Pay | ⚠ |
-| MB Way | ⚠ |
-| Satispay | ⚠ |
-| Wero | ⚠ |
+| MB Way | ✓ |
+| Satispay | ✓ |
+| Wero | ✓ |
 | GoPay | ⚠ |
 | GCash | ⚠ |
 | Momo | ⚠ |
@@ -205,9 +207,9 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Affirm | ✓ |
 | Afterpay | ✓ |
 | Klarna | ✓ |
-| UPI Collect | ⚠ |
-| UPI Intent | ⚠ |
-| UPI QR | ⚠ |
+| UPI Collect | ✓ |
+| UPI Intent | ✓ |
+| UPI QR | ✓ |
 | Thailand | ⚠ |
 | Czech | ⚠ |
 | Finland | ⚠ |
@@ -220,7 +222,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Local | ⚠ |
 | iDEAL | ✓ |
 | Sofort | ⚠ |
-| Trustly | ⚠ |
+| Trustly | ✓ |
 | Giropay | ✓ |
 | EPS | ✓ |
 | Przelewy24 | ✓ |
@@ -408,6 +410,16 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
+##### UPI Collect
+
+```python
+"payment_method": {
+  "upi_collect": {
+    "vpa_id": "test@upi"
+  }
+}
+```
+
 ##### Affirm
 
 ```python
@@ -416,7 +428,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L391) · [Kotlin](../../examples/dummy/dummy.kt#L206) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L416) · [Kotlin](../../examples/dummy/dummy.kt#L208) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.Capture
 
@@ -427,7 +439,7 @@ Finalize an authorized payment by transferring funds. Captures the authorized am
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L400) · [Kotlin](../../examples/dummy/dummy.kt#L218) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L425) · [Kotlin](../../examples/dummy/dummy.kt#L220) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.Get
 
@@ -438,7 +450,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L427) · [Kotlin](../../examples/dummy/dummy.kt#L257) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L452) · [Kotlin](../../examples/dummy/dummy.kt#L259) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.IncrementalAuthorization
 
@@ -449,7 +461,7 @@ Increase the authorized amount for an existing payment. Enables you to capture a
 | **Request** | `PaymentServiceIncrementalAuthorizationRequest` |
 | **Response** | `PaymentServiceIncrementalAuthorizationResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L436) · [Kotlin](../../examples/dummy/dummy.kt#L265) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L470) · [Kotlin](../../examples/dummy/dummy.kt#L283) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.ProxyAuthorize
 
@@ -460,7 +472,7 @@ Authorize using vault-aliased card data. Proxy substitutes before connector.
 | **Request** | `PaymentServiceProxyAuthorizeRequest` |
 | **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L445) · [Kotlin](../../examples/dummy/dummy.kt#L281) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L488) · [Kotlin](../../examples/dummy/dummy.kt#L314) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.ProxySetupRecurring
 
@@ -471,7 +483,7 @@ Setup recurring mandate using vault-aliased card data.
 | **Request** | `PaymentServiceProxySetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L454) · [Kotlin](../../examples/dummy/dummy.kt#L310) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L497) · [Kotlin](../../examples/dummy/dummy.kt#L343) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.Refund
 
@@ -482,7 +494,7 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L472) · [Kotlin](../../examples/dummy/dummy.kt#L373) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L515) · [Kotlin](../../examples/dummy/dummy.kt#L406) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.SetupRecurring
 
@@ -493,7 +505,7 @@ Configure a payment method for recurring billing. Sets up the mandate and paymen
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L490) · [Kotlin](../../examples/dummy/dummy.kt#L395) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L533) · [Kotlin](../../examples/dummy/dummy.kt#L428) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.TokenAuthorize
 
@@ -504,7 +516,7 @@ Authorize using a connector-issued payment method token.
 | **Request** | `PaymentServiceTokenAuthorizeRequest` |
 | **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L499) · [Kotlin](../../examples/dummy/dummy.kt#L434) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L542) · [Kotlin](../../examples/dummy/dummy.kt#L467) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentMethodService.Tokenize
 
@@ -515,7 +527,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L508) · [Kotlin](../../examples/dummy/dummy.kt#L455) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L551) · [Kotlin](../../examples/dummy/dummy.kt#L488) · [Rust](../../examples/dummy/dummy.rs)
 
 #### PaymentService.Void
 
@@ -526,7 +538,7 @@ Cancel an authorized payment that has not been captured. Releases held funds bac
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts) · [Kotlin](../../examples/dummy/dummy.kt#L481) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts) · [Kotlin](../../examples/dummy/dummy.kt#L514) · [Rust](../../examples/dummy/dummy.rs)
 
 ### Refunds
 
@@ -539,7 +551,7 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L481) · [Kotlin](../../examples/dummy/dummy.kt#L383) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L524) · [Kotlin](../../examples/dummy/dummy.kt#L416) · [Rust](../../examples/dummy/dummy.rs)
 
 ### Mandates
 
@@ -552,7 +564,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L463) · [Kotlin](../../examples/dummy/dummy.kt#L342) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L506) · [Kotlin](../../examples/dummy/dummy.kt#L375) · [Rust](../../examples/dummy/dummy.rs)
 
 ### Customers
 
@@ -565,7 +577,7 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L418) · [Kotlin](../../examples/dummy/dummy.kt#L244) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L443) · [Kotlin](../../examples/dummy/dummy.kt#L246) · [Rust](../../examples/dummy/dummy.rs)
 
 ### Authentication
 
@@ -578,4 +590,4 @@ Initialize client-facing SDK sessions for wallets, device fingerprinting, etc. R
 | **Request** | `MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse` |
 
-**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L409) · [Kotlin](../../examples/dummy/dummy.kt#L228) · [Rust](../../examples/dummy/dummy.rs)
+**Examples:** [Python](../../examples/dummy/dummy.py) · [TypeScript](../../examples/dummy/dummy.ts#L434) · [Kotlin](../../examples/dummy/dummy.kt#L230) · [Rust](../../examples/dummy/dummy.rs)
