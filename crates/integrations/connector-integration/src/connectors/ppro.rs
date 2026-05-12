@@ -10,7 +10,10 @@ use common_utils::{
     ext_traits::ByteSliceExt,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, RepeatPayment,
+        SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenRequestData, ConnectorSpecifications, ConnectorWebhookSecrets,
         EventContext, EventType, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
