@@ -1352,9 +1352,10 @@ macro_rules! expand_payout_implementation {
                     ::domain_types::payouts::payouts_types::PayoutCreateResponse,
                 >,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     "payout_create",
-                ))
+                ).into())
             }
         }
     };
@@ -1382,9 +1383,10 @@ macro_rules! expand_payout_implementation {
                     ::domain_types::payouts::payouts_types::PayoutTransferResponse,
                 >,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     "payout_transfer",
-                ))
+                ).into())
             }
         }
     };
@@ -1412,9 +1414,10 @@ macro_rules! expand_payout_implementation {
                     ::domain_types::payouts::payouts_types::PayoutGetResponse,
                 >,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     "payout_get",
-                ))
+                ).into())
             }
         }
     };
@@ -1442,9 +1445,10 @@ macro_rules! expand_payout_implementation {
                     ::domain_types::payouts::payouts_types::PayoutVoidResponse,
                 >,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     "payout_void",
-                ))
+                ).into())
             }
         }
     };
@@ -1472,9 +1476,10 @@ macro_rules! expand_payout_implementation {
                     ::domain_types::payouts::payouts_types::PayoutStageResponse,
                 >,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     "payout_stage",
-                ))
+                ).into())
             }
         }
     };
@@ -1502,9 +1507,10 @@ macro_rules! expand_payout_implementation {
                     ::domain_types::payouts::payouts_types::PayoutCreateLinkResponse,
                 >,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     "payout_create_link",
-                ))
+                ).into())
             }
         }
     };
@@ -1532,9 +1538,10 @@ macro_rules! expand_payout_implementation {
                     ::domain_types::payouts::payouts_types::PayoutCreateRecipientResponse,
                 >,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     "payout_create_recipient",
-                ))
+                ).into())
             }
         }
     };
@@ -1562,9 +1569,10 @@ macro_rules! expand_payout_implementation {
                     ::domain_types::payouts::payouts_types::PayoutEnrollDisburseAccountResponse,
                 >,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     "payout_enroll_disburse_account",
-                ))
+                ).into())
             }
         }
     };
@@ -1579,8 +1587,8 @@ pub(crate) use expand_payout_implementation;
 /// `domain_types::connector_flow`. The macro looks up the flow's full type
 /// signature internally (see [`expand_flow_status_impl!`]) and emits one full
 /// `impl ConnectorIntegrationV2<F, FCD, Req, Resp>` block whose `get_url`
-/// returns the appropriate error via the `flow_not_implemented` /
-/// `flow_not_supported` helpers in `crate::utils`.
+/// returns `Err(IntegrationError::connector_flow_not_implemented(...).into())`
+/// or `Err(IntegrationError::connector_flow_not_supported(...).into())`.
 ///
 /// Mirrors the recursive list-peeling pattern used by
 /// [`macro_connector_payout_implementation!`].
@@ -1967,9 +1975,10 @@ macro_rules! expand_flow_status_impl {
 pub(crate) use expand_flow_status_impl;
 
 /// Emit a stub `ConnectorIntegrationV2` impl whose `get_url` returns
-/// `Err(...)` via the `flow_not_implemented` / `flow_not_supported`
-/// helpers in `crate::utils`. The flow name (for the error message) is
-/// passed as a string literal by the calling [`expand_flow_status_impl!`] arm.
+/// `Err(IntegrationError::connector_flow_not_implemented(...).into())` or
+/// `Err(IntegrationError::connector_flow_not_supported(...).into())`. The
+/// flow name (for the error message) is passed as a string literal by the
+/// calling [`expand_flow_status_impl!`] arm.
 ///
 /// The marker-trait impl pairing for stubbed flows is emitted by the
 /// per-flow arms in [`expand_flow_status_impl!`] before they call this macro.
@@ -1993,9 +2002,10 @@ macro_rules! flow_status_emit {
                 &self,
                 _req: &::domain_types::router_data_v2::RouterDataV2<$flow, $fcd, $req, $resp>,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_implemented(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_implemented(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     $name,
-                ))
+                ).into())
             }
         }
     };
@@ -2018,9 +2028,10 @@ macro_rules! flow_status_emit {
                 &self,
                 _req: &::domain_types::router_data_v2::RouterDataV2<$flow, $fcd, $req, $resp>,
             ) -> ::common_utils::CustomResult<String, ::domain_types::errors::IntegrationError> {
-                Err($crate::utils::flow_not_supported(::interfaces::api::ConnectorCommon::id(self),
+                Err(::domain_types::errors::IntegrationError::connector_flow_not_supported(
+                    ::interfaces::api::ConnectorCommon::id(self),
                     $name,
-                ))
+                ).into())
             }
         }
     };

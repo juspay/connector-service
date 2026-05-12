@@ -137,7 +137,7 @@ macros::macro_connector_implementation!(
             &self,
             _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
-            crate::utils::no_request_url(self.id(), "authorize")
+            Err(IntegrationError::connector_flow_not_supported(self.id(), "authorize").into())
         }
 
         fn get_kafka_topic(

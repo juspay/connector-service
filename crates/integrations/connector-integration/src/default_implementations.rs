@@ -50,9 +50,10 @@ macro_rules! default_impl_verify_webhook_source_v2 {
                         VerifyWebhookSourceResponseData,
                     >,
                 ) -> CustomResult<String, IntegrationError> {
-                    $crate::utils::no_request_url(::interfaces::api::ConnectorCommon::id(self),
+                    Err(::domain_types::errors::IntegrationError::connector_flow_not_supported(
+                        ::interfaces::api::ConnectorCommon::id(self),
                         "verify_webhook_source",
-                    )
+                    ).into())
                 }
 
                 fn build_request_v2(
