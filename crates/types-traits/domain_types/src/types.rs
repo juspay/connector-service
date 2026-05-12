@@ -629,16 +629,16 @@ impl<'de> Deserialize<'de> for ProxyConfig {
         let raw = ProxyConfigRaw::deserialize(deserializer)?;
         let mut proxies = raw.proxies;
         // New format: [proxy.proxies.<name>] — proxies map populated directly, nothing to do.
-        // Old format: flat https_url/http_url at [proxy] level — promote to proxies["shadow"].
+        // Old format: flat https_url/http_url at [proxy] level — old behavior was a single proxy
+        // URL used for all traffic, so promote to both "primary" and "shadow" to preserve that.
         if proxies.is_empty() && (raw.https_url.is_some() || raw.http_url.is_some()) {
-            proxies.insert(
-                "shadow".to_string(),
-                Proxy {
-                    https_url: raw.https_url,
-                    http_url: raw.http_url,
-                    ca_cert: None,
-                },
-            );
+            let entry = Proxy {
+                https_url: raw.https_url,
+                http_url: raw.http_url,
+                ca_cert: None,
+            };
+            proxies.insert("primary".to_string(), entry.clone());
+            proxies.insert("shadow".to_string(), entry);
         }
         Ok(ProxyConfig {
             idle_pool_connection_timeout: raw.idle_pool_connection_timeout,
