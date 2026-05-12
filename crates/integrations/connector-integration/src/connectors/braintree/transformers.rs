@@ -3029,28 +3029,24 @@ impl TryFrom<ResponseRouterData<BraintreeVoidPCResponse, Self>>
             }),
             BraintreeVoidPCResponse::VoidPCResponse(void_pc_response) => {
                 let reversal_data = void_pc_response.data.reverse_transaction.reversal;
-                let status = enums::AttemptStatus::from(reversal_data.status.clone());
-                let response = if domain_types::utils::is_payment_failure(status) {
+                let attempt_status = enums::AttemptStatus::from(reversal_data.status.clone());
+                let response = if domain_types::utils::is_payment_failure(attempt_status) {
                     Err(create_failure_error_response(
                         reversal_data.status,
                         None,
                         item.http_code,
                     ))
                 } else {
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::NoResponseId,
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
+                    Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                        post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+                        connector_reference_id: Some(reversal_data.id),
+                        description: None,
                         status_code: item.http_code,
                     })
                 };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: attempt_status,
                         ..item.router_data.resource_common_data
                     },
                     response,
