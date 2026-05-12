@@ -2509,16 +2509,10 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     ..item.router_data
                 })
             } else {
-                let payments_response = PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(
-                        void_response.cnp_txn_id.clone(),
-                    ),
-                    redirection_data: None,
-                    mandate_reference: None,
-                    connector_metadata: None,
-                    network_txn_id: None,
-                    connector_response_reference_id: Some(void_response.id.clone()),
-                    incremental_authorization_allowed: None,
+                let payments_response = PaymentsResponseData::PostCaptureVoidResponse {
+                    post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+                    connector_reference_id: Some(void_response.cnp_txn_id.clone()),
+                    description: None,
                     status_code: item.http_code,
                 };
 
