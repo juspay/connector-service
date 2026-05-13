@@ -1568,6 +1568,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     NexinetsClientAuthenticationResponse nexinets = 24;
     NexixpayClientAuthenticationResponse nexixpay = 25;
     RevolutClientAuthenticationResponse revolut = 26;
+    PproClientAuthenticationResponse ppro = 27;
   }
 }
 
@@ -1709,6 +1710,16 @@ message RevolutClientAuthenticationResponse {
   string order_id = 1;
   // The client authentication token for SDK initialization
   SecretString token = 2;
+}
+
+// Ppro SDK initialization data — session_id and optional session_token for hosted checkout
+message PproClientAuthenticationResponse {
+  // Unique Ppro checkout session identifier
+  string session_id = 1;
+  // Short-lived JWT for client-side SDK initialization; absent for redirect-only flows
+  optional SecretString session_token = 2;
+  // Full redirect URL to Ppro hosted checkout page for redirect flows
+  optional string checkout_url = 3;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()

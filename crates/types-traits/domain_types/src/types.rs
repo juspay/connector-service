@@ -2163,6 +2163,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::Netbanking => {
                 Ok(Some(PaymentMethodType::Netbanking))
             }
+            grpc_api_types::payments::PaymentMethodType::Ideal => {
+                Ok(Some(PaymentMethodType::Ideal))
+            }
+            grpc_api_types::payments::PaymentMethodType::BancontactCard => {
+                Ok(Some(PaymentMethodType::BancontactCard))
+            }
+            grpc_api_types::payments::PaymentMethodType::Blik => {
+                Ok(Some(PaymentMethodType::Blik))
+            }
             _ => Err(IntegrationError::InvalidDataFormat {
                 field_name: "unknown",
                 context: IntegrationErrorContext {
@@ -11276,6 +11285,19 @@ ConnectorSpecificClientAuthenticationResponse::Cybersource(cybersource_data) => 
                         grpc_api_types::payments::RevolutClientAuthenticationResponse {
                             order_id: revolut_data.order_id,
                             token: Some(revolut_data.token),
+                        },
+                    ),
+                ),
+            }
+        }
+        ConnectorSpecificClientAuthenticationResponse::Ppro(ppro_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Ppro(
+                        grpc_api_types::payments::PproClientAuthenticationResponse {
+                            session_id: ppro_data.session_id,
+                            session_token: ppro_data.session_token,
+                            checkout_url: ppro_data.checkout_url,
                         },
                     ),
                 ),
