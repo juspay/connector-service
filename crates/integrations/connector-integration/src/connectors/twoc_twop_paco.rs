@@ -500,17 +500,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::IntegrationError> {
-            let (_office_id, merchant_id) = transformers::extract_paco_merchant_identifiers(
-                &req.resource_common_data.connector_feature_data,
-            )?;
             let base_url = self.connector_base_url_payments(req);
             let order_no = req
                 .resource_common_data
                 .connector_request_reference_id
                 .clone();
             Ok(format!(
-                "{base_url}/api/2.0/Inquiry/transactionStatus?merchantId={}&orderNo={}",
-                urlencoding::encode(merchant_id.peek()),
+                "{base_url}/api/2.0/Inquiry/transactionStatus?orderNo={}",
                 urlencoding::encode(&order_no),
             ))
         }
@@ -545,14 +541,10 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::IntegrationError> {
-            let (_office_id, merchant_id) = transformers::extract_paco_merchant_identifiers(
-                &req.resource_common_data.connector_feature_data,
-            )?;
             let base_url = self.connector_base_url_refunds(req);
             let order_no = req.request.connector_refund_id.clone();
             Ok(format!(
-                "{base_url}/api/2.0/Inquiry/transactionStatus?merchantId={}&orderNo={}",
-                urlencoding::encode(merchant_id.peek()),
+                "{base_url}/api/2.0/Inquiry/transactionStatus?orderNo={}",
                 urlencoding::encode(&order_no),
             ))
         }

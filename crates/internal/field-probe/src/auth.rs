@@ -667,6 +667,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
         },
         ConnectorEnum::TwocTwopPaco => ConnectorSpecificConfig::TwocTwopPaco {
             access_token: s(),
+            office_id: s(),
             paco_kid: s(),
             merchant_signing_private_key: s(),
             merchant_encryption_private_key: s(),

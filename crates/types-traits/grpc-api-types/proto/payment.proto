@@ -4211,6 +4211,8 @@ message TwocTwopPacoConfig {
   // Company access token, used as both the `token`/`apikey` HTTP header and
   // as the `iss` / `CompanyApiKey` JWT claim.
   SecretString access_token = 1;
+  // PACO multi-merchant scoping key, present in every JOSE request body.
+  SecretString office_id = 2;
   // 32-hex-char JWE key id, environment-specific (UAT vs PRD).
   SecretString paco_kid = 4;
   // Merchant RSA private key (PEM) — signs the request JWS (PS256).

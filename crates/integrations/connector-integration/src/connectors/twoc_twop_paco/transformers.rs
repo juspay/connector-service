@@ -61,6 +61,7 @@ pub enum PacoDeviceCategory {
 #[derive(Debug, Clone)]
 pub struct TwocTwopPacoAuthType {
     pub access_token: Secret<String>,
+    pub office_id: Secret<String>,
     pub response_audience: Secret<String>,
     pub jose_cfg: JoseConfig,
 }
@@ -72,6 +73,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TwocTwopPacoAuthType {
         match value {
             ConnectorSpecificConfig::TwocTwopPaco {
                 access_token,
+                office_id,
                 paco_kid,
                 merchant_signing_private_key,
                 merchant_encryption_private_key,
@@ -93,6 +95,24 @@ impl TryFrom<&ConnectorSpecificConfig> for TwocTwopPacoAuthType {
                             additional_context: Some(
                                 "paco_kid must be exactly 32 hexadecimal characters.".to_string(),
                             ),
+                        },
+                    }
+                    .into());
+                }
+
+                let office = office_id.peek();
+                if office.is_empty() || office.len() > PACO_OFFICE_ID_MAX_LEN {
+                    return Err(errors::IntegrationError::InvalidDataFormat {
+                        field_name: "office_id",
+                        context: errors::IntegrationErrorContext {
+                            suggested_action: Some(
+                                "office_id must be 1..=20 characters.".to_string(),
+                            ),
+                            doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                            additional_context: Some(format!(
+                                "Received office_id length {}.",
+                                office.len()
+                            )),
                         },
                     }
                     .into());
@@ -120,6 +140,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TwocTwopPacoAuthType {
 
                 Ok(Self {
                     access_token: access_token.clone(),
+                    office_id: office_id.clone(),
                     response_audience: response_audience
                         .clone()
                         .unwrap_or_else(|| access_token.clone()),
@@ -393,13 +414,12 @@ pub struct TwocTwopPacoAuthenticateResponse(pub TwocTwopPacoNonUiResponse);
 
 pub fn build_authorize_request<T>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    _auth: &TwocTwopPacoAuthType,
+    auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoAuthorizeRequest, error_stack::Report<errors::IntegrationError>>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 {
-    let (office_id, _merchant_id) =
-        extract_paco_merchant_identifiers(&item.resource_common_data.connector_feature_data)?;
+    let office_id = auth.office_id.clone();
     let order_no = item
         .resource_common_data
         .connector_request_reference_id
@@ -508,7 +528,7 @@ pub fn build_authenticate_request<T>(
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
     >,
-    _auth: &TwocTwopPacoAuthType,
+    auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoCardAuthorizeRequest, error_stack::Report<errors::IntegrationError>>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
@@ -574,8 +594,7 @@ where
         .and_then(|bi| bi.user_agent.clone())
         .map(PacoDeviceDetails::from_user_agent);
 
-    let (office_id, _merchant_id) =
-        extract_paco_merchant_identifiers(&item.resource_common_data.connector_feature_data)?;
+    let office_id = auth.office_id.clone();
     match item.request.payment_method_data.as_ref() {
         Some(PaymentMethodData::Card(card)) => {
             let card_type = match card.card_type.as_deref() {
@@ -641,10 +660,9 @@ pub struct TwocTwopPacoCaptureRequest {
 
 pub fn build_capture_request(
     item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    _auth: &TwocTwopPacoAuthType,
+    auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoCaptureRequest, error_stack::Report<errors::IntegrationError>> {
-    let (office_id, _merchant_id) =
-        extract_paco_merchant_identifiers(&item.resource_common_data.connector_feature_data)?;
+    let office_id = auth.office_id.clone();
     let invoice_no = item.request.get_connector_transaction_id()?;
     let amount =
         PacoTransactionAmount::new(item.request.minor_amount_to_capture, item.request.currency)?;
@@ -679,10 +697,9 @@ pub struct TwocTwopPacoVoidRequest {
 
 pub fn build_void_request(
     item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    _auth: &TwocTwopPacoAuthType,
+    auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
-    let (office_id, _merchant_id) =
-        extract_paco_merchant_identifiers(&item.resource_common_data.connector_feature_data)?;
+    let office_id = auth.office_id.clone();
     Ok(TwocTwopPacoVoidRequest {
         api_request: ApiRequestEnvelope::new(),
         office_id,
@@ -702,10 +719,9 @@ pub fn build_void_pc_request(
         PaymentsCancelPostCaptureData,
         PaymentsResponseData,
     >,
-    _auth: &TwocTwopPacoAuthType,
+    auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
-    let (office_id, _merchant_id) =
-        extract_paco_merchant_identifiers(&item.resource_common_data.connector_feature_data)?;
+    let office_id = auth.office_id.clone();
     Ok(TwocTwopPacoVoidRequest {
         api_request: ApiRequestEnvelope::new(),
         office_id,
@@ -742,10 +758,9 @@ pub struct TwocTwopPacoRefundRequest {
 
 pub fn build_refund_request(
     item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    _auth: &TwocTwopPacoAuthType,
+    auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoRefundRequest, error_stack::Report<errors::IntegrationError>> {
-    let (office_id, _merchant_id) =
-        extract_paco_merchant_identifiers(&item.resource_common_data.connector_feature_data)?;
+    let office_id = auth.office_id.clone();
     let amount =
         PacoTransactionAmount::new(item.request.minor_refund_amount, item.request.currency)?;
     let original_order_no = item
@@ -798,96 +813,6 @@ pub fn build_refund_request(
             maker: PacoHumanActor { username: maker_id },
         },
     })
-}
-
-pub fn extract_paco_merchant_identifiers(
-    feature_data: &Option<common_utils::SecretSerdeValue>,
-) -> Result<(Secret<String>, Secret<String>), error_stack::Report<errors::IntegrationError>> {
-    let meta =
-        feature_data
-            .as_ref()
-            .ok_or_else(|| errors::IntegrationError::MissingRequiredField {
-                field_name: "connector_feature_data",
-                context: errors::IntegrationErrorContext {
-                    suggested_action: Some(
-                        "Set `connector_feature_data` to a JSON object containing \
-                     `office_id` and `merchant_id`."
-                            .to_string(),
-                    ),
-                    doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
-                    additional_context: Some(
-                        "PACO requires per-merchant `office_id` and `merchant_id` on every \
-                         request; they are not part of `ConnectorSpecificConfig`."
-                            .to_string(),
-                    ),
-                },
-            })?;
-    let value = meta.peek();
-    let obj = value
-        .as_object()
-        .ok_or_else(|| errors::IntegrationError::InvalidDataFormat {
-            field_name: "connector_feature_data",
-            context: errors::IntegrationErrorContext {
-                suggested_action: Some("connector_feature_data must be a JSON object.".to_string()),
-                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
-                additional_context: Some(
-                    "Expected shape: {\"office_id\":\"<id>\",\"merchant_id\":\"<id>\"}."
-                        .to_string(),
-                ),
-            },
-        })?;
-    let office_id = obj
-        .get("office_id")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| errors::IntegrationError::MissingRequiredField {
-            field_name: "connector_feature_data.office_id",
-            context: errors::IntegrationErrorContext {
-                suggested_action: Some(
-                    "Provide office_id (1..=20 chars) in connector_feature_data.".to_string(),
-                ),
-                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
-                additional_context: Some(
-                    "office_id is PACO's multi-merchant scoping key, configured per merchant in PACO."
-                        .to_string(),
-                ),
-            },
-        })?;
-    if office_id.len() > PACO_OFFICE_ID_MAX_LEN {
-        return Err(errors::IntegrationError::InvalidDataFormat {
-            field_name: "connector_feature_data.office_id",
-            context: errors::IntegrationErrorContext {
-                suggested_action: Some("office_id must be 1..=20 characters.".to_string()),
-                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
-                additional_context: Some(format!(
-                    "Received office_id length {} > {PACO_OFFICE_ID_MAX_LEN}.",
-                    office_id.len()
-                )),
-            },
-        }
-        .into());
-    }
-    let merchant_id = obj
-        .get("merchant_id")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| errors::IntegrationError::MissingRequiredField {
-            field_name: "connector_feature_data.merchant_id",
-            context: errors::IntegrationErrorContext {
-                suggested_action: Some(
-                    "Provide merchant_id in connector_feature_data.".to_string(),
-                ),
-                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
-                additional_context: Some(
-                    "merchant_id is the acquirer-side merchant identifier PACO routes to."
-                        .to_string(),
-                ),
-            },
-        })?;
-    Ok((
-        Secret::new(office_id.to_string()),
-        Secret::new(merchant_id.to_string()),
-    ))
 }
 
 fn extract_paco_original_order_no(meta: &common_utils::SecretSerdeValue) -> Option<String> {

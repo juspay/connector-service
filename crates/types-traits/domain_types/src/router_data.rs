@@ -747,6 +747,7 @@ pub enum ConnectorSpecificConfig {
     },
     TwocTwopPaco {
         access_token: Secret<String>,
+        office_id: Secret<String>,
         paco_kid: Secret<String>,
         merchant_signing_private_key: Secret<String>,
         merchant_encryption_private_key: Secret<String>,
@@ -1071,6 +1072,7 @@ impl ConnectorSpecificConfig {
             Imerchantsolutions { api_key },
             TwocTwopPaco {
                 access_token,
+                office_id,
                 paco_kid
             },
         )
@@ -1481,6 +1483,7 @@ impl ConnectorSpecificConfig {
                 Imerchantsolutions { api_key },
                 TwocTwopPaco {
                     access_token,
+                    office_id,
                     paco_kid
                 },
             ),
@@ -2018,6 +2021,7 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
             }),
             AuthType::TwocTwopPaco(twoc_twop_paco) => Ok(Self::TwocTwopPaco {
                 access_token: twoc_twop_paco.access_token.ok_or_else(err)?,
+                office_id: twoc_twop_paco.office_id.ok_or_else(err)?,
                 paco_kid: twoc_twop_paco.paco_kid.ok_or_else(err)?,
                 merchant_signing_private_key: twoc_twop_paco
                     .merchant_signing_private_key
