@@ -8,7 +8,8 @@ use ucs_env::{configs, error::ResultExtGrpc};
 
 use crate::utils::{connector_and_config_from_metadata, connector_from_metadata, MetadataPayload};
 use ucs_interface_common::metadata::{
-    merchant_id_from_metadata, request_id_from_metadata, tenant_id_from_metadata,
+    merchant_id_from_metadata, proxy_name_from_metadata, request_id_from_metadata,
+    tenant_id_from_metadata,
 };
 /// Structured request data with secure metadata access.
 /// This is the gRPC-specific wrapper around `InterfaceRequestData` that
@@ -120,6 +121,8 @@ fn extract_routing_metadata_only(
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
 
+    let proxy_name = proxy_name_from_metadata(metadata);
+
     Ok(MetadataPayload {
         tenant_id,
         request_id,
@@ -131,5 +134,6 @@ fn extract_routing_metadata_only(
         shadow_mode,
         resource_id,
         environment,
+        proxy_name,
     })
 }
