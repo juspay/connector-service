@@ -704,6 +704,11 @@ macros::macro_connector_implementation!(
     }
 );
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Braintree<T>
+{
+}
+
 // ConnectorIntegrationV2 implementations for authentication flows
 
 macros::macro_connector_flow_status_impls!(
