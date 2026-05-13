@@ -11466,6 +11466,17 @@ ConnectorSpecificClientAuthenticationResponse::Cybersource(cybersource_data) => 
                 ),
             }
         }
+        ConnectorSpecificClientAuthenticationResponse::Dummy(dummy_data) => {
+            grpc_api_types::payments::ConnectorSpecificClientAuthenticationResponse {
+                connector: Some(
+                    grpc_api_types::payments::connector_specific_client_authentication_response::Connector::Dummy(
+                        grpc_api_types::payments::DummyClientAuthenticationResponse {
+                            client_secret: Some(dummy_data.client_secret),
+                        },
+                    ),
+                ),
+            }
+        }
     };
     grpc_api_types::payments::ClientAuthenticationTokenData {
         sdk_type: Some(

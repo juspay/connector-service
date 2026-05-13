@@ -22,7 +22,7 @@ use domain_types::{
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId, SetupMandateRequestData,
-        StripeClientAuthenticationResponse as DummyClientAuthenticationResponseDomain,
+        DummyClientAuthenticationResponse as DummyClientAuthenticationResponseDomain,
     },
     errors::{ConnectorError, IntegrationError},
     mandates::AcceptanceType,
@@ -45,16 +45,14 @@ use domain_types::{
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use time::PrimitiveDateTime;
 use url::Url;
 
 use crate::{
-    connectors::dummy::{
-        headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT, DummyAmountConvertor, DummyRouterData,
-    },
+    connectors::dummy::{DummyAmountConvertor, DummyRouterData},
     types::ResponseRouterData,
     utils::{
         convert_uppercase, deserialize_zero_minor_amount_as_none, is_refund_failure,
@@ -103,7 +101,7 @@ impl TryFrom<&ConnectorSpecificConfig> for DummyAuthType {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(item: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match item {
-            ConnectorSpecificConfig::Stripe { api_key, .. } => Ok(Self {
+            ConnectorSpecificConfig::Dummy { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(IntegrationError::FailedToObtainAuthType {
@@ -1971,8 +1969,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let item = value.router_data;
 
-        let (transfer_account_id, charge_type, application_fees) = (None, None, None);
-
         let payment_method_token = match &item.request.payment_method_data {
             PaymentMethodData::PaymentMethodToken(t) => Some(t.token.clone()),
             _ => None,
@@ -2170,45 +2166,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             None
         };
 
-        let charges = match &item.request.split_payments {
-            Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                dummy_split_payment,
-            )) => match &dummy_split_payment.charge_type {
-                common_enums::PaymentChargeType::Stripe(charge_type) => match charge_type {
-                    common_enums::StripeChargeType::Direct => Some(IntentCharges {
-                        application_fee_amount: dummy_split_payment.application_fees,
-                        destination_account_id: None,
-                    }),
-                    common_enums::StripeChargeType::Destination => Some(IntentCharges {
-                        application_fee_amount: dummy_split_payment.application_fees,
-                        destination_account_id: Some(Secret::new(
-                            dummy_split_payment.transfer_account_id.clone(),
-                        )),
-                    }),
-                },
-            },
-            None => None,
-        };
-
-        let charges_in = if charges.is_none() {
-            match charge_type {
-                Some(common_enums::PaymentChargeType::Stripe(
-                    common_enums::StripeChargeType::Direct,
-                )) => Some(IntentCharges {
-                    application_fee_amount: application_fees, // default to 0 if None
-                    destination_account_id: None,
-                }),
-                Some(common_enums::PaymentChargeType::Stripe(
-                    common_enums::StripeChargeType::Destination,
-                )) => Some(IntentCharges {
-                    application_fee_amount: application_fees,
-                    destination_account_id: transfer_account_id,
-                }),
-                _ => None,
-            }
-        } else {
-            charges
-        };
+        let charges_in: Option<IntentCharges> = None;
 
         let pm = match (payment_method, payment_method_token.clone()) {
             (Some(method), _) => Some(Secret::new(method)),
@@ -2784,20 +2742,7 @@ where
             let connector_mandate_id = Some(payment_method_id.clone().expose());
             let payment_method_id = Some(payment_method_id.expose());
 
-            let _mandate_metadata: Option<Secret<Value>> = match item
-                .router_data
-                .request
-                .get_split_payment_data()
-            {
-                Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                    dummy_split_data,
-                )) => Some(Secret::new(serde_json::json!({
-                                        "transfer_account_id": dummy_split_data.transfer_account_id,
-                                        "charge_type": dummy_split_data.charge_type,
-                                        "application_fees": dummy_split_data.application_fees
-                }))),
-                _ => None,
-            };
+            let _mandate_metadata: Option<Secret<Value>> = None;
 
             MandateReference {
                 connector_mandate_id,
@@ -4041,31 +3986,13 @@ fn get_dummy_payments_response_data(
 }
 
 pub fn construct_charge_response<T>(
-    charge_id: String,
-    request: &T,
+    _charge_id: String,
+    _request: &T,
 ) -> Option<domain_types::connector_types::ConnectorChargeResponseData>
 where
     T: SplitPaymentData,
 {
-    let charge_request = request.get_split_payment_data();
-    if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-        dummy_split_payment,
-    )) = charge_request
-    {
-        let dummy_charge_response = domain_types::connector_types::StripeChargeResponseData {
-            charge_id: Some(charge_id),
-            charge_type: dummy_split_payment.charge_type,
-            application_fees: dummy_split_payment.application_fees,
-            transfer_account_id: dummy_split_payment.transfer_account_id,
-        };
-        Some(
-            domain_types::connector_types::ConnectorChargeResponseData::StripeSplitPayment(
-                dummy_charge_response,
-            ),
-        )
-    } else {
-        None
-    }
+    None
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -4088,22 +4015,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             transfer_account_id: None,
             application_fees: None,
         })
-    }
-}
-
-pub(super) fn transform_headers_for_connect_platform(
-    charge_type: common_enums::PaymentChargeType,
-    transfer_account_id: Secret<String>,
-    header: &mut Vec<(String, Maskable<String>)>,
-) {
-    if let common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct) =
-        charge_type
-    {
-        let mut customer_account_header = vec![(
-            DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-            transfer_account_id.into_masked(),
-        )];
-        header.append(&mut customer_account_header);
     }
 }
 
@@ -4339,15 +4250,10 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             item.router_data.request.minor_refund_amount,
             item.router_data.request.currency,
         )?;
-        match item.router_data.request.split_refunds.as_ref() {
-            Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(_)) => Ok(
-                Self::ChargeRefundRequest(ChargeRefundRequest::try_from(&item.router_data)?),
-            ),
-            _ => Ok(Self::RefundRequest(RefundRequest::try_from((
-                &item.router_data,
-                refund_amount,
-            ))?)),
-        }
+        Ok(Self::RefundRequest(RefundRequest::try_from((
+            &item.router_data,
+            refund_amount,
+        ))?))
     }
 }
 
@@ -4373,55 +4279,6 @@ impl<F>
                 is_refund_id_as_reference: Some("true".to_string()),
             },
         })
-    }
-}
-
-impl<F> TryFrom<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>
-    for ChargeRefundRequest
-{
-    type Error = error_stack::Report<IntegrationError>;
-    fn try_from(
-        item: &RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let amount = item.request.minor_refund_amount;
-        match item.request.split_refunds.as_ref() {
-            None => Err(IntegrationError::MissingRequiredField {
-                field_name: "split_refunds",
-                context: Default::default(),
-            }
-            .into()),
-
-            Some(split_refunds) => match split_refunds {
-                domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(
-                    dummy_refund,
-                ) => {
-                    let (refund_application_fee, reverse_transfer) = match &dummy_refund.options {
-                        domain_types::connector_types::ChargeRefundsOptions::Direct(
-                            domain_types::connector_types::DirectChargeRefund {
-                                revert_platform_fee,
-                            },
-                        ) => (Some(*revert_platform_fee), None),
-                        domain_types::connector_types::ChargeRefundsOptions::Destination(
-                            domain_types::connector_types::DestinationChargeRefund {
-                                revert_platform_fee,
-                                revert_transfer,
-                            },
-                        ) => (Some(*revert_platform_fee), Some(*revert_transfer)),
-                    };
-
-                    Ok(Self {
-                        charge: dummy_refund.charge_id.clone(),
-                        refund_application_fee,
-                        reverse_transfer,
-                        amount: Some(amount),
-                        meta_data: DummyMetadata {
-                            order_id: Some(item.request.refund_id.clone()),
-                            is_refund_id_as_reference: Some("true".to_string()),
-                        },
-                    })
-                }
-            },
-        }
     }
 }
 
@@ -4843,90 +4700,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Ser
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
-        item: &RouterDataV2<
+        _item: &RouterDataV2<
             RepeatPayment,
             PaymentFlowData,
             RepeatPaymentData<T>,
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        //extracting mandate metadata from CIT call if CIT call was a Split Payment
-        let from_metadata = match &item
-            .request
-            .mandate_reference {
-                MandateReferenceId::ConnectorMandateId(mandate_data) => {
-                    mandate_data.get_mandate_metadata()
-                }
-                _ => None
-}
-            .and_then(|secret_value| {
-                let json_value = secret_value.clone().expose();
-                match serde_json::from_value::<Self>(json_value.clone()) {
-                    Ok(val) => Some(val),
-                    Err(err) => {
-                        tracing::info!(
-                            "DUMMY: Picking merchant_account_id and merchant_config_currency from payments request: {:?}", err
-                        );
-                        None
-                    }
-                }
-            });
-
-        // If the Split Payment Request in MIT mismatches with the metadata from CIT, throw an error
-        if from_metadata.is_some() && item.request.split_payments.is_some() {
-            let mut mit_charge_type = None;
-            let mut mit_application_fees = None;
-            let mut mit_transfer_account_id = None;
-            if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                dummy_split_payment,
-            )) = item.request.split_payments.as_ref()
-            {
-                mit_charge_type = Some(dummy_split_payment.charge_type.clone());
-                mit_application_fees = dummy_split_payment.application_fees;
-                mit_transfer_account_id = Some(dummy_split_payment.transfer_account_id.clone());
-            }
-
-            if mit_charge_type != from_metadata.as_ref().and_then(|m| m.charge_type.clone())
-                || mit_application_fees != from_metadata.as_ref().and_then(|m| m.application_fees)
-                || mit_transfer_account_id
-                    != from_metadata
-                        .as_ref()
-                        .and_then(|m| m.transfer_account_id.clone().map(|s| s.expose()))
-            {
-                let mismatched_fields = ["transfer_account_id", "application_fees", "charge_type"];
-
-                let field_str = mismatched_fields.join(", ");
-                Err(IntegrationError::MandatePaymentDataMismatch {
-                    fields: field_str,
-                    context: Default::default(),
-                })?
-            }
-        }
-
-        // If Mandate Metadata from CIT call has something, populate it
-        let (charge_type, mut transfer_account_id, application_fees) =
-            if let Some(ref metadata) = from_metadata {
-                (
-                    metadata.charge_type.clone(),
-                    metadata.transfer_account_id.clone(),
-                    metadata.application_fees,
-                )
-            } else {
-                (None, None, None)
-            };
-
-        // If Charge Type is Destination, transfer_account_id need not be appended in headers
-        if charge_type
-            == Some(common_enums::PaymentChargeType::Stripe(
-                common_enums::StripeChargeType::Destination,
-            ))
-        {
-            transfer_account_id = None;
-        }
         Ok(Self {
-            charge_type,
-            transfer_account_id,
-            application_fees,
+            charge_type: None,
+            transfer_account_id: None,
+            application_fees: None,
         })
     }
 }
@@ -4973,33 +4757,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let item = value.router_data;
-
-        let mandate_metadata = match &item.request.mandate_reference {
-            MandateReferenceId::ConnectorMandateId(mandate_data) => {
-                Some(mandate_data.get_mandate_metadata())
-            }
-            _ => None,
-        };
-
-        let (transfer_account_id, charge_type, application_fees) =
-            match mandate_metadata.as_ref().and_then(|s| s.as_ref()) {
-                Some(secret_value) => {
-                    let json_value = secret_value.clone().expose();
-
-                    let parsed: Result<DummySplitPaymentRequest, _> =
-                        serde_json::from_value(json_value);
-
-                    match parsed {
-                        Ok(data) => (
-                            data.transfer_account_id,
-                            data.charge_type,
-                            data.application_fees,
-                        ),
-                        Err(_) => (None, None, None),
-                    }
-                }
-                None => (None, None, None),
-            };
 
         let payment_method_token = match &item.request.payment_method_data {
             PaymentMethodData::PaymentMethodToken(t) => Some(t.token.clone()),
@@ -5182,45 +4939,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             None
         };
 
-        let charges = match &item.request.split_payments {
-            Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                dummy_split_payment,
-            )) => match &dummy_split_payment.charge_type {
-                common_enums::PaymentChargeType::Stripe(charge_type) => match charge_type {
-                    common_enums::StripeChargeType::Direct => Some(IntentCharges {
-                        application_fee_amount: dummy_split_payment.application_fees,
-                        destination_account_id: None,
-                    }),
-                    common_enums::StripeChargeType::Destination => Some(IntentCharges {
-                        application_fee_amount: dummy_split_payment.application_fees,
-                        destination_account_id: Some(Secret::new(
-                            dummy_split_payment.transfer_account_id.clone(),
-                        )),
-                    }),
-                },
-            },
-            None => None,
-        };
-
-        let charges_in = if charges.is_none() {
-            match charge_type {
-                Some(common_enums::PaymentChargeType::Stripe(
-                    common_enums::StripeChargeType::Direct,
-                )) => Some(IntentCharges {
-                    application_fee_amount: application_fees, // default to 0 if None
-                    destination_account_id: None,
-                }),
-                Some(common_enums::PaymentChargeType::Stripe(
-                    common_enums::StripeChargeType::Destination,
-                )) => Some(IntentCharges {
-                    application_fee_amount: application_fees,
-                    destination_account_id: transfer_account_id,
-                }),
-                _ => None,
-            }
-        } else {
-            charges
-        };
+        let charges_in: Option<IntentCharges> = None;
 
         let pm = match (payment_method, payment_method_token.clone()) {
             (Some(method), _) => Some(Secret::new(method)),
@@ -5500,7 +5219,7 @@ impl TryFrom<ResponseRouterData<DummyClientAuthResponse, Self>>
                 })?;
 
         let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
-            ConnectorSpecificClientAuthenticationResponse::Stripe(
+            ConnectorSpecificClientAuthenticationResponse::Dummy(
                 DummyClientAuthenticationResponseDomain { client_secret },
             ),
         ));

@@ -1,4 +1,5 @@
 pub mod transformers;
+
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
@@ -41,7 +42,7 @@ use domain_types::{
 };
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -64,7 +65,6 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
-    pub(crate) const DUMMY_COMPATIBLE_CONNECT_ACCOUNT: &str = "Dummy-Account";
 }
 use dummy::auth_headers;
 
@@ -561,37 +561,6 @@ macros::macro_connector_implementation!(
 
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
-
-            let dummy_split_payment_metadata = dummy::DummySplitPaymentRequest::try_from(req)?;
-
-            // if the request has split payment object, then append the transfer account id in headers in charge_type is Direct
-            if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                dummy_split_payment,
-            )) = &req.request.split_payments
-            {
-                if dummy_split_payment.charge_type
-                    ==common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct)
-                {
-                    let mut customer_account_header = vec![(
-                        headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                        dummy_split_payment
-                            .transfer_account_id
-                            .clone()
-                            .into_masked(),
-                    )];
-                    header.append(&mut customer_account_header);
-                }
-            }
-            // if request doesn't have transfer_account_id, but split_payment_metadata has it, append it
-            else if let Some(transfer_account_id) =
-                dummy_split_payment_metadata.transfer_account_id.clone()
-            {
-                let mut customer_account_header = vec![(
-                    headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                    transfer_account_id.into_masked(),
-                )];
-                header.append(&mut customer_account_header);
-            }
             Ok(header)
         }
 
@@ -634,31 +603,6 @@ macros::macro_connector_implementation!(
 
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
-
-            let dummy_split_payment_metadata = dummy::DummySplitPaymentRequest::try_from(req)?;
-
-            let transfer_account_id = req
-                .request
-                .split_payments
-                .as_ref()
-                .map(|split_payments| {
-                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(dummy_split_payment) =
-                        split_payments;
-                    dummy_split_payment
-                })
-                .filter(|dummy_split_payment| {
-                    matches!(dummy_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
-                })
-                .map(|dummy_split_payment| dummy_split_payment.transfer_account_id.clone())
-                .or_else(|| dummy_split_payment_metadata.transfer_account_id.clone().map(|s| s.expose()));
-
-            if let Some(transfer_account_id) = transfer_account_id {
-                let mut customer_account_header = vec![(
-                    headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                    transfer_account_id.clone().into_masked(),
-                )];
-                header.append(&mut customer_account_header);
-            };
             Ok(header)
         }
 
@@ -696,27 +640,6 @@ macros::macro_connector_implementation!(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
-            let transfer_account_id = req
-                .request
-                .split_payments
-                .as_ref()
-                .map(|split_payments| {
-                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(dummy_split_payment) =
-                        split_payments;
-                    dummy_split_payment
-                })
-                .filter(|dummy_split_payment| {
-                    matches!(dummy_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
-                })
-                .map(|dummy_split_payment| dummy_split_payment.transfer_account_id.clone());
-
-            if let Some(transfer_account_id) = transfer_account_id {
-                let mut customer_account_header = vec![(
-                    headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                    transfer_account_id.clone().into_masked(),
-                )];
-                header.append(&mut customer_account_header);
-            };
 
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
@@ -796,27 +719,6 @@ macros::macro_connector_implementation!(
                     .to_string()
                     .into(),
             )];
-            let transfer_account_id = req
-                .request
-                .split_payments
-                .as_ref()
-                .map(|split_payments| {
-                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(dummy_split_payment) =
-                        split_payments;
-                    dummy_split_payment
-                })
-                .filter(|dummy_split_payment| {
-                    matches!(dummy_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
-                })
-                .map(|dummy_split_payment| dummy_split_payment.transfer_account_id.clone());
-
-            if let Some(transfer_account_id) = transfer_account_id {
-                let mut customer_account_header = vec![(
-                    headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                    transfer_account_id.clone().into_masked(),
-                )];
-                header.append(&mut customer_account_header);
-            };
 
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
@@ -853,17 +755,6 @@ macros::macro_connector_implementation!(
             )];
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
-
-            if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                dummy_split_payment,
-            )) = &req.request.split_payments
-            {
-                transformers::transform_headers_for_connect_platform(
-                    dummy_split_payment.charge_type.clone(),
-                    Secret::new(dummy_split_payment.transfer_account_id.clone()),
-                    &mut header,
-                );
-            }
             Ok(header)
         }
         fn get_url(
@@ -1029,25 +920,6 @@ macros::macro_connector_implementation!(
             )];
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
-
-            if let Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(ref dummy_split_refund)) =
-                req.request.split_refunds.as_ref()
-            {
-                match &dummy_split_refund.charge_type {
-                    common_enums::PaymentChargeType::Stripe(dummy_charge) => {
-                        if dummy_charge == &common_enums::StripeChargeType::Direct {
-                            let mut customer_account_header = vec![(
-                                headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                                dummy_split_refund
-                                    .transfer_account_id
-                                    .clone()
-                                    .into_masked(),
-                            )];
-                            header.append(&mut customer_account_header);
-                        }
-                    }
-                }
-            }
             Ok(header)
         }
         fn get_url(
@@ -1081,16 +953,6 @@ macros::macro_connector_implementation!(
             )];
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
-
-            if let Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(ref dummy_refund)) =
-                req.request.split_refunds.as_ref()
-            {
-                transformers::transform_headers_for_connect_platform(
-                    dummy_refund.charge_type.clone(),
-                    Secret::new(dummy_refund.transfer_account_id.clone()),
-                    &mut header,
-                );
-            }
             Ok(header)
         }
         fn get_url(
