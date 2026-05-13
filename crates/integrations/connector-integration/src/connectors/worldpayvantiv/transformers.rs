@@ -2510,10 +2510,13 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                 })
             } else {
                 let post_capture_void_status = get_post_capture_void_status(void_response.response);
+                let description = post_capture_void_status
+                    .is_post_capture_void_failure()
+                    .then(|| void_response.message.clone());
                 let payments_response = PaymentsResponseData::PostCaptureVoidResponse {
                     post_capture_void_status,
                     connector_reference_id: Some(void_response.cnp_txn_id.clone()),
-                    description: None,
+                    description,
                     status_code: item.http_code,
                 };
 

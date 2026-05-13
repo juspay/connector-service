@@ -1364,6 +1364,15 @@ pub enum PostCaptureVoidStatus {
     Failed,
 }
 
+impl PostCaptureVoidStatus {
+    pub fn is_post_capture_void_failure(self) -> bool {
+        match self {
+            Self::Failed => true,
+            Self::Pending | Self::Succeeded => false,
+        }
+    }
+}
+
 /// Status of the dispute
 #[derive(
     Clone,
