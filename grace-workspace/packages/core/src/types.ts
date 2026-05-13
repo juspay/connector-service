@@ -771,6 +771,14 @@ export interface PipelineArtifacts {
   l2Review?: SpecReviewSession;
   l3Review?: SpecReviewSession;
   /**
+   * Phase 13: GitHub issue URL created at `juspay/grace` (or whatever
+   * config.checkpoints.l2_review.graceIssueRepo points at) when the L2 tech
+   * spec is approved. Set by `maybeCreateGraceIssue` in l2-review.ts.
+   * Cleared by manual rewind via ARTIFACT_KEYS_BY_STAGE.l2_review so a
+   * post-rewind re-approval creates a fresh issue.
+   */
+  l2GraceIssueUrl?: string;
+  /**
    * Phase 12: per-phase Claude CLI session ids. Each LLM-using checkpoint
    * captures a uuid on its first call (returned by the runner) and stores
    * it here; subsequent calls resume the same conversation via

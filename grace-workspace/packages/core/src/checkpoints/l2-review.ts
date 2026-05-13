@@ -1,5 +1,6 @@
 import type { Checkpoint, L2Plan } from "../types.js";
 import { runHumanReview } from "./human-review.js";
+import { maybeCreateGraceIssue } from "./grace-issue.js";
 
 function renderL2(spec: L2Plan) {
   const line = "─".repeat(60);
@@ -36,7 +37,7 @@ export const l2ReviewCheckpoint: Checkpoint = {
   timeout: 24 * 60 * 60 * 1000,
   maxRetries: 5,
   async run(ctx) {
-    return runHumanReview<L2Plan>(ctx, {
+    const result = await runHumanReview<L2Plan>(ctx, {
       checkpointId: "l2_review",
       specType: "l2",
       loadSpec: (c) => c.artifacts.l2,
@@ -49,5 +50,10 @@ export const l2ReviewCheckpoint: Checkpoint = {
       previousKey: "previousL2",
       sessionKey: "l2Review",
     });
+
+    // Phase 13: on approve, file a tracking issue at juspay/grace. Warns and
+    // returns the original result unchanged on failure — external system
+    // side-effect is not a correctness gate.
+    return maybeCreateGraceIssue(ctx, result);
   },
 };

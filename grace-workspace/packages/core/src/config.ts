@@ -89,6 +89,19 @@ export interface CsddConfig {
     regression: { command: string; args: string[]; enabled?: boolean };
     design_match: { enabled: boolean; screenshotRoute: string };
     pr_review: { requireHumanApproval: boolean; humanApprovalTimeoutMs: number };
+    /**
+     * Phase 13: GitHub side-effect on l2 tech spec approval. When the
+     * reviewer (human or auto-mode) approves the L2 spec, the engine
+     * shells out to `gh issue create` against `graceIssueRepo` so the
+     * approved spec lands in a central tracker. Failure to create the
+     * issue logs a warning and lets l2_review still pass (external system
+     * isn't a correctness gate).
+     */
+    l2_review: {
+      createGraceIssue: boolean;
+      graceIssueRepo: string;
+      graceIssueLabels: string[];
+    };
   };
 }
 
@@ -133,6 +146,15 @@ const DEFAULTS: CsddConfig = {
     regression: { command: "npm", args: ["run", "re:build"] },
     design_match: { enabled: true, screenshotRoute: "/" },
     pr_review: { requireHumanApproval: true, humanApprovalTimeoutMs: 300_000 },
+    l2_review: {
+      createGraceIssue: true,
+      graceIssueRepo: "juspay/grace",
+      // `connector-integration` exists on juspay/grace (verified via
+      // `gh label list`). gh issue create --label NAME errors if NAME
+      // doesn't exist on the target repo, so we deliberately ship a
+      // single label that's known to be present.
+      graceIssueLabels: ["connector-integration"],
+    },
   },
 };
 
@@ -198,6 +220,13 @@ export function loadConfig(explicitPath?: string): CsddConfig {
     merged.credsPath = path.resolve(process.env.BYNE_CREDS_PATH);
   } else if (merged.credsPath && !path.isAbsolute(merged.credsPath)) {
     merged.credsPath = path.resolve(merged.credsPath);
+  }
+  // Phase 13: env override for the grace issue repo. Lets developers point
+  // at a fork (e.g. shuklatushar226/grace for testing) without editing
+  // config.yml. Empty / unset → config.yml or DEFAULTS value wins.
+  if (process.env.BYNE_GRACE_ISSUE_REPO) {
+    merged.checkpoints.l2_review.graceIssueRepo =
+      process.env.BYNE_GRACE_ISSUE_REPO;
   }
 
   if (usedPath) {
