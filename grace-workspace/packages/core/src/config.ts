@@ -149,7 +149,11 @@ const DEFAULTS: CsddConfig = {
     l2_review: {
       createGraceIssue: true,
       graceIssueRepo: "juspay/grace",
-      graceIssueLabels: ["tech-spec", "auto-generated"],
+      // `connector-integration` exists on juspay/grace (verified via
+      // `gh label list`). gh issue create --label NAME errors if NAME
+      // doesn't exist on the target repo, so we deliberately ship a
+      // single label that's known to be present.
+      graceIssueLabels: ["connector-integration"],
     },
   },
 };
