@@ -1,17 +1,3 @@
-//! 2C2P PACO connector — JOSE-encrypted (PS256 + RSA-OAEP/A128CBC-HS256).
-//!
-//! Per-request metadata contract:
-//! - **Every flow** requires `connector_feature_data` carrying a JSON object
-//!   with `office_id` (PACO multi-merchant scoping) and `merchant_id`
-//!   (acquirer-side identifier).
-//! - **Refund** additionally requires the original Authorize orderNo, passed
-//!   in `refund_metadata` (preferred) or `connector_feature_data` (fallback)
-//!   — as a plain string or `{"original_order_no":"<auth orderNo>"}`. The
-//!   orchestrator overwrites `connector_request_reference_id` with the
-//!   refund id, so the original cannot be recovered from there.
-//! - **Refund** accepts an optional `maker_id` in the same metadata for the
-//!   PACO audit-log username; defaults to `"merchant"`.
-
 pub mod transformers;
 
 use std::{self, fmt::Debug};
@@ -474,8 +460,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
 
-        // Hex-prefix of the body lands in `reason` whenever we can't decode a
-        // typed PACO error — enables wire-capture correlation without logs.
         let body_prefix_hex = || {
             let take = body.len().min(128);
             let hex: String = body
@@ -604,7 +588,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Distinct response newtype avoids a templating-struct collision with PSync.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwocTwopPaco,
@@ -647,8 +630,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// All Authorize payment methods (Card S2S + Wallet) route to /Payment/nonUi;
-// the body's `paymentType` selects card vs WALLET-GCASH on PACO's side.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwocTwopPaco,
@@ -760,8 +741,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// VoidPC posts to the same /Void endpoint as Void; the office config picks
-// which lifecycle states it accepts.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwocTwopPaco,
@@ -836,8 +815,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Default `verify_webhook_source` returns Ok(false) → fail-closed reject. Until
-// a wired impl lands, merchants poll PSync for state on hosted-page / 3DS flows.
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for TwocTwopPaco<T>
 {
@@ -930,11 +907,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for TwocTwopPaco<T>
 {
 }
-
-// PACO does native 3DS: only `Authenticate` is wired. PreAuthenticate (no DDC
-// endpoint) and PostAuthenticate (challenge result flows server-side via the
-// ACS callback into PACO's 3DSS; merchants poll PSync after the challenge)
-// are empty markers.
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<

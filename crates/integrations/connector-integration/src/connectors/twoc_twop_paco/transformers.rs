@@ -32,16 +32,11 @@ const PACO_CARD_TYPE_DEBIT: &str = "debit";
 const PACO_REFUND_MAKER_ID: &str = "merchant";
 const PACO_KID_HEX_LEN: usize = 32;
 const PACO_OFFICE_ID_MAX_LEN: usize = 20;
-/// Audience claim PACO requires on every JWT envelope.
 pub const PACO_AUDIENCE: &str = "PacoAudience";
-/// TTL applied to outgoing JWT envelopes. PACO's published sample script
-/// uses 5 minutes; anything past that returns a "JWT expired" error.
 const PACO_JWT_TTL_SECONDS: i64 = 300;
-/// 2C2P JOSE / config reference for error doc_url surfaces.
 const PACO_INTEGRATION_DOC_URL: &str =
     "https://developer.2c2p.com/docs/getting-started-with-payment-air-controller-paco";
 
-/// PACO finalised-status response code prefix used by every successful response.
 pub const PACO_RESPONSE_CODE_SUCCESS: &str = "PC-B050000";
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -66,7 +61,6 @@ pub enum PacoDeviceCategory {
 #[derive(Debug, Clone)]
 pub struct TwocTwopPacoAuthType {
     pub access_token: Secret<String>,
-    /// Expected `aud` on PACO response JWTs. Defaults to `access_token`.
     pub response_audience: Secret<String>,
     pub jose_cfg: JoseConfig,
 }
@@ -150,9 +144,6 @@ impl TryFrom<&ConnectorSpecificConfig> for TwocTwopPacoAuthType {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ApiRequestEnvelope {
-    /// PACO requires a unique id per request; it echoes back in
-    /// `apiResponse.responseToRequestMessageId` for correlation. UUID v4
-    /// matches 2C2P's sample-code convention.
     #[serde(rename = "requestMessageID")]
     pub request_message_id: String,
     #[serde(rename = "requestDateTime")]
@@ -177,7 +168,6 @@ impl ApiRequestEnvelope {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoTransactionAmount {
-    /// 12-digit zero-padded minor-unit string PACO uses for cross-checking.
     pub amount_text: String,
     pub currency_code: Currency,
     pub decimal_places: u8,
@@ -231,8 +221,6 @@ impl PacoTransactionAmount {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PacoNotificationUrls {
-    /// PACO field names suffix `URL` (capitalised) — serde's camelCase
-    /// would emit `confirmationUrl`, which fails server-side validation.
     #[serde(rename = "confirmationURL", skip_serializing_if = "Option::is_none")]
     pub confirmation_url: Option<String>,
     #[serde(rename = "failedURL", skip_serializing_if = "Option::is_none")]
@@ -247,8 +235,6 @@ pub struct PacoNotificationUrls {
 #[serde(rename_all = "camelCase")]
 pub struct PacoCreditCardDetails {
     pub card_number: Secret<String>,
-    /// PACO expects `cardExpiryMMYY` — serde camelCase would emit
-    /// `cardExpiryMmyy`, which fails server-side validation.
     #[serde(rename = "cardExpiryMMYY")]
     pub card_expiry_mmyy: Secret<String>,
     pub cvv_code: Secret<String>,
@@ -257,8 +243,6 @@ pub struct PacoCreditCardDetails {
     pub card_type: &'static str,
 }
 
-/// EMV 3DS 2.0 device fingerprint sent to the issuer ACS. Omitting it forces
-/// a step-up challenge since the ACS has nothing to risk-evaluate.
 #[derive(Debug, Clone, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoBrowserInfo {
@@ -272,8 +256,6 @@ pub struct PacoBrowserInfo {
     pub java_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
-    /// PACO accepts numeric values as strings here (the EMV 3DS 2.0 wire
-    /// format encodes everything as strings). Match that convention.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_depth: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -287,9 +269,6 @@ pub struct PacoBrowserInfo {
 }
 
 impl PacoBrowserInfo {
-    /// Lift a prism `BrowserInformation` into PACO's expected shape. Any
-    /// missing fields stay None and are skipped at serialisation — the
-    /// issuer ACS then evaluates whatever's present.
     pub fn from_browser_info(bi: &domain_types::router_request_types::BrowserInformation) -> Self {
         Self {
             accept_header: bi.accept_header.clone(),
@@ -315,20 +294,13 @@ pub struct TwocTwopPacoCardAuthorizeRequest {
     pub product_description: String,
     pub payment_type: PacoPaymentType,
     pub transaction_amount: PacoTransactionAmount,
-    /// PACO expects the plural-with-capitals form `notificationURLs`.
     #[serde(rename = "notificationURLs")]
     pub notification_urls: PacoNotificationUrls,
     pub credit_card_details: PacoCreditCardDetails,
     #[serde(rename = "request3dsFlag")]
     pub request3ds_flag: PacoRequest3dsFlag,
-    /// EMV 3DS 2.0 device fingerprint. Required for the issuer ACS to
-    /// have any chance of evaluating frictionless. PACO accepts the body
-    /// without it but then always escalates to challenge.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser_info: Option<PacoBrowserInfo>,
-    /// Maps to PACO's `deviceDetails` — distinct from `browserInfo`, used
-    /// by PACO's own routing (mobile vs PC); also influences hosted-page
-    /// rendering for the wallet flow.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub device_details: Option<PacoDeviceDetails>,
 }
@@ -348,9 +320,6 @@ impl PacoDeviceDetails {
         }
     }
 
-    /// Derive deviceCategory from the user-agent string. Mobile UAs that
-    /// contain "Mobile" / "Android" / "iPhone" / "iPad" map to `M`; everything
-    /// else to `P`.
     pub fn from_user_agent(user_agent: String) -> Self {
         let lower = user_agent.to_ascii_lowercase();
         let is_mobile = lower.contains("mobile")
@@ -375,7 +344,6 @@ pub struct TwocTwopPacoWalletAuthorizeRequest {
     pub office_id: Secret<String>,
     pub order_no: String,
     pub product_description: String,
-    /// `WALLET-GCASH` returns the GCash app URL directly (no PACO hosted page).
     pub payment_type: PacoPaymentType,
     pub transaction_amount: PacoTransactionAmount,
     #[serde(rename = "notificationURLs")]
@@ -383,10 +351,6 @@ pub struct TwocTwopPacoWalletAuthorizeRequest {
     pub device_details: PacoDeviceDetails,
 }
 
-// PACO has two Authorize endpoints with distinct schemas; the untagged enum
-// keeps the on-wire JSON identical to what each per-variant builder emits.
-// Card variant is ~656 B (card + browser info); boxing would double-allocate
-// every request, so the larger short-lived enum is acceptable.
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
@@ -403,8 +367,6 @@ pub struct TwocTwopPacoVoidPcRequest(pub TwocTwopPacoVoidRequest);
 #[serde(transparent)]
 pub struct TwocTwopPacoAuthenticateRequest(pub TwocTwopPacoCardAuthorizeRequest);
 
-// Per-flow newtypes around the shared wire shape so each `Bridge` gets a
-// distinct templating slot. `#[serde(transparent)]` keeps the wire identical.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct TwocTwopPacoAuthorizeResponse(pub TwocTwopPacoNonUiResponse);
@@ -618,7 +580,6 @@ where
                     card_holder_name: card.get_optional_cardholder_name(),
                     card_type,
                 },
-                // Authenticate forces 3DS regardless of the upstream flag.
                 request3ds_flag: PacoRequest3dsFlag::Y,
                 browser_info,
                 device_details,
@@ -647,8 +608,6 @@ pub struct TwocTwopPacoCaptureRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
     pub order_no: String,
-    /// PACO field is `invoiceNo2C2P` — serde camelCase would emit
-    /// `invoiceNo2c2p`, which fails server-side validation.
     #[serde(rename = "invoiceNo2C2P")]
     pub invoice_no2c2p: String,
     pub settlement_amount: PacoSettlementAmount,
@@ -686,8 +645,6 @@ pub struct TwocTwopPacoVoidRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
     pub order_no: String,
-    /// PACO field is `invoiceNo2C2P` — serde camelCase would emit
-    /// `invoiceNo2c2p`, which fails server-side validation.
     #[serde(rename = "invoiceNo2C2P")]
     pub invoice_no2c2p: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -712,9 +669,6 @@ pub fn build_void_request(
     })
 }
 
-/// PACO's `/api/2.0/Void` accepts both pre- and post-capture reversals.
-/// VoidPC carries the same identifiers as Void, so the wire body is the
-/// same — only the upstream Prism flow marker differs.
 pub fn build_void_pc_request(
     item: &RouterDataV2<
         VoidPC,
@@ -738,22 +692,6 @@ pub fn build_void_pc_request(
     })
 }
 
-//
-// Body shape per PACO's official OpenAPI spec at
-// https://devzone.2c2p.com/reference/refund:
-//
-//   { officeId, orderNo, productDescription?,
-//     refundAmount: AmountCompound,
-//     localMakerChecker: { maker: { username }, checker? } }
-//
-// `orderNo` is the ORIGINAL transaction's order number (a.k.a. invoice no),
-// NOT a new refund identifier. There is no `refundDetails` wrapper and no
-// `invoiceNo2C2P` body field. `localMakerChecker.maker.username` is what
-// PACO records in its audit log; the office config decides whether a
-// checker (approver) is also required.
-
-/// `username` is recorded in PACO's audit log. Defaults to `"merchant"`; pass
-/// `{"maker_id":"<operator>"}` in `refund_metadata` for a traceable id.
 #[derive(Debug, Clone, Serialize)]
 pub struct PacoHumanActor {
     pub username: String,
@@ -769,9 +707,6 @@ pub struct PacoMakerChecker {
 pub struct TwocTwopPacoRefundRequest {
     pub api_request: ApiRequestEnvelope,
     pub office_id: Secret<String>,
-    /// PACO requires the ORIGINAL transaction's orderNo here. Callers must
-    /// set `x-connector-request-reference-id` to the original auth's order
-    /// reference when invoking Refund.
     pub order_no: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub product_description: Option<String>,
@@ -787,10 +722,6 @@ pub fn build_refund_request(
         extract_paco_merchant_identifiers(&item.resource_common_data.connector_feature_data)?;
     let amount =
         PacoTransactionAmount::new(item.request.minor_refund_amount, item.request.currency)?;
-    // PACO matches refunds by the original Authorize orderNo, but the
-    // orchestrator overwrites `connector_request_reference_id` with the
-    // refund id — so the caller must pass it through `refund_metadata`
-    // (preferred) or `connector_feature_data` (fallback).
     let original_order_no = item
         .request
         .refund_connector_metadata
@@ -843,10 +774,6 @@ pub fn build_refund_request(
     })
 }
 
-/// Pull `(office_id, merchant_id)` from per-request `connector_feature_data`.
-/// Both are required — PACO has no implicit defaults and signing fails fast
-/// rather than silently routing to the wrong office. Mirrors the Axisbank
-/// `extract_merchant_identifiers_from_metadata` pattern.
 pub fn extract_paco_merchant_identifiers(
     feature_data: &Option<common_utils::SecretSerdeValue>,
 ) -> Result<(Secret<String>, Secret<String>), error_stack::Report<errors::IntegrationError>> {
@@ -921,8 +848,6 @@ pub fn extract_paco_merchant_identifiers(
     ))
 }
 
-/// Pull the original orderNo from a metadata SecretSerdeValue. Accepts either
-/// a bare JSON string ("auth_xxx") or an object ({"original_order_no":"..."}).
 fn extract_paco_original_order_no(meta: &common_utils::SecretSerdeValue) -> Option<String> {
     let value = meta.peek();
     if let Some(s) = value.as_str() {
@@ -940,8 +865,6 @@ fn extract_paco_original_order_no(meta: &common_utils::SecretSerdeValue) -> Opti
     None
 }
 
-/// Pull the optional `maker_id` (audit-log operator username) from a refund
-/// metadata SecretSerdeValue. Only valid when metadata is an object.
 fn extract_paco_maker_id(meta: &common_utils::SecretSerdeValue) -> Option<String> {
     let value = meta.peek();
     let obj = value.as_object()?;
@@ -951,22 +874,14 @@ fn extract_paco_maker_id(meta: &common_utils::SecretSerdeValue) -> Option<String
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PacoPaymentStatus {
-    /// Authorized.
     A,
-    /// Settled / Charged.
     S,
-    /// Voided.
     V,
-    /// Refunded.
     R,
-    /// Incomplete (3DS challenge in flight or pending).
     I,
-    /// Pending.
     P,
-    /// Payment Created, Page Generated (hosted-page wallet/redirect).
     #[serde(rename = "PCPS")]
     Pcps,
-    /// Failure.
     F,
     #[serde(other)]
     Unknown,
@@ -974,25 +889,15 @@ pub enum PacoPaymentStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PacoPaymentStep {
-    /// Pre-authorisation.
     PA,
-    /// Settlement.
     ST,
-    /// Voided.
     VD,
-    /// Refunded (final).
     RF,
-    /// Refund Requested (in flight).
     RR,
-    /// Awaiting Challenge.
     AC,
-    /// Initiated / Pending.
     IN,
-    /// Pending refund.
     RP,
-    /// Hosted page generated.
     GP,
-    /// Pending Response from acquirer.
     PR,
     #[serde(other)]
     Unknown,
@@ -1005,11 +910,9 @@ fn map_attempt_status(status: &PacoPaymentStatus, step: &PacoPaymentStep) -> Att
         (PacoPaymentStatus::V, PacoPaymentStep::VD) => AttemptStatus::Voided,
         (PacoPaymentStatus::R, PacoPaymentStep::RF) => AttemptStatus::Charged,
         (PacoPaymentStatus::R, PacoPaymentStep::RR) => AttemptStatus::Charged,
-        // (I, *) = payment in-flight (hosted-page / ACS challenge pending).
         (PacoPaymentStatus::I, _) => AttemptStatus::AuthenticationPending,
         (PacoPaymentStatus::Pcps, PacoPaymentStep::GP) => AttemptStatus::AuthenticationPending,
         (PacoPaymentStatus::P, PacoPaymentStep::IN) => AttemptStatus::Authorizing,
-        // P/RP (Pending Refund): the original auth is still the canonical state.
         (PacoPaymentStatus::P, PacoPaymentStep::RP) => AttemptStatus::Authorizing,
         (PacoPaymentStatus::F, _) => AttemptStatus::Failure,
         (s, st) => {
@@ -1068,9 +971,6 @@ pub struct PacoPriorPaymentResponseDetails {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoPaymentPage {
-    /// PACO returns this field as `paymentPageUrl` on /Payment/nonUi
-    /// responses but as `paymentPageURL` on /Payment/prepaymentUi. Accept
-    /// both casings.
     #[serde(default, alias = "paymentPageURL")]
     pub payment_page_url: Option<String>,
 }
@@ -1090,33 +990,21 @@ pub struct PacoPaymentResultBlock {
     pub prior_payment_response_details: Option<PacoPriorPaymentResponseDetails>,
     #[serde(default)]
     pub payment_page: Option<PacoPaymentPage>,
-    /// Top-level page URL fallback. PACO emits this as `paymentPageUrl`
-    /// on /Payment/nonUi and as `paymentPageURL` on /Payment/prepaymentUi.
     #[serde(default, alias = "paymentPageURL")]
     pub payment_page_url: Option<String>,
-    /// `/nonUi` wallet flows (e.g. WALLET-GCASH) return the PSP-direct URL
-    /// here under `data.webPaymentResult.webPaymentUrl`.
     #[serde(default)]
     pub web_payment_url: Option<String>,
-    /// Present on /Payment/nonUi 3DS challenge responses
-    /// (paymentStatus=I, paymentStep=AC).
     #[serde(default, rename = "aresACSChallenge")]
     pub ares_acs_challenge: Option<AresAcsChallenge>,
-    /// Present on frictionless or post-challenge success responses with
-    /// CAVV/ECI/3DS-version/etc.
     #[serde(default)]
     pub credit_card_authenticated_details: Option<PacoCreditCardAuthenticatedDetails>,
 }
 
-/// 3DS ACS challenge details returned by `/Payment/nonUi` when PACO needs the
-/// cardholder to complete a CReq POST against the issuer's ACS.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AresAcsChallenge {
-    /// PACO field is `acsURL` (capital URL). Public issuer endpoint.
     #[serde(default, rename = "acsURL", alias = "acsUrl")]
     pub acs_url: Option<String>,
-    /// PACO can name the CReq blob `creq`, `cReq`, or `creqB64`. Accept any.
     #[serde(default, alias = "cReq", alias = "creqB64")]
     pub creq: Option<Secret<String>>,
     #[serde(default, rename = "threeDSSessionData")]
@@ -1127,8 +1015,6 @@ pub struct AresAcsChallenge {
     pub challenge_html: Option<Secret<String>>,
 }
 
-/// 3DS authentication artefacts returned by PACO once enrolment + challenge
-/// have produced a CAVV / ECI / threeDS transaction id.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoCreditCardAuthenticatedDetails {
@@ -1149,21 +1035,10 @@ pub struct PacoData {
     pub payment_result: Option<PacoPaymentResultBlock>,
     #[serde(default)]
     pub payment_incomplete_result: Option<PacoPaymentResultBlock>,
-    /// `/Payment/nonUi` wallet flows (e.g. `paymentType: WALLET-GCASH`)
-    /// return their pending payment block here. Same field set as
-    /// `paymentResult` but carries `webPaymentUrl` instead of `paymentPage`.
     #[serde(default)]
     pub web_payment_result: Option<PacoPaymentResultBlock>,
-    /// On `/Payment/prepaymentUi` responses (GCash hosted-page) PACO returns
-    /// `paymentPage` as a sibling of `paymentIncompleteResult` inside `data`,
-    /// not nested under it. The `merged_payment_page_url` accessor below
-    /// checks both locations.
     #[serde(default)]
     pub payment_page: Option<PacoPaymentPage>,
-    /// `/Refund/refund` flattens the result fields onto `data` directly —
-    /// there is no `paymentResult`/`paymentIncompleteResult` wrapper. Catch
-    /// the flat shape with the same field set so `merged_result()` can fall
-    /// back to it.
     #[serde(default)]
     pub payment_status_info: Option<PacoPaymentStatusInfo>,
     #[serde(default, rename = "invoiceNo2C2P")]
@@ -1188,13 +1063,6 @@ pub struct TwocTwopPacoNonUiResponse {
 }
 
 impl TwocTwopPacoNonUiResponse {
-    /// PACO emits the per-flow status block under one of three keys depending
-    /// on flow / endpoint:
-    /// - `paymentResult` (terminal — card auth, capture, void)
-    /// - `paymentIncompleteResult` (in-flight — pending CC auth)
-    /// - `webPaymentResult` (`/nonUi` wallet flow, e.g. WALLET-GCASH)
-    ///
-    /// All three share the same shape, so we merge into one accessor.
     pub fn merged_result(&self) -> Option<&PacoPaymentResultBlock> {
         self.data.as_ref().and_then(|d| {
             d.payment_result
@@ -1204,12 +1072,8 @@ impl TwocTwopPacoNonUiResponse {
         })
     }
 
-    /// Refund / Settlement / Void responses flatten the result fields onto
-    /// `data` directly instead of nesting them under `paymentResult` /
-    /// `paymentIncompleteResult`. Use this when the flat shape is expected.
     pub fn flat_data_block(&self) -> Option<PacoPaymentResultBlock> {
         let data = self.data.as_ref()?;
-        // Prefer the wrapper shapes if present.
         if let Some(b) = data
             .payment_result
             .as_ref()
@@ -1271,14 +1135,6 @@ where
                             )
                         })?;
                     let status = map_attempt_status(&info.payment_status, &info.payment_step);
-                    // PACO publishes the redirect URL in four possible spots
-                    // depending on flow:
-                    //   - `data.webPaymentResult.webPaymentUrl`
-                    //     (/nonUi wallet, direct PSP URL — current GCash path)
-                    //   - `data.paymentPage.paymentPageUrl`
-                    //     (legacy /prepaymentUi hosted-page sibling)
-                    //   - `data.<result>.paymentPage.paymentPageUrl` (nested)
-                    //   - `data.<result>.paymentPageUrl` (flat fallback)
                     let url = block
                         .web_payment_url
                         .clone()
@@ -1568,9 +1424,6 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
             router_data,
             http_code,
         } = item;
-        // PACO's `/Refund/refund` returns the result fields flat on `data`,
-        // not nested under `paymentResult`. Use `flat_data_block()` so the
-        // shared status-mapping helpers still work on that shape.
         let result = response.flat_data_block();
 
         let refund_status = match result.as_ref().and_then(|b| b.payment_status_info.as_ref()) {
@@ -1621,9 +1474,6 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
 pub struct TwocTwopPacoInquiryResponse {
     #[serde(default)]
     pub api_response: Option<PacoApiResponse>,
-    /// PACO returns `data` as a JSON array on `/Inquiry/transactionStatus`,
-    /// even when only one transaction matches. The accessor picks the
-    /// first entry.
     #[serde(default, deserialize_with = "deserialize_inquiry_data")]
     pub data: Option<PacoInquiryData>,
 }
@@ -1876,7 +1726,6 @@ pub fn error_code_message(
     (code, message)
 }
 
-/// Inquiry-endpoint plain-JSON error body.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TwocTwopPacoErrorResponse {
@@ -1908,8 +1757,6 @@ impl TwocTwopPacoErrorResponse {
     }
 }
 
-/// Build the JOSE claim envelope expected by PACO. The `iss` and
-/// `CompanyApiKey` claims both carry the access token; `aud` is fixed.
 #[derive(Debug, Serialize)]
 pub struct PacoJoseClaims<'a> {
     pub iss: &'a str,
@@ -1937,15 +1784,6 @@ impl<'a> PacoJoseClaims<'a> {
     }
 }
 
-// Wire-envelope encode/decode lives on the connector struct itself, in
-// `preprocess_request_bytes` / `preprocess_response_bytes` (see
-// `twoc_twop_paco.rs::create_all_prerequisites!`). The standalone helpers
-// previously exposed here (`build_jose_envelope` / `decode_jose_response`)
-// are no longer needed now that every flow runs through the framework's
-// `preprocess_request: true, preprocess_response: true` macro path.
-
-/// Translate PACO's `creditCardAuthenticatedDetails` block into the prism
-/// `AuthenticationData` shape consumed by downstream Authorize.
 fn build_authentication_data_from_paco(
     details: &PacoCreditCardAuthenticatedDetails,
 ) -> AuthenticationData {
@@ -2005,7 +1843,6 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwocTwopPacoNonUiResp
         let connector_txn_id = result.and_then(|b| b.invoice_no2c2p.clone());
         let connector_response_reference_id = result.and_then(|b| b.order_no.clone());
 
-        // Failure → emit ErrorResponse and stop.
         let mapped_status = info
             .map(|i| map_attempt_status(&i.payment_status, &i.payment_step))
             .unwrap_or(AttemptStatus::AuthenticationPending);
@@ -2038,13 +1875,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwocTwopPacoNonUiResp
             });
         }
 
-        // Challenge required → build CReq POST form.
         let challenge = result.and_then(|b| b.ares_acs_challenge.as_ref());
         if let Some(challenge) = challenge {
-            // PACO returns aresACSChallenge with at least the acsURL when a
-            // challenge is required; creq may be absent on some 3DS-method-data
-            // responses. Use empty string defaults so we still surface the
-            // form to the orchestrator.
             let acs_url = challenge.acs_url.clone().unwrap_or_default();
             let creq = challenge
                 .creq
@@ -2085,7 +1917,6 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwocTwopPacoNonUiResp
             });
         }
 
-        // Frictionless → CAVV / ECI returned directly on the nonUi response.
         let authentication_data = result
             .and_then(|b| b.credit_card_authenticated_details.as_ref())
             .map(build_authentication_data_from_paco);
@@ -2093,10 +1924,6 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwocTwopPacoNonUiResp
         let status = if authentication_data.is_some() {
             AttemptStatus::AuthenticationSuccessful
         } else {
-            // No challenge AND no CAVV — keep the prism state machine on
-            // AuthenticationPending so the orchestrator can fall through
-            // to PSync (which polls the Inquiry endpoint) to retrieve the
-            // final post-3DS state.
             AttemptStatus::AuthenticationPending
         };
 
@@ -2277,9 +2104,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self(build_authenticate_request(&item.router_data, &auth)?))
     }
 }
-
-// Shim TryFroms unwrap the newtype response and delegate to the inner-type
-// decoder, avoiding ~30 lines of duplicated status/error mapping per flow.
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<TwocTwopPacoAuthorizeResponse, Self>>
