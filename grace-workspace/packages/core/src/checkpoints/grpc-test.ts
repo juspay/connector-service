@@ -10,6 +10,10 @@ import {
   tailLogFile,
   type ServerHandle,
 } from "./grpc-server-lifecycle.js";
+import {
+  deriveClaudeSessionId,
+  friendlySessionName,
+} from "./session-id.js";
 
 /**
  * gRPC Test Checkpoint — Phase 6-7 of 2.3_codegen.md, but with the server
@@ -292,6 +296,10 @@ export const grpcTestCheckpoint: Checkpoint = {
           "info"
         );
 
+        // Phase 15: deterministic session id from (connector, flow, phase).
+        const grpcFriendly = friendlySessionName(connector, flow, "grpc_test");
+        const grpcDerived = deriveClaudeSessionId(connector, flow, "grpc_test");
+
         const testCall = grpcSessionId
           ? {
               claudeSessionId: grpcSessionId,
@@ -311,6 +319,7 @@ export const grpcTestCheckpoint: Checkpoint = {
                 HAS_FIELD_PROBE: hasFieldProbe,
                 FIELD_PROBE_PATH: fieldProbePath || "",
               },
+              preferredSessionId: grpcDerived,
             };
 
         const { result: r, sessionId: nextGrpcSessionId } =
@@ -319,6 +328,7 @@ export const grpcTestCheckpoint: Checkpoint = {
             cwd: projectRoot,
             label: grpcSessionId ? `grpc:test:retry-${iter}` : "grpc:test",
             timeoutMs: 10 * 60 * 1000,
+            sessionLabel: grpcFriendly,
           });
         result = r;
         grpcSessionId = nextGrpcSessionId;
@@ -355,6 +365,12 @@ ${grpcOutput.slice(0, 3000)}
               grpcurlCommand: grpcCommand,
               grpcResponse: responseSummary,
               grpcTestIterations: iter,
+              // Phase 15: belt-and-suspenders echo. The session id is mutated
+              // inside the fix loop (line ~325) but checkpoint runs can span
+              // many iterations and only state.save at checkpoint boundary
+              // persists. Echoing here makes the persistence contract explicit
+              // for the success path.
+              grpcTestSessionId: ctx.artifacts.grpcTestSessionId,
             },
           };
         }
@@ -449,6 +465,10 @@ ${grpcOutput.slice(0, 3000)}
           grpcResponse: responseSummary,
           grpcTestFailed: true,
           grpcTestError: errorMsg,
+          // Phase 15: belt-and-suspenders echo on failure too (this is the
+          // path the audit flagged as highest-risk for losing the in-loop
+          // mutation).
+          grpcTestSessionId: ctx.artifacts.grpcTestSessionId,
         },
       };
     } catch (err) {

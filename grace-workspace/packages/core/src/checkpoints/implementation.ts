@@ -6,6 +6,10 @@ import {
   CODEGEN_AGENT_SYSTEM,
   buildCodegenPayload,
 } from "../generators/codegen-agent-prompt.js";
+import {
+  deriveClaudeSessionId,
+  friendlySessionName,
+} from "./session-id.js";
 
 /**
  * Phase 12: build the short follow-up message for a resumed implementation
@@ -361,6 +365,10 @@ ${workflowContent}
         ? buildIncrementalImplMessage(connector, flow, compilationErrors, grpcTestErrors)
         : "";
 
+      // Phase 15: deterministic session id from (connector, flow, phase).
+      const implFriendly = friendlySessionName(connector, flow, "implementation");
+      const implDerived = deriveClaudeSessionId(connector, flow, "implementation");
+
       const aiCall = isResume
         ? {
             claudeSessionId: implSessionId,
@@ -371,6 +379,7 @@ ${workflowContent}
         : {
             skillBody: systemPrompt,
             userPayload: payload,
+            preferredSessionId: implDerived,
           };
 
       const { result: rawResult, sessionId: nextImplSessionId } =
@@ -379,6 +388,7 @@ ${workflowContent}
           cwd: projectRoot,
           label: isResume ? "implementation:codegen:resume" : "implementation:codegen",
           timeoutMs: 25 * 60 * 1000, // 25 min (no build/test, just code writing)
+          sessionLabel: implFriendly,
         });
       result = rawResult;
       ctx.artifacts.implementationSessionId = nextImplSessionId;
@@ -436,6 +446,8 @@ ${workflowContent}
       passed: true,
       artifacts: {
         implementation: result,
+        // Phase 15: belt-and-suspenders echo (see l2-planning for rationale)
+        implementationSessionId: ctx.artifacts.implementationSessionId,
       },
     };
   },

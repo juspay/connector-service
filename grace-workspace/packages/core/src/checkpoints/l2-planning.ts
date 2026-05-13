@@ -1,5 +1,9 @@
 import type { Checkpoint, L2Plan, L2GenerationLog } from "../types.js";
 import { runAI } from "../tools/runner-factory.js";
+import {
+  deriveClaudeSessionId,
+  friendlySessionName,
+} from "./session-id.js";
 import { L2_SYSTEM, buildL2User } from "../generators/l2-prompt.js";
 import {
   LINKS_AGENT_SYSTEM,
@@ -123,6 +127,19 @@ export const l2PlanningCheckpoint: Checkpoint = {
     const regenPrompt = ctx.artifacts.l2RegeneratePrompt as string | undefined;
 
     try {
+      // Phase 15: deterministic session id from (connector, flow, phase).
+      // Same task → same uuid → cross-run resume of the same conversation.
+      const linksFriendly = friendlySessionName(
+        connector,
+        paymentMethod,
+        "l2_planning_links"
+      );
+      const linksDerived = deriveClaudeSessionId(
+        connector,
+        paymentMethod,
+        "l2_planning_links"
+      );
+
       const aiCall = linksSessionId
         ? {
             claudeSessionId: linksSessionId,
@@ -136,6 +153,7 @@ export const l2PlanningCheckpoint: Checkpoint = {
         : {
             skillBody: LINKS_AGENT_SYSTEM,
             userPayload: linksPayload,
+            preferredSessionId: linksDerived,
           };
 
       const { result: rawResult, sessionId: nextLinksSessionId } =
@@ -144,6 +162,7 @@ export const l2PlanningCheckpoint: Checkpoint = {
           cwd: projectRoot,
           label: linksSessionId ? "l2_gen:links:resume" : "l2_gen:links",
           timeoutMs: 15 * 60 * 1000, // 15 min for web search
+          sessionLabel: linksFriendly,
         });
       linksResult = rawResult;
       // Persist the session id so a future retry can `--resume` this exact
@@ -226,6 +245,17 @@ export const l2PlanningCheckpoint: Checkpoint = {
       | undefined;
 
     try {
+      const techspecFriendly = friendlySessionName(
+        connector,
+        paymentMethod,
+        "l2_planning_techspec"
+      );
+      const techspecDerived = deriveClaudeSessionId(
+        connector,
+        paymentMethod,
+        "l2_planning_techspec"
+      );
+
       const aiCall = techspecSessionId
         ? {
             claudeSessionId: techspecSessionId,
@@ -239,6 +269,7 @@ export const l2PlanningCheckpoint: Checkpoint = {
         : {
             skillBody: TECHSPEC_AGENT_SYSTEM,
             userPayload: techspecPayload,
+            preferredSessionId: techspecDerived,
           };
 
       const { result: rawResult, sessionId: nextTechspecSessionId } =
@@ -247,6 +278,7 @@ export const l2PlanningCheckpoint: Checkpoint = {
           cwd: projectRoot,
           label: techspecSessionId ? "l2_gen:techspec:resume" : "l2_gen:techspec",
           timeoutMs: 30 * 60 * 1000, // 30 min for grace techspec
+          sessionLabel: techspecFriendly,
         });
       techspecResult = rawResult;
       ctx.artifacts.l2TechspecSessionId = nextTechspecSessionId;
@@ -385,6 +417,13 @@ export const l2PlanningCheckpoint: Checkpoint = {
       artifacts: {
         l2: l2Plan,
         l2GenLog: generationLog,
+        // Phase 15: belt-and-suspenders echo. ctx.artifacts.l2*SessionId is
+        // already set above via direct mutation, so this is technically
+        // redundant — but it makes the persistence contract explicit so a
+        // future refactor that derives artifacts from result rather than
+        // ctx doesn't silently drop the session ids.
+        l2LinksSessionId: ctx.artifacts.l2LinksSessionId,
+        l2TechspecSessionId: ctx.artifacts.l2TechspecSessionId,
       },
     };
   },

@@ -61,6 +61,12 @@ export interface AIRunOptions {
    * Claude-code only.
    */
   incremental?: boolean;
+  /**
+   * Phase 15: human-readable label for the Claude conversation (e.g.
+   * `stripe-card3ds-implementation`). Logged in the spawn line for
+   * grep-ability; does not affect spawn args. Claude-code only.
+   */
+  sessionLabel?: string;
 }
 
 /**
@@ -165,6 +171,7 @@ export async function runAI<T = unknown>(
       claudeSessionId: opts.claudeSessionId,
       preferredSessionId: opts.preferredSessionId,
       incremental: opts.incremental,
+      sessionLabel: opts.sessionLabel,
     };
     return runClaudeCode<T>(ccOpts);
   } else {

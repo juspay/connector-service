@@ -1,0 +1,74 @@
+import { createHash } from "node:crypto";
+
+/**
+ * Phase 15: deterministic Claude session ids derived from
+ * `(connector, flow/payment-method, phase)`.
+ *
+ * The runner's `--session-id` flag wants a UUID-shaped string (8-4-4-4-12
+ * hex). We produce one by SHA-1ing a namespaced friendly name and slicing
+ * the hex into UUID form. Same friendly name → same id, always; different
+ * name → different id (cryptographically). This is structurally similar to
+ * UUIDv5 but doesn't bother setting the version/variant bits — claude CLI
+ * doesn't enforce them, only the shape.
+ *
+ * The friendly name (`stripe-card3ds-implementation`) is what we log
+ * alongside the uuid in the runner so engine output is grep-able by name.
+ *
+ * Cross-run implication: two pipeline runs of the same `(connector, flow,
+ * phase)` produce identical ids, so the second run's runAI call issues
+ * `--resume <same-uuid>` and picks up the prior conversation. This is the
+ * intentional behaviour — connector implementation effort is cumulative;
+ * the L2/L3/codegen Claudes remember what was tried before. To get a fresh
+ * conversation, the user must explicitly delete the jsonl (e.g. via
+ * `byne sessions prune` or a future targeted reset command).
+ */
+
+const BYNE_NAMESPACE = "byne-grace-pipeline";
+
+/** Lowercase + collapse non-alphanumerics into single underscores. Trim
+ *  leading/trailing underscores. Lossy on purpose so display variants
+ *  ("Card 3DS" / "card-3ds" / "Card3DS") collapse to the same key. */
+function norm(s: string | undefined | null): string {
+  return (s ?? "unknown")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+/**
+ * Stable, human-readable identifier for one `(connector, flow, phase)`
+ * tuple. Logged in engine output so `grep stripe-card3ds-implementation`
+ * pulls every relevant spawn line.
+ */
+export function friendlySessionName(
+  connector: string | undefined,
+  flow: string | undefined,
+  phase: string
+): string {
+  return `${norm(connector)}-${norm(flow)}-${norm(phase)}`;
+}
+
+/**
+ * Deterministic UUID-shaped session id. Pass to `runAI` as
+ * `preferredSessionId` on first call; the runner forwards it to
+ * `claude --session-id <derived>` instead of generating a random uuid.
+ *
+ * Same friendly name → same returned uuid, always.
+ */
+export function deriveClaudeSessionId(
+  connector: string | undefined,
+  flow: string | undefined,
+  phase: string
+): string {
+  const fname = friendlySessionName(connector, flow, phase);
+  const hex = createHash("sha1")
+    .update(`${BYNE_NAMESPACE}/${fname}`)
+    .digest("hex");
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20, 32),
+  ].join("-");
+}

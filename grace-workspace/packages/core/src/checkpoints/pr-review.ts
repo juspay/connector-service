@@ -2,6 +2,10 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 import type { Checkpoint, PRReviewResult } from "../types.js";
 import { runAI } from "../tools/runner-factory.js";
+import {
+  deriveClaudeSessionId,
+  friendlySessionName,
+} from "./session-id.js";
 import { safeParseJson } from "../utils.js";
 import { getConfig } from "../config.js";
 import { askYesNo } from "../prompts/cli-prompts.js";
@@ -93,6 +97,13 @@ export const prReviewCheckpoint: Checkpoint = {
     const priorPrReview = ctx.artifacts.prReview as
       | { prUrl?: string }
       | undefined;
+    // Phase 15: deterministic session id from (connector, flow, phase).
+    const prConnector =
+      (ctx.task.targetConnectors && ctx.task.targetConnectors[0]) || "unknown";
+    const prFlow = ctx.task.paymentMethod || "unknown";
+    const prFriendly = friendlySessionName(prConnector, prFlow, "pr_review");
+    const prDerived = deriveClaudeSessionId(prConnector, prFlow, "pr_review");
+
     try {
       const aiCall = prSessionId
         ? {
@@ -122,6 +133,7 @@ export const prReviewCheckpoint: Checkpoint = {
               cypressReport: ctx.artifacts.cypressReport,
               playwrightReport: ctx.artifacts.playwrightReport,
             },
+            preferredSessionId: prDerived,
           };
 
       const { result: rawParsed, sessionId: nextPrSessionId } =
@@ -131,6 +143,7 @@ export const prReviewCheckpoint: Checkpoint = {
           label: prSessionId ? "pr_review:resume" : "pr_review",
           timeoutMs: 20 * 60 * 1000,
           allowWrite: true, // Grant full tool access to PR review agent
+          sessionLabel: prFriendly,
         });
       parsed = rawParsed;
       ctx.artifacts.prReviewSessionId = nextPrSessionId;
@@ -185,21 +198,25 @@ export const prReviewCheckpoint: Checkpoint = {
     // Auto-pass if approved and score is ok
     const autoPass = parsed.approved && scoreOk;
 
+    // Phase 15: belt-and-suspenders echo (see l2-planning for rationale).
+    // Used in all four success/failure returns below.
+    const prSessionEcho = { prReviewSessionId: ctx.artifacts.prReviewSessionId };
+
     if (autoPass) {
-      return { passed: true, artifacts: { prReview: parsed } };
+      return { passed: true, artifacts: { prReview: parsed, ...prSessionEcho } };
     }
 
     // If autoApproveReviews is enabled, pass despite issues
     if (ctx.options.autoApproveReviews) {
       ctx.log("[pr_review] Auto-approving despite issues (autoApproveReviews enabled)", "warn");
-      return { passed: true, artifacts: { prReview: parsed } };
+      return { passed: true, artifacts: { prReview: parsed, ...prSessionEcho } };
     }
 
     const cfg = getConfig().checkpoints.pr_review;
     // If human approval is not required, pass through to allow pushing changes
     if (!cfg.requireHumanApproval) {
       ctx.log("[pr_review] Passing without human approval (requireHumanApproval: false)", "warn");
-      return { passed: true, artifacts: { prReview: parsed } };
+      return { passed: true, artifacts: { prReview: parsed, ...prSessionEcho } };
     }
 
     const timeoutMs = cfg.humanApprovalTimeoutMs;
@@ -214,13 +231,16 @@ export const prReviewCheckpoint: Checkpoint = {
     if (approved) {
       return {
         passed: true,
-        artifacts: { prReview: { ...parsed, approved: true } },
+        artifacts: {
+          prReview: { ...parsed, approved: true },
+          ...prSessionEcho,
+        },
       };
     }
     return {
       passed: false,
       errors: ["Human reviewer rejected PR review"],
-      artifacts: { prReview: parsed },
+      artifacts: { prReview: parsed, ...prSessionEcho },
     };
   },
 };

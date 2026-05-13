@@ -1,6 +1,10 @@
 import type { Checkpoint, L3Analysis } from "../types.js";
 import { runAI } from "../tools/runner-factory.js";
 import {
+  deriveClaudeSessionId,
+  friendlySessionName,
+} from "./session-id.js";
+import {
   L3_ANALYSIS_SYSTEM,
   buildL3AnalysisPayload,
   type L3AnalysisOptions,
@@ -299,6 +303,10 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     const l3SessionId = ctx.artifacts.l3SessionId as string | undefined;
     const l3RegenPrompt = ctx.artifacts.l3RegeneratePrompt as string | undefined;
     try {
+      // Phase 15: deterministic session id from (connector, flow, phase).
+      const l3Friendly = friendlySessionName(connector, flow, "l3_analysis");
+      const l3Derived = deriveClaudeSessionId(connector, flow, "l3_analysis");
+
       const aiCall = l3SessionId
         ? {
             claudeSessionId: l3SessionId,
@@ -312,6 +320,7 @@ export const l3AnalysisCheckpoint: Checkpoint = {
         : {
             skillBody: L3_ANALYSIS_SYSTEM,
             userPayload: payload,
+            preferredSessionId: l3Derived,
           };
 
       const { result: rawResult, sessionId: nextL3SessionId } =
@@ -320,6 +329,7 @@ export const l3AnalysisCheckpoint: Checkpoint = {
           cwd: projectRoot,
           label: l3SessionId ? "l3:analysis:resume" : "l3:analysis",
           timeoutMs: 35 * 60 * 1000, // 35 min (5 min buffer below the 40 min checkpoint wrapper)
+          sessionLabel: l3Friendly,
         });
       result = rawResult;
       ctx.artifacts.l3SessionId = nextL3SessionId;
@@ -553,6 +563,8 @@ export const l3AnalysisCheckpoint: Checkpoint = {
       artifacts: {
         l3: result,
         l3SpecPath: l3SpecPath,
+        // Phase 15: belt-and-suspenders echo (see l2-planning for rationale)
+        l3SessionId: ctx.artifacts.l3SessionId,
       },
     };
   },

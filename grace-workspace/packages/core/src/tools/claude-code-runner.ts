@@ -67,6 +67,13 @@ export interface ClaudeCodeRunOptions {
    * stdout parsing is still controlled by `rawText`.
    */
   incremental?: boolean;
+  /**
+   * Phase 15: human-readable identifier for the conversation thread (e.g.
+   * `stripe-card3ds-implementation`). Logged alongside the uuid in the spawn
+   * line so `grep stripe-card3ds-implementation engine.log` pulls every
+   * relevant claude invocation. Does NOT affect the spawn args.
+   */
+  sessionLabel?: string;
 }
 
 function dbg(...args: unknown[]) {
@@ -259,9 +266,10 @@ export async function runClaudeCode<T = unknown>(
   const timeoutMs = opts.timeoutMs ?? cc.timeoutMs ?? 10 * 60 * 1000;
   const startedAt = Date.now();
   const sessionMode = isResume ? `resume(${sessionId.slice(0, 8)}…)` : `new(${sessionId.slice(0, 8)}…)`;
+  const friendlyTag = opts.sessionLabel ? ` · session=${opts.sessionLabel}` : "";
   // eslint-disable-next-line no-console
   console.log(
-    `\x1b[36m[claude-code] → ${opts.label} · cwd=${absCwd} · model=${model ?? "default"} · ${sessionMode} · prompt=${prompt.length}ch\x1b[0m`
+    `\x1b[36m[claude-code] → ${opts.label} · cwd=${absCwd} · model=${model ?? "default"} · ${sessionMode}${friendlyTag} · prompt=${prompt.length}ch\x1b[0m`
   );
 
   // Capture stdout and stderr to extract the model's answer and error details.
