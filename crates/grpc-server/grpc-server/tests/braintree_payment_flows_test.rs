@@ -28,7 +28,7 @@ use uuid::Uuid;
 
 const CONNECTOR_NAME: &str = "braintree";
 const AUTH_TYPE: &str = "signature-key";
-const MERCHANT_ID: &str = "merchant_17555143863";
+const MERCHANT_ID: &str = "merchant_braintree_test";
 
 const TEST_CARD_NUMBER: &str = "4242424242424242";
 const TEST_CARD_EXP_MONTH: &str = "10";
@@ -51,7 +51,7 @@ fn add_braintree_metadata<T>(request: &mut Request<T>) {
     let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
         .expect("Failed to load braintree credentials");
 
-    let (api_key, key1, api_secret) = match auth {
+    let (api_key, _key1, api_secret) = match auth {
         domain_types::router_data::ConnectorAuthType::SignatureKey {
             api_key,
             key1,
@@ -60,24 +60,33 @@ fn add_braintree_metadata<T>(request: &mut Request<T>) {
         _ => panic!("Expected SignatureKey auth type for braintree"),
     };
 
-    request.metadata_mut().append(
-        "x-connector",
-        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
+    let metadata = utils::credential_utils::load_connector_metadata(CONNECTOR_NAME)
+        .expect("Failed to load braintree metadata");
+    let merchant_account_id = metadata
+        .get("merchant_account_id")
+        .expect("merchant_account_id missing from braintree metadata")
+        .clone();
+    let merchant_config_currency = metadata
+        .get("merchant_config_currency")
+        .cloned()
+        .unwrap_or_else(|| "USD".to_string());
+
+    // Use x-connector-config with full Braintree config so merchant_account_id is available.
+    // Repeated proto fields (apple_pay_supported_networks etc.) must be present as empty arrays.
+    let connector_config_json = format!(
+        r#"{{"config":{{"Braintree":{{"public_key":"{public_key}","private_key":"{private_key}","merchant_account_id":"{merchant_account_id}","merchant_config_currency":"{merchant_config_currency}","apple_pay_supported_networks":[],"apple_pay_merchant_capabilities":[],"gpay_allowed_auth_methods":[],"gpay_allowed_card_networks":[]}}}}}}"#,
+        public_key = api_key,
+        private_key = api_secret,
+        merchant_account_id = merchant_account_id,
+        merchant_config_currency = merchant_config_currency,
     );
-    request
-        .metadata_mut()
-        .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
-    request.metadata_mut().append(
-        "x-api-key",
-        api_key.parse().expect("Failed to parse x-api-key"),
+    request.metadata_mut().insert(
+        "x-connector-config",
+        connector_config_json
+            .parse()
+            .expect("Failed to parse x-connector-config"),
     );
-    request
-        .metadata_mut()
-        .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
-    request.metadata_mut().append(
-        "x-api-secret",
-        api_secret.parse().expect("Failed to parse x-api-secret"),
-    );
+
     request.metadata_mut().append(
         "x-merchant-id",
         MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"),
@@ -116,7 +125,7 @@ fn create_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
     };
 
     let mut merchant_account_metadata_map = HashMap::new();
-    merchant_account_metadata_map.insert("merchant_account_id".to_string(), "Anand".to_string());
+    merchant_account_metadata_map.insert("merchant_account_id".to_string(), "juspay".to_string());
     merchant_account_metadata_map
         .insert("merchant_config_currency".to_string(), "USD".to_string());
     merchant_account_metadata_map.insert("currency".to_string(), "USD".to_string());
@@ -189,4 +198,12 @@ async fn test_setup_mandate() {
             response.status
         );
     });
+}
+
+#[test]
+fn test_braintree_config_deser() {
+    let json = r#"{"config":{"Braintree":{"public_key":"testkey","private_key":"testsecret","merchant_account_id":"juspay","merchant_config_currency":"USD","apple_pay_supported_networks":[],"apple_pay_merchant_capabilities":[],"gpay_allowed_auth_methods":[],"gpay_allowed_card_networks":[]}}}"#;
+    let result: Result<grpc_api_types::payments::ConnectorSpecificConfig, _> = serde_json::from_str(json);
+    println!("Deser result: {:?}", result);
+    assert!(result.is_ok(), "Failed: {:?}", result.err());
 }
