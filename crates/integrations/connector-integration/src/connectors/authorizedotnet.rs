@@ -11,9 +11,9 @@ use domain_types::{
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, ConnectorSpecifications,
-        ConnectorWebhookSecrets, EventContext, EventType, PaymentFlowData,
+        ConnectorWebhookSecrets, EventContext, EventType, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, PaymentVoidData, RefundFlowData, RefundSyncData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
         RequestDetails, ResponseId, SetupMandateRequestData, WebhookDetailsResponse,
     },

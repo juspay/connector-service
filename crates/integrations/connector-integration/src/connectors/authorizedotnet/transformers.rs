@@ -2612,27 +2612,31 @@ pub fn convert_to_payments_response_data_or_error(
                 })
             } else {
                 // Extract mandate_reference from profile_response if available
-                let mandate_reference = response.profile_response.as_ref().map(|profile_response| {
-                    let payment_profile_id = profile_response
-                        .customer_payment_profile_id_list
-                        .as_ref()
-                        .and_then(|list| list.first().cloned());
+                let mandate_reference =
+                    response.profile_response.as_ref().map(|profile_response| {
+                        let payment_profile_id = profile_response
+                            .customer_payment_profile_id_list
+                            .as_ref()
+                            .and_then(|list| list.first().cloned());
 
-                    MandateReference {
-                        connector_mandate_id: profile_response.customer_profile_id.as_ref().and_then(
-                            |customer_profile_id| {
-                                payment_profile_id.map(|payment_profile_id| {
-                                    format!("{customer_profile_id}-{payment_profile_id}")
-                                })
-                            },
-                        ),
-                        payment_method_id: None,
-                        connector_mandate_request_reference_id: None,
-                    }
-                });
+                        MandateReference {
+                            connector_mandate_id: profile_response
+                                .customer_profile_id
+                                .as_ref()
+                                .and_then(|customer_profile_id| {
+                                    payment_profile_id.map(|payment_profile_id| {
+                                        format!("{customer_profile_id}-{payment_profile_id}")
+                                    })
+                                }),
+                            payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
+                        }
+                    });
 
                 Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(trans_res.transaction_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        trans_res.transaction_id.clone(),
+                    ),
                     redirection_data: None,
                     connector_metadata,
                     mandate_reference: mandate_reference.map(Box::new),
