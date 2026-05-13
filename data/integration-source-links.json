@@ -65,5 +65,12 @@
     "https://developer.peachpayments.com/docs/dashboard-response-codes",
     "https://developer.peachpayments.com/docs/reference-webhooks",
     "https://peachpayments.docs.oppwa.com/reference/parameters"
+  ],
+  "Wellsfargo": [
+    "https://developer.cybersource.com/docs/cybs/en-us/digital-accept-flex/developer/all/rest/digital-accept-flex/microform-integ-v2.html",
+    "https://developer.cybersource.com/docs/cybs/en-us/digital-accept-flex/developer/all/rest/digital-accept-flex/microform-integ-v2/micro-v2-reference/flex-capture-context-api-intro.html",
+    "https://developer.cybersource.com/docs/cybs/en-us/platform/developer/all/rest/rest-getting-started.html",
+    "https://developer.cybersource.com/docs/cybs/en-us/payments/developer/wellsfargoach/so/payments/payments-intro/payments-intro-payments.html",
+    "https://developer.cybersource.com/docs/cybs/en-us/digital-accept-flex/developer/all/rest/digital-accept-flex/microform-integ-v2/microform-integ-getting-started-v2.html"
   ]
 }
