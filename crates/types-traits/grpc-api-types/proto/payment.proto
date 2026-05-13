@@ -1568,6 +1568,7 @@ message ConnectorSpecificClientAuthenticationResponse {
     NexinetsClientAuthenticationResponse nexinets = 24;
     NexixpayClientAuthenticationResponse nexixpay = 25;
     RevolutClientAuthenticationResponse revolut = 26;
+    PproClientAuthenticationResponse ppro = 27;
   }
 }
 
@@ -1709,6 +1710,14 @@ message RevolutClientAuthenticationResponse {
   string order_id = 1;
   // The client authentication token for SDK initialization
   SecretString token = 2;
+}
+
+// Ppro SDK initialization data — charge_id and redirect_url for client-side redirect
+message PproClientAuthenticationResponse {
+  // The charge ID created on Ppro
+  string charge_id = 1;
+  // The redirect URL for client-side authentication
+  string redirect_url = 2;
 }
 
 // Stripe SDK initialization data — client_secret for stripe.confirmPayment()
