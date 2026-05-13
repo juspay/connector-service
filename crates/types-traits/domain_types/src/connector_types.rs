@@ -3583,6 +3583,8 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Nexixpay(NexixpayClientAuthenticationResponse),
     /// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
     Revolut(RevolutClientAuthenticationResponse),
+    /// PPRO SDK initialization data — charge_id and redirect_url for Drop-in Checkout
+    Ppro(PproClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
@@ -3790,6 +3792,13 @@ pub struct RevolutClientAuthenticationResponse {
     pub order_id: String,
     /// The client authentication token for SDK initialization
     pub token: Secret<String>,
+}
+
+/// PPRO's charge_id and redirect_url for Drop-in Checkout initialization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PproClientAuthenticationResponse {
+    pub charge_id: String,
+    pub redirect_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
