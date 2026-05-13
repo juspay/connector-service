@@ -874,14 +874,22 @@ fn extract_paco_maker_id(meta: &common_utils::SecretSerdeValue) -> Option<String
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PacoPaymentStatus {
+    /// Authorized.
     A,
+    /// Settled / Charged.
     S,
+    /// Voided.
     V,
+    /// Refunded.
     R,
+    /// Incomplete (3DS challenge in flight or pending).
     I,
+    /// Pending.
     P,
+    /// Payment Created, Page Generated (hosted-page wallet / redirect).
     #[serde(rename = "PCPS")]
     Pcps,
+    /// Failure.
     F,
     #[serde(other)]
     Unknown,
@@ -889,15 +897,25 @@ pub enum PacoPaymentStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PacoPaymentStep {
+    /// Pre-authorisation.
     PA,
+    /// Settlement.
     ST,
+    /// Voided.
     VD,
+    /// Refunded (final).
     RF,
+    /// Refund Requested (in flight).
     RR,
+    /// Awaiting Challenge.
     AC,
+    /// Initiated / Pending.
     IN,
+    /// Pending refund.
     RP,
+    /// Hosted page generated.
     GP,
+    /// Pending Response from acquirer.
     PR,
     #[serde(other)]
     Unknown,
