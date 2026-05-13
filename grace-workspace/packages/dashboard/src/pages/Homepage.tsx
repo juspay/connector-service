@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSessions, type SessionRecord } from "../hooks/useSessions";
-import { CreateSessionModal } from "../components/CreateSessionModal";
+import { UnifiedCreateSessionModal } from "../components/UnifiedCreateSessionModal";
+import { SidebarLayout } from "../components/NavigationSidebar";
 import { T } from "../theme";
+import type { SessionWithTaskInput } from "../components/UnifiedCreateSessionModal";
 
 const CONTROL_WS_PORT =
   (import.meta.env.VITE_WS_PORT as string | undefined) ?? "3142";
@@ -20,10 +22,12 @@ export function Homepage() {
     controlStatus,
     lastError,
     createSession,
+    startSession,
   } = useSessions(CONTROL_WS_URL);
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [pendingCreateName, setPendingCreateName] = useState<string | null>(null);
+  const [shouldAutoStart, setShouldAutoStart] = useState(false);
 
   // Auto-route to a new session as soon as it appears. Done in an effect
   // (not inline during render) so React doesn't swallow the navigate() call
@@ -34,17 +38,23 @@ export function Homepage() {
   }, [pendingCreateName, sessions]);
   useEffect(() => {
     if (newlyCreated) {
+      const sessionId = newlyCreated.sessionId;
       setPendingCreateName(null);
-      // Phase 8: signal "user just created this session and expects to
-      // start running immediately." WorkflowPage reads location.state.
-      // autostart to decide whether to auto-spawn an engine on mount.
-      // Click-throughs from session cards intentionally omit this state
-      // so they don't wipe prior-run results.
-      navigate(`/sessions/${newlyCreated.sessionId}`, {
-        state: { autostart: true },
-      });
+      
+      if (shouldAutoStart) {
+        setShouldAutoStart(false);
+        // Start the engine immediately, then navigate
+        startSession(sessionId).then(() => {
+          navigate(`/sessions/${sessionId}`);
+        });
+      } else {
+        // Just navigate (existing behavior)
+        navigate(`/sessions/${sessionId}`, {
+          state: { autostart: true },
+        });
+      }
     }
-  }, [newlyCreated, navigate]);
+  }, [newlyCreated, navigate, shouldAutoStart, startSession]);
 
   const defaultSession = sessions.find((s) => s.sessionId === "default");
   const defaultProjectRoot = defaultSession?.projectRoot ?? "";
@@ -53,21 +63,17 @@ export function Homepage() {
   const archived = sessions.filter((s) => s.status === "archived");
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: T.bg,
-        color: T.text,
-        fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      }}
-    >
-      <style>{`
-        html, body, #root { margin: 0; padding: 0; background: ${T.bg}; }
-        * { box-sizing: border-box; }
-      `}</style>
-
-      <header
+    <SidebarLayout>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: T.bg,
+          color: T.text,
+          fontFamily:
+            "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        }}
+      >
+        <header
         style={{
           padding: "20px 32px",
           borderBottom: `1px solid ${T.border}`,
@@ -149,18 +155,40 @@ export function Homepage() {
         </section>
       )}
 
-      {showCreate && (
-        <CreateSessionModal
-          defaultSourcePath={defaultProjectRoot}
-          onCreate={(input) => {
-            setPendingCreateName(input.name);
-            createSession(input);
-            setShowCreate(false);
-          }}
-          onClose={() => setShowCreate(false)}
-        />
-      )}
-    </div>
+        {showCreate && (
+          <UnifiedCreateSessionModal
+            defaultSourcePath={defaultProjectRoot}
+            onCreate={(input: SessionWithTaskInput) => {
+              setPendingCreateName(input.name);
+              createSession(input);
+              setShowCreate(false);
+            }}
+            onCreateAndStart={async (input: SessionWithTaskInput) => {
+              setPendingCreateName(input.name);
+              createSession(input);
+              setShowCreate(false);
+              
+              // Wait for session to appear in list, then start it
+              const checkAndStart = setInterval(async () => {
+                const newSession = sessions.find((s) => s.name === input.name && s.status === "idle");
+                if (newSession) {
+                  clearInterval(checkAndStart);
+                  await startSession(newSession.sessionId);
+                  navigate(`/sessions/${newSession.sessionId}`, {
+                    state: { autostart: true },
+                  });
+                }
+              }, 500);
+              
+              // Cleanup after 10 seconds if session never appears
+              setTimeout(() => clearInterval(checkAndStart), 10000);
+            }}
+            onClose={() => setShowCreate(false)}
+            wsConnected={controlStatus === "open"}
+          />
+        )}
+      </div>
+    </SidebarLayout>
   );
 }
 

@@ -51,6 +51,11 @@ export interface SessionMetadata {
   originalPath: string;
   copyStrategy: SessionCopyStrategy;
   diskUsageBytes?: number;
+  /**
+   * Initial task to auto-submit when the session starts.
+   * Set when creating a session with the unified modal.
+   */
+  initialTask?: TaskDefinition;
 }
 
 export interface SessionRecord {
@@ -515,15 +520,30 @@ export class StateManager {
     this.db
       .prepare(
         `UPDATE sessions
-            SET ws_port = COALESCE(@wsPort, ws_port),
-                pid     = COALESCE(@pid, pid),
-                updated_at = @now
-          WHERE session_id = @sessionId`
+             SET ws_port = COALESCE(@wsPort, ws_port),
+                 pid     = COALESCE(@pid, pid),
+                 updated_at = @now
+           WHERE session_id = @sessionId`
       )
       .run({
         sessionId,
         wsPort: update.wsPort ?? null,
         pid: update.pid ?? null,
+        now: Date.now(),
+      });
+  }
+
+  updateSessionMetadata(sessionId: string, metadata: SessionMetadata): void {
+    this.db
+      .prepare(
+        `UPDATE sessions
+             SET metadata_json = @metadata,
+                 updated_at = @now
+           WHERE session_id = @sessionId`
+      )
+      .run({
+        sessionId,
+        metadata: JSON.stringify(metadata),
         now: Date.now(),
       });
   }
@@ -696,6 +716,8 @@ export class StateManager {
    */
   enqueueRun(sessionId: string, runId: string, task: TaskDefinition): void {
     const now = Date.now();
+    // Include task in artifacts so it's available via ctx.artifacts.task in checkpoints
+    const artifacts = { task };
     this.db
       .prepare(
         `INSERT INTO runs (
@@ -707,7 +729,7 @@ export class StateManager {
         runId,
         sessionId,
         JSON.stringify(task),
-        "{}",
+        JSON.stringify(artifacts),
         "{}",
         "pending",
         now,

@@ -408,6 +408,15 @@ export class SessionSupervisor {
       }
       case "sessions:create": {
         try {
+          // DEBUG: Log what we receive
+          console.log("[SUPERVISOR] Received sessions:create payload:", {
+            hasInitialTask: !!payload.initialTask,
+            initialTaskKeys: payload.initialTask ? Object.keys(payload.initialTask as object) : [],
+            runner: (payload.initialTask as Record<string, unknown>)?.runner,
+            runnerModel: (payload.initialTask as Record<string, unknown>)?.runnerModel,
+            fullPayload: JSON.stringify(payload).slice(0, 500),
+          });
+          
           const session = await this.sessions.create({
             name: String(payload.name ?? ""),
             description: payload.description as string | undefined,
@@ -415,6 +424,7 @@ export class SessionSupervisor {
             strategy:
               (payload.strategy as "git-worktree" | "full" | "shallow") ??
               "git-worktree",
+            initialTask: payload.initialTask as import("./types.js").TaskDefinition | undefined,
           });
           this.broadcastControl("sessions:created", { session });
         } catch (err) {
@@ -506,20 +516,51 @@ export class SessionSupervisor {
     }
 
     let runId: string;
+    // Track if we had initialTask (for deciding whether to skip task checkpoint)
+    let hasInitialTask = false;
+    
     if (intent?.runId) {
       runId = intent.runId;
     } else {
       runId = newRunId();
-      const task = {
-        title: "",
-        description: "",
-        acceptanceCriteria: [] as string[],
-        projectRoot: session.projectRoot,
-        sessionId,
-      };
+      // Check for initialTask in session metadata (from unified create modal)
+      const initialTask = session.metadata?.initialTask;
+      // Capture this BEFORE we clear the metadata below
+      hasInitialTask = !!initialTask;
+      
+      const task = initialTask
+        ? {
+            title: initialTask.title,
+            description: initialTask.description,
+            acceptanceCriteria: initialTask.acceptanceCriteria,
+            projectRoot: session.projectRoot,
+            sessionId,
+            paymentMethod: initialTask.paymentMethod,
+            targetConnectors: initialTask.targetConnectors,
+            paymentMethodCategory: (initialTask as unknown as { category?: string }).category,
+            priority: initialTask.priority,
+            runner: initialTask.runner,
+            runnerModel: initialTask.runnerModel,
+            connectorDocUrls: [],
+          }
+        : {
+            title: "",
+            description: "",
+            acceptanceCriteria: [] as string[],
+            projectRoot: session.projectRoot,
+            sessionId,
+          };
       this.state.enqueueRun(sessionId, runId, task);
+      
+      // Clear initialTask after using it so it doesn't run twice
+      if (initialTask) {
+        this.state.updateSessionMetadata(sessionId, {
+          ...session.metadata,
+          initialTask: undefined,
+        });
+      }
     }
-
+    
     const args = [
       this.opts.cliEntryPath,
       "run",
@@ -527,9 +568,21 @@ export class SessionSupervisor {
       sessionId,
       "--resume",
       runId,
-      "--task-from-ui",
     ];
-    if (intent?.startFrom) args.push("--start-from", intent.startFrom);
+    
+    // Only use --task-from-ui when we DON'T have an initial task
+    // When we have initialTask, we skip task checkpoint and go to preflight
+    if (!hasInitialTask) {
+      args.push("--task-from-ui");
+    }
+    
+    // If we have initialTask and no explicit startFrom, start from preflight (skip task checkpoint)
+    if (hasInitialTask && !intent?.startFrom) {
+      args.push("--start-from", "preflight");
+    } else if (intent?.startFrom) {
+      args.push("--start-from", intent.startFrom);
+    }
+    
     if (this.opts.configPath) args.push("--config", this.opts.configPath);
 
     const child = spawn(process.execPath, args, {

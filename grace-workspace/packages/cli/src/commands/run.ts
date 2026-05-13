@@ -269,6 +269,23 @@ export async function runCommand(opts: RunOpts): Promise<void> {
     }
   }
 
+  // Phase 12: Override config runner with task-specified runner (from unified create modal)
+  // This allows per-task runner selection from the dashboard
+  if (task.runner) {
+    cfg.runner = task.runner;
+    // Also set model if specified in task
+    if (task.runnerModel) {
+      cfg.llm.model = task.runnerModel;
+      if (task.runner === "claude-code") {
+        cfg.claudeCode.model = task.runnerModel;
+      } else if (task.runner === "opencode") {
+        cfg.opencode.model = task.runnerModel;
+      }
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[byne] Using task-specified runner: ${cfg.runner}${task.runnerModel ? ` (${task.runnerModel})` : ''}`);
+  }
+
   // Resolve the owning session. Precedence: CLI flag > task.sessionId > default.
   // The supervisor passes --session when spawning a child engine; standalone
   // engines fall back to whatever the resumed run says, or finally the default.
