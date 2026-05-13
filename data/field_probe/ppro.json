@@ -763,8 +763,30 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: client_authentication_token flow for ppro"
+        "status": "supported",
+        "proto_request": {
+          "merchant_client_session_id": "probe_sdk_session_001",
+          "domain_context": {
+            "payment": {
+              "amount": {
+                "minor_amount": 1000,
+                "currency": "USD"
+              }
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api.sandbox.eu.ppro.com/v1/checkout-sessions",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_key",
+            "content-type": "application/json",
+            "merchant-id": "probe_merchant",
+            "request-idempotency-key": "probe_sdk_session_001",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantPaymentChargeReference\":\"probe_sdk_session_001\"}"
+        }
       }
     },
     "create_customer": {

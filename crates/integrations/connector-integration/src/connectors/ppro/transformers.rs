@@ -7,7 +7,9 @@ use super::PproRouterData;
 use crate::types::ResponseRouterData;
 use domain_types::errors::{ConnectorError, IntegrationError, WebhookError};
 use domain_types::{
-    connector_flow::{Capture, ClientAuthenticationToken, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Capture, ClientAuthenticationToken, RSync, Refund, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse, EventType, MandateReference,
@@ -1559,9 +1561,7 @@ where
         };
 
         let payment_method = match router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::BancontactCard) => {
-                Some("BANCONTACT".to_string())
-            }
+            Some(common_enums::PaymentMethodType::BancontactCard) => Some("BANCONTACT".to_string()),
             Some(common_enums::PaymentMethodType::UpiIntent) => Some("UPI".to_string()),
             Some(common_enums::PaymentMethodType::AliPay) => Some("ALIPAY".to_string()),
             Some(common_enums::PaymentMethodType::WeChatPay) => Some("WECHATPAY".to_string()),
@@ -1618,16 +1618,13 @@ impl TryFrom<ResponseRouterData<PproCheckoutSessionResponse, Self>>
     fn try_from(
         item: ResponseRouterData<PproCheckoutSessionResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let session_data =
-            ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
-                ConnectorSpecificClientAuthenticationResponse::Ppro(
-                    PproClientAuthenticationResponse {
-                        session_id: item.response.session_id,
-                        session_token: item.response.session_token,
-                        checkout_url: item.response.checkout_url,
-                    },
-                ),
-            ));
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Ppro(PproClientAuthenticationResponse {
+                session_id: item.response.session_id,
+                session_token: item.response.session_token,
+                checkout_url: item.response.checkout_url,
+            }),
+        ));
 
         Ok(Self {
             response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {

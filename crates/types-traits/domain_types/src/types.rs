@@ -2169,9 +2169,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::BancontactCard => {
                 Ok(Some(PaymentMethodType::BancontactCard))
             }
-            grpc_api_types::payments::PaymentMethodType::Blik => {
-                Ok(Some(PaymentMethodType::Blik))
-            }
+            grpc_api_types::payments::PaymentMethodType::Blik => Ok(Some(PaymentMethodType::Blik)),
             _ => Err(IntegrationError::InvalidDataFormat {
                 field_name: "unknown",
                 context: IntegrationErrorContext {
