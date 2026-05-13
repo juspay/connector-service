@@ -122,9 +122,10 @@ Execute flows in EXACT sequence - each must complete before next begins.
 ### PHASE 4: FINAL VALIDATION AND QUALITY REVIEW
 1. **MANDATORY**: Execute final cargo build
 2. **MANDATORY**: Validate all flows compile successfully
-3. **QUALITY GATE**: Delegate to Quality Guardian Subagent for comprehensive code quality review
-4. **WAIT FOR**: Quality review completion and approval
-5. **MANDATORY**: Generate completion report
+3. **MANDATORY**: Create or update `crates/grpc-server/grpc-server/tests/{connector_name}_payment_flows_test.rs` with gRPC integration tests covering every implemented flow. All connector credentials MUST be loaded via `utils::credential_utils::load_connector_auth(CONNECTOR_NAME)` — no hardcoded keys. See `stripe_payment_flows_test.rs` as the canonical reference.
+4. **QUALITY GATE**: Delegate to Quality Guardian Subagent for comprehensive code quality review (includes verifying the test file exists and credentials are redacted)
+5. **WAIT FOR**: Quality review completion and approval
+6. **MANDATORY**: Generate completion report
 
 ## WORKFLOW INITIATION COMMAND
 When user requests: "integrate {ConnectorName} using grace/rulesbook/codegen/.gracerules"
