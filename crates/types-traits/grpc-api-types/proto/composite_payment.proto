@@ -150,6 +150,9 @@ message CompositeGetRequest {
 
   // Access Token
   optional string merchant_access_token_id = 15; // Reference ID for access token tracking
+
+  // Attempt status from preceding authorize step (used by psync connectors)
+  optional PaymentStatus attempt_status = 17;
 }
 
 // Response message for composite get flow.

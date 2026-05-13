@@ -2096,6 +2096,9 @@ message PaymentServiceGetRequest {
 
   // Payment Experience
   optional PaymentExperience payment_experience = 14;
+
+  // Attempt status from preceding authorize step (used by psync connectors)
+  optional PaymentStatus attempt_status = 16;
 }
 
 // Response message for a payment status synchronization

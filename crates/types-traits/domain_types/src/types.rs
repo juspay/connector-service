@@ -4434,11 +4434,18 @@ impl
             .map(ServerAuthenticationTokenResponseData::foreign_try_from)
             .transpose()?;
 
+        let status = value
+            .attempt_status
+            .and_then(|s| grpc_api_types::payments::PaymentStatus::try_from(s).ok())
+            .map(common_enums::AttemptStatus::foreign_try_from)
+            .transpose()?
+            .unwrap_or(common_enums::AttemptStatus::Pending);
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-            status: common_enums::AttemptStatus::Pending,
+            status,
             payment_method: PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
