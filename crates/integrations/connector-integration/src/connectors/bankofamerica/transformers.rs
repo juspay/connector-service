@@ -2479,8 +2479,7 @@ impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         match item.response {
             BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
-                let attempt_status =
-                    map_boa_attempt_status((info_response.status.clone(), false));
+                let attempt_status = map_boa_attempt_status((info_response.status.clone(), false));
                 let error_opt =
                     get_error_response_if_failure((&info_response, attempt_status, item.http_code));
                 let response = match error_opt {
