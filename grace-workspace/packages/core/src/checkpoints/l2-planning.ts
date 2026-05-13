@@ -132,12 +132,12 @@ export const l2PlanningCheckpoint: Checkpoint = {
       const linksFriendly = friendlySessionName(
         connector,
         paymentMethod,
-        "l2_planning_links"
+        "l2planning-links"
       );
       const linksDerived = deriveClaudeSessionId(
         connector,
         paymentMethod,
-        "l2_planning_links"
+        "l2planning-links"
       );
 
       const aiCall = linksSessionId
@@ -248,12 +248,12 @@ export const l2PlanningCheckpoint: Checkpoint = {
       const techspecFriendly = friendlySessionName(
         connector,
         paymentMethod,
-        "l2_planning_techspec"
+        "l2planning-techspec"
       );
       const techspecDerived = deriveClaudeSessionId(
         connector,
         paymentMethod,
-        "l2_planning_techspec"
+        "l2planning-techspec"
       );
 
       const aiCall = techspecSessionId

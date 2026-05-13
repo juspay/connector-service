@@ -25,27 +25,33 @@ import { createHash } from "node:crypto";
 
 const BYNE_NAMESPACE = "byne-grace-pipeline";
 
-/** Lowercase + collapse non-alphanumerics into single underscores. Trim
- *  leading/trailing underscores. Lossy on purpose so display variants
- *  ("Card 3DS" / "card-3ds" / "Card3DS") collapse to the same key. */
+/** Lowercase + strip every non-alphanumeric character (no replacement, no
+ *  underscores). Lossy on purpose so display variants ("Card 3DS" /
+ *  "card-3ds" / "Card3DS") all collapse to the same key "card3ds". The
+ *  empty-string guard handles the edge case where the input is entirely
+ *  punctuation (extremely unlikely in practice). */
 function norm(s: string | undefined | null): string {
-  return (s ?? "unknown")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+  const stripped = (s ?? "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return stripped.length > 0 ? stripped : "unknown";
 }
 
 /**
  * Stable, human-readable identifier for one `(connector, flow, phase)`
  * tuple. Logged in engine output so `grep stripe-card3ds-implementation`
  * pulls every relevant spawn line.
+ *
+ * Only connector and flow are normalized — they're user-supplied display
+ * strings ("Stripe", "Card 3DS"). The phase tag is a code-controlled
+ * internal identifier already in canonical form ("l2planning-links",
+ * "grpctest") and is passed through verbatim so its internal hyphens are
+ * preserved as readable sub-segment separators.
  */
 export function friendlySessionName(
   connector: string | undefined,
   flow: string | undefined,
   phase: string
 ): string {
-  return `${norm(connector)}-${norm(flow)}-${norm(phase)}`;
+  return `${norm(connector)}-${norm(flow)}-${phase}`;
 }
 
 /**

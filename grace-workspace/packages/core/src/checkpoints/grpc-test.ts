@@ -297,8 +297,8 @@ export const grpcTestCheckpoint: Checkpoint = {
         );
 
         // Phase 15: deterministic session id from (connector, flow, phase).
-        const grpcFriendly = friendlySessionName(connector, flow, "grpc_test");
-        const grpcDerived = deriveClaudeSessionId(connector, flow, "grpc_test");
+        const grpcFriendly = friendlySessionName(connector, flow, "grpctest");
+        const grpcDerived = deriveClaudeSessionId(connector, flow, "grpctest");
 
         const testCall = grpcSessionId
           ? {

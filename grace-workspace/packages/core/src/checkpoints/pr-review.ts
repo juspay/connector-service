@@ -101,8 +101,8 @@ export const prReviewCheckpoint: Checkpoint = {
     const prConnector =
       (ctx.task.targetConnectors && ctx.task.targetConnectors[0]) || "unknown";
     const prFlow = ctx.task.paymentMethod || "unknown";
-    const prFriendly = friendlySessionName(prConnector, prFlow, "pr_review");
-    const prDerived = deriveClaudeSessionId(prConnector, prFlow, "pr_review");
+    const prFriendly = friendlySessionName(prConnector, prFlow, "prreview");
+    const prDerived = deriveClaudeSessionId(prConnector, prFlow, "prreview");
 
     try {
       const aiCall = prSessionId

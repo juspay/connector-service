@@ -304,8 +304,8 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     const l3RegenPrompt = ctx.artifacts.l3RegeneratePrompt as string | undefined;
     try {
       // Phase 15: deterministic session id from (connector, flow, phase).
-      const l3Friendly = friendlySessionName(connector, flow, "l3_analysis");
-      const l3Derived = deriveClaudeSessionId(connector, flow, "l3_analysis");
+      const l3Friendly = friendlySessionName(connector, flow, "l3analysis");
+      const l3Derived = deriveClaudeSessionId(connector, flow, "l3analysis");
 
       const aiCall = l3SessionId
         ? {
