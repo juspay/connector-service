@@ -19,6 +19,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.12.0
+
+### Bug Fixes
+
+- **ci:** Truncate release notes to GitHub 125K release body limit ([#1275](https://github.com/juspay/connector-service/pull/1275)) ([`3e71b54`](https://github.com/juspay/connector-service/commit/3e71b54f2e8511c54017fe9d64de7a4b82c58656))
+
+### Documentation
+
+- Blog for money framework ([#1230](https://github.com/juspay/connector-service/pull/1230)) ([`6282bc8`](https://github.com/juspay/connector-service/commit/6282bc8e03cdcdc3324009d8997d39f5b9b0b231))
+
+**Full Changelog:** [`2026.05.11.0...2026.05.12.0`](https://github.com/juspay/connector-service/compare/2026.05.11.0...2026.05.12.0)
+
+- - -
+
+## 2026.05.11.0
+
+### Features
+
+- **connector:** Implement BankDebit for cybersource (review fixes) ([#1190](https://github.com/juspay/connector-service/pull/1190)) ([`6b353b7`](https://github.com/juspay/connector-service/commit/6b353b777cf53dc60a7700e8fa92a92621cdeff0))
+- **framework:** Webhook auth flexibility trait parser ([#1200](https://github.com/juspay/connector-service/pull/1200)) ([`79fd1b4`](https://github.com/juspay/connector-service/commit/79fd1b4adc637a9e043ea06556a04fc8712070a4))
+
+### Bug Fixes
+
+- **ci:** Add missing actions and id-token permissions to release workflow ([#1268](https://github.com/juspay/connector-service/pull/1268)) ([`442f9c9`](https://github.com/juspay/connector-service/commit/442f9c9846a6ada2049a0539ac67e00752cc526d))
+
+### Documentation
+
+- **grace:** Tighten hardening and test workflow guidance ([#1237](https://github.com/juspay/connector-service/pull/1237)) ([`85a233e`](https://github.com/juspay/connector-service/commit/85a233eff4c2f3a7c2991bfc08431afb16eac19d))
+
+**Full Changelog:** [`2026.05.08.0...2026.05.11.0`](https://github.com/juspay/connector-service/compare/2026.05.08.0...2026.05.11.0)
+
+- - -
+
+## 2026.05.08.0
+
+### Bug Fixes
+
+- **connector:** [Trustly] Skip serializing fields if none ([#1247](https://github.com/juspay/connector-service/pull/1247)) ([`2fc84fc`](https://github.com/juspay/connector-service/commit/2fc84fc0ceca1796e8faee0fc7afea3c8cc08afe))
+
+**Full Changelog:** [`2026.05.07.1...2026.05.08.0`](https://github.com/juspay/connector-service/compare/2026.05.07.1...2026.05.08.0)
+
+- - -
+
+## 2026.05.07.1
+
+### Features
+
+- **connector:** Add payout flows to loonio ([#1197](https://github.com/juspay/connector-service/pull/1197)) ([`bf16c14`](https://github.com/juspay/connector-service/commit/bf16c140fd90e74d892cd3bd579c4bc16621fd54))
+- **proto:** Add API contract for surcharge granular flow ([#1232](https://github.com/juspay/connector-service/pull/1232)) ([`1ef8761`](https://github.com/juspay/connector-service/commit/1ef876126c42e1ed216f61845cff508a90badcf5))
+
+### Bug Fixes
+
+- **connector:** [Trustly] Fix country handling in the request ([#1241](https://github.com/juspay/connector-service/pull/1241)) ([`93bb564`](https://github.com/juspay/connector-service/commit/93bb564cec1f8ba972907544f90eca66f6b733da))
+- **nuvei:** Fix positive override test bugs in CreateOrder status expectations ([#1208](https://github.com/juspay/connector-service/pull/1208)) ([`e5b3618`](https://github.com/juspay/connector-service/commit/e5b36180a0fb314bde8cb4e63ea23e37acf31e81))
+- Fix injector flow ([#1165](https://github.com/juspay/connector-service/pull/1165)) ([`f77e758`](https://github.com/juspay/connector-service/commit/f77e7583810dae11dcfb0ad7713bdd7d3066bc09))
+
+### Miscellaneous Tasks
+
+- Bump SDK versions — npm 0.0.9, PyPI 0.0.5, Maven 0.0.6 ([#1244](https://github.com/juspay/connector-service/pull/1244)) ([`3060f0e`](https://github.com/juspay/connector-service/commit/3060f0e421b3034b1cdb58154a7de1f01e2cc93a))
+
+**Full Changelog:** [`2026.05.07.0...2026.05.07.1`](https://github.com/juspay/connector-service/compare/2026.05.07.0...2026.05.07.1)
+
+- - -
+
 ## 2026.05.07.0
 
 ### Bug Fixes

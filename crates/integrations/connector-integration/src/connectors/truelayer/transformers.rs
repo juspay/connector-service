@@ -73,6 +73,7 @@ pub struct TruelayerErrorResponse {
     pub status: i32,
     pub trace_id: String,
     pub detail: String,
+    pub errors: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
