@@ -2846,14 +2846,13 @@ impl<F> TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
         let response = match error_response {
             Some(error) => Err(error),
             None => {
-                let post_capture_void_status =
-                    if status == common_enums::AttemptStatus::Voided {
-                        common_enums::PostCaptureVoidStatus::Succeeded
-                    } else if domain_types::utils::is_payment_failure(status) {
-                        common_enums::PostCaptureVoidStatus::Failed
-                    } else {
-                        common_enums::PostCaptureVoidStatus::Pending
-                    };
+                let post_capture_void_status = if status == common_enums::AttemptStatus::Voided {
+                    common_enums::PostCaptureVoidStatus::Succeeded
+                } else if domain_types::utils::is_payment_failure(status) {
+                    common_enums::PostCaptureVoidStatus::Failed
+                } else {
+                    common_enums::PostCaptureVoidStatus::Pending
+                };
                 Ok(PaymentsResponseData::PostCaptureVoidResponse {
                     post_capture_void_status,
                     connector_reference_id: Some(item.response.id.clone()),
