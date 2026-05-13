@@ -54,6 +54,7 @@ pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const API_KEY: &str = "Api-Key";
     pub(crate) const CLIENT_REQUEST_ID: &str = "Client-Request-Id";
+    pub(crate) const AUTH_TOKEN_TYPE: &str = "Auth-Token-Type";
     pub(crate) const TIMESTAMP: &str = "Timestamp";
     pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
 }
@@ -307,6 +308,10 @@ macros::create_all_prerequisites!(
                 (
                     headers::CLIENT_REQUEST_ID.to_string(),
                     client_request_id.into(),
+                ),
+                (
+                    headers::AUTH_TOKEN_TYPE.to_string(),
+                    "HMAC".to_string().into(),
                 ),
                 (headers::TIMESTAMP.to_string(), timestamp.into()),
                 (

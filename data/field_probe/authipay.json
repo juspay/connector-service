@@ -124,6 +124,7 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
+            "auth-token-type": "HMAC",
             "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
             "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
@@ -498,6 +499,7 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
+            "auth-token-type": "HMAC",
             "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
             "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
@@ -574,6 +576,7 @@
           "method": "Get",
           "headers": {
             "api-key": "probe_key",
+            "auth-token-type": "HMAC",
             "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
             "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
@@ -638,6 +641,7 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
+            "auth-token-type": "HMAC",
             "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
             "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
@@ -681,6 +685,7 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
+            "auth-token-type": "HMAC",
             "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
             "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
@@ -704,6 +709,7 @@
           "method": "Get",
           "headers": {
             "api-key": "probe_key",
+            "auth-token-type": "HMAC",
             "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
             "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
@@ -757,6 +763,7 @@
           "method": "Post",
           "headers": {
             "api-key": "probe_key",
+            "auth-token-type": "HMAC",
             "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
             "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
