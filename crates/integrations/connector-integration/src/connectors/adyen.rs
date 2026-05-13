@@ -23,15 +23,17 @@ use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
         IncrementalAuthorization, PSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorSpecifications,
         ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         DisputeWebhookReference, EventContext, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentVoidData, PaymentWebhookReference, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundWebhookDetailsResponse, RefundWebhookReference,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundWebhookDetailsResponse, RefundWebhookReference, RefundsData,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
         SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
         WebhookDetailsResponse, WebhookResourceReference,
     },
@@ -65,7 +67,8 @@ use transformers::{
     AdyenOrderCreateRequest, AdyenOrderCreateResponse, AdyenPSyncResponse, AdyenPaymentRequest,
     AdyenPaymentResponse, AdyenRedirectRequest, AdyenRefundRequest, AdyenRefundResponse,
     AdyenRepeatPaymentRequest, AdyenRepeatPaymentResponse, AdyenSubmitEvidenceResponse,
-    AdyenVoidRequest, AdyenVoidResponse, SetupMandateRequest, SetupMandateResponse,
+    AdyenVoidPCRequest, AdyenVoidPCResponse, AdyenVoidRequest, AdyenVoidResponse,
+    SetupMandateRequest, SetupMandateResponse,
 };
 
 use super::macros;
@@ -107,6 +110,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Adyen<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Adyen<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -181,6 +188,12 @@ macros::create_all_prerequisites!(
             request_body: AdyenVoidRequest,
             response_body: AdyenVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: VoidPC,
+            request_body: AdyenVoidPCRequest,
+            response_body: AdyenVoidPCResponse,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
@@ -626,6 +639,40 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            let id = req.request.connector_transaction_id.clone();
+            let endpoint = build_env_specific_endpoint(
+                self.connector_base_url_payments(req),
+                req.resource_common_data.test_mode,
+                &req.connector_config,
+            )?;
+            Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/cancels"))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Adyen,
+    curl_request: Json(AdyenVoidPCRequest),
+    curl_response: AdyenVoidPCResponse,
+    flow_name: VoidPC,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCancelPostCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
             let id = req.request.connector_transaction_id.clone();
             let endpoint = build_env_specific_endpoint(
@@ -1326,7 +1373,6 @@ macros::macro_connector_flow_status_impls!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     not_implemented: [
-        VoidPC,
         RSync,
         PreAuthenticate,
         Authenticate,
