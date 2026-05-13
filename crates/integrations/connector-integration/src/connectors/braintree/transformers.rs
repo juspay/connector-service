@@ -3038,9 +3038,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })?;
 
         let payment_method_id = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::PaymentMethodToken(token_data) => {
-                token_data.token.clone()
-            }
+            PaymentMethodData::PaymentMethodToken(token_data) => token_data.token.clone(),
             _ => {
                 return Err(error_stack::report!(IntegrationError::NotSupported {
                     message: utils::get_unimplemented_payment_method_error_message("braintree"),
@@ -3091,10 +3089,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 match vault_data.verification {
                     Some(verification) => {
-                        let status =
-                            enums::AttemptStatus::from(verification.status.clone());
-                        let response = if domain_types::utils::is_payment_failure(status)
-                        {
+                        let status = enums::AttemptStatus::from(verification.status.clone());
+                        let response = if domain_types::utils::is_payment_failure(status) {
                             Err(create_failure_error_response(
                                 verification.status,
                                 Some(verification.id),
@@ -3106,9 +3102,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .or(verification.payment_method.as_ref())
                                 .map(|pm| pm.id.clone().expose());
                             Ok(PaymentsResponseData::TransactionResponse {
-                                resource_id: ResponseId::ConnectorTransactionId(
-                                    verification.id,
-                                ),
+                                resource_id: ResponseId::ConnectorTransactionId(verification.id),
                                 redirection_data: None,
                                 mandate_reference: mandate_pm_id.map(|id| {
                                     Box::new(MandateReference {
@@ -3134,31 +3128,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         })
                     }
                     None => {
-                        let mandate_pm_id =
-                            vaulted_pm.as_ref().map(|pm| pm.id.clone().expose());
+                        let mandate_pm_id = vaulted_pm.as_ref().map(|pm| pm.id.clone().expose());
                         Ok(Self {
                             resource_common_data: PaymentFlowData {
                                 status: enums::AttemptStatus::Charged,
                                 ..item.router_data.resource_common_data
                             },
-                            response: Ok(
-                                PaymentsResponseData::TransactionResponse {
-                                    resource_id: ResponseId::NoResponseId,
-                                    redirection_data: None,
-                                    mandate_reference: mandate_pm_id.map(|id| {
-                                        Box::new(MandateReference {
-                                            connector_mandate_id: Some(id),
-                                            payment_method_id: None,
-                                            connector_mandate_request_reference_id: None,
-                                        })
-                                    }),
-                                    connector_metadata: None,
-                                    network_txn_id: None,
-                                    connector_response_reference_id: None,
-                                    incremental_authorization_allowed: None,
-                                    status_code: item.http_code,
-                                },
-                            ),
+                            response: Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::NoResponseId,
+                                redirection_data: None,
+                                mandate_reference: mandate_pm_id.map(|id| {
+                                    Box::new(MandateReference {
+                                        connector_mandate_id: Some(id),
+                                        payment_method_id: None,
+                                        connector_mandate_request_reference_id: None,
+                                    })
+                                }),
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: None,
+                                incremental_authorization_allowed: None,
+                                status_code: item.http_code,
+                            }),
                             ..item.router_data
                         })
                     }

@@ -12,7 +12,7 @@ from payments import MerchantAuthenticationClient
 from payments import PaymentMethodClient
 from payments.generated import sdk_config_pb2, payment_pb2, payment_methods_pb2
 
-SUPPORTED_FLOWS = ["capture", "create_client_authentication_token", "get", "refund", "tokenize", "void"]
+SUPPORTED_FLOWS = ["capture", "create_client_authentication_token", "get", "refund", "token_setup_recurring", "tokenize", "void"]
 
 _default_config = sdk_config_pb2.ConnectorConfig(
     options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
@@ -82,6 +82,36 @@ def _build_refund_request(connector_transaction_id: str):
         reason="customer_request",  # Reason for the refund.
     )
 
+def _build_token_setup_recurring_request():
+    return payment_pb2.PaymentServiceTokenSetupRecurringRequest(
+        merchant_recurring_payment_id="probe_tokenized_mandate_001",
+        amount=payment_pb2.Money(
+            minor_amount=0,  # Amount in minor units (e.g., 1000 = $10.00).
+            currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
+        ),
+        connector_token=payment_methods_pb2.SecretString(value="pm_1AbcXyzStripeTestToken"),
+        address=payment_pb2.PaymentAddress(
+            billing_address=payment_pb2.Address(),
+        ),
+        customer_acceptance=payment_pb2.CustomerAcceptance(
+            acceptance_type=payment_pb2.AcceptanceType.Value("ONLINE"),  # Type of acceptance (e.g., online, offline).
+            accepted_at=0,  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+            online_mandate_details=payment_pb2.OnlineMandate(  # Details if the acceptance was an online mandate.
+                ip_address="127.0.0.1",  # IP address from which the mandate was accepted.
+                user_agent="Mozilla/5.0",  # User agent string of the browser used for mandate acceptance.
+            ),
+        ),
+        setup_mandate_details=payment_pb2.SetupMandateDetails(
+            mandate_type=payment_pb2.MandateType(  # Type of mandate (single_use or multi_use) with amount details.
+                multi_use=payment_pb2.MandateAmountData(
+                    amount=0,  # Amount.
+                    currency=payment_pb2.Currency.Value("USD"),  # Currency code (ISO 4217).
+                ),
+            ),
+        ),
+        setup_future_usage=payment_pb2.FutureUsage.Value("OFF_SESSION"),
+    )
+
 def _build_tokenize_request():
     return payment_pb2.PaymentMethodServiceTokenizeRequest(
         amount=payment_pb2.Money(  # Payment Information.
@@ -141,6 +171,15 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
     refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
 
     return {"status": refund_response.status}
+
+
+async def process_token_setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.TokenSetupRecurring"""
+    payment_client = PaymentClient(config)
+
+    token_response = await payment_client.token_setup_recurring(_build_token_setup_recurring_request())
+
+    return {"status": token_response.status}
 
 
 async def process_tokenize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):

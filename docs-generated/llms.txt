@@ -123,7 +123,7 @@ connector_id: braintree
 doc: docs/connectors/braintree.md
 scenarios: none
 payment_methods: ApplePayThirdPartySdk, GooglePayThirdPartySdk, PaypalSdk
-flows: authorize, capture, create_client_authentication_token, get, refund, tokenize, void
+flows: authorize, capture, create_client_authentication_token, get, refund, token_setup_recurring, tokenize, void
 examples_python: none
 
 ## Calida

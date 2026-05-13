@@ -15,15 +15,15 @@ use std::{
 };
 
 use cards::CardNumber;
-use grpc_api_types::payments::{
-    payment_method, payment_method_service_client::PaymentMethodServiceClient,
-    payment_service_client::PaymentServiceClient, AcceptanceType, CardDetails,
-    Currency, Customer, CustomerAcceptance, FutureUsage, MandateAmountData, Money, PaymentAddress,
-    PaymentMethod, PaymentMethodServiceTokenizeRequest, PaymentServiceTokenSetupRecurringRequest,
-    PaymentStatus, SetupMandateDetails,
-};
 use grpc_api_types::payments::mandate_type::MandateType as MandateTypeInner;
 use grpc_api_types::payments::MandateType;
+use grpc_api_types::payments::{
+    payment_method, payment_method_service_client::PaymentMethodServiceClient,
+    payment_service_client::PaymentServiceClient, AcceptanceType, CardDetails, Currency, Customer,
+    CustomerAcceptance, FutureUsage, MandateAmountData, Money, PaymentAddress, PaymentMethod,
+    PaymentMethodServiceTokenizeRequest, PaymentServiceTokenSetupRecurringRequest, PaymentStatus,
+    SetupMandateDetails,
+};
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -153,8 +153,7 @@ fn create_token_setup_recurring_request(
 ) -> PaymentServiceTokenSetupRecurringRequest {
     let mut merchant_account_metadata_map = HashMap::new();
     merchant_account_metadata_map.insert("merchant_account_id".to_string(), "juspay".to_string());
-    merchant_account_metadata_map
-        .insert("merchant_config_currency".to_string(), "USD".to_string());
+    merchant_account_metadata_map.insert("merchant_config_currency".to_string(), "USD".to_string());
     merchant_account_metadata_map.insert("currency".to_string(), "USD".to_string());
     let merchant_account_metadata_json =
         serde_json::to_string(&merchant_account_metadata_map).unwrap();
@@ -254,7 +253,8 @@ async fn test_setup_mandate() {
 #[test]
 fn test_braintree_config_deser() {
     let json = r#"{"config":{"Braintree":{"public_key":"testkey","private_key":"testsecret","merchant_account_id":"juspay","merchant_config_currency":"USD","apple_pay_supported_networks":[],"apple_pay_merchant_capabilities":[],"gpay_allowed_auth_methods":[],"gpay_allowed_card_networks":[]}}}"#;
-    let result: Result<grpc_api_types::payments::ConnectorSpecificConfig, _> = serde_json::from_str(json);
+    let result: Result<grpc_api_types::payments::ConnectorSpecificConfig, _> =
+        serde_json::from_str(json);
     println!("Deser result: {:?}", result);
     assert!(result.is_ok(), "Failed: {:?}", result.err());
 }
