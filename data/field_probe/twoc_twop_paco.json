@@ -55,7 +55,7 @@
         }
       }
     },
-    "psync": {
+    "get": {
       "default": {
         "status": "supported",
         "sample": {
@@ -119,7 +119,7 @@
         "proto_request": {
           "merchant_refund_id": "probe_refund_001",
           "connector_transaction_id": "CEBU0000000000000",
-          "payment_amount": "10000",
+          "payment_amount": 10000,
           "refund_amount": { "minor_amount": 10000, "currency": "PHP" },
           "reason": "customer request",
           "refund_metadata": { "value": "{\"original_order_no\":\"probe_txn_001\"}" }
@@ -135,7 +135,7 @@
         }
       }
     },
-    "rsync": {
+    "refund_get": {
       "default": {
         "status": "supported",
         "notes": "RSync hits the same /api/2.0/Inquiry/transactionStatus endpoint as PSync.",
@@ -150,7 +150,7 @@
         }
       }
     },
-    "preauthenticate": {
+    "pre_authenticate": {
       "default": {
         "status": "not_implemented",
         "error": "PACO has no merchant-facing DDC endpoint; PreAuthenticate is an empty marker impl (same convention as Stripe / Adyen / PayPal / Checkout / Nuvei). Merchants invoke Authenticate directly for 3DS."
@@ -200,7 +200,7 @@
         }
       }
     },
-    "postauthenticate": {
+    "post_authenticate": {
       "default": {
         "status": "supported",
         "sample": {
