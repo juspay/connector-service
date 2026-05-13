@@ -213,8 +213,7 @@ impl EventService for EventServiceImpl {
                             Err(err) => {
                                 tracing::warn!(
                                     target: "webhook",
-                                    "{:?}",
-                                    err
+                                    error = ?err
                                 );
                                 false
                             }
