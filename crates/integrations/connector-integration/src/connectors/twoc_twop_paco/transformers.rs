@@ -1113,21 +1113,18 @@ pub struct PacoPaymentResultBlock {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AresAcsChallenge {
-    /// PACO field is `acsURL` (capital URL).
+    /// PACO field is `acsURL` (capital URL). Public issuer endpoint.
     #[serde(default, rename = "acsURL", alias = "acsUrl")]
     pub acs_url: Option<String>,
     /// PACO can name the CReq blob `creq`, `cReq`, or `creqB64`. Accept any.
     #[serde(default, alias = "cReq", alias = "creqB64")]
-    pub creq: Option<String>,
-    /// `threeDSSessionData` (capital DS).
+    pub creq: Option<Secret<String>>,
     #[serde(default, rename = "threeDSSessionData")]
-    pub three_ds_session_data: Option<String>,
-    /// `authentication3DSVersion` (capital DS).
+    pub three_ds_session_data: Option<Secret<String>>,
     #[serde(default, rename = "authentication3DSVersion")]
     pub authentication_3ds_version: Option<String>,
-    /// `challengeHTML` (capital HTML).
     #[serde(default, rename = "challengeHTML")]
-    pub challenge_html: Option<String>,
+    pub challenge_html: Option<Secret<String>>,
 }
 
 /// 3DS authentication artefacts returned by PACO once enrolment + challenge
@@ -1135,11 +1132,11 @@ pub struct AresAcsChallenge {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoCreditCardAuthenticatedDetails {
-    pub cavv: Option<String>,
+    pub cavv: Option<Secret<String>>,
     #[serde(rename = "eciValue")]
     pub eci_value: Option<String>,
     #[serde(rename = "threeDsTransactionId")]
-    pub three_ds_transaction_id: Option<String>,
+    pub three_ds_transaction_id: Option<Secret<String>>,
     #[serde(rename = "authentication3DSVersion")]
     pub authentication_3ds_version: Option<String>,
     pub authentication_status: Option<String>,
@@ -1958,16 +1955,25 @@ fn build_authentication_data_from_paco(
             .as_ref()
             .and_then(|s| s.parse::<common_enums::TransactionStatus>().ok()),
         eci: details.eci_value.clone(),
-        cavv: details.cavv.clone().map(Secret::new),
+        cavv: details.cavv.clone(),
         ucaf_collection_indicator: None,
-        threeds_server_transaction_id: details.three_ds_transaction_id.clone(),
+        threeds_server_transaction_id: details
+            .three_ds_transaction_id
+            .as_ref()
+            .map(|s| s.peek().clone()),
         message_version: details
             .authentication_3ds_version
             .as_ref()
             .and_then(|v| v.parse::<common_utils::types::SemanticVersion>().ok()),
-        ds_trans_id: details.three_ds_transaction_id.clone(),
+        ds_trans_id: details
+            .three_ds_transaction_id
+            .as_ref()
+            .map(|s| s.peek().clone()),
         acs_transaction_id: None,
-        transaction_id: details.three_ds_transaction_id.clone(),
+        transaction_id: details
+            .three_ds_transaction_id
+            .as_ref()
+            .map(|s| s.peek().clone()),
         network_params: None,
         exemption_indicator: None,
     }
@@ -2040,7 +2046,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwocTwopPacoNonUiResp
             // responses. Use empty string defaults so we still surface the
             // form to the orchestrator.
             let acs_url = challenge.acs_url.clone().unwrap_or_default();
-            let creq = challenge.creq.clone().unwrap_or_default();
+            let creq = challenge
+                .creq
+                .as_ref()
+                .map(|s| s.peek().clone())
+                .unwrap_or_default();
             tracing::debug!(
                 acs_url = %acs_url,
                 "twoc_twop_paco: Authenticate requires ACS challenge"
@@ -2048,7 +2058,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwocTwopPacoNonUiResp
             let mut form_fields: HashMap<String, String> = HashMap::new();
             form_fields.insert("creq".to_string(), creq);
             if let Some(session_data) = &challenge.three_ds_session_data {
-                form_fields.insert("threeDSSessionData".to_string(), session_data.clone());
+                form_fields.insert(
+                    "threeDSSessionData".to_string(),
+                    session_data.peek().clone(),
+                );
             }
             let redirect = Box::new(RedirectForm::Form {
                 endpoint: acs_url,
