@@ -103,21 +103,6 @@
     }
   },
   "EventService/HandleEvent": {
-    "payment_succeeded": {
-      "assert": {
-        "source_verified": true
-      }
-    },
-    "payment_failed": {
-      "assert": {
-        "source_verified": true
-      }
-    },
-    "refund_succeeded": {
-      "assert": {
-        "source_verified": true
-      }
-    },
     "invalid_signature": {
       "grpc_req": {
         "request_details": {
