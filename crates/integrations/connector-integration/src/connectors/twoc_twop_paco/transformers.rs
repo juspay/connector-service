@@ -89,7 +89,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TwocTwopPacoAuthType {
                                 "Provide a 32-character lowercase hex string for paco_kid."
                                     .to_string(),
                             ),
-                            doc_url: None,
+                            doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
                             additional_context: Some(
                                 "paco_kid must be exactly 32 hexadecimal characters.".to_string(),
                             ),
@@ -131,7 +131,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TwocTwopPacoAuthType {
                     suggested_action: Some(
                         "Configure the connector with the TwocTwopPaco auth variant.".to_string(),
                     ),
-                    doc_url: None,
+                    doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
                     additional_context: Some(
                         "Expected ConnectorSpecificConfig::TwocTwopPaco.".to_string(),
                     ),
@@ -486,7 +486,16 @@ where
         }
         _ => Err(errors::IntegrationError::NotImplemented(
             "Selected payment method through TwocTwopPaco".to_string(),
-            errors::IntegrationErrorContext::default(),
+            errors::IntegrationErrorContext {
+                suggested_action: Some(
+                    "Use Card or GcashRedirect; PACO does not support other payment methods today."
+                        .to_string(),
+                ),
+                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                additional_context: Some(
+                    "Authorize accepts card S2S or GCash wallet redirect.".to_string(),
+                ),
+            },
         )
         .into()),
     }
@@ -517,9 +526,18 @@ where
         .request
         .currency
         .ok_or(errors::IntegrationError::MissingRequiredField {
-            field_name: "currency",
-            context: errors::IntegrationErrorContext::default(),
-        })?;
+        field_name: "currency",
+        context: errors::IntegrationErrorContext {
+            suggested_action: Some(
+                "Set `amount.currency` on the Authenticate request to a supported ISO 4217 code."
+                    .to_string(),
+            ),
+            doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+            additional_context: Some(
+                "PACO Authenticate requires an explicit transaction currency.".to_string(),
+            ),
+        },
+    })?;
     let amount = PacoTransactionAmount::new(item.request.amount, currency)?;
     let notification_urls = PacoNotificationUrls {
         confirmation_url: item
@@ -587,7 +605,15 @@ where
         }
         _ => Err(errors::IntegrationError::NotImplemented(
             "Selected payment method through TwocTwopPaco Authenticate".to_string(),
-            errors::IntegrationErrorContext::default(),
+            errors::IntegrationErrorContext {
+                suggested_action: Some(
+                    "Use a Card payment method; PACO Authenticate is card-3DS only.".to_string(),
+                ),
+                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                additional_context: Some(
+                    "Authenticate accepts card S2S; wallet flows go through Authorize.".to_string(),
+                ),
+            },
         )
         .into()),
     }
@@ -788,8 +814,12 @@ pub fn extract_paco_merchant_identifiers(
                      `office_id` and `merchant_id`."
                             .to_string(),
                     ),
-                    doc_url: None,
-                    additional_context: None,
+                    doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                    additional_context: Some(
+                        "PACO requires per-merchant `office_id` and `merchant_id` on every \
+                         request; they are not part of `ConnectorSpecificConfig`."
+                            .to_string(),
+                    ),
                 },
             })?;
     let value = meta.peek();
@@ -799,8 +829,11 @@ pub fn extract_paco_merchant_identifiers(
             field_name: "connector_feature_data",
             context: errors::IntegrationErrorContext {
                 suggested_action: Some("connector_feature_data must be a JSON object.".to_string()),
-                doc_url: None,
-                additional_context: None,
+                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                additional_context: Some(
+                    "Expected shape: {\"office_id\":\"<id>\",\"merchant_id\":\"<id>\"}."
+                        .to_string(),
+                ),
             },
         })?;
     let office_id = obj
@@ -813,8 +846,11 @@ pub fn extract_paco_merchant_identifiers(
                 suggested_action: Some(
                     "Provide office_id (1..=20 chars) in connector_feature_data.".to_string(),
                 ),
-                doc_url: None,
-                additional_context: None,
+                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                additional_context: Some(
+                    "office_id is PACO's multi-merchant scoping key, configured per merchant in PACO."
+                        .to_string(),
+                ),
             },
         })?;
     if office_id.len() > PACO_OFFICE_ID_MAX_LEN {
@@ -822,8 +858,11 @@ pub fn extract_paco_merchant_identifiers(
             field_name: "connector_feature_data.office_id",
             context: errors::IntegrationErrorContext {
                 suggested_action: Some("office_id must be 1..=20 characters.".to_string()),
-                doc_url: None,
-                additional_context: None,
+                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                additional_context: Some(format!(
+                    "Received office_id length {} > {PACO_OFFICE_ID_MAX_LEN}.",
+                    office_id.len()
+                )),
             },
         }
         .into());
@@ -838,8 +877,11 @@ pub fn extract_paco_merchant_identifiers(
                 suggested_action: Some(
                     "Provide merchant_id in connector_feature_data.".to_string(),
                 ),
-                doc_url: None,
-                additional_context: None,
+                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                additional_context: Some(
+                    "merchant_id is the acquirer-side merchant identifier PACO routes to."
+                        .to_string(),
+                ),
             },
         })?;
     Ok((

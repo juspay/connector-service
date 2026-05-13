@@ -336,7 +336,21 @@ macro_rules! expand_fn_get_request_body {
                 let request = bridge.request_body(input_data)?;
                 let json_bytes = serde_json::to_vec(&request).change_context(
                     macro_types::IntegrationError::RequestEncodingFailed {
-                        context: Default::default(),
+                        context: domain_types::errors::IntegrationErrorContext {
+                            suggested_action: Some(
+                                "Verify the connector's request struct serialises to JSON cleanly."
+                                    .to_string(),
+                            ),
+                            doc_url: Some(
+                                "https://docs.hyperswitch.io/prism/architecture/concepts/error-codes"
+                                    .to_string(),
+                            ),
+                            additional_context: Some(
+                                "Failed to JSON-serialise the request body before handing it to \
+                                 `preprocess_request_bytes`."
+                                    .to_string(),
+                            ),
+                        },
                     },
                 )?;
                 let preprocessed = self.preprocess_request_bytes(req, json_bytes)?;

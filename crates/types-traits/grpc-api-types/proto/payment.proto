@@ -4225,10 +4225,6 @@ message TwocTwopPacoConfig {
   // when None. Set if PACO emits a different aud on a specific office.
   optional SecretString response_audience = 10;
   optional string base_url = 50;
-  // office_id (2) and merchant_id (3) live in per-request metadata
-  // (`connector_feature_data`), not config — see twoc_twop_paco docstring.
-  reserved 2, 3, 9;
-  reserved "office_id", "merchant_id", "refund_maker_id";
 }
 
 // ConnectorSpecificConfig message with oneof containing all connector
