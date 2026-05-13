@@ -54,7 +54,10 @@ const ARTIFACT_KEYS_BY_STAGE: Record<string, string[]> = {
   // conversation. The on-disk jsonl files at ~/.claude/projects/<...>/<uuid>.jsonl
   // survive until the `byne sessions prune` command reaps them.
   l2_gen: ["l2", "l2LinksSessionId", "l2TechspecSessionId"],
-  l2_review: ["l2Review", "l2RegeneratePrompt", "previousL2"],
+  // Phase 13: also clear l2GraceIssueUrl so a post-rewind re-approval files
+  // a fresh issue at juspay/grace instead of being silently skipped by the
+  // idempotency guard in maybeCreateGraceIssue.
+  l2_review: ["l2Review", "l2RegeneratePrompt", "previousL2", "l2GraceIssueUrl"],
   l3_gen: ["l3", "l3SessionId"],
   l3_review: ["l3Review", "l3RegeneratePrompt", "previousL3"],
   l4_gen: ["l4"],
