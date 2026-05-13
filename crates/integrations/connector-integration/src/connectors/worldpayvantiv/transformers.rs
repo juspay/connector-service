@@ -2509,8 +2509,7 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, Self>>
                     ..item.router_data
                 })
             } else {
-                let post_capture_void_status =
-                    get_post_capture_void_status(void_response.response);
+                let post_capture_void_status = get_post_capture_void_status(void_response.response);
                 let payments_response = PaymentsResponseData::PostCaptureVoidResponse {
                     post_capture_void_status,
                     connector_reference_id: Some(void_response.cnp_txn_id.clone()),
