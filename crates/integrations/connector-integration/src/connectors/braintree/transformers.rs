@@ -80,7 +80,7 @@ pub type BraintreeRefundResponse = GenericBraintreeResponse<RefundResponse>;
 pub type BraintreeCaptureResponse = GenericBraintreeResponse<CaptureResponse>;
 pub type BraintreePSyncResponse = GenericBraintreeResponse<PSyncResponse>;
 pub type BraintreeSetupMandateRequest =
-    GenericBraintreeRequest<GenericVariableInput<VerifyPaymentMethodInput>>;
+    GenericBraintreeRequest<GenericVariableInput<VaultPaymentMethodInput>>;
 
 pub type VariablePaymentInput = GenericVariableInput<PaymentInput>;
 pub type VariableClientTokenInput = GenericVariableInput<InputClientTokenData>;
@@ -2942,29 +2942,31 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// SetupMandate (ZeroDollarAuth via verifyPaymentMethod) types
+// SetupMandate (ZeroDollarAuth / vaultPaymentMethod + verification) types
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VerifyPaymentMethodInput {
+pub struct VaultPaymentMethodInput {
     payment_method_id: Secret<String>,
-    merchant_account_id: Secret<String>,
+    verification_merchant_account_id: Secret<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct VerifyPaymentMethodResponse {
-    data: VerifyPaymentMethodDataResponse,
+pub struct VaultPaymentMethodResponse {
+    data: VaultPaymentMethodDataResponse,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VerifyPaymentMethodDataResponse {
-    verify_payment_method: VerifyPaymentMethodWrapper,
+pub struct VaultPaymentMethodDataResponse {
+    vault_payment_method: VaultPaymentMethodWrapper,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct VerifyPaymentMethodWrapper {
-    verification: VerificationBody,
+#[serde(rename_all = "camelCase")]
+pub struct VaultPaymentMethodWrapper {
+    payment_method: Option<PaymentMethodInfo>,
+    verification: Option<VerificationBody>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -2998,7 +3000,7 @@ impl From<BraintreeVerificationStatus> for enums::AttemptStatus {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum BraintreeSetupMandateResponse {
-    VerifyResponse(Box<VerifyPaymentMethodResponse>),
+    VaultResponse(Box<VaultPaymentMethodResponse>),
     ErrorResponse(Box<ErrorResponse>),
 }
 
@@ -3049,11 +3051,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         Ok(Self {
-            query: constants::VERIFY_PAYMENT_METHOD_MUTATION.to_string(),
+            query: constants::VAULT_PAYMENT_METHOD_MUTATION.to_string(),
             variables: GenericVariableInput {
-                input: VerifyPaymentMethodInput {
+                input: VaultPaymentMethodInput {
                     payment_method_id,
-                    merchant_account_id,
+                    verification_merchant_account_id: merchant_account_id,
                 },
             },
         })
@@ -3083,45 +3085,84 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .map_err(|err| *err),
                 ..item.router_data
             }),
-            BraintreeSetupMandateResponse::VerifyResponse(verify_response) => {
-                let verification = verify_response.data.verify_payment_method.verification;
-                let status = enums::AttemptStatus::from(verification.status.clone());
-                let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(create_failure_error_response(
-                        verification.status,
-                        Some(verification.id),
-                        item.http_code,
-                    ))
-                } else {
-                    let mandate_pm_id = verification
-                        .payment_method
-                        .as_ref()
-                        .map(|pm| pm.id.clone().expose());
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(verification.id),
-                        redirection_data: None,
-                        mandate_reference: mandate_pm_id.map(|id| {
-                            Box::new(MandateReference {
-                                connector_mandate_id: Some(id),
-                                payment_method_id: None,
-                                connector_mandate_request_reference_id: None,
+            BraintreeSetupMandateResponse::VaultResponse(vault_response) => {
+                let vault_data = vault_response.data.vault_payment_method;
+                let vaulted_pm = vault_data.payment_method;
+
+                match vault_data.verification {
+                    Some(verification) => {
+                        let status =
+                            enums::AttemptStatus::from(verification.status.clone());
+                        let response = if domain_types::utils::is_payment_failure(status)
+                        {
+                            Err(create_failure_error_response(
+                                verification.status,
+                                Some(verification.id),
+                                item.http_code,
+                            ))
+                        } else {
+                            let mandate_pm_id = vaulted_pm
+                                .as_ref()
+                                .or(verification.payment_method.as_ref())
+                                .map(|pm| pm.id.clone().expose());
+                            Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(
+                                    verification.id,
+                                ),
+                                redirection_data: None,
+                                mandate_reference: mandate_pm_id.map(|id| {
+                                    Box::new(MandateReference {
+                                        connector_mandate_id: Some(id),
+                                        payment_method_id: None,
+                                        connector_mandate_request_reference_id: None,
+                                    })
+                                }),
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: None,
+                                incremental_authorization_allowed: None,
+                                status_code: item.http_code,
                             })
-                        }),
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
-                    })
-                };
-                Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..item.router_data.resource_common_data
-                    },
-                    response,
-                    ..item.router_data
-                })
+                        };
+                        Ok(Self {
+                            resource_common_data: PaymentFlowData {
+                                status,
+                                ..item.router_data.resource_common_data
+                            },
+                            response,
+                            ..item.router_data
+                        })
+                    }
+                    None => {
+                        let mandate_pm_id =
+                            vaulted_pm.as_ref().map(|pm| pm.id.clone().expose());
+                        Ok(Self {
+                            resource_common_data: PaymentFlowData {
+                                status: enums::AttemptStatus::Charged,
+                                ..item.router_data.resource_common_data
+                            },
+                            response: Ok(
+                                PaymentsResponseData::TransactionResponse {
+                                    resource_id: ResponseId::NoResponseId,
+                                    redirection_data: None,
+                                    mandate_reference: mandate_pm_id.map(|id| {
+                                        Box::new(MandateReference {
+                                            connector_mandate_id: Some(id),
+                                            payment_method_id: None,
+                                            connector_mandate_request_reference_id: None,
+                                        })
+                                    }),
+                                    connector_metadata: None,
+                                    network_txn_id: None,
+                                    connector_response_reference_id: None,
+                                    incremental_authorization_allowed: None,
+                                    status_code: item.http_code,
+                                },
+                            ),
+                            ..item.router_data
+                        })
+                    }
+                }
             }
         }
     }
