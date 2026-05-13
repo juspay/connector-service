@@ -155,7 +155,7 @@ Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other
 | [Hipay](connectors/hipay.md) | ✓ | ✓ | x | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | x | ✓ | x | ✓ | ⚠ | x | x | x | x | x | x | x | ⚠ | x | ⚠ | ⚠ | ⚠ |
 | [Hyperpg](connectors/hyperpg.md) | ✓ | ⚠ | x | ⚠ | ⚠ | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Iatapay](connectors/iatapay.md) | ✓ | x | x | x | ⚠ | ✓ | x | ⚠ | ⚠ | x | ⚠ | x | ⚠ | ⚠ | x | ✓ | x | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ |
-| [Imerchantsolutions](connectors/imerchantsolutions.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | x | ⚠ | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | x | x | ✓ | ✓ |
+| [Imerchantsolutions](connectors/imerchantsolutions.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ? | ⚠ | ✓ | x | ⚠ | ⚠ | ⚠ | x | x | x | x | x | x | ⚠ | x | x | ✓ | ✓ |
 | [Itaubank](connectors/itaubank.md) | ⚠ | x | x | x | x | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ✓ | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Jpmorgan](connectors/jpmorgan.md) | ✓ | ✓ | x | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | x | ? | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Loonio](connectors/loonio.md) | ✓ | x | x | x | x | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ |
