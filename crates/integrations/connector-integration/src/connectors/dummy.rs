@@ -1,5 +1,8 @@
 pub mod transformers;
 
+#[cfg(test)]
+mod test;
+
 use std::{
     fmt::Debug,
     marker::{Send, Sync},

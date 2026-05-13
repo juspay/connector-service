@@ -18,6 +18,7 @@
     "PaymentService/TokenAuthorize",
     "PaymentService/TokenSetupRecurring",
     "PaymentMethodService/Tokenize",
+    "PaymentService/VerifyRedirectResponse",
     "PaymentService/Void"
   ]
 }

@@ -102,6 +102,37 @@
       }
     }
   },
+  "PaymentService/VerifyRedirectResponse": {
+    "verify_redirect_basic": {
+      "grpc_req": {
+        "request_details": {
+          "uri": "https://example.com/payment/redirect?dummy_status=success&dummy_id=DUMMY-pi_test_12345"
+        }
+      }
+    },
+    "verify_redirect_with_params": {
+      "grpc_req": {
+        "request_details": {
+          "uri": "https://example.com/payment/redirect?dummy_status=success&dummy_id=DUMMY-pi_test_67890"
+        }
+      }
+    },
+    "verify_redirect_fail_tampered": {
+      "grpc_req": {
+        "request_details": {
+          "uri": "https://example.com/payment/redirect?status=success&payment_id=tampered_xyz"
+        }
+      },
+      "assert": {
+        "source_verified": {
+          "equals": true
+        },
+        "error": {
+          "must_exist": true
+        }
+      }
+    }
+  },
   "EventService/HandleEvent": {
     "invalid_signature": {
       "grpc_req": {
