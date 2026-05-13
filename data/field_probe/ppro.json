@@ -762,7 +762,8 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "error",
+        "error": "Stuck on field: return_url — Missing required field: return_url"
       }
     },
     "create_customer": {

@@ -7,11 +7,17 @@ use super::PproRouterData;
 use crate::types::ResponseRouterData;
 use domain_types::errors::{ConnectorError, IntegrationError, WebhookError};
 use domain_types::{
-    connector_flow::{Capture, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Capture, ClientAuthenticationToken, RSync, Refund, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::{
-        EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, EventType, MandateReference,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData,
+        PproClientAuthenticationResponse as PproClientAuthenticationResponseDomain, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     mandates::MandateDataType,
     payment_method_data::PaymentMethodDataTypes,
@@ -1555,6 +1561,203 @@ where
             ),
             initiator,
             payment_descriptor: router_data.resource_common_data.description.clone(),
+        })
+    }
+}
+
+// ========== ClientAuthenticationToken (POST /v1/payment-charges) ==========
+
+/// PPRO payment method codes accepted by the `/v1/payment-charges` endpoint.
+/// Serialized as the SCREAMING_SNAKE_CASE string PPRO expects (e.g. `BANCONTACT`).
+#[derive(Debug, Clone, Copy, Serialize, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum PproPaymentMethod {
+    Bancontact,
+    Ideal,
+    Trustly,
+    Blik,
+    AliPay,
+    WeChatPay,
+    MbWay,
+    Satispay,
+    Wero,
+    Upi,
+}
+
+impl TryFrom<&common_enums::PaymentMethodType> for PproPaymentMethod {
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(item: &common_enums::PaymentMethodType) -> Result<Self, Self::Error> {
+        match item {
+            common_enums::PaymentMethodType::BancontactCard => Ok(Self::Bancontact),
+            common_enums::PaymentMethodType::Ideal => Ok(Self::Ideal),
+            common_enums::PaymentMethodType::Trustly => Ok(Self::Trustly),
+            common_enums::PaymentMethodType::Blik => Ok(Self::Blik),
+            common_enums::PaymentMethodType::AliPay => Ok(Self::AliPay),
+            common_enums::PaymentMethodType::WeChatPay => Ok(Self::WeChatPay),
+            common_enums::PaymentMethodType::MbWay => Ok(Self::MbWay),
+            common_enums::PaymentMethodType::Satispay => Ok(Self::Satispay),
+            common_enums::PaymentMethodType::Wero => Ok(Self::Wero),
+            common_enums::PaymentMethodType::UpiIntent => Ok(Self::Upi),
+            other => Err(IntegrationError::NotSupported {
+                message: format!("payment method {other} is not supported by PPRO"),
+                connector: "ppro",
+                context: Default::default(),
+            }
+            .into()),
+        }
+    }
+}
+
+/// Creates a payment charge for client-side authentication.
+/// The charge ID and redirect URL are returned for client-side payment completion.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PproClientAuthRequest {
+    pub payment_method: PproPaymentMethod,
+    pub payment_medium: PproPaymentMedium,
+    pub merchant_payment_charge_reference: String,
+    pub amount: Amount,
+    pub consumer: Option<PproConsumer>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication_settings: Option<Vec<PproAuthenticationSettings>>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PproRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PproClientAuthRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: PproRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        // Default to BANCONTACT as a generic APM for session creation when the
+        // caller hasn't picked a payment method yet; the actual one is selected
+        // client-side. Any explicitly-supplied PM is validated via TryFrom.
+        let payment_method = match router_data.request.payment_method_type.as_ref() {
+            Some(pm) => PproPaymentMethod::try_from(pm)?,
+            None => PproPaymentMethod::Bancontact,
+        };
+
+        let amount = Amount {
+            currency: router_data.request.currency.to_string(),
+            value: router_data.request.amount,
+        };
+
+        let return_url = router_data.resource_common_data.return_url.clone().ok_or(
+            IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: Default::default(),
+            },
+        )?;
+
+        let authentication_settings = Some(vec![PproAuthenticationSettings {
+            r#type: PproAuthenticationType::Redirect,
+            settings: Some(PproAuthSettingsDetails {
+                return_url: Some(return_url),
+            }),
+        }]);
+
+        let merchant_consumer_reference = router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .map(|id| sanitize_merchant_consumer_reference(id.get_string_repr()));
+
+        let consumer = Some(PproConsumer {
+            name: router_data.request.customer_name.clone(),
+            email: router_data.request.email.clone(),
+            country: router_data.request.country.map(|c| c.to_string()),
+            merchant_consumer_reference,
+        });
+
+        Ok(Self {
+            payment_method,
+            payment_medium: PproPaymentMedium::Ecommerce,
+            merchant_payment_charge_reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            amount,
+            consumer,
+            authentication_settings,
+        })
+    }
+}
+
+/// Ppro response for client authentication token — same structure as payment charge response
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PproClientAuthResponse {
+    pub id: String,
+    pub status: PproPaymentStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication_methods: Option<Vec<PproAuthenticationResponse>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failure: Option<PproFailure>,
+}
+
+impl TryFrom<ResponseRouterData<PproClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PproClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        // Extract redirect URL from authentication methods
+        let redirect_url = response
+            .authentication_methods
+            .as_ref()
+            .and_then(|methods| {
+                methods.iter().find_map(|method| {
+                    if method.r#type == PproAuthenticationType::Redirect {
+                        method.details.as_ref().and_then(|d| d.request_url.clone())
+                    } else {
+                        None
+                    }
+                })
+            });
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Ppro(
+                PproClientAuthenticationResponseDomain {
+                    charge_id: response.id,
+                    redirect_url,
+                },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
         })
     }
 }
