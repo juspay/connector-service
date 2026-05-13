@@ -306,6 +306,46 @@ macro_rules! expand_fn_get_request_body {
             }
         }
     };
+
+    // Preprocessing arm: serialize the bridge's request struct as JSON,
+    // then hand the bytes to `preprocess_request_bytes` for connector-side
+    // transformation (JOSE encrypt / HMAC seal / custom envelope). Result
+    // is shipped as `RequestContent::RawBytes`. Symmetric to the
+    // `preprocess_response_bytes` hook on the response side.
+    (
+        $connector: ty,
+        $curl_req: ty,
+        $content_type: ident,
+        $curl_res: ty,
+        $flow: ident,
+        $resource_common_data: ty,
+        $request: ty,
+        $response: ty,
+        preprocess_request
+    ) => {
+        paste::paste! {
+            fn get_request_body(
+                &self,
+                req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::IntegrationError>
+            {
+                use error_stack::ResultExt;
+                let bridge = self.[< $flow:snake >];
+                let input_data = [< $connector RouterData >] {
+                    connector: self.to_owned(),
+                    router_data: req.clone()
+};
+                let request = bridge.request_body(input_data)?;
+                let json_bytes = serde_json::to_vec(&request).change_context(
+                    macro_types::IntegrationError::RequestEncodingFailed {
+                        context: Default::default(),
+                    },
+                )?;
+                let preprocessed = self.preprocess_request_bytes(req, json_bytes)?;
+                Ok(Some(macro_types::RequestContent::RawBytes(preprocessed)))
+            }
+        }
+    };
 }
 pub(crate) use expand_fn_get_request_body;
 
@@ -419,7 +459,73 @@ macro_rules! expand_default_functions {
 pub(crate) use expand_default_functions;
 
 macro_rules! macro_connector_implementation {
-    // MOST SPECIFIC PATTERNS FIRST - Version with preprocess_response: true and curl_request
+    // MOST SPECIFIC: both preprocess_request and preprocess_response enabled.
+    // Used by connectors that wrap the request body in a cryptographic envelope
+    // (JOSE, HMAC-sealed, etc.) on both directions. The bridge's request struct
+    // is JSON-serialised; `preprocess_request_bytes` then transforms those bytes
+    // into the wire body. Response side mirrors via `preprocess_response_bytes`.
+    (
+        connector_default_implementations: [$($function_name: ident), *],
+        connector: $connector: ident,
+        curl_request: $content_type:ident($curl_req: ty),
+        curl_response:$curl_res: ty,
+        flow_name:$flow: ident,
+        resource_common_data:$resource_common_data: ty,
+        flow_request:$request: ty,
+        flow_response:$response: ty,
+        http_method: $http_method_type:ident,
+        preprocess_request: true,
+        preprocess_response: true,
+        generic_type: $generic_type:tt,
+        [$($bounds:tt)*],
+        other_functions: {
+            $($function_def: tt)*
+        }
+    ) => {
+        impl <$generic_type: $($bounds)*>
+            ConnectorIntegrationV2<
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+            > for $connector<$generic_type>
+        {
+            fn get_http_method(&self) -> common_utils::request::Method {
+                common_utils::request::Method::$http_method_type
+            }
+            $($function_def)*
+            $(
+                macros::expand_default_functions!(
+                    function: $function_name,
+                    flow_name:$flow,
+                    resource_common_data:$resource_common_data,
+                    flow_request:$request,
+                    flow_response:$response,
+                );
+            )*
+            macros::expand_fn_get_request_body!(
+                $connector,
+                $curl_req,
+                $content_type,
+                $curl_res,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+                preprocess_request
+            );
+            macros::expand_fn_handle_response!(
+                $connector,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+                preprocess_enabled
+            );
+        }
+    };
+
+    // Version with preprocess_response: true and curl_request
     (
         connector_default_implementations: [$($function_name: ident), *],
         connector: $connector: ident,

@@ -26,7 +26,7 @@ use domain_types::{
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::types::ResponseRouterData;
+use crate::{connectors::twoctwop_paco::TwoctwopPacoRouterData, types::ResponseRouterData};
 
 const PACO_LANGUAGE: &str = "en-US";
 const PACO_PAYMENT_TYPE_CC: &str = "CC";
@@ -406,24 +406,100 @@ pub struct TwoctwopPacoWalletAuthorizeRequest {
     pub preferred_payment_types: Vec<&'static str>,
 }
 
-/// Discriminator returned by the request builder so the connector module knows
-/// which PACO endpoint to POST to without re-inspecting the payment-method-data.
-#[derive(Debug, Clone)]
+/// Discriminator used to pick the PACO endpoint for Authorize without
+/// re-inspecting the payment-method-data inside both `get_url` and the
+/// request-body TryFrom impl.
+#[derive(Debug, Clone, Copy)]
 pub enum AuthorizeRoute {
     CardNonUi,
     WalletPrepaymentUi,
 }
 
-#[derive(Debug, Clone)]
-pub struct AuthorizeRequest {
-    pub route: AuthorizeRoute,
-    pub body: serde_json::Value,
+/// Inspect the Authorize input and return the PACO endpoint to hit. Pure —
+/// no auth or amount conversion. Used by both `get_url` (URL selection) and
+/// the `TryFrom` impl (body selection) so the two stay in lock-step.
+pub fn authorize_route<T>(
+    item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+) -> Result<AuthorizeRoute, error_stack::Report<errors::IntegrationError>>
+where
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+{
+    match &item.request.payment_method_data {
+        PaymentMethodData::Card(_) => Ok(AuthorizeRoute::CardNonUi),
+        PaymentMethodData::Wallet(WalletData::GcashRedirect(_)) => {
+            Ok(AuthorizeRoute::WalletPrepaymentUi)
+        }
+        _ => Err(errors::IntegrationError::NotImplemented(
+            "Selected payment method through TwoctwopPaco".to_string(),
+            errors::IntegrationErrorContext::default(),
+        )
+        .into()),
+    }
 }
+
+/// Wire body for Authorize. Two-shape because PACO has two endpoints with
+/// distinct schemas. `#[serde(untagged)]` keeps the on-wire JSON identical
+/// to what the per-variant builder used to emit.
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+// Card variant is ~656 B (card details + browser info); Wallet is far smaller.
+// Boxing would double-allocate every Authorize. The enum is short-lived
+// (built, serialised, then dropped), so the larger size is acceptable here.
+#[allow(clippy::large_enum_variant)]
+pub enum TwoctwopPacoAuthorizeRequest {
+    Card(TwoctwopPacoCardAuthorizeRequest),
+    Wallet(TwoctwopPacoWalletAuthorizeRequest),
+}
+
+/// Wire body for VoidPC (post-capture reverse). Same shape as Void — the
+/// newtype only exists so the `Bridge<RequestTemplating, ...>` for VoidPC
+/// is distinct from Void's at the type system level.
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoVoidPcRequest(pub TwoctwopPacoVoidRequest);
+
+/// Wire body for Authenticate. Same shape as the card Authorize body with
+/// `request3dsFlag` forced to "Y"; newtype gives Authenticate its own
+/// `Bridge` templating slot.
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoAuthenticateRequest(pub TwoctwopPacoCardAuthorizeRequest);
+
+// Response newtypes. Each JOSE flow shares the underlying
+// `TwoctwopPacoNonUiResponse` wire shape, but the `Bridge<_, ResponseTemplating, T>`
+// definition expanded by `impl_templating!` would collide if the same response
+// type were registered against multiple flows. Per-flow newtypes give each
+// bridge a distinct templating slot; `#[serde(transparent)]` keeps the on-wire
+// deserialisation identical.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoAuthorizeResponse(pub TwoctwopPacoNonUiResponse);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoCaptureResponse(pub TwoctwopPacoNonUiResponse);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoVoidResponse(pub TwoctwopPacoNonUiResponse);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoVoidPcResponse(pub TwoctwopPacoNonUiResponse);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoRefundResponse(pub TwoctwopPacoNonUiResponse);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TwoctwopPacoAuthenticateResponse(pub TwoctwopPacoNonUiResponse);
+
 
 pub fn build_authorize_request<T>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     auth: &TwoctwopPacoAuthType,
-) -> Result<AuthorizeRequest, error_stack::Report<errors::IntegrationError>>
+) -> Result<TwoctwopPacoAuthorizeRequest, error_stack::Report<errors::IntegrationError>>
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 {
@@ -486,15 +562,7 @@ where
                 browser_info,
                 device_details,
             };
-            Ok(AuthorizeRequest {
-                route: AuthorizeRoute::CardNonUi,
-                body: serde_json::to_value(&body).map_err(|_| {
-                    errors::IntegrationError::InvalidDataFormat {
-                        field_name: "twoctwop_paco card body",
-                        context: errors::IntegrationErrorContext::default(),
-                    }
-                })?,
-            })
+            Ok(TwoctwopPacoAuthorizeRequest::Card(body))
         }
         PaymentMethodData::Wallet(WalletData::GcashRedirect(_)) => {
             let device_details = item
@@ -518,15 +586,7 @@ where
                 device_details,
                 preferred_payment_types: vec![PACO_PREFERRED_PAYMENT_TYPE_GCASH],
             };
-            Ok(AuthorizeRequest {
-                route: AuthorizeRoute::WalletPrepaymentUi,
-                body: serde_json::to_value(&body).map_err(|_| {
-                    errors::IntegrationError::InvalidDataFormat {
-                        field_name: "twoctwop_paco wallet body",
-                        context: errors::IntegrationErrorContext::default(),
-                    }
-                })?,
-            })
+            Ok(TwoctwopPacoAuthorizeRequest::Wallet(body))
         }
         _ => Err(errors::IntegrationError::NotImplemented(
             "Selected payment method through TwoctwopPaco".to_string(),
@@ -1867,89 +1927,12 @@ impl<'a> PacoJoseClaims<'a> {
     }
 }
 
-/// Wrap a serialisable PACO request body in the JOSE claim envelope and
-/// return the compact JWE that PACO expects on the wire.
-pub fn build_jose_envelope<T: Serialize>(
-    body: T,
-    auth: &TwoctwopPacoAuthType,
-) -> Result<Vec<u8>, error_stack::Report<errors::IntegrationError>> {
-    let request_value = serde_json::to_value(&body).map_err(|err| {
-        error_stack::report!(errors::IntegrationError::InvalidDataFormat {
-            field_name: "twoctwop_paco request body",
-            context: errors::IntegrationErrorContext {
-                suggested_action: None,
-                doc_url: None,
-                additional_context: Some(format!("Failed to serialise PACO body: {err}")),
-            },
-        })
-    })?;
-    let claims = PacoJoseClaims::new(auth.access_token.peek(), request_value);
-    let jwe =
-        common_utils::crypto::jose::sign_then_encrypt(&claims, &auth.jose_cfg).map_err(|err| {
-            error_stack::report!(errors::IntegrationError::FailedToObtainAuthType {
-                context: errors::IntegrationErrorContext {
-                    suggested_action: Some(
-                        "Confirm the PACO PEMs and `kid` resolve a valid JOSE pair.".to_string(),
-                    ),
-                    doc_url: None,
-                    additional_context: Some(format!("JOSE sign+encrypt failed: {err}")),
-                },
-            })
-        })?;
-    Ok(jwe.into_bytes())
-}
-
-/// Decrypt a compact JWE response from PACO and parse it as the requested type.
-pub fn decode_jose_response<R: for<'de> Deserialize<'de>>(
-    body: &[u8],
-    status_code: u16,
-    auth: &TwoctwopPacoAuthType,
-) -> Result<R, error_stack::Report<errors::ConnectorError>> {
-    let compact = std::str::from_utf8(body).map_err(|_| {
-        error_stack::report!(
-            errors::ConnectorError::response_deserialization_failed_with_context(
-                status_code,
-                Some("twoctwop_paco: response was not valid UTF-8".to_string()),
-            )
-        )
-    })?;
-    let trimmed = compact.trim().trim_matches('"');
-    // PACO's response JWT carries the merchant's access_token as aud by
-    // default — the mirror of our request's iss. `response_audience` lets a
-    // per-merchant config override this if PACO changes the response aud on
-    // a specific office. Validate aud + temporal claims so a captured
-    // response can't be replayed indefinitely. 60s skew tolerates clock
-    // drift between us and PACO.
-    let validation = common_utils::crypto::jose::JoseClaimValidation {
-        expected_audience: Some(auth.response_audience.peek().clone()),
-        clock_skew_seconds: 60,
-    };
-    let claims = common_utils::crypto::jose::decrypt_then_verify_with_claims(
-        trimmed,
-        &auth.jose_cfg,
-        Some(&validation),
-    )
-    .map_err(|err| {
-        error_stack::report!(
-            errors::ConnectorError::response_deserialization_failed_with_context(
-                status_code,
-                Some(format!("JOSE decrypt+verify failed: {err}")),
-            )
-        )
-    })?;
-    let inner = match claims.get("response") {
-        Some(value) => value.clone(),
-        None => claims,
-    };
-    serde_json::from_value::<R>(inner).map_err(|err| {
-        error_stack::report!(
-            errors::ConnectorError::response_deserialization_failed_with_context(
-                status_code,
-                Some(format!("twoctwop_paco: response shape mismatch: {err}")),
-            )
-        )
-    })
-}
+// Wire-envelope encode/decode lives on the connector struct itself, in
+// `preprocess_request_bytes` / `preprocess_response_bytes` (see
+// `twoctwop_paco.rs::create_all_prerequisites!`). The standalone helpers
+// previously exposed here (`build_jose_envelope` / `decode_jose_response`)
+// are no longer needed now that every flow runs through the framework's
+// `preprocess_request: true, preprocess_response: true` macro path.
 
 // ---------- 3DS trio: shared helpers ----------
 
@@ -2118,3 +2101,277 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwoctwopPacoNonUiResp
     }
 }
 
+// ============================================================================
+// TryFrom impls — used by the macro-driven bridge to construct each flow's
+// typed request body. Each impl extracts auth from `connector_config` then
+// delegates to the existing `build_*_request` helper, wrapping in the
+// per-flow newtype where the wire body is shared (VoidPC reuses Void's body,
+// Authenticate reuses the card-Authorize body).
+// ============================================================================
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TwoctwopPacoRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for TwoctwopPacoAuthorizeRequest
+{
+    type Error = error_stack::Report<errors::IntegrationError>;
+
+    fn try_from(
+        item: TwoctwopPacoRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = TwoctwopPacoAuthType::try_from(&item.router_data.connector_config)?;
+        build_authorize_request(&item.router_data, &auth)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TwoctwopPacoRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for TwoctwopPacoCaptureRequest
+{
+    type Error = error_stack::Report<errors::IntegrationError>;
+
+    fn try_from(
+        item: TwoctwopPacoRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = TwoctwopPacoAuthType::try_from(&item.router_data.connector_config)?;
+        build_capture_request(&item.router_data, &auth)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TwoctwopPacoRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for TwoctwopPacoVoidRequest
+{
+    type Error = error_stack::Report<errors::IntegrationError>;
+
+    fn try_from(
+        item: TwoctwopPacoRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = TwoctwopPacoAuthType::try_from(&item.router_data.connector_config)?;
+        build_void_request(&item.router_data, &auth)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TwoctwopPacoRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for TwoctwopPacoVoidPcRequest
+{
+    type Error = error_stack::Report<errors::IntegrationError>;
+
+    fn try_from(
+        item: TwoctwopPacoRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = TwoctwopPacoAuthType::try_from(&item.router_data.connector_config)?;
+        Ok(Self(build_void_pc_request(&item.router_data, &auth)?))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TwoctwopPacoRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for TwoctwopPacoRefundRequest
+{
+    type Error = error_stack::Report<errors::IntegrationError>;
+
+    fn try_from(
+        item: TwoctwopPacoRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = TwoctwopPacoAuthType::try_from(&item.router_data.connector_config)?;
+        build_refund_request(&item.router_data, &auth)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TwoctwopPacoRouterData<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for TwoctwopPacoAuthenticateRequest
+{
+    type Error = error_stack::Report<errors::IntegrationError>;
+
+    fn try_from(
+        item: TwoctwopPacoRouterData<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = TwoctwopPacoAuthType::try_from(&item.router_data.connector_config)?;
+        Ok(Self(build_authenticate_request(&item.router_data, &auth)?))
+    }
+}
+
+// ============================================================================
+// Response newtype → RouterDataV2 shim TryFrom impls. Each unwraps the
+// flow-distinct newtype and delegates to the existing
+// `TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, _>>` impl that holds
+// the actual decoding logic. Keeping the logic in the inner-type impl avoids
+// duplicating ~30 lines of status/auth/error mapping per flow.
+// ============================================================================
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<TwoctwopPacoAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TwoctwopPacoAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<TwoctwopPacoCaptureResponse, Self>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TwoctwopPacoCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<TwoctwopPacoVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TwoctwopPacoVoidResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<TwoctwopPacoVoidPcResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TwoctwopPacoVoidPcResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<TwoctwopPacoRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TwoctwopPacoRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes>
+    TryFrom<ResponseRouterData<TwoctwopPacoAuthenticateResponse, Self>>
+    for RouterDataV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TwoctwopPacoAuthenticateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(ResponseRouterData {
+            response: item.response.0,
+            router_data: item.router_data,
+            http_code: item.http_code,
+        })
+    }
+}
