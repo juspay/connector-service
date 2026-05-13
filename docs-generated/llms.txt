@@ -201,10 +201,10 @@ examples_python: examples/dlocal/dlocal.py
 ## Dummy
 connector_id: dummy
 doc: docs/connectors/dummy.md
-scenarios: none
-payment_methods: none
-flows: handle_event, parse_event
-examples_python: none
+scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
+payment_methods: Ach, AchBankTransfer, Affirm, Afterpay, AliPayRedirect, AmazonPayRedirect, ApplePay, ApplePayDecrypted, Bacs, BacsBankTransfer, BancontactCard, Becs, Blik, Card, CashappQr, Eps, Giropay, GooglePay, Ideal, Klarna, MbWay, MultibancoBankTransfer, Przelewy24, RevolutPay, Satispay, Sepa, SepaBankTransfer, Trustly, UpiCollect, UpiIntent, UpiQr, WeChatPayQr, Wero
+flows: authorize, capture, create_client_authentication_token, create_customer, get, handle_event, incremental_authorization, parse_event, proxy_authorize, proxy_setup_recurring, recurring_charge, refund, refund_get, setup_recurring, token_authorize, tokenize, void
+examples_python: examples/dummy/dummy.py
 
 ## Easebuzz
 connector_id: easebuzz
