@@ -42,6 +42,25 @@ export interface AIRunOptions {
    * Default is false (read-only tools).
    */
   allowWrite?: boolean;
+  /**
+   * Phase 12: resume a prior Claude conversation by session id. Only honored
+   * by the claude-code runner; opencode runner will throw if set (opencode has
+   * no equivalent persistent-session concept in this codebase).
+   */
+  claudeSessionId?: string;
+  /**
+   * Phase 12: pre-picked UUID for the new (non-resume) call. Lets callers
+   * decide the session id in advance — useful when spawning sibling sessions
+   * that need to know each other's ids up front. Claude-code only.
+   */
+  preferredSessionId?: string;
+  /**
+   * Phase 12: treat `userPayload` as the entire prompt body (typically a
+   * short follow-up message) and skip the standard skill body / `## Input` /
+   * answer-instructions framing. Required when `claudeSessionId` is set.
+   * Claude-code only.
+   */
+  incremental?: boolean;
 }
 
 /**
@@ -58,10 +77,27 @@ export interface AIHealthResult {
 }
 
 /**
+ * Phase 12: unified result shape. Every runAI call returns both the parsed
+ * result and the Claude session id that produced it. Callers that don't need
+ * the session id can `const { result } = await runAI(...)` and ignore the
+ * rest. Callers that DO need it (per-phase persistence) read `sessionId` and
+ * stash it on ctx.artifacts for later --resume invocations.
+ *
+ * The opencode runner has no persistent-session concept, so its sessionId is
+ * a single-use throwaway UUID returned only to keep the type uniform — it
+ * cannot be passed back as `claudeSessionId` (the opencode branch rejects
+ * that option).
+ */
+export interface AIRunResult<T> {
+  result: T;
+  sessionId: string;
+}
+
+/**
  * Interface that both runners must implement.
  */
 export interface RunnerInterface {
-  run<T>(opts: AIRunOptions): Promise<T>;
+  run<T>(opts: AIRunOptions): Promise<AIRunResult<T>>;
   checkHealth(): Promise<AIHealthResult>;
 }
 
@@ -104,8 +140,15 @@ export async function checkAIHealth(): Promise<AIHealthResult> {
  * Run an AI task using the configured runner.
  * This is the main entry point for checkpoint code - it automatically
  * delegates to the appropriate runner based on configuration.
+ *
+ * Phase 12: returns `{ result, sessionId }`. Callers that don't care about
+ * persistence can `const { result } = await runAI(...)`. Callers that do
+ * want to resume on retry stash `sessionId` on `ctx.artifacts` and pass it
+ * back as `claudeSessionId` next time.
  */
-export async function runAI<T = unknown>(opts: AIRunOptions): Promise<T> {
+export async function runAI<T = unknown>(
+  opts: AIRunOptions
+): Promise<AIRunResult<T>> {
   const runner = getConfiguredRunner();
 
   if (runner === "claude-code") {
@@ -119,9 +162,20 @@ export async function runAI<T = unknown>(opts: AIRunOptions): Promise<T> {
       rawText: opts.rawText,
       extraArgs: opts.extraArgs,
       allowWrite: opts.allowWrite,
+      claudeSessionId: opts.claudeSessionId,
+      preferredSessionId: opts.preferredSessionId,
+      incremental: opts.incremental,
     };
     return runClaudeCode<T>(ccOpts);
   } else {
+    // Opencode path doesn't support persistent sessions — fail loud if a
+    // caller tries to use them with the wrong runner. Better than silently
+    // ignoring and pretending to resume.
+    if (opts.claudeSessionId || opts.incremental) {
+      throw new Error(
+        `runAI: claudeSessionId/incremental are claude-code only (current runner: ${runner}, label: ${opts.label})`
+      );
+    }
     const ocOpts: OpencodeRunOptions = {
       skillBody: opts.skillBody,
       userPayload: opts.userPayload,
@@ -131,7 +185,11 @@ export async function runAI<T = unknown>(opts: AIRunOptions): Promise<T> {
       timeoutMs: opts.timeoutMs,
       rawText: opts.rawText,
     };
-    return runOpencode<T>(ocOpts);
+    const result = await runOpencode<T>(ocOpts);
+    // Synthetic single-use id keeps the return shape uniform. Storing it
+    // on artifacts won't enable resume (opencode would reject it next time),
+    // so callers in opencode mode should treat sessionId as a no-op.
+    return { result, sessionId: opts.preferredSessionId ?? "opencode-noop" };
   }
 }
 

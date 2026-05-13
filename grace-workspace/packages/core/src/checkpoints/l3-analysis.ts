@@ -292,15 +292,37 @@ export const l3AnalysisCheckpoint: Checkpoint = {
     ctx.log("[l3_analysis]   6. Existing Transformers", "info");
 
     let result: L3Analysis;
+    // Phase 12: persistent per-phase Claude session. First call generates a
+    // uuid (returned in `sessionId`); retries resume that conversation with the
+    // reviewer's regenerate feedback as an incremental message, so the model
+    // keeps its memory of the codebase / L2 spec it already read.
+    const l3SessionId = ctx.artifacts.l3SessionId as string | undefined;
+    const l3RegenPrompt = ctx.artifacts.l3RegeneratePrompt as string | undefined;
     try {
-      const rawResult = await runAI<L3Analysis>({
-        skillBody: L3_ANALYSIS_SYSTEM,
-        userPayload: payload,
-        cwd: projectRoot,
-        label: "l3:analysis",
-        timeoutMs: 35 * 60 * 1000, // 35 min (5 min buffer below the 40 min checkpoint wrapper)
-      });
+      const aiCall = l3SessionId
+        ? {
+            claudeSessionId: l3SessionId,
+            incremental: true,
+            userPayload:
+              `The reviewer requested revisions to your L3 analysis:\n\n` +
+              `${l3RegenPrompt ?? "(no specific feedback supplied — refine your specification, particularly around ambiguities and edge cases you previously flagged)"}\n\n` +
+              `Revise the analysis. The L2 spec, codebase patterns, and macro reference you already read are unchanged. Re-read specific files only if your new conclusions depend on them. Reply with ONLY the same L3Analysis JSON shape as your first reply (first char \`{\`, last char \`}\`).`,
+            skillBody: "",
+          }
+        : {
+            skillBody: L3_ANALYSIS_SYSTEM,
+            userPayload: payload,
+          };
+
+      const { result: rawResult, sessionId: nextL3SessionId } =
+        await runAI<L3Analysis>({
+          ...aiCall,
+          cwd: projectRoot,
+          label: l3SessionId ? "l3:analysis:resume" : "l3:analysis",
+          timeoutMs: 35 * 60 * 1000, // 35 min (5 min buffer below the 40 min checkpoint wrapper)
+        });
       result = rawResult;
+      ctx.artifacts.l3SessionId = nextL3SessionId;
 
       // Handle auto-wrapped results (when JSON parsing failed in runner)
       if (

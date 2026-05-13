@@ -8,6 +8,61 @@ import {
 } from "../generators/codegen-agent-prompt.js";
 
 /**
+ * Phase 12: build the short follow-up message for a resumed implementation
+ * session. Claude already remembers the L3 spec, the file layout it wrote, and
+ * its prior reasoning — we only need to send the new error context and the
+ * answer-shape reminder. Roughly 1-2 KB versus the ~30-50 KB first-call prompt.
+ */
+function buildIncrementalImplMessage(
+  connector: string,
+  flow: string,
+  compilationErrors?: string[],
+  grpcTestErrors?: string[]
+): string {
+  const parts: string[] = [
+    `Retry of code generation for ${connector} / ${flow}.`,
+    "",
+  ];
+
+  if (compilationErrors && compilationErrors.length > 0) {
+    parts.push(
+      "## Cargo build errors from your prior attempt",
+      "",
+      compilationErrors.map((e) => `- ${e}`).join("\n"),
+      "",
+      "Fix ONLY what's needed to resolve these errors. Don't rewrite files that compiled cleanly. Use your Read tool to re-examine the broken files in their current on-disk state (your edits may not match memory after a failed build).",
+      ""
+    );
+  }
+
+  if (grpcTestErrors && grpcTestErrors.length > 0) {
+    parts.push(
+      "## gRPC test errors from your prior attempt",
+      "",
+      grpcTestErrors.map((e) => `- ${e}`).join("\n"),
+      "",
+      "These indicate the request/response struct shapes or status mapping don't match the connector API. Fix them without breaking the build.",
+      ""
+    );
+  }
+
+  if (
+    (!compilationErrors || compilationErrors.length === 0) &&
+    (!grpcTestErrors || grpcTestErrors.length === 0)
+  ) {
+    parts.push(
+      "No specific error context was passed. The previous attempt failed validation; review your prior output and re-attempt. Re-read the L3 spec if you need to."
+    );
+  }
+
+  parts.push(
+    "Reply with ONLY the same CodegenResult JSON shape as your first reply (first char `{`, last char `}`). Update `filesModified` with the actual list of paths you touched in this turn."
+  );
+
+  return parts.join("\n");
+}
+
+/**
  * Ensure tech spec is saved to disk for the Codegen Agent to read
  */
 async function ensureTechSpecFile(
@@ -288,15 +343,45 @@ ${workflowContent}
     ctx.log("[implementation]   Phase 5: Implement code (NO build/test)", "info");
 
     let result: CodegenResult;
+    // Phase 12: persistent implementation session. On the first call the
+    // codegen agent writes all files from scratch using the full L3 spec.
+    // On auto-retry (e.g. compile errors propagated via
+    // ctx.artifacts.compilationErrors), we resume the same conversation —
+    // the model already remembers the L3 spec, the codebase, and what files
+    // it wrote, so the incremental message just contains the new errors.
+    //
+    // compiler_check and grpc_test downstream also resume this session
+    // directly to drive their inner fix loops (see those checkpoints).
+    const implSessionId = ctx.artifacts.implementationSessionId as
+      | string
+      | undefined;
     try {
-      const rawResult = await runAI<CodegenResult>({
-        skillBody: systemPrompt,  // Use custom prompt with Phase 5 restriction
-        userPayload: payload,
-        cwd: projectRoot,
-        label: "implementation:codegen",
-        timeoutMs: 25 * 60 * 1000, // 25 min (no build/test, just code writing)
-      });
+      const isResume = !!implSessionId;
+      const incrementalMessage = isResume
+        ? buildIncrementalImplMessage(connector, flow, compilationErrors, grpcTestErrors)
+        : "";
+
+      const aiCall = isResume
+        ? {
+            claudeSessionId: implSessionId,
+            incremental: true,
+            userPayload: incrementalMessage,
+            skillBody: "",
+          }
+        : {
+            skillBody: systemPrompt,
+            userPayload: payload,
+          };
+
+      const { result: rawResult, sessionId: nextImplSessionId } =
+        await runAI<CodegenResult>({
+          ...aiCall,
+          cwd: projectRoot,
+          label: isResume ? "implementation:codegen:resume" : "implementation:codegen",
+          timeoutMs: 25 * 60 * 1000, // 25 min (no build/test, just code writing)
+        });
       result = rawResult;
+      ctx.artifacts.implementationSessionId = nextImplSessionId;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       ctx.log(`[implementation] Codegen Agent failed: ${msg}`, "error");

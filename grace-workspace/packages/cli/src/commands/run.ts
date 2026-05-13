@@ -49,18 +49,31 @@ const ARTIFACT_KEYS_BY_STAGE: Record<string, string[]> = {
   product_alignment: ["productAlignment", "pmClarifications"],
   feature_research: ["featureResearch"],
   design_gate: ["designGate"],
-  l2_gen: ["l2"],
+  // Phase 12: include per-phase Claude session ids so manual rewind forces a
+  // fresh `claude --session-id <new>` call instead of resuming a stale
+  // conversation. The on-disk jsonl files at ~/.claude/projects/<...>/<uuid>.jsonl
+  // survive until the `byne sessions prune` command reaps them.
+  l2_gen: ["l2", "l2LinksSessionId", "l2TechspecSessionId"],
   l2_review: ["l2Review", "l2RegeneratePrompt", "previousL2"],
-  l3_gen: ["l3"],
+  l3_gen: ["l3", "l3SessionId"],
   l3_review: ["l3Review", "l3RegeneratePrompt", "previousL3"],
   l4_gen: ["l4"],
   l4_review: ["l4Review", "l4RegeneratePrompt", "previousL4"],
-  implementation: ["implementation", "implementationFiles"],
+  implementation: [
+    "implementation",
+    "implementationFiles",
+    "implementationSessionId",
+  ],
   compiler: ["compiledFiles"],
   design_match: ["designDiff"],
   cypress: ["cypressReport"],
   playwright: ["playwrightReport"],
-  pr_review: ["prReview"],
+  // Phase 12: also clear grpc_test's persistent session id on rewind so a
+  // do-over starts the test conversation fresh. grpc_test's stage id is
+  // not in the existing keyed-by-stage scheme (it shares "implementation"
+  // for the legacy rollback path), so we add a dedicated entry here.
+  grpc_test: ["grpcTest", "grpcurlOutput", "grpcTestErrors", "grpcTestSessionId"],
+  pr_review: ["prReview", "prReviewSessionId"],
   regression: ["regression"],
 };
 

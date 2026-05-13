@@ -157,7 +157,7 @@ export const featureResearchCheckpoint: Checkpoint = {
           cwd: ctx.task.projectRoot,
           label: "feature_research:agent1-existing",
           rawText: true,
-        }),
+        }).then((r) => r.result),
         runAI<string>({
           skillBody: IDEAL_FLOW_SYSTEM,
           userPayload: {
@@ -167,7 +167,7 @@ export const featureResearchCheckpoint: Checkpoint = {
           cwd: ctx.task.projectRoot,
           label: "feature_research:agent2-idealflow",
           rawText: true,
-        }),
+        }).then((r) => r.result),
       ]);
       existingStructure = String(repoReport ?? "").trim();
       idealFlow = String(webReport ?? "").trim();
@@ -199,7 +199,7 @@ export const featureResearchCheckpoint: Checkpoint = {
     let actionItems: string[] | undefined;
 
     try {
-      const decision = await runAI<{
+      const { result: decision } = await runAI<{
         finalDecision?: string;
         actionItems?: unknown;
       }>({

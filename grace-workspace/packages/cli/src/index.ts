@@ -69,6 +69,26 @@ program
   .description("Ping the configured hosted LLM and print its raw response")
   .action(() => testLlmCommand());
 
+const sessionsCmd = program
+  .command("sessions")
+  .description("Manage per-phase Claude CLI sessions (Phase 12 persistence)");
+
+sessionsCmd
+  .command("prune")
+  .description(
+    "Delete stale Claude session jsonl files under ~/.claude/projects/. Skips uuids referenced by active runs."
+  )
+  .option(
+    "--older-than <duration>",
+    'Cutoff age (e.g. "30d", "12h", "0d" for everything not active). Default 30d.',
+    "30d"
+  )
+  .option("--dry-run", "Print what would be deleted without actually removing files")
+  .action(async (opts) => {
+    const { sessionsPruneCommand } = await import("./commands/sessions-prune.js");
+    await sessionsPruneCommand(opts);
+  });
+
 program.parseAsync(process.argv).catch((err) => {
   // eslint-disable-next-line no-console
   console.error(err);

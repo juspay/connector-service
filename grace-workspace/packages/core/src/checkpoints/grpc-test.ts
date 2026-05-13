@@ -138,16 +138,24 @@ character must be \`{\`, last must be \`}\`.
 }
 `;
 
+// Phase 12: bound the inner test-fix loop. Each iteration is: rebuild
+// grpc-server + test via SLIM_PROMPT agent + (on fail) resume implementation
+// to fix code. Keep this conservative — each iteration can take 10-20 min
+// on a cold rebuild.
+const MAX_GRPC_FIX_ITERATIONS = 3;
+
 export const grpcTestCheckpoint: Checkpoint = {
   id: "grpc_test",
   name: "gRPC Test",
   description:
-    "Test connector via gRPC calls using grpcurl (orchestrator-managed server)",
-  retryFrom: "implementation",
-  // Outer budget covers preflight (~5s) + cargo build (≤15min cold) +
-  // server start + health wait (≤45s) + agent runAI (≤6min) + cleanup (~5s)
-  // with margin.
-  timeout: 30 * 60 * 1000,
+    "Test connector via gRPC calls using grpcurl. Phase 12: owns its own test-fix loop — on grpcurl failure, resumes implementation's Claude session to fix the code, rebuilds the server, and retries up to MAX_GRPC_FIX_ITERATIONS times.",
+  // Phase 12: self-loop. Failures fix code via implementation's session
+  // directly, rather than rolling back to the implementation checkpoint.
+  retryFrom: "grpc_test",
+  // Outer budget covers MAX_GRPC_FIX_ITERATIONS × (rebuild + test + fix)
+  // with margin. Each iteration can hit ~25 min in the worst case (cold
+  // rebuild + 10-min test + 15-min fix), so the wrapper is generous.
+  timeout: MAX_GRPC_FIX_ITERATIONS * 25 * 60 * 1000 + 5 * 60 * 1000,
   continueOnFailure: true,
 
   async run(ctx) {
@@ -225,63 +233,99 @@ export const grpcTestCheckpoint: Checkpoint = {
     const tsLog = (msg: string, level: "info" | "warn" | "error" = "info") =>
       ctx.log(`[grpc_test] ${msg}`, level);
 
-    try {
-      tsLog(`preflight: killing stale processes on :${grpcPort}/:${dummyConnectorPort}`);
+    // Helper: (re)start the grpc-server and wait for it to be healthy. Used
+    // both for the initial startup and after each fix iteration, since a
+    // code fix invalidates the running binary.
+    const bringServerUp = async (label: string): Promise<void> => {
+      tsLog(`${label}: killing stale processes on :${grpcPort}/:${dummyConnectorPort}`);
       await killStaleProcesses(tsLog, grpcPort, dummyConnectorPort);
-
-      tsLog(`starting grpc-server (gRPC :${grpcPort}, dummy :${dummyConnectorPort}), log → ${logFile}`);
+      tsLog(`${label}: starting grpc-server (gRPC :${grpcPort}, dummy :${dummyConnectorPort}), log → ${logFile}`);
       server = await startGrpcServer(
         { projectRoot, logFile, grpcPort, dummyConnectorPort },
         tsLog
       );
-
       // Cold cargo builds can take 10-20 min on this tree (diesel + macros);
-      // the TCP probe's 45s budget is only correct once the binary is exec'd.
-      // Watch the log for cargo's "Running `target/.../grpc-server`" marker
-      // first, then probe TCP.
-      tsLog("waiting for cargo build to finish (≤20min for cold builds)");
+      // post-fix rebuilds are usually <1 min because cargo only rebuilds the
+      // changed crate. waitForBuildComplete watches the log for the
+      // "Running `target/.../grpc-server`" marker before falling through to
+      // the TCP health probe.
+      tsLog(`${label}: waiting for cargo build to finish (≤20min worst-case)`);
       await waitForBuildComplete(
         { logFile, timeoutMs: 20 * 60 * 1000 },
         tsLog
       );
-
-      tsLog(`waiting for ${serverHost} to become healthy (≤45s)`);
+      tsLog(`${label}: waiting for ${serverHost} to become healthy (≤45s)`);
       await waitForHealthy(
         { host: "localhost", port: grpcPort, timeoutMs: 45_000 },
         tsLog
       );
+    };
 
-      tsLog("server healthy — invoking agent for grpcurl test");
+    try {
+      // Initial server startup (iteration 0).
+      await bringServerUp("preflight");
 
-      result = await runAI<GrpcTestResult>({
-        skillBody: SLIM_PROMPT,
-        userPayload: {
-          CONNECTOR: connector,
-          FLOW: flow,
-          SERVER_HOST: serverHost,
-          CREDS_PATH: credsPath,
-          SERVER_LOG_PATH: logFile,
-          HAS_FIELD_PROBE: hasFieldProbe,
-          FIELD_PROBE_PATH: fieldProbePath || "",
-        },
-        cwd: projectRoot,
-        label: "grpc:test",
-        // Up to 4 grpcurl calls + transformer/proto reads + log tailing:
-        // the prior 6-min budget left no headroom for the corrective
-        // retry loop, so the agent kept running out of time mid-iteration.
-        // Strictly less than the outer checkpoint timeout (30 min) so the
-        // finally block has room to clean up after the agent.
-        timeoutMs: 10 * 60 * 1000,
-      });
+      const implSessionId = ctx.artifacts.implementationSessionId;
+      let grpcSessionId = ctx.artifacts.grpcTestSessionId as
+        | string
+        | undefined;
+      let grpcCommand = "";
+      let grpcOutput = "";
+      let responseSummary = "";
+      let uiOutput = "";
 
-      const testPassed =
-        result.status === "SUCCESS" || result.grpcurl_result === "PASS";
+      // Phase 12: inner test-fix loop. Each iteration: run grpcurl via the
+      // test agent → if pass, return success; if fail, resume implementation
+      // to fix code, restart server, re-test. Bounded by
+      // MAX_GRPC_FIX_ITERATIONS.
+      for (let iter = 0; iter <= MAX_GRPC_FIX_ITERATIONS; iter++) {
+        tsLog(
+          iter === 0
+            ? "server healthy — invoking test agent (iter 0)"
+            : `re-testing after fix iteration ${iter}…`,
+          "info"
+        );
 
-      const grpcCommand = result.grpcurl_command || "";
-      const grpcOutput = result.grpcurl_output || result.output || "";
-      const responseSummary = result.response_summary || "";
+        const testCall = grpcSessionId
+          ? {
+              claudeSessionId: grpcSessionId,
+              incremental: true,
+              userPayload:
+                `Iteration ${iter}: the implementation Claude has updated the code and the grpc-server has been rebuilt and restarted at ${serverHost}. Re-run your grpcurl test against this fresh server (same connector ${connector}, same flow ${flow}). Reply with the same JSON shape as your first reply.`,
+              skillBody: "",
+            }
+          : {
+              skillBody: SLIM_PROMPT,
+              userPayload: {
+                CONNECTOR: connector,
+                FLOW: flow,
+                SERVER_HOST: serverHost,
+                CREDS_PATH: credsPath,
+                SERVER_LOG_PATH: logFile,
+                HAS_FIELD_PROBE: hasFieldProbe,
+                FIELD_PROBE_PATH: fieldProbePath || "",
+              },
+            };
 
-      const uiOutput = `gRPC Test Results
+        const { result: r, sessionId: nextGrpcSessionId } =
+          await runAI<GrpcTestResult>({
+            ...testCall,
+            cwd: projectRoot,
+            label: grpcSessionId ? `grpc:test:retry-${iter}` : "grpc:test",
+            timeoutMs: 10 * 60 * 1000,
+          });
+        result = r;
+        grpcSessionId = nextGrpcSessionId;
+        ctx.artifacts.grpcTestSessionId = nextGrpcSessionId;
+
+        const testPassed =
+          r.status === "SUCCESS" || r.grpcurl_result === "PASS";
+
+        grpcCommand = r.grpcurl_command || "";
+        grpcOutput = r.grpcurl_output || r.output || "";
+        responseSummary = r.response_summary || "";
+
+        uiOutput = `gRPC Test Results (iteration ${iter}/${MAX_GRPC_FIX_ITERATIONS})
 ═══════════════════════════════════════════════════════════════
 
 COMMAND USED:
@@ -294,22 +338,97 @@ FULL OUTPUT:
 ${grpcOutput.slice(0, 3000)}
 `;
 
-      if (testPassed) {
-        tsLog("✓ gRPC tests passed", "info");
-        return {
-          passed: true,
-          output: uiOutput,
-          artifacts: {
-            grpcTest: result,
-            grpcurlOutput: grpcOutput,
-            grpcurlCommand: grpcCommand,
-            grpcResponse: responseSummary,
-          },
-        };
+        if (testPassed) {
+          tsLog(`✓ gRPC tests passed at iteration ${iter}`, "info");
+          return {
+            passed: true,
+            output: uiOutput,
+            artifacts: {
+              grpcTest: r,
+              grpcurlOutput: grpcOutput,
+              grpcurlCommand: grpcCommand,
+              grpcResponse: responseSummary,
+              grpcTestIterations: iter,
+            },
+          };
+        }
+
+        tsLog(`⚠ gRPC test failed at iteration ${iter}`, "warn");
+
+        // Out of fix iterations — return failure.
+        if (iter === MAX_GRPC_FIX_ITERATIONS) {
+          break;
+        }
+
+        // No implementation session to drive fixes — also bail out.
+        if (!implSessionId) {
+          tsLog(
+            "No implementationSessionId on artifacts — cannot auto-fix. Returning failure.",
+            "warn"
+          );
+          break;
+        }
+
+        // Resume implementation's session with the grpcurl errors and ask
+        // it to fix the code. Then rebuild + restart the server before the
+        // next iteration's test.
+        tsLog(
+          `asking implementation Claude (session ${implSessionId.slice(0, 8)}…) to fix grpcurl errors before iteration ${iter + 1}`,
+          "warn"
+        );
+        const fixMsg = [
+          `grpcurl test failed against your last code update. Details:`,
+          ``,
+          `Connector: ${connector} · Flow: ${flow} · Endpoint: ${serverHost}`,
+          ``,
+          `Test agent response:`,
+          `  ${r.reason || "(no reason given)"}`,
+          ``,
+          `Response summary:`,
+          responseSummary || "(empty)",
+          ``,
+          `Grpcurl output (last 2000 chars):`,
+          "```",
+          grpcOutput.slice(-2000),
+          "```",
+          ``,
+          `Fix the connector code (request struct, response parsing, transformers, status mapping — whatever the error points at). Do NOT touch unrelated files. The grpc-server will be rebuilt and restarted after your edits. Reply briefly when you're done.`,
+        ].join("\n");
+
+        try {
+          await runAI({
+            claudeSessionId: implSessionId,
+            incremental: true,
+            userPayload: fixMsg,
+            skillBody: "",
+            rawText: true,
+            cwd: projectRoot,
+            label: `grpc_test:fix-iter-${iter + 1}`,
+            timeoutMs: 15 * 60 * 1000,
+            allowWrite: true,
+          });
+        } catch (fixErr) {
+          const msg = fixErr instanceof Error ? fixErr.message : String(fixErr);
+          tsLog(`fix iteration ${iter + 1} threw: ${msg}`, "error");
+          break;
+        }
+
+        // Restart server to pick up the fix.
+        try {
+          if (server) {
+            await server.kill();
+            server = undefined;
+          }
+          await bringServerUp(`fix-iter-${iter + 1}`);
+        } catch (restartErr) {
+          const msg = restartErr instanceof Error ? restartErr.message : String(restartErr);
+          tsLog(`server restart after fix failed: ${msg}`, "error");
+          break;
+        }
       }
 
-      tsLog("⚠ gRPC tests failed", "warn");
-      const errorMsg = result.reason || "gRPC test failed";
+      // Fell out of the loop without success — return the last failure state.
+      const errorMsg = result?.reason || "gRPC test failed after all fix iterations";
       ctx.artifacts.grpcTestErrors = [errorMsg, grpcOutput].filter(Boolean);
       ctx.artifacts.grpcurlOutput = grpcOutput;
 

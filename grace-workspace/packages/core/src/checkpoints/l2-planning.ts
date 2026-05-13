@@ -113,15 +113,42 @@ export const l2PlanningCheckpoint: Checkpoint = {
     const linksPayload = buildLinksAgentUserPayload(connector, paymentMethod, task);
     let linksResult: LinksAgentResult;
 
+    // Phase 12: resume the links agent's persistent Claude session if we have
+    // one from a prior run/retry of this checkpoint. The incremental message
+    // carries the reviewer's regenerate feedback (set by l2_review on
+    // "regenerate" verdict). On the very first call, no session exists and we
+    // do a fresh `--session-id <uuid>` invocation; the uuid we capture goes on
+    // ctx.artifacts.l2LinksSessionId for the next retry.
+    const linksSessionId = ctx.artifacts.l2LinksSessionId as string | undefined;
+    const regenPrompt = ctx.artifacts.l2RegeneratePrompt as string | undefined;
+
     try {
-      const rawResult = await runAI<LinksAgentResult>({
-        skillBody: LINKS_AGENT_SYSTEM,
-        userPayload: linksPayload,
-        cwd: projectRoot,
-        label: "l2_gen:links",
-        timeoutMs: 15 * 60 * 1000, // 15 min for web search
-      });
+      const aiCall = linksSessionId
+        ? {
+            claudeSessionId: linksSessionId,
+            incremental: true,
+            userPayload:
+              `The reviewer requested changes to the L2 documentation discovery for ${connector} / ${paymentMethod}:\n\n` +
+              `${regenPrompt ?? "(no specific feedback supplied — perform another pass and improve coverage)"}\n\n` +
+              `Revise the URL list to address this. Use your read tools as needed. Reply with ONLY the same JSON shape as your first reply (no markdown fences, first char \`{\` last char \`}\`).`,
+            skillBody: "", // ignored when incremental
+          }
+        : {
+            skillBody: LINKS_AGENT_SYSTEM,
+            userPayload: linksPayload,
+          };
+
+      const { result: rawResult, sessionId: nextLinksSessionId } =
+        await runAI<LinksAgentResult>({
+          ...aiCall,
+          cwd: projectRoot,
+          label: linksSessionId ? "l2_gen:links:resume" : "l2_gen:links",
+          timeoutMs: 15 * 60 * 1000, // 15 min for web search
+        });
       linksResult = rawResult;
+      // Persist the session id so a future retry can `--resume` this exact
+      // conversation. If we just resumed, nextLinksSessionId echoes the input.
+      ctx.artifacts.l2LinksSessionId = nextLinksSessionId;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       ctx.log(`[l2_planning] Links Agent failed: ${msg}`, "error");
@@ -194,16 +221,35 @@ export const l2PlanningCheckpoint: Checkpoint = {
 
     const techspecPayload = buildTechspecAgentUserPayload(connector, paymentMethod, task);
     let techspecResult: TechspecAgentResult;
+    const techspecSessionId = ctx.artifacts.l2TechspecSessionId as
+      | string
+      | undefined;
 
     try {
-      const rawResult = await runAI<TechspecAgentResult>({
-        skillBody: TECHSPEC_AGENT_SYSTEM,
-        userPayload: techspecPayload,
-        cwd: projectRoot,
-        label: "l2_gen:techspec",
-        timeoutMs: 30 * 60 * 1000, // 30 min for grace techspec
-      });
+      const aiCall = techspecSessionId
+        ? {
+            claudeSessionId: techspecSessionId,
+            incremental: true,
+            userPayload:
+              `The reviewer requested changes to the L2 tech spec for ${connector} / ${paymentMethod}:\n\n` +
+              `${regenPrompt ?? "(no specific feedback — refine the spec further)"}\n\n` +
+              `Revise the spec content. The links agent's output (this conversation's sibling) may have changed — re-read the URL file if your prior assumptions about it need verification. Reply with ONLY the same JSON shape as your first reply.`,
+            skillBody: "",
+          }
+        : {
+            skillBody: TECHSPEC_AGENT_SYSTEM,
+            userPayload: techspecPayload,
+          };
+
+      const { result: rawResult, sessionId: nextTechspecSessionId } =
+        await runAI<TechspecAgentResult>({
+          ...aiCall,
+          cwd: projectRoot,
+          label: techspecSessionId ? "l2_gen:techspec:resume" : "l2_gen:techspec",
+          timeoutMs: 30 * 60 * 1000, // 30 min for grace techspec
+        });
       techspecResult = rawResult;
+      ctx.artifacts.l2TechspecSessionId = nextTechspecSessionId;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       ctx.log(`[l2_planning] Tech Spec Agent failed: ${msg}`, "error");

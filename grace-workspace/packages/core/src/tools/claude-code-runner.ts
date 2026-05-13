@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getConfig } from "../config.js";
 
@@ -41,6 +42,31 @@ export interface ClaudeCodeRunOptions {
    * Default is false (read-only tools).
    */
   allowWrite?: boolean;
+  /**
+   * If set, the runner does `claude --resume <id>` instead of starting a fresh
+   * session. The caller is responsible for having stored this id from a prior
+   * `runClaudeCode` call. Combine with `incremental: true` to send a short
+   * follow-up message instead of the full skill body + payload framing.
+   */
+  claudeSessionId?: string;
+  /**
+   * Pre-picked UUID for a new (non-resume) call. If omitted and
+   * `claudeSessionId` is not set, the runner generates a fresh UUID via
+   * `randomUUID()`. Use this when the caller wants the session id to be
+   * predictable or shared between siblings.
+   */
+  preferredSessionId?: string;
+  /**
+   * If true, the runner treats `userPayload` as the full prompt body (either a
+   * string or stringified JSON) and skips the standard skill body / `## Input`
+   * / `## How to return your answer` framing. Intended for resume calls that
+   * carry a short incremental follow-up message ("here are the errors, fix").
+   *
+   * The caller is responsible for putting any answer-shape instructions
+   * (e.g. "reply with JSON") into the message body when needed. The runner's
+   * stdout parsing is still controlled by `rawText`.
+   */
+  incremental?: boolean;
 }
 
 function dbg(...args: unknown[]) {
@@ -121,46 +147,76 @@ export async function checkClaudeCodeHealth(): Promise<ClaudeCodeHealthResult> {
 
 export async function runClaudeCode<T = unknown>(
   opts: ClaudeCodeRunOptions
-): Promise<T> {
+): Promise<{ result: T; sessionId: string }> {
   const absCwdEarly = path.resolve(opts.cwd);
 
-  const answerInstructions = opts.allowWrite
-    ? [
-        "## How to return your answer",
-        "",
-        "You have FULL TOOL ACCESS including Write and Edit. Use any tools necessary to complete your task.",
-        "",
-        opts.rawText
-          ? "Reply with your final report as plain text (markdown is fine)."
-          : "Reply with ONLY the raw JSON object in your chat message. No markdown fences, no thinking out loud, no preamble. The very first character of your reply must be `{` and the very last must be `}`.",
-      ]
-    : opts.rawText
+  if (opts.incremental && !opts.claudeSessionId) {
+    throw new Error(
+      `runClaudeCode: incremental=true requires claudeSessionId (label: ${opts.label})`
+    );
+  }
+
+  // Determine the session id we'll bind to this call. Three precedence cases:
+  //   1. Caller passed claudeSessionId → resume that session.
+  //   2. Caller passed preferredSessionId → start fresh with that uuid.
+  //   3. Neither → generate a fresh uuid here.
+  // We always return whichever id was used, so callers can persist it for
+  // later `--resume` invocations.
+  const sessionId =
+    opts.claudeSessionId ?? opts.preferredSessionId ?? randomUUID();
+  const isResume = !!opts.claudeSessionId;
+
+  // Prompt construction.
+  //   - First-call (non-incremental): full skill body + JSON payload + answer
+  //     instructions, as before.
+  //   - Resume / incremental: the caller supplies the entire message body. We
+  //     pass it through verbatim; any "reply with JSON" cue must already be in
+  //     it. The runner's stdout parsing is still controlled by `rawText`.
+  let prompt: string;
+  if (opts.incremental) {
+    prompt =
+      typeof opts.userPayload === "string"
+        ? opts.userPayload
+        : JSON.stringify(opts.userPayload, null, 2);
+  } else {
+    const answerInstructions = opts.allowWrite
       ? [
           "## How to return your answer",
           "",
-          "IMPORTANT: Do NOT use your write or edit tools to create any files. Do NOT create answer.json or any other output files. Just reply in chat with your final report as plain text (markdown is fine).",
+          "You have FULL TOOL ACCESS including Write and Edit. Use any tools necessary to complete your task.",
           "",
-          "Use your read tools (Read, Grep, Glob, Bash) to gather evidence BEFORE replying. Then reply with the report directly in your message.",
+          opts.rawText
+            ? "Reply with your final report as plain text (markdown is fine)."
+            : "Reply with ONLY the raw JSON object in your chat message. No markdown fences, no thinking out loud, no preamble. The very first character of your reply must be `{` and the very last must be `}`.",
         ]
-      : [
-          "## How to return your answer",
-          "",
-          "IMPORTANT: Do NOT use your write or edit tools to create any files. Do NOT create answer.json or any other output files. Do NOT write prose or explanation — reply with ONLY the raw JSON object in your chat message. No markdown fences, no thinking out loud, no preamble. The very first character of your reply must be `{` and the very last must be `}`.",
-          "",
-          "Use your read tools (Read, Grep, Glob, Bash) to gather evidence BEFORE replying. Then reply with ONLY the JSON.",
-        ];
+      : opts.rawText
+        ? [
+            "## How to return your answer",
+            "",
+            "IMPORTANT: Do NOT use your write or edit tools to create any files. Do NOT create answer.json or any other output files. Just reply in chat with your final report as plain text (markdown is fine).",
+            "",
+            "Use your read tools (Read, Grep, Glob, Bash) to gather evidence BEFORE replying. Then reply with the report directly in your message.",
+          ]
+        : [
+            "## How to return your answer",
+            "",
+            "IMPORTANT: Do NOT use your write or edit tools to create any files. Do NOT create answer.json or any other output files. Do NOT write prose or explanation — reply with ONLY the raw JSON object in your chat message. No markdown fences, no thinking out loud, no preamble. The very first character of your reply must be `{` and the very last must be `}`.",
+            "",
+            "Use your read tools (Read, Grep, Glob, Bash) to gather evidence BEFORE replying. Then reply with ONLY the JSON.",
+          ];
 
-  const prompt = [
-    opts.skillBody.trim(),
-    "",
-    "## Input",
-    "",
-    "```json",
-    JSON.stringify(opts.userPayload, null, 2),
-    "```",
-    "",
-    ...answerInstructions,
-  ].join("\n");
+    prompt = [
+      opts.skillBody.trim(),
+      "",
+      "## Input",
+      "",
+      "```json",
+      JSON.stringify(opts.userPayload, null, 2),
+      "```",
+      "",
+      ...answerInstructions,
+    ].join("\n");
+  }
 
   const absCwd = absCwdEarly;
 
@@ -182,6 +238,15 @@ export async function runClaudeCode<T = unknown>(
   // Skip permission prompts for subagent - parent manages permissions
   args.push("--dangerously-skip-permissions");
 
+  // Phase 12: per-phase Claude conversation continuity. Either resume an
+  // existing session (caller stored the id from a prior call) or start a fresh
+  // one with a pre-picked uuid we can return for future resumes.
+  if (isResume) {
+    args.push("--resume", sessionId);
+  } else {
+    args.push("--session-id", sessionId);
+  }
+
   // Add any extra args from config or options
   const extraArgs = opts.extraArgs ?? cc.extraArgs ?? [];
   if (extraArgs.length > 0) {
@@ -193,9 +258,10 @@ export async function runClaudeCode<T = unknown>(
 
   const timeoutMs = opts.timeoutMs ?? cc.timeoutMs ?? 10 * 60 * 1000;
   const startedAt = Date.now();
+  const sessionMode = isResume ? `resume(${sessionId.slice(0, 8)}…)` : `new(${sessionId.slice(0, 8)}…)`;
   // eslint-disable-next-line no-console
   console.log(
-    `\x1b[36m[claude-code] → ${opts.label} · cwd=${absCwd} · model=${model ?? "default"} · prompt=${prompt.length}ch\x1b[0m`
+    `\x1b[36m[claude-code] → ${opts.label} · cwd=${absCwd} · model=${model ?? "default"} · ${sessionMode} · prompt=${prompt.length}ch\x1b[0m`
   );
 
   // Capture stdout and stderr to extract the model's answer and error details.
@@ -283,7 +349,7 @@ export async function runClaudeCode<T = unknown>(
     if (contentStart >= 0) {
       cleaned = lines.slice(contentStart).join("\n").trim();
     }
-    return cleaned as unknown as T;
+    return { result: cleaned as unknown as T, sessionId };
   }
 
   // JSON mode: find the last complete JSON object in the output.
@@ -343,5 +409,5 @@ export async function runClaudeCode<T = unknown>(
     }
   }
 
-  return parsed as T;
+  return { result: parsed as T, sessionId };
 }

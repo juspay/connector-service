@@ -85,25 +85,55 @@ export const prReviewCheckpoint: Checkpoint = {
     }
 
     let parsed: PRReviewResult;
+    // Phase 12: persistent pr_review session. On the first call the agent opens
+    // the PR; on retries (e.g. reviewer asks for an amend) it must NOT open a
+    // new PR — it amends the existing one via `git commit --amend && git push
+    // --force-with-lease`. The resume prompt makes that contract explicit.
+    const prSessionId = ctx.artifacts.prReviewSessionId as string | undefined;
+    const priorPrReview = ctx.artifacts.prReview as
+      | { prUrl?: string }
+      | undefined;
     try {
-      parsed = await runAI<PRReviewResult>({
-        skillBody: SYSTEM,
-        userPayload: {
-          l2: ctx.artifacts.l2,
-          l3: ctx.artifacts.l3,
-          implementation: ctx.artifacts.implementation,
-          grpcTest: ctx.artifacts.grpcTest,
-          grpcurlOutput: ctx.artifacts.grpcurlOutput,
-          branch: ctx.artifacts.branch,
-          files,
-          cypressReport: ctx.artifacts.cypressReport,
-          playwrightReport: ctx.artifacts.playwrightReport,
-        },
-        cwd: ctx.task.projectRoot,
-        label: "pr_review",
-        timeoutMs: 20 * 60 * 1000,
-        allowWrite: true, // Grant full tool access to PR review agent
-      });
+      const aiCall = prSessionId
+        ? {
+            claudeSessionId: prSessionId,
+            incremental: true,
+            userPayload:
+              `Retry of PR review for branch ${ctx.artifacts.branch ?? "(unknown branch)"}.\n\n` +
+              `IMPORTANT: a PR has already been opened${priorPrReview?.prUrl ? ` at ${priorPrReview.prUrl}` : ""}.\n` +
+              `Do NOT create a new PR. To incorporate changes, amend the existing PR by:\n` +
+              `  1. Make any necessary edits to source files\n` +
+              `  2. \`git add\` the changes\n` +
+              `  3. \`git commit --amend --no-edit\` (or with a new message if the description needs updating)\n` +
+              `  4. \`git push --force-with-lease\` to update the existing PR\n\n` +
+              `Then re-run your review and reply with the updated PRReviewResult JSON (same shape as before).`,
+            skillBody: "",
+          }
+        : {
+            skillBody: SYSTEM,
+            userPayload: {
+              l2: ctx.artifacts.l2,
+              l3: ctx.artifacts.l3,
+              implementation: ctx.artifacts.implementation,
+              grpcTest: ctx.artifacts.grpcTest,
+              grpcurlOutput: ctx.artifacts.grpcurlOutput,
+              branch: ctx.artifacts.branch,
+              files,
+              cypressReport: ctx.artifacts.cypressReport,
+              playwrightReport: ctx.artifacts.playwrightReport,
+            },
+          };
+
+      const { result: rawParsed, sessionId: nextPrSessionId } =
+        await runAI<PRReviewResult>({
+          ...aiCall,
+          cwd: ctx.task.projectRoot,
+          label: prSessionId ? "pr_review:resume" : "pr_review",
+          timeoutMs: 20 * 60 * 1000,
+          allowWrite: true, // Grant full tool access to PR review agent
+        });
+      parsed = rawParsed;
+      ctx.artifacts.prReviewSessionId = nextPrSessionId;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       ctx.log(`[pr_review] AI runner failed: ${msg}`, "error");

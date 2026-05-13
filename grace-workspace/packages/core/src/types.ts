@@ -770,6 +770,41 @@ export interface PipelineArtifacts {
   previousL3?: L3Analysis;
   l2Review?: SpecReviewSession;
   l3Review?: SpecReviewSession;
+  /**
+   * Phase 12: per-phase Claude CLI session ids. Each LLM-using checkpoint
+   * captures a uuid on its first call (returned by the runner) and stores
+   * it here; subsequent calls resume the same conversation via
+   * `claude --resume <uuid>`, letting the model retain prior-turn context
+   * (the L3 spec it already read, files it already wrote, etc.) across
+   * retries and engine respawns.
+   *
+   * l2_planning has two sub-sessions (links + techspec agents); implementation
+   * has one per parallel file (see `implementationFileSessionIds`).
+   *
+   * Cleared by manual rewind via ARTIFACT_KEYS_BY_STAGE, forcing a fresh
+   * Claude conversation on the next run of the rewound phase.
+   */
+  l2LinksSessionId?: string;
+  l2TechspecSessionId?: string;
+  l3SessionId?: string;
+  /**
+   * Single session for the implementation phase. The codegen agent uses its
+   * own Edit/Write tool calls to write multiple files within one Claude
+   * conversation — the planned per-file fan-out doesn't exist in current
+   * code (`implementationConcurrency` config is unused), so one session id
+   * is correct here. compiler_check and grpc_test resume this session
+   * directly to trigger fixes.
+   */
+  implementationSessionId?: string;
+  /**
+   * Phase 12: grpc_test owns its own Claude session for the test-driving
+   * agent (uses SLIM_PROMPT). When the test fails and the inner fix loop
+   * needs to retry, the grpc_test agent resumes its own session ("code has
+   * been updated; retry") while the FIX itself happens via
+   * implementationSessionId.
+   */
+  grpcTestSessionId?: string;
+  prReviewSessionId?: string;
 }
 
 export interface InboundBus {

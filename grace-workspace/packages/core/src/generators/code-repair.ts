@@ -98,7 +98,7 @@ export async function repairCode(
 
   let repairs: RepairsResult;
   try {
-    repairs = await runAI<RepairsResult>({
+    ({ result: repairs } = await runAI<RepairsResult>({
       skillBody: REPAIR_SYSTEM,
       userPayload: {
         files: fileContents,
@@ -107,7 +107,7 @@ export async function repairCode(
       cwd: ctx.task.projectRoot,
       label: "code-repair",
       timeoutMs: 15 * 60 * 1000,
-    });
+    }));
   } catch (err) {
     ctx.log(
       "[code-repair] AI runner call failed: " + (err instanceof Error ? err.message : String(err)),
