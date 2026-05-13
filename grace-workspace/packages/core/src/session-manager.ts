@@ -20,6 +20,11 @@ export interface CreateSessionInput {
   sourcePath: string;
   /** Defaults to git-worktree (recommended for git projects). */
   strategy?: SessionCopyStrategy;
+  /**
+   * Initial task to auto-submit when session starts.
+   * Enables unified session+task creation from dashboard.
+   */
+  initialTask?: import("./types.js").TaskDefinition;
 }
 
 /**
@@ -105,6 +110,7 @@ export class SessionManager {
     const metadata: SessionMetadata = {
       originalPath: sourcePath,
       copyStrategy: strategy,
+      initialTask: input.initialTask,
     };
 
     // Phase 10A: symlink the user-configured creds.json into this worktree
