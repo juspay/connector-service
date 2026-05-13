@@ -175,6 +175,40 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Redirect callback: PostAuthenticate needed for challenge callback (has_redirect_params = false)
         !is_initial_request && is_3ds_card && !has_redirect_params
     }
+
+    fn next_authentication_step(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method: common_enums::PaymentMethod,
+        has_redirect_params: Option<bool>,
+        completed_step: Option<connector_types::AuthenticationStep>,
+    ) -> connector_types::AuthenticationStep {
+        use connector_types::AuthenticationStep;
+        if auth_type == common_enums::AuthenticationType::ThreeDs
+            && payment_method == common_enums::PaymentMethod::Card {
+            match (has_redirect_params, completed_step) {
+                // Initial request: start with PreAuthenticate
+                (None, _) => AuthenticationStep::PreAuthenticate,
+                
+                // DDC callback: run Authenticate
+                (Some(true), None) => AuthenticationStep::Authenticate,
+                
+                // Authenticate completed inline (frictionless, rare for CS): proceed to Authorize
+                (Some(true), Some(AuthenticationStep::Authenticate)) => AuthenticationStep::Authorize,
+                
+                // Challenge callback: run PostAuthenticate
+                (Some(false), None) => AuthenticationStep::PostAuthenticate,
+                
+                // PostAuth completed inline: proceed to Authorize
+                (Some(false), Some(AuthenticationStep::PostAuthenticate)) => AuthenticationStep::Authorize,
+                
+                // Fallback
+                _ => AuthenticationStep::Authorize,
+            }
+        } else {
+            AuthenticationStep::Authorize
+        }
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Cybersource<T>

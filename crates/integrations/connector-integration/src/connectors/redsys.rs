@@ -160,6 +160,41 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         //                    Challenge callback (has_redirect_params = false) skips Authenticate
         is_3ds_card && (is_initial_request || has_redirect_params)
     }
+
+    fn next_authentication_step(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method: common_enums::PaymentMethod,
+        has_redirect_params: Option<bool>,
+        completed_step: Option<connector_types::AuthenticationStep>,
+    ) -> connector_types::AuthenticationStep {
+        use connector_types::AuthenticationStep;
+
+        if auth_type == common_enums::AuthenticationType::ThreeDs
+            && payment_method == common_enums::PaymentMethod::Card {
+            match (has_redirect_params, completed_step) {
+                // Initial request: start with PreAuthenticate (DDC setup)
+                (None, None) => AuthenticationStep::PreAuthenticate,
+                
+                // PreAuth completed inline (frictionless/exempt): run Authenticate
+                (None, Some(AuthenticationStep::PreAuthenticate)) => AuthenticationStep::Authenticate,
+                
+                // Authenticate completed inline (frictionless): proceed to Authorize
+                (None, Some(AuthenticationStep::Authenticate)) => AuthenticationStep::Authorize,
+                
+                // DDC callback (has params): run Authenticate to initiate challenge
+                (Some(true), None) => AuthenticationStep::Authenticate,
+                
+                // Challenge callback (no params): proceed to Authorize
+                (Some(false), None) => AuthenticationStep::Authorize,
+                
+                // Fallback: proceed to Authorize
+                _ => AuthenticationStep::Authorize,
+            }
+        } else {
+            AuthenticationStep::Authorize
+        }        
+    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

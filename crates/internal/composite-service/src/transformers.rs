@@ -479,13 +479,13 @@ impl
 impl
     ForeignFrom<(
         &CompositeAuthorizeRequest,
-        &PaymentMethodAuthenticationServiceAuthenticateResponse,
+        Option<&PaymentMethodAuthenticationServiceAuthenticateResponse>,
     )> for PaymentMethodAuthenticationServicePostAuthenticateRequest
 {
     fn foreign_from(
         (item, auth_response): (
             &CompositeAuthorizeRequest,
-            &PaymentMethodAuthenticationServiceAuthenticateResponse,
+            Option<&PaymentMethodAuthenticationServiceAuthenticateResponse>,
         ),
     ) -> Self {
         Self {
@@ -494,14 +494,14 @@ impl
             payment_method: item.payment_method.clone(),
             customer: item.customer.clone(),
             address: item.address.clone(),
-            // Pass authentication_data from authenticate response (ECI/CAVV)
-            authentication_data: auth_response.authentication_data.clone(),
-            connector_order_reference_id: auth_response.connector_transaction_id.clone(),
+            authentication_data: auth_response
+                .and_then(|r| r.authentication_data.clone())
+                .or_else(|| item.authentication_data.clone()),
+            connector_order_reference_id: auth_response
+                .and_then(|r| r.connector_transaction_id.clone()),
             metadata: item.metadata.clone(),
-            // Carry connector_feature_data from auth response
             connector_feature_data: auth_response
-                .connector_feature_data
-                .clone()
+                .and_then(|r| r.connector_feature_data.clone())
                 .or_else(|| item.connector_feature_data.clone()),
             return_url: item.return_url.clone(),
             continue_redirection_url: item.continue_redirection_url.clone(),
