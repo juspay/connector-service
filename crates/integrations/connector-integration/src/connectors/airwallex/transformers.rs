@@ -636,6 +636,13 @@ impl TryFrom<ResponseRouterData<AirwallexSyncResponse, Self>>
         // Use the same simple status mapping as hyperswitch
         let status = get_payment_status(&item.response.status, &item.response.next_action);
 
+        let network_txn_id = item
+            .response
+            .latest_payment_attempt
+            .as_ref()
+            .and_then(|attempt| attempt.network_transaction_id.clone())
+            .or_else(|| item.response.network_transaction_id.clone());
+
         let intent_id = item.response.id;
 
         Ok(Self {
@@ -644,7 +651,7 @@ impl TryFrom<ResponseRouterData<AirwallexSyncResponse, Self>>
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
-                network_txn_id: None,
+                network_txn_id,
                 connector_response_reference_id: Some(intent_id.clone()),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
