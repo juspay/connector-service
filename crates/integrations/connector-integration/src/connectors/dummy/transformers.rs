@@ -1915,10 +1915,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 gpay_data
                     .tokenization_data
                     .get_encrypted_google_pay_token()
-                    .change_context(IntegrationError::MissingRequiredField {
-                        field_name: "gpay wallet_token",
-                        context: Default::default(),
-                    })?
+                    .change_context(IntegrationError::NotImplemented(
+                        get_unimplemented_payment_method_error_message("dummy"),
+                        Default::default(),
+                    ))?
                     .as_bytes()
                     .parse_struct::<DummyGpayToken>("DummyGpayToken")
                     .change_context(IntegrationError::InvalidWalletToken {
