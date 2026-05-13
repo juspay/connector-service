@@ -148,42 +148,6 @@ pub trait ValidationTrait: ConnectorCommon {
         false
     }
 
-    /// Returns true if PreAuthenticate flow is required for this request.
-    /// Typically checks: is_3ds && is_card && is_initial_request
-    fn is_pre_authentication_flow_required(
-        &self,
-        _auth_type: common_enums::AuthenticationType,
-        _payment_method: PaymentMethod,
-        _is_initial_request: bool,
-    ) -> bool {
-        false
-    }
-
-    /// Returns true if Authenticate flow is required for this request.
-    /// For initial requests: depends on connector (some do inline, some redirect from PreAuth)
-    /// For redirect callbacks: true if this is a DDC callback, false if challenge callback
-    fn is_authentication_flow_required(
-        &self,
-        _auth_type: common_enums::AuthenticationType,
-        _payment_method: PaymentMethod,
-        _is_initial_request: bool,
-        _has_redirect_params: bool,
-    ) -> bool {
-        false
-    }
-
-    /// Returns true if PostAuthenticate flow is required after challenge completion.
-    /// CyberSource needs this; Redsys does not.
-    fn is_post_authentication_flow_required(
-        &self,
-        _auth_type: common_enums::AuthenticationType,
-        _payment_method: PaymentMethod,
-        _is_initial_request: bool,
-        _has_redirect_params: bool,
-    ) -> bool {
-        false
-    }
-
     /// Returns true if this connector is in the config set of connectors that require
     /// an external API call for webhook source verification (e.g. PayPal).
     fn requires_external_webhook_verification(

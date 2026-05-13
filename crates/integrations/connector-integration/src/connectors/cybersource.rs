@@ -135,47 +135,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Cybersource<T>
 {
-    fn is_pre_authentication_flow_required(
-        &self,
-        auth_type: common_enums::AuthenticationType,
-        payment_method: common_enums::PaymentMethod,
-        is_initial_request: bool,
-    ) -> bool {
-        is_initial_request
-            && auth_type == common_enums::AuthenticationType::ThreeDs
-            && payment_method == common_enums::PaymentMethod::Card
-    }
-
-    fn is_authentication_flow_required(
-        &self,
-        auth_type: common_enums::AuthenticationType,
-        payment_method: common_enums::PaymentMethod,
-        is_initial_request: bool,
-        has_redirect_params: bool,
-    ) -> bool {
-        let is_3ds_card = auth_type == common_enums::AuthenticationType::ThreeDs
-            && payment_method == common_enums::PaymentMethod::Card;
-
-        // CyberSource: Initial requests never do Authenticate inline (PreAuth always redirects for DDC)
-        // Redirect callback: Authenticate needed only for DDC callback (has_redirect_params = true)
-        !is_initial_request && is_3ds_card && has_redirect_params
-    }
-
-    fn is_post_authentication_flow_required(
-        &self,
-        auth_type: common_enums::AuthenticationType,
-        payment_method: common_enums::PaymentMethod,
-        is_initial_request: bool,
-        has_redirect_params: bool,
-    ) -> bool {
-        let is_3ds_card = auth_type == common_enums::AuthenticationType::ThreeDs
-            && payment_method == common_enums::PaymentMethod::Card;
-
-        // Initial request: never called (Authenticate not reached in initial path for CyberSource)
-        // Redirect callback: PostAuthenticate needed for challenge callback (has_redirect_params = false)
-        !is_initial_request && is_3ds_card && !has_redirect_params
-    }
-
     fn next_authentication_step(
         &self,
         auth_type: common_enums::AuthenticationType,
