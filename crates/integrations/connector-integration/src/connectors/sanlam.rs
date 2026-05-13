@@ -4,8 +4,10 @@ use super::macros;
 use crate::types::ResponseRouterData;
 use common_enums::CurrencyUnit;
 use common_utils::{
+    crypto::{self, VerifySignature},
     errors::CustomResult,
     events,
+    ext_traits::ByteSliceExt,
     request::{KafkaRecord, KafkaRecordBuilder, TransportType},
 };
 use domain_types::{
@@ -18,19 +20,20 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, ClientAuthenticationTokenRequestData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
-        ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventContext, EventType, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentWebhookReference, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
+        ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse, WebhookResourceReference,
     },
-    errors::IntegrationError,
+    errors::{IntegrationError, WebhookError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -174,6 +177,120 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Sanlam<T>
 {
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        let signature = request
+            .headers
+            .get("x-signature")
+            .ok_or(WebhookError::WebhookSignatureNotFound)
+            .attach_printable("Missing incoming webhook signature for Sanlam")?;
+
+        hex::decode(signature).change_context(WebhookError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<WebhookError>> {
+        let message = std::str::from_utf8(&request.body)
+            .change_context(WebhookError::WebhookSourceVerificationFailed)?;
+
+        Ok(message.to_string().into_bytes())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+    ) -> Result<bool, error_stack::Report<WebhookError>> {
+        let algorithm = crypto::HmacSha256;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => Err(WebhookError::WebhookVerificationSecretNotFound)?,
+        };
+
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(WebhookError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+    ) -> Result<EventType, error_stack::Report<WebhookError>> {
+        let details: sanlam::SanlamWebhookEvent =
+            request
+                .body
+                .parse_struct("SanlamWebhookEvent")
+                .change_context(WebhookError::WebhookEventTypeNotFound)?;
+
+        let event_type = match details {
+            sanlam::SanlamWebhookEvent::Payment(ref event) => match event.event_type {
+                sanlam::SanlamWebhookEventType::PaymentSucceeded => EventType::PaymentIntentSuccess,
+                sanlam::SanlamWebhookEventType::PaymentFailed => EventType::PaymentIntentFailure,
+                sanlam::SanlamWebhookEventType::DisputeOpened => EventType::DisputeOpened,
+            },
+        };
+
+        Ok(event_type)
+    }
+
+    fn get_webhook_event_reference(
+        &self,
+        request: RequestDetails,
+    ) -> Result<Option<WebhookResourceReference>, error_stack::Report<WebhookError>> {
+        let details: sanlam::SanlamWebhookEvent =
+            request
+                .body
+                .parse_struct("SanlamWebhookEvent")
+                .change_context(WebhookError::WebhookReferenceIdNotFound)?;
+
+        let id = match details {
+            sanlam::SanlamWebhookEvent::Payment(ref event) => {
+                WebhookResourceReference::Payment(PaymentWebhookReference {
+                    connector_transaction_id: None,
+                    merchant_transaction_id: Some(event.payment.user_reference.clone()),
+                })
+            }
+        };
+
+        Ok(Some(id))
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
+        _event_context: Option<EventContext>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<WebhookError>> {
+        let details: sanlam::SanlamWebhookEvent =
+            request
+                .body
+                .parse_struct("SanlamWebhookEvent")
+                .change_context(WebhookError::WebhookResponseEncodingFailed)?;
+
+        let response = WebhookDetailsResponse::try_from(details)
+            .change_context(WebhookError::WebhookResponseEncodingFailed);
+
+        response.map(|mut response| {
+            response.raw_connector_response =
+                Some(String::from_utf8_lossy(&request.body).to_string());
+            response
+        })
+    }
 }
 
 macros::create_all_prerequisites!(
