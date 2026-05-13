@@ -163,7 +163,6 @@ impl TryFrom<&ConnectorSpecificConfig> for TwoctwopPacoAuthType {
     }
 }
 
-// ---------- Common envelope shared by every JOSE request body ----------
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ApiRequestEnvelope {
@@ -266,19 +265,8 @@ pub struct PacoCreditCardDetails {
     pub card_type: &'static str,
 }
 
-// ---------- /Payment/nonUi (Card S2S) ----------
-
-/// EMV 3DS 2.0 device-fingerprint payload PACO threads through to the
-/// issuer's ACS. Populated from prism's `BrowserInformation` for the
-/// browser channel; the issuer uses it to make the frictionless-vs-
-/// challenge decision via Risk-Based Authentication. Omitting it
-/// effectively forces a step-up challenge every time, because the ACS
-/// has nothing to evaluate.
-///
-/// All fields here are optional in PACO's schema, but populating the
-/// EMV 3DS 2.0 minimum set (acceptHeader, javaEnabled, javascriptEnabled,
-/// language, colorDepth, screenH/W, timeZone, userAgent, ip) gives the
-/// best chance of frictionless on a recognised cardholder device.
+/// EMV 3DS 2.0 device fingerprint sent to the issuer ACS. Omitting it forces
+/// a step-up challenge since the ACS has nothing to risk-evaluate.
 #[derive(Debug, Clone, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoBrowserInfo {
@@ -354,8 +342,6 @@ pub struct TwoctwopPacoCardAuthorizeRequest {
     pub device_details: Option<PacoDeviceDetails>,
 }
 
-// ---------- /Payment/prepaymentUi (GCash hosted) ----------
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoDeviceDetails {
@@ -406,18 +392,14 @@ pub struct TwoctwopPacoWalletAuthorizeRequest {
     pub preferred_payment_types: Vec<&'static str>,
 }
 
-/// Discriminator used to pick the PACO endpoint for Authorize without
-/// re-inspecting the payment-method-data inside both `get_url` and the
-/// request-body TryFrom impl.
 #[derive(Debug, Clone, Copy)]
 pub enum AuthorizeRoute {
     CardNonUi,
     WalletPrepaymentUi,
 }
 
-/// Inspect the Authorize input and return the PACO endpoint to hit. Pure —
-/// no auth or amount conversion. Used by both `get_url` (URL selection) and
-/// the `TryFrom` impl (body selection) so the two stay in lock-step.
+/// Used by both `get_url` and the request `TryFrom` so URL and body selection
+/// stay in lock-step.
 pub fn authorize_route<T>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> Result<AuthorizeRoute, error_stack::Report<errors::IntegrationError>>
@@ -437,40 +419,28 @@ where
     }
 }
 
-/// Wire body for Authorize. Two-shape because PACO has two endpoints with
-/// distinct schemas. `#[serde(untagged)]` keeps the on-wire JSON identical
-/// to what the per-variant builder used to emit.
+// PACO has two Authorize endpoints with distinct schemas; the untagged enum
+// keeps the on-wire JSON identical to what each per-variant builder emits.
+// Card variant is ~656 B (card + browser info); boxing would double-allocate
+// every request, so the larger short-lived enum is acceptable.
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
-// Card variant is ~656 B (card details + browser info); Wallet is far smaller.
-// Boxing would double-allocate every Authorize. The enum is short-lived
-// (built, serialised, then dropped), so the larger size is acceptable here.
 #[allow(clippy::large_enum_variant)]
 pub enum TwoctwopPacoAuthorizeRequest {
     Card(TwoctwopPacoCardAuthorizeRequest),
     Wallet(TwoctwopPacoWalletAuthorizeRequest),
 }
 
-/// Wire body for VoidPC (post-capture reverse). Same shape as Void — the
-/// newtype only exists so the `Bridge<RequestTemplating, ...>` for VoidPC
-/// is distinct from Void's at the type system level.
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
 pub struct TwoctwopPacoVoidPcRequest(pub TwoctwopPacoVoidRequest);
 
-/// Wire body for Authenticate. Same shape as the card Authorize body with
-/// `request3dsFlag` forced to "Y"; newtype gives Authenticate its own
-/// `Bridge` templating slot.
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
 pub struct TwoctwopPacoAuthenticateRequest(pub TwoctwopPacoCardAuthorizeRequest);
 
-// Response newtypes. Each JOSE flow shares the underlying
-// `TwoctwopPacoNonUiResponse` wire shape, but the `Bridge<_, ResponseTemplating, T>`
-// definition expanded by `impl_templating!` would collide if the same response
-// type were registered against multiple flows. Per-flow newtypes give each
-// bridge a distinct templating slot; `#[serde(transparent)]` keeps the on-wire
-// deserialisation identical.
+// Per-flow newtypes around the shared wire shape so each `Bridge` gets a
+// distinct templating slot. `#[serde(transparent)]` keeps the wire identical.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct TwoctwopPacoAuthorizeResponse(pub TwoctwopPacoNonUiResponse);
@@ -596,8 +566,6 @@ where
     }
 }
 
-// ---------- /Payment/nonUi (Authenticate — same body as Authorize, request3dsFlag forced "Y") ----------
-
 pub fn build_authenticate_request<T>(
     item: &RouterDataV2<
         Authenticate,
@@ -699,8 +667,6 @@ where
     }
 }
 
-// ---------- Capture / Settle ----------
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoSettlementAmount {
@@ -746,8 +712,6 @@ pub fn build_capture_request(
         },
     })
 }
-
-// ---------- Void ----------
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -803,7 +767,6 @@ pub fn build_void_pc_request(
     })
 }
 
-// ---------- Refund ----------
 //
 // Body shape per PACO's official OpenAPI spec at
 // https://devzone.2c2p.com/reference/refund:
@@ -934,7 +897,6 @@ fn extract_paco_original_order_no(meta: &common_utils::SecretSerdeValue) -> Opti
     None
 }
 
-// ---------- Status enums ----------
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PacoPaymentStatus {
@@ -1042,7 +1004,6 @@ fn map_refund_status(status: &PacoPaymentStatus, step: &PacoPaymentStep) -> Refu
     }
 }
 
-// ---------- Generic JOSE response shape ----------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1226,7 +1187,6 @@ impl TwoctwopPacoNonUiResponse {
     }
 }
 
-// ---------- Authorize response → RouterDataV2 ----------
 
 impl<F, T> TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
@@ -1602,7 +1562,6 @@ impl TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
     }
 }
 
-// ---------- Inquiry (PSync / RSync) — plain JSON ----------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1818,7 +1777,6 @@ impl TryFrom<ResponseRouterData<TwoctwopPacoInquiryResponse, Self>>
     }
 }
 
-// ---------- Helpers ----------
 
 fn extract_status(
     block: Option<&PacoPaymentResultBlock>,
@@ -1934,8 +1892,6 @@ impl<'a> PacoJoseClaims<'a> {
 // are no longer needed now that every flow runs through the framework's
 // `preprocess_request: true, preprocess_response: true` macro path.
 
-// ---------- 3DS trio: shared helpers ----------
-
 /// Translate PACO's `creditCardAuthenticatedDetails` block into the prism
 /// `AuthenticationData` shape consumed by downstream Authorize.
 fn build_authentication_data_from_paco(
@@ -1962,8 +1918,6 @@ fn build_authentication_data_from_paco(
     }
 }
 
-
-// ---------- Authenticate response → RouterDataV2 ----------
 
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, Self>>
     for RouterDataV2<
@@ -2100,14 +2054,6 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwoctwopPacoNonUiResp
         })
     }
 }
-
-// ============================================================================
-// TryFrom impls — used by the macro-driven bridge to construct each flow's
-// typed request body. Each impl extracts auth from `connector_config` then
-// delegates to the existing `build_*_request` helper, wrapping in the
-// per-flow newtype where the wire body is shared (VoidPC reuses Void's body,
-// Authenticate reuses the card-Authorize body).
-// ============================================================================
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -2265,13 +2211,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// ============================================================================
-// Response newtype → RouterDataV2 shim TryFrom impls. Each unwraps the
-// flow-distinct newtype and delegates to the existing
-// `TryFrom<ResponseRouterData<TwoctwopPacoNonUiResponse, _>>` impl that holds
-// the actual decoding logic. Keeping the logic in the inner-type impl avoids
-// duplicating ~30 lines of status/auth/error mapping per flow.
-// ============================================================================
+// Shim TryFroms unwrap the newtype response and delegate to the inner-type
+// decoder, avoiding ~30 lines of duplicated status/error mapping per flow.
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<TwoctwopPacoAuthorizeResponse, Self>>

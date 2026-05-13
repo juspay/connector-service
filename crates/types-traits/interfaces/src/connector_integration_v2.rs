@@ -156,8 +156,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     /// accepts the raw api error response and decodes it
     ///
     /// `connector_config` carries the per-merchant credentials (PEMs, kid,
-    /// access tokens) needed to decrypt encrypted error bodies. Connectors
-    /// that have plain-text error bodies can ignore it.
+    /// access tokens) needed to decrypt encrypted error bodies.
     fn get_error_response_v2(
         &self,
         res: domain_types::router_response_types::Response,

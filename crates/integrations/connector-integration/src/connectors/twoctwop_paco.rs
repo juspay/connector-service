@@ -1,29 +1,11 @@
-//! # 2C2P PACO connector
+//! 2C2P PACO connector — JOSE-encrypted (PS256 + RSA-OAEP/A128CBC-HS256).
 //!
-//! JOSE-encrypted (PS256 + RSA-OAEP/A128CBC-HS256) connector for the 2C2P PACO
-//! Payment Orchestration Layer.
-//!
-//! ## Merchant-facing contracts that aren't in the proto types
-//!
-//! ### Refund — original orderNo passthrough
-//!
-//! PACO matches refunds against the *original* transaction's `orderNo`, which
-//! is the value the merchant supplied to Authorize as
-//! `merchant_transaction_id` / `x-connector-request-reference-id`. The prism
-//! orchestrator overrides `RefundFlowData.connector_request_reference_id`
-//! with the refund id, so the connector cannot recover the original orderNo
-//! from there. The merchant **must** pass it through on the Refund request,
-//! in one of these proto fields, in priority order:
-//!
-//! 1. `refund_metadata` (proto field 10) — preferred.
-//! 2. `connector_feature_data` (proto field 11) — fallback.
-//!
-//! Each accepts either a plain JSON string (treated as the orderNo) or an
-//! object: `{"original_order_no":"<auth orderNo>"}`. If neither is supplied,
-//! the connector errors with `MissingRequiredField` and a `suggested_action`
-//! pointing the merchant at the contract.
-//!
-//! See `creds_dummy.json` for an example credentials block.
+//! Refund contract: the prism orchestrator overwrites
+//! `RefundFlowData.connector_request_reference_id` with the refund id, so the
+//! merchant must pass the *original* Authorize orderNo on Refund in
+//! `refund_metadata` (preferred) or `connector_feature_data` (fallback) — as
+//! a plain string or `{"original_order_no":"<auth orderNo>"}`. Missing →
+//! `MissingRequiredField`.
 
 pub mod transformers;
 
@@ -92,8 +74,6 @@ pub(crate) mod headers {
 
 const CONTENT_TYPE_JOSE: &str = "application/jose";
 const CONTENT_TYPE_JSON: &str = "application/json";
-
-// Marker trait impls (mirrors imerchantsolutions).
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ClientAuthentication for TwoctwopPaco<T>
@@ -345,11 +325,6 @@ macros::create_all_prerequisites!(
             &req.resource_common_data.connectors.twoctwop_paco.base_url
         }
 
-        // Request-side JOSE preprocessing. Receives the JSON-serialised inner
-        // request body, wraps it in a `PacoJoseClaims` envelope (iss/aud/iat/
-        // nbf/exp + `request: <body>`), signs as PS256 JWS, then seals as
-        // RSA-OAEP/A128CBC-HS256 JWE. Returns the compact JWE bytes that go
-        // on the wire. Symmetric counterpart to `preprocess_response_bytes`.
         pub fn preprocess_request_bytes<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
@@ -387,10 +362,6 @@ macros::create_all_prerequisites!(
             Ok(jwe.into_bytes())
         }
 
-        // Response-side JOSE preprocessing. Decrypts the compact JWE, verifies
-        // the inner JWS signature against PACO's signing pubkey, enforces
-        // aud/exp/nbf claims, and returns the inner `response` body as JSON
-        // bytes for the bridge to deserialise into `TwoctwopPacoNonUiResponse`.
         pub fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
@@ -495,10 +466,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_');
 
-        // Up to 128 bytes of the wire body, hex-encoded, surfaced into the
-        // error `reason` whenever the connector can't parse a typed error
-        // code out of the response. Lets operators correlate prism errors
-        // with PACO wire captures even without access to server logs.
+        // Hex-prefix of the body lands in `reason` whenever we can't decode a
+        // typed PACO error — enables wire-capture correlation without logs.
         let body_prefix_hex = || {
             let take = body.len().min(128);
             let hex: String = body
@@ -582,7 +551,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-// PSync — JSON Inquiry endpoint, GET, header `apikey`.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
@@ -626,9 +594,7 @@ macros::macro_connector_implementation!(
     }
 );
 
-// RSync — same Inquiry endpoint as PSync. Uses a distinct
-// `TwoctwopPacoRSyncInquiryResponse` newtype so the macro's templating
-// struct doesn't collide with PSync's.
+// Distinct response newtype avoids a templating-struct collision with PSync.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
@@ -669,19 +635,7 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ---------- JOSE-bodied flows ----------
-//
-// All six flows below share the same wire envelope: a typed inner JSON body
-// (per-flow `try_from` impl) is wrapped by the framework's
-// `preprocess_request_bytes` hook into a `PacoJoseClaims` envelope, signed
-// PS256, sealed RSA-OAEP / A128CBC-HS256, then sent as `application/jose`.
-// Responses run in reverse via `preprocess_response_bytes`. The JOSE plumbing
-// itself lives in the `create_all_prerequisites!` member_functions block
-// further up.
-
-// Authorize — POST. Dual URL: `/Payment/nonUi` for cards, `/Payment/prepaymentUi`
-// for GCash hosted-page redirect. Route is picked at request time by
-// `transformers::authorize_route` which inspects the payment method data.
+// Authorize: dual URL — Card → /Payment/nonUi, GCash → /Payment/prepaymentUi.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
@@ -723,7 +677,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Capture — PUT /api/2.0/Settlement.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
@@ -761,7 +714,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Void — POST /api/2.0/Void.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
@@ -799,10 +751,8 @@ macros::macro_connector_implementation!(
     }
 );
 
-// VoidPC (post-capture reverse) — POST /api/2.0/Void. Same endpoint as Void;
-// the office config decides which lifecycle states are accepted at request
-// time. Body shape is identical to Void, but the typed wrapper gives this
-// flow a distinct bridge slot.
+// VoidPC posts to the same /Void endpoint as Void; the office config picks
+// which lifecycle states it accepts.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
@@ -840,8 +790,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Refund — POST /api/2.0/Refund/refund. Uses the refund base URL helper
-// which still resolves to the same configured `twoctwop_paco.base_url`.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
@@ -879,27 +827,13 @@ macros::macro_connector_implementation!(
     }
 );
 
-// ---------- IncomingWebhook ----------
-//
-// PACO supports backend webhook notifications (JOSE-encrypted, same wire
-// envelope as API responses) for hosted-page wallet flows and async
-// settlement state changes. The verification path needs the merchant's
-// encryption private key, which is per-merchant and reaches us via
-// `ConnectorSpecificConfig::TwoctwopPaco` — i.e. the same auth bundle
-// the API flows use.
-//
-// Intentionally left as the default empty impl for now: the trait's
-// default `verify_webhook_source` returns Ok(false), which rejects
-// every incoming webhook as unverified. That is fail-closed by design.
-// Until a wired implementation lands, merchants should poll
-// `/Inquiry/transactionStatus` (PSync) to get final state for the
-// hosted-page and post-3DS flows.
+// Default `verify_webhook_source` returns Ok(false) → fail-closed reject. Until
+// a wired impl lands, merchants poll PSync for state on hosted-page / 3DS flows.
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for TwoctwopPaco<T>
 {
 }
 
-// ---------- Stubs for unsupported flows ----------
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -989,18 +923,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// ---------- 3DS trio ----------
-//
-// PACO is native 3DS. The merchant-facing surface collapses to:
-//   PreAuthenticate  empty marker — PACO has no DDC endpoint
-//   Authenticate     POST /Payment/nonUi with request3dsFlag=Y → either an
-//                    ACS challenge (RedirectForm) or inline CAVV/ECI
-//   PostAuthenticate empty marker — PACO has no CRes-submit endpoint; the
-//                    challenge result flows back via ACS callback into
-//                    PACO's underlying 3DSS, server-side. Merchants call
-//                    PSync after the browser challenge to fetch the final
-//                    state from /Inquiry/transactionStatus (PSync surfaces
-//                    `authenticationData` + post-3DS payment status).
+// PACO does native 3DS: only `Authenticate` is wired. PreAuthenticate (no DDC
+// endpoint) and PostAuthenticate (challenge result flows server-side via the
+// ACS callback into PACO's 3DSS; merchants poll PSync after the challenge)
+// are empty markers.
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -1012,9 +938,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Authenticate — POST /api/2.0/Payment/nonUi with `request3dsFlag=Y`. Wire
-// envelope and body shape are identical to a Card Authorize, only the flow
-// marker differs.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: TwoctwopPaco,
@@ -1052,15 +975,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-// PostAuthenticate — empty marker. The prism convention for this flow is
-// "merchant submits the CRes / 3DS challenge result, gateway returns the
-// final auth state" (POST with body — Cybersource / Nexixpay / Worldpay).
-// PACO doesn't expose a merchant-facing endpoint to push a CRes — the
-// challenge result flows back through PACO's underlying 3DSS via the ACS
-// callback, server-to-server, transparent to the merchant. After the
-// browser challenge completes, merchants should call PSync to retrieve
-// the final state from `/Inquiry/transactionStatus`; PSync already
-// surfaces `authenticationData` and the post-3DS payment status.
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PostAuthenticate,

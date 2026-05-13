@@ -745,21 +745,6 @@ pub enum ConnectorSpecificConfig {
         juspay_public_key: Secret<String>,
         base_url: Option<String>,
     },
-    /// 2C2P PACO - Payment Air Controller. JOSE-encrypted REST.
-    /// Carries a 32-hex `paco_kid`, four RSA PEMs, an access token, an
-    /// `office_id` (multi-merchant scoping in PACO) and the acquirer-side
-    /// `merchant_id` (used on the Inquiry path).
-    ///
-    /// `refund_maker_id` is the human-actor identifier PACO records in its
-    /// audit log under `localMakerChecker.maker.username` on every Refund
-    /// request. Defaults to `"merchant"` when None — but a merchant SHOULD
-    /// override it with their own operator id / ticket id so refunds can be
-    /// traced back to a human in the audit trail.
-    ///
-    /// `response_audience` is the expected `aud` claim on JOSE response
-    /// JWTs returned by PACO. When None the connector falls back to using
-    /// `access_token` as the expected audience (current PACO behaviour). Set
-    /// this if PACO changes the response `aud` for a specific office.
     TwoctwopPaco {
         access_token: Secret<String>,
         office_id: Secret<String>,
@@ -3121,10 +3106,6 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
-            // PACO carries an 8-field credential set that does not fit any
-            // of the legacy `ConnectorAuthType` variants. Configuration must
-            // arrive via the typed gRPC `ConnectorSpecificConfig::TwoctwopPaco`
-            // path (see `ForeignTryFrom<grpc::ConnectorSpecificConfig>`).
             ConnectorEnum::TwoctwopPaco => Err(err().into()),
         }
     }

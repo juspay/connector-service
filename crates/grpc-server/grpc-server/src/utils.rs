@@ -700,22 +700,17 @@ macro_rules! implement_connector_operation {
                 $response_data_type,
             > = connector_data.connector.get_connector_integration_v2();
 
-            // Extract payment_method_data from the payload when present so
-            // native-3DS connectors (Cybersource, PACO, Worldpay, Nexixpay …)
-            // can read the card on PreAuth/Authenticate. Best-effort: a
-            // missing payment_method or a payment-method shape we can't
-            // resolve passes through as None rather than erroring, matching
-            // the prior "always None" semantics for flows that don't use it.
             let payment_method_data: Option<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>> =
                 match payload.payment_method.clone() {
-                    Some(pm) => match domain_types::types::PaymentMethodDataAction::get_payment_method_data_action(pm.clone()) {
-                        Ok(domain_types::types::PaymentMethodDataAction::Card(card_details)) => {
-                            domain_types::payment_method_data::Card::<domain_types::payment_method_data::DefaultPCIHolder>::foreign_try_from(card_details)
-                                .ok()
-                                .map(domain_types::payment_method_data::PaymentMethodData::Card)
+                    Some(pm) => match domain_types::types::PaymentMethodDataAction::get_payment_method_data_action(pm.clone()).into_grpc_status()? {
+                        domain_types::types::PaymentMethodDataAction::Card(card_details) => {
+                            Some(domain_types::payment_method_data::PaymentMethodData::Card(
+                                domain_types::payment_method_data::Card::<domain_types::payment_method_data::DefaultPCIHolder>::foreign_try_from(card_details)
+                                    .into_grpc_status()?
+                            ))
                         }
-                        Ok(domain_types::types::PaymentMethodDataAction::Default) => {
-                            domain_types::payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(pm).ok()
+                        domain_types::types::PaymentMethodDataAction::Default => {
+                            Some(domain_types::payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(pm).into_grpc_status()?)
                         }
                         _ => None,
                     },

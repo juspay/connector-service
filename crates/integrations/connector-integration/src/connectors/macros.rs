@@ -307,11 +307,9 @@ macro_rules! expand_fn_get_request_body {
         }
     };
 
-    // Preprocessing arm: serialize the bridge's request struct as JSON,
-    // then hand the bytes to `preprocess_request_bytes` for connector-side
-    // transformation (JOSE encrypt / HMAC seal / custom envelope). Result
-    // is shipped as `RequestContent::RawBytes`. Symmetric to the
-    // `preprocess_response_bytes` hook on the response side.
+    // Hand the JSON-serialised request to `preprocess_request_bytes` so the
+    // connector can wrap it (JOSE encrypt, HMAC seal, …) before it hits the
+    // wire. Symmetric to `preprocess_response_bytes`.
     (
         $connector: ty,
         $curl_req: ty,
@@ -459,11 +457,8 @@ macro_rules! expand_default_functions {
 pub(crate) use expand_default_functions;
 
 macro_rules! macro_connector_implementation {
-    // MOST SPECIFIC: both preprocess_request and preprocess_response enabled.
-    // Used by connectors that wrap the request body in a cryptographic envelope
-    // (JOSE, HMAC-sealed, etc.) on both directions. The bridge's request struct
-    // is JSON-serialised; `preprocess_request_bytes` then transforms those bytes
-    // into the wire body. Response side mirrors via `preprocess_response_bytes`.
+    // Most specific arm: both preprocess hooks enabled. Used by connectors
+    // that wrap the body in a cryptographic envelope on both directions.
     (
         connector_default_implementations: [$($function_name: ident), *],
         connector: $connector: ident,
