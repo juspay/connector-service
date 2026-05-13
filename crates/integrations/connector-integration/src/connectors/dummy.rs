@@ -55,7 +55,7 @@ use transformers::{
     PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,
     PaymentsCaptureResponse, PaymentsVoidResponse, RefundResponse,
     RefundResponse as RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,
-    StripeClientAuthRequest, StripeClientAuthResponse, StripeRefundRequest, StripeTokenResponse,
+    DummyClientAuthRequest, DummyClientAuthResponse, DummyRefundRequest, DummyTokenResponse,
     TokenRequest,
 };
 
@@ -65,7 +65,7 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
-    pub(crate) const STRIPE_COMPATIBLE_CONNECT_ACCOUNT: &str = "Stripe-Account";
+    pub(crate) const DUMMY_COMPATIBLE_CONNECT_ACCOUNT: &str = "Dummy-Account";
 }
 use dummy::auth_headers;
 
@@ -386,7 +386,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Refund,
-            request_body: StripeRefundRequest,
+            request_body: DummyRefundRequest,
             response_body: RefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
@@ -398,7 +398,7 @@ macros::create_all_prerequisites!(
         (
             flow: PaymentMethodToken,
             request_body: TokenRequest<T>,
-            response_body: StripeTokenResponse,
+            response_body: DummyTokenResponse,
             router_data: RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
         ),
         (
@@ -421,8 +421,8 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: ClientAuthenticationToken,
-            request_body: StripeClientAuthRequest,
-            response_body: StripeClientAuthResponse,
+            request_body: DummyClientAuthRequest,
+            response_body: DummyClientAuthResponse,
             router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
         )
     ],
@@ -477,7 +477,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-        let auth = dummy::StripeAuthType::try_from(auth_type).change_context(
+        let auth = dummy::DummyAuthType::try_from(auth_type).change_context(
             IntegrationError::FailedToObtainAuthType {
                 context: Default::default(),
             },
@@ -488,8 +488,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 format!("Bearer {}", auth.api_key.peek()).into_masked(),
             ),
             (
-                auth_headers::STRIPE_API_VERSION.to_string(),
-                auth_headers::STRIPE_VERSION.to_string().into_masked(),
+                auth_headers::DUMMY_API_VERSION.to_string(),
+                auth_headers::DUMMY_VERSION.to_string().into_masked(),
             ),
         ])
     }
@@ -563,19 +563,19 @@ macros::macro_connector_implementation!(
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
 
-            let stripe_split_payment_metadata = dummy::StripeSplitPaymentRequest::try_from(req)?;
+            let dummy_split_payment_metadata = dummy::DummySplitPaymentRequest::try_from(req)?;
 
             // if the request has split payment object, then append the transfer account id in headers in charge_type is Direct
             if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                stripe_split_payment,
+                dummy_split_payment,
             )) = &req.request.split_payments
             {
-                if stripe_split_payment.charge_type
+                if dummy_split_payment.charge_type
                     ==common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct)
                 {
                     let mut customer_account_header = vec![(
-                        headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                        stripe_split_payment
+                        headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                        dummy_split_payment
                             .transfer_account_id
                             .clone()
                             .into_masked(),
@@ -585,10 +585,10 @@ macros::macro_connector_implementation!(
             }
             // if request doesn't have transfer_account_id, but split_payment_metadata has it, append it
             else if let Some(transfer_account_id) =
-                stripe_split_payment_metadata.transfer_account_id.clone()
+                dummy_split_payment_metadata.transfer_account_id.clone()
             {
                 let mut customer_account_header = vec![(
-                    headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                    headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
                     transfer_account_id.into_masked(),
                 )];
                 header.append(&mut customer_account_header);
@@ -636,26 +636,26 @@ macros::macro_connector_implementation!(
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
 
-            let stripe_split_payment_metadata = dummy::StripeSplitPaymentRequest::try_from(req)?;
+            let dummy_split_payment_metadata = dummy::DummySplitPaymentRequest::try_from(req)?;
 
             let transfer_account_id = req
                 .request
                 .split_payments
                 .as_ref()
                 .map(|split_payments| {
-                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(stripe_split_payment) =
+                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(dummy_split_payment) =
                         split_payments;
-                    stripe_split_payment
+                    dummy_split_payment
                 })
-                .filter(|stripe_split_payment| {
-                    matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
+                .filter(|dummy_split_payment| {
+                    matches!(dummy_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
                 })
-                .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone())
-                .or_else(|| stripe_split_payment_metadata.transfer_account_id.clone().map(|s| s.expose()));
+                .map(|dummy_split_payment| dummy_split_payment.transfer_account_id.clone())
+                .or_else(|| dummy_split_payment_metadata.transfer_account_id.clone().map(|s| s.expose()));
 
             if let Some(transfer_account_id) = transfer_account_id {
                 let mut customer_account_header = vec![(
-                    headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                    headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
                     transfer_account_id.clone().into_masked(),
                 )];
                 header.append(&mut customer_account_header);
@@ -680,7 +680,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Dummy,
     curl_request: FormUrlEncoded(TokenRequest),
-    curl_response: StripeTokenResponse,
+    curl_response: DummyTokenResponse,
     flow_name: PaymentMethodToken,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentMethodTokenizationData<T>,
@@ -702,18 +702,18 @@ macros::macro_connector_implementation!(
                 .split_payments
                 .as_ref()
                 .map(|split_payments| {
-                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(stripe_split_payment) =
+                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(dummy_split_payment) =
                         split_payments;
-                    stripe_split_payment
+                    dummy_split_payment
                 })
-                .filter(|stripe_split_payment| {
-                    matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
+                .filter(|dummy_split_payment| {
+                    matches!(dummy_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
                 })
-                .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone());
+                .map(|dummy_split_payment| dummy_split_payment.transfer_account_id.clone());
 
             if let Some(transfer_account_id) = transfer_account_id {
                 let mut customer_account_header = vec![(
-                    headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                    headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
                     transfer_account_id.clone().into_masked(),
                 )];
                 header.append(&mut customer_account_header);
@@ -802,18 +802,18 @@ macros::macro_connector_implementation!(
                 .split_payments
                 .as_ref()
                 .map(|split_payments| {
-                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(stripe_split_payment) =
+                    let domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(dummy_split_payment) =
                         split_payments;
-                    stripe_split_payment
+                    dummy_split_payment
                 })
-                .filter(|stripe_split_payment| {
-                    matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
+                .filter(|dummy_split_payment| {
+                    matches!(dummy_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
                 })
-                .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone());
+                .map(|dummy_split_payment| dummy_split_payment.transfer_account_id.clone());
 
             if let Some(transfer_account_id) = transfer_account_id {
                 let mut customer_account_header = vec![(
-                    headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                    headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
                     transfer_account_id.clone().into_masked(),
                 )];
                 header.append(&mut customer_account_header);
@@ -856,12 +856,12 @@ macros::macro_connector_implementation!(
             header.append(&mut api_key);
 
             if let Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                stripe_split_payment,
+                dummy_split_payment,
             )) = &req.request.split_payments
             {
                 transformers::transform_headers_for_connect_platform(
-                    stripe_split_payment.charge_type.clone(),
-                    Secret::new(stripe_split_payment.transfer_account_id.clone()),
+                    dummy_split_payment.charge_type.clone(),
+                    Secret::new(dummy_split_payment.transfer_account_id.clone()),
                     &mut header,
                 );
             }
@@ -1010,7 +1010,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Dummy,
-    curl_request: FormUrlEncoded(StripeRefundRequest),
+    curl_request: FormUrlEncoded(DummyRefundRequest),
     curl_response: RefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
@@ -1031,15 +1031,15 @@ macros::macro_connector_implementation!(
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
 
-            if let Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(ref stripe_split_refund)) =
+            if let Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(ref dummy_split_refund)) =
                 req.request.split_refunds.as_ref()
             {
-                match &stripe_split_refund.charge_type {
-                    common_enums::PaymentChargeType::Stripe(stripe_charge) => {
-                        if stripe_charge == &common_enums::StripeChargeType::Direct {
+                match &dummy_split_refund.charge_type {
+                    common_enums::PaymentChargeType::Stripe(dummy_charge) => {
+                        if dummy_charge == &common_enums::StripeChargeType::Direct {
                             let mut customer_account_header = vec![(
-                                headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                                stripe_split_refund
+                                headers::DUMMY_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
+                                dummy_split_refund
                                     .transfer_account_id
                                     .clone()
                                     .into_masked(),
@@ -1083,12 +1083,12 @@ macros::macro_connector_implementation!(
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
 
-            if let Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(ref stripe_refund)) =
+            if let Some(domain_types::connector_types::SplitRefundsRequest::StripeSplitRefund(ref dummy_refund)) =
                 req.request.split_refunds.as_ref()
             {
                 transformers::transform_headers_for_connect_platform(
-                    stripe_refund.charge_type.clone(),
-                    Secret::new(stripe_refund.transfer_account_id.clone()),
+                    dummy_refund.charge_type.clone(),
+                    Secret::new(dummy_refund.transfer_account_id.clone()),
                     &mut header,
                 );
             }
@@ -1107,8 +1107,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Dummy,
-    curl_request: FormUrlEncoded(StripeClientAuthRequest),
-    curl_response: StripeClientAuthResponse,
+    curl_request: FormUrlEncoded(DummyClientAuthRequest),
+    curl_response: DummyClientAuthResponse,
     flow_name: ClientAuthenticationToken,
     resource_common_data: PaymentFlowData,
     flow_request: ClientAuthenticationTokenRequestData,
