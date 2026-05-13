@@ -745,16 +745,13 @@ pub enum ConnectorSpecificConfig {
         juspay_public_key: Secret<String>,
         base_url: Option<String>,
     },
-    TwoctwopPaco {
+    TwocTwopPaco {
         access_token: Secret<String>,
-        office_id: Secret<String>,
-        merchant_id: Secret<String>,
         paco_kid: Secret<String>,
         merchant_signing_private_key: Secret<String>,
         merchant_encryption_private_key: Secret<String>,
         paco_signing_public_key: Secret<String>,
         paco_encryption_public_key: Secret<String>,
-        refund_maker_id: Option<String>,
         response_audience: Option<Secret<String>>,
         base_url: Option<String>,
     },
@@ -1072,10 +1069,8 @@ impl ConnectorSpecificConfig {
                 client_secret
             },
             Imerchantsolutions { api_key },
-            TwoctwopPaco {
+            TwocTwopPaco {
                 access_token,
-                office_id,
-                merchant_id,
                 paco_kid
             },
         )
@@ -1484,10 +1479,8 @@ impl ConnectorSpecificConfig {
                     client_secret
                 },
                 Imerchantsolutions { api_key },
-                TwoctwopPaco {
+                TwocTwopPaco {
                     access_token,
-                    office_id,
-                    merchant_id,
                     paco_kid
                 },
             ),
@@ -2023,24 +2016,21 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 merchant_id: imerchantsolutions.merchant_id,
                 base_url: imerchantsolutions.base_url,
             }),
-            AuthType::TwoctwopPaco(twoctwop_paco) => Ok(Self::TwoctwopPaco {
-                access_token: twoctwop_paco.access_token.ok_or_else(err)?,
-                office_id: twoctwop_paco.office_id.ok_or_else(err)?,
-                merchant_id: twoctwop_paco.merchant_id.ok_or_else(err)?,
-                paco_kid: twoctwop_paco.paco_kid.ok_or_else(err)?,
-                merchant_signing_private_key: twoctwop_paco
+            AuthType::TwocTwopPaco(twoc_twop_paco) => Ok(Self::TwocTwopPaco {
+                access_token: twoc_twop_paco.access_token.ok_or_else(err)?,
+                paco_kid: twoc_twop_paco.paco_kid.ok_or_else(err)?,
+                merchant_signing_private_key: twoc_twop_paco
                     .merchant_signing_private_key
                     .ok_or_else(err)?,
-                merchant_encryption_private_key: twoctwop_paco
+                merchant_encryption_private_key: twoc_twop_paco
                     .merchant_encryption_private_key
                     .ok_or_else(err)?,
-                paco_signing_public_key: twoctwop_paco.paco_signing_public_key.ok_or_else(err)?,
-                paco_encryption_public_key: twoctwop_paco
+                paco_signing_public_key: twoc_twop_paco.paco_signing_public_key.ok_or_else(err)?,
+                paco_encryption_public_key: twoc_twop_paco
                     .paco_encryption_public_key
                     .ok_or_else(err)?,
-                refund_maker_id: twoctwop_paco.refund_maker_id,
-                response_audience: twoctwop_paco.response_audience,
-                base_url: twoctwop_paco.base_url,
+                response_audience: twoc_twop_paco.response_audience,
+                base_url: twoc_twop_paco.base_url,
             }),
         }
     }
@@ -3106,7 +3096,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
-            ConnectorEnum::TwoctwopPaco => Err(err().into()),
+            ConnectorEnum::TwocTwopPaco => Err(err().into()),
         }
     }
 }

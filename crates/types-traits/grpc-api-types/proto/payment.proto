@@ -753,7 +753,7 @@ enum Connector {
   IMERCHANTSOLUTIONS = 118;
   AXISBANK = 119;
   EASEBUZZ = 120;
-  TWOCTWOP_PACO = 121;
+  TWOC_TWOP_PACO = 121;
 }
 
 // Payment method types
@@ -4207,14 +4207,10 @@ message AxisbankConfig {
   optional string base_url = 50;
 }
 
-message TwoctwopPacoConfig {
+message TwocTwopPacoConfig {
   // Company access token, used as both the `token`/`apikey` HTTP header and
   // as the `iss` / `CompanyApiKey` JWT claim.
   SecretString access_token = 1;
-  // Office identifier (PACO multi-merchant scoping). Required in every body.
-  SecretString office_id = 2;
-  // Acquirer-side merchant id, required as a query param on the Inquiry path.
-  SecretString merchant_id = 3;
   // 32-hex-char JWE key id, environment-specific (UAT vs PRD).
   SecretString paco_kid = 4;
   // Merchant RSA private key (PEM) — signs the request JWS (PS256).
@@ -4225,17 +4221,14 @@ message TwoctwopPacoConfig {
   SecretString paco_signing_public_key = 7;
   // PACO RSA public key (PEM) — encrypts the request JWE.
   SecretString paco_encryption_public_key = 8;
-  // Identifier recorded in PACO's audit log as `localMakerChecker.maker.username`
-  // on every Refund request. When None the connector defaults to "merchant"
-  // (legacy behaviour). Override per-merchant with operator/ticket id for
-  // a traceable audit trail.
-  optional string refund_maker_id = 9;
-  // Expected `aud` claim on JOSE response JWTs returned by PACO. When None
-  // the connector falls back to the access_token as the expected audience
-  // (current PACO behaviour). Set this if PACO changes the response aud for
-  // a specific office.
+  // Expected `aud` claim on JOSE response JWTs. Defaults to the access_token
+  // when None. Set if PACO emits a different aud on a specific office.
   optional SecretString response_audience = 10;
   optional string base_url = 50;
+  // office_id (2) and merchant_id (3) live in per-request metadata
+  // (`connector_feature_data`), not config — see twoc_twop_paco docstring.
+  reserved 2, 3, 9;
+  reserved "office_id", "merchant_id", "refund_maker_id";
 }
 
 // ConnectorSpecificConfig message with oneof containing all connector
@@ -4495,8 +4488,8 @@ message ConnectorSpecificConfig {
     // EASEBUZZ = 120
     EasebuzzConfig easebuzz = 120;
 
-    // TWOCTWOP_PACO = 121
-    TwoctwopPacoConfig twoctwop_paco = 121;
+    // TWOC_TWOP_PACO = 121
+    TwocTwopPacoConfig twoc_twop_paco = 121;
   }
 }
 

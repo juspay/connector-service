@@ -128,6 +128,6 @@ default_impl_verify_webhook_source_v2!(
     Sanlam,
     Ppro,
     PinelabsOnline,
-    TwoctwopPaco
+    TwocTwopPaco
 );
 // PayPal has its own implementation in paypal.rs

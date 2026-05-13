@@ -393,7 +393,7 @@ pub struct Connectors {
     pub easebuzz: ConnectorParams,
     pub imerchantsolutions: ConnectorParams,
     pub axisbank: ConnectorParams,
-    pub twoctwop_paco: ConnectorParams,
+    pub twoc_twop_paco: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]

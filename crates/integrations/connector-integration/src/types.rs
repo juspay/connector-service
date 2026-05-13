@@ -110,7 +110,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Easebuzz => Box::new(connectors::Easebuzz::new()),
             ConnectorEnum::Imerchantsolutions => Box::new(connectors::Imerchantsolutions::new()),
             ConnectorEnum::Axisbank => Box::new(connectors::Axisbank::new()),
-            ConnectorEnum::TwoctwopPaco => Box::new(connectors::TwoctwopPaco::new()),
+            ConnectorEnum::TwocTwopPaco => Box::new(connectors::TwocTwopPaco::new()),
         }
     }
 }

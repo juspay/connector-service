@@ -1,5 +1,5 @@
 {
-  "connector": "twoctwop_paco",
+  "connector": "twoc_twop_paco",
   "notes": "2C2P PACO is a JOSE-encrypted gateway (PS256 + RSA-OAEP/A128CBC-HS256). All Payment/Settlement/Void/Refund bodies are wire-encrypted, so field-probe captures of request/response samples are limited to the JOSE envelope; the inner JSON schema is captured in tests and the connector module docs.",
   "flows": {
     "authorize": {
