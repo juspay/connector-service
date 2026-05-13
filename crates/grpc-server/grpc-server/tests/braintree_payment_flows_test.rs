@@ -16,10 +16,11 @@ use std::{
 
 use cards::CardNumber;
 use grpc_api_types::payments::{
-    payment_method, payment_service_client::PaymentServiceClient, AcceptanceType,
-    AuthenticationType, CardDetails, Currency, CustomerAcceptance, FutureUsage, MandateAmountData,
-    PaymentAddress, PaymentMethod, PaymentServiceSetupRecurringRequest, PaymentStatus,
-    SetupMandateDetails,
+    payment_method, payment_method_service_client::PaymentMethodServiceClient,
+    payment_service_client::PaymentServiceClient, AcceptanceType, CardDetails,
+    Currency, Customer, CustomerAcceptance, FutureUsage, MandateAmountData, Money, PaymentAddress,
+    PaymentMethod, PaymentMethodServiceTokenizeRequest, PaymentServiceTokenSetupRecurringRequest,
+    PaymentStatus, SetupMandateDetails,
 };
 use grpc_api_types::payments::mandate_type::MandateType as MandateTypeInner;
 use grpc_api_types::payments::MandateType;
@@ -27,7 +28,6 @@ use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
 const CONNECTOR_NAME: &str = "braintree";
-const AUTH_TYPE: &str = "signature-key";
 const MERCHANT_ID: &str = "merchant_braintree_test";
 
 const TEST_CARD_NUMBER: &str = "4242424242424242";
@@ -109,7 +109,7 @@ fn add_braintree_metadata<T>(request: &mut Request<T>) {
     );
 }
 
-fn create_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
+fn create_card_payment_method() -> PaymentMethod {
     let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
@@ -123,7 +123,34 @@ fn create_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
         bank_code: None,
         nick_name: None,
     };
+    PaymentMethod {
+        payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
+    }
+}
 
+fn create_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
+    PaymentMethodServiceTokenizeRequest {
+        amount: Some(Money {
+            minor_amount: 0,
+            currency: i32::from(Currency::Usd),
+        }),
+        payment_method: Some(create_card_payment_method()),
+        customer: Some(Customer {
+            email: Some(format!("test_{}@example.com", get_timestamp()).into()),
+            name: Some(TEST_CARD_HOLDER.to_string()),
+            id: None,
+            connector_customer_id: None,
+            phone_number: None,
+            phone_country_code: None,
+        }),
+        address: Some(PaymentAddress::default()),
+        ..Default::default()
+    }
+}
+
+fn create_token_setup_recurring_request(
+    connector_token: String,
+) -> PaymentServiceTokenSetupRecurringRequest {
     let mut merchant_account_metadata_map = HashMap::new();
     merchant_account_metadata_map.insert("merchant_account_id".to_string(), "juspay".to_string());
     merchant_account_metadata_map
@@ -132,16 +159,14 @@ fn create_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
     let merchant_account_metadata_json =
         serde_json::to_string(&merchant_account_metadata_map).unwrap();
 
-    PaymentServiceSetupRecurringRequest {
+    PaymentServiceTokenSetupRecurringRequest {
         merchant_recurring_payment_id: generate_unique_id("braintree_mandate"),
-        amount: Some(grpc_api_types::payments::Money {
+        amount: Some(Money {
             minor_amount: 0,
             currency: i32::from(Currency::Usd),
         }),
-        payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
-        }),
-        customer: Some(grpc_api_types::payments::Customer {
+        connector_token: Some(Secret::new(connector_token)),
+        customer: Some(Customer {
             email: Some(format!("test_{}@example.com", get_timestamp()).into()),
             name: Some(TEST_CARD_HOLDER.to_string()),
             id: None,
@@ -155,9 +180,7 @@ fn create_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
             online_mandate_details: None,
         }),
         address: Some(PaymentAddress::default()),
-        auth_type: i32::from(AuthenticationType::NoThreeDs),
         setup_future_usage: Some(i32::from(FutureUsage::OffSession)),
-        enrolled_for_3ds: false,
         metadata: Some(Secret::new(merchant_account_metadata_json)),
         setup_mandate_details: Some(SetupMandateDetails {
             update_mandate_id: None,
@@ -179,25 +202,53 @@ fn create_setup_recurring_request() -> PaymentServiceSetupRecurringRequest {
 
 #[tokio::test]
 async fn test_setup_mandate() {
-    grpc_test!(client, PaymentServiceClient<Channel>, {
-        let request = create_setup_recurring_request();
-        let mut grpc_request = Request::new(request);
-        add_braintree_metadata(&mut grpc_request);
+    grpc_test!(
+        [
+            pm_client: PaymentMethodServiceClient<Channel>,
+            payment_client: PaymentServiceClient<Channel>
+        ],
+        {
+            // Step 1: Tokenize card to get a payment method token (Braintree nonce/vaultToken).
+            // SetupMandate transformer only accepts PaymentMethodToken, not raw card data.
+            let tokenize_request = create_tokenize_request();
+            let mut tok_grpc_request = Request::new(tokenize_request);
+            add_braintree_metadata(&mut tok_grpc_request);
 
-        let response = client
-            .setup_recurring(grpc_request)
-            .await
-            .expect("gRPC setup_recurring call failed")
-            .into_inner();
+            let tokenize_response = pm_client
+                .tokenize(tok_grpc_request)
+                .await
+                .expect("gRPC Tokenize call failed")
+                .into_inner();
 
-        assert!(
-            response.status == i32::from(PaymentStatus::Charged)
-                || response.status == i32::from(PaymentStatus::AuthenticationPending)
-                || response.status == i32::from(PaymentStatus::Pending),
-            "Setup mandate should be in Charged, AuthenticationPending, or Pending state, got: {}",
-            response.status
-        );
-    });
+            assert!(
+                tokenize_response.error.is_none(),
+                "Tokenize should succeed, got error: {:?}",
+                tokenize_response.error
+            );
+
+            let token = tokenize_response.payment_method_token;
+            assert!(!token.is_empty(), "Tokenize should return a non-empty token");
+
+            // Step 2: Use the token in TokenSetupRecurring (vaultPaymentMethod flow).
+            let setup_request = create_token_setup_recurring_request(token);
+            let mut setup_grpc_request = Request::new(setup_request);
+            add_braintree_metadata(&mut setup_grpc_request);
+
+            let response = payment_client
+                .token_setup_recurring(setup_grpc_request)
+                .await
+                .expect("gRPC TokenSetupRecurring call failed")
+                .into_inner();
+
+            assert!(
+                response.status == i32::from(PaymentStatus::Charged)
+                    || response.status == i32::from(PaymentStatus::AuthenticationPending)
+                    || response.status == i32::from(PaymentStatus::Pending),
+                "Setup mandate should be in Charged, AuthenticationPending, or Pending state, got: {}",
+                response.status
+            );
+        }
+    );
 }
 
 #[test]
