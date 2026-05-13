@@ -421,7 +421,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: Jpmorgan,

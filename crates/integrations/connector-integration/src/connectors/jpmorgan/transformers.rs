@@ -749,16 +749,15 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
                 network_error_message: None,
             })
         } else {
-            let post_capture_void_status =
-                match item.response.transaction_state {
-                    responses::JpmorganTransactionState::Voided => {
-                        common_enums::PostCaptureVoidStatus::Succeeded
-                    }
-                    responses::JpmorganTransactionState::Pending => {
-                        common_enums::PostCaptureVoidStatus::Pending
-                    }
-                    _ => common_enums::PostCaptureVoidStatus::Succeeded,
-                };
+            let post_capture_void_status = match item.response.transaction_state {
+                responses::JpmorganTransactionState::Voided => {
+                    common_enums::PostCaptureVoidStatus::Succeeded
+                }
+                responses::JpmorganTransactionState::Pending => {
+                    common_enums::PostCaptureVoidStatus::Pending
+                }
+                _ => common_enums::PostCaptureVoidStatus::Succeeded,
+            };
 
             Ok(PaymentsResponseData::PostCaptureVoidResponse {
                 post_capture_void_status,
