@@ -3323,6 +3323,12 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
             }
         }
 
+        if new_router_data.response.is_err() {
+            let mut resource_common_data = new_router_data.resource_common_data.clone();
+            resource_common_data.status = AttemptStatus::Failure;
+            new_router_data.resource_common_data = resource_common_data;
+        }
+
         Ok(new_router_data)
     }
 }
