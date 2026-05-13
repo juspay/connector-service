@@ -4228,14 +4228,14 @@ impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
             }
             AdyenWebhookStatus::AuthorisationFailed
             | AdyenWebhookStatus::AdjustAuthorizationFailed => Ok(Self::Failure),
-            AdyenWebhookStatus::Cancelled => Ok(Self::Voided),
+            AdyenWebhookStatus::Cancelled | AdyenWebhookStatus::Reversed => Ok(Self::Voided),
             AdyenWebhookStatus::CancelFailed => Ok(Self::VoidFailed),
             AdyenWebhookStatus::Captured => Ok(Self::Charged),
             AdyenWebhookStatus::CaptureFailed => Ok(Self::CaptureFailed),
             AdyenWebhookStatus::Expired => Ok(Self::Expired),
             //If Unexpected Event is received, need to understand how it reached this point
             //Webhooks with Payment Events only should try to consume this resource object.
-            AdyenWebhookStatus::UnexpectedEvent | AdyenWebhookStatus::Reversed => {
+            AdyenWebhookStatus::UnexpectedEvent => {
                 Err(error_stack::report!(
                     ConnectorError::response_handling_failed_http_status_unknown()
                 ))
