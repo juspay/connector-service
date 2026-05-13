@@ -14,13 +14,13 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, PSync, PaymentMethodToken, RSync, Refund,
-        RepeatPayment, Void,
+        RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         ClientAuthenticationTokenRequestData, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData,
+        RefundsResponseData, RepeatPaymentData, SetupMandateRequestData,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -41,8 +41,8 @@ use transformers::{
     BraintreePSyncRequest, BraintreePSyncResponse, BraintreePaymentsRequest,
     BraintreePaymentsResponse, BraintreeRSyncRequest, BraintreeRSyncResponse,
     BraintreeRefundRequest, BraintreeRefundResponse, BraintreeRepeatPaymentRequest,
-    BraintreeRepeatPaymentResponse, BraintreeSessionResponse, BraintreeTokenRequest,
-    BraintreeTokenResponse,
+    BraintreeRepeatPaymentResponse, BraintreeSessionResponse, BraintreeSetupMandateRequest,
+    BraintreeSetupMandateResponse, BraintreeTokenRequest, BraintreeTokenResponse,
 };
 
 use super::macros;
@@ -210,6 +210,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Braintree<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Braintree<T>
 {
 }
@@ -280,6 +284,12 @@ macros::create_all_prerequisites!(
             request_body: BraintreeRepeatPaymentRequest,
             response_body: BraintreeRepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: BraintreeSetupMandateRequest,
+            response_body: BraintreeSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -466,6 +476,34 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Braintree,
+    curl_request: Json(BraintreeSetupMandateRequest),
+    curl_response: BraintreeSetupMandateResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
             Ok(self.connector_base_url_payments(req).to_string())
         }
@@ -685,7 +723,6 @@ macros::macro_connector_flow_status_impls!(
         SubmitEvidence,
         DefendDispute,
         Accept,
-        SetupMandate,
         MandateRevoke,
         PreAuthenticate,
         Authenticate,
