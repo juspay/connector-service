@@ -1646,9 +1646,7 @@ impl<
                         account_number: eft.account_number.ok_or(
                             IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("EFT account number is required".to_string()), ..Default::default() } },
                         )?,
-                        branch_code: eft.branch_code.ok_or(
-                            IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("EFT branch code is required".to_string()), ..Default::default() } },
-                        )?,
+                        branch_code: eft.branch_code,
                     }),
                 ),
                 grpc_api_types::payments::payment_method::PaymentMethod::Sepa(sepa) => Ok(
