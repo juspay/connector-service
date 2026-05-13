@@ -152,10 +152,16 @@ export const grpcTestCheckpoint: Checkpoint = {
   // Phase 12: self-loop. Failures fix code via implementation's session
   // directly, rather than rolling back to the implementation checkpoint.
   retryFrom: "grpc_test",
-  // Outer budget covers MAX_GRPC_FIX_ITERATIONS × (rebuild + test + fix)
-  // with margin. Each iteration can hit ~25 min in the worst case (cold
-  // rebuild + 10-min test + 15-min fix), so the wrapper is generous.
-  timeout: MAX_GRPC_FIX_ITERATIONS * 25 * 60 * 1000 + 5 * 60 * 1000,
+  // Phase 14: effectively no upper bound on the outer wrapper. A cold cargo
+  // rebuild + multiple fix iterations can legitimately push past 80 min on
+  // slower machines, and the engine's `withTimeout` (utils.ts:11-28) was
+  // killing live runs. The four inner timeouts inside `run()` still bound
+  // each individual operation — waitForBuildComplete (20m), waitForHealthy
+  // (45s), runAI test agent (10m), runAI fix agent (15m) — so a wedged
+  // subprocess won't sit forever. 24h is a soft cap matching the human-
+  // review checkpoints' idiom; using Infinity / MAX_SAFE_INTEGER would be
+  // silently clamped to 1ms by Node's setTimeout (signed-32-bit limit).
+  timeout: 24 * 60 * 60 * 1000,
   continueOnFailure: true,
 
   async run(ctx) {
