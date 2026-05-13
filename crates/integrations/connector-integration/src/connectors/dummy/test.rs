@@ -196,8 +196,7 @@ mod tests {
 
     #[test]
     fn test_redirect_query_parser_success() {
-        let (status, id) =
-            parse_dummy_redirect_query("dummy_status=success&dummy_id=DUMMY-pi_010");
+        let (status, id) = parse_dummy_redirect_query("dummy_status=success&dummy_id=DUMMY-pi_010");
         assert_eq!(status, Some(DummyRedirectStatus::Success));
         assert_eq!(id.as_deref(), Some("DUMMY-pi_010"));
     }
