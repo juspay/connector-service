@@ -3,7 +3,8 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: authenticate flow for dummy"
       }
     },
     "authorize": {
@@ -35,7 +36,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=us_bank_account&payment_method_data%5Bus_bank_account%5D%5Baccount_holder_type%5D=individual&payment_method_data%5Bus_bank_account%5D%5Baccount_number%5D=000123456789&payment_method_data%5Bus_bank_account%5D%5Brouting_number%5D=110000000&capture_method=automatic&payment_method_types%5B0%5D=us_bank_account&expand%5B0%5D=latest_charge"
@@ -65,7 +66,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=customer_balance&payment_method_options%5Bcustomer_balance%5D%5Bbank_transfer%5D%5Btype%5D=us_bank_transfer&payment_method_types%5B0%5D=customer_balance&payment_method_options%5Bcustomer_balance%5D%5Bfunding_type%5D=bank_transfer&capture_method=automatic&expand%5B0%5D=latest_charge"
@@ -95,7 +96,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=affirm&capture_method=automatic&payment_method_types%5B0%5D=affirm&expand%5B0%5D=latest_charge"
@@ -130,7 +131,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Btype%5D=afterpay_clearpay&capture_method=automatic&payment_method_types%5B0%5D=afterpay_clearpay&expand%5B0%5D=latest_charge"
@@ -164,7 +165,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=alipay&capture_method=automatic&payment_method_types%5B0%5D=alipay&expand%5B0%5D=latest_charge"
@@ -194,7 +195,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=amazon_pay&capture_method=automatic&payment_method_types%5B0%5D=amazon_pay&expand%5B0%5D=latest_charge"
@@ -234,7 +235,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&pk_token=%7B%22version%22%3A%22EC_v1%22%2C%22data%22%3A%22probe%22%2C%22signature%22%3A%22probe%22%7D&pk_token_instrument_name=debit&pk_token_payment_network=Visa&pk_token_transaction_id=probe_txn_id&capture_method=automatic&expand%5B0%5D=latest_charge"
@@ -282,7 +283,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&card%5Bnumber%5D=4111111111111111&card%5Bexp_year%5D=2030&card%5Bexp_month%5D=03&card%5Bcryptogram%5D=AAAAAA%3D%3D&card%5Beci%5D=05&card%5Btokenization_method%5D=apple_pay&capture_method=automatic&expand%5B0%5D=latest_charge"
@@ -320,7 +321,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=bacs_debit&payment_method_data%5Bbacs_debit%5D%5Baccount_number%5D=55779911&payment_method_data%5Bbacs_debit%5D%5Bsort_code%5D=200000&capture_method=automatic&payment_method_types%5B0%5D=bacs_debit&expand%5B0%5D=latest_charge"
@@ -350,7 +351,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=customer_balance&payment_method_options%5Bcustomer_balance%5D%5Bbank_transfer%5D%5Btype%5D=gb_bank_transfer&payment_method_options%5Bcustomer_balance%5D%5Bfunding_type%5D=bank_transfer&payment_method_types%5B0%5D=customer_balance&capture_method=automatic&payment_method_types%5B0%5D=customer_balance&expand%5B0%5D=latest_charge"
@@ -385,7 +386,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=bancontact&capture_method=automatic&payment_method_types%5B0%5D=bancontact&expand%5B0%5D=latest_charge"
@@ -423,7 +424,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=au_becs_debit&payment_method_data%5Bau_becs_debit%5D%5Baccount_number%5D=000123456&payment_method_data%5Bau_becs_debit%5D%5Bbsb_number%5D=000000&capture_method=automatic&payment_method_types%5B0%5D=au_becs_debit&expand%5B0%5D=latest_charge"
@@ -463,7 +464,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=blik&payment_method_options%5Bblik%5D%5Bcode%5D=777124&capture_method=automatic&payment_method_types%5B0%5D=blik&expand%5B0%5D=latest_charge"
@@ -515,7 +516,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=card&payment_method_data%5Bcard%5D%5Bnumber%5D=4111111111111111&payment_method_data%5Bcard%5D%5Bexp_month%5D=03&payment_method_data%5Bcard%5D%5Bexp_year%5D=2030&payment_method_data%5Bcard%5D%5Bcvc%5D=737&payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic&capture_method=automatic&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_charge"
@@ -545,7 +546,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=cashapp&capture_method=automatic&payment_method_types%5B0%5D=cashapp&expand%5B0%5D=latest_charge"
@@ -619,7 +620,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=eps&capture_method=automatic&payment_method_types%5B0%5D=eps&expand%5B0%5D=latest_charge"
@@ -657,7 +658,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=giropay&capture_method=automatic&payment_method_types%5B0%5D=giropay&expand%5B0%5D=latest_charge"
@@ -708,7 +709,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=card&payment_method_data%5Bcard%5D%5Btoken%5D=tok_probe_gpay&capture_method=automatic&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_charge"
@@ -746,7 +747,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=ideal&capture_method=automatic&payment_method_types%5B0%5D=ideal&expand%5B0%5D=latest_charge"
@@ -804,7 +805,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=klarna&capture_method=automatic&payment_method_types%5B0%5D=klarna&expand%5B0%5D=latest_charge"
@@ -854,7 +855,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=mb_way&capture_method=automatic&payment_method_types%5B0%5D=mb_way&expand%5B0%5D=latest_charge"
@@ -902,7 +903,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=multibanco&payment_method_types%5B0%5D=multibanco&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&capture_method=automatic&expand%5B0%5D=latest_charge"
@@ -1020,7 +1021,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=p24&capture_method=automatic&payment_method_types%5B0%5D=p24&expand%5B0%5D=latest_charge"
@@ -1062,7 +1063,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=revolut_pay&capture_method=automatic&payment_method_types%5B0%5D=revolut_pay&expand%5B0%5D=latest_charge"
@@ -1096,7 +1097,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=satispay&capture_method=automatic&payment_method_types%5B0%5D=satispay&expand%5B0%5D=latest_charge"
@@ -1133,7 +1134,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=sepa_debit&payment_method_data%5Bsepa_debit%5D%5Biban%5D=DE89370400440532013000&capture_method=automatic&payment_method_types%5B0%5D=sepa_debit&expand%5B0%5D=latest_charge"
@@ -1165,7 +1166,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Btype%5D=customer_balance&payment_method_options%5Bcustomer_balance%5D%5Bbank_transfer%5D%5Btype%5D=eu_bank_transfer&payment_method_options%5Bcustomer_balance%5D%5Bfunding_type%5D=bank_transfer&payment_method_types%5B0%5D=customer_balance&payment_method_options%5Bcustomer_balance%5D%5Bbank_transfer%5D%5Beu_bank_transfer%5D%5Bcountry%5D=US&capture_method=automatic&payment_method_types%5B0%5D=customer_balance&expand%5B0%5D=latest_charge"
@@ -1219,7 +1220,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=trustly&capture_method=automatic&payment_method_types%5B0%5D=trustly&expand%5B0%5D=latest_charge"
@@ -1255,7 +1256,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=upi&payment_method_data%5Bupi%5D%5Bflow%5D=collect&payment_method_data%5Bupi%5D%5Bvpa%5D=test%40upi&capture_method=automatic&payment_method_types%5B0%5D=upi&expand%5B0%5D=latest_charge"
@@ -1285,7 +1286,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=upi&payment_method_data%5Bupi%5D%5Bflow%5D=intent&capture_method=automatic&payment_method_types%5B0%5D=upi&expand%5B0%5D=latest_charge"
@@ -1315,7 +1316,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=upi&payment_method_data%5Bupi%5D%5Bflow%5D=qr&capture_method=automatic&payment_method_types%5B0%5D=upi&expand%5B0%5D=latest_charge"
@@ -1349,7 +1350,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=wechat_pay&payment_method_options%5Bwechat_pay%5D%5Bclient%5D=web&capture_method=automatic&payment_method_types%5B0%5D=wechat_pay&expand%5B0%5D=latest_charge"
@@ -1379,7 +1380,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=wero&capture_method=automatic&payment_method_types%5B0%5D=wero&expand%5B0%5D=latest_charge"
@@ -1403,7 +1404,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount_to_capture=1000"
@@ -1430,7 +1431,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=usd&automatic_payment_methods%5Benabled%5D=true&metadata%5Border_id%5D=probe_sdk_session_001"
@@ -1452,7 +1453,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "email=test%40example.com&name=John+Doe"
@@ -1461,27 +1462,32 @@
     },
     "create_order": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "create_order flow not supported by dummy connector"
       }
     },
     "create_server_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "server_authentication_token flow not supported by dummy connector"
       }
     },
     "create_server_session_authentication_token": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: server_session_authentication_token flow for dummy"
       }
     },
     "dispute_accept": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: accept_dispute flow for dummy"
       }
     },
     "dispute_defend": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: defend_dispute flow for dummy"
       }
     },
     "dispute_get": {
@@ -1491,7 +1497,8 @@
     },
     "dispute_submit_evidence": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: submit_evidence flow for dummy"
       }
     },
     "eligibility": {
@@ -1516,7 +1523,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": null
@@ -1561,7 +1568,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1100"
@@ -1589,12 +1596,14 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: post_authenticate flow for dummy"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_implemented",
+        "error": "This feature is not implemented: pre_authenticate flow for dummy"
       }
     },
     "proxy_authorize": {
@@ -1627,7 +1636,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_proxy_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method_data%5Btype%5D=card&payment_method_data%5Bcard%5D%5Bnumber%5D=%7B%7B%24card_number%7D%7D&payment_method_data%5Bcard%5D%5Bexp_month%5D=%7B%7B%24card_exp_month%7D%7D&payment_method_data%5Bcard%5D%5Bexp_year%5D=%7B%7B%24card_exp_year%7D%7D&payment_method_data%5Bcard%5D%5Bcvc%5D=%7B%7B%24card_cvc%7D%7D&payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic&payment_method_options%5Bcard%5D%5Bnetwork%5D=visa&capture_method=automatic&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_charge"
@@ -1667,7 +1676,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "confirm=true&usage=off_session&payment_method_data%5Btype%5D=card&payment_method_data%5Bcard%5D%5Bnumber%5D=%7B%7B%24card_number%7D%7D&payment_method_data%5Bcard%5D%5Bexp_month%5D=%7B%7B%24card_exp_month%7D%7D&payment_method_data%5Bcard%5D%5Bexp_year%5D=%7B%7B%24card_exp_year%7D%7D&payment_method_data%5Bcard%5D%5Bcvc%5D=%7B%7B%24card_cvc%7D%7D&payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic&payment_method_options%5Bcard%5D%5Bnetwork%5D=visa&metadata%5Border_id%5D=probe_proxy_mandate_001&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_attempt"
@@ -1705,7 +1714,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=&return_url=https%3A%2F%2Fexample.com%2Frecurring-return&confirm=true&payment_method=probe_pm_token&customer=cust_probe_123&capture_method=automatic&off_session=true&expand%5B0%5D=latest_charge"
@@ -1714,7 +1723,8 @@
     },
     "recurring_revoke": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "mandate_revoke flow not supported by dummy connector"
       }
     },
     "refund": {
@@ -1736,7 +1746,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&payment_intent=probe_connector_txn_001&metadata%5Border_id%5D=probe_refund_001&metadata%5Bis_refund_id_as_reference%5D=true"
@@ -1757,7 +1767,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": null
@@ -1766,7 +1776,8 @@
     },
     "reverse": {
       "default": {
-        "status": "not_implemented"
+        "status": "not_supported",
+        "error": "void_post_capture flow not supported by dummy connector"
       }
     },
     "setup_recurring": {
@@ -1806,7 +1817,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "confirm=true&usage=off_session&return_url=https%3A%2F%2Fexample.com%2Fmandate-return&payment_method_data%5Btype%5D=card&payment_method_data%5Bcard%5D%5Bnumber%5D=4111111111111111&payment_method_data%5Bcard%5D%5Bexp_month%5D=03&payment_method_data%5Bcard%5D%5Bexp_year%5D=2030&payment_method_data%5Bcard%5D%5Bcvc%5D=737&payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic&metadata%5Border_id%5D=probe_mandate_001&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_attempt"
@@ -1835,7 +1846,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_tokenized_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&payment_method=pm_1AbcXyzStripeTestToken&capture_method=automatic&expand%5B0%5D=latest_charge"
@@ -1875,7 +1886,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "type=card&card%5Bnumber%5D=4111111111111111&card%5Bexp_month%5D=03&card%5Bexp_year%5D=2030&card%5Bcvc%5D=737"
@@ -1901,7 +1912,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15",
+            "dummy-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": ""

@@ -1868,12 +1868,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let bank_name = bank_name
                     .map(|bank_name| DummyBankNames::try_from(&bank_name))
                     .transpose()?;
-                Ok(Self::BankRedirect(
-                    DummyBankRedirectData::DummyPrezelewy24(Box::new(DummyPrezelewy24 {
+                Ok(Self::BankRedirect(DummyBankRedirectData::DummyPrezelewy24(
+                    Box::new(DummyPrezelewy24 {
                         payment_method_data_type,
                         bank_name,
-                    })),
-                ))
+                    }),
+                )))
             }
             BankRedirectData::Trustly { country } => Ok(Self::BankRedirect(
                 DummyBankRedirectData::DummyTrustly(Box::new(DummyTrustly {
@@ -2267,9 +2267,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-fn get_dummy_overcapture_request(
-    enable_overcapture: bool,
-) -> Option<DummyRequestOvercaptureBool> {
+fn get_dummy_overcapture_request(enable_overcapture: bool) -> Option<DummyRequestOvercaptureBool> {
     match enable_overcapture {
         true => Some(DummyRequestOvercaptureBool::IfAvailable),
         false => None,
@@ -2786,25 +2784,26 @@ where
             let connector_mandate_id = Some(payment_method_id.clone().expose());
             let payment_method_id = Some(payment_method_id.expose());
 
-            let _mandate_metadata: Option<Secret<Value>> =
-                match item.router_data.request.get_split_payment_data() {
-                    Some(
-                        domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
-                            dummy_split_data,
-                        ),
-                    ) => Some(Secret::new(serde_json::json!({
-                        "transfer_account_id": dummy_split_data.transfer_account_id,
-                        "charge_type": dummy_split_data.charge_type,
-                        "application_fees": dummy_split_data.application_fees
-}))),
-                    _ => None
-};
+            let _mandate_metadata: Option<Secret<Value>> = match item
+                .router_data
+                .request
+                .get_split_payment_data()
+            {
+                Some(domain_types::connector_types::SplitPaymentsRequest::StripeSplitPayment(
+                    dummy_split_data,
+                )) => Some(Secret::new(serde_json::json!({
+                                        "transfer_account_id": dummy_split_data.transfer_account_id,
+                                        "charge_type": dummy_split_data.charge_type,
+                                        "application_fees": dummy_split_data.application_fees
+                }))),
+                _ => None,
+            };
 
             MandateReference {
                 connector_mandate_id,
                 payment_method_id,
-                connector_mandate_request_reference_id: None
-}
+                connector_mandate_request_reference_id: None,
+            }
         });
 
         //Note: we might have to call retrieve_setup_intent to get the network_transaction_id in case its not sent in PaymentIntentResponse
@@ -4675,8 +4674,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     ))),
                 ),
                 payment_method_data::BankTransferData::SepaBankTransfer {} => {
-                    Ok(Self::BankTransfer(
-                        DummyBankTransferData::SepaBankTransfer(Box::new(SepaBankTransferData {
+                    Ok(Self::BankTransfer(DummyBankTransferData::SepaBankTransfer(
+                        Box::new(SepaBankTransferData {
                             payment_method_data_type: DummyPaymentMethodType::CustomerBalance,
                             bank_transfer_type: BankTransferType::EuBankTransfer,
                             balance_funding_type: BankTransferType::BankTransfers,
@@ -4685,8 +4684,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 .router_data
                                 .resource_common_data
                                 .get_billing_country()?,
-                        })),
-                    ))
+                        }),
+                    )))
                 }
                 payment_method_data::BankTransferData::BacsBankTransfer { .. } => {
                     Ok(Self::BankTransfer(

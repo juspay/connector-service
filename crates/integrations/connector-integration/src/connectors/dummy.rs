@@ -49,14 +49,13 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as dummy, CancelRequest, CaptureRequest, CreateConnectorCustomerRequest,
-    CreateConnectorCustomerResponse, PaymentIncrementalAuthRequest, PaymentIntentRequest,
+    CreateConnectorCustomerResponse, DummyClientAuthRequest, DummyClientAuthResponse,
+    DummyRefundRequest, DummyTokenResponse, PaymentIncrementalAuthRequest, PaymentIntentRequest,
     PaymentIntentRequest as RepeatPaymentRequest,
     PaymentIntentResponse as PaymentIncrementalAuthResponse, PaymentSyncResponse,
     PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,
     PaymentsCaptureResponse, PaymentsVoidResponse, RefundResponse,
-    RefundResponse as RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,
-    DummyClientAuthRequest, DummyClientAuthResponse, DummyRefundRequest, DummyTokenResponse,
-    TokenRequest,
+    RefundResponse as RefundSyncResponse, SetupMandateRequest, SetupMandateResponse, TokenRequest,
 };
 
 use super::macros;
