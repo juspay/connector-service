@@ -2104,12 +2104,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // (authorizationOptions / actionList / actionTokenTypes / capture)
                 // are sent alongside paymentType.name = "check". secCode "WEB" is
                 // the standard online-consumer-initiated SEC code for ACH debits.
-                let sec_code = CybersourceConnectorMetadataObject::try_from(
+                let sec_code = match CybersourceConnectorMetadataObject::try_from(
                     &item.router_data.request.metadata.clone(),
                 )
                 .ok()
                 .and_then(|m| m.sec_code)
-                .unwrap_or_else(|| String::from("WEB"));
+                {
+                    Some(code) if matches!(code.as_str(), "WEB" | "CCD" | "PPD" | "TEL") => code,
+                    Some(_invalid) => {
+                        return Err(error_stack::report!(
+                            IntegrationError::InvalidDataFormat {
+                                field_name:
+                                    "metadata.sec_code: must be one of WEB, CCD, PPD, TEL",
+                                context: Default::default(),
+                            }
+                        ));
+                    }
+                    None => String::from("WEB"),
+                };
 
                 let processing_information = ProcessingInformation {
                     action_list: None,
