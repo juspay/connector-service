@@ -187,7 +187,7 @@ Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other
 | [Redsys](connectors/redsys.md) | ✓ | ✓ | ⚠ | ✓ | x | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ⚠ | x | ✓ | x | ⚠ | ⚠ | x | x | x | ✓ | ✓ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Revolut](connectors/revolut.md) | ✓ | ⚠ | x | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | x | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ |
 | [Revolv3](connectors/revolv3.md) | x | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | x | x | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Sanlam](connectors/sanlam.md) | ⚠ | x | x | ⚠ | x | ⚠ | x | ⚠ | ⚠ | x | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | ⚠ | x | x | x | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ |
+| [Sanlam](connectors/sanlam.md) | ⚠ | x | x | ⚠ | x | ⚠ | x | ⚠ | ⚠ | x | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | ⚠ | x | x | x | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ✓ | ✓ |
 | [Shift4](connectors/shift4.md) | ✓ | x | x | ✓ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ✓ | ⚠ | ⚠ | x | x | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Silverflow](connectors/silverflow.md) | ✓ | ✓ | x | ✓ | x | ✓ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | ⚠ | ⚠ | x | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Stax](connectors/stax.md) | ✓ | ✓ | x | ✓ | x | ✓ | x | ⚠ | ? | ✓ | ✓ | ? | ? | ✓ | x | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ |
@@ -198,7 +198,7 @@ Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other
 | [Trustpayments](connectors/trustpayments.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ⚠ | x | ✓ | ✓ | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Tsys](connectors/tsys.md) | ✓ | ✓ | x | ✓ | x | ✓ | x | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | x | ✓ | x | x | ⚠ | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Volt](connectors/volt.md) | ✓ | ⚠ | x | x | x | ✓ | x | ⚠ | ⚠ | x | ⚠ | x | ⚠ | ⚠ | ⚠ | x | x | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ |
-| [Wellsfargo](connectors/wellsfargo.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | x | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ |
+| [Wellsfargo](connectors/wellsfargo.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | x | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Worldpay](connectors/worldpay.md) | ✓ | ✓ | ⚠ | ✓ | x | ✓ | ✓ | ⚠ | ⚠ | ? | ⚠ | x | ⚠ | ✓ | x | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ? | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ | ✓ | ✓ | ✓ | x | ✓ | ✓ | ⚠ | ⚠ | x | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | x | ⚠ | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | x | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | ⚠ |

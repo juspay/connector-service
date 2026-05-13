@@ -5,14 +5,15 @@ use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::payment_method_data::Card as DomainCard;
 use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
         WellsfargoClientAuthenticationResponse as WellsfargoClientAuthenticationResponseDomain,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, SetupMandateRequestData,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ErrorResponse},
@@ -1818,14 +1819,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
 
-        let return_url = router_data
-            .resource_common_data
-            .return_url
-            .clone()
-            .ok_or(IntegrationError::MissingRequiredField {
+        let return_url = router_data.resource_common_data.return_url.clone().ok_or(
+            IntegrationError::MissingRequiredField {
                 field_name: "return_url",
                 context: Default::default(),
-            })?;
+            },
+        )?;
 
         let target_origin = url::Url::parse(&return_url)
             .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or_default()))

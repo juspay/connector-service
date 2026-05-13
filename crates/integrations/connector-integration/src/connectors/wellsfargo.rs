@@ -11,7 +11,9 @@ use common_utils::{
     types::StringMajorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenRequestData, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
@@ -844,9 +846,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ClientAuthenticationTokenRequestData,
             PaymentsResponseData,
         >::try_from(response_router_data)
-        .map_err(|e| {
-            e.change_context(ConnectorError::response_handling_failed(res.status_code))
-        })?;
+        .map_err(|e| e.change_context(ConnectorError::response_handling_failed(res.status_code)))?;
 
         Ok(result)
     }

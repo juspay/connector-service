@@ -518,8 +518,8 @@
     },
     "create_client_authentication_token": {
       "default": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: client_authentication_token flow for wellsfargo"
+        "status": "error",
+        "error": "Stuck on field: return_url — Missing required field: return_url"
       }
     },
     "create_customer": {

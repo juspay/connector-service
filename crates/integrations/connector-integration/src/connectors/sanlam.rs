@@ -13,9 +13,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{
-        ConnectorWebhookSecrets, EventContext, EventType, PaymentFlowData,
-        PaymentWebhookReference, PaymentsAuthorizeData, PaymentsResponseData, RequestDetails,
-        WebhookDetailsResponse, WebhookResourceReference,
+        ConnectorWebhookSecrets, EventContext, EventType, PaymentFlowData, PaymentWebhookReference,
+        PaymentsAuthorizeData, PaymentsResponseData, RequestDetails, WebhookDetailsResponse,
+        WebhookResourceReference,
     },
     errors::{IntegrationError, IntegrationErrorContext, WebhookError},
     payment_method_data::PaymentMethodDataTypes,
