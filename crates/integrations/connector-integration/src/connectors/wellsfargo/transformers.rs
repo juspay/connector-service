@@ -1,15 +1,19 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, CardNetwork, RefundStatus};
 use common_utils::consts;
-use domain_types::errors::{ConnectorError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError, IntegrationErrorContext};
 use domain_types::payment_method_data::Card as DomainCard;
 use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
-    connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, SetupMandateRequestData,
+        ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
+        ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        WellsfargoClientAuthenticationResponse as WellsfargoClientAuthenticationResponseDomain,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ErrorResponse},
@@ -1786,5 +1790,186 @@ pub fn get_error_reason(
         (None, Some(details), None) => Some(details),
         (None, None, Some(avs_message)) => Some(avs_message),
         (None, None, None) => None,
+    }
+}
+
+// ---- ClientAuthenticationToken flow types ----
+
+#[derive(Debug, Serialize)]
+pub enum WellsfargoFlexCardNetwork {
+    #[serde(rename = "VISA")]
+    Visa,
+    #[serde(rename = "MASTERCARD")]
+    Mastercard,
+    #[serde(rename = "AMEX")]
+    AmericanExpress,
+    #[serde(rename = "DISCOVER")]
+    Discover,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WellsfargoClientAuthRequest {
+    pub target_origins: Vec<String>,
+    pub client_version: String,
+    pub allowed_card_networks: Option<Vec<WellsfargoFlexCardNetwork>>,
+    pub fields: serde_json::Value,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        WellsFargoRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for WellsfargoClientAuthRequest
+{
+    type Error = Report<IntegrationError>;
+    fn try_from(
+        item: WellsFargoRouterData<
+            RouterDataV2<
+                ClientAuthenticationToken,
+                PaymentFlowData,
+                ClientAuthenticationTokenRequestData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+
+        let return_url = router_data
+            .resource_common_data
+            .return_url
+            .clone()
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "Wellsfargo Flex Microform requires a return_url to set target_origins for the session"
+                            .to_string(),
+                    ),
+                    doc_url: Some(
+                        "https://developer.cybersource.com/docs/cybs/en-us/digital-accept-flex/developer/all/rest/digital-accept-flex/microform-integ-v2.html"
+                            .to_string(),
+                    ),
+                    ..Default::default()
+                },
+            })?;
+
+        let target_origin = url::Url::parse(&return_url)
+            .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or_default()))
+            .unwrap_or(return_url);
+
+        Ok(Self {
+            target_origins: vec![target_origin],
+            client_version: "0.11".to_string(),
+            allowed_card_networks: Some(vec![
+                WellsfargoFlexCardNetwork::Visa,
+                WellsfargoFlexCardNetwork::Mastercard,
+                WellsfargoFlexCardNetwork::AmericanExpress,
+                WellsfargoFlexCardNetwork::Discover,
+            ]),
+            fields: serde_json::json!({
+                "paymentInformation": {
+                    "card": {
+                        "number": {},
+                        "securityCode": {}
+                    }
+                }
+            }),
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct WellsfargoClientAuthResponse {
+    pub capture_context: String,
+}
+
+impl<'de> Deserialize<'de> for WellsfargoClientAuthResponse {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct WellsfargoClientAuthVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for WellsfargoClientAuthVisitor {
+            type Value = WellsfargoClientAuthResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a JWT string or a JSON object with captureContext")
+            }
+
+            fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                Ok(WellsfargoClientAuthResponse {
+                    capture_context: v.to_string(),
+                })
+            }
+
+            fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Self::Value, E> {
+                Ok(WellsfargoClientAuthResponse {
+                    capture_context: v,
+                })
+            }
+
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Self::Value, A::Error> {
+                let mut capture_context = None;
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "captureContext" => capture_context = Some(map.next_value()?),
+                        _ => {
+                            let _: serde_json::Value = map.next_value()?;
+                        }
+                    }
+                }
+                let capture_context = capture_context
+                    .ok_or_else(|| serde::de::Error::missing_field("captureContext"))?;
+                Ok(WellsfargoClientAuthResponse { capture_context })
+            }
+        }
+
+        deserializer.deserialize_any(WellsfargoClientAuthVisitor)
+    }
+}
+
+impl TryFrom<ResponseRouterData<WellsfargoClientAuthResponse, Self>>
+    for RouterDataV2<
+        ClientAuthenticationToken,
+        PaymentFlowData,
+        ClientAuthenticationTokenRequestData,
+        PaymentsResponseData,
+    >
+{
+    type Error = Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<WellsfargoClientAuthResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        let capture_context = Secret::new(response.capture_context);
+
+        let session_data = ClientAuthenticationTokenData::ConnectorSpecific(Box::new(
+            ConnectorSpecificClientAuthenticationResponse::Wellsfargo(
+                WellsfargoClientAuthenticationResponseDomain { capture_context },
+            ),
+        ));
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::ClientAuthenticationTokenResponse {
+                session_data,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
     }
 }
