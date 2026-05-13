@@ -60,6 +60,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> GetS
     }
 }
 
+// Field order MATTERS: TransIT XSD is sequence-validated. Order verified against
+// the dev portal MOTO sample and a live `<SaleResponse><responseCode>F9901`
+// rejection that pinpointed `<cardDataSource>` having to precede `<developerID>`.
+// Operation-specific fields go between transactionKey and developerID, which
+// always sits at the end of the auth triple.
 #[derive(Debug, Serialize)]
 pub struct TsysXmlAuthorizeBody<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
@@ -67,8 +72,6 @@ pub struct TsysXmlAuthorizeBody<T: PaymentMethodDataTypes + Debug + Sync + Send 
     pub device_id: Secret<String>,
     #[serde(rename = "transactionKey")]
     pub transaction_key: Secret<String>,
-    #[serde(rename = "developerID")]
-    pub developer_id: Secret<String>,
     #[serde(rename = "cardDataSource")]
     pub card_data_source: TsysXmlCardDataSource,
     #[serde(rename = "transactionAmount")]
@@ -86,6 +89,8 @@ pub struct TsysXmlAuthorizeBody<T: PaymentMethodDataTypes + Debug + Sync + Send 
     pub zip: Option<Secret<String>>,
     #[serde(rename = "externalReferenceID", skip_serializing_if = "Option::is_none")]
     pub external_reference_id: Option<String>,
+    #[serde(rename = "developerID")]
+    pub developer_id: Secret<String>,
     /// Phantom marker so the generic `T` is preserved on the struct without leaking
     /// into the serialized payload.
     #[serde(skip)]
@@ -104,10 +109,10 @@ pub struct TsysXmlTransactionInquiryRequest {
     pub device_id: Secret<String>,
     #[serde(rename = "transactionKey")]
     pub transaction_key: Secret<String>,
-    #[serde(rename = "developerID")]
-    pub developer_id: Secret<String>,
     #[serde(rename = "transactionID")]
     pub transaction_id: String,
+    #[serde(rename = "developerID")]
+    pub developer_id: Secret<String>,
 }
 
 impl GetSoapXml for TsysXmlTransactionInquiryRequest {
@@ -143,8 +148,6 @@ pub struct TsysXmlCaptureRequest {
     pub device_id: Secret<String>,
     #[serde(rename = "transactionKey")]
     pub transaction_key: Secret<String>,
-    #[serde(rename = "developerID")]
-    pub developer_id: Secret<String>,
     #[serde(rename = "transactionID")]
     pub transaction_id: String,
     #[serde(rename = "transactionAmount")]
@@ -155,6 +158,8 @@ pub struct TsysXmlCaptureRequest {
     /// Total expected capture count for this auth. Stubbed `None` for PR-1.
     #[serde(rename = "paymentCount", skip_serializing_if = "Option::is_none")]
     pub payment_count: Option<u32>,
+    #[serde(rename = "developerID")]
+    pub developer_id: Secret<String>,
 }
 
 impl GetSoapXml for TsysXmlCaptureRequest {
@@ -190,8 +195,6 @@ pub struct TsysXmlReturnRequest {
     pub device_id: Secret<String>,
     #[serde(rename = "transactionKey")]
     pub transaction_key: Secret<String>,
-    #[serde(rename = "developerID")]
-    pub developer_id: Secret<String>,
     /// Reference to the original capture's `<transactionID>`. Present for
     /// referenced refunds; absent for unreferenced refunds.
     #[serde(rename = "transactionID", skip_serializing_if = "Option::is_none")]
@@ -199,6 +202,10 @@ pub struct TsysXmlReturnRequest {
     /// Origin of card data — only sent for unreferenced refunds.
     #[serde(rename = "cardDataSource", skip_serializing_if = "Option::is_none")]
     pub card_data_source: Option<TsysXmlCardDataSource>,
+    /// Refund amount in major units. Always emitted in PR-1; "omit for full
+    /// referenced refunds" is a TODO follow-up.
+    #[serde(rename = "transactionAmount", skip_serializing_if = "Option::is_none")]
+    pub transaction_amount: Option<StringMajorUnit>,
     /// PAN — only present for unreferenced refunds.
     #[serde(rename = "cardNumber", skip_serializing_if = "Option::is_none")]
     pub card_number: Option<Secret<String>>,
@@ -209,10 +216,8 @@ pub struct TsysXmlReturnRequest {
     /// require it).
     #[serde(rename = "cvv2", skip_serializing_if = "Option::is_none")]
     pub cvv2: Option<Secret<String>>,
-    /// Refund amount in major units. Always emitted in PR-1; "omit for full
-    /// referenced refunds" is a TODO follow-up.
-    #[serde(rename = "transactionAmount", skip_serializing_if = "Option::is_none")]
-    pub transaction_amount: Option<StringMajorUnit>,
+    #[serde(rename = "developerID")]
+    pub developer_id: Secret<String>,
 }
 
 impl GetSoapXml for TsysXmlReturnRequest {
@@ -241,13 +246,13 @@ pub struct TsysXmlVoidRequest {
     pub device_id: Secret<String>,
     #[serde(rename = "transactionKey")]
     pub transaction_key: Secret<String>,
-    #[serde(rename = "developerID")]
-    pub developer_id: Secret<String>,
     #[serde(rename = "transactionID")]
     pub transaction_id: String,
     /// Optional — present for a partial void, omitted for a full void.
     #[serde(rename = "transactionAmount", skip_serializing_if = "Option::is_none")]
     pub transaction_amount: Option<StringMajorUnit>,
+    #[serde(rename = "developerID")]
+    pub developer_id: Secret<String>,
 }
 
 impl GetSoapXml for TsysXmlVoidRequest {
