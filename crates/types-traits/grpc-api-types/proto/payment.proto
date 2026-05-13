@@ -4214,18 +4214,18 @@ message TwocTwopPacoConfig {
   // PACO multi-merchant scoping key, present in every JOSE request body.
   SecretString office_id = 2;
   // 32-hex-char JWE key id, environment-specific (UAT vs PRD).
-  SecretString paco_kid = 4;
+  SecretString paco_kid = 3;
   // Merchant RSA private key (PEM) — signs the request JWS (PS256).
-  SecretString merchant_signing_private_key = 5;
+  SecretString merchant_signing_private_key = 4;
   // Merchant RSA private key (PEM) — decrypts the response JWE (RSA-OAEP).
-  SecretString merchant_encryption_private_key = 6;
+  SecretString merchant_encryption_private_key = 5;
   // PACO RSA public key (PEM) — verifies the response JWS.
-  SecretString paco_signing_public_key = 7;
+  SecretString paco_signing_public_key = 6;
   // PACO RSA public key (PEM) — encrypts the request JWE.
-  SecretString paco_encryption_public_key = 8;
+  SecretString paco_encryption_public_key = 7;
   // Expected `aud` claim on JOSE response JWTs. Defaults to the access_token
   // when None. Set if PACO emits a different aud on a specific office.
-  optional SecretString response_audience = 10;
+  optional SecretString response_audience = 8;
   optional string base_url = 50;
 }
 
