@@ -1189,6 +1189,7 @@ dependencies = [
  "domain_types",
  "grpc-api-types",
  "hyperswitch_masking",
+ "interfaces",
  "prost 0.14.3",
  "prost-types",
  "serde",

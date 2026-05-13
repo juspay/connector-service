@@ -171,29 +171,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         use connector_types::AuthenticationStep;
 
         if auth_type == common_enums::AuthenticationType::ThreeDs
-            && payment_method == common_enums::PaymentMethod::Card {
+            && payment_method == common_enums::PaymentMethod::Card
+        {
             match (has_redirect_params, completed_step) {
                 // Initial request: start with PreAuthenticate (DDC setup)
                 (None, None) => AuthenticationStep::PreAuthenticate,
-                
+
                 // PreAuth completed inline (frictionless/exempt): run Authenticate
-                (None, Some(AuthenticationStep::PreAuthenticate)) => AuthenticationStep::Authenticate,
-                
+                (None, Some(AuthenticationStep::PreAuthenticate)) => {
+                    AuthenticationStep::Authenticate
+                }
+
                 // Authenticate completed inline (frictionless): proceed to Authorize
                 (None, Some(AuthenticationStep::Authenticate)) => AuthenticationStep::Authorize,
-                
+
                 // DDC callback (has params): run Authenticate to initiate challenge
                 (Some(true), None) => AuthenticationStep::Authenticate,
-                
+
                 // Challenge callback (no params): proceed to Authorize
                 (Some(false), None) => AuthenticationStep::Authorize,
-                
+
                 // Fallback: proceed to Authorize
                 _ => AuthenticationStep::Authorize,
             }
         } else {
             AuthenticationStep::Authorize
-        }        
+        }
     }
 }
 

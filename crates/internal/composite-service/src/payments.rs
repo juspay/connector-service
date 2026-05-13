@@ -3,7 +3,6 @@ use domain_types::{
     connector_types::{ConnectorEnum, ServerAuthenticationTokenResponseData},
     utils::ForeignTryFrom as _,
 };
-use interfaces::connector_types::AuthenticationStep;
 use grpc_api_types::payments::{
     composite_payment_service_server::CompositePaymentService,
     composite_refund_service_server::CompositeRefundService,
@@ -27,6 +26,7 @@ use grpc_api_types::payments::{
     PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse, RefundServiceGetRequest,
 };
+use interfaces::connector_types::AuthenticationStep;
 
 use crate::transformers::ForeignFrom;
 use crate::utils::{
@@ -432,9 +432,10 @@ where
         let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(&connector);
 
         // Derive redirect state from proto redirection_response
-        let has_redirect_params: Option<bool> = payload.redirection_response.as_ref().map(|r| {
-            r.params.as_ref().map(|p| !p.is_empty()).unwrap_or(false)
-        });
+        let has_redirect_params: Option<bool> = payload
+            .redirection_response
+            .as_ref()
+            .map(|r| r.params.as_ref().map(|p| !p.is_empty()).unwrap_or(false));
 
         let mut pre_auth_response_opt = None;
         let mut authn_response_opt = None;
@@ -464,7 +465,7 @@ where
                         } else {
                             CompositeStatus::Completed
                         };
-                        
+
                         return Ok(tonic::Response::new(CompositeAuthorizeResponse {
                             access_token_response,
                             create_customer_response,
@@ -498,7 +499,7 @@ where
                         } else {
                             CompositeStatus::Completed
                         };
-                        
+
                         return Ok(tonic::Response::new(CompositeAuthorizeResponse {
                             access_token_response,
                             create_customer_response,
@@ -516,7 +517,12 @@ where
 
                 AuthenticationStep::PostAuthenticate => {
                     let post_auth_response = self
-                        .post_authenticate(&payload, authn_response_opt.as_ref(), &metadata, &extensions)
+                        .post_authenticate(
+                            &payload,
+                            authn_response_opt.as_ref(),
+                            &metadata,
+                            &extensions,
+                        )
                         .await?;
 
                     post_authn_response_opt = Some(post_auth_response);
