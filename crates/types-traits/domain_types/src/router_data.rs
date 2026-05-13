@@ -609,6 +609,12 @@ pub enum ConnectorSpecificConfig {
         developer_id: Secret<String>,
         base_url: Option<String>,
     },
+    TsysXml {
+        device_id: Secret<String>,
+        transaction_key: Secret<String>,
+        developer_id: Secret<String>,
+        base_url: Option<String>,
+    },
     Wellsfargo {
         api_key: Secret<String>,
         merchant_account: Secret<String>,
@@ -963,6 +969,11 @@ impl ConnectorSpecificConfig {
                 site_reference
             },
             Tsys {
+                device_id,
+                transaction_key,
+                developer_id
+            },
+            TsysXml {
                 device_id,
                 transaction_key,
                 developer_id
@@ -1368,6 +1379,11 @@ impl ConnectorSpecificConfig {
                     site_reference
                 },
                 Tsys {
+                    device_id,
+                    transaction_key,
+                    developer_id
+                },
+                TsysXml {
                     device_id,
                     transaction_key,
                     developer_id
@@ -1997,6 +2013,12 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: imerchantsolutions.api_key.ok_or_else(err)?,
                 merchant_id: imerchantsolutions.merchant_id,
                 base_url: imerchantsolutions.base_url,
+            }),
+            AuthType::TsysXml(tsys_xml) => Ok(Self::TsysXml {
+                device_id: tsys_xml.device_id.ok_or_else(err)?,
+                transaction_key: tsys_xml.transaction_key.ok_or_else(err)?,
+                developer_id: tsys_xml.developer_id.ok_or_else(err)?,
+                base_url: tsys_xml.base_url,
             }),
         }
     }
@@ -3058,6 +3080,19 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     juspay_kid: key1.clone(),
                     merchant_private_key: api_secret.clone(),
                     juspay_public_key: key2.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::TsysXml => match auth {
+                ConnectorAuthType::SignatureKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                } => Ok(Self::TsysXml {
+                    device_id: key1.clone(),
+                    transaction_key: api_key.clone(),
+                    developer_id: api_secret.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),
