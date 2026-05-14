@@ -163,12 +163,7 @@ pub fn parse_metadata(
         |e: Report<domain_types::errors::IntegrationError>| {
             common_utils::errors::ErrorSwitch::switch(e.current_context())
         },
-    )?.as_payment().ok_or_else(|| IntegrationError {
-        error_message: "Unsupported connector variant".to_string(),
-        error_code: "UNSUPPORTED_CONNECTOR_VARIANT".to_string(),
-        suggested_action: None,
-        doc_url: None,
-    })?;
+    )?;
 
     // 3. Convert proto config to domain ConnectorSpecificConfig
     let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
@@ -221,12 +216,7 @@ pub fn parse_webhook_metadata(
             suggested_action: None,
             doc_url: None,
         },
-    )?.as_payment().ok_or_else(|| IntegrationError {
-        error_message: "Unsupported connector variant".to_string(),
-        error_code: "UNSUPPORTED_CONNECTOR_VARIANT".to_string(),
-        suggested_action: None,
-        doc_url: None,
-    })?;
+    )?;
 
     // For webhook flows, connector config is optional.
     let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone()).ok();

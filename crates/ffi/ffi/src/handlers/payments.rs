@@ -29,18 +29,27 @@ fn get_config(
 /// - `$res_type`  — protobuf response type (e.g. `PaymentServiceAuthorizeResponse`)
 /// - `$req_svc`   — service function for building the connector HTTP request
 /// - `$res_svc`   — service function for parsing the connector HTTP response
+/// - `$connector_data_ty` — connector data type (ConnectorData or SurchargeConnectorData)
 macro_rules! impl_flow_handlers {
-    ($flow:ident, $req_type:ty, $res_type:ty, $req_svc:ident, $res_svc:ident) => {
+    ($flow:ident, $req_type:ty, $res_type:ty, $req_svc:ident, $res_svc:ident, $connector_data_ty:ty) => {
         paste::paste! {
             pub fn [<$flow _req_handler>](
                 request: FfiRequestData<$req_type>,
                 environment: Option<Environment>,
             ) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::IntegrationError> {
                 let config = get_config(environment)?;
-                $req_svc::<DefaultPCIHolder>(
+                let connector_data: $connector_data_ty =
+                    connector_integration::types::ConnectorDataProvider::from_connector_variant(&request.extracted_metadata.connector)
+                        .ok_or_else(|| IntegrationError {
+                            error_message: "Invalid connector type for this flow".to_string(),
+                            error_code: "INVALID_CONNECTOR_TYPE".to_string(),
+                            suggested_action: None,
+                            doc_url: None,
+                        })?;
+                $req_svc(
                     request.payload,
                     &config,
-                    request.extracted_metadata.connector,
+                    connector_data.connector_name,
                     request
                         .extracted_metadata
                         .connector_config
@@ -65,10 +74,18 @@ macro_rules! impl_flow_handlers {
                     http_status_code: None,
                     error_info: None,
                 })?;
-                $res_svc::<DefaultPCIHolder>(
+                let connector_data: $connector_data_ty =
+                    connector_integration::types::ConnectorDataProvider::from_connector_variant(&request.extracted_metadata.connector)
+                        .ok_or_else(|| ConnectorError {
+                            error_message: "Invalid connector type for this flow".to_string(),
+                            error_code: "INVALID_CONNECTOR_TYPE".to_string(),
+                            http_status_code: None,
+                            error_info: None,
+                        })?;
+                $res_svc(
                     request.payload,
                     &config,
-                    request.extracted_metadata.connector,
+                    connector_data.connector_name,
                     request
                         .extracted_metadata
                         .connector_config
