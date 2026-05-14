@@ -842,16 +842,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 // VoidPC Response
-// Datatrans cancel returns 200 with JSON body or 204 No Content on success.
-// Fields are optional to handle both cases.
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DatatransVoidPCResponse {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub transaction_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub acquirer_authorization_code: Option<String>,
-}
+// Datatrans cancel endpoint returns 204 No Content with an empty body on success;
+// it does not echo a transactionId, acquirerAuthorizationCode, or status field.
+// Error responses (4xx/5xx) are handled separately by `build_error_response`.
+// The framework parses an empty body as `{}`, which deserializes to this empty struct.
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct DatatransVoidPCResponse {}
 
 impl TryFrom<ResponseRouterData<DatatransVoidPCResponse, Self>>
     for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
@@ -861,16 +857,11 @@ impl TryFrom<ResponseRouterData<DatatransVoidPCResponse, Self>>
     fn try_from(
         item: ResponseRouterData<DatatransVoidPCResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        // Use transaction_id from response if available, otherwise fall back to request
-        let transaction_id = item
-            .response
-            .transaction_id
-            .clone()
-            .unwrap_or_else(|| item.router_data.request.connector_transaction_id.clone());
-
         let payments_response_data = PaymentsResponseData::PostCaptureVoidResponse {
             post_capture_void_status: PostCaptureVoidStatus::Succeeded,
-            connector_reference_id: Some(transaction_id),
+            connector_reference_id: Some(
+                item.router_data.request.connector_transaction_id.clone(),
+            ),
             description: None,
             status_code: item.http_code,
         };
