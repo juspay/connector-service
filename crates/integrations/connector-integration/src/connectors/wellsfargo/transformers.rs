@@ -1,7 +1,7 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::consts;
-use domain_types::errors::{ConnectorError, IntegrationError};
+use domain_types::errors::{ConnectorError, IntegrationError, IntegrationErrorContext};
 use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::{
@@ -1880,18 +1880,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .resource_common_data
             .return_url
             .clone()
-            .unwrap_or_else(|| "https://hyperswitch.io".to_string());
+            .ok_or(IntegrationError::MissingRequiredField {
+                field_name: "return_url",
+                context: Default::default(),
+            })?;
 
-        // Extract the origin from the return_url for target_origins
-        let target_origin = url::Url::parse(&return_url)
-            .map(|u| {
-                format!(
-                    "{}://{}",
-                    u.scheme(),
-                    u.host_str().unwrap_or("hyperswitch.io")
-                )
-            })
-            .unwrap_or_else(|_| "https://hyperswitch.io".to_string());
+        let parsed_url = url::Url::parse(&return_url).map_err(|e| {
+            IntegrationError::UrlParsingFailed {
+                context: IntegrationErrorContext {
+                    additional_context: Some(format!("return_url: {e}")),
+                    ..Default::default()
+                },
+            }
+        })?;
+        let target_origin = format!(
+            "{}://{}",
+            parsed_url.scheme(),
+            parsed_url
+                .host_str()
+                .ok_or(IntegrationError::MissingRequiredField {
+                    field_name: "return_url",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("URL missing host".to_string()),
+                        ..Default::default()
+                    },
+                })?
+        );
 
         Ok(Self {
             target_origins: vec![target_origin],
