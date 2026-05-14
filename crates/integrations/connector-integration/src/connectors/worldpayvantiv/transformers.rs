@@ -2696,16 +2696,15 @@ fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
     )
 }
 
-// Extract MMYY expDate string (Vantiv format) from SetupMandate payment method
-// data. Returns None for non-card payment methods; RepeatPayment will then
-// reject the request.
-fn extract_exp_date_mmyy<T: PaymentMethodDataTypes>(pmd: &PaymentMethodData<T>) -> Option<String> {
+fn extract_exp_date_mmyy<T: PaymentMethodDataTypes>(
+    pmd: &PaymentMethodData<T>,
+) -> Result<Option<String>, Report<IntegrationError>> {
     match pmd {
-        PaymentMethodData::Card(card_data) => card_data
-            .get_expiry_date_as_mmyy()
-            .ok()
-            .map(|exp| exp.expose()),
-        _ => None,
+        PaymentMethodData::Card(card_data) => {
+            let exp = card_data.get_expiry_date_as_mmyy()?;
+            Ok(Some(exp.expose()))
+        }
+        _ => Ok(None),
     }
 }
 
@@ -2872,7 +2871,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<CnpOnlineResponse, Self>) -> Result<Self, Self::Error> {
         let auth_response = match item.response.authorization_response.as_ref() {
-            Some(r) => r,
+            Some(authorization_response) => authorization_response,
             None => {
                 let error_response = ErrorResponse {
                     code: item.response.response_code,
@@ -2928,7 +2927,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let cnp_token = auth_response
             .token_response
             .as_ref()
-            .map(|t| t.cnp_token.clone().expose())
+            .map(|token_resp| token_resp.cnp_token.clone().expose())
             .ok_or_else(|| {
                 error_stack::report!(
                     ConnectorError::response_deserialization_failed_with_context(
@@ -2957,7 +2956,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // RepeatPayment splits on `|` to recover them. NTI intentionally does
         // NOT reuse `connector_mandate_request_reference_id`, which is the
         // merchant's own mandate-setup reference — not an NTI carrier.
-        let packed_exp_date = extract_exp_date_mmyy(&item.router_data.request.payment_method_data);
+        let packed_exp_date = extract_exp_date_mmyy(&item.router_data.request.payment_method_data)
+            .map_err(|e| {
+                e.change_context(ConnectorError::response_handling_failed(item.http_code))
+            })?;
         let connector_mandate_id = match (packed_exp_date.as_deref(), network_txn_id.as_deref()) {
             (Some(exp), Some(nti)) if !exp.is_empty() && !nti.is_empty() => {
                 format!("{cnp_token}|{exp}|{nti}")
@@ -3047,8 +3049,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             field_name: "connector_mandate_id",
                             context: Default::default(),
                         })?;
+                    if !packed_mandate_id.contains('|') {
+                        return Err(IntegrationError::InvalidDataFormat {
+                            field_name: "connector_mandate_id",
+                            context: IntegrationErrorContext {
+                                additional_context: Some(format!(
+                                    "Expected pipe-delimited format \"<cnpToken>|<MMYY>[|<NTI>]\"; \
+                                     received {:?}",
+                                    packed_mandate_id
+                                )),
+                                ..Default::default()
+                            },
+                        }
+                        .into());
+                    }
                     let mut parts = packed_mandate_id.splitn(3, '|');
-                    let cnp_token = parts.next().unwrap_or_default().to_owned();
+                    let cnp_token = parts
+                        .next()
+                        .filter(|v| !v.is_empty())
+                        .ok_or(IntegrationError::MissingRequiredField {
+                            field_name: "connector_mandate_id[cnpToken]",
+                            context: Default::default(),
+                        })?
+                        .to_owned();
                     let card_expiry_mmyy = parts.next().map(str::to_owned);
                     let original_network_transaction_id = parts
                         .next()
