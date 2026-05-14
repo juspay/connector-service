@@ -255,6 +255,5 @@ fn test_braintree_config_deser() {
     let json = r#"{"config":{"Braintree":{"public_key":"testkey","private_key":"testsecret","merchant_account_id":"juspay","merchant_config_currency":"USD","apple_pay_supported_networks":[],"apple_pay_merchant_capabilities":[],"gpay_allowed_auth_methods":[],"gpay_allowed_card_networks":[]}}}"#;
     let result: Result<grpc_api_types::payments::ConnectorSpecificConfig, _> =
         serde_json::from_str(json);
-    println!("Deser result: {:?}", result);
     assert!(result.is_ok(), "Failed: {:?}", result.err());
 }
