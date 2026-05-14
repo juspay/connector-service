@@ -657,12 +657,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 /// Map TransIT Return (`<status>` + `<responseCode>`) to `RefundStatus` per
 /// tech spec § Status Mappings.
 ///
-/// - `PASS` + `A0000` → `Success`
+/// - `PASS` + `A0000` → `Success` — full referenced refund completed.
+/// - `PASS` + `A0002` → `Success` — partial approval (refundedAmount in the
+///   response reflects the actual amount processed).
+/// - `PASS` + `A0014` → `Success` — Return requested against an unsettled
+///   transaction; TSYS converts it to a pre-settlement Void. Effective refund
+///   from the merchant's perspective. Verified live (`<ReturnResponse>` with
+///   `responseMessage: "Return requested, Void successful"`).
 /// - `FAIL` (any code) → `Failure`
 /// - Anything else → `Failure` (fail closed)
 fn map_refund_status(response: &TsysXmlReturnResponse) -> RefundStatus {
     match (response.status.as_ref(), response.response_code.as_deref()) {
-        (Some(TsysXmlStatus::Pass), Some("A0000")) => RefundStatus::Success,
+        (Some(TsysXmlStatus::Pass), Some("A0000" | "A0002" | "A0014")) => RefundStatus::Success,
         (Some(TsysXmlStatus::Fail), _) => RefundStatus::Failure,
         _ => RefundStatus::Failure,
     }

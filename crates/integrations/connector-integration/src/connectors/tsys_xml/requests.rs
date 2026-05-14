@@ -148,10 +148,12 @@ pub struct TsysXmlCaptureRequest {
     pub device_id: Secret<String>,
     #[serde(rename = "transactionKey")]
     pub transaction_key: Secret<String>,
-    #[serde(rename = "transactionID")]
-    pub transaction_id: String,
+    // TransIT XSD: transactionAmount before transactionID for Capture/Void/Return.
+    // Verified live against responseCode F9901.
     #[serde(rename = "transactionAmount")]
     pub transaction_amount: StringMajorUnit,
+    #[serde(rename = "transactionID")]
+    pub transaction_id: String,
     /// Multi-clearing sequence number (1-based). Stubbed `None` for PR-1.
     #[serde(rename = "seqNumber", skip_serializing_if = "Option::is_none")]
     pub seq_number: Option<u32>,
@@ -195,17 +197,18 @@ pub struct TsysXmlReturnRequest {
     pub device_id: Secret<String>,
     #[serde(rename = "transactionKey")]
     pub transaction_key: Secret<String>,
-    /// Reference to the original capture's `<transactionID>`. Present for
-    /// referenced refunds; absent for unreferenced refunds.
-    #[serde(rename = "transactionID", skip_serializing_if = "Option::is_none")]
-    pub transaction_id: Option<String>,
     /// Origin of card data — only sent for unreferenced refunds.
     #[serde(rename = "cardDataSource", skip_serializing_if = "Option::is_none")]
     pub card_data_source: Option<TsysXmlCardDataSource>,
     /// Refund amount in major units. Always emitted in PR-1; "omit for full
     /// referenced refunds" is a TODO follow-up.
+    /// TransIT XSD requires transactionAmount BEFORE transactionID.
     #[serde(rename = "transactionAmount", skip_serializing_if = "Option::is_none")]
     pub transaction_amount: Option<StringMajorUnit>,
+    /// Reference to the original capture's `<transactionID>`. Present for
+    /// referenced refunds; absent for unreferenced refunds.
+    #[serde(rename = "transactionID", skip_serializing_if = "Option::is_none")]
+    pub transaction_id: Option<String>,
     /// PAN — only present for unreferenced refunds.
     #[serde(rename = "cardNumber", skip_serializing_if = "Option::is_none")]
     pub card_number: Option<Secret<String>>,
@@ -246,11 +249,12 @@ pub struct TsysXmlVoidRequest {
     pub device_id: Secret<String>,
     #[serde(rename = "transactionKey")]
     pub transaction_key: Secret<String>,
-    #[serde(rename = "transactionID")]
-    pub transaction_id: String,
     /// Optional — present for a partial void, omitted for a full void.
+    /// TransIT XSD requires transactionAmount BEFORE transactionID.
     #[serde(rename = "transactionAmount", skip_serializing_if = "Option::is_none")]
     pub transaction_amount: Option<StringMajorUnit>,
+    #[serde(rename = "transactionID")]
+    pub transaction_id: String,
     #[serde(rename = "developerID")]
     pub developer_id: Secret<String>,
 }
