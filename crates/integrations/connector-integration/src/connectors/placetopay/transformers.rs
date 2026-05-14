@@ -1,10 +1,10 @@
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Void, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -250,6 +250,61 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             auth,
             internal_reference,
             action,
+            authorization: None,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PlacetopayRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PlacetopayNextActionRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: PlacetopayRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
+        let internal_reference = item
+            .router_data
+            .request
+            .connector_transaction_id
+            .parse::<u64>()
+            .change_context(IntegrationError::RequestEncodingFailed {
+                context: Default::default(),
+            })?;
+        let action = PlacetopayNextAction::Reverse;
+        // Extract the authorization code stored during the original payment
+        let authorization = match item
+            .router_data
+            .resource_common_data
+            .connector_feature_data
+            .clone()
+        {
+            Some(metadata) => metadata.expose().as_str().map(|auth| auth.to_string()),
+            None => None,
+        };
+        Ok(Self {
+            auth,
+            internal_reference,
+            action,
+            authorization: authorization.map(Secret::new),
         })
     }
 }
@@ -331,6 +386,59 @@ impl<F, T> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
     }
 }
 
+/// Dedicated response type for the VoidPC (Reverse) flow so it can have its own
+/// `TryFrom` that returns `PaymentsResponseData::PostCaptureVoidResponse` instead
+/// of the generic `TransactionResponse`.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(transparent)]
+pub struct PlacetopayVoidPcResponse(PlacetopayPaymentsResponse);
+
+impl TryFrom<ResponseRouterData<PlacetopayVoidPcResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PlacetopayVoidPcResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let inner = item.response.0;
+        let post_capture_void_status = match inner.status.status {
+            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
+                common_enums::PostCaptureVoidStatus::Succeeded
+            }
+            PlacetopayTransactionStatus::Failed
+            | PlacetopayTransactionStatus::Rejected
+            | PlacetopayTransactionStatus::Error => common_enums::PostCaptureVoidStatus::Failed,
+            PlacetopayTransactionStatus::Pending
+            | PlacetopayTransactionStatus::PendingValidation
+            | PlacetopayTransactionStatus::PendingProcess => {
+                common_enums::PostCaptureVoidStatus::Pending
+            }
+        };
+        let attempt_status = match post_capture_void_status {
+            common_enums::PostCaptureVoidStatus::Succeeded => {
+                common_enums::AttemptStatus::VoidedPostCapture
+            }
+            common_enums::PostCaptureVoidStatus::Failed => common_enums::AttemptStatus::Failure,
+            common_enums::PostCaptureVoidStatus::Pending => {
+                common_enums::AttemptStatus::VoidPostCaptureInitiated
+            }
+        };
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: attempt_status,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status,
+                connector_reference_id: Some(inner.internal_reference.to_string()),
+                description: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacetopayPsyncRequest {
@@ -377,6 +485,8 @@ pub struct PlacetopayNextActionRequest {
     auth: PlacetopayAuth,
     internal_reference: u64,
     action: PlacetopayNextAction,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    authorization: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -418,6 +528,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             auth,
             internal_reference,
             action,
+            authorization: None,
         })
     }
 }
