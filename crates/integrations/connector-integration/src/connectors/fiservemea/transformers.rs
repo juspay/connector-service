@@ -12,8 +12,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, ResponseId,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
@@ -994,12 +994,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
 
 impl
     TryFrom<
-        &RouterDataV2<
-            VoidPC,
-            PaymentFlowData,
-            PaymentsCancelPostCaptureData,
-            PaymentsResponseData,
-        >,
+        &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
     > for FiservemeaVoidPCRequest
 {
     type Error = error_stack::Report<IntegrationError>;
@@ -1024,12 +1019,7 @@ impl
 // Maps a successful void to VoidPostCaptureInitiated.
 
 impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
-    for RouterDataV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    >
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
