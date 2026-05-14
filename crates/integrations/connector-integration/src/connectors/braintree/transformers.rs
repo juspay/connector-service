@@ -18,8 +18,8 @@ use domain_types::{
         GpayMerchantInfo, GpayShippingAddressParameters, GpayTokenParameters,
         GpayTokenizationSpecification, GpayTransactionInfo, MandateReference, NextActionCall,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentRequestMetadata, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        PaymentRequestMetadata, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         PaypalClientAuthenticationResponse, PaypalTransactionInfo, RefundFlowData, RefundSyncData,
         RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SdkNextAction,
         SecretInfoToInitiateSdk, ThirdPartySdkSessionResponse,
@@ -2961,7 +2961,12 @@ pub struct BraintreeVoidPCRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BraintreeRouterData<
-            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for BraintreeVoidPCRequest
@@ -2970,7 +2975,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: BraintreeRouterData<
-            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
