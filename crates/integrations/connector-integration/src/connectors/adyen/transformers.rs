@@ -4563,7 +4563,8 @@ impl TryFrom<ResponseRouterData<AdyenReversalResponse, Self>>
             http_code,
         } = value;
         // Adyen always returns "received" — actual void outcome arrives via webhook.
-        let status = AttemptStatus::Pending;
+        // Preserve the existing attempt status; do not override it here.
+        let status = router_data.resource_common_data.status;
 
         let payments_response_data = PaymentsResponseData::PostCaptureVoidResponse {
             post_capture_void_status: common_enums::PostCaptureVoidStatus::Pending,
