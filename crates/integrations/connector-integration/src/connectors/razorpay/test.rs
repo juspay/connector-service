@@ -114,6 +114,8 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
+
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -205,7 +207,6 @@ mod tests {
                     redirect_response: None,
                     threeds_method_comp_ind: None,
                     tokenization: None,
-                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -307,6 +308,8 @@ mod tests {
                     minor_amount_capturable: None,
                     amount: None,
                     l2_l3_data: None,
+
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -375,7 +378,6 @@ mod tests {
                     redirect_response: None,
                     threeds_method_comp_ind: None,
                     tokenization: None,
-                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -451,6 +453,8 @@ mod tests {
                     minor_amount_capturable: None,
                     amount: None,
                     l2_l3_data: None,
+
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -519,7 +523,6 @@ mod tests {
                     redirect_response: None,
                     threeds_method_comp_ind: None,
                     tokenization: None,
-                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -617,6 +620,8 @@ mod tests {
                     minor_amount_capturable: None,
                     amount: None,
                     l2_l3_data: None,
+
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -708,7 +713,6 @@ mod tests {
                     redirect_response: None,
                     threeds_method_comp_ind: None,
                     tokenization: None,
-                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -981,6 +985,8 @@ mod tests {
                 order_details: None,
                 minor_amount_capturable: None,
                 l2_l3_data: None,
+
+                merchant_request_id: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1068,7 +1074,6 @@ mod tests {
                 redirect_response: None,
                 threeds_method_comp_ind: None,
                 tokenization: None,
-                merchant_request_id: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1181,6 +1186,8 @@ mod tests {
                 recurring_mandate_payment_data: None,
                 order_details: None,
                 l2_l3_data: None,
+
+                merchant_request_id: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1268,7 +1275,6 @@ mod tests {
                 redirect_response: None,
                 threeds_method_comp_ind: None,
                 tokenization: None,
-                merchant_request_id: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1383,6 +1389,8 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     l2_l3_data: None,
+
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1502,6 +1510,8 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     l2_l3_data: None,
+
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1624,6 +1634,8 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     l2_l3_data: None,
+
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "invalid_key".to_string().into(),
@@ -1692,7 +1704,6 @@ mod tests {
                     redirect_response: None,
                     threeds_method_comp_ind: None,
                     tokenization: None,
-                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),
@@ -1789,6 +1800,8 @@ mod tests {
                 order_details: None,
                 minor_amount_capturable: None,
                 l2_l3_data: None,
+
+                merchant_request_id: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1920,6 +1933,8 @@ mod tests {
                 recurring_mandate_payment_data: None,
                 order_details: None,
                 l2_l3_data: None,
+
+                merchant_request_id: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
@@ -2040,6 +2055,8 @@ mod tests {
                 recurring_mandate_payment_data: None,
                 order_details: None,
                 l2_l3_data: None,
+
+                merchant_request_id: None,
             },
             connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),

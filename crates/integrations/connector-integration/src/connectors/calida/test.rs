@@ -105,6 +105,7 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Calida {
                     api_key: Secret::new(api_key),
@@ -167,7 +168,6 @@ mod tests {
                     threeds_method_comp_ind: None,
                     tokenization: None,
                     payment_channel: None,
-                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -265,6 +265,7 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
+                    merchant_request_id: None,
                 },
                 connector_config: ConnectorSpecificConfig::Calida {
                     api_key: Secret::new(api_key),
@@ -319,7 +320,6 @@ mod tests {
                     threeds_method_comp_ind: None,
                     tokenization: None,
                     payment_channel: None,
-                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

@@ -171,6 +171,26 @@ pub struct ApiRequestEnvelope {
     pub language: &'static str,
 }
 
+fn paco_require_merchant_request_id(
+    result: Result<String, error_stack::Report<errors::IntegrationError>>,
+) -> Result<String, error_stack::Report<errors::IntegrationError>> {
+    result.map_err(|_| {
+        error_stack::report!(errors::IntegrationError::MissingRequiredField {
+            field_name: "merchant_request_id",
+            context: errors::IntegrationErrorContext {
+                suggested_action: Some(
+                    "Pass a unique `merchant_request_id` (UUID) on the gRPC request — 2C2P PACO requires it as the `apiRequest.requestMessageID` on every call."
+                        .to_string(),
+                ),
+                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                additional_context: Some(
+                    "PACO does not accept calls without `requestMessageID`.".to_string(),
+                ),
+            },
+        })
+    })
+}
+
 impl ApiRequestEnvelope {
     fn new(request_message_id: String) -> Self {
         let now = time::OffsetDateTime::now_utc();
@@ -185,25 +205,6 @@ impl ApiRequestEnvelope {
     }
 }
 
-fn require_merchant_request_id(
-    merchant_request_id: Option<&String>,
-) -> Result<String, errors::IntegrationError> {
-    merchant_request_id
-        .cloned()
-        .ok_or(errors::IntegrationError::MissingRequiredField {
-            field_name: "merchant_request_id",
-            context: errors::IntegrationErrorContext {
-                suggested_action: Some(
-                    "Pass a unique `merchant_request_id` (UUID) on the gRPC request — 2C2P PACO requires it as the `apiRequest.requestMessageID` on every call."
-                        .to_string(),
-                ),
-                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
-                additional_context: Some(
-                    "PACO does not accept calls without `requestMessageID`.".to_string(),
-                ),
-            },
-        })
-}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -440,8 +441,7 @@ where
         .description
         .clone()
         .unwrap_or_else(|| order_no.clone());
-    let request_message_id =
-        require_merchant_request_id(item.request.merchant_request_id.as_ref())?;
+    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     let amount = PacoTransactionAmount::new(item.request.minor_amount, item.request.currency)?;
     let notification_urls = PacoNotificationUrls {
         confirmation_url: item.request.router_return_url.clone(),
@@ -561,8 +561,9 @@ pub fn build_capture_request(
     let invoice_no = item.request.get_connector_transaction_id()?;
     let amount =
         PacoTransactionAmount::new(item.request.minor_amount_to_capture, item.request.currency)?;
+    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoCaptureRequest {
-        api_request: ApiRequestEnvelope::new(uuid::Uuid::new_v4().to_string()),
+        api_request: ApiRequestEnvelope::new(request_message_id),
         office_id,
         order_no: item
             .resource_common_data
@@ -595,8 +596,9 @@ pub fn build_void_request(
     auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
     let office_id = auth.office_id.clone();
+    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoVoidRequest {
-        api_request: ApiRequestEnvelope::new(uuid::Uuid::new_v4().to_string()),
+        api_request: ApiRequestEnvelope::new(request_message_id),
         office_id,
         order_no: item
             .resource_common_data
@@ -617,8 +619,9 @@ pub fn build_void_pc_request(
     auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
     let office_id = auth.office_id.clone();
+    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoVoidRequest {
-        api_request: ApiRequestEnvelope::new(uuid::Uuid::new_v4().to_string()),
+        api_request: ApiRequestEnvelope::new(request_message_id),
         office_id,
         order_no: item
             .resource_common_data
@@ -698,8 +701,9 @@ pub fn build_refund_request(
                 .and_then(extract_paco_maker_id)
         })
         .unwrap_or_else(|| PACO_REFUND_MAKER_ID.to_string());
+    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoRefundRequest {
-        api_request: ApiRequestEnvelope::new(uuid::Uuid::new_v4().to_string()),
+        api_request: ApiRequestEnvelope::new(request_message_id),
         office_id,
         order_no: original_order_no,
         product_description: item.request.reason.clone(),
