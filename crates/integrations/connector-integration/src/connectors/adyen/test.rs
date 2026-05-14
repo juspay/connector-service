@@ -182,7 +182,8 @@ mod tests {
                     continue_redirection_url: None,
                     redirect_response: None,
                     threeds_method_comp_ind: None,
-                    tokenization: None
+                    tokenization: None,
+                    merchant_request_id: None
 },
                 response: Err(ErrorResponse::default())
 };
@@ -337,7 +338,8 @@ mod tests {
                     continue_redirection_url: None,
                     redirect_response: None,
                     threeds_method_comp_ind: None,
-                    tokenization: None
+                    tokenization: None,
+                    merchant_request_id: None
 },
                 response: Err(ErrorResponse::default())
 };

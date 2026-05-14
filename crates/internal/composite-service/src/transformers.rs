@@ -137,6 +137,7 @@ impl
             continue_redirection_url: item.continue_redirection_url.clone(),
             l2_l3_data: item.l2_l3_data.clone(),
             connector_order_id: item.connector_order_id.clone(),
+            merchant_request_id: item.merchant_request_id.clone(),
         }
     }
 }

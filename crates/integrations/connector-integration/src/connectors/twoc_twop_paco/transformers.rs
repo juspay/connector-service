@@ -8,9 +8,9 @@ use common_utils::{
     types::{FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit},
 };
 use domain_types::{
-    connector_flow::{Authenticate, Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
@@ -18,7 +18,6 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::AuthenticationData,
     router_response_types::RedirectForm,
 };
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -173,17 +172,37 @@ pub struct ApiRequestEnvelope {
 }
 
 impl ApiRequestEnvelope {
-    fn new() -> Self {
+    fn new(request_message_id: String) -> Self {
         let now = time::OffsetDateTime::now_utc();
         let formatted = now
             .format(&time::format_description::well_known::Rfc3339)
             .unwrap_or_else(|_| String::from("1970-01-01T00:00:00Z"));
         Self {
-            request_message_id: uuid::Uuid::new_v4().to_string(),
+            request_message_id,
             request_date_time: formatted,
             language: PACO_LANGUAGE,
         }
     }
+}
+
+fn require_merchant_request_id(
+    merchant_request_id: Option<&String>,
+) -> Result<String, errors::IntegrationError> {
+    merchant_request_id
+        .cloned()
+        .ok_or(errors::IntegrationError::MissingRequiredField {
+            field_name: "merchant_request_id",
+            context: errors::IntegrationErrorContext {
+                suggested_action: Some(
+                    "Pass a unique `merchant_request_id` (UUID) on the gRPC request — 2C2P PACO requires it as the `apiRequest.requestMessageID` on every call."
+                        .to_string(),
+                ),
+                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
+                additional_context: Some(
+                    "PACO does not accept calls without `requestMessageID`.".to_string(),
+                ),
+            },
+        })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -384,10 +403,6 @@ pub enum TwocTwopPacoAuthorizeRequest {
 #[serde(transparent)]
 pub struct TwocTwopPacoVoidPcRequest(pub TwocTwopPacoVoidRequest);
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(transparent)]
-pub struct TwocTwopPacoAuthenticateRequest(pub TwocTwopPacoCardAuthorizeRequest);
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct TwocTwopPacoAuthorizeResponse(pub TwocTwopPacoNonUiResponse);
@@ -408,10 +423,6 @@ pub struct TwocTwopPacoVoidPcResponse(pub TwocTwopPacoNonUiResponse);
 #[serde(transparent)]
 pub struct TwocTwopPacoRefundResponse(pub TwocTwopPacoNonUiResponse);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct TwocTwopPacoAuthenticateResponse(pub TwocTwopPacoNonUiResponse);
-
 pub fn build_authorize_request<T>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     auth: &TwocTwopPacoAuthType,
@@ -429,6 +440,8 @@ where
         .description
         .clone()
         .unwrap_or_else(|| order_no.clone());
+    let request_message_id =
+        require_merchant_request_id(item.request.merchant_request_id.as_ref())?;
     let amount = PacoTransactionAmount::new(item.request.minor_amount, item.request.currency)?;
     let notification_urls = PacoNotificationUrls {
         confirmation_url: item.request.router_return_url.clone(),
@@ -444,10 +457,9 @@ where
                 _ => PACO_CARD_TYPE_CREDIT,
             };
             let mmyy = card.get_card_expiry_month_year_2_digit_with_delimiter(String::new())?;
-            let request3ds_flag = if item.request.enrolled_for_3ds.unwrap_or(false) {
-                PacoRequest3dsFlag::Y
-            } else {
-                PacoRequest3dsFlag::N
+            let request3ds_flag = match item.resource_common_data.auth_type {
+                common_enums::AuthenticationType::ThreeDs => PacoRequest3dsFlag::Y,
+                common_enums::AuthenticationType::NoThreeDs => PacoRequest3dsFlag::N,
             };
             let browser_info = item
                 .request
@@ -461,7 +473,7 @@ where
                 .and_then(|bi| bi.user_agent.clone())
                 .map(PacoDeviceDetails::from_user_agent);
             let body = TwocTwopPacoCardAuthorizeRequest {
-                api_request: ApiRequestEnvelope::new(),
+                api_request: ApiRequestEnvelope::new(request_message_id),
                 office_id,
                 order_no,
                 product_description: description,
@@ -493,7 +505,7 @@ where
                 })
                 .unwrap_or_else(PacoDeviceDetails::default_browser);
             let body = TwocTwopPacoWalletAuthorizeRequest {
-                api_request: ApiRequestEnvelope::new(),
+                api_request: ApiRequestEnvelope::new(request_message_id),
                 office_id,
                 order_no,
                 product_description: description,
@@ -514,123 +526,6 @@ where
                 doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
                 additional_context: Some(
                     "Authorize accepts card S2S or GCash wallet redirect.".to_string(),
-                ),
-            },
-        )
-        .into()),
-    }
-}
-
-pub fn build_authenticate_request<T>(
-    item: &RouterDataV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    >,
-    auth: &TwocTwopPacoAuthType,
-) -> Result<TwocTwopPacoCardAuthorizeRequest, error_stack::Report<errors::IntegrationError>>
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-{
-    let order_no = item
-        .resource_common_data
-        .connector_request_reference_id
-        .clone();
-    let description = item
-        .resource_common_data
-        .description
-        .clone()
-        .unwrap_or_else(|| order_no.clone());
-    let currency = item
-        .request
-        .currency
-        .ok_or(errors::IntegrationError::MissingRequiredField {
-        field_name: "currency",
-        context: errors::IntegrationErrorContext {
-            suggested_action: Some(
-                "Set `amount.currency` on the Authenticate request to a supported ISO 4217 code."
-                    .to_string(),
-            ),
-            doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
-            additional_context: Some(
-                "PACO Authenticate requires an explicit transaction currency.".to_string(),
-            ),
-        },
-    })?;
-    let amount = PacoTransactionAmount::new(item.request.amount, currency)?;
-    let notification_urls = PacoNotificationUrls {
-        confirmation_url: item
-            .request
-            .router_return_url
-            .as_ref()
-            .map(|u| u.to_string()),
-        failed_url: item
-            .request
-            .router_return_url
-            .as_ref()
-            .map(|u| u.to_string()),
-        cancellation_url: item
-            .request
-            .router_return_url
-            .as_ref()
-            .map(|u| u.to_string()),
-        backend_url: item
-            .request
-            .continue_redirection_url
-            .as_ref()
-            .map(|u| u.to_string()),
-    };
-
-    let browser_info = item
-        .request
-        .browser_info
-        .as_ref()
-        .map(PacoBrowserInfo::from_browser_info);
-    let device_details = item
-        .request
-        .browser_info
-        .as_ref()
-        .and_then(|bi| bi.user_agent.clone())
-        .map(PacoDeviceDetails::from_user_agent);
-
-    let office_id = auth.office_id.clone();
-    match item.request.payment_method_data.as_ref() {
-        Some(PaymentMethodData::Card(card)) => {
-            let card_type = match card.card_type.as_deref() {
-                Some(t) if t.eq_ignore_ascii_case("debit") => PACO_CARD_TYPE_DEBIT,
-                _ => PACO_CARD_TYPE_CREDIT,
-            };
-            let mmyy = card.get_card_expiry_month_year_2_digit_with_delimiter(String::new())?;
-            Ok(TwocTwopPacoCardAuthorizeRequest {
-                api_request: ApiRequestEnvelope::new(),
-                office_id,
-                order_no,
-                product_description: description,
-                payment_type: PacoPaymentType::CC,
-                transaction_amount: amount,
-                notification_urls,
-                credit_card_details: PacoCreditCardDetails {
-                    card_number: Secret::new(card.card_number.peek().to_string()),
-                    card_expiry_mmyy: mmyy,
-                    cvv_code: card.card_cvc.clone(),
-                    card_holder_name: card.get_optional_cardholder_name(),
-                    card_type,
-                },
-                request3ds_flag: PacoRequest3dsFlag::Y,
-                browser_info,
-                device_details,
-            })
-        }
-        _ => Err(errors::IntegrationError::NotImplemented(
-            "Selected payment method through TwocTwopPaco Authenticate".to_string(),
-            errors::IntegrationErrorContext {
-                suggested_action: Some(
-                    "Use a Card payment method; PACO Authenticate is card-3DS only.".to_string(),
-                ),
-                doc_url: Some(PACO_INTEGRATION_DOC_URL.to_string()),
-                additional_context: Some(
-                    "Authenticate accepts card S2S; wallet flows go through Authorize.".to_string(),
                 ),
             },
         )
@@ -667,7 +562,7 @@ pub fn build_capture_request(
     let amount =
         PacoTransactionAmount::new(item.request.minor_amount_to_capture, item.request.currency)?;
     Ok(TwocTwopPacoCaptureRequest {
-        api_request: ApiRequestEnvelope::new(),
+        api_request: ApiRequestEnvelope::new(uuid::Uuid::new_v4().to_string()),
         office_id,
         order_no: item
             .resource_common_data
@@ -701,7 +596,7 @@ pub fn build_void_request(
 ) -> Result<TwocTwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
     let office_id = auth.office_id.clone();
     Ok(TwocTwopPacoVoidRequest {
-        api_request: ApiRequestEnvelope::new(),
+        api_request: ApiRequestEnvelope::new(uuid::Uuid::new_v4().to_string()),
         office_id,
         order_no: item
             .resource_common_data
@@ -723,7 +618,7 @@ pub fn build_void_pc_request(
 ) -> Result<TwocTwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
     let office_id = auth.office_id.clone();
     Ok(TwocTwopPacoVoidRequest {
-        api_request: ApiRequestEnvelope::new(),
+        api_request: ApiRequestEnvelope::new(uuid::Uuid::new_v4().to_string()),
         office_id,
         order_no: item
             .resource_common_data
@@ -804,7 +699,7 @@ pub fn build_refund_request(
         })
         .unwrap_or_else(|| PACO_REFUND_MAKER_ID.to_string());
     Ok(TwocTwopPacoRefundRequest {
-        api_request: ApiRequestEnvelope::new(),
+        api_request: ApiRequestEnvelope::new(uuid::Uuid::new_v4().to_string()),
         office_id,
         order_no: original_order_no,
         product_description: item.request.reason.clone(),
@@ -1120,30 +1015,50 @@ where
                             )
                         })?;
                     let status = map_attempt_status(&info.payment_status, &info.payment_step);
-                    let url = block
-                        .web_payment_url
-                        .clone()
-                        .or_else(|| {
-                            response
-                                .data
-                                .as_ref()
-                                .and_then(|d| d.payment_page.as_ref())
-                                .and_then(|p| p.payment_page_url.clone())
+                    let redirection_data = if let Some(challenge) = block.ares_acs_challenge.as_ref()
+                    {
+                        let acs_url = challenge.acs_url.clone().unwrap_or_default();
+                        let mut form_fields: HashMap<String, String> = HashMap::new();
+                        if let Some(creq) = &challenge.creq {
+                            form_fields.insert("creq".to_string(), creq.peek().clone());
+                        }
+                        if let Some(session_data) = &challenge.three_ds_session_data {
+                            form_fields.insert(
+                                "threeDSSessionData".to_string(),
+                                session_data.peek().clone(),
+                            );
+                        }
+                        Some(Box::new(RedirectForm::Form {
+                            endpoint: acs_url,
+                            method: Method::Post,
+                            form_fields,
+                        }))
+                    } else {
+                        let url = block
+                            .web_payment_url
+                            .clone()
+                            .or_else(|| {
+                                response
+                                    .data
+                                    .as_ref()
+                                    .and_then(|d| d.payment_page.as_ref())
+                                    .and_then(|p| p.payment_page_url.clone())
+                            })
+                            .or_else(|| {
+                                block
+                                    .payment_page
+                                    .as_ref()
+                                    .and_then(|p| p.payment_page_url.clone())
+                            })
+                            .or_else(|| block.payment_page_url.clone());
+                        url.map(|endpoint| {
+                            Box::new(RedirectForm::Form {
+                                endpoint,
+                                method: Method::Get,
+                                form_fields: HashMap::new(),
+                            })
                         })
-                        .or_else(|| {
-                            block
-                                .payment_page
-                                .as_ref()
-                                .and_then(|p| p.payment_page_url.clone())
-                        })
-                        .or_else(|| block.payment_page_url.clone());
-                    let redirection_data = url.map(|endpoint| {
-                        Box::new(RedirectForm::Form {
-                            endpoint,
-                            method: Method::Get,
-                            form_fields: HashMap::new(),
-                        })
-                    });
+                    };
                     (
                         status,
                         redirection_data,
@@ -1769,171 +1684,6 @@ impl<'a> PacoJoseClaims<'a> {
     }
 }
 
-fn build_authentication_data_from_paco(
-    details: &PacoCreditCardAuthenticatedDetails,
-) -> AuthenticationData {
-    AuthenticationData {
-        trans_status: details
-            .authentication_status
-            .as_ref()
-            .and_then(|s| s.parse::<common_enums::TransactionStatus>().ok()),
-        eci: details.eci_value.clone(),
-        cavv: details.cavv.clone(),
-        ucaf_collection_indicator: None,
-        threeds_server_transaction_id: details
-            .three_ds_transaction_id
-            .as_ref()
-            .map(|s| s.peek().clone()),
-        message_version: details
-            .authentication_3ds_version
-            .as_ref()
-            .and_then(|v| v.parse::<common_utils::types::SemanticVersion>().ok()),
-        ds_trans_id: details
-            .three_ds_transaction_id
-            .as_ref()
-            .map(|s| s.peek().clone()),
-        acs_transaction_id: None,
-        transaction_id: details
-            .three_ds_transaction_id
-            .as_ref()
-            .map(|s| s.peek().clone()),
-        network_params: None,
-        exemption_indicator: None,
-    }
-}
-
-impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwocTwopPacoNonUiResponse, Self>>
-    for RouterDataV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    >
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<TwocTwopPacoNonUiResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = item;
-
-        let result = response.merged_result();
-        let api_response = response.api_response.clone();
-        let info = result.and_then(|b| b.payment_status_info.as_ref());
-        let prior = result.and_then(|b| b.prior_payment_response_details.clone());
-        let connector_txn_id = result.and_then(|b| b.invoice_no2c2p.clone());
-        let connector_response_reference_id = result.and_then(|b| b.order_no.clone());
-
-        let mapped_status = info
-            .map(|i| map_attempt_status(&i.payment_status, &i.payment_step))
-            .unwrap_or(AttemptStatus::AuthenticationPending);
-
-        if matches!(mapped_status, AttemptStatus::Failure) {
-            let (code, message) = error_code_message(&api_response, &prior);
-            tracing::warn!(
-                code = %code,
-                message = %message,
-                "twoc_twop_paco: Authenticate returned failure"
-            );
-            let error = ErrorResponse {
-                code,
-                message: message.clone(),
-                reason: Some(message),
-                status_code: http_code,
-                attempt_status: Some(AttemptStatus::AuthenticationFailed),
-                connector_transaction_id: connector_txn_id,
-                network_advice_code: None,
-                network_decline_code: None,
-                network_error_message: None,
-            };
-            return Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status: AttemptStatus::AuthenticationFailed,
-                    ..router_data.resource_common_data
-                },
-                response: Err(error),
-                ..router_data
-            });
-        }
-
-        let challenge = result.and_then(|b| b.ares_acs_challenge.as_ref());
-        if let Some(challenge) = challenge {
-            let acs_url = challenge.acs_url.clone().unwrap_or_default();
-            let creq = challenge
-                .creq
-                .as_ref()
-                .map(|s| s.peek().clone())
-                .unwrap_or_default();
-            tracing::debug!(
-                acs_url = %acs_url,
-                "twoc_twop_paco: Authenticate requires ACS challenge"
-            );
-            let mut form_fields: HashMap<String, String> = HashMap::new();
-            form_fields.insert("creq".to_string(), creq);
-            if let Some(session_data) = &challenge.three_ds_session_data {
-                form_fields.insert(
-                    "threeDSSessionData".to_string(),
-                    session_data.peek().clone(),
-                );
-            }
-            let redirect = Box::new(RedirectForm::Form {
-                endpoint: acs_url,
-                method: Method::Post,
-                form_fields,
-            });
-
-            return Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status: AttemptStatus::AuthenticationPending,
-                    ..router_data.resource_common_data
-                },
-                response: Ok(PaymentsResponseData::AuthenticateResponse {
-                    resource_id: connector_txn_id.map(ResponseId::ConnectorTransactionId),
-                    redirection_data: Some(redirect),
-                    authentication_data: None,
-                    connector_response_reference_id,
-                    status_code: http_code,
-                }),
-                ..router_data
-            });
-        }
-
-        let authentication_data = result
-            .and_then(|b| b.credit_card_authenticated_details.as_ref())
-            .map(build_authentication_data_from_paco);
-
-        let status = if authentication_data.is_some() {
-            AttemptStatus::AuthenticationSuccessful
-        } else {
-            AttemptStatus::AuthenticationPending
-        };
-
-        tracing::debug!(
-            frictionless = authentication_data.is_some(),
-            "twoc_twop_paco: Authenticate response decoded"
-        );
-
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..router_data.resource_common_data
-            },
-            response: Ok(PaymentsResponseData::AuthenticateResponse {
-                resource_id: connector_txn_id.map(ResponseId::ConnectorTransactionId),
-                redirection_data: None,
-                authentication_data,
-                connector_response_reference_id,
-                status_code: http_code,
-            }),
-            ..router_data
-        })
-    }
-}
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TwocTwopPacoRouterData<
@@ -2060,37 +1810,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        TwocTwopPacoRouterData<
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for TwocTwopPacoAuthenticateRequest
-{
-    type Error = error_stack::Report<errors::IntegrationError>;
-
-    fn try_from(
-        item: TwocTwopPacoRouterData<
-            RouterDataV2<
-                Authenticate,
-                PaymentFlowData,
-                PaymentsAuthenticateData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let auth = TwocTwopPacoAuthType::try_from(&item.router_data.connector_config)?;
-        Ok(Self(build_authenticate_request(&item.router_data, &auth)?))
-    }
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<TwocTwopPacoAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -2171,23 +1890,3 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoRefundResponse, Self>>
     }
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TwocTwopPacoAuthenticateResponse, Self>>
-    for RouterDataV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    >
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: ResponseRouterData<TwocTwopPacoAuthenticateResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        Self::try_from(ResponseRouterData {
-            response: item.response.0,
-            router_data: item.router_data,
-            http_code: item.http_code,
-        })
-    }
-}

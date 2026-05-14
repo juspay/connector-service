@@ -9,9 +9,9 @@ use common_utils::{
     events,
 };
 use domain_types::{
-    connector_flow::{Authenticate, Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
     },
@@ -30,12 +30,12 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as twoc_twop_paco, TwocTwopPacoAuthType, TwocTwopPacoAuthenticateRequest,
-    TwocTwopPacoAuthenticateResponse, TwocTwopPacoAuthorizeRequest, TwocTwopPacoAuthorizeResponse,
-    TwocTwopPacoCaptureRequest, TwocTwopPacoCaptureResponse, TwocTwopPacoErrorResponse,
-    TwocTwopPacoNonUiResponse, TwocTwopPacoPSyncInquiryResponse, TwocTwopPacoRSyncInquiryResponse,
-    TwocTwopPacoRefundRequest, TwocTwopPacoRefundResponse, TwocTwopPacoVoidPcRequest,
-    TwocTwopPacoVoidPcResponse, TwocTwopPacoVoidRequest, TwocTwopPacoVoidResponse,
+    self as twoc_twop_paco, TwocTwopPacoAuthType, TwocTwopPacoAuthorizeRequest,
+    TwocTwopPacoAuthorizeResponse, TwocTwopPacoCaptureRequest, TwocTwopPacoCaptureResponse,
+    TwocTwopPacoErrorResponse, TwocTwopPacoNonUiResponse, TwocTwopPacoPSyncInquiryResponse,
+    TwocTwopPacoRSyncInquiryResponse, TwocTwopPacoRefundRequest, TwocTwopPacoRefundResponse,
+    TwocTwopPacoVoidPcRequest, TwocTwopPacoVoidPcResponse, TwocTwopPacoVoidRequest,
+    TwocTwopPacoVoidResponse,
 };
 
 use super::macros;
@@ -99,10 +99,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
     for TwocTwopPaco<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for TwocTwopPaco<T>
-{
-}
 macros::macro_connector_payout_implementation!(
     connector: TwocTwopPaco,
     generic_type: T,
@@ -130,6 +126,7 @@ macros::macro_connector_flow_status_impls!(
         ServerAuthenticationToken,
         ClientAuthenticationToken,
         PreAuthenticate,
+        Authenticate,
         PostAuthenticate,
     ],
 );
@@ -177,12 +174,6 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: TwocTwopPacoRSyncInquiryResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
-            flow: Authenticate,
-            request_body: TwocTwopPacoAuthenticateRequest,
-            response_body: TwocTwopPacoAuthenticateResponse,
-            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -741,39 +732,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_error_response_v2],
-    connector: TwocTwopPaco,
-    curl_request: Json(TwocTwopPacoAuthenticateRequest),
-    curl_response: TwocTwopPacoAuthenticateResponse,
-    flow_name: Authenticate,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthenticateData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    preprocess_request: true,
-    preprocess_response: true,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
-            let auth = TwocTwopPacoAuthType::try_from(&req.connector_config)?;
-            Ok(self.build_jose_headers(&auth))
-        }
-
-        fn get_content_type(&self) -> &'static str {
-            CONTENT_TYPE_JOSE
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::IntegrationError> {
-            let base_url = self.connector_base_url_payments(req);
-            Ok(format!("{base_url}/api/2.0/Payment/nonUi"))
-        }
-    }
-);

@@ -167,6 +167,7 @@ mod tests {
                     threeds_method_comp_ind: None,
                     tokenization: None,
                     payment_channel: None,
+                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -318,6 +319,7 @@ mod tests {
                     threeds_method_comp_ind: None,
                     tokenization: None,
                     payment_channel: None,
+                    merchant_request_id: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
