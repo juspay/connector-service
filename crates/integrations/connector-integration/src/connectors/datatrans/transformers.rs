@@ -876,12 +876,8 @@ impl TryFrom<ResponseRouterData<DatatransVoidPCResponse, Self>>
         };
 
         Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status: AttemptStatus::Voided, // Successful post-capture cancel means payment is voided
-                ..item.router_data.resource_common_data.clone()
-            },
             response: Ok(payments_response_data),
-            ..item.router_data.clone()
+            ..item.router_data
         })
     }
 }
