@@ -859,9 +859,7 @@ impl TryFrom<ResponseRouterData<DatatransVoidPCResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let payments_response_data = PaymentsResponseData::PostCaptureVoidResponse {
             post_capture_void_status: PostCaptureVoidStatus::Succeeded,
-            connector_reference_id: Some(
-                item.router_data.request.connector_transaction_id.clone(),
-            ),
+            connector_reference_id: Some(item.router_data.request.connector_transaction_id.clone()),
             description: None,
             status_code: item.http_code,
         };
