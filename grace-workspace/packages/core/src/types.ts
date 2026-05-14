@@ -160,6 +160,14 @@ export interface TaskDefinition {
   paymentMethod?: string;
 
   /**
+   * GRACE: Flow / API to implement (e.g. "Pay.Capture", "Pay.Refund",
+   * "Event.HandleEvent"). Used when the task targets a connector flow
+   * gap instead of a payment-method gap. Mutually exclusive with
+   * paymentMethod in practice but both fields are optional.
+   */
+  flow?: string;
+
+  /**
    * GRACE: Target connectors
    * Array of connector names to implement this payment method for
    * Like Grace's {CONNECTORS_FILE}
