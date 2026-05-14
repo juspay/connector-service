@@ -1399,7 +1399,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidPCResponse, Self>>
             http_code,
         } = value;
         // Use our helper function to convert the response
-        let (status, response_result, connector_response_data) =
+        let (_status, response_result, connector_response_data) =
             convert_to_payments_response_data_or_error(
                 &response.0,
                 http_code,
@@ -1414,9 +1414,9 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidPCResponse, Self>>
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
 
-        // Update the status and connector_response in resource_common_data
+        // Update connector_response in resource_common_data; status is carried
+        // by PaymentsResponseData::PostCaptureVoidResponse.post_capture_void_status.
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = status;
         resource_common_data.connector_response = connector_response_data;
         new_router_data.resource_common_data = resource_common_data;
 
