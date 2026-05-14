@@ -1184,7 +1184,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .request
                 .cancellation_reason
                 .clone()
-                .unwrap_or_else(|| "CUSTOMER_REQUEST".to_string());
+                .unwrap_or_else(|| "POST_AUTH_USER_DECLINE".to_string());
             if raw.len() > 80 {
                 raw.chars().take(80).collect()
             } else {

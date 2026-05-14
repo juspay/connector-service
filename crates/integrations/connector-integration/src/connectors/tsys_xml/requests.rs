@@ -642,12 +642,14 @@ pub struct TsysXmlVoidRequest {
     pub transaction_amount: Option<StringMajorUnit>,
     #[serde(rename = "transactionID")]
     pub transaction_id: String,
-    /// Cert script Step 7: derived from `cancellation_reason`, capped at 80 chars.
-    /// Defaults to "CUSTOMER_REQUEST" when no reason is supplied upstream.
-    #[serde(rename = "voidReason")]
-    pub void_reason: String,
     #[serde(rename = "developerID")]
     pub developer_id: Secret<String>,
+    /// MUST come AFTER developerID (TransIT XSD verified live — voidReason is the
+    /// last element in the Void sequence). Derived from `cancellation_reason`,
+    /// capped at 80 chars. Defaults to `POST_AUTH_USER_DECLINE` — the only enum
+    /// value we've found accepted by TSYS' XSD validator.
+    #[serde(rename = "voidReason")]
+    pub void_reason: String,
 }
 
 impl GetSoapXml for TsysXmlVoidRequest {
