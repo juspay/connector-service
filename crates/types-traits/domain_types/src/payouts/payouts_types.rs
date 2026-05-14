@@ -23,6 +23,7 @@ pub struct PayoutFlowData {
     pub raw_connector_request: Option<Secret<String>>,
     pub access_token: Option<ServerAuthenticationTokenResponseData>,
     pub test_mode: Option<bool>,
+    pub description: Option<String>,
 }
 
 impl RawConnectorRequestResponse for PayoutFlowData {
@@ -87,7 +88,6 @@ pub struct PayoutCreateRequest {
     pub priority: Option<common_enums::PayoutPriority>,
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
-    pub description: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
     pub source_bank_data: Option<Bank>,
 }
@@ -117,7 +117,6 @@ pub struct PayoutTransferRequest {
     pub priority: Option<common_enums::PayoutPriority>,
     pub connector_payout_method_id: Option<String>,
     pub webhook_url: Option<String>,
-    pub description: Option<String>,
     pub payout_method_data: Option<PayoutMethodData>,
     pub address: Option<PayoutAddress>,
     pub source_bank_data: Option<Bank>,
@@ -302,7 +301,6 @@ pub struct PayoutTransferResponse {
 pub struct PayoutGetRequest {
     pub merchant_payout_id: Option<String>,
     pub connector_payout_id: Option<String>,
-    pub access_token: Option<ServerAuthenticationTokenResponseData>,
 }
 
 #[derive(Debug, Clone)]

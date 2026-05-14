@@ -370,10 +370,6 @@ message PayoutServiceGetRequest {
   optional string connector_payout_id = 2;
   // access token
   optional SecretString access_token = 3;
-  // Description of the payout
-  optional string description = 14;
-  // Source Bank Data
-  optional SourceBankData source_bank_data = 15;
 }
 
 // Response message for fetching a payout

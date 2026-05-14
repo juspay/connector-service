@@ -71,7 +71,6 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-
         grpc_logging_wrapper(
             request,
             &service_name,
@@ -92,7 +91,6 @@ impl PayoutService for Payouts {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "PayoutService".to_string());
-
         grpc_logging_wrapper(
             request,
             &service_name,

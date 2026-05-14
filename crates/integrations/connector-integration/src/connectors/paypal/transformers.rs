@@ -4117,7 +4117,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             amount,
             payout_method_data,
-            note: item.router_data.request.description.clone(),
+            note: item.router_data.resource_common_data.description.clone(),
             notification_language: constants::DEFAULT_NOTIFICATION_LANGUAGE.to_string(),
         })
     }

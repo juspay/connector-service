@@ -43,6 +43,7 @@ impl
                 }
             }),
             test_mode: None,
+            description: value.description.clone(),
         })
     }
 }
@@ -122,7 +123,6 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRequest>
                 .transpose()?,
             connector_payout_method_id: value.connector_payout_method_id.clone(),
             webhook_url: value.webhook_url.clone(),
-            description: value.description.clone(),
             payout_method_data,
             source_bank_data: value
                 .source_bank_data
@@ -1150,7 +1150,6 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
             priority,
             connector_payout_method_id: value.connector_payout_method_id,
             webhook_url: value.webhook_url,
-            description: value.description,
             payout_method_data,
             source_bank_data: value
                 .source_bank_data
@@ -1214,13 +1213,6 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceGetRequest>
         Ok(Self {
             merchant_payout_id: value.merchant_payout_id,
             connector_payout_id: value.connector_payout_id,
-            access_token: value.access_token.map(|token| {
-                crate::connector_types::ServerAuthenticationTokenResponseData {
-                    access_token: token,
-                    token_type: None,
-                    expires_in: None,
-                }
-            }),
         })
     }
 }
@@ -1528,6 +1520,7 @@ impl
                 }
             }),
             test_mode: None,
+            description: value.description.clone(),
         })
     }
 }
@@ -1568,6 +1561,7 @@ impl
                 }
             }),
             test_mode: None,
+            description: None,
         })
     }
 }
@@ -1608,6 +1602,7 @@ impl
                 }
             }),
             test_mode: None,
+            description: None,
         })
     }
 }
@@ -1648,6 +1643,7 @@ impl
                 }
             }),
             test_mode: None,
+            description: None,
         })
     }
 }
@@ -1688,6 +1684,7 @@ impl
                 }
             }),
             test_mode: None,
+            description: None,
         })
     }
 }
@@ -1728,6 +1725,7 @@ impl
                 }
             }),
             test_mode: None,
+            description: None,
         })
     }
 }
@@ -1768,6 +1766,7 @@ impl
                 }
             }),
             test_mode: None,
+            description: None,
         })
     }
 }
