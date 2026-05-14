@@ -8,8 +8,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, ResponseId,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -1065,9 +1065,7 @@ impl TryFrom<ResponseRouterData<FiservVoidPCResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<FiservVoidPCResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FiservVoidPCResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1091,12 +1089,15 @@ impl TryFrom<ResponseRouterData<FiservVoidPCResponse, Self>>
                 _ => common_enums::PostCaptureVoidStatus::Failed,
             },
             connector_reference_id: Some(
-                gateway_resp.gateway_transaction_id.clone().unwrap_or_else(|| {
-                    gateway_resp
-                        .transaction_processing_details
-                        .transaction_id
-                        .clone()
-                }),
+                gateway_resp
+                    .gateway_transaction_id
+                    .clone()
+                    .unwrap_or_else(|| {
+                        gateway_resp
+                            .transaction_processing_details
+                            .transaction_id
+                            .clone()
+                    }),
             ),
             description: None,
             status_code: http_code,

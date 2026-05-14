@@ -739,8 +739,8 @@
       "default": {
         "status": "supported",
         "proto_request": {
-          "merchant_reverse_id": "probe_rev_001",
-          "connector_transaction_id": "probe_capture_txn_id"
+          "merchant_reverse_id": "probe_reverse_001",
+          "connector_transaction_id": "probe_connector_txn_001"
         },
         "sample": {
           "url": "https://cert.api.fiservapps.com/ch/payments/v1/cancels",
@@ -754,7 +754,7 @@
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"transactionDetails\":{\"reversalReasonCode\":null,\"merchantTransactionId\":\"probe_rev_001\"},\"merchantDetails\":{\"merchantId\":\"probe_merchant\",\"terminalId\":null},\"referenceTransactionDetails\":{\"referenceTransactionId\":\"probe_capture_txn_id\"}}"
+          "body": "{\"transactionDetails\":{\"merchantTransactionId\":\"probe_reverse_001\"},\"merchantDetails\":{\"merchantId\":\"probe_merchant\",\"terminalId\":null},\"referenceTransactionDetails\":{\"referenceTransactionId\":\"probe_connector_txn_001\"}}"
         }
       }
     },
