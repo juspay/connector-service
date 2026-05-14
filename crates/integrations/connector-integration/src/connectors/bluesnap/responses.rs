@@ -180,7 +180,7 @@ pub struct BluesnapPaymentSourcesResponse {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BluesnapSetupMandateResponse {
-    pub vaulted_shopper_id: i64,
+    pub vaulted_shopper_id: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub first_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

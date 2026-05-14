@@ -1085,7 +1085,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let (first_name, last_name) = match billing_address {
             Some(address) => {
                 let first = address.get_first_name()?.clone();
-                let last = address.get_last_name().unwrap_or(&first).clone();
+                let last = address.get_last_name()?.clone();
                 (first, last)
             }
             None => {
@@ -1182,7 +1182,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .map(|cards| !cards.is_empty())
             .unwrap_or(false);
 
-        if response.vaulted_shopper_id <= 0 || !vault_populated {
+        if response.vaulted_shopper_id == 0 || !vault_populated {
             return Ok(Self {
                 response: Err(ErrorResponse {
                     status_code: item.http_code,
