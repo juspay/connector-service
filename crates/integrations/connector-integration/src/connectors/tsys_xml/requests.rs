@@ -4,7 +4,7 @@ use common_utils::types::StringMajorUnit;
 use domain_types::{errors::IntegrationError, payment_method_data::PaymentMethodDataTypes};
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::super::macros::GetSoapXml;
 
@@ -19,6 +19,336 @@ pub enum TsysXmlCardDataSource {
     Internet,
     Manual,
     Recurring,
+    Mail,
+}
+
+// =============================================================================
+// TerminalData group — XSD-driven enums for the e-commerce cert script.
+//
+// Every variant carries its exact XSD wire string via `#[serde(rename = "...")]`.
+// We avoid `rename_all` to keep the wire contract explicit.
+//
+// `Deserialize` is derived on each enum so the connector metadata override
+// (`connector_metadata.tsys_xml.terminal_data.*`) — which arrives as a
+// `serde_json::Value` — can parse straight into these types.
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlTerminalCapability {
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+    #[serde(rename = "NO_TERMINAL_MANUAL")]
+    NoTerminalManual,
+    #[serde(rename = "MAGSTRIPE_READ_ONLY")]
+    MagstripeReadOnly,
+    #[serde(rename = "OCR")]
+    Ocr,
+    #[serde(rename = "ICC_CHIP_READ_ONLY")]
+    IccChipReadOnly,
+    #[serde(rename = "KEYED_ENTRY_ONLY")]
+    KeyedEntryOnly,
+    #[serde(rename = "MAGSTRIPE_CONTACTLESS_ONLY")]
+    MagstripeContactlessOnly,
+    #[serde(rename = "MAGSTRIPE_KEYED_ENTRY_ONLY")]
+    MagstripeKeyedEntryOnly,
+    #[serde(rename = "MAGSTRIPE_ICC_KEYED_ENTRY_ONLY")]
+    MagstripeIccKeyedEntryOnly,
+    #[serde(rename = "MAGSTRIPE_ICC_ONLY")]
+    MagstripeIccOnly,
+    #[serde(rename = "ICC_KEYED_ENTRY_ONLY")]
+    IccKeyedEntryOnly,
+    #[serde(rename = "ICC_CHIP_CONTACT_CONTACTLESS")]
+    IccChipContactContactless,
+    #[serde(rename = "ICC_CONTACTLESS_ONLY")]
+    IccContactlessOnly,
+    #[serde(rename = "OTHER_CAPABILITY_FOR_MASTERCARD")]
+    OtherCapabilityForMastercard,
+    #[serde(rename = "MAGSTRIPE_SIGNATURE_FOR_AMEX_ONLY")]
+    MagstripeSignatureForAmexOnly,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlTerminalOperatingEnvironment {
+    #[serde(rename = "NO_TERMINAL")]
+    NoTerminal,
+    #[serde(rename = "ON_MERCHANT_PREMISES_ATTENDED")]
+    OnMerchantPremisesAttended,
+    #[serde(rename = "ON_MERCHANT_PREMISES_UNATTENDED")]
+    OnMerchantPremisesUnattended,
+    #[serde(rename = "OFF_MERCHANT_PREMISES_ATTENDED")]
+    OffMerchantPremisesAttended,
+    #[serde(rename = "OFF_MERCHANT_PREMISES_UNATTENDED")]
+    OffMerchantPremisesUnattended,
+    #[serde(rename = "ON_CUSTOMER_PREMISES_UNATTENDED")]
+    OnCustomerPremisesUnattended,
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+    #[serde(rename = "ELECTRONIC_DELIVERY_AMEX")]
+    ElectronicDeliveryAmex,
+    #[serde(rename = "PHYSICAL_DELIVERY_AMEX")]
+    PhysicalDeliveryAmex,
+    #[serde(rename = "OFF_MERCHANT_PREMISES_MPOS")]
+    OffMerchantPremisesMpos,
+    #[serde(rename = "ON_MERCHANT_PREMISES_MPOS")]
+    OnMerchantPremisesMpos,
+    #[serde(rename = "OFF_MERCHANT_PREMISES_CUSTOMER_POS")]
+    OffMerchantPremisesCustomerPos,
+    #[serde(rename = "ON_MERCHANT_PREMISES_CUSTOMER_POS")]
+    OnMerchantPremisesCustomerPos,
+    #[serde(rename = "OFF_CUSTOMER_PREMISES_UNATTENDED")]
+    OffCustomerPremisesUnattended,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlCardholderAuthenticationMethod {
+    #[serde(rename = "NOT_AUTHENTICATED")]
+    NotAuthenticated,
+    #[serde(rename = "PIN")]
+    Pin,
+    #[serde(rename = "ELECTRONIC_SIGNATURE_ANALYSIS")]
+    ElectronicSignatureAnalysis,
+    #[serde(rename = "MANUAL_SIGNATURE")]
+    ManualSignature,
+    #[serde(rename = "MANUAL_OTHER")]
+    ManualOther,
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+    #[serde(rename = "SYSTEMATIC_OTHER")]
+    SystematicOther,
+    #[serde(rename = "E_TICKET_ENV_AMEX")]
+    ETicketEnvAmex,
+    #[serde(rename = "OFFLINE_PIN")]
+    OfflinePin,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlTerminalAuthenticationCapability {
+    #[serde(rename = "NO_CAPABILITY")]
+    NoCapability,
+    #[serde(rename = "PIN_ENTRY")]
+    PinEntry,
+    #[serde(rename = "SIGNATURE_ANALYSIS")]
+    SignatureAnalysis,
+    #[serde(rename = "MPOS_SOFTWARE_BASED_PIN_ENTRY_CAPABILITY")]
+    MposSoftwareBasedPinEntryCapability,
+    #[serde(rename = "SIGNATURE_ANALYSIS_INOPERATIVE")]
+    SignatureAnalysisInoperative,
+    #[serde(rename = "OTHER")]
+    Other,
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlTerminalOutputCapability {
+    #[serde(rename = "NONE")]
+    None,
+    #[serde(rename = "PRINT_ONLY")]
+    PrintOnly,
+    #[serde(rename = "DISPLAY_ONLY")]
+    DisplayOnly,
+    #[serde(rename = "PRINT_AND_DISPLAY")]
+    PrintAndDisplay,
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlMaxPinLength {
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+    #[serde(rename = "NOT_SUPPORTED")]
+    NotSupported,
+    #[serde(rename = "4")]
+    Four,
+    #[serde(rename = "5")]
+    Five,
+    #[serde(rename = "6")]
+    Six,
+    #[serde(rename = "7")]
+    Seven,
+    #[serde(rename = "8")]
+    Eight,
+    #[serde(rename = "9")]
+    Nine,
+    #[serde(rename = "10")]
+    Ten,
+    #[serde(rename = "11")]
+    Eleven,
+    #[serde(rename = "12")]
+    Twelve,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlTerminalCardCaptureCapability {
+    #[serde(rename = "NO_CAPABILITY")]
+    NoCapability,
+    #[serde(rename = "CARD_CAPTURE_CAPABILITY")]
+    CardCaptureCapability,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlCardholderPresentDetail {
+    #[serde(rename = "CLICK_TO_PAY_DISCOVER")]
+    ClickToPayDiscover,
+    #[serde(rename = "CARDHOLDER_PRESENT")]
+    CardholderPresent,
+    #[serde(rename = "CARDHOLDER_NOT_PRESENT_UNSPECIFIED_REASON")]
+    CardholderNotPresentUnspecifiedReason,
+    #[serde(rename = "CARDHOLDER_NOT_PRESENT_MAIL_TRANSACTION")]
+    CardholderNotPresentMailTransaction,
+    #[serde(rename = "CARDHOLDER_NOT_PRESENT_PHONE_TRANSACTION")]
+    CardholderNotPresentPhoneTransaction,
+    #[serde(rename = "CARDHOLDER_NOT_PRESENT_RECURRING_TRANSACTION")]
+    CardholderNotPresentRecurringTransaction,
+    #[serde(rename = "CARDHOLDER_NOT_PRESENT_ELECTRONIC_COMMERCE")]
+    CardholderNotPresentElectronicCommerce,
+    #[serde(rename = "CARDHOLDER_NOT_PRESENT_INSTALLMENT_TRANSACTION")]
+    CardholderNotPresentInstallmentTransaction,
+    #[serde(rename = "PARTIAL_SHIPMENT_TRANSACTION_ON_TOKEN_CRYPTOGRAM_TXN")]
+    PartialShipmentTransactionOnTokenCryptogramTxn,
+    #[serde(rename = "RECURRING_TRANSACTION_ON_TOKEN_CRYPTOGRAM_TXN")]
+    RecurringTransactionOnTokenCryptogramTxn,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlCardPresentDetail {
+    #[serde(rename = "CARD_NOT_PRESENT")]
+    CardNotPresent,
+    #[serde(rename = "CARD_PRESENT")]
+    CardPresent,
+    #[serde(rename = "TRANSPONDER_AMEX")]
+    TransponderAmex,
+    #[serde(rename = "CONTACTLESS_CHIP_TRANSACTIONS")]
+    ContactlessChipTransactions,
+    #[serde(rename = "DIGITAL_WALLET_AMEX")]
+    DigitalWalletAmex,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlCardDataInputMode {
+    #[serde(rename = "VOICE_AUTH_ARU_ONLY")]
+    VoiceAuthAruOnly,
+    #[serde(rename = "MAGNETIC_STRIPE_READER_INPUT")]
+    MagneticStripeReaderInput,
+    #[serde(rename = "BAR_CODE_PAYMENT_CODE")]
+    BarCodePaymentCode,
+    #[serde(rename = "KEY_ENTERED_INPUT")]
+    KeyEnteredInput,
+    #[serde(rename = "MERCHANT_INITIATED_TRANSACTION_CARD_CREDENTIAL_STORED_ON_FILE")]
+    MerchantInitiatedTransactionCardCredentialStoredOnFile,
+    #[serde(rename = "PAN_AUTO_ENTRY_CONTACTLESS_MAGNETIC_STRIPE")]
+    PanAutoEntryContactlessMagneticStripe,
+    #[serde(rename = "MAGNETIC_STRIPE_READER_INPUT_TRACK_DATA_CAPTURED_PASSED_UNALTERED")]
+    MagneticStripeReaderInputTrackDataCapturedPassedUnaltered,
+    #[serde(rename = "ONLINE_CHIP")]
+    OnlineChip,
+    #[serde(rename = "OFFLINE_CHIP")]
+    OfflineChip,
+    #[serde(rename = "PAN_AUTO_ENTRY_CONTACTLESS_CHIP_CARD")]
+    PanAutoEntryContactlessChipCard,
+    #[serde(rename = "TRACK_DATA_READ_UNALTERED_CHIP_CAPABLE_TERMINAL_CHIP_DATA_NOT_READ")]
+    TrackDataReadUnalteredChipCapableTerminalChipDataNotRead,
+    #[serde(rename = "EMPTY_CANDIDATE_LIST_FALLBACK")]
+    EmptyCandidateListFallback,
+    #[serde(rename = "PAN_ENTRY_ELECTRONIC_COMMERCE_INCLUDING_REMOTE_CHIP")]
+    PanEntryElectronicCommerceIncludingRemoteChip,
+    #[serde(rename = "ELECTRONIC_COMMERCE_NO_SECURITY_CHANNEL_ENCRYPTED_SET_WITHOUT_CARDHOLDER_CERTIFICATE")]
+    ElectronicCommerceNoSecurityChannelEncryptedSetWithoutCardholderCertificate,
+    #[serde(rename = "MANUALLY_ENTERED_WITH_KEYED_CID_AMEX_JCB")]
+    ManuallyEnteredWithKeyedCidAmexJcb,
+    #[serde(rename = "SWIPED_TRANSACTION_WITH_KEYED_CID_AMEX_JCB")]
+    SwipedTransactionWithKeyedCidAmexJcb,
+    #[serde(rename = "CONTACTLESS_TO_CONTACT_CHIP_CARD_SWITCH_TRANSACTION_DISCOVER_ONLY")]
+    ContactlessToContactChipCardSwitchTransactionDiscoverOnly,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlCardholderAuthenticationEntity {
+    #[serde(rename = "NOT_AUTHENTICATED")]
+    NotAuthenticated,
+    #[serde(rename = "ICC_OFFLINE_PIN")]
+    IccOfflinePin,
+    #[serde(rename = "CARD_ACCEPTANCE_DEVICE")]
+    CardAcceptanceDevice,
+    #[serde(rename = "AUTHORIZING_AGENT_ONLINE_PIN")]
+    AuthorizingAgentOnlinePin,
+    #[serde(rename = "MERCHANT_CARD_ACCEPTOR_SIGNATURE")]
+    MerchantCardAcceptorSignature,
+    #[serde(rename = "OTHER")]
+    Other,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TsysXmlCardDataOutputCapability {
+    #[serde(rename = "NONE")]
+    None,
+    #[serde(rename = "MAGNETIC_STRIPE_WRITE")]
+    MagneticStripeWrite,
+    #[serde(rename = "ICC")]
+    Icc,
+    #[serde(rename = "OTHER")]
+    Other,
+}
+
+/// MC/AMEX-only field. PREAUTH for manual capture (delayed funds), FINAL for
+/// auto-capture (Sale).
+#[derive(Debug, Clone, Serialize)]
+pub enum TsysXmlAuthorizationIndicator {
+    #[serde(rename = "PREAUTH")]
+    Preauth,
+    #[serde(rename = "FINAL")]
+    Final,
+}
+
+/// Discover/JCB/Diners/CUP-only signal indicating whether the cardholder is a
+/// registered user in the merchant's system.
+#[derive(Debug, Clone, Serialize)]
+pub enum TsysXmlRegisteredUserIndicator {
+    #[serde(rename = "YES")]
+    Yes,
+    #[serde(rename = "NO")]
+    No,
+}
+
+/// XSD `terminalData` group — required by the TransIT e-commerce certification
+/// script for every authorization. The 12 inner fields are all required.
+#[derive(Debug, Serialize)]
+#[serde(rename = "terminalData")]
+pub struct TsysXmlTerminalData {
+    #[serde(rename = "terminalCapability")]
+    pub terminal_capability: TsysXmlTerminalCapability,
+    #[serde(rename = "terminalOperatingEnvironment")]
+    pub terminal_operating_environment: TsysXmlTerminalOperatingEnvironment,
+    #[serde(rename = "cardholderAuthenticationMethod")]
+    pub cardholder_authentication_method: TsysXmlCardholderAuthenticationMethod,
+    #[serde(rename = "terminalAuthenticationCapability")]
+    pub terminal_authentication_capability: TsysXmlTerminalAuthenticationCapability,
+    #[serde(rename = "terminalOutputCapability")]
+    pub terminal_output_capability: TsysXmlTerminalOutputCapability,
+    #[serde(rename = "maxPinLength")]
+    pub max_pin_length: TsysXmlMaxPinLength,
+    #[serde(rename = "terminalCardCaptureCapability")]
+    pub terminal_card_capture_capability: TsysXmlTerminalCardCaptureCapability,
+    #[serde(rename = "cardholderPresentDetail")]
+    pub cardholder_present_detail: TsysXmlCardholderPresentDetail,
+    #[serde(rename = "cardPresentDetail")]
+    pub card_present_detail: TsysXmlCardPresentDetail,
+    #[serde(rename = "cardDataInputMode")]
+    pub card_data_input_mode: TsysXmlCardDataInputMode,
+    #[serde(rename = "cardholderAuthenticationEntity")]
+    pub cardholder_authentication_entity: TsysXmlCardholderAuthenticationEntity,
+    #[serde(rename = "cardDataOutputCapability")]
+    pub card_data_output_capability: TsysXmlCardDataOutputCapability,
+}
+
+/// XSD `developerInfo` wrapper. Cert script asks for the developerID to be
+/// nested under a `<developerInfo>` element on the Authorize flow.
+#[derive(Debug, Serialize)]
+#[serde(rename = "developerInfo")]
+pub struct TsysXmlDeveloperInfo {
+    #[serde(rename = "developerID")]
+    pub developer_id: Secret<String>,
 }
 
 fn generate_xml<T: Serialize>(
@@ -61,10 +391,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> GetS
 }
 
 // Field order MATTERS: TransIT XSD is sequence-validated. Order verified against
-// the dev portal MOTO sample and a live `<SaleResponse><responseCode>F9901`
-// rejection that pinpointed `<cardDataSource>` having to precede `<developerID>`.
-// Operation-specific fields go between transactionKey and developerID, which
-// always sits at the end of the auth triple.
+// the dev portal MOTO sample and live `<SaleResponse><responseCode>F9901`
+// rejections that leaked the allowed-next sets.
+//
+// CRITICAL DEV-PORTAL DOC MISMATCH:
+// The dev portal labels `terminalData` and `developerInfo` as XSD groups with
+// child nodes. The live XSD does NOT have those groups — every child element
+// (`terminalCapability`, `developerID`, `acceptorStreetAddress`, etc.) is a
+// FLAT sibling. Verified against the F9901 error pasted into the design doc.
+// `partialApprovalCapable` is similarly bogus — the real element is
+// `partialAuthSupport`.
 #[derive(Debug, Serialize)]
 pub struct TsysXmlAuthorizeBody<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
@@ -83,14 +419,65 @@ pub struct TsysXmlAuthorizeBody<T: PaymentMethodDataTypes + Debug + Sync + Send 
     pub expiration_date: Secret<String>,
     #[serde(rename = "cvv2", skip_serializing_if = "Option::is_none")]
     pub cvv2: Option<Secret<String>>,
-    #[serde(rename = "addressLine1", skip_serializing_if = "Option::is_none")]
-    pub address_line1: Option<Secret<String>>,
-    #[serde(rename = "zip", skip_serializing_if = "Option::is_none")]
-    pub zip: Option<Secret<String>>,
-    #[serde(rename = "externalReferenceID", skip_serializing_if = "Option::is_none")]
-    pub external_reference_id: Option<String>,
+    /// Required by the cert script (AVS).
+    #[serde(rename = "addressLine1")]
+    pub address_line1: Secret<String>,
+    /// Required by the cert script (AVS).
+    #[serde(rename = "zip")]
+    pub zip: Secret<String>,
+    /// Required by the cert script (merchant's reference id, echoed in the response).
+    #[serde(rename = "externalReferenceID")]
+    pub external_reference_id: String,
+    /// Always "YES" — declares partial-auth support to TSYS. XSD name is
+    /// `partialAuthSupport` (not `partialApprovalCapable`).
+    #[serde(rename = "partialAuthSupport")]
+    pub partial_auth_support: String,
+    // --- terminalData fields (flat per the XSD; dev portal groups them, XSD doesn't) ---
+    #[serde(rename = "terminalCapability")]
+    pub terminal_capability: TsysXmlTerminalCapability,
+    #[serde(rename = "terminalOperatingEnvironment")]
+    pub terminal_operating_environment: TsysXmlTerminalOperatingEnvironment,
+    #[serde(rename = "cardholderAuthenticationMethod")]
+    pub cardholder_authentication_method: TsysXmlCardholderAuthenticationMethod,
+    #[serde(rename = "terminalAuthenticationCapability")]
+    pub terminal_authentication_capability: TsysXmlTerminalAuthenticationCapability,
+    #[serde(rename = "terminalOutputCapability")]
+    pub terminal_output_capability: TsysXmlTerminalOutputCapability,
+    #[serde(rename = "maxPinLength")]
+    pub max_pin_length: TsysXmlMaxPinLength,
+    #[serde(rename = "terminalCardCaptureCapability")]
+    pub terminal_card_capture_capability: TsysXmlTerminalCardCaptureCapability,
+    #[serde(rename = "cardholderPresentDetail")]
+    pub cardholder_present_detail: TsysXmlCardholderPresentDetail,
+    #[serde(rename = "cardPresentDetail")]
+    pub card_present_detail: TsysXmlCardPresentDetail,
+    #[serde(rename = "cardDataInputMode")]
+    pub card_data_input_mode: TsysXmlCardDataInputMode,
+    #[serde(rename = "cardholderAuthenticationEntity")]
+    pub cardholder_authentication_entity: TsysXmlCardholderAuthenticationEntity,
+    #[serde(rename = "cardDataOutputCapability")]
+    pub card_data_output_capability: TsysXmlCardDataOutputCapability,
+    /// developerID is a FLAT element, NOT inside a `<developerInfo>` wrapper.
     #[serde(rename = "developerID")]
     pub developer_id: Secret<String>,
+    /// Discover/JCB/Diners/CUP only.
+    #[serde(rename = "registeredUserIndicator", skip_serializing_if = "Option::is_none")]
+    pub registered_user_indicator: Option<TsysXmlRegisteredUserIndicator>,
+    /// Discover/JCB/Diners/CUP only.
+    #[serde(rename = "lastRegisteredChangeDate", skip_serializing_if = "Option::is_none")]
+    pub last_registered_change_date: Option<String>,
+    /// MC/AMEX only: PREAUTH for manual capture, FINAL otherwise.
+    #[serde(rename = "authorizationIndicator", skip_serializing_if = "Option::is_none")]
+    pub authorization_indicator: Option<TsysXmlAuthorizationIndicator>,
+    /// MC-only acceptor info — all four sub-fields must be present together.
+    #[serde(rename = "acceptorStreetAddress", skip_serializing_if = "Option::is_none")]
+    pub acceptor_street_address: Option<String>,
+    #[serde(rename = "acceptorCustomerServicePhoneNumber", skip_serializing_if = "Option::is_none")]
+    pub acceptor_customer_service_phone_number: Option<String>,
+    #[serde(rename = "acceptorPhoneNumber", skip_serializing_if = "Option::is_none")]
+    pub acceptor_phone_number: Option<String>,
+    #[serde(rename = "acceptorURLAddress", skip_serializing_if = "Option::is_none")]
+    pub acceptor_url_address: Option<String>,
     /// Phantom marker so the generic `T` is preserved on the struct without leaking
     /// into the serialized payload.
     #[serde(skip)]
@@ -255,6 +642,10 @@ pub struct TsysXmlVoidRequest {
     pub transaction_amount: Option<StringMajorUnit>,
     #[serde(rename = "transactionID")]
     pub transaction_id: String,
+    /// Cert script Step 7: derived from `cancellation_reason`, capped at 80 chars.
+    /// Defaults to "CUSTOMER_REQUEST" when no reason is supplied upstream.
+    #[serde(rename = "voidReason")]
+    pub void_reason: String,
     #[serde(rename = "developerID")]
     pub developer_id: Secret<String>,
 }

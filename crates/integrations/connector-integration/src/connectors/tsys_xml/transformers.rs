@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use common_enums::{AttemptStatus, CaptureMethod, RefundStatus};
+use common_enums::{AttemptStatus, CaptureMethod, CardNetwork, PaymentChannel, RefundStatus};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -8,20 +8,26 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::IntegrationError,
+    errors::{ConnectorError, IntegrationError},
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use error_stack::Report;
-use hyperswitch_masking::{PeekInterface, Secret};
+use error_stack::{Report, ResultExt};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::{
     requests::{
-        TsysXmlAuthorizeBody, TsysXmlAuthorizeRequest, TsysXmlCaptureRequest,
-        TsysXmlCardDataSource, TsysXmlReturnRequest, TsysXmlTransactionInquiryRequest,
-        TsysXmlVoidRequest,
+        TsysXmlAuthorizationIndicator, TsysXmlAuthorizeBody, TsysXmlAuthorizeRequest,
+        TsysXmlCaptureRequest, TsysXmlCardDataInputMode, TsysXmlCardDataOutputCapability,
+        TsysXmlCardDataSource, TsysXmlCardPresentDetail,
+        TsysXmlCardholderAuthenticationEntity, TsysXmlCardholderAuthenticationMethod,
+        TsysXmlCardholderPresentDetail, TsysXmlMaxPinLength,
+        TsysXmlRegisteredUserIndicator, TsysXmlReturnRequest, TsysXmlTerminalAuthenticationCapability,
+        TsysXmlTerminalCapability, TsysXmlTerminalCardCaptureCapability,
+        TsysXmlTerminalOperatingEnvironment, TsysXmlTerminalOutputCapability,
+        TsysXmlTransactionInquiryRequest, TsysXmlVoidRequest,
     },
     responses::{
         TsysXmlAuthorizeResponse, TsysXmlCaptureResponse, TsysXmlReturnResponse, TsysXmlStatus,
@@ -30,7 +36,49 @@ use super::{
     TsysXmlRouterData,
 };
 use crate::types::ResponseRouterData;
-use domain_types::errors::ConnectorError;
+
+// =============================================================================
+// Connector metadata schema (parsed from `PaymentsAuthorizeData.metadata`)
+// =============================================================================
+
+/// Top-level wrapper — the merchant supplies `connector_metadata.tsys_xml.{...}`.
+#[derive(Debug, Default, Deserialize)]
+struct TsysXmlMerchantMetadata {
+    #[serde(default)]
+    tsys_xml: Option<TsysXmlMerchantMetadataInner>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct TsysXmlMerchantMetadataInner {
+    #[serde(default)]
+    acceptor: Option<TsysXmlAcceptorMetadata>,
+    #[serde(default)]
+    terminal_data: Option<TsysXmlTerminalDataOverrides>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct TsysXmlAcceptorMetadata {
+    street_address: Option<String>,
+    customer_service_phone: Option<String>,
+    phone: Option<String>,
+    url: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct TsysXmlTerminalDataOverrides {
+    terminal_capability: Option<TsysXmlTerminalCapability>,
+    terminal_operating_environment: Option<TsysXmlTerminalOperatingEnvironment>,
+    cardholder_authentication_method: Option<TsysXmlCardholderAuthenticationMethod>,
+    terminal_authentication_capability: Option<TsysXmlTerminalAuthenticationCapability>,
+    terminal_output_capability: Option<TsysXmlTerminalOutputCapability>,
+    max_pin_length: Option<TsysXmlMaxPinLength>,
+    terminal_card_capture_capability: Option<TsysXmlTerminalCardCaptureCapability>,
+    cardholder_present_detail: Option<TsysXmlCardholderPresentDetail>,
+    card_present_detail: Option<TsysXmlCardPresentDetail>,
+    card_data_input_mode: Option<TsysXmlCardDataInputMode>,
+    cardholder_authentication_entity: Option<TsysXmlCardholderAuthenticationEntity>,
+    card_data_output_capability: Option<TsysXmlCardDataOutputCapability>,
+}
 
 /// Auth bundle for TsysXml (TransIT) — flattened into the XML request body.
 ///
@@ -135,24 +183,171 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data.request.currency,
         )?;
 
-        // Billing address fields used by AVS (addressLine1 + zip).
+        // Billing address fields used by AVS (addressLine1 + zip). Both REQUIRED
+        // by the e-commerce certification script.
         let billing = router_data
             .resource_common_data
             .address
             .get_payment_billing()
             .and_then(|b| b.address.as_ref());
-        let address_line1 = billing.and_then(|a| a.line1.clone());
-        let zip = billing.and_then(|a| a.zip.clone());
+        let address_line1 = billing.and_then(|a| a.line1.clone()).ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "billing.address.line1",
+                context: Default::default(),
+            })
+        })?;
+        let zip = billing.and_then(|a| a.zip.clone()).ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "billing.address.zip",
+                context: Default::default(),
+            })
+        })?;
 
-        // TODO(tsys_xml): derive cardDataSource from upstream channel hints
-        // (browser_info presence vs PHONE/MOTO). Default to INTERNET — matches
-        // cert script Sheet 3 (eCommerce) which is the most common UCS scenario.
-        let card_data_source = TsysXmlCardDataSource::Internet;
+        // Channel-driven cardDataSource selection — replaces the previous
+        // hardcoded Internet default.
+        let channel = router_data.request.payment_channel.clone();
+        let card_data_source = match channel {
+            Some(PaymentChannel::TelephoneOrder) => TsysXmlCardDataSource::Phone,
+            Some(PaymentChannel::MailOrder) => TsysXmlCardDataSource::Mail,
+            Some(PaymentChannel::Ecommerce) | None => TsysXmlCardDataSource::Internet,
+        };
+
+        // Capture method drives MC/AMEX authorizationIndicator.
+        let is_manual_capture = matches!(
+            router_data.request.capture_method,
+            Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple)
+        );
+
+        // Card network drives several MC/AMEX/Discover-only fields.
+        let card_network = card.card_network.clone();
+
+        let authorization_indicator = match card_network {
+            Some(CardNetwork::Mastercard) | Some(CardNetwork::AmericanExpress) => Some(
+                if is_manual_capture {
+                    TsysXmlAuthorizationIndicator::Preauth
+                } else {
+                    TsysXmlAuthorizationIndicator::Final
+                },
+            ),
+            _ => None,
+        };
+
+        // Parse connector metadata once. Failure to deserialize surfaces as
+        // InvalidDataFormat so merchants see a precise error.
+        let merchant_metadata = match router_data.request.metadata.as_ref() {
+            Some(meta) => serde_json::from_value::<TsysXmlMerchantMetadata>(
+                meta.clone().expose(),
+            )
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "connector_metadata.tsys_xml",
+                context: Default::default(),
+            })?,
+            None => TsysXmlMerchantMetadata::default(),
+        };
+        let merchant_inner = merchant_metadata.tsys_xml.unwrap_or_default();
+        let acceptor_meta = merchant_inner.acceptor;
+        let terminal_overrides = merchant_inner.terminal_data.unwrap_or_default();
+
+        // Acceptor fields — MC only, all four required together.
+        let (
+            acceptor_street_address,
+            acceptor_customer_service_phone_number,
+            acceptor_phone_number,
+            acceptor_url_address,
+        ) = if matches!(card_network, Some(CardNetwork::Mastercard)) {
+            let a = acceptor_meta.ok_or_else(|| {
+                error_stack::report!(IntegrationError::MissingRequiredField {
+                    field_name:
+                        "connector_metadata.tsys_xml.acceptor.* required for MasterCard",
+                    context: Default::default(),
+                })
+            })?;
+            match (a.street_address, a.customer_service_phone, a.phone, a.url) {
+                (Some(s), Some(cs), Some(p), Some(u)) => {
+                    (Some(s), Some(cs), Some(p), Some(u))
+                }
+                _ => {
+                    return Err(IntegrationError::MissingRequiredField {
+                        field_name:
+                            "connector_metadata.tsys_xml.acceptor.* required for MasterCard",
+                        context: Default::default(),
+                    }
+                    .into());
+                }
+            }
+        } else {
+            (None, None, None, None)
+        };
+
+        // registeredUserIndicator / lastRegisteredChangeDate — Discover/JCB/Diners/CUP only.
+        let (registered_user_indicator, last_registered_change_date) = match card_network {
+            Some(CardNetwork::Discover)
+            | Some(CardNetwork::JCB)
+            | Some(CardNetwork::DinersClub)
+            | Some(CardNetwork::UnionPay) => (
+                Some(TsysXmlRegisteredUserIndicator::No),
+                Some("00/00/0000".to_string()),
+            ),
+            _ => (None, None),
+        };
+
+        // terminalData fields — flat in the XSD; defaults driven by payment_channel,
+        // each field individually override-able via `connector_metadata.tsys_xml.terminal_data`.
+        let terminal_capability = terminal_overrides
+            .terminal_capability
+            .unwrap_or(TsysXmlTerminalCapability::KeyedEntryOnly);
+        let terminal_operating_environment = terminal_overrides
+            .terminal_operating_environment
+            .unwrap_or(TsysXmlTerminalOperatingEnvironment::NoTerminal);
+        let cardholder_authentication_method = terminal_overrides
+            .cardholder_authentication_method
+            .unwrap_or(TsysXmlCardholderAuthenticationMethod::NotAuthenticated);
+        let terminal_authentication_capability = terminal_overrides
+            .terminal_authentication_capability
+            .unwrap_or(TsysXmlTerminalAuthenticationCapability::NoCapability);
+        let terminal_output_capability = terminal_overrides
+            .terminal_output_capability
+            .unwrap_or(TsysXmlTerminalOutputCapability::None);
+        let max_pin_length = terminal_overrides
+            .max_pin_length
+            .unwrap_or(TsysXmlMaxPinLength::NotSupported);
+        let terminal_card_capture_capability = terminal_overrides
+            .terminal_card_capture_capability
+            .unwrap_or(TsysXmlTerminalCardCaptureCapability::NoCapability);
+        let cardholder_present_detail =
+            terminal_overrides
+                .cardholder_present_detail
+                .unwrap_or_else(|| match channel {
+                    Some(PaymentChannel::TelephoneOrder) => {
+                        TsysXmlCardholderPresentDetail::CardholderNotPresentPhoneTransaction
+                    }
+                    Some(PaymentChannel::MailOrder) => {
+                        TsysXmlCardholderPresentDetail::CardholderNotPresentMailTransaction
+                    }
+                    _ => TsysXmlCardholderPresentDetail::CardholderNotPresentElectronicCommerce,
+                });
+        let card_present_detail = terminal_overrides
+            .card_present_detail
+            .unwrap_or(TsysXmlCardPresentDetail::CardNotPresent);
+        let card_data_input_mode =
+            terminal_overrides
+                .card_data_input_mode
+                .unwrap_or_else(|| match channel {
+                    Some(PaymentChannel::Ecommerce) | None => {
+                        TsysXmlCardDataInputMode::PanEntryElectronicCommerceIncludingRemoteChip
+                    }
+                    _ => TsysXmlCardDataInputMode::KeyEnteredInput,
+                });
+        let cardholder_authentication_entity = terminal_overrides
+            .cardholder_authentication_entity
+            .unwrap_or(TsysXmlCardholderAuthenticationEntity::NotAuthenticated);
+        let card_data_output_capability = terminal_overrides
+            .card_data_output_capability
+            .unwrap_or(TsysXmlCardDataOutputCapability::None);
 
         let body = TsysXmlAuthorizeBody {
             device_id: auth.device_id,
             transaction_key: auth.transaction_key,
-            developer_id: auth.developer_id,
             card_data_source,
             transaction_amount,
             card_number: Secret::new(card.card_number.peek().to_string()),
@@ -160,19 +355,33 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             cvv2: Some(card.card_cvc.clone()),
             address_line1,
             zip,
-            external_reference_id: Some(
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
+            external_reference_id: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            partial_auth_support: "YES".to_string(),
+            terminal_capability,
+            terminal_operating_environment,
+            cardholder_authentication_method,
+            terminal_authentication_capability,
+            terminal_output_capability,
+            max_pin_length,
+            terminal_card_capture_capability,
+            cardholder_present_detail,
+            card_present_detail,
+            card_data_input_mode,
+            cardholder_authentication_entity,
+            card_data_output_capability,
+            developer_id: auth.developer_id,
+            registered_user_indicator,
+            last_registered_change_date,
+            authorization_indicator,
+            acceptor_street_address,
+            acceptor_customer_service_phone_number,
+            acceptor_phone_number,
+            acceptor_url_address,
             _marker: std::marker::PhantomData,
         };
-
-        let is_manual_capture = matches!(
-            router_data.request.capture_method,
-            Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple)
-        );
 
         Ok(if is_manual_capture {
             Self::Auth(body)
@@ -961,12 +1170,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             _ => None,
         };
 
+        // Cert script Step 7: voidReason is required. Derive from
+        // `cancellation_reason`, fall back to a sensible default, cap at 80
+        // chars to stay within TSYS' field bounds.
+        let void_reason = {
+            let raw = router_data
+                .request
+                .cancellation_reason
+                .clone()
+                .unwrap_or_else(|| "CUSTOMER_REQUEST".to_string());
+            if raw.len() > 80 {
+                raw.chars().take(80).collect()
+            } else {
+                raw
+            }
+        };
+
         Ok(Self {
             device_id: auth.device_id,
             transaction_key: auth.transaction_key,
             developer_id: auth.developer_id,
             transaction_id,
             transaction_amount,
+            void_reason,
         })
     }
 }
