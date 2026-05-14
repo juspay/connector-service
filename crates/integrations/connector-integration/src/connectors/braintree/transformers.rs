@@ -168,17 +168,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let payment_method_id =
-            match &item.router_data.request.payment_method_data {
-                PaymentMethodData::PaymentMethodToken(t) => t.token.clone(),
-                _ => {
-                    return Err(IntegrationError::MissingRequiredField {
-                        field_name: "payment_method_token",
-                        context: Default::default(),
-                    }
-                    .into())
+        let payment_method_id = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::PaymentMethodToken(t) => t.token.clone(),
+            _ => {
+                return Err(IntegrationError::MissingRequiredField {
+                    field_name: "payment_method_token",
+                    context: Default::default(),
                 }
-            };
+                .into())
+            }
+        };
 
         let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_account_id =
