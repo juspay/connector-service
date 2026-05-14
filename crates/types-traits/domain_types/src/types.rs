@@ -393,6 +393,7 @@ pub struct Connectors {
     pub easebuzz: ConnectorParams,
     pub imerchantsolutions: ConnectorParams,
     pub axisbank: ConnectorParams,
+    pub twoc_twop_paco: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -2634,6 +2635,7 @@ pub struct AuthorizationRequest {
     pub tokenization_strategy: Option<grpc_payment_types::Tokenization>,
     pub test_mode: Option<bool>,
     pub payment_method_token: Option<Secret<String>>,
+    pub merchant_request_id: Option<String>,
 }
 
 /// Intermediate setup recurring request that accepts both CardDetails and ProxyCardDetails.
@@ -2719,6 +2721,7 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
             order_details: Some(req.order_details),
             test_mode: req.test_mode,
             payment_method_token: None,
+            merchant_request_id: req.merchant_request_id,
         }
     }
 }
@@ -2779,6 +2782,7 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
             tokenization_strategy: None,
             test_mode: req.test_mode,
             payment_method_token: None,
+            merchant_request_id: None,
         }
     }
 }
@@ -3988,6 +3992,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -4118,6 +4123,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             order_details,
             l2_l3_data: l2_l3_data.map(Box::new),
             minor_amount_authorized: None,
+            merchant_request_id: value.merchant_request_id.clone(),
         })
     }
 }
@@ -4168,7 +4174,7 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             status: common_enums::AttemptStatus::Pending,
             payment_method: PaymentMethod::Card,
             address,
-            auth_type: common_enums::AuthenticationType::default(),
+            auth_type: common_enums::AuthenticationType::foreign_try_from(value.auth_type)?,
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.merchant_transaction_id,
             ),
@@ -4201,6 +4207,7 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             recurring_mandate_payment_data: None,
             order_details,
             minor_amount_authorized: None,
+            merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: l2_l3_data.map(Box::new),
         })
     }
@@ -4283,6 +4290,7 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             recurring_mandate_payment_data: None,
             order_details,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: l2_l3_data.map(Box::new),
         })
     }
@@ -4394,6 +4402,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: l2_l3_data.map(Box::new),
         })
     }
@@ -4480,6 +4489,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: None,
         })
     }
@@ -4551,6 +4561,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: None,
         })
     }
@@ -6507,6 +6518,7 @@ impl
             connector_feature_data,
             test_mode: value.test_mode,
             payment_method,
+            merchant_request_id: value.merchant_request_id.clone(),
         })
     }
 }
@@ -6567,6 +6579,7 @@ impl
             connector_feature_data,
             test_mode: value.test_mode,
             payment_method,
+            merchant_request_id: value.merchant_request_id.clone(),
         })
     }
 }
@@ -7347,6 +7360,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: None,
         })
     }
@@ -7455,6 +7469,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -8069,6 +8084,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: None,
         })
     }
@@ -8169,6 +8185,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -8518,6 +8535,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: l2_l3_data.map(Box::new),
         })
     }
@@ -8625,6 +8643,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -9746,6 +9765,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -10259,6 +10279,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -10434,6 +10455,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -10583,6 +10605,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -12353,6 +12376,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -12444,6 +12468,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -12542,6 +12567,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -12618,6 +12644,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            merchant_request_id: None,
             l2_l3_data: None,
         })
     }
@@ -13218,6 +13245,7 @@ pub fn tokenized_authorize_to_base(
         statement_descriptor_suffix: None,
         threeds_completion_indicator: None,
         tokenization_strategy: None,
+        merchant_request_id: None,
     }
 }
 
@@ -13388,6 +13416,7 @@ pub fn proxied_authorize_to_base(
         tokenization_strategy: None,
         setup_mandate_details: None,
         test_mode: None,
+        merchant_request_id: None,
     })
 }
 

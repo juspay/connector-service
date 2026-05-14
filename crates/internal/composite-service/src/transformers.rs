@@ -137,6 +137,7 @@ impl
             continue_redirection_url: item.continue_redirection_url.clone(),
             l2_l3_data: item.l2_l3_data.clone(),
             connector_order_id: item.connector_order_id.clone(),
+            merchant_request_id: item.merchant_request_id.clone(),
         }
     }
 }
@@ -199,6 +200,7 @@ impl
             connector_order_reference_id: item.connector_order_reference_id.clone(),
             test_mode: item.test_mode,
             payment_experience: item.payment_experience,
+            merchant_request_id: item.merchant_request_id.clone(),
         }
     }
 }
@@ -263,6 +265,7 @@ impl
             test_mode: item.test_mode,
             payment_method_type: item.payment_method_type,
             customer_id: item.customer_id.clone(),
+            merchant_request_id: item.merchant_request_id.clone(),
         }
     }
 }
@@ -323,6 +326,7 @@ impl
             payment_method_type: item.payment_method_type,
             connector_feature_data: item.connector_feature_data.clone(),
             refund_amount: item.refund_amount,
+            merchant_request_id: item.merchant_request_id.clone(),
         }
     }
 }
@@ -382,6 +386,7 @@ impl
             state: resolved_state,
             test_mode: item.test_mode,
             merchant_order_id: item.merchant_order_id.clone(),
+            merchant_request_id: item.merchant_request_id.clone(),
         }
     }
 }
@@ -441,6 +446,7 @@ impl
             state: resolved_state,
             test_mode: item.test_mode,
             merchant_order_id: item.merchant_order_id.clone(),
+            merchant_request_id: item.merchant_request_id.clone(),
         }
     }
 }
