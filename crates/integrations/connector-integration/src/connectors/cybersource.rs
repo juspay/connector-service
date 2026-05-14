@@ -139,34 +139,31 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         auth_type: common_enums::AuthenticationType,
         payment_method: common_enums::PaymentMethod,
-        has_redirect_params: Option<bool>,
+        redirect_state: connector_types::RedirectState,
         completed_step: Option<connector_types::AuthenticationStep>,
     ) -> connector_types::AuthenticationStep {
-        use connector_types::AuthenticationStep;
+        use connector_types::{AuthenticationStep, RedirectState};
         if auth_type == common_enums::AuthenticationType::ThreeDs
             && payment_method == common_enums::PaymentMethod::Card
         {
-            match (has_redirect_params, completed_step) {
-                // Initial request: start with PreAuthenticate
-                (None, _) => AuthenticationStep::PreAuthenticate,
+            match (redirect_state, completed_step) {
+                (RedirectState::InitialRequest, _) => AuthenticationStep::PreAuthenticate,
 
-                // DDC callback: run Authenticate
-                (Some(true), None) => AuthenticationStep::Authenticate,
+                (RedirectState::RedirectWithParams, None) => AuthenticationStep::Authenticate,
 
-                // Authenticate completed inline (frictionless, rare for CS): proceed to Authorize
-                (Some(true), Some(AuthenticationStep::Authenticate)) => {
+                (RedirectState::RedirectWithParams, Some(AuthenticationStep::Authenticate)) => {
                     AuthenticationStep::Authorize
                 }
 
-                // Challenge callback: run PostAuthenticate
-                (Some(false), None) => AuthenticationStep::PostAuthenticate,
-
-                // PostAuth completed inline: proceed to Authorize
-                (Some(false), Some(AuthenticationStep::PostAuthenticate)) => {
-                    AuthenticationStep::Authorize
+                (RedirectState::RedirectWithoutParams, None) => {
+                    AuthenticationStep::PostAuthenticate
                 }
 
-                // Fallback
+                (
+                    RedirectState::RedirectWithoutParams,
+                    Some(AuthenticationStep::PostAuthenticate),
+                ) => AuthenticationStep::Authorize,
+
                 _ => AuthenticationStep::Authorize,
             }
         } else {

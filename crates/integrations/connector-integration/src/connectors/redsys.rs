@@ -138,33 +138,29 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         auth_type: common_enums::AuthenticationType,
         payment_method: common_enums::PaymentMethod,
-        has_redirect_params: Option<bool>,
+        redirect_state: connector_types::RedirectState,
         completed_step: Option<connector_types::AuthenticationStep>,
     ) -> connector_types::AuthenticationStep {
-        use connector_types::AuthenticationStep;
+        use connector_types::{AuthenticationStep, RedirectState};
 
         if auth_type == common_enums::AuthenticationType::ThreeDs
             && payment_method == common_enums::PaymentMethod::Card
         {
-            match (has_redirect_params, completed_step) {
-                // Initial request: start with PreAuthenticate (DDC setup)
-                (None, None) => AuthenticationStep::PreAuthenticate,
+            match (redirect_state, completed_step) {
+                (RedirectState::InitialRequest, None) => AuthenticationStep::PreAuthenticate,
 
-                // PreAuth completed inline (frictionless/exempt): run Authenticate
-                (None, Some(AuthenticationStep::PreAuthenticate)) => {
+                (RedirectState::InitialRequest, Some(AuthenticationStep::PreAuthenticate)) => {
                     AuthenticationStep::Authenticate
                 }
 
-                // Authenticate completed inline (frictionless): proceed to Authorize
-                (None, Some(AuthenticationStep::Authenticate)) => AuthenticationStep::Authorize,
+                (RedirectState::InitialRequest, Some(AuthenticationStep::Authenticate)) => {
+                    AuthenticationStep::Authorize
+                }
 
-                // DDC callback (has params): run Authenticate to initiate challenge
-                (Some(true), None) => AuthenticationStep::Authenticate,
+                (RedirectState::RedirectWithParams, None) => AuthenticationStep::Authenticate,
 
-                // Challenge callback (no params): proceed to Authorize
-                (Some(false), None) => AuthenticationStep::Authorize,
+                (RedirectState::RedirectWithoutParams, None) => AuthenticationStep::Authorize,
 
-                // Fallback: proceed to Authorize
                 _ => AuthenticationStep::Authorize,
             }
         } else {

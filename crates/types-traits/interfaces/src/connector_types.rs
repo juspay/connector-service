@@ -66,6 +66,14 @@ pub enum AuthenticationStep {
     Authorize,
 }
 
+/// Represents the redirect state for composite authorize flow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RedirectState {
+    InitialRequest,
+    RedirectWithParams,
+    RedirectWithoutParams,
+}
+
 pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
     + ValidationTrait
@@ -170,7 +178,7 @@ pub trait ValidationTrait: ConnectorCommon {
         &self,
         _auth_type: common_enums::AuthenticationType,
         _payment_method: PaymentMethod,
-        _has_redirect_params: Option<bool>,
+        _redirect_state: RedirectState,
         _completed_step: Option<AuthenticationStep>,
     ) -> AuthenticationStep {
         AuthenticationStep::Authorize

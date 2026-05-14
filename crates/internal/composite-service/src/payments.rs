@@ -414,138 +414,134 @@ where
             .create_connector_customer(&connector, &payload, &metadata, &extensions)
             .await?;
 
-        // Extract request properties for validation
-        let auth_type = common_enums::AuthenticationType::foreign_try_from(
-            grpc_api_types::payments::AuthenticationType::try_from(payload.auth_type)
-                .unwrap_or_default(),
-        )
-        .map_err(|err| tonic::Status::invalid_argument(format!("invalid auth_type: {err}")))?;
-        let payment_method = payload
-            .payment_method()
-            .map(common_enums::PaymentMethod::foreign_try_from)
-            .transpose()
-            .map_err(|err| {
-                tonic::Status::invalid_argument(format!("invalid payment_method: {err}"))
-            })?
-            .ok_or_else(|| tonic::Status::invalid_argument("missing payment_method"))?;
-
-        let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(&connector);
-
-        // Derive redirect state from proto redirection_response
-        let has_redirect_params: Option<bool> = payload
-            .redirection_response
-            .as_ref()
-            .map(|r| r.params.as_ref().map(|p| !p.is_empty()).unwrap_or(false));
-
         let mut pre_auth_response_opt = None;
         let mut authn_response_opt = None;
         let mut post_authn_response_opt = None;
+        let mut authorize_response_opt = None;
         let mut completed_step: Option<AuthenticationStep> = None;
 
         // Authentication loop - connector controls flow via next_authentication_step
         loop {
+            let auth_type = common_enums::AuthenticationType::foreign_try_from(
+                grpc_api_types::payments::AuthenticationType::try_from(payload.auth_type)
+                    .unwrap_or_default(),
+            )
+            .map_err(|err| tonic::Status::invalid_argument(format!("invalid auth_type: {err}")))?;
+            let payment_method = payload
+                .payment_method()
+                .map(common_enums::PaymentMethod::foreign_try_from)
+                .transpose()
+                .map_err(|err| {
+                    tonic::Status::invalid_argument(format!("invalid payment_method: {err}"))
+                })?
+                .ok_or_else(|| tonic::Status::invalid_argument("missing payment_method"))?;
+            let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(&connector);
+            let redirect_state = match payload.redirection_response.as_ref() {
+                None => interfaces::connector_types::RedirectState::InitialRequest,
+                Some(r) => {
+                    if r.params.as_ref().map(|p| !p.is_empty()).unwrap_or(false) {
+                        interfaces::connector_types::RedirectState::RedirectWithParams
+                    } else {
+                        interfaces::connector_types::RedirectState::RedirectWithoutParams
+                    }
+                }
+            };
+
             let next_step = connector_data.connector.next_authentication_step(
                 auth_type,
                 payment_method,
-                has_redirect_params,
+                redirect_state,
                 completed_step,
             );
 
             match next_step {
                 AuthenticationStep::PreAuthenticate => {
-                    let pre_auth_response = self
-                        .pre_authenticate(&payload, &metadata, &extensions)
-                        .await?;
-
-                    if pre_auth_response.redirection_data.is_some()
-                        || is_failure_payment_status(pre_auth_response.status)
-                    {
-                        let composite_status = if pre_auth_response.redirection_data.is_some() {
-                            CompositeStatus::RedirectRequired
-                        } else {
-                            CompositeStatus::Completed
-                        };
-
-                        return Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                            access_token_response,
-                            create_customer_response,
-                            pre_authenticate_response: Some(pre_auth_response),
-                            authenticate_response: None,
-                            post_authenticate_response: None,
-                            authorize_response: None,
-                            composite_status: composite_status.into(),
-                        }));
-                    }
-
-                    pre_auth_response_opt = Some(pre_auth_response);
+                    pre_auth_response_opt = Some(
+                        self.pre_authenticate(&payload, &metadata, &extensions)
+                            .await?,
+                    );
                     completed_step = Some(AuthenticationStep::PreAuthenticate);
+
+                    if pre_auth_response_opt
+                        .as_ref()
+                        .map(|r| {
+                            r.redirection_data.is_some() || is_failure_payment_status(r.status)
+                        })
+                        .unwrap_or(false)
+                    {
+                        break;
+                    }
                 }
 
                 AuthenticationStep::Authenticate => {
-                    let auth_response = self
-                        .authenticate(
+                    authn_response_opt = Some(
+                        self.authenticate(
                             &payload,
                             pre_auth_response_opt.as_ref(),
                             &metadata,
                             &extensions,
                         )
-                        .await?;
-
-                    if auth_response.redirection_data.is_some()
-                        || is_terminal_payment_status(auth_response.status)
-                    {
-                        let composite_status = if auth_response.redirection_data.is_some() {
-                            CompositeStatus::RedirectRequired
-                        } else {
-                            CompositeStatus::Completed
-                        };
-
-                        return Ok(tonic::Response::new(CompositeAuthorizeResponse {
-                            access_token_response,
-                            create_customer_response,
-                            pre_authenticate_response: pre_auth_response_opt,
-                            authenticate_response: Some(auth_response),
-                            post_authenticate_response: None,
-                            authorize_response: None,
-                            composite_status: composite_status.into(),
-                        }));
-                    }
-
-                    authn_response_opt = Some(auth_response);
+                        .await?,
+                    );
                     completed_step = Some(AuthenticationStep::Authenticate);
+
+                    if authn_response_opt
+                        .as_ref()
+                        .map(|r| {
+                            r.redirection_data.is_some() || is_terminal_payment_status(r.status)
+                        })
+                        .unwrap_or(false)
+                    {
+                        break;
+                    }
                 }
 
                 AuthenticationStep::PostAuthenticate => {
-                    let post_auth_response = self
-                        .post_authenticate(
+                    post_authn_response_opt = Some(
+                        self.post_authenticate(
                             &payload,
                             authn_response_opt.as_ref(),
                             &metadata,
                             &extensions,
                         )
-                        .await?;
-
-                    post_authn_response_opt = Some(post_auth_response);
+                        .await?,
+                    );
                     completed_step = Some(AuthenticationStep::PostAuthenticate);
                 }
 
                 AuthenticationStep::Authorize => {
+                    authorize_response_opt = Some(
+                        self.authorize(
+                            &payload,
+                            access_token_response.as_ref(),
+                            create_customer_response.as_ref(),
+                            authn_response_opt.as_ref(),
+                            post_authn_response_opt.as_ref(),
+                            &metadata,
+                            &extensions,
+                        )
+                        .await?,
+                    );
                     break;
                 }
             }
         }
 
-        let authorize_response = self
-            .authorize(
-                &payload,
-                access_token_response.as_ref(),
-                create_customer_response.as_ref(),
-                authn_response_opt.as_ref(),
-                post_authn_response_opt.as_ref(),
-                &metadata,
-                &extensions,
-            )
-            .await?;
+        // Response construction - check if redirect occurred
+        let has_redirection = pre_auth_response_opt
+            .as_ref()
+            .map(|r| r.redirection_data.is_some())
+            .unwrap_or(false)
+            || authn_response_opt
+                .as_ref()
+                .map(|r| r.redirection_data.is_some())
+                .unwrap_or(false);
+
+        let composite_status = if has_redirection {
+            CompositeStatus::RedirectRequired
+        } else {
+            CompositeStatus::Completed
+        };
 
         Ok(tonic::Response::new(CompositeAuthorizeResponse {
             access_token_response,
@@ -553,8 +549,8 @@ where
             pre_authenticate_response: pre_auth_response_opt,
             authenticate_response: authn_response_opt,
             post_authenticate_response: post_authn_response_opt,
-            authorize_response: Some(authorize_response),
-            composite_status: CompositeStatus::Completed.into(),
+            authorize_response: authorize_response_opt,
+            composite_status: composite_status.into(),
         }))
     }
 
