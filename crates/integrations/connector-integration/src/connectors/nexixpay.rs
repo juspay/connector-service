@@ -7,13 +7,13 @@ use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceEx
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, PSync, PostAuthenticate, PreAuthenticate,
-        RSync, Refund, Void,
+        RSync, Refund, Void, VoidPC,
     },
     connector_types::{
         ClientAuthenticationTokenRequestData, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
@@ -34,8 +34,8 @@ use transformers::{
     NexixpayClientAuthResponse, NexixpayPaymentsRequest, NexixpayPaymentsResponse,
     NexixpayPostAuthenticateRequest, NexixpayPostAuthenticateResponse,
     NexixpayPreAuthenticateRequest, NexixpayPreAuthenticateResponse, NexixpayRSyncResponse,
-    NexixpayRefundRequest, NexixpayRefundResponse, NexixpaySyncResponse, NexixpayVoidRequest,
-    NexixpayVoidResponse,
+    NexixpayRefundRequest, NexixpayRefundResponse, NexixpaySyncResponse, NexixpayVoidPCRequest,
+    NexixpayVoidPCResponse, NexixpayVoidRequest, NexixpayVoidResponse,
 };
 use uuid::Uuid;
 
@@ -108,6 +108,12 @@ macros::create_all_prerequisites!(
             request_body: NexixpayClientAuthRequest,
             response_body: NexixpayClientAuthResponse,
             router_data: RouterDataV2<ClientAuthenticationToken, PaymentFlowData, ClientAuthenticationTokenRequestData, PaymentsResponseData>,
+        ),
+        (
+            flow: VoidPC,
+            request_body: NexixpayVoidPCRequest,
+            response_body: NexixpayVoidPCResponse,
+            router_data: RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -198,6 +204,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Nexixpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Nexixpay<T>
 {
 }
 
@@ -378,7 +389,51 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Payment Void Post Capture
+// Payment Void Post Capture (Reverse)
+// Uses POST /operations/{operationId}/cancels endpoint to cancel a captured payment
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Nexixpay,
+    curl_request: Json(NexixpayVoidPCRequest),
+    curl_response: NexixpayVoidPCResponse,
+    flow_name: VoidPC,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCancelPostCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            let mut header = self.build_headers(req)?;
+            header.push((
+                headers::IDEMPOTENCY_KEY.to_string(),
+                Uuid::new_v4().to_string().into(),
+            ));
+            Ok(header)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            // Use the capture operation ID to cancel/reverse the captured payment
+            let operation_id = if let Some(metadata) = req.resource_common_data.connector_feature_data.as_ref() {
+                nexixpay::get_payment_id(
+                    Some(metadata.peek().clone()),
+                    Some(nexixpay::NexixpayPaymentIntent::Capture)
+                ).unwrap_or_else(|_| {
+                    req.request.connector_transaction_id.clone()
+                })
+            } else {
+                req.request.connector_transaction_id.clone()
+            };
+            Ok(format!("{}/operations/{}/cancels", self.connector_base_url_payments(req), operation_id))
+        }
+    }
+);
 
 // Payment Capture
 macros::macro_connector_implementation!(
@@ -722,7 +777,6 @@ macros::macro_connector_flow_status_impls!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     not_implemented: [
         IncrementalAuthorization,
-        VoidPC,
         SetupMandate,
         RepeatPayment,
         MandateRevoke,

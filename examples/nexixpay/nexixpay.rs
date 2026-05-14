@@ -20,6 +20,7 @@ pub const SUPPORTED_FLOWS: &[&str] = &[
     "pre_authenticate",
     "refund",
     "refund_get",
+    "reverse",
     "void",
 ];
 
@@ -125,6 +126,14 @@ pub fn build_refund_get_request() -> RefundServiceGetRequest {
     }
 }
 
+pub fn build_reverse_request(connector_transaction_id: &str) -> PaymentServiceReverseRequest {
+    PaymentServiceReverseRequest {
+        merchant_reverse_id: Some("probe_reverse_001".to_string()), // Identification.
+        connector_transaction_id: connector_transaction_id.to_string(),
+        ..Default::default()
+    }
+}
+
 pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
         merchant_void_id: Some("probe_void_001".to_string()), // Identification.
@@ -210,6 +219,22 @@ pub async fn process_refund_get(
     Ok(format!("status: {:?}", response.status()))
 }
 
+// Flow: PaymentService.Reverse
+#[allow(dead_code)]
+pub async fn process_reverse(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .reverse(
+            build_reverse_request("probe_connector_txn_001"),
+            &HashMap::new(),
+            None,
+        )
+        .await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: PaymentService.Void
 #[allow(dead_code)]
 pub async fn process_void(
@@ -239,9 +264,10 @@ async fn main() {
         "process_pre_authenticate" => process_pre_authenticate(&client, "txn_001").await,
         "process_refund" => process_refund(&client, "txn_001").await,
         "process_refund_get" => process_refund_get(&client, "txn_001").await,
+        "process_reverse" => process_reverse(&client, "txn_001").await,
         "process_void" => process_void(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_capture, process_get, process_pre_authenticate, process_refund, process_refund_get, process_void", flow);
+            eprintln!("Unknown flow: {}. Available: process_capture, process_get, process_pre_authenticate, process_refund, process_refund_get, process_reverse, process_void", flow);
             return;
         }
     };

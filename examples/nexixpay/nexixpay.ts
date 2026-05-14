@@ -7,7 +7,7 @@
 
 import { PaymentClient, PaymentMethodAuthenticationClient, RefundClient, types } from 'hyperswitch-prism';
 const { Environment, Currency } = types;
-export const SUPPORTED_FLOWS = ["capture", "get", "pre_authenticate", "refund", "refund_get", "void"];
+export const SUPPORTED_FLOWS = ["capture", "get", "pre_authenticate", "refund", "refund_get", "reverse", "void"];
 
 const _defaultConfig: types.IConnectorConfig = {
     options: {
@@ -89,6 +89,13 @@ function _buildRefundGetRequest(): types.IRefundServiceGetRequest {
     };
 }
 
+function _buildReverseRequest(connectorTransactionId: string): types.IPaymentServiceReverseRequest {
+    return {
+        "merchantReverseId": "probe_reverse_001",  // Identification.
+        "connectorTransactionId": connectorTransactionId
+    };
+}
+
 function _buildVoidRequest(connectorTransactionId: string): types.IPaymentServiceVoidRequest {
     return {
         "merchantVoidId": "probe_void_001",  // Identification.
@@ -147,6 +154,15 @@ async function refundGet(merchantTransactionId: string, config: types.IConnector
     return refundResponse;
 }
 
+// Flow: PaymentService.Reverse
+async function reverse(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const reverseResponse = await paymentClient.reverse(_buildReverseRequest('probe_connector_txn_001'));
+
+    return reverseResponse;
+}
+
 // Flow: PaymentService.Void
 async function voidPayment(merchantTransactionId: string, config: types.IConnectorConfig = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -159,7 +175,7 @@ async function voidPayment(merchantTransactionId: string, config: types.IConnect
 
 // Export all process* functions for the smoke test
 export {
-    capture, get, preAuthenticate, refund, refundGet, voidPayment, _buildCaptureRequest, _buildGetRequest, _buildPreAuthenticateRequest, _buildRefundRequest, _buildRefundGetRequest, _buildVoidRequest
+    capture, get, preAuthenticate, refund, refundGet, reverse, voidPayment, _buildCaptureRequest, _buildGetRequest, _buildPreAuthenticateRequest, _buildRefundRequest, _buildRefundGetRequest, _buildReverseRequest, _buildVoidRequest
 };
 
 // CLI runner

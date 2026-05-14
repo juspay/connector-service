@@ -700,8 +700,25 @@ macro_rules! implement_connector_operation {
                 $response_data_type,
             > = connector_data.connector.get_connector_integration_v2();
 
-            // Create connector request data with None for payment_method_data
-            let specific_request_data = $request_data_constructor((payload.clone(), None::<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>))
+            // Attempt to extract payment method data from payload if present; pass None if unavailable
+            let optional_payment_method_data: Option<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>> = if let Some(pm) = payload.payment_method.clone() {
+                match domain_types::types::PaymentMethodDataAction::get_payment_method_data_action(pm.clone()) {
+                    Ok(domain_types::types::PaymentMethodDataAction::Card(card_details)) => {
+                        domain_types::payment_method_data::Card::<domain_types::payment_method_data::DefaultPCIHolder>::foreign_try_from(card_details)
+                            .ok()
+                            .map(domain_types::payment_method_data::PaymentMethodData::Card)
+                    }
+                    Ok(domain_types::types::PaymentMethodDataAction::Default) => {
+                        domain_types::payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(pm).ok()
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
+
+            // Create connector request data with optional payment_method_data
+            let specific_request_data = $request_data_constructor((payload.clone(), optional_payment_method_data))
                 .into_grpc_status()?;
 
             // Create common request data
