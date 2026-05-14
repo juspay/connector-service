@@ -352,7 +352,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             transaction_amount,
             card_number: Secret::new(card.card_number.peek().to_string()),
             expiration_date: format_expiration_date(card),
-            cvv2: Some(card.card_cvc.clone()),
+            // TransIT cert "Do Not Send" CVV scenario: emit no `<cvv2>` when empty
+            // (cert script row 113 — AMEX with absent CVV is still approved).
+            cvv2: if card.card_cvc.peek().is_empty() {
+                None
+            } else {
+                Some(card.card_cvc.clone())
+            },
             address_line1,
             zip,
             external_reference_id: router_data
