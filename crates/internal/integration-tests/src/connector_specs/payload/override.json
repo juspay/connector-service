@@ -1,82 +1,10 @@
 {
-  "PaymentService/Authorize": {
-    "no3ds_auto_capture_credit_card": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    },
-    "no3ds_auto_capture_debit_card": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    }
-  },
-  "PaymentService/Get": {
-    "sync_payment": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    },
-    "sync_payment_with_handle_response": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    }
-  },
-  "PaymentService/Refund": {
-    "refund_full_amount": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    },
-    "refund_partial_amount": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    },
-    "refund_with_reason": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    }
-  },
-  "RefundService/Get": {
-    "refund_sync": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    },
-    "RefundService/Get": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    },
-    "refund_sync_with_reason": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      }
-    }
-  },
   "PaymentService/SetupRecurring": {
     "PaymentService/SetupRecurring": {
       "grpc_req": {
         "amount": {
           "minor_amount": 0
         }
-      },
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
       }
     },
     "setup_recurring": {
@@ -84,10 +12,6 @@
         "amount": {
           "minor_amount": 0
         }
-      },
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
       }
     },
     "setup_recurring_with_order_context": {
@@ -95,10 +19,6 @@
         "amount": {
           "minor_amount": 0
         }
-      },
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
       }
     },
     "setup_recurring_with_webhook": {
@@ -106,19 +26,11 @@
         "amount": {
           "minor_amount": 0
         }
-      },
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
       }
     }
   },
   "RecurringPaymentService/Charge": {
     "RecurringPaymentService/Charge": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      },
       "grpc_req": {
         "payment_method": {
           "card": {
@@ -131,10 +43,6 @@
       }
     },
     "recurring_charge": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      },
       "grpc_req": {
         "payment_method": {
           "card": {
@@ -147,10 +55,6 @@
       }
     },
     "recurring_charge_low_amount": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      },
       "grpc_req": {
         "payment_method": {
           "card": {
@@ -163,10 +67,6 @@
       }
     },
     "recurring_charge_with_order_context": {
-      "pre_request_http": {
-        "url": "http://10.255.255.1",
-        "timeout_secs": 31
-      },
       "grpc_req": {
         "payment_method": {
           "card": {
