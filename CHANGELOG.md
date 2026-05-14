@@ -19,6 +19,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.14.0
+
+### Features
+
+- **connector:**
+  - [iMerchant Solutions] Add Support for Card based CIT and MIT ([#1304](https://github.com/juspay/connector-service/pull/1304)) ([`453057a`](https://github.com/juspay/connector-service/commit/453057a42d77ad213f007187b6a97f6934da4db8))
+  - Add payment webhooks for Sanlam ([#1266](https://github.com/juspay/connector-service/pull/1266)) ([`b6b277d`](https://github.com/juspay/connector-service/commit/b6b277d85ed9df1dea0c9c5cc688ca216a9e5ab1))
+  - Implement Reverse (VoidPostCapture) for worldpayvantiv ([#1295](https://github.com/juspay/connector-service/pull/1295)) ([`e78d3e2`](https://github.com/juspay/connector-service/commit/e78d3e23aa58f982bb6265c5b55baf326505c57f))
+- **connectors:** Add messages for unsupported flows ([#1164](https://github.com/juspay/connector-service/pull/1164)) ([`71fd3cd`](https://github.com/juspay/connector-service/commit/71fd3cd45b0519af32dac82666a08fcaf76b28bd))
+
+### Bug Fixes
+
+- **authorizedotnet/authorize:** Map HeldForReview to Unresolved ([#1210](https://github.com/juspay/connector-service/pull/1210)) ([`1d3ab73`](https://github.com/juspay/connector-service/commit/1d3ab73a539f92518ef51c80b9728ad517c6486b))
+- **connector:** Add Auth-Token-Type HMAC header for authipay authorize ([#1194](https://github.com/juspay/connector-service/pull/1194)) ([`7af9fd0`](https://github.com/juspay/connector-service/commit/7af9fd0826cadd20c9a614bc4fee2a8a15c6fc31))
+
+**Full Changelog:** [`2026.05.12.0...2026.05.14.0`](https://github.com/juspay/connector-service/compare/2026.05.12.0...2026.05.14.0)
+
+- - -
+
 ## 2026.05.12.0
 
 ### Bug Fixes
