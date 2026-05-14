@@ -4262,6 +4262,9 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Easebuzz(_) => Ok(Self::Easebuzz),
             AuthType::Imerchantsolutions(_) => Ok(Self::Imerchantsolutions),
             AuthType::TwocTwopPaco(_) => Ok(Self::TwocTwopPaco),
+            AuthType::Bamboraapac(_) => Ok(Self::Bamboraapac),
+            AuthType::Placetopay(_) => Ok(Self::Placetopay),
+            AuthType::Finix(_) => Ok(Self::Finix),
         }
     }
 }
