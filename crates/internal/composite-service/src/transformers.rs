@@ -199,6 +199,7 @@ impl
             connector_order_reference_id: item.connector_order_reference_id.clone(),
             test_mode: item.test_mode,
             payment_experience: item.payment_experience,
+            payment_method_type: item.payment_method_type,
         }
     }
 }

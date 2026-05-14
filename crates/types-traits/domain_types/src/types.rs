@@ -5590,6 +5590,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             )?),
         };
 
+        let payment_method_type = <Option<common_enums::PaymentMethodType>>::foreign_try_from(
+            value.payment_method_type(),
+        )?;
+
         let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
@@ -5602,7 +5606,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             connector_feature_data,
             sync_type,
             mandate_id: None,
-            payment_method_type: None,
+            payment_method_type,
             currency,
             payment_experience,
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
