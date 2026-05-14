@@ -54,6 +54,7 @@ impl DisputeOperationsInternal for Disputes {
         request_data_constructor: DisputeDefendData::foreign_try_from,
         common_flow_data_constructor: DisputeFlowData::foreign_try_from,
         generate_response_fn: generate_defend_dispute_response,
+        connector_data_type: ConnectorData<DefaultPCIHolder>,
         all_keys_required: None
     );
 }

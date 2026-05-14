@@ -521,10 +521,13 @@ macro_rules! implement_connector_operation {
                 extensions: _
             } = request;
 
-            let (connector, request_id, connector_config) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_config);
+            let request_id = metadata_payload.request_id.clone();
+            let connector_config = metadata_payload.connector_config.clone();
 
-            // Get connector data
-            let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+            // Get connector data using ConnectorDataProvider trait
+            let connector_data: $connector_data_type = 
+                connector_integration::types::ConnectorDataProvider::from_connector_variant(&metadata_payload.connector)
+                    .ok_or_else(|| tonic::Status::unimplemented("Invalid connector type for this flow"))?;
 
             // Get connector integration
             let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
@@ -686,10 +689,13 @@ macro_rules! implement_connector_operation {
                 extensions: _
             } = request;
 
-            let (connector, request_id, connector_config) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_config);
+            let request_id = metadata_payload.request_id.clone();
+            let connector_config = metadata_payload.connector_config.clone();
 
-            // Get connector data
-            let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+            // Get connector data using ConnectorDataProvider trait
+            let connector_data: $connector_data_type = 
+                connector_integration::types::ConnectorDataProvider::from_connector_variant(&metadata_payload.connector)
+                    .ok_or_else(|| tonic::Status::unimplemented("Invalid connector type for this flow"))?;
 
             // Get connector integration
             let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
@@ -812,10 +818,13 @@ macro_rules! implement_connector_operation {
                 extensions: _
             } = request;
 
-            let (connector, request_id, connector_config) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_config);
+            let request_id = metadata_payload.request_id.clone();
+            let connector_config = metadata_payload.connector_config.clone();
 
-            // Get connector data
-            let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+            // Get connector data using ConnectorDataProvider trait
+            let connector_data: $connector_data_type = 
+                connector_integration::types::ConnectorDataProvider::from_connector_variant(&metadata_payload.connector)
+                    .ok_or_else(|| tonic::Status::unimplemented("Invalid connector type for this flow"))?;
 
             // Get connector integration
             let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<

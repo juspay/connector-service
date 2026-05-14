@@ -1,7 +1,10 @@
 use std::fmt::Debug;
 
-use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentMethodDataTypes};
-use interfaces::connector_types::BoxedConnector;
+use domain_types::{
+    connector_types::{SurchargeConnectorEnum, ConnectorEnum},
+    payment_method_data::PaymentMethodDataTypes,
+};
+use interfaces::connector_types::{BoxedConnector, BoxedSurchargeConnector};
 
 use crate::connectors;
 
@@ -9,6 +12,12 @@ use crate::connectors;
 pub struct ConnectorData<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static> {
     pub connector: BoxedConnector<T>,
     pub connector_name: ConnectorEnum,
+}
+
+#[derive(Clone)]
+pub struct SurchargeConnectorData {
+    pub connector: BoxedSurchargeConnector,
+    pub connector_name: SurchargeConnectorEnum,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde::Serialize>
@@ -111,6 +120,76 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Imerchantsolutions => Box::new(connectors::Imerchantsolutions::new()),
             ConnectorEnum::Axisbank => Box::new(connectors::Axisbank::new()),
         }
+    }
+}
+
+impl SurchargeConnectorData {
+    pub fn get_connector_by_name(connector_name: &SurchargeConnectorEnum) -> Self {
+        let connector = Self::convert_connector(*connector_name);
+        Self {
+            connector,
+            connector_name: *connector_name,
+        }
+    }
+
+    fn convert_connector(
+        _connector_name: SurchargeConnectorEnum,
+    ) -> BoxedSurchargeConnector {
+        // TODO: Add surcharge connectors as they are implemented
+        unimplemented!("Surcharge connectors not yet available")
+    }
+}
+
+/// Trait abstracting over connector data types
+pub trait ConnectorDataProvider: Sized {
+    type ConnectorEnumType: Copy;
+
+    /// Get connector data by name
+    fn get_connector_by_name(connector_name: &Self::ConnectorEnumType) -> Self;
+
+    /// Convert variant to this type
+    fn from_connector_variant(variant: &domain_types::connector_types::ConnectorVariant) -> Option<Self>;
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde::Serialize>
+    ConnectorDataProvider for ConnectorData<T>
+{
+    type ConnectorEnumType = ConnectorEnum;
+
+    fn get_connector_by_name(connector_name: &ConnectorEnum) -> Self {
+        let connector = Self::convert_connector(*connector_name);
+        Self {
+            connector,
+            connector_name: *connector_name,
+        }
+    }
+
+    fn from_connector_variant(
+        variant: &domain_types::connector_types::ConnectorVariant,
+    ) -> Option<Self> {
+        variant
+            .as_payment()
+            .map(|c| Self::get_connector_by_name(&c))
+    }
+}
+
+impl ConnectorDataProvider for SurchargeConnectorData {
+    type ConnectorEnumType = SurchargeConnectorEnum;
+
+    fn get_connector_by_name(connector_name: &SurchargeConnectorEnum) -> Self {
+        let connector = Self::convert_connector(*connector_name);
+        Self {
+            connector,
+            connector_name: *connector_name,
+        }
+    }
+
+    fn from_connector_variant(
+        variant: &domain_types::connector_types::ConnectorVariant,
+    ) -> Option<Self> {
+        variant
+            .as_surcharge()
+            .map(|c| Self::get_connector_by_name(&c))
     }
 }
 

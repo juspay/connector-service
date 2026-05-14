@@ -2002,21 +2002,24 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
     }
 }
 
-impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
+impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
     for ConnectorSpecificConfig
 {
     type Error = errors::IntegrationError;
 
     fn foreign_try_from(
-        (auth, connector): (&ConnectorAuthType, &connector_types::ConnectorEnum),
+        (auth, connector): (&ConnectorAuthType, &connector_types::ConnectorVariant),
     ) -> Result<Self, Error> {
-        use connector_types::ConnectorEnum;
+
+        use connector_types::{ConnectorEnum, ConnectorVariant};
 
         let err = || errors::IntegrationError::FailedToObtainAuthType {
             context: Default::default(),
         };
 
         match connector {
+            ConnectorVariant::Payment(connector_enum) => 
+            match connector_enum {
             // --- HeaderKey connectors ---
             ConnectorEnum::Stripe => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Stripe {
@@ -3063,6 +3066,10 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 _ => Err(err().into()),
             },
         }
+        connector_types::ConnectorVariant::Surcharge(_) => {
+            unimplemented!("Surcharge connectors not yet available")
+        }
+    } 
     }
 }
 

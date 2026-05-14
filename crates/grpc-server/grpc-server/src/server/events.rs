@@ -74,7 +74,9 @@ impl EventService for EventServiceImpl {
                 Box::pin(async move {
                     let payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
-                    let connector = metadata_payload.connector;
+                    let connector = metadata_payload.connector.as_payment().ok_or_else(|| {
+                        tonic::Status::unimplemented("Surcharge connectors not supported for webhook events")
+                    })?;
                     let request_details =
                         domain_types::connector_types::RequestDetails::foreign_try_from(
                             payload
@@ -148,7 +150,9 @@ impl EventService for EventServiceImpl {
                 Box::pin(async move {
                     let payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
-                    let connector = metadata_payload.connector;
+                    let connector = metadata_payload.connector.clone().as_payment().ok_or_else(|| {
+                        tonic::Status::unimplemented("Surcharge connectors not supported for webhook events")
+                    })?;
                     let _request_id = &metadata_payload.request_id;
                     let connector_config = &metadata_payload.connector_config;
                     let request_details = payload

@@ -92,9 +92,17 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PayoutCreateLinkV2
     + PayoutCreateRecipientV2
     + PayoutEnrollDisburseAccountV2
-    + SurchargeCalculateV2
 {
 }
+
+
+pub trait SurchargeServiceTrait:
+    ConnectorCommon
+     + SurchargeCalculateV2
+     {
+
+     }
+
 
 pub trait PaymentVoidV2:
     ConnectorIntegrationV2<connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
@@ -112,6 +120,9 @@ pub trait PaymentVoidPostCaptureV2:
 }
 
 pub type BoxedConnector<T> = Box<&'static (dyn ConnectorServiceTrait<T> + Sync)>;
+
+pub type BoxedSurchargeConnector = Box<&'static (dyn SurchargeServiceTrait + Sync)>;
+
 
 pub trait ValidationTrait: ConnectorCommon {
     fn should_do_order_create(&self) -> bool {
