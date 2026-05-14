@@ -5,11 +5,11 @@ use common_utils::{
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -346,6 +346,13 @@ pub struct FiservVoidResponse {
     pub gateway_response: GatewayResponse,
 }
 
+// Create a response type for VoidPostCapture (Reverse)
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservVoidPCResponse {
+    pub gateway_response: GatewayResponse,
+}
+
 // Create Refund response type
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -409,6 +416,15 @@ pub struct ReferenceTransactionDetails {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservVoidRequest {
+    pub transaction_details: TransactionDetails,
+    pub merchant_details: MerchantDetails,
+    pub reference_transaction_details: ReferenceTransactionDetails,
+}
+
+// VoidPostCapture (Reverse) request — same structure as VoidRequest but for captured payments
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservVoidPCRequest {
     pub transaction_details: TransactionDetails,
     pub merchant_details: MerchantDetails,
     pub reference_transaction_details: ReferenceTransactionDetails,
@@ -713,6 +729,58 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+// Implementation for the VoidPostCapture (Reverse) request
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        FiservRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for FiservVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+    fn try_from(
+        item: FiservRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_config)?;
+
+        Ok(Self {
+            merchant_details: MerchantDetails {
+                merchant_id: auth.merchant_account.clone(),
+                terminal_id: auth.terminal_id.clone(),
+            },
+            reference_transaction_details: ReferenceTransactionDetails {
+                reference_transaction_id: router_data.request.connector_transaction_id.clone(),
+            },
+            transaction_details: TransactionDetails {
+                capture_flag: None,
+                reversal_reason_code: router_data.request.cancellation_reason.clone(),
+                merchant_transaction_id: Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+                operation_type: None,
+            },
+        })
+    }
+}
+
 // Implementation for the Refund request
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
@@ -975,6 +1043,75 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                     .transaction_id
                     .clone(),
                 message: format!("Void status: {:?}", gateway_resp.transaction_state),
+                reason: None,
+                status_code: http_code,
+                attempt_status: Some(status),
+                connector_transaction_id: gateway_resp.gateway_transaction_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            });
+        } else {
+            router_data_out.response = Ok(response_payload);
+        }
+
+        Ok(router_data_out)
+    }
+}
+
+// Implementation for the VoidPostCapture (Reverse) flow response
+impl TryFrom<ResponseRouterData<FiservVoidPCResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<FiservVoidPCResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+
+        let gateway_resp = &response.gateway_response;
+
+        // Map VOIDED state to VoidPostCaptureInitiated; any other state is a failure
+        let status = match gateway_resp.transaction_state {
+            FiservPaymentStatus::Voided => enums::AttemptStatus::VoidPostCaptureInitiated,
+            _ => enums::AttemptStatus::Failure,
+        };
+
+        let mut router_data_out = router_data;
+        router_data_out.resource_common_data.status = status;
+
+        let response_payload = PaymentsResponseData::PostCaptureVoidResponse {
+            post_capture_void_status: match gateway_resp.transaction_state {
+                FiservPaymentStatus::Voided => common_enums::PostCaptureVoidStatus::Succeeded,
+                _ => common_enums::PostCaptureVoidStatus::Failed,
+            },
+            connector_reference_id: Some(
+                gateway_resp.gateway_transaction_id.clone().unwrap_or_else(|| {
+                    gateway_resp
+                        .transaction_processing_details
+                        .transaction_id
+                        .clone()
+                }),
+            ),
+            description: None,
+            status_code: http_code,
+        };
+
+        if status == enums::AttemptStatus::Failure {
+            router_data_out.response = Err(ErrorResponse {
+                code: gateway_resp
+                    .transaction_processing_details
+                    .transaction_id
+                    .clone(),
+                message: format!(
+                    "VoidPostCapture status: {:?}",
+                    gateway_resp.transaction_state
+                ),
                 reason: None,
                 status_code: http_code,
                 attempt_status: Some(status),
