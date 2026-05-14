@@ -890,7 +890,7 @@ pub enum PacoPaymentStep {
 
 fn map_attempt_status(status: &PacoPaymentStatus, step: &PacoPaymentStep) -> AttemptStatus {
     match (status, step) {
-        (PacoPaymentStatus::A, PacoPaymentStep::PA) => AttemptStatus::Authorized,
+        (PacoPaymentStatus::A, PacoPaymentStep::PA) => AttemptStatus::Charged,
         (PacoPaymentStatus::S, PacoPaymentStep::ST) => AttemptStatus::Charged,
         (PacoPaymentStatus::V, PacoPaymentStep::VD) => AttemptStatus::Voided,
         (PacoPaymentStatus::R, PacoPaymentStep::RF) => AttemptStatus::Charged,
