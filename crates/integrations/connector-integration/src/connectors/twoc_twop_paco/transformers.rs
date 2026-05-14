@@ -10,9 +10,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, VoidPC},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
@@ -1015,50 +1015,50 @@ where
                             )
                         })?;
                     let status = map_attempt_status(&info.payment_status, &info.payment_step);
-                    let redirection_data = if let Some(challenge) = block.ares_acs_challenge.as_ref()
-                    {
-                        let acs_url = challenge.acs_url.clone().unwrap_or_default();
-                        let mut form_fields: HashMap<String, String> = HashMap::new();
-                        if let Some(creq) = &challenge.creq {
-                            form_fields.insert("creq".to_string(), creq.peek().clone());
-                        }
-                        if let Some(session_data) = &challenge.three_ds_session_data {
-                            form_fields.insert(
-                                "threeDSSessionData".to_string(),
-                                session_data.peek().clone(),
-                            );
-                        }
-                        Some(Box::new(RedirectForm::Form {
-                            endpoint: acs_url,
-                            method: Method::Post,
-                            form_fields,
-                        }))
-                    } else {
-                        let url = block
-                            .web_payment_url
-                            .clone()
-                            .or_else(|| {
-                                response
-                                    .data
-                                    .as_ref()
-                                    .and_then(|d| d.payment_page.as_ref())
-                                    .and_then(|p| p.payment_page_url.clone())
+                    let redirection_data =
+                        if let Some(challenge) = block.ares_acs_challenge.as_ref() {
+                            let acs_url = challenge.acs_url.clone().unwrap_or_default();
+                            let mut form_fields: HashMap<String, String> = HashMap::new();
+                            if let Some(creq) = &challenge.creq {
+                                form_fields.insert("creq".to_string(), creq.peek().clone());
+                            }
+                            if let Some(session_data) = &challenge.three_ds_session_data {
+                                form_fields.insert(
+                                    "threeDSSessionData".to_string(),
+                                    session_data.peek().clone(),
+                                );
+                            }
+                            Some(Box::new(RedirectForm::Form {
+                                endpoint: acs_url,
+                                method: Method::Post,
+                                form_fields,
+                            }))
+                        } else {
+                            let url = block
+                                .web_payment_url
+                                .clone()
+                                .or_else(|| {
+                                    response
+                                        .data
+                                        .as_ref()
+                                        .and_then(|d| d.payment_page.as_ref())
+                                        .and_then(|p| p.payment_page_url.clone())
+                                })
+                                .or_else(|| {
+                                    block
+                                        .payment_page
+                                        .as_ref()
+                                        .and_then(|p| p.payment_page_url.clone())
+                                })
+                                .or_else(|| block.payment_page_url.clone());
+                            url.map(|endpoint| {
+                                Box::new(RedirectForm::Form {
+                                    endpoint,
+                                    method: Method::Get,
+                                    form_fields: HashMap::new(),
+                                })
                             })
-                            .or_else(|| {
-                                block
-                                    .payment_page
-                                    .as_ref()
-                                    .and_then(|p| p.payment_page_url.clone())
-                            })
-                            .or_else(|| block.payment_page_url.clone());
-                        url.map(|endpoint| {
-                            Box::new(RedirectForm::Form {
-                                endpoint,
-                                method: Method::Get,
-                                form_fields: HashMap::new(),
-                            })
-                        })
-                    };
+                        };
                     (
                         status,
                         redirection_data,
@@ -1889,4 +1889,3 @@ impl TryFrom<ResponseRouterData<TwocTwopPacoRefundResponse, Self>>
         })
     }
 }
-
