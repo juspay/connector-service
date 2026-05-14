@@ -992,19 +992,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .get_optional_billing_full_name()
             .ok_or(IntegrationError::MissingRequiredField {
-                field_name: "billing.first_name",
+                field_name: "billing.first_name or billing.last_name",
                 context: Default::default(),
             })?;
 
         let expiry_year = card_data.get_card_expiry_year_2_digit()?;
 
+        // Zero-dollar auth: complete must be false (pre-auth) — there is no
+        // amount to capture, so Bambora should create a credential-on-file
+        // without settling.
         let card = BamboraCard {
             name: cardholder_name,
             number: card_data.card_number.clone(),
             expiry_month: card_data.card_exp_month.clone(),
             expiry_year,
             cvd: card_data.card_cvc.clone(),
-            complete: item.router_data.request.is_auto_capture(),
+            complete: false,
         };
 
         let minor_amount = item.router_data.request.minor_amount.ok_or(

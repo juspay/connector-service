@@ -626,7 +626,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"order_number\":\"probe_proxy_mandate_001\",\"amount\":0.0,\"payment_method\":\"card\",\"card\":{\"name\":\"John\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvd\":\"123\",\"complete\":true},\"card_on_file\":{\"type\":\"first_recurring\"},\"billing\":{\"name\":\"John\"}}"
+          "body": "{\"order_number\":\"probe_proxy_mandate_001\",\"amount\":0.0,\"payment_method\":\"card\",\"card\":{\"name\":\"John\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvd\":\"123\",\"complete\":false},\"card_on_file\":{\"type\":\"first_recurring\"},\"billing\":{\"name\":\"John\"}}"
         }
       }
     },
