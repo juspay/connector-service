@@ -5,7 +5,9 @@ use domain_types::errors::{ConnectorError, IntegrationError};
 use domain_types::payment_method_data::Card as DomainCard;
 use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
         ConnectorSpecificClientAuthenticationResponse, PaymentFlowData, PaymentVoidData,
@@ -1823,14 +1825,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
 
-        let return_url = router_data
-            .resource_common_data
-            .return_url
-            .clone()
-            .ok_or(IntegrationError::MissingRequiredField {
+        let return_url = router_data.resource_common_data.return_url.clone().ok_or(
+            IntegrationError::MissingRequiredField {
                 field_name: "return_url",
                 context: Default::default(),
-            })?;
+            },
+        )?;
 
         let target_origin = url::Url::parse(&return_url)
             .map(|u| format!("{}://{}", u.scheme(), u.host_str().unwrap_or_default()))
@@ -1886,9 +1886,7 @@ impl<'de> Deserialize<'de> for WellsfargoClientAuthResponse {
             }
 
             fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Self::Value, E> {
-                Ok(WellsfargoClientAuthResponse {
-                    capture_context: v,
-                })
+                Ok(WellsfargoClientAuthResponse { capture_context: v })
             }
 
             fn visit_map<A: serde::de::MapAccess<'de>>(

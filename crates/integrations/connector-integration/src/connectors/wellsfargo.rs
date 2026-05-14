@@ -11,7 +11,9 @@ use common_utils::{
     types::StringMajorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenRequestData, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
@@ -33,8 +35,8 @@ use serde::Serialize;
 use std::fmt::Debug;
 use time::OffsetDateTime;
 use transformers::{
-    self as wellsfargo, WellsfargoClientAuthRequest, WellsfargoClientAuthResponse,
-    WellsfargoCaptureRequest, WellsfargoPaymentsRequest, WellsfargoPaymentsResponse,
+    self as wellsfargo, WellsfargoCaptureRequest, WellsfargoClientAuthRequest,
+    WellsfargoClientAuthResponse, WellsfargoPaymentsRequest, WellsfargoPaymentsResponse,
     WellsfargoPaymentsResponse as WellsfargoCaptureResponse,
     WellsfargoPaymentsResponse as WellsfargoVoidResponse,
     WellsfargoPaymentsResponse as WellsfargoPSyncResponse,
@@ -820,8 +822,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         domain_types::errors::ConnectorError,
     > {
         let response_bytes = res.response.to_vec();
-        let response_str = String::from_utf8(response_bytes)
-            .map_err(|_| domain_types::errors::ConnectorError::response_handling_failed(res.status_code))?;
+        let response_str = String::from_utf8(response_bytes).map_err(|_| {
+            domain_types::errors::ConnectorError::response_handling_failed(res.status_code)
+        })?;
 
         // Wellsfargo Flex v2 sessions API returns JSON with captureContext field
         // or a raw JWT string (content-type: application/jwt)
@@ -853,9 +856,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >::try_from(response_router_data)
         .map_err(|e| {
-            e.change_context(domain_types::errors::ConnectorError::response_handling_failed(
-                res.status_code,
-            ))
+            e.change_context(
+                domain_types::errors::ConnectorError::response_handling_failed(res.status_code),
+            )
         })?;
 
         Ok(result)

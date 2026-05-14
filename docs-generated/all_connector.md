@@ -198,7 +198,7 @@ Consolidated view of Get, Void, Refund, Capture, Reverse, CreateOrder, and other
 | [Trustpayments](connectors/trustpayments.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ⚠ | x | ✓ | ✓ | ✓ | ⚠ | ✓ | x | ⚠ | ⚠ | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Tsys](connectors/tsys.md) | ✓ | ✓ | x | ✓ | x | ✓ | x | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | x | ✓ | x | x | ⚠ | x | x | x | x | x | x | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Volt](connectors/volt.md) | ✓ | ⚠ | x | x | x | ✓ | x | ⚠ | ⚠ | x | ⚠ | x | ⚠ | ⚠ | ⚠ | x | x | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ |
-| [Wellsfargo](connectors/wellsfargo.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | x | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ |
+| [Wellsfargo](connectors/wellsfargo.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | x | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Worldpay](connectors/worldpay.md) | ✓ | ✓ | ⚠ | ✓ | x | ✓ | ✓ | ⚠ | ⚠ | ? | ⚠ | x | ⚠ | ✓ | x | ✓ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ? | x | ⚠ | x | x | ⚠ | ⚠ |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ | ✓ | ✓ | ✓ | x | ✓ | ✓ | ⚠ | ⚠ | x | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | x | ⚠ | ⚠ | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | x | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | ⚠ |
