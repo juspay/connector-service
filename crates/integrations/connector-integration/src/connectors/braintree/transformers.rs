@@ -3039,8 +3039,28 @@ impl TryFrom<ResponseRouterData<BraintreeVoidPCResponse, Self>>
             }),
             BraintreeVoidPCResponse::VoidPCResponse(void_pc_response) => {
                 let reversal_data = void_pc_response.data.reverse_transaction.reversal;
-                let attempt_status = enums::AttemptStatus::from(reversal_data.status.clone());
-                let response = if domain_types::utils::is_payment_failure(attempt_status) {
+                let post_capture_void_status = match reversal_data.status {
+                    BraintreePaymentStatus::Voided => {
+                        common_enums::PostCaptureVoidStatus::Succeeded
+                    }
+                    BraintreePaymentStatus::Failed
+                    | BraintreePaymentStatus::GatewayRejected
+                    | BraintreePaymentStatus::ProcessorDeclined
+                    | BraintreePaymentStatus::SettlementDeclined
+                    | BraintreePaymentStatus::AuthorizedExpired => {
+                        common_enums::PostCaptureVoidStatus::Failed
+                    }
+                    BraintreePaymentStatus::Authorized
+                    | BraintreePaymentStatus::Authorizing
+                    | BraintreePaymentStatus::Settling
+                    | BraintreePaymentStatus::Settled
+                    | BraintreePaymentStatus::SettlementPending
+                    | BraintreePaymentStatus::SettlementConfirmed
+                    | BraintreePaymentStatus::SubmittedForSettlement => {
+                        common_enums::PostCaptureVoidStatus::Pending
+                    }
+                };
+                let response = if post_capture_void_status.is_post_capture_void_failure() {
                     Err(create_failure_error_response(
                         reversal_data.status,
                         None,
@@ -3048,17 +3068,13 @@ impl TryFrom<ResponseRouterData<BraintreeVoidPCResponse, Self>>
                     ))
                 } else {
                     Ok(PaymentsResponseData::PostCaptureVoidResponse {
-                        post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+                        post_capture_void_status,
                         connector_reference_id: Some(reversal_data.id),
                         description: None,
                         status_code: item.http_code,
                     })
                 };
                 Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status: attempt_status,
-                        ..item.router_data.resource_common_data
-                    },
                     response,
                     ..item.router_data
                 })
