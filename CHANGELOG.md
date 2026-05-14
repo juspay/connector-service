@@ -19,6 +19,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.14.0
+
+### Features
+
+- **connector:**
+  - [iMerchant Solutions] Add Support for Card based CIT and MIT ([#1304](https://github.com/juspay/connector-service/pull/1304)) ([`453057a`](https://github.com/juspay/connector-service/commit/453057a42d77ad213f007187b6a97f6934da4db8))
+  - Add payment webhooks for Sanlam ([#1266](https://github.com/juspay/connector-service/pull/1266)) ([`b6b277d`](https://github.com/juspay/connector-service/commit/b6b277d85ed9df1dea0c9c5cc688ca216a9e5ab1))
+  - Implement Reverse (VoidPostCapture) for worldpayvantiv ([#1295](https://github.com/juspay/connector-service/pull/1295)) ([`e78d3e2`](https://github.com/juspay/connector-service/commit/e78d3e23aa58f982bb6265c5b55baf326505c57f))
+- **connectors:** Add messages for unsupported flows ([#1164](https://github.com/juspay/connector-service/pull/1164)) ([`71fd3cd`](https://github.com/juspay/connector-service/commit/71fd3cd45b0519af32dac82666a08fcaf76b28bd))
+
+### Bug Fixes
+
+- **authorizedotnet/authorize:** Map HeldForReview to Unresolved ([#1210](https://github.com/juspay/connector-service/pull/1210)) ([`1d3ab73`](https://github.com/juspay/connector-service/commit/1d3ab73a539f92518ef51c80b9728ad517c6486b))
+- **connector:** Add Auth-Token-Type HMAC header for authipay authorize ([#1194](https://github.com/juspay/connector-service/pull/1194)) ([`7af9fd0`](https://github.com/juspay/connector-service/commit/7af9fd0826cadd20c9a614bc4fee2a8a15c6fc31))
+
+**Full Changelog:** [`2026.05.12.0...2026.05.14.0`](https://github.com/juspay/connector-service/compare/2026.05.12.0...2026.05.14.0)
+
+- - -
+
+## 2026.05.12.0
+
+### Bug Fixes
+
+- **ci:** Truncate release notes to GitHub 125K release body limit ([#1275](https://github.com/juspay/connector-service/pull/1275)) ([`3e71b54`](https://github.com/juspay/connector-service/commit/3e71b54f2e8511c54017fe9d64de7a4b82c58656))
+
+### Documentation
+
+- Blog for money framework ([#1230](https://github.com/juspay/connector-service/pull/1230)) ([`6282bc8`](https://github.com/juspay/connector-service/commit/6282bc8e03cdcdc3324009d8997d39f5b9b0b231))
+
+**Full Changelog:** [`2026.05.11.0...2026.05.12.0`](https://github.com/juspay/connector-service/compare/2026.05.11.0...2026.05.12.0)
+
+- - -
+
+## 2026.05.11.0
+
+### Features
+
+- **connector:** Implement BankDebit for cybersource (review fixes) ([#1190](https://github.com/juspay/connector-service/pull/1190)) ([`6b353b7`](https://github.com/juspay/connector-service/commit/6b353b777cf53dc60a7700e8fa92a92621cdeff0))
+- **framework:** Webhook auth flexibility trait parser ([#1200](https://github.com/juspay/connector-service/pull/1200)) ([`79fd1b4`](https://github.com/juspay/connector-service/commit/79fd1b4adc637a9e043ea06556a04fc8712070a4))
+
+### Bug Fixes
+
+- **ci:** Add missing actions and id-token permissions to release workflow ([#1268](https://github.com/juspay/connector-service/pull/1268)) ([`442f9c9`](https://github.com/juspay/connector-service/commit/442f9c9846a6ada2049a0539ac67e00752cc526d))
+
+### Documentation
+
+- **grace:** Tighten hardening and test workflow guidance ([#1237](https://github.com/juspay/connector-service/pull/1237)) ([`85a233e`](https://github.com/juspay/connector-service/commit/85a233eff4c2f3a7c2991bfc08431afb16eac19d))
+
+**Full Changelog:** [`2026.05.08.0...2026.05.11.0`](https://github.com/juspay/connector-service/compare/2026.05.08.0...2026.05.11.0)
+
+- - -
+
 ## 2026.05.08.0
 
 ### Bug Fixes

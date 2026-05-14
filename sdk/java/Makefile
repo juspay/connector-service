@@ -17,7 +17,7 @@ GENERATED_KOTLIN := $(SDK_ROOT)/src/main/kotlin/generated
 GENERATED_JAVA   := $(SDK_ROOT)/src/main/java/generated
 NATIVE_DIR       := $(SDK_ROOT)/src/main/resources/native
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-java
-PACKAGE_VERSION  := $(shell cd $(SDK_ROOT) && ./gradlew properties -q 2>/dev/null | grep "^version:" | awk '{print $$2}')
+PACKAGE_VERSION  := $(if $(VERSION),$(VERSION),$(shell cd $(SDK_ROOT) && ./gradlew properties -q 2>/dev/null | grep "^version:" | awk '{print $$2}'))
 
 # Note: BINDGEN is defined in common.mk
 

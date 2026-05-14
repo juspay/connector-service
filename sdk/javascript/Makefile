@@ -15,7 +15,7 @@ include $(SDK_ROOT)/../common.mk
 # SDK-specific paths continued
 GENERATED_OUT    := $(SDK_ROOT)/src/payments/generated
 PACKAGE_DIR      := $(ARTIFACTS_DIR)/sdk-javascript
-PACKAGE_VERSION  := $(shell node -p "require('$(SDK_ROOT)/package.json').version")
+PACKAGE_VERSION  := $(if $(VERSION),$(VERSION),$(shell node -p "require('$(SDK_ROOT)/package.json').version"))
 JS_TARBALL       := $(PACKAGE_DIR)/hyperswitch-prism-$(PACKAGE_VERSION).tgz
 
 # ---------------------------------------------------------------------------
@@ -135,7 +135,13 @@ build-ts: install-deps
 pack-archive: build-ts
 	@echo "Packing npm archive..."
 	@mkdir -p $(PACKAGE_DIR)
+ifdef VERSION
+	@cd $(SDK_ROOT) && npm version $(VERSION) --no-git-tag-version --allow-same-version
+endif
 	@npm pack --pack-destination $(PACKAGE_DIR)
+ifdef VERSION
+	@cd $(SDK_ROOT) && npm version 0.0.0-dev --no-git-tag-version --allow-same-version
+endif
 	@echo "Tarball created: $(JS_TARBALL)"
 
 # ---------------------------------------------------------------------------

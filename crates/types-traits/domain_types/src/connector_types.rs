@@ -1430,6 +1430,12 @@ pub enum PaymentsResponseData {
         connector_authorization_id: Option<String>,
         status_code: u16,
     },
+    PostCaptureVoidResponse {
+        post_capture_void_status: common_enums::PostCaptureVoidStatus,
+        connector_reference_id: Option<String>,
+        description: Option<String>,
+        status_code: u16,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
