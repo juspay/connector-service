@@ -4,7 +4,7 @@ use common_enums::{self, AttemptStatus, CountryAlpha2, Currency};
 use common_utils::{
     pii::{self, IpAddress},
     request::Method,
-    CustomerId, StringMajorUnit,
+    StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Refund},

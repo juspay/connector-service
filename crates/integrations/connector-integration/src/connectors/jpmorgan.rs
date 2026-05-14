@@ -15,20 +15,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
-        IncrementalAuthorization, MandateRevoke, PSync, RSync, Refund, RepeatPayment,
-        ServerAuthenticationToken, ServerSessionAuthenticationToken, SetupMandate, SubmitEvidence,
-        Void,
+        Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, RepeatPayment,
+        ServerAuthenticationToken, SetupMandate, Void,
     },
     connector_types::{
-        AcceptDisputeData, ClientAuthenticationTokenRequestData, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, MandateRevokeRequestData, MandateRevokeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ServerAuthenticationTokenRequestData,
-        ServerAuthenticationTokenResponseData, ServerSessionAuthenticationTokenRequestData,
-        ServerSessionAuthenticationTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        ClientAuthenticationTokenRequestData, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        SetupMandateRequestData,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
@@ -104,16 +99,6 @@ impl JpmorganResourceData for RefundFlowData {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Jpmorgan<T>
 {
 }
@@ -158,7 +143,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Jpmorgan<T>
+    connector_types::ServerAuthentication for Jpmorgan<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -169,59 +154,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Jpmorgan<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentIncrementalAuthorization for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ServerSessionAuthentication for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ServerAuthentication for Jpmorgan<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Jpmorgan<T>
-{
-}
-
 macros::create_amount_converter_wrapper!(connector_name: Jpmorgan, amount_type: MinorUnit);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Jpmorgan<T> {
@@ -451,104 +383,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        ServerSessionAuthenticationToken,
-        PaymentFlowData,
-        ServerSessionAuthenticationTokenRequestData,
-        ServerSessionAuthenticationTokenResponseData,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::PostAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::Authenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::PreAuthenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::VoidPC,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::PaymentMethodToken,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentMethodTokenizationData<T>,
-        domain_types::connector_types::PaymentMethodTokenResponse,
-    > for Jpmorgan<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::CreateConnectorCustomer,
-        PaymentFlowData,
-        domain_types::connector_types::ConnectorCustomerData,
-        domain_types::connector_types::ConnectorCustomerResponse,
-    > for Jpmorgan<T>
-{
-}
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
     connector: Jpmorgan,
@@ -617,16 +451,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Jpmorgan<T>
-{
-}
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_error_response_v2],
@@ -923,3 +747,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
     for Jpmorgan<T>
 {
 }
+
+macros::macro_connector_flow_status_impls!(
+    connector: Jpmorgan,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    not_implemented: [
+        IncrementalAuthorization,
+        CreateOrder,
+        SubmitEvidence,
+        DefendDispute,
+        Accept,
+        ServerSessionAuthenticationToken,
+        MandateRevoke,
+        PostAuthenticate,
+        Authenticate,
+        PreAuthenticate,
+        PaymentMethodToken,
+        CreateConnectorCustomer,
+    ],
+    not_supported: [
+        VoidPC,
+    ],
+);
