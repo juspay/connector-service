@@ -205,7 +205,6 @@ impl ApiRequestEnvelope {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoTransactionAmount {
@@ -441,7 +440,8 @@ where
         .description
         .clone()
         .unwrap_or_else(|| order_no.clone());
-    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
+    let request_message_id =
+        paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     let amount = PacoTransactionAmount::new(item.request.minor_amount, item.request.currency)?;
     let notification_urls = PacoNotificationUrls {
         confirmation_url: item.request.router_return_url.clone(),
@@ -561,7 +561,8 @@ pub fn build_capture_request(
     let invoice_no = item.request.get_connector_transaction_id()?;
     let amount =
         PacoTransactionAmount::new(item.request.minor_amount_to_capture, item.request.currency)?;
-    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
+    let request_message_id =
+        paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoCaptureRequest {
         api_request: ApiRequestEnvelope::new(request_message_id),
         office_id,
@@ -596,7 +597,8 @@ pub fn build_void_request(
     auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
     let office_id = auth.office_id.clone();
-    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
+    let request_message_id =
+        paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoVoidRequest {
         api_request: ApiRequestEnvelope::new(request_message_id),
         office_id,
@@ -619,7 +621,8 @@ pub fn build_void_pc_request(
     auth: &TwocTwopPacoAuthType,
 ) -> Result<TwocTwopPacoVoidRequest, error_stack::Report<errors::IntegrationError>> {
     let office_id = auth.office_id.clone();
-    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
+    let request_message_id =
+        paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoVoidRequest {
         api_request: ApiRequestEnvelope::new(request_message_id),
         office_id,
@@ -701,7 +704,8 @@ pub fn build_refund_request(
                 .and_then(extract_paco_maker_id)
         })
         .unwrap_or_else(|| PACO_REFUND_MAKER_ID.to_string());
-    let request_message_id = paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
+    let request_message_id =
+        paco_require_merchant_request_id(item.resource_common_data.get_merchant_request_id())?;
     Ok(TwocTwopPacoRefundRequest {
         api_request: ApiRequestEnvelope::new(request_message_id),
         office_id,
