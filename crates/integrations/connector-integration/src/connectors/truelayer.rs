@@ -1011,6 +1011,51 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(truelayer::get_webhook_event(webhook_body._type))
     }
 
+    fn get_webhook_event_reference(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Option<domain_types::connector_types::WebhookResourceReference>,
+        error_stack::Report<WebhookError>,
+    > {
+        let webhook_body: truelayer::TruelayerWebhookBody = request
+            .body
+            .parse_struct("TruelayerWebhookBody")
+            .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+
+        let webhook_resource_reference = match webhook_body._type {
+            truelayer::TruelayerWebhookEventType::PaymentAuthorized
+            | truelayer::TruelayerWebhookEventType::PaymentExecuted
+            | truelayer::TruelayerWebhookEventType::PaymentReversed
+            | truelayer::TruelayerWebhookEventType::PaymentFailed
+            | truelayer::TruelayerWebhookEventType::PaymentSettlementStalled
+            | truelayer::TruelayerWebhookEventType::PaymentSettled
+            | truelayer::TruelayerWebhookEventType::PaymentCreditable
+            | truelayer::TruelayerWebhookEventType::PaymentFundsReceived => {
+                domain_types::connector_types::WebhookResourceReference::Payment(
+                    domain_types::connector_types::PaymentWebhookReference {
+                        connector_transaction_id: Some(webhook_body.payment_id),
+                        merchant_transaction_id: None,
+                    },
+                )
+            }
+            truelayer::TruelayerWebhookEventType::RefundExecuted
+            | truelayer::TruelayerWebhookEventType::RefundFailed => {
+                domain_types::connector_types::WebhookResourceReference::Refund(
+                    domain_types::connector_types::RefundWebhookReference {
+                        connector_refund_id: webhook_body.refund_id,
+                        merchant_refund_id: None,
+                        connector_transaction_id: Some(webhook_body.payment_id.clone()),
+                    },
+                )
+            }
+            truelayer::TruelayerWebhookEventType::PaymentDisputed
+            | truelayer::TruelayerWebhookEventType::Unknown => return Ok(None),
+        };
+
+        Ok(Some(webhook_resource_reference))
+    }
+
     fn process_payment_webhook(
         &self,
         request: domain_types::connector_types::RequestDetails,
@@ -1058,6 +1103,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
+            sender_payment_instrument_id: details
+                .payment_source
+                .as_ref()
+                .and_then(|ps| ps.id.clone()),
         })
     }
 
