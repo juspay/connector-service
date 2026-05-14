@@ -14,7 +14,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::{ConnectorError, IntegrationError},
+    errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -952,6 +952,8 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRsyncResponse, Self>>
 
 // ---- ClientAuthenticationToken flow types ----
 
+const BARCLAYCARD_FLEX_CLIENT_VERSION: &str = "0.11";
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BarclaycardRouterData<
@@ -994,9 +996,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             })?;
 
         let parsed_url =
-            url::Url::parse(return_url).map_err(|_| IntegrationError::InvalidDataFormat {
+            url::Url::parse(return_url).map_err(|e| IntegrationError::InvalidDataFormat {
                 field_name: "return_url",
-                context: Default::default(),
+                context: IntegrationErrorContext {
+                    additional_context: Some(format!("{e}")),
+                    ..Default::default()
+                },
             })?;
         let host = parsed_url
             .host_str()
@@ -1008,7 +1013,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         Ok(Self {
             target_origins: vec![target_origin],
-            client_version: "0.11".to_string(),
+            client_version: BARCLAYCARD_FLEX_CLIENT_VERSION.to_string(),
             allowed_card_networks: Some(vec![
                 "VISA".to_string(),
                 "MASTERCARD".to_string(),

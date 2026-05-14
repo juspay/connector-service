@@ -415,8 +415,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ConnectorError,
     > {
         // Barclaycard Flex v2 sessions API returns a raw JWT string (content-type: application/jwt)
-        let capture_context_jwt = String::from_utf8(res.response.to_vec())
-            .map_err(|_| ConnectorError::response_handling_failed(res.status_code))?;
+        let capture_context_jwt = String::from_utf8(res.response.to_vec()).map_err(|e| {
+            ConnectorError::response_handling_failed_with_context(
+                res.status_code,
+                Some(format!("response body is not valid UTF-8: {e}")),
+            )
+        })?;
 
         let response_body = BarclaycardClientAuthResponse {
             capture_context: capture_context_jwt,
