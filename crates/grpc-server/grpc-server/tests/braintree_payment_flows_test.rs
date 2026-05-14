@@ -152,7 +152,7 @@ fn create_token_setup_recurring_request(
     connector_token: String,
 ) -> PaymentServiceTokenSetupRecurringRequest {
     let mut merchant_account_metadata_map = HashMap::new();
-    merchant_account_metadata_map.insert("merchant_account_id".to_string(), "juspay".to_string());
+    merchant_account_metadata_map.insert("merchant_account_id".to_string(), "test_merchant_account".to_string());
     merchant_account_metadata_map.insert("merchant_config_currency".to_string(), "USD".to_string());
     merchant_account_metadata_map.insert("currency".to_string(), "USD".to_string());
     let merchant_account_metadata_json =
@@ -252,7 +252,7 @@ async fn test_setup_mandate() {
 
 #[test]
 fn test_braintree_config_deser() {
-    let json = r#"{"config":{"Braintree":{"public_key":"testkey","private_key":"testsecret","merchant_account_id":"juspay","merchant_config_currency":"USD","apple_pay_supported_networks":[],"apple_pay_merchant_capabilities":[],"gpay_allowed_auth_methods":[],"gpay_allowed_card_networks":[]}}}"#;
+    let json = r#"{"config":{"Braintree":{"public_key":"testkey","private_key":"testsecret","merchant_account_id":"test_merchant_account","merchant_config_currency":"USD","apple_pay_supported_networks":[],"apple_pay_merchant_capabilities":[],"gpay_allowed_auth_methods":[],"gpay_allowed_card_networks":[]}}}"#;
     let result: Result<grpc_api_types::payments::ConnectorSpecificConfig, _> =
         serde_json::from_str(json);
     assert!(result.is_ok(), "Failed: {:?}", result.err());

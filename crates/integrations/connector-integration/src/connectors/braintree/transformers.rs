@@ -53,7 +53,6 @@ pub mod constants {
     pub const CHARGE_AND_VAULT_TRANSACTION_MUTATION: &str ="mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id status createdAt paymentMethod { id } } } }";
     pub const DELETE_PAYMENT_METHOD_FROM_VAULT_MUTATION: &str = "mutation deletePaymentMethodFromVault($input: DeletePaymentMethodFromVaultInput!) { deletePaymentMethodFromVault(input: $input) { clientMutationId } }";
     pub const VAULT_PAYMENT_METHOD_MUTATION: &str = "mutation vaultPaymentMethod($input: VaultPaymentMethodInput!) { vaultPaymentMethod(input: $input) { paymentMethod { id } verification { id status paymentMethod { id } } } }";
-    pub const VERIFY_PAYMENT_METHOD_MUTATION: &str = "mutation verifyPaymentMethod($input: VerifyPaymentMethodInput!) { verifyPaymentMethod(input: $input) { verification { id status paymentMethod { id } } } }";
     pub const TRANSACTION_QUERY: &str = "query($input: TransactionSearchInput!) { search { transactions(input: $input) { edges { node { id status } } } } }";
     pub const REFUND_QUERY: &str = "query($input: RefundSearchInput!) { search { refunds(input: $input, first: 1) { edges { node { id status createdAt amount { value currencyCode } orderId } } } } }";
     pub const CHARGE_GOOGLE_PAY_MUTATION: &str = "mutation ChargeGPay($input: ChargePaymentMethodInput!) { chargePaymentMethod(input: $input) { transaction { id status amount { value currencyCode } } } }";
@@ -2980,6 +2979,8 @@ pub struct VerificationBody {
 #[derive(Debug, Clone, Deserialize, Serialize, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum BraintreeVerificationStatus {
+    Pending,
+    Verifying,
     Verified,
     Failed,
     GatewayRejected,
@@ -2990,6 +2991,9 @@ impl From<BraintreeVerificationStatus> for enums::AttemptStatus {
     fn from(item: BraintreeVerificationStatus) -> Self {
         match item {
             BraintreeVerificationStatus::Verified => Self::Charged,
+            BraintreeVerificationStatus::Pending | BraintreeVerificationStatus::Verifying => {
+                Self::Pending
+            }
             BraintreeVerificationStatus::Failed
             | BraintreeVerificationStatus::GatewayRejected
             | BraintreeVerificationStatus::ProcessorDeclined => Self::Failure,
