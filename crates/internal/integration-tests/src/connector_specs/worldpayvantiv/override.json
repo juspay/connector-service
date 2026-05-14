@@ -242,7 +242,7 @@
     "incremental_auth_multiple_increase": {
       "assert": {
         "status": {
-          "one_of": ["AUTHORIZATION_SUCCESS", "SUCCESS", "AUTHORIZED", "FAILED", "AUTHORIZATION_FAILURE"]
+          "one_of": ["AUTHORIZATION_SUCCESS", "SUCCESS", "AUTHORIZED"]
         }
       }
     }
