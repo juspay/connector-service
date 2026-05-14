@@ -151,7 +151,7 @@ export interface TaskDefinition {
   /** Optional model override for the selected runner */
   runnerModel?: string;
 
-  // ========== GRACE/Byne WORKFLOW FIELDS ==========
+  // ========== GRACE/10XGRACE WORKFLOW FIELDS ==========
 
   /**
    * GRACE: {PAYMENT_METHOD} equivalent
@@ -206,7 +206,7 @@ export interface TaskDefinition {
   estimatedComplexity?: "low" | "medium" | "high";
 
   /**
-   * Byne: Requirements discovery results
+   * 10XGRACE: Requirements discovery results
    * Populated by Requirements checkpoint
    */
   requirements?: {

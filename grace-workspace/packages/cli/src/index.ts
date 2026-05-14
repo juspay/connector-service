@@ -8,8 +8,8 @@ import { testLlmCommand } from "./commands/test-llm.js";
 
 const program = new Command();
 program
-  .name("byne")
-  .description("Byne · checkpoint-based spec-driven development pipeline")
+  .name("10xgrace")
+  .description("10XGRACE · checkpoint-based spec-driven development pipeline")
   .version("0.1.0");
 
 program

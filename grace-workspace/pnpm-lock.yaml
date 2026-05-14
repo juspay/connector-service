@@ -14,7 +14,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@byne/core':
+      '@10xgrace/core':
         specifier: workspace:*
         version: link:../core
       commander:
