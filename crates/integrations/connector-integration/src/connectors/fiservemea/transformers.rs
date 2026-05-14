@@ -1037,31 +1037,36 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // Map to VoidPostCaptureInitiated on success, Failure otherwise
-        let status = match item.response.transaction_status.as_ref() {
-            Some(FiservemeaPaymentStatus::Approved) => {
-                AttemptStatus::VoidPostCaptureInitiated
-            }
-            Some(FiservemeaPaymentStatus::Waiting) => AttemptStatus::Pending,
+        let (status, post_capture_void_status) = match item.response.transaction_status.as_ref() {
+            Some(FiservemeaPaymentStatus::Approved) => (
+                AttemptStatus::VoidPostCaptureInitiated,
+                common_enums::PostCaptureVoidStatus::Succeeded,
+            ),
+            Some(FiservemeaPaymentStatus::Waiting) => (
+                AttemptStatus::Pending,
+                common_enums::PostCaptureVoidStatus::Succeeded,
+            ),
             _ => match item.response.transaction_result.as_ref() {
-                Some(FiservemeaPaymentResult::Approved) => {
-                    AttemptStatus::VoidPostCaptureInitiated
-                }
-                Some(FiservemeaPaymentResult::Waiting) => AttemptStatus::Pending,
-                _ => AttemptStatus::Failure,
+                Some(FiservemeaPaymentResult::Approved) => (
+                    AttemptStatus::VoidPostCaptureInitiated,
+                    common_enums::PostCaptureVoidStatus::Succeeded,
+                ),
+                Some(FiservemeaPaymentResult::Waiting) => (
+                    AttemptStatus::Pending,
+                    common_enums::PostCaptureVoidStatus::Succeeded,
+                ),
+                _ => (
+                    AttemptStatus::Failure,
+                    common_enums::PostCaptureVoidStatus::Failed,
+                ),
             },
         };
 
         Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.ipg_transaction_id.clone(),
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: item.response.api_trace_id.clone(),
-                connector_response_reference_id: item.response.client_request_id.clone(),
-                incremental_authorization_allowed: None,
+            response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status,
+                connector_reference_id: Some(item.response.ipg_transaction_id.clone()),
+                description: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
