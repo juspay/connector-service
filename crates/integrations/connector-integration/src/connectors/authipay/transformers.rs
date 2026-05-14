@@ -594,8 +594,6 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsRespo
     fn try_from(
         item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        // Map transaction status using status/result, state, AND transaction type
-        // CRITICAL: This validates BOTH status fields and transaction state
         let status = map_status(
             item.response.transaction_status.clone(),
             item.response.transaction_result.clone(),
@@ -603,13 +601,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsRespo
             item.response.transaction_type.clone(),
         );
 
-        // Extract connector metadata from payment token using helper function
-        let connector_metadata = extract_connector_metadata(item.response.payment_token.as_ref());
-
-        // Extract network-specific fields from processor object using helper function
-
-        let (network_txn_id, _network_decline_code, _network_error_message) =
-            extract_network_fields(item.response.processor.as_ref());
+        let connector_metadata = Some(serde_json::json!({"order_id": item.response.order_id}));
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -619,8 +611,8 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsRespo
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata,
-                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
-                connector_response_reference_id: item.response.client_request_id.clone(),
+                network_txn_id: None,
+                connector_response_reference_id: item.response.order_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
@@ -1161,5 +1153,190 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.router_data)
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use std::marker::PhantomData;
+
+    use common_utils::types::MinorUnit;
+    use domain_types::{
+        connector_flow::Authorize,
+        connector_types::{
+            PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        },
+        payment_method_data::{DefaultPCIHolder, PaymentMethodData},
+        router_data::{ConnectorSpecificConfig, ErrorResponse},
+        router_data_v2::RouterDataV2,
+        types::Connectors,
+    };
+    use hyperswitch_masking::Secret;
+
+    use crate::types::ResponseRouterData;
+
+    fn dummy_router_data() -> RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<DefaultPCIHolder>,
+        PaymentsResponseData,
+    > {
+        RouterDataV2 {
+            flow: PhantomData::<Authorize>,
+            resource_common_data: PaymentFlowData {
+                merchant_id: common_utils::id_type::MerchantId::default(),
+                customer_id: None,
+                connector_customer: None,
+                payment_id: "pay_test".to_string(),
+                attempt_id: "attempt_test".to_string(),
+                status: AttemptStatus::Pending,
+                payment_method: common_enums::PaymentMethod::Card,
+                description: None,
+                return_url: None,
+                order_details: None,
+                address: domain_types::payment_address::PaymentAddress::new(
+                    None, None, None, None,
+                ),
+                auth_type: common_enums::AuthenticationType::NoThreeDs,
+                connector_feature_data: None,
+                amount_captured: None,
+                minor_amount_captured: None,
+                minor_amount_authorized: None,
+                access_token: None,
+                session_token: None,
+                reference_id: None,
+                connector_order_id: None,
+                preprocessing_id: None,
+                connector_api_version: None,
+                connector_request_reference_id: "ref_test".to_string(),
+                test_mode: None,
+                connector_http_status_code: None,
+                connectors: Connectors::default(),
+                external_latency: None,
+                connector_response_headers: None,
+                raw_connector_response: None,
+                vault_headers: None,
+                raw_connector_request: None,
+                minor_amount_capturable: None,
+                amount: None,
+                connector_response: None,
+                recurring_mandate_payment_data: None,
+                l2_l3_data: None,
+            },
+            connector_config: ConnectorSpecificConfig::Authipay {
+                api_key: Secret::new("test_key".to_string()),
+                api_secret: Secret::new("test_secret".to_string()),
+                base_url: None,
+            },
+            request: PaymentsAuthorizeData {
+                payment_channel: None,
+                authentication_data: None,
+                connector_testing_data: None,
+                payment_method_data: PaymentMethodData::Card(Default::default()),
+                amount: MinorUnit::new(1000),
+                order_tax_amount: None,
+                email: None,
+                customer_name: None,
+                currency: common_enums::Currency::USD,
+                confirm: true,
+                capture_method: None,
+                integrity_object: None,
+                router_return_url: None,
+                webhook_url: None,
+                complete_authorize_url: None,
+                mandate_id: None,
+                setup_future_usage: None,
+                off_session: None,
+                browser_info: None,
+                order_category: None,
+                session_token: None,
+                enrolled_for_3ds: None,
+                related_transaction_id: None,
+                payment_experience: None,
+                payment_method_type: None,
+                customer_id: None,
+                request_incremental_authorization: None,
+                metadata: None,
+                minor_amount: MinorUnit::new(1000),
+                merchant_order_id: None,
+                shipping_cost: None,
+                merchant_account_id: None,
+                merchant_config_currency: None,
+                all_keys_required: None,
+                access_token: None,
+                customer_acceptance: None,
+                split_payments: None,
+                request_extended_authorization: None,
+                setup_mandate_details: None,
+                enable_overcapture: None,
+                connector_feature_data: None,
+                billing_descriptor: None,
+                enable_partial_authorization: None,
+                locale: None,
+                continue_redirection_url: None,
+                redirect_response: None,
+                threeds_method_comp_ind: None,
+                tokenization: None,
+            },
+            response: Err(ErrorResponse::default()),
+        }
+    }
+
+    #[test]
+    fn test_authorize_response_maps_order_id_to_connector_metadata() {
+        let response: AuthipayPaymentsResponse = serde_json::from_value(serde_json::json!({
+            "clientRequestId": "9226ac72-test",
+            "apiTraceId": "afBdrVqyJyr-test",
+            "ipgTransactionId": "84631848846",
+            "orderId": "R-c6342b58-test",
+            "transactionType": "SALE",
+            "transactionStatus": "APPROVED",
+            "transactionState": "CAPTURED",
+            "processor": {
+                "responseCode": "00",
+                "responseMessage": "Approved"
+            },
+            "paymentToken": {
+                "reusable": true,
+                "declineDuplicates": false
+            }
+        }))
+        .unwrap();
+
+        let router_data = dummy_router_data();
+        let response_router_data = ResponseRouterData {
+            response,
+            router_data,
+            http_code: 200,
+        };
+
+        let result: RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<DefaultPCIHolder>,
+            PaymentsResponseData,
+        > = response_router_data.try_into().unwrap();
+
+        match result.response.unwrap() {
+            PaymentsResponseData::TransactionResponse {
+                connector_metadata,
+                network_txn_id,
+                connector_response_reference_id,
+                ..
+            } => {
+                assert_eq!(
+                    connector_metadata,
+                    Some(serde_json::json!({"order_id": "R-c6342b58-test"})),
+                );
+                assert_eq!(network_txn_id, None);
+                assert_eq!(
+                    connector_response_reference_id,
+                    Some("R-c6342b58-test".to_string()),
+                );
+            }
+            _ => panic!("Expected TransactionResponse"),
+        }
     }
 }
