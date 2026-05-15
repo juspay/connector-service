@@ -468,23 +468,25 @@ pub struct AuthipayPaymentsResponse {
 
 // ===== HELPER FUNCTIONS TO AVOID CODE DUPLICATION =====
 
-/// Extract connector metadata from payment token
-fn extract_connector_metadata(payment_token: Option<&PaymentToken>) -> Option<serde_json::Value> {
-    payment_token.map(|token| {
-        let mut metadata = HashMap::new();
-        if let Some(value) = &token.value {
-            metadata.insert("payment_token".to_string(), value.clone());
-        }
+/// Extract connector metadata from order_id and payment token
+fn extract_connector_metadata(
+    order_id: Option<&str>,
+    payment_token: Option<&PaymentToken>,
+) -> Option<serde_json::Value> {
+    let mut metadata = serde_json::Map::new();
+    if let Some(id) = order_id {
+        metadata.insert("order_id".to_string(), serde_json::Value::String(id.to_string()));
+    }
+    if let Some(token) = payment_token {
         if let Some(reusable) = token.reusable {
-            metadata.insert("token_reusable".to_string(), reusable.to_string());
+            metadata.insert("token_reusable".to_string(), serde_json::Value::Bool(reusable));
         }
-        serde_json::Value::Object(
-            metadata
-                .into_iter()
-                .map(|(k, v)| (k, serde_json::Value::String(v)))
-                .collect(),
-        )
-    })
+    }
+    if metadata.is_empty() {
+        None
+    } else {
+        Some(serde_json::Value::Object(metadata))
+    }
 }
 
 /// Extract network-specific fields from processor object
@@ -601,7 +603,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsRespo
             item.response.transaction_type.clone(),
         );
 
-        let connector_metadata = Some(serde_json::json!({"order_id": item.response.order_id}));
+        let connector_metadata = extract_connector_metadata(
+            item.response.order_id.as_deref(),
+            item.response.payment_token.as_ref(),
+        );
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -611,7 +616,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsRespo
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata,
-                network_txn_id: None,
+                network_txn_id: item.response.scheme_transaction_id.clone(),
                 connector_response_reference_id: item.response.order_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
@@ -647,7 +652,10 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
         );
 
         // Extract connector metadata from payment token using helper function
-        let connector_metadata = extract_connector_metadata(item.response.payment_token.as_ref());
+        let connector_metadata = extract_connector_metadata(
+            item.response.order_id.as_deref(),
+            item.response.payment_token.as_ref(),
+        );
 
         // Extract network-specific fields from processor object using helper function
 
@@ -699,7 +707,10 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
         );
 
         // Extract connector metadata from payment token using helper function
-        let connector_metadata = extract_connector_metadata(item.response.payment_token.as_ref());
+        let connector_metadata = extract_connector_metadata(
+            item.response.order_id.as_deref(),
+            item.response.payment_token.as_ref(),
+        );
 
         // Extract network-specific fields from processor object using helper function
         let (network_txn_id, _network_decline_code, _network_error_message) =
@@ -1291,6 +1302,7 @@ mod tests {
             "apiTraceId": "afBdrVqyJyr-test",
             "ipgTransactionId": "84631848846",
             "orderId": "R-c6342b58-test",
+            "schemeTransactionId": "MCC4668980327",
             "transactionType": "SALE",
             "transactionStatus": "APPROVED",
             "transactionState": "CAPTURED",
@@ -1328,9 +1340,9 @@ mod tests {
             } => {
                 assert_eq!(
                     connector_metadata,
-                    Some(serde_json::json!({"order_id": "R-c6342b58-test"})),
+                    Some(serde_json::json!({"order_id": "R-c6342b58-test", "token_reusable": true})),
                 );
-                assert_eq!(network_txn_id, None);
+                assert_eq!(network_txn_id, Some("MCC4668980327".to_string()));
                 assert_eq!(
                     connector_response_reference_id,
                     Some("R-c6342b58-test".to_string()),
