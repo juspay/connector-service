@@ -4291,9 +4291,6 @@ message TwocTwopPacoConfig {
 // Connector enum value from this file;
 message ConnectorSpecificConfig {
   oneof config {
-    // ACI = 2
-    AciConfig aci = 116;
-
     // ADYEN = 3
     AdyenConfig adyen = 1;
 
@@ -4557,6 +4554,9 @@ message ConnectorSpecificConfig {
 
     // FINIX = 111
     FinixConfig finix = 124;
+
+    // ACI = 122
+    AciConfig aci = 122;
   }
 }
 
