@@ -8,7 +8,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Authorize, Capture, ClientAuthenticationToken, PSync, PaymentMethodToken, RSync,
-        RepeatPayment, Void,
+        RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
@@ -22,7 +22,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, PaypalClientAuthenticationResponse,
         PaypalTransactionInfo, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SdkNextAction, SecretInfoToInitiateSdk,
-        ThirdPartySdkSessionResponse,
+        SetupMandateRequestData, ThirdPartySdkSessionResponse,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
@@ -52,6 +52,7 @@ pub mod constants {
     pub const AUTHORIZE_AND_VAULT_CREDIT_CARD_MUTATION: &str="mutation authorizeCreditCard($input: AuthorizeCreditCardInput!) { authorizeCreditCard(input: $input) { transaction { id status createdAt paymentMethod { id } } } }";
     pub const CHARGE_AND_VAULT_TRANSACTION_MUTATION: &str ="mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id status createdAt paymentMethod { id } } } }";
     pub const DELETE_PAYMENT_METHOD_FROM_VAULT_MUTATION: &str = "mutation deletePaymentMethodFromVault($input: DeletePaymentMethodFromVaultInput!) { deletePaymentMethodFromVault(input: $input) { clientMutationId } }";
+    pub const VAULT_PAYMENT_METHOD_MUTATION: &str = "mutation vaultPaymentMethod($input: VaultPaymentMethodInput!) { vaultPaymentMethod(input: $input) { paymentMethod { id } verification { id status paymentMethod { id } } } }";
     pub const TRANSACTION_QUERY: &str = "query($input: TransactionSearchInput!) { search { transactions(input: $input) { edges { node { id status } } } } }";
     pub const REFUND_QUERY: &str = "query($input: RefundSearchInput!) { search { refunds(input: $input, first: 1) { edges { node { id status createdAt amount { value currencyCode } orderId } } } } }";
     pub const CHARGE_GOOGLE_PAY_MUTATION: &str = "mutation ChargeGPay($input: ChargePaymentMethodInput!) { chargePaymentMethod(input: $input) { transaction { id status amount { value currencyCode } } } }";
@@ -77,6 +78,8 @@ pub type BraintreeWalletRequest = GenericBraintreeRequest<GenericVariableInput<W
 pub type BraintreeRefundResponse = GenericBraintreeResponse<RefundResponse>;
 pub type BraintreeCaptureResponse = GenericBraintreeResponse<CaptureResponse>;
 pub type BraintreePSyncResponse = GenericBraintreeResponse<PSyncResponse>;
+pub type BraintreeSetupMandateRequest =
+    GenericBraintreeRequest<GenericVariableInput<VaultPaymentMethodInput>>;
 
 pub type VariablePaymentInput = GenericVariableInput<PaymentInput>;
 pub type VariableClientTokenInput = GenericVariableInput<InputClientTokenData>;
@@ -2933,6 +2936,228 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     response,
                     ..item.router_data
                 })
+            }
+        }
+    }
+}
+
+// SetupMandate (ZeroDollarAuth / vaultPaymentMethod + verification) types
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultPaymentMethodInput {
+    payment_method_id: Secret<String>,
+    verification_merchant_account_id: Secret<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct VaultPaymentMethodResponse {
+    data: VaultPaymentMethodDataResponse,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultPaymentMethodDataResponse {
+    vault_payment_method: VaultPaymentMethodWrapper,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultPaymentMethodWrapper {
+    payment_method: Option<PaymentMethodInfo>,
+    verification: Option<VerificationBody>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerificationBody {
+    id: String,
+    status: BraintreeVerificationStatus,
+    payment_method: Option<PaymentMethodInfo>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, strum::Display)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum BraintreeVerificationStatus {
+    Pending,
+    Verifying,
+    Verified,
+    Failed,
+    GatewayRejected,
+    ProcessorDeclined,
+}
+
+impl From<BraintreeVerificationStatus> for enums::AttemptStatus {
+    fn from(item: BraintreeVerificationStatus) -> Self {
+        match item {
+            BraintreeVerificationStatus::Verified => Self::Charged,
+            BraintreeVerificationStatus::Pending | BraintreeVerificationStatus::Verifying => {
+                Self::Pending
+            }
+            BraintreeVerificationStatus::Failed
+            | BraintreeVerificationStatus::GatewayRejected
+            | BraintreeVerificationStatus::ProcessorDeclined => Self::Failure,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum BraintreeSetupMandateResponse {
+    VaultResponse(Box<VaultPaymentMethodResponse>),
+    ErrorResponse(Box<ErrorResponse>),
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BraintreeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BraintreeSetupMandateRequest
+{
+    type Error = Report<IntegrationError>;
+    fn try_from(
+        item: BraintreeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
+        let merchant_account_id =
+            auth.merchant_account_id
+                .ok_or(IntegrationError::InvalidConnectorConfig {
+                    config: "merchant_account_id",
+                    context: Default::default(),
+                })?;
+
+        let payment_method_id = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::PaymentMethodToken(token_data) => token_data.token.clone(),
+            _ => {
+                return Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: utils::get_unimplemented_payment_method_error_message("braintree"),
+                    connector: "Braintree",
+                    context: Default::default(),
+                }));
+            }
+        };
+
+        Ok(Self {
+            query: constants::VAULT_PAYMENT_METHOD_MUTATION.to_string(),
+            variables: GenericVariableInput {
+                input: VaultPaymentMethodInput {
+                    payment_method_id,
+                    verification_merchant_account_id: merchant_account_id,
+                },
+            },
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<BraintreeSetupMandateResponse, Self>>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BraintreeSetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            BraintreeSetupMandateResponse::ErrorResponse(error_response) => Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: enums::AttemptStatus::Failure,
+                    ..item.router_data.resource_common_data
+                },
+                response: build_error_response(&error_response.errors, item.http_code)
+                    .map_err(|err| *err),
+                ..item.router_data
+            }),
+            BraintreeSetupMandateResponse::VaultResponse(vault_response) => {
+                let vault_data = vault_response.data.vault_payment_method;
+                let vaulted_pm = vault_data.payment_method;
+
+                match vault_data.verification {
+                    Some(verification) => {
+                        let status = enums::AttemptStatus::from(verification.status.clone());
+                        let response = if domain_types::utils::is_payment_failure(status) {
+                            Err(create_failure_error_response(
+                                verification.status,
+                                Some(verification.id),
+                                item.http_code,
+                            ))
+                        } else {
+                            let mandate_pm_id = vaulted_pm
+                                .as_ref()
+                                .or(verification.payment_method.as_ref())
+                                .map(|pm| pm.id.clone().expose());
+                            Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(verification.id),
+                                redirection_data: None,
+                                mandate_reference: mandate_pm_id.map(|id| {
+                                    Box::new(MandateReference {
+                                        connector_mandate_id: Some(id),
+                                        payment_method_id: None,
+                                        connector_mandate_request_reference_id: None,
+                                    })
+                                }),
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: None,
+                                incremental_authorization_allowed: None,
+                                status_code: item.http_code,
+                            })
+                        };
+                        Ok(Self {
+                            resource_common_data: PaymentFlowData {
+                                status,
+                                ..item.router_data.resource_common_data
+                            },
+                            response,
+                            ..item.router_data
+                        })
+                    }
+                    None => {
+                        let mandate_pm_id = vaulted_pm.as_ref().map(|pm| pm.id.clone().expose());
+                        Ok(Self {
+                            resource_common_data: PaymentFlowData {
+                                status: enums::AttemptStatus::Charged,
+                                ..item.router_data.resource_common_data
+                            },
+                            response: Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::NoResponseId,
+                                redirection_data: None,
+                                mandate_reference: mandate_pm_id.map(|id| {
+                                    Box::new(MandateReference {
+                                        connector_mandate_id: Some(id),
+                                        payment_method_id: None,
+                                        connector_mandate_request_reference_id: None,
+                                    })
+                                }),
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: None,
+                                incremental_authorization_allowed: None,
+                                status_code: item.http_code,
+                            }),
+                            ..item.router_data
+                        })
+                    }
+                }
             }
         }
     }
