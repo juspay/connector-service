@@ -8225,6 +8225,7 @@ dependencies = [
  "hex",
  "http 1.4.0",
  "hyperswitch_masking",
+ "josekit",
  "md5",
  "multipart",
  "nanoid",

@@ -300,10 +300,16 @@ where
                     }
 
                     let error_response = match body.status_code {
-                        500..=511 => {
-                            connector.get_5xx_error_response(body.clone(), event.as_deref_mut())?
-                        }
-                        _ => connector.get_error_response_v2(body.clone(), event.as_deref_mut())?,
+                        500..=511 => connector.get_5xx_error_response(
+                            body.clone(),
+                            event.as_deref_mut(),
+                            &updated_router_data.connector_config,
+                        )?,
+                        _ => connector.get_error_response_v2(
+                            body.clone(),
+                            event.as_deref_mut(),
+                            &updated_router_data.connector_config,
+                        )?,
                     };
                     if let Some(evt) = event {
                         evt.set_error_response(&error_response);

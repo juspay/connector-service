@@ -2805,34 +2805,60 @@ impl RecurringPaymentService for RecurringPayments {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let payment_method_data_action = PaymentMethodDataAction::get_payment_method_data_action(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
-                        .map_err(|err| {
-                            tracing::error!("PAYMENT_CHARGE_FLOW: failed to get payment method data action - error: {:?}", err);
-                            tonic::Status::invalid_argument("Invalid payment method data")
-                        })?;
-                    let payment_method_data = match payment_method_data_action{
-                            PaymentMethodDataAction::Card(card_details) => {
-                            tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
-                            let payment_method_data = payment_method_data::PaymentMethodData::Card(payment_method_data::Card::<DefaultPCIHolder>::foreign_try_from(card_details).map_err(|err| {
-                                tracing::error!("PAYMENT_CHARGE_FLOW: failed to get payment method data action - error: {:?}", err);
-                                tonic::Status::invalid_argument("Invalid payment method data")
-                            })?);
-                            Ok(payment_method_data)
-                        }
-                        PaymentMethodDataAction::Default => {
-                            tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
-                            let payment_method_data = payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(payload.payment_method.clone().ok_or(tonic::Status::invalid_argument("missing request_details in the payload"))?)
+                    let payment_method_data = if let Some(payment_method) = payload.payment_method.clone() {
+                        let payment_method_data_action =
+                            PaymentMethodDataAction::get_payment_method_data_action(payment_method.clone())
                                 .map_err(|err| {
-                                    tracing::error!("Failed to convert payment method data: {:?}", err);
+                                    tracing::error!(
+                                        "PAYMENT_CHARGE_FLOW: failed to get payment method data action - error: {:?}",
+                                        err
+                                    );
+
                                     tonic::Status::invalid_argument("Invalid payment method data")
                                 })?;
-                            Ok(payment_method_data)
+
+                        tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
+
+                        match payment_method_data_action {
+                            PaymentMethodDataAction::Card(card_details) => {
+                                Some(payment_method_data::PaymentMethodData::Card(
+                                    payment_method_data::Card::<DefaultPCIHolder>::foreign_try_from(
+                                        card_details,
+                                    )
+                                    .map_err(|err| {
+                                        tracing::error!(
+                                            "PAYMENT_CHARGE_FLOW: failed to convert card details - error: {:?}",
+                                            err
+                                        );
+
+                                        tonic::Status::invalid_argument("Invalid payment method data")
+                                    })?),
+                                )
+                            }
+
+                            PaymentMethodDataAction::Default => {
+                                Some(payment_method_data::PaymentMethodData::convert_to_domain_model_for_non_card_payment_methods(
+                                    payment_method,
+                                )
+                                .map_err(|err| {
+                                    tracing::error!(
+                                        "Failed to convert payment method data: {:?}",
+                                        err
+                                    );
+
+                                    tonic::Status::invalid_argument("Invalid payment method data")
+                                })?)
+                            }
+
+                            PaymentMethodDataAction::CardProxy(_) => {
+                                return Err(tonic::Status::invalid_argument(
+                                    "Invalid payment method data",
+                                ));
+                            }
                         }
-                        PaymentMethodDataAction::CardProxy(_) =>{
-                            //when moved to internal fn, this would be available
-                            Err(tonic::Status::invalid_argument("Invalid payment method data"))
-                        }
-                    }?;
+                    } else {
+                        None
+                    };
 
                     // Create repeat payment data
                     let repeat_payment_data = RepeatPaymentData::foreign_try_from((payload.clone(), payment_method_data))
