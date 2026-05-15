@@ -6160,7 +6160,7 @@ pub fn generate_payment_sync_response(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -6222,7 +6222,7 @@ pub fn generate_payment_sync_response(
                     email: None,
                     connector_customer_id: None,
                     merchant_order_id: None,
-                    metadata: None,
+                    metadata: convert_connector_metadata_to_secret_string(connector_metadata),
                     status_code: status_code as u32,
                     raw_connector_response,
                     response_headers: router_data_v2
