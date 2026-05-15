@@ -473,32 +473,9 @@ macros::macro_connector_implementation!(
                         .build(),
                 ))
             } else {
-                // Non-redirect flow (e.g. card payments): GET /v68/payments/{pspReference}
-                let connector_transaction_id = req
-                    .request
-                    .connector_transaction_id
-                    .get_connector_transaction_id()
-                    .change_context(IntegrationError::MissingConnectorTransactionID {
-                        context: Default::default(),
-                    })?;
-                let endpoint = build_env_specific_endpoint(
-                    self.connector_base_url_payments(req),
-                    req.resource_common_data.test_mode,
-                    &req.connector_config,
-                )?;
-                let url = format!(
-                    "{endpoint}{ADYEN_API_VERSION}/payments/{connector_transaction_id}"
-                );
-                let headers = self.get_headers(req)?;
-
-                Ok(Some(
-                    common_utils::request::RequestBuilder::new()
-                        .method(common_utils::request::Method::Get)
-                        .url(&url)
-                        .attach_default_headers()
-                        .headers(headers)
-                        .build(),
-                ))
+                // For wallet redirects without encoded_data, return None
+                // This allows the system to rely on webhooks for payment status
+                Ok(None)
             }
         }
     }
