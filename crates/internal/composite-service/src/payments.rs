@@ -22,9 +22,9 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePostAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
-    PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse, RefundServiceGetRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
 };
 use interfaces::connector_types::AuthenticationStep;
 
@@ -157,6 +157,16 @@ impl CompositeAccessTokenRequest for CompositeCaptureRequest {
             self, connector,
         ))
     }
+}
+
+/// Holds the mutable state accumulated during composite authorize flow execution.
+#[derive(Default)]
+struct CompositeFlowState {
+    pre_auth_response_opt: Option<PaymentMethodAuthenticationServicePreAuthenticateResponse>,
+    authn_response_opt: Option<PaymentMethodAuthenticationServiceAuthenticateResponse>,
+    post_authn_response_opt: Option<PaymentMethodAuthenticationServicePostAuthenticateResponse>,
+    authorize_response_opt: Option<PaymentServiceAuthorizeResponse>,
+    completed_step: Option<AuthenticationStep>,
 }
 
 #[derive(Clone)]
@@ -306,7 +316,7 @@ where
         >,
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
-    ) -> Result<grpc_api_types::payments::PaymentServiceAuthorizeResponse, tonic::Status> {
+    ) -> Result<PaymentServiceAuthorizeResponse, tonic::Status> {
         let authorize_payload = PaymentServiceAuthorizeRequest::foreign_from((
             payload,
             access_token_response,
@@ -398,6 +408,50 @@ where
         Ok(post_auth_response)
     }
 
+    /// Extracts and validates authentication type from the request payload.
+    fn get_auth_type(
+        &self,
+        payload: &CompositeAuthorizeRequest,
+    ) -> Result<common_enums::AuthenticationType, tonic::Status> {
+        common_enums::AuthenticationType::foreign_try_from(
+            grpc_api_types::payments::AuthenticationType::try_from(payload.auth_type)
+                .unwrap_or_default(),
+        )
+        .map_err(|err| tonic::Status::invalid_argument(format!("invalid auth_type: {err}")))
+    }
+
+    /// Extracts and validates payment method from the request payload.
+    fn get_payment_method(
+        &self,
+        payload: &CompositeAuthorizeRequest,
+    ) -> Result<common_enums::PaymentMethod, tonic::Status> {
+        payload
+            .payment_method()
+            .map(common_enums::PaymentMethod::foreign_try_from)
+            .transpose()
+            .map_err(|err| {
+                tonic::Status::invalid_argument(format!("invalid payment_method: {err}"))
+            })?
+            .ok_or_else(|| tonic::Status::invalid_argument("missing payment_method"))
+    }
+
+    /// Derives redirect state from the proto redirection_response field.
+    fn get_redirect_state(
+        &self,
+        payload: &CompositeAuthorizeRequest,
+    ) -> interfaces::connector_types::RedirectState {
+        match payload.redirection_response.as_ref() {
+            None => interfaces::connector_types::RedirectState::InitialRequest,
+            Some(r) => {
+                if r.params.as_ref().map(|p| !p.is_empty()).unwrap_or(false) {
+                    interfaces::connector_types::RedirectState::RedirectWithParams
+                } else {
+                    interfaces::connector_types::RedirectState::RedirectWithoutParams
+                }
+            }
+        }
+    }
+
     async fn process_composite_authorize(
         &self,
         request: tonic::Request<CompositeAuthorizeRequest>,
@@ -414,55 +468,33 @@ where
             .create_connector_customer(&connector, &payload, &metadata, &extensions)
             .await?;
 
-        let mut pre_auth_response_opt = None;
-        let mut authn_response_opt = None;
-        let mut post_authn_response_opt = None;
-        let mut authorize_response_opt = None;
-        let mut completed_step: Option<AuthenticationStep> = None;
+        // Extract flow parameters from payload
+        let auth_type = self.get_auth_type(&payload)?;
+        let payment_method = self.get_payment_method(&payload)?;
+        let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(&connector);
+        let redirect_state = self.get_redirect_state(&payload);
+
+        let mut state = CompositeFlowState::default();
 
         // Authentication loop - connector controls flow via next_authentication_step
         loop {
-            let auth_type = common_enums::AuthenticationType::foreign_try_from(
-                grpc_api_types::payments::AuthenticationType::try_from(payload.auth_type)
-                    .unwrap_or_default(),
-            )
-            .map_err(|err| tonic::Status::invalid_argument(format!("invalid auth_type: {err}")))?;
-            let payment_method = payload
-                .payment_method()
-                .map(common_enums::PaymentMethod::foreign_try_from)
-                .transpose()
-                .map_err(|err| {
-                    tonic::Status::invalid_argument(format!("invalid payment_method: {err}"))
-                })?
-                .ok_or_else(|| tonic::Status::invalid_argument("missing payment_method"))?;
-            let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(&connector);
-            let redirect_state = match payload.redirection_response.as_ref() {
-                None => interfaces::connector_types::RedirectState::InitialRequest,
-                Some(r) => {
-                    if r.params.as_ref().map(|p| !p.is_empty()).unwrap_or(false) {
-                        interfaces::connector_types::RedirectState::RedirectWithParams
-                    } else {
-                        interfaces::connector_types::RedirectState::RedirectWithoutParams
-                    }
-                }
-            };
-
             let next_step = connector_data.connector.next_authentication_step(
                 auth_type,
                 payment_method,
                 redirect_state,
-                completed_step,
+                state.completed_step,
             );
 
             match next_step {
                 AuthenticationStep::PreAuthenticate => {
-                    pre_auth_response_opt = Some(
+                    state.pre_auth_response_opt = Some(
                         self.pre_authenticate(&payload, &metadata, &extensions)
                             .await?,
                     );
-                    completed_step = Some(AuthenticationStep::PreAuthenticate);
+                    state.completed_step = Some(AuthenticationStep::PreAuthenticate);
 
-                    if pre_auth_response_opt
+                    if state
+                        .pre_auth_response_opt
                         .as_ref()
                         .map(|r| {
                             r.redirection_data.is_some() || is_failure_payment_status(r.status)
@@ -474,18 +506,19 @@ where
                 }
 
                 AuthenticationStep::Authenticate => {
-                    authn_response_opt = Some(
+                    state.authn_response_opt = Some(
                         self.authenticate(
                             &payload,
-                            pre_auth_response_opt.as_ref(),
+                            state.pre_auth_response_opt.as_ref(),
                             &metadata,
                             &extensions,
                         )
                         .await?,
                     );
-                    completed_step = Some(AuthenticationStep::Authenticate);
+                    state.completed_step = Some(AuthenticationStep::Authenticate);
 
-                    if authn_response_opt
+                    if state
+                        .authn_response_opt
                         .as_ref()
                         .map(|r| {
                             r.redirection_data.is_some() || is_terminal_payment_status(r.status)
@@ -497,26 +530,26 @@ where
                 }
 
                 AuthenticationStep::PostAuthenticate => {
-                    post_authn_response_opt = Some(
+                    state.post_authn_response_opt = Some(
                         self.post_authenticate(
                             &payload,
-                            authn_response_opt.as_ref(),
+                            state.authn_response_opt.as_ref(),
                             &metadata,
                             &extensions,
                         )
                         .await?,
                     );
-                    completed_step = Some(AuthenticationStep::PostAuthenticate);
+                    state.completed_step = Some(AuthenticationStep::PostAuthenticate);
                 }
 
                 AuthenticationStep::Authorize => {
-                    authorize_response_opt = Some(
+                    state.authorize_response_opt = Some(
                         self.authorize(
                             &payload,
                             access_token_response.as_ref(),
                             create_customer_response.as_ref(),
-                            authn_response_opt.as_ref(),
-                            post_authn_response_opt.as_ref(),
+                            state.authn_response_opt.as_ref(),
+                            state.post_authn_response_opt.as_ref(),
                             &metadata,
                             &extensions,
                         )
@@ -528,11 +561,13 @@ where
         }
 
         // Response construction - check if redirect occurred
-        let has_redirection = pre_auth_response_opt
+        let has_redirection = state
+            .pre_auth_response_opt
             .as_ref()
             .map(|r| r.redirection_data.is_some())
             .unwrap_or(false)
-            || authn_response_opt
+            || state
+                .authn_response_opt
                 .as_ref()
                 .map(|r| r.redirection_data.is_some())
                 .unwrap_or(false);
@@ -546,10 +581,10 @@ where
         Ok(tonic::Response::new(CompositeAuthorizeResponse {
             access_token_response,
             create_customer_response,
-            pre_authenticate_response: pre_auth_response_opt,
-            authenticate_response: authn_response_opt,
-            post_authenticate_response: post_authn_response_opt,
-            authorize_response: authorize_response_opt,
+            pre_authenticate_response: state.pre_auth_response_opt,
+            authenticate_response: state.authn_response_opt,
+            post_authenticate_response: state.post_authn_response_opt,
+            authorize_response: state.authorize_response_opt,
             composite_status: composite_status.into(),
         }))
     }
