@@ -166,7 +166,7 @@ pub enum SurchargeConnectorEnum {
 }
 
 /// Unified connector enum that can represent either payment or surcharge connectors
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConnectorVariant {
     Payment(ConnectorEnum),
     Surcharge(SurchargeConnectorEnum),
