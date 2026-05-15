@@ -2576,8 +2576,9 @@ impl From<SyncStatus> for AttemptStatus {
             SyncStatus::Voided => Self::Voided,
             SyncStatus::CouldNotVoid => Self::VoidFailed,
             SyncStatus::GeneralError => Self::Failure,
-            SyncStatus::RefundSettledSuccessfully => Self::Charged,
-            SyncStatus::RefundPendingSettlement => Self::Pending,
+            SyncStatus::RefundSettledSuccessfully | SyncStatus::RefundPendingSettlement => {
+                Self::Charged
+            }
             SyncStatus::FDSPendingReview | SyncStatus::FDSAuthorizedPendingReview => {
                 Self::Unresolved
             }
