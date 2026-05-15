@@ -161,7 +161,7 @@ impl CompositeAccessTokenRequest for CompositeCaptureRequest {
 
 /// Holds the mutable state accumulated during composite authorize flow execution.
 #[derive(Default)]
-struct CompositeFlowState {
+struct AuthorizeCompositeState {
     pre_auth_response_opt: Option<PaymentMethodAuthenticationServicePreAuthenticateResponse>,
     authn_response_opt: Option<PaymentMethodAuthenticationServiceAuthenticateResponse>,
     post_authn_response_opt: Option<PaymentMethodAuthenticationServicePostAuthenticateResponse>,
@@ -474,7 +474,7 @@ where
         let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(&connector);
         let redirect_state = self.get_redirect_state(&payload);
 
-        let mut state = CompositeFlowState::default();
+        let mut state = AuthorizeCompositeState::default();
 
         // Authentication loop - connector controls flow via next_authentication_step
         loop {
