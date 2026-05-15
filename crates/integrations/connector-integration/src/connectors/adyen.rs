@@ -893,6 +893,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_reason,
             network_txn_id,
             payment_method_update,
+            sender_payment_instrument_id: None,
         })
     }
 
