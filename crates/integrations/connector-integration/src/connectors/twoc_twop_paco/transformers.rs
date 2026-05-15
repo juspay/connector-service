@@ -893,7 +893,7 @@ pub struct PacoPaymentResultBlock {
 pub struct AresAcsChallenge {
     #[serde(default, rename = "acsURL", alias = "acsUrl")]
     pub acs_url: Option<String>,
-    #[serde(default, alias = "cReq", alias = "creqB64")]
+    #[serde(default, rename = "rawCreq", alias = "raw_creq")]
     pub raw_creq: Option<Secret<String>>,
     #[serde(default, rename = "threeDSSessionData")]
     pub three_ds_session_data: Option<Secret<String>>,
