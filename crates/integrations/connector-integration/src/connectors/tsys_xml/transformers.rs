@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 
-use common_enums::{AttemptStatus, CaptureMethod, CardNetwork, PaymentChannel, RefundStatus};
+use common_enums::{AttemptStatus, CaptureMethod, CardNetwork, FutureUsage, PaymentChannel, RefundStatus};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, CreateConnectorCustomer, PSync, RSync, Refund, SetupMandate, Void},
     connector_types::{
+        ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
@@ -19,18 +20,21 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     requests::{
-        TsysXmlAuthorizationIndicator, TsysXmlAuthorizeBody, TsysXmlAuthorizeRequest,
-        TsysXmlCaptureRequest, TsysXmlCardDataInputMode, TsysXmlCardDataOutputCapability,
-        TsysXmlCardDataSource, TsysXmlCardPresentDetail,
-        TsysXmlCardholderAuthenticationEntity, TsysXmlCardholderAuthenticationMethod,
-        TsysXmlCardholderPresentDetail, TsysXmlMaxPinLength,
-        TsysXmlRegisteredUserIndicator, TsysXmlReturnRequest, TsysXmlTerminalAuthenticationCapability,
-        TsysXmlTerminalCapability, TsysXmlTerminalCardCaptureCapability,
-        TsysXmlTerminalOperatingEnvironment, TsysXmlTerminalOutputCapability,
-        TsysXmlTransactionInquiryRequest, TsysXmlVoidRequest,
+        TsysXmlAddCustomerCardDetails, TsysXmlAddCustomerRequest,
+        TsysXmlAddCustomerWalletDetails, TsysXmlAuthorizationIndicator, TsysXmlAuthorizeBody,
+        TsysXmlAuthorizeRequest, TsysXmlCaptureRequest, TsysXmlCardAuthenticationRequest,
+        TsysXmlCardDataInputMode, TsysXmlCardDataOutputCapability, TsysXmlCardDataSource,
+        TsysXmlCardOnFile, TsysXmlCardPresentDetail, TsysXmlCardholderAuthenticationEntity,
+        TsysXmlCardholderAuthenticationMethod, TsysXmlCardholderPresentDetail, TsysXmlMaxPinLength,
+        TsysXmlMit, TsysXmlMitIndicator, TsysXmlPersonalDetails, TsysXmlRegisteredUserIndicator,
+        TsysXmlReturnRequest, TsysXmlTerminalAuthenticationCapability, TsysXmlTerminalCapability,
+        TsysXmlTerminalCardCaptureCapability, TsysXmlTerminalOperatingEnvironment,
+        TsysXmlTerminalOutputCapability, TsysXmlTransactionInquiryRequest, TsysXmlVoidRequest,
+        TsysXmlWalletDetailsRef,
     },
     responses::{
-        TsysXmlAuthorizeResponse, TsysXmlCaptureResponse, TsysXmlReturnResponse, TsysXmlStatus,
+        TsysXmlAddCustomerResponse, TsysXmlAuthorizeResponse, TsysXmlCaptureResponse,
+        TsysXmlCardAuthenticationResponse, TsysXmlReturnResponse, TsysXmlStatus,
         TsysXmlTransactionInquiryResponse, TsysXmlTransactionState, TsysXmlVoidResponse,
     },
     TsysXmlRouterData,
@@ -166,9 +170,34 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = &item.router_data;
         let auth = TsysXmlAuthType::try_from(&router_data.connector_config)?;
 
-        let card = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => card,
-            _ => {
+        // Mandate-driven dispatch: when the upstream HS request supplies a
+        // `connector_mandate_id` we recognize one of:
+        //   - `cust:CCC:WWW`  → Path B (vault token MIT). Omit PAN/expiry/cvv2;
+        //                       emit customerCode + walletDetails.
+        //   - `ntid:XXX`      → Path A (network-token MIT). Keep PAN, emit
+        //                       previousNetworkTransactionID + cardOnFile + mit.
+        //   - everything else → fall through to CIT / one-shot logic (PAN-bearing).
+        // We split on the FIRST ':' to find the prefix so that walletIDs / NTIDs
+        // containing colons still round-trip correctly.
+        let mandate_dispatch = decode_mandate_dispatch(
+            router_data.request.mandate_id.as_ref(),
+        );
+
+        // CIT signal (no prior mandate but caller intends to store creds).
+        let is_cit_setup = matches!(mandate_dispatch, MandateDispatch::None)
+            && (router_data.request.setup_future_usage == Some(FutureUsage::OffSession)
+                || router_data.request.off_session == Some(true));
+
+        // Path B (vault) does NOT need card data — we emit customerCode + walletID
+        // instead. Every other branch (Path A / CIT / one-shot) requires a Card.
+        let card_opt = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card) => Some(card),
+            _ => None,
+        };
+        let card = match (&mandate_dispatch, card_opt) {
+            (MandateDispatch::Vault { .. }, _) => None,
+            (_, Some(card)) => Some(card),
+            (_, None) => {
                 return Err(IntegrationError::NotSupported {
                     message: "Selected payment method".to_string(),
                     connector: "tsys_xml",
@@ -218,8 +247,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple)
         );
 
-        // Card network drives several MC/AMEX/Discover-only fields.
-        let card_network = card.card_network.clone();
+        // Card network drives several MC/AMEX/Discover-only fields. On Path B
+        // (vault MIT) no card object is available — we skip the network-driven
+        // optional fields entirely.
+        let card_network = card.and_then(|c| c.card_network.clone());
 
         let authorization_indicator = match card_network {
             Some(CardNetwork::Mastercard) | Some(CardNetwork::AmericanExpress) => Some(
@@ -345,20 +376,90 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .card_data_output_capability
             .unwrap_or(TsysXmlCardDataOutputCapability::None);
 
+        // Path-specific card-source fields: Path A / CIT / one-shot carry PAN;
+        // Path B carries customerCode + walletDetails instead.
+        let (
+            card_number,
+            expiration_date,
+            cvv2_opt,
+            customer_code_opt,
+            wallet_details_opt,
+        ) = match (&mandate_dispatch, card) {
+            (MandateDispatch::Vault { customer_code, wallet_id }, _) => (
+                None,
+                None,
+                None,
+                Some(Secret::new(customer_code.clone())),
+                Some(TsysXmlWalletDetailsRef {
+                    wallet_id: Secret::new(wallet_id.clone()),
+                }),
+            ),
+            (_, Some(card)) => {
+                let cvv = if card.card_cvc.peek().is_empty() {
+                    None
+                } else {
+                    Some(card.card_cvc.clone())
+                };
+                (
+                    Some(Secret::new(card.card_number.peek().to_string())),
+                    Some(format_expiration_date(card)),
+                    cvv,
+                    None,
+                    None,
+                )
+            }
+            // Unreachable — guarded above; fail closed if reached.
+            (_, None) => {
+                return Err(IntegrationError::NotSupported {
+                    message: "Selected payment method".to_string(),
+                    connector: "tsys_xml",
+                    context: Default::default(),
+                }
+                .into());
+            }
+        };
+
+        // cardOnFile + MIT + previousNetworkTransactionID — driven by dispatch.
+        let (card_on_file, mit_block, previous_network_transaction_id) =
+            match &mandate_dispatch {
+                MandateDispatch::Ntid { ntid } => (
+                    Some(TsysXmlCardOnFile::Y),
+                    Some(TsysXmlMit {
+                        // Default Recurring indicator for MIT — overridable via
+                        // metadata in a follow-up TODO.
+                        mit_indicator: TsysXmlMitIndicator::R,
+                    }),
+                    Some(ntid.clone()),
+                ),
+                MandateDispatch::Vault { .. } => (
+                    Some(TsysXmlCardOnFile::Y),
+                    Some(TsysXmlMit {
+                        mit_indicator: TsysXmlMitIndicator::R,
+                    }),
+                    None,
+                ),
+                MandateDispatch::None if is_cit_setup => (
+                    // CIT (storing the credential for future MIT) — flag cardOnFile=Y
+                    // but no MIT indicator and no NTID.
+                    Some(TsysXmlCardOnFile::Y),
+                    None,
+                    None,
+                ),
+                MandateDispatch::None => (None, None, None),
+            };
+
         let body = TsysXmlAuthorizeBody {
             device_id: auth.device_id,
             transaction_key: auth.transaction_key,
             card_data_source,
             transaction_amount,
-            card_number: Secret::new(card.card_number.peek().to_string()),
-            expiration_date: format_expiration_date(card),
+            card_number,
+            expiration_date,
             // TransIT cert "Do Not Send" CVV scenario: emit no `<cvv2>` when empty
             // (cert script row 113 — AMEX with absent CVV is still approved).
-            cvv2: if card.card_cvc.peek().is_empty() {
-                None
-            } else {
-                Some(card.card_cvc.clone())
-            },
+            cvv2: cvv2_opt,
+            customer_code: customer_code_opt,
+            wallet_details: wallet_details_opt,
             address_line1,
             zip,
             external_reference_id: router_data
@@ -386,6 +487,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             acceptor_customer_service_phone_number,
             acceptor_phone_number,
             acceptor_url_address,
+            card_on_file,
+            previous_network_transaction_id,
+            mit: mit_block,
             _marker: std::marker::PhantomData,
         };
 
@@ -395,6 +499,89 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Self::Sale(body)
         })
     }
+}
+
+// =============================================================================
+// Mandate dispatch helper
+// =============================================================================
+
+/// Result of decoding an upstream `connector_mandate_id` ("cust:CCC:WWW" or
+/// "ntid:XXX") into a Path A / Path B / fall-through directive.
+#[derive(Debug, Clone)]
+enum MandateDispatch {
+    /// Path B — vault token MIT. Emit customerCode + walletDetails.
+    Vault {
+        customer_code: String,
+        wallet_id: String,
+    },
+    /// Path A — network-token MIT. Emit cardOnFile + MIT + previousNetworkTransactionID.
+    Ntid { ntid: String },
+    /// No mandate id (or a mandate id we couldn't decode) — caller decides
+    /// whether to treat the request as a CIT or a one-shot.
+    None,
+}
+
+/// Decode `MandateIds.mandate_reference_id` into a `MandateDispatch`.
+///
+/// We look at the `ConnectorMandateId` variant first (this is where prior
+/// CreateConnectorCustomer / SetupMandate responses encode the mandate id).
+/// Falls back to `NetworkMandateId` so plain NTIDs surfaced by HS are still
+/// treated as Path A.
+fn decode_mandate_dispatch(
+    mandate_id: Option<&domain_types::connector_types::MandateIds>,
+) -> MandateDispatch {
+    let Some(mandate_id) = mandate_id else {
+        return MandateDispatch::None;
+    };
+
+    if let Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ids)) =
+        mandate_id.mandate_reference_id.as_ref()
+    {
+        if let Some(raw) = connector_mandate_ids.get_connector_mandate_id() {
+            return decode_mandate_id_string(&raw);
+        }
+    }
+
+    // NetworkMandateId — treat as a raw NTID (Path A) so HS-stored network
+    // transaction ids still drive the MIT path.
+    if let Some(MandateReferenceId::NetworkMandateId(ntid)) =
+        mandate_id.mandate_reference_id.as_ref()
+    {
+        return MandateDispatch::Ntid { ntid: ntid.clone() };
+    }
+
+    MandateDispatch::None
+}
+
+/// Parse the prefix-encoded mandate id our CreateConnectorCustomer /
+/// SetupMandate flows emit:
+/// - `cust:<customerCode>:<walletID>` → Path B
+/// - `ntid:<cardTransactionIdentifier>` → Path A
+/// Anything else → `None` (fall through to CIT / one-shot decision).
+fn decode_mandate_id_string(raw: &str) -> MandateDispatch {
+    if let Some(rest) = raw.strip_prefix("cust:") {
+        // splitn(2, ':') so wallet IDs containing additional colons survive.
+        let mut parts = rest.splitn(2, ':');
+        match (parts.next(), parts.next()) {
+            (Some(customer_code), Some(wallet_id))
+                if !customer_code.is_empty() && !wallet_id.is_empty() =>
+            {
+                return MandateDispatch::Vault {
+                    customer_code: customer_code.to_string(),
+                    wallet_id: wallet_id.to_string(),
+                };
+            }
+            _ => {}
+        }
+    }
+    if let Some(ntid) = raw.strip_prefix("ntid:") {
+        if !ntid.is_empty() {
+            return MandateDispatch::Ntid {
+                ntid: ntid.to_string(),
+            };
+        }
+    }
+    MandateDispatch::None
 }
 
 // =============================================================================
@@ -1295,6 +1482,510 @@ impl TryFrom<ResponseRouterData<TsysXmlVoidResponse, Self>>
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
+                ..router_data.resource_common_data.clone()
+            },
+            response: Ok(payments_response_data),
+            ..router_data.clone()
+        })
+    }
+}
+
+// =============================================================================
+// CreateConnectorCustomer — request transformer (`<AddCustomer>`)
+// =============================================================================
+//
+// Sources:
+//   - first/last name: split `ConnectorCustomerData.name` on first whitespace.
+//     No whitespace -> entire string goes to firstName, lastName defaults to
+//     "-" (TSYS' XSD requires both fields).
+//   - addressLine1 / zip: PaymentFlowData.address.billing_address.
+//   - card data: `ConnectorCustomerData` does NOT carry payment_method_data in
+//     this repo. PR-1 fails closed via `MissingRequiredField` so the live-test
+//     phase identifies the right HS-side bridge before iterating.
+//
+// `expirationDate` in `<AddCustomer>` is MMYYYY (6 digits) — different from
+// Sale/Auth's MMYY.
+
+fn split_full_name(full: &str) -> (String, String) {
+    let trimmed = full.trim();
+    if trimmed.is_empty() {
+        return ("-".to_string(), "-".to_string());
+    }
+    match trimmed.split_once(char::is_whitespace) {
+        Some((first, rest)) => {
+            let last = rest.trim();
+            (
+                first.to_string(),
+                if last.is_empty() {
+                    "-".to_string()
+                } else {
+                    last.to_string()
+                },
+            )
+        }
+        None => (trimmed.to_string(), "-".to_string()),
+    }
+}
+
+#[allow(dead_code)]
+fn format_add_customer_expiration(card: &Card<impl PaymentMethodDataTypes>) -> Secret<String> {
+    // AddCustomer wants MMYYYY (6 digits). Normalize 2-digit years up to 4-digit
+    // by prefixing "20" (TransIT only supports cards expiring this century).
+    let month_raw = card.card_exp_month.peek().clone();
+    let year_raw = card.card_exp_year.peek().clone();
+    let month = if month_raw.len() == 1 {
+        format!("0{month_raw}")
+    } else {
+        month_raw
+    };
+    let year_full = if year_raw.len() == 2 {
+        format!("20{year_raw}")
+    } else {
+        year_raw
+    };
+    Secret::new(format!("{month}{year_full}"))
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TsysXmlRouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    > for TsysXmlAddCustomerRequest
+{
+    type Error = Report<IntegrationError>;
+
+    fn try_from(
+        item: TsysXmlRouterData<
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = TsysXmlAuthType::try_from(&router_data.connector_config)?;
+
+        // Name — required by AddCustomer XSD. Split on the first whitespace; if
+        // no whitespace at all, lastName defaults to "-".
+        let name_secret = router_data.request.name.clone().ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "ConnectorCustomerData.name",
+                context: Default::default(),
+            })
+        })?;
+        let (first_name, last_name) = split_full_name(name_secret.peek().as_str());
+
+        // Billing address — supplies addressLine1 + zip in both personalDetails
+        // and walletDetails per the AddCustomer body shape.
+        let billing = router_data
+            .resource_common_data
+            .address
+            .get_payment_billing()
+            .and_then(|b| b.address.as_ref());
+        let address_line1 = billing.and_then(|a| a.line1.clone()).ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "billing.address.line1",
+                context: Default::default(),
+            })
+        })?;
+        let zip = billing.and_then(|a| a.zip.clone()).ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "billing.address.zip",
+                context: Default::default(),
+            })
+        })?;
+
+        // `ConnectorCustomerData` is non-generic and lacks `payment_method_data`
+        // in this repo; we cannot populate the mandatory <walletDetails>
+        // <cardDetails> block without it. Fail closed with the precise field
+        // name so the live-test phase identifies the right HS-side bridge.
+        let (card_number, expiration_date) = extract_add_customer_card::<T>(router_data)?;
+
+        Ok(Self {
+            device_id: auth.device_id,
+            transaction_key: auth.transaction_key,
+            personal_details: TsysXmlPersonalDetails {
+                first_name: Secret::new(first_name),
+                last_name: Secret::new(last_name),
+                address_line1: address_line1.clone(),
+                zip: zip.clone(),
+            },
+            wallet_details: TsysXmlAddCustomerWalletDetails {
+                card_details: TsysXmlAddCustomerCardDetails {
+                    card_number,
+                    expiration_date,
+                },
+                address_line1,
+                zip,
+                payment_sequence: "1".to_string(),
+            },
+            developer_id: auth.developer_id,
+        })
+    }
+}
+
+/// Pull card data for `<AddCustomer>` from any HS-side surface we recognize.
+///
+/// `ConnectorCustomerData` does not carry `payment_method_data` in this repo
+/// today, so we surface `MissingRequiredField` explicitly. The live-test phase
+/// will identify the right HS-side bridge (likely a generic variant of
+/// `ConnectorCustomerData` or a `connector_feature_data` payload).
+fn extract_add_customer_card<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>(
+    _router_data: &RouterDataV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    >,
+) -> Result<(Secret<String>, Secret<String>), Report<IntegrationError>> {
+    Err(IntegrationError::MissingRequiredField {
+        field_name: "ConnectorCustomerData.payment_method_data (card)",
+        context: Default::default(),
+    }
+    .into())
+}
+
+// =============================================================================
+// CreateConnectorCustomer — response transformer
+// =============================================================================
+
+impl TryFrom<ResponseRouterData<TsysXmlAddCustomerResponse, Self>>
+    for RouterDataV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    >
+{
+    type Error = Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TsysXmlAddCustomerResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let response = &item.response;
+
+        let is_success = matches!(response.status, Some(TsysXmlStatus::Pass))
+            && response.response_code.as_deref() == Some("A0000");
+
+        if !is_success {
+            return Ok(Self {
+                response: Err(ErrorResponse {
+                    status_code: item.http_code,
+                    code: response
+                        .response_code
+                        .clone()
+                        .unwrap_or_else(|| common_utils::consts::NO_ERROR_CODE.to_string()),
+                    message: response
+                        .response_message
+                        .clone()
+                        .unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),
+                    reason: response.response_message.clone(),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: response.response_message.clone(),
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        let customer_code = response.customer_code.clone().ok_or_else(|| {
+            crate::utils::response_deserialization_fail(
+                item.http_code,
+                "tsys_xml: AddCustomerResponse missing <customerCode>; confirm API contract.",
+            )
+        })?;
+        let wallet_id = response
+            .wallet_details
+            .as_ref()
+            .and_then(|w| w.wallet_id.clone())
+            .ok_or_else(|| {
+                crate::utils::response_deserialization_fail(
+                    item.http_code,
+                    "tsys_xml: AddCustomerResponse missing <walletDetails><walletID>; confirm API contract.",
+                )
+            })?;
+
+        // Stash the Path B mandate id (`cust:CCC:WWW`) on
+        // `PaymentFlowData.reference_id` so the next Authorize call can pick it
+        // up. `ConnectorCustomerResponse` only carries `connector_customer_id`,
+        // so we use the generic reference_id slot to surface walletID.
+        let path_b_mandate_id = format!("cust:{customer_code}:{wallet_id}");
+
+        Ok(Self {
+            response: Ok(ConnectorCustomerResponse {
+                connector_customer_id: customer_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                reference_id: Some(path_b_mandate_id),
+                ..router_data.resource_common_data.clone()
+            },
+            ..router_data.clone()
+        })
+    }
+}
+
+// =============================================================================
+// SetupMandate — request transformer (`<CardAuthentication>`, zero-dollar CIT)
+// =============================================================================
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        TsysXmlRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for TsysXmlCardAuthenticationRequest
+{
+    type Error = Report<IntegrationError>;
+
+    fn try_from(
+        item: TsysXmlRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = TsysXmlAuthType::try_from(&router_data.connector_config)?;
+
+        let card = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card) => card,
+            _ => {
+                return Err(IntegrationError::NotSupported {
+                    message: "Selected payment method".to_string(),
+                    connector: "tsys_xml",
+                    context: Default::default(),
+                }
+                .into());
+            }
+        };
+
+        let billing = router_data
+            .resource_common_data
+            .address
+            .get_payment_billing()
+            .and_then(|b| b.address.as_ref());
+        let address_line1 = billing.and_then(|a| a.line1.clone()).ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "billing.address.line1",
+                context: Default::default(),
+            })
+        })?;
+        let zip = billing.and_then(|a| a.zip.clone()).ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "billing.address.zip",
+                context: Default::default(),
+            })
+        })?;
+
+        let channel = router_data.request.payment_channel.clone();
+        let card_data_source = match channel {
+            Some(PaymentChannel::TelephoneOrder) => TsysXmlCardDataSource::Phone,
+            Some(PaymentChannel::MailOrder) => TsysXmlCardDataSource::Mail,
+            Some(PaymentChannel::Ecommerce) | None => TsysXmlCardDataSource::Internet,
+        };
+
+        // Reuse the Authorize metadata overrides so terminalData is consistent
+        // across CIT verify and the subsequent MIT call.
+        let merchant_metadata = match router_data.request.metadata.as_ref() {
+            Some(meta) => serde_json::from_value::<TsysXmlMerchantMetadata>(meta.clone().expose())
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "connector_metadata.tsys_xml",
+                    context: Default::default(),
+                })?,
+            None => TsysXmlMerchantMetadata::default(),
+        };
+        let merchant_inner = merchant_metadata.tsys_xml.unwrap_or_default();
+        let terminal_overrides = merchant_inner.terminal_data.unwrap_or_default();
+
+        let terminal_capability = terminal_overrides
+            .terminal_capability
+            .unwrap_or(TsysXmlTerminalCapability::KeyedEntryOnly);
+        let terminal_operating_environment = terminal_overrides
+            .terminal_operating_environment
+            .unwrap_or(TsysXmlTerminalOperatingEnvironment::NoTerminal);
+        let cardholder_authentication_method = terminal_overrides
+            .cardholder_authentication_method
+            .unwrap_or(TsysXmlCardholderAuthenticationMethod::NotAuthenticated);
+        let terminal_authentication_capability = terminal_overrides
+            .terminal_authentication_capability
+            .unwrap_or(TsysXmlTerminalAuthenticationCapability::NoCapability);
+        let terminal_output_capability = terminal_overrides
+            .terminal_output_capability
+            .unwrap_or(TsysXmlTerminalOutputCapability::None);
+        let max_pin_length = terminal_overrides
+            .max_pin_length
+            .unwrap_or(TsysXmlMaxPinLength::NotSupported);
+        let terminal_card_capture_capability = terminal_overrides
+            .terminal_card_capture_capability
+            .unwrap_or(TsysXmlTerminalCardCaptureCapability::NoCapability);
+        let cardholder_present_detail = terminal_overrides
+            .cardholder_present_detail
+            .unwrap_or_else(|| match channel {
+                Some(PaymentChannel::TelephoneOrder) => {
+                    TsysXmlCardholderPresentDetail::CardholderNotPresentPhoneTransaction
+                }
+                Some(PaymentChannel::MailOrder) => {
+                    TsysXmlCardholderPresentDetail::CardholderNotPresentMailTransaction
+                }
+                _ => TsysXmlCardholderPresentDetail::CardholderNotPresentElectronicCommerce,
+            });
+        let card_present_detail = terminal_overrides
+            .card_present_detail
+            .unwrap_or(TsysXmlCardPresentDetail::CardNotPresent);
+        let card_data_input_mode = terminal_overrides
+            .card_data_input_mode
+            .unwrap_or_else(|| match channel {
+                Some(PaymentChannel::Ecommerce) | None => {
+                    TsysXmlCardDataInputMode::PanEntryElectronicCommerceIncludingRemoteChip
+                }
+                _ => TsysXmlCardDataInputMode::KeyEnteredInput,
+            });
+        let cardholder_authentication_entity = terminal_overrides
+            .cardholder_authentication_entity
+            .unwrap_or(TsysXmlCardholderAuthenticationEntity::NotAuthenticated);
+        let card_data_output_capability = terminal_overrides
+            .card_data_output_capability
+            .unwrap_or(TsysXmlCardDataOutputCapability::None);
+
+        Ok(Self {
+            device_id: auth.device_id,
+            transaction_key: auth.transaction_key,
+            card_data_source,
+            card_number: Secret::new(card.card_number.peek().to_string()),
+            expiration_date: format_expiration_date(card),
+            address_line1,
+            zip,
+            external_reference_id: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            card_on_file: TsysXmlCardOnFile::Y,
+            developer_id: auth.developer_id,
+            terminal_capability,
+            terminal_operating_environment,
+            cardholder_authentication_method,
+            terminal_authentication_capability,
+            terminal_output_capability,
+            max_pin_length,
+            terminal_card_capture_capability,
+            cardholder_present_detail,
+            card_present_detail,
+            card_data_input_mode,
+            cardholder_authentication_entity,
+            card_data_output_capability,
+        })
+    }
+}
+
+// =============================================================================
+// SetupMandate — response transformer
+// =============================================================================
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<TsysXmlCardAuthenticationResponse, Self>>
+    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+{
+    type Error = Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<TsysXmlCardAuthenticationResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let response = &item.response;
+
+        let is_success = matches!(response.status, Some(TsysXmlStatus::Pass))
+            && response.response_code.as_deref() == Some("A0000");
+
+        if !is_success {
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: AttemptStatus::Failure,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Err(ErrorResponse {
+                    status_code: item.http_code,
+                    code: response
+                        .response_code
+                        .clone()
+                        .unwrap_or_else(|| common_utils::consts::NO_ERROR_CODE.to_string()),
+                    message: response
+                        .response_message
+                        .clone()
+                        .unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),
+                    reason: response.response_message.clone(),
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: response.transaction_id.clone(),
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: response.response_message.clone(),
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Prefer cardTransactionIdentifier (the actual NTID); fall back to
+        // transactionID if the cert sandbox forgets to emit it.
+        let ntid_source = response
+            .card_transaction_identifier
+            .clone()
+            .or_else(|| response.transaction_id.clone())
+            .ok_or_else(|| {
+                crate::utils::response_deserialization_fail(
+                    item.http_code,
+                    "tsys_xml: CardAuthenticationResponse missing both <cardTransactionIdentifier> and <transactionID>; confirm API contract.",
+                )
+            })?;
+
+        let path_a_mandate_id = format!("ntid:{ntid_source}");
+        let mandate_reference = Box::new(MandateReference {
+            connector_mandate_id: Some(path_a_mandate_id),
+            payment_method_id: None,
+            connector_mandate_request_reference_id: None,
+        });
+
+        let connector_txn_id = response
+            .transaction_id
+            .clone()
+            .unwrap_or_else(|| ntid_source.clone());
+
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(connector_txn_id.clone()),
+            redirection_data: None,
+            mandate_reference: Some(mandate_reference),
+            connector_metadata: None,
+            network_txn_id: response.auth_code.clone(),
+            connector_response_reference_id: Some(connector_txn_id),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                // Card verified — Authorized is the closest non-charged status.
+                status: AttemptStatus::Authorized,
                 ..router_data.resource_common_data.clone()
             },
             response: Ok(payments_response_data),

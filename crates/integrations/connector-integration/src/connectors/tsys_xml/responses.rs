@@ -128,6 +128,58 @@ pub struct TsysXmlVoidResponse {
     pub response_message: Option<String>,
 }
 
+/// `<walletDetails>` block on `<AddCustomerResponse>` — exposes the walletID
+/// that we stash alongside the customerCode to drive Path B Authorize.
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+pub struct TsysXmlAddCustomerWalletDetails {
+    #[serde(rename = "walletID", default)]
+    pub wallet_id: Option<String>,
+    #[serde(rename = "maskedCardNumber", default)]
+    pub masked_card_number: Option<String>,
+    #[serde(rename = "externalWalletReferenceID", default)]
+    pub external_wallet_reference_id: Option<String>,
+}
+
+/// TransIT `<AddCustomerResponse>` — CreateConnectorCustomer response.
+/// We surface `customerCode` as `connector_customer_id` and stash the
+/// `walletID` on `PaymentFlowData.connector_response_reference_id` so a
+/// downstream Authorize can encode the Path B `cust:CCC:WWW` mandate id.
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[serde(rename = "AddCustomerResponse")]
+pub struct TsysXmlAddCustomerResponse {
+    #[serde(rename = "status", default)]
+    pub status: Option<TsysXmlStatus>,
+    #[serde(rename = "responseCode", default)]
+    pub response_code: Option<String>,
+    #[serde(rename = "responseMessage", default)]
+    pub response_message: Option<String>,
+    #[serde(rename = "customerCode", default)]
+    pub customer_code: Option<String>,
+    #[serde(rename = "walletDetails", default)]
+    pub wallet_details: Option<TsysXmlAddCustomerWalletDetails>,
+}
+
+/// TransIT `<CardAuthenticationResponse>` — SetupMandate response. Mirrors
+/// the Sale/Auth response shape (PASS/FAIL + responseCode + transactionID),
+/// plus `cardTransactionIdentifier` which we use as the mandate's
+/// network-token id (NTID) for Path A.
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[serde(rename = "CardAuthenticationResponse")]
+pub struct TsysXmlCardAuthenticationResponse {
+    #[serde(rename = "status", default)]
+    pub status: Option<TsysXmlStatus>,
+    #[serde(rename = "responseCode", default)]
+    pub response_code: Option<String>,
+    #[serde(rename = "responseMessage", default)]
+    pub response_message: Option<String>,
+    #[serde(rename = "transactionID", default)]
+    pub transaction_id: Option<String>,
+    #[serde(rename = "cardTransactionIdentifier", default)]
+    pub card_transaction_identifier: Option<String>,
+    #[serde(rename = "authCode", default)]
+    pub auth_code: Option<String>,
+}
+
 /// RSync response — reuses the PSync inquiry response shape via a type alias.
 /// TransIT's `<TransactionInquiry>` endpoint serves both payment and refund
 /// status lookups; the alias keeps the macro layer's Templating types

@@ -9,11 +9,13 @@ use common_utils::{
     errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{
+        Authorize, Capture, CreateConnectorCustomer, PSync, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData,
+        ConnectorCustomerData, ConnectorCustomerResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_method_data::PaymentMethodDataTypes,
@@ -32,11 +34,13 @@ use serde::Serialize;
 use transformers::{self as tsys_xml};
 
 use requests::{
-    TsysXmlAuthorizeRequest, TsysXmlCaptureRequest, TsysXmlRSyncRequest, TsysXmlReturnRequest,
+    TsysXmlAddCustomerRequest, TsysXmlAuthorizeRequest, TsysXmlCaptureRequest,
+    TsysXmlCardAuthenticationRequest, TsysXmlRSyncRequest, TsysXmlReturnRequest,
     TsysXmlTransactionInquiryRequest, TsysXmlVoidRequest,
 };
 use responses::{
-    TsysXmlAuthorizeResponse, TsysXmlCaptureResponse, TsysXmlRSyncResponse, TsysXmlReturnResponse,
+    TsysXmlAddCustomerResponse, TsysXmlAuthorizeResponse, TsysXmlCaptureResponse,
+    TsysXmlCardAuthenticationResponse, TsysXmlRSyncResponse, TsysXmlReturnResponse,
     TsysXmlTransactionInquiryResponse, TsysXmlVoidResponse,
 };
 
@@ -103,6 +107,20 @@ macros::create_all_prerequisites!(
             response_body: TsysXmlVoidResponse,
             response_format: xml,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateConnectorCustomer,
+            request_body: TsysXmlAddCustomerRequest,
+            response_body: TsysXmlAddCustomerResponse,
+            response_format: xml,
+            router_data: RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: TsysXmlCardAuthenticationRequest,
+            response_body: TsysXmlCardAuthenticationResponse,
+            response_format: xml,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -257,6 +275,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for TsysXml<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::CreateConnectorCustomer for TsysXml<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for TsysXml<T>
 {
 }
 
@@ -489,6 +517,74 @@ macros::macro_connector_implementation!(
 );
 
 // =============================================================================
+// CREATE CONNECTOR CUSTOMER FLOW — TransIT `<AddCustomer>` (vault setup, Path B)
+// =============================================================================
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TsysXml,
+    curl_request: SoapXml(TsysXmlAddCustomerRequest),
+    curl_response: TsysXmlAddCustomerResponse,
+    flow_name: CreateConnectorCustomer,
+    resource_common_data: PaymentFlowData,
+    flow_request: ConnectorCustomerData,
+    flow_response: ConnectorCustomerResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            Ok(vec![
+                (headers::CONTENT_TYPE.to_string(), CONTENT_TYPE_XML.to_string().into()),
+            ])
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
+// =============================================================================
+// SETUP MANDATE FLOW — TransIT `<CardAuthentication>` (zero-dollar CIT verify)
+// =============================================================================
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: TsysXml,
+    curl_request: SoapXml(TsysXmlCardAuthenticationRequest),
+    curl_response: TsysXmlCardAuthenticationResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+            Ok(vec![
+                (headers::CONTENT_TYPE.to_string(), CONTENT_TYPE_XML.to_string().into()),
+            ])
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, IntegrationError> {
+            Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
+// =============================================================================
 // FLOW STATUS IMPLEMENTATIONS — remaining flows are scaffolded as `not_implemented`.
 // =============================================================================
 macros::macro_connector_payout_implementation!(
@@ -503,12 +599,10 @@ macros::macro_connector_flow_status_impls!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     not_implemented: [
         CreateOrder,
-        SetupMandate,
         RepeatPayment,
         IncrementalAuthorization,
         VoidPC,
         PaymentMethodToken,
-        CreateConnectorCustomer,
         ServerAuthenticationToken,
         ServerSessionAuthenticationToken,
         ClientAuthenticationToken,

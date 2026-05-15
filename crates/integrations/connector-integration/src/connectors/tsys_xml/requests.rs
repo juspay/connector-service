@@ -301,6 +301,53 @@ pub enum TsysXmlAuthorizationIndicator {
     Final,
 }
 
+/// `<cardOnFile>` flag — `Y` when a credential is being used / stored on file
+/// (CIT / MIT / vault), `N` otherwise. Two-variant enum keeps the wire contract
+/// explicit per tech spec § CIT/MIT.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum TsysXmlCardOnFile {
+    #[serde(rename = "Y")]
+    Y,
+    #[serde(rename = "N")]
+    N,
+}
+
+/// Merchant-initiated-transaction indicator — TransIT XSD enum per § CIT/MIT.
+/// Values:
+/// - `R` — recurring
+/// - `M101` — resubmission
+/// - `M102` — reauthorization
+/// - `M103` — delayed charge
+/// - `M104` — no-show
+/// - `S` — installment
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum TsysXmlMitIndicator {
+    R,
+    M101,
+    M102,
+    M103,
+    M104,
+    S,
+}
+
+/// `<mit>` wrapper carrying the MIT indicator value.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename = "mit")]
+pub struct TsysXmlMit {
+    #[serde(rename = "mitIndicator")]
+    pub mit_indicator: TsysXmlMitIndicator,
+}
+
+/// Vault wallet details — emitted on Path B MIT (and CreateConnectorCustomer
+/// response shape). The `<walletDetails><walletID>...</walletID></walletDetails>`
+/// structure replaces PAN/expiry/cvv2 on Path B Authorize calls.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename = "walletDetails")]
+pub struct TsysXmlWalletDetailsRef {
+    #[serde(rename = "walletID")]
+    pub wallet_id: Secret<String>,
+}
+
 /// Discover/JCB/Diners/CUP-only signal indicating whether the cardholder is a
 /// registered user in the merchant's system.
 #[derive(Debug, Clone, Serialize)]
@@ -412,13 +459,26 @@ pub struct TsysXmlAuthorizeBody<T: PaymentMethodDataTypes + Debug + Sync + Send 
     pub card_data_source: TsysXmlCardDataSource,
     #[serde(rename = "transactionAmount")]
     pub transaction_amount: StringMajorUnit,
-    #[serde(rename = "cardNumber")]
-    pub card_number: Secret<String>,
+    /// Path A (PAN / network-token MIT / CIT) — emit `<cardNumber>` /
+    /// `<expirationDate>` / `<cvv2>`. Mutually exclusive with the
+    /// Path B (`customerCode` + `walletDetails`) block below.
+    #[serde(rename = "cardNumber", skip_serializing_if = "Option::is_none")]
+    pub card_number: Option<Secret<String>>,
     /// MM/YY — TransIT explicitly documents this format (tech spec § Field Reference).
-    #[serde(rename = "expirationDate")]
-    pub expiration_date: Secret<String>,
+    /// Skipped on Path B (vault token MIT).
+    #[serde(rename = "expirationDate", skip_serializing_if = "Option::is_none")]
+    pub expiration_date: Option<Secret<String>>,
     #[serde(rename = "cvv2", skip_serializing_if = "Option::is_none")]
     pub cvv2: Option<Secret<String>>,
+    /// Path B vault dispatch (`customerCode` + `walletDetails`). When present,
+    /// `card_number` / `expiration_date` / `cvv2` MUST be `None`.
+    /// Sequence-positioned near the other card-source fields per tech spec §
+    /// CIT/MIT; final wire order is the same as TSYS doc examples (we iterate
+    /// against F9901 if needed).
+    #[serde(rename = "customerCode", skip_serializing_if = "Option::is_none")]
+    pub customer_code: Option<Secret<String>>,
+    #[serde(rename = "walletDetails", skip_serializing_if = "Option::is_none")]
+    pub wallet_details: Option<TsysXmlWalletDetailsRef>,
     /// Required by the cert script (AVS).
     #[serde(rename = "addressLine1")]
     pub address_line1: Secret<String>,
@@ -478,6 +538,21 @@ pub struct TsysXmlAuthorizeBody<T: PaymentMethodDataTypes + Debug + Sync + Send 
     pub acceptor_phone_number: Option<String>,
     #[serde(rename = "acceptorURLAddress", skip_serializing_if = "Option::is_none")]
     pub acceptor_url_address: Option<String>,
+    /// `<cardOnFile>` — emitted as `Y` on CIT (stored credential consent) and
+    /// MIT (subsequent use) per tech spec § CIT/MIT. Sequence position mirrors
+    /// TSYS doc examples; we iterate on F9901 if XSD ordering disagrees.
+    #[serde(rename = "cardOnFile", skip_serializing_if = "Option::is_none")]
+    pub card_on_file: Option<TsysXmlCardOnFile>,
+    /// `<previousNetworkTransactionID>` — Path A (network-token MIT) only.
+    /// Holds the originating CIT's `cardTransactionIdentifier` (NTID).
+    #[serde(
+        rename = "previousNetworkTransactionID",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub previous_network_transaction_id: Option<String>,
+    /// `<mit>` block — MIT indicator. Path A & Path B both emit on MIT calls.
+    #[serde(rename = "mit", skip_serializing_if = "Option::is_none")]
+    pub mit: Option<TsysXmlMit>,
     /// Phantom marker so the generic `T` is preserved on the struct without leaking
     /// into the serialized payload.
     #[serde(skip)]
@@ -659,6 +734,143 @@ impl GetSoapXml for TsysXmlVoidRequest {
             // structural failures, so this branch is essentially unreachable
             // for valid inputs.
             String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Void/>")
+        })
+    }
+}
+
+// =============================================================================
+// AddCustomer — CreateConnectorCustomer flow
+// =============================================================================
+
+/// `<personalDetails>` block for `<AddCustomer>`. TransIT requires firstName +
+/// lastName (we split on first whitespace; if no whitespace, lastName is `"-"`).
+#[derive(Debug, Serialize)]
+#[serde(rename = "personalDetails")]
+pub struct TsysXmlPersonalDetails {
+    #[serde(rename = "firstName")]
+    pub first_name: Secret<String>,
+    #[serde(rename = "lastName")]
+    pub last_name: Secret<String>,
+    #[serde(rename = "addressLine1")]
+    pub address_line1: Secret<String>,
+    #[serde(rename = "zip")]
+    pub zip: Secret<String>,
+}
+
+/// Card data inside `<walletDetails>` of `<AddCustomer>`. Note the
+/// `expirationDate` format here is `MMYYYY` (6 digits) — different from
+/// Sale/Auth which uses `MMYY`.
+#[derive(Debug, Serialize)]
+#[serde(rename = "cardDetails")]
+pub struct TsysXmlAddCustomerCardDetails {
+    #[serde(rename = "cardNumber")]
+    pub card_number: Secret<String>,
+    /// `MMYYYY` (6 digits) — see tech spec note.
+    #[serde(rename = "expirationDate")]
+    pub expiration_date: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename = "walletDetails")]
+pub struct TsysXmlAddCustomerWalletDetails {
+    #[serde(rename = "cardDetails")]
+    pub card_details: TsysXmlAddCustomerCardDetails,
+    #[serde(rename = "addressLine1")]
+    pub address_line1: Secret<String>,
+    #[serde(rename = "zip")]
+    pub zip: Secret<String>,
+    /// `1` for the primary card on the new customer wallet.
+    #[serde(rename = "paymentSequence")]
+    pub payment_sequence: String,
+}
+
+/// TransIT `<AddCustomer>` request (CreateConnectorCustomer flow). The wallet
+/// block holds the first card we want to associate with the new customer.
+#[derive(Debug, Serialize)]
+#[serde(rename = "AddCustomer")]
+pub struct TsysXmlAddCustomerRequest {
+    #[serde(rename = "deviceID")]
+    pub device_id: Secret<String>,
+    #[serde(rename = "transactionKey")]
+    pub transaction_key: Secret<String>,
+    #[serde(rename = "personalDetails")]
+    pub personal_details: TsysXmlPersonalDetails,
+    #[serde(rename = "walletDetails")]
+    pub wallet_details: TsysXmlAddCustomerWalletDetails,
+    #[serde(rename = "developerID")]
+    pub developer_id: Secret<String>,
+}
+
+impl GetSoapXml for TsysXmlAddCustomerRequest {
+    fn to_soap_xml(&self) -> String {
+        generate_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<AddCustomer/>")
+        })
+    }
+}
+
+// =============================================================================
+// CardAuthentication — SetupMandate flow (zero-dollar CIT verify)
+// =============================================================================
+
+/// TransIT `<CardAuthentication>` request — zero-dollar CIT card verification
+/// used by the SetupMandate flow. Mirrors the Sale/Auth terminalData fields
+/// plus `<cardOnFile>Y</cardOnFile>` to flag CIT consent.
+#[derive(Debug, Serialize)]
+#[serde(rename = "CardAuthentication")]
+pub struct TsysXmlCardAuthenticationRequest {
+    #[serde(rename = "deviceID")]
+    pub device_id: Secret<String>,
+    #[serde(rename = "transactionKey")]
+    pub transaction_key: Secret<String>,
+    #[serde(rename = "cardDataSource")]
+    pub card_data_source: TsysXmlCardDataSource,
+    #[serde(rename = "cardNumber")]
+    pub card_number: Secret<String>,
+    /// MM/YY (matches Sale/Auth format) — TransIT XSD-aligned per tech spec.
+    #[serde(rename = "expirationDate")]
+    pub expiration_date: Secret<String>,
+    #[serde(rename = "addressLine1")]
+    pub address_line1: Secret<String>,
+    #[serde(rename = "zip")]
+    pub zip: Secret<String>,
+    #[serde(rename = "externalReferenceID")]
+    pub external_reference_id: String,
+    #[serde(rename = "cardOnFile")]
+    pub card_on_file: TsysXmlCardOnFile,
+    #[serde(rename = "developerID")]
+    pub developer_id: Secret<String>,
+    // terminalData (flat per XSD; same flattening as Sale/Auth)
+    #[serde(rename = "terminalCapability")]
+    pub terminal_capability: TsysXmlTerminalCapability,
+    #[serde(rename = "terminalOperatingEnvironment")]
+    pub terminal_operating_environment: TsysXmlTerminalOperatingEnvironment,
+    #[serde(rename = "cardholderAuthenticationMethod")]
+    pub cardholder_authentication_method: TsysXmlCardholderAuthenticationMethod,
+    #[serde(rename = "terminalAuthenticationCapability")]
+    pub terminal_authentication_capability: TsysXmlTerminalAuthenticationCapability,
+    #[serde(rename = "terminalOutputCapability")]
+    pub terminal_output_capability: TsysXmlTerminalOutputCapability,
+    #[serde(rename = "maxPinLength")]
+    pub max_pin_length: TsysXmlMaxPinLength,
+    #[serde(rename = "terminalCardCaptureCapability")]
+    pub terminal_card_capture_capability: TsysXmlTerminalCardCaptureCapability,
+    #[serde(rename = "cardholderPresentDetail")]
+    pub cardholder_present_detail: TsysXmlCardholderPresentDetail,
+    #[serde(rename = "cardPresentDetail")]
+    pub card_present_detail: TsysXmlCardPresentDetail,
+    #[serde(rename = "cardDataInputMode")]
+    pub card_data_input_mode: TsysXmlCardDataInputMode,
+    #[serde(rename = "cardholderAuthenticationEntity")]
+    pub cardholder_authentication_entity: TsysXmlCardholderAuthenticationEntity,
+    #[serde(rename = "cardDataOutputCapability")]
+    pub card_data_output_capability: TsysXmlCardDataOutputCapability,
+}
+
+impl GetSoapXml for TsysXmlCardAuthenticationRequest {
+    fn to_soap_xml(&self) -> String {
+        generate_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<CardAuthentication/>")
         })
     }
 }
