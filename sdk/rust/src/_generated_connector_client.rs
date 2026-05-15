@@ -627,11 +627,11 @@ pub fn build_ffi_request<T>(
     let connector =
         domain_types::connector_types::ConnectorEnum::foreign_try_from(config_variant.clone())
             .map_err(|e| SdkError::IntegrationError {
-                error_code: "CONNECTOR_MAPPING_FAILED".to_string(),
-                error_message: format!("Connector mapping failed: {e}"),
-                suggested_action: None,
-                doc_url: None,
-            })?;
+            error_code: "CONNECTOR_MAPPING_FAILED".to_string(),
+            error_message: format!("Connector mapping failed: {e}"),
+            suggested_action: None,
+            doc_url: None,
+        })?;
 
     let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
         .map_err(|e| SdkError::IntegrationError {
