@@ -4541,13 +4541,13 @@ message ConnectorSpecificConfig {
     TwocTwopPacoConfig twoc_twop_paco = 121;
 
     // BAMBORAAPAC = 7
-    BamboraapacConfig bamboraapac = 121;
+    BamboraapacConfig bamboraapac = 122;
 
     // PLACETOPAY = 65
-    PlacetopayConfig placetopay = 122;
+    PlacetopayConfig placetopay = 123;
 
     // FINIX = 111
-    FinixConfig finix = 123;
+    FinixConfig finix = 124;
   }
 }
 
