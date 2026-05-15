@@ -337,11 +337,12 @@ impl CustomerService for Customer {
                         metadata_payload.lineage_ids,
                     );
                     let connector_config = &metadata_payload.connector_config;
-                    let payment_connector = connector
-                        .as_payment()
-                        .ok_or(tonic::Status::invalid_argument(format!(
-                            "Invalid Connector Recieved: Connector"
-                        )))?;
+                    let payment_connector =
+                        connector
+                            .as_payment()
+                            .ok_or(tonic::Status::invalid_argument(format!(
+                                "Invalid Connector Recieved: Connector"
+                            )))?;
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&payment_connector);
@@ -2690,10 +2691,8 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                 let service_name = service_name.clone();
                 Box::pin(async move {
                     let metadata_payload = request_data.extracted_metadata;
-                    let ( request_id, lineage_ids) = (
-                        metadata_payload.request_id,
-                        metadata_payload.lineage_ids,
-                    );
+                    let (request_id, lineage_ids) =
+                        (metadata_payload.request_id, metadata_payload.lineage_ids);
                     let connector_config = &metadata_payload.connector_config;
                     let connector = metadata_payload.connector.as_payment().ok_or_else(|| {
                         tonic::Status::invalid_argument("Invalid Connector Recieved: Connector")

@@ -150,7 +150,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== MACRO-BASED IMPLEMENTATION =====
 
-
 macros::create_all_prerequisites!(
     connector_name: Airwallex,
     generic_type: T,

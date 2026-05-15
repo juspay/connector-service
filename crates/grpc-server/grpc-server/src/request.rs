@@ -6,7 +6,9 @@ use error_stack::Report;
 use tonic::metadata;
 use ucs_env::{configs, error::ResultExtGrpc};
 
-use crate::utils::{connector_and_config_from_metadata, connector_variant_from_metadata, MetadataPayload};
+use crate::utils::{
+    connector_and_config_from_metadata, connector_variant_from_metadata, MetadataPayload,
+};
 use ucs_interface_common::metadata::{
     merchant_id_from_metadata, request_id_from_metadata, tenant_id_from_metadata,
 };

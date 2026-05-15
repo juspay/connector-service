@@ -470,7 +470,6 @@ macro_rules! payout_res_transformer {
     };
 }
 
-
 /// Macro to generate surcharge request transformer functions
 ///
 /// # Example

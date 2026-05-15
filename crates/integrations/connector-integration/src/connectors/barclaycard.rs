@@ -134,7 +134,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // SetupMandate implementation is below using macro_connector_implementation!
 
-
 macros::create_all_prerequisites!(
     connector_name: Barclaycard,
     generic_type: T,

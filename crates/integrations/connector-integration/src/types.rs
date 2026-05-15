@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use domain_types::{
-    connector_types::{SurchargeConnectorEnum, ConnectorEnum},
+    connector_types::{ConnectorEnum, SurchargeConnectorEnum},
     payment_method_data::PaymentMethodDataTypes,
 };
 use interfaces::connector_types::{BoxedConnector, BoxedSurchargeConnector};
@@ -133,9 +133,7 @@ impl SurchargeConnectorData {
         }
     }
 
-    fn convert_connector(
-        _connector_name: SurchargeConnectorEnum,
-    ) -> BoxedSurchargeConnector {
+    fn convert_connector(_connector_name: SurchargeConnectorEnum) -> BoxedSurchargeConnector {
         // TODO: Add surcharge connectors as they are implemented
         unimplemented!("Surcharge connectors not yet available")
     }
@@ -149,7 +147,9 @@ pub trait ConnectorDataProvider: Sized {
     fn get_connector_by_name(connector_name: &Self::ConnectorEnumType) -> Self;
 
     /// Convert variant to this type
-    fn from_connector_variant(variant: &domain_types::connector_types::ConnectorVariant) -> Option<Self>;
+    fn from_connector_variant(
+        variant: &domain_types::connector_types::ConnectorVariant,
+    ) -> Option<Self>;
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde::Serialize>

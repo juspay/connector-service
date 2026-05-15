@@ -176,7 +176,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-
 macros::create_all_prerequisites!(
     connector_name: Aci,
     generic_type: T,

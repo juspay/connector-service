@@ -75,7 +75,9 @@ impl EventService for EventServiceImpl {
                     let payload = request_data.payload;
                     let metadata_payload = request_data.extracted_metadata;
                     let connector = metadata_payload.connector.as_payment().ok_or_else(|| {
-                        tonic::Status::unimplemented("Surcharge connectors not supported for webhook events")
+                        tonic::Status::unimplemented(
+                            "Surcharge connectors not supported for webhook events",
+                        )
                     })?;
                     let request_details =
                         domain_types::connector_types::RequestDetails::foreign_try_from(

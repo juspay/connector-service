@@ -154,7 +154,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 {
 }
 
-
 macros::create_all_prerequisites!(
     connector_name: Adyen,
     generic_type: T,

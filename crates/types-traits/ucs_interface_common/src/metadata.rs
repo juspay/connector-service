@@ -126,9 +126,10 @@ pub fn connector_variant_from_metadata(
                 },
             })
         })?;
-         Ok(connector_types::ConnectorVariant::Payment(connector))
-    } else if let Some(value) = metadata.get(consts::X_SURCHARGE_CONNECTOR_NAME) // Priority 2: Check x-surcharge-connector header
-     {
+        Ok(connector_types::ConnectorVariant::Payment(connector))
+    } else if let Some(value) = metadata.get(consts::X_SURCHARGE_CONNECTOR_NAME)
+    // Priority 2: Check x-surcharge-connector header
+    {
         let connector_str = value.to_str().map_err(|e| {
             Report::new(IntegrationError::InvalidDataFormat {
                 field_name: "x-surcharge-connector",
@@ -140,8 +141,8 @@ pub fn connector_variant_from_metadata(
                 },
             })
         })?;
-        let connector = connector_types::SurchargeConnectorEnum::from_str(connector_str).map_err(
-            |e| {
+        let connector =
+            connector_types::SurchargeConnectorEnum::from_str(connector_str).map_err(|e| {
                 Report::new(IntegrationError::InvalidDataFormat {
                     field_name: "x-surcharge-connector",
                     context: IntegrationErrorContext {
@@ -149,16 +150,15 @@ pub fn connector_variant_from_metadata(
                         ..Default::default()
                     },
                 })
-            },
-        )?;
-         Ok(connector_types::ConnectorVariant::Surcharge(connector))
+            })?;
+        Ok(connector_types::ConnectorVariant::Surcharge(connector))
     } else {
-    // Neither header found
-    Err(Report::new(IntegrationError::MissingRequiredField {
-        field_name: "x-connector",
-        context: IntegrationErrorContext::default(),
-    }))
-}
+        // Neither header found
+        Err(Report::new(IntegrationError::MissingRequiredField {
+            field_name: "x-connector",
+            context: IntegrationErrorContext::default(),
+        }))
+    }
 }
 
 pub fn connector_from_metadata(

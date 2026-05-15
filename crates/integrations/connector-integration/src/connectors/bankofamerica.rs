@@ -234,7 +234,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-
 macros::create_all_prerequisites!(
     connector_name: Bankofamerica,
     generic_type: T,

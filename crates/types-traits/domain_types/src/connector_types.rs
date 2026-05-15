@@ -162,7 +162,7 @@ pub enum ConnectorEnum {
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum SurchargeConnectorEnum {
-    InterPayments
+    InterPayments,
 }
 
 /// Unified connector enum that can represent either payment or surcharge connectors
@@ -4315,8 +4315,9 @@ pub struct BillingDescriptor {
 //     }
 // }
 
-
-impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config> for ConnectorVariant {
+impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
+    for ConnectorVariant
+{
     type Error = IntegrationError;
     fn foreign_try_from(
         auth_type: grpc_api_types::payments::connector_specific_config::Config,
@@ -4384,15 +4385,15 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Barclaycard(_) => Ok(Self::Payment(ConnectorEnum::Barclaycard)),
             AuthType::Worldpayxml(_) => Ok(Self::Payment(ConnectorEnum::Worldpayxml)),
             AuthType::Revolut(_) => Ok(Self::Payment(ConnectorEnum::Revolut)),
-            AuthType::Loonio(_) => Ok(Self::Payment(ConnectorEnum::Loonio)), 
+            AuthType::Loonio(_) => Ok(Self::Payment(ConnectorEnum::Loonio)),
             AuthType::Gigadat(_) => Ok(Self::Payment(ConnectorEnum::Gigadat)),
-            AuthType::Hyperpg(_) => Ok(Self::Payment(ConnectorEnum::Hyperpg)), 
-            AuthType::Peachpayments(_) =>  Ok(Self::Payment(ConnectorEnum::Peachpayments)), 
-            AuthType::Zift(_) => Ok(Self::Payment(ConnectorEnum::Zift)), 
-            AuthType::Trustly(_) => Ok(Self::Payment(ConnectorEnum::Trustly)), 
-            AuthType::Truelayer(_) =>  Ok(Self::Payment(ConnectorEnum::Truelayer)), 
-            AuthType::Fiservcommercehub(_) => Ok(Self::Payment(ConnectorEnum::Fiservcommercehub)), 
-            AuthType::Itaubank(_) => Ok(Self::Payment(ConnectorEnum::Itaubank)), 
+            AuthType::Hyperpg(_) => Ok(Self::Payment(ConnectorEnum::Hyperpg)),
+            AuthType::Peachpayments(_) => Ok(Self::Payment(ConnectorEnum::Peachpayments)),
+            AuthType::Zift(_) => Ok(Self::Payment(ConnectorEnum::Zift)),
+            AuthType::Trustly(_) => Ok(Self::Payment(ConnectorEnum::Trustly)),
+            AuthType::Truelayer(_) => Ok(Self::Payment(ConnectorEnum::Truelayer)),
+            AuthType::Fiservcommercehub(_) => Ok(Self::Payment(ConnectorEnum::Fiservcommercehub)),
+            AuthType::Itaubank(_) => Ok(Self::Payment(ConnectorEnum::Itaubank)),
             AuthType::Axisbank(_) => Ok(Self::Payment(ConnectorEnum::Axisbank)),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 IntegrationError::InvalidDataFormat {
@@ -4406,7 +4407,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
                     context: IntegrationErrorContext::default(),
                 },
             )),
-            AuthType::Fiuu(_) => Ok(Self::Payment(ConnectorEnum::Fiuu)), 
+            AuthType::Fiuu(_) => Ok(Self::Payment(ConnectorEnum::Fiuu)),
             AuthType::Globepay(_) => Err(error_stack::Report::new(
                 IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -4425,12 +4426,12 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
                     context: IntegrationErrorContext::default(),
                 },
             )),
-            AuthType::Revolv3(_) => Ok(Self::Payment(ConnectorEnum::Revolv3)), 
-            AuthType::Authorizedotnet(_) => Ok(Self::Payment(ConnectorEnum::Authorizedotnet)), 
-            AuthType::Ppro(_) => Ok(Self::Payment(ConnectorEnum::Ppro)), 
-            AuthType::PinelabsOnline(_) => Ok(Self::Payment(ConnectorEnum::PinelabsOnline)), 
-            AuthType::Easebuzz(_) => Ok(Self::Payment(ConnectorEnum::Easebuzz)), 
-            AuthType::Imerchantsolutions(_) => Ok(Self::Payment(ConnectorEnum::Imerchantsolutions)), 
+            AuthType::Revolv3(_) => Ok(Self::Payment(ConnectorEnum::Revolv3)),
+            AuthType::Authorizedotnet(_) => Ok(Self::Payment(ConnectorEnum::Authorizedotnet)),
+            AuthType::Ppro(_) => Ok(Self::Payment(ConnectorEnum::Ppro)),
+            AuthType::PinelabsOnline(_) => Ok(Self::Payment(ConnectorEnum::PinelabsOnline)),
+            AuthType::Easebuzz(_) => Ok(Self::Payment(ConnectorEnum::Easebuzz)),
+            AuthType::Imerchantsolutions(_) => Ok(Self::Payment(ConnectorEnum::Imerchantsolutions)),
             AuthType::TwocTwopPaco(_) => Ok(Self::Payment(ConnectorEnum::TwocTwopPaco)),
         }
     }

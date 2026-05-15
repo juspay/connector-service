@@ -129,7 +129,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-
 // Stub out the payout flows that Loonio doesn't implement. PayoutTransfer
 // and PayoutGet are real implementations below.
 macros::macro_connector_payout_implementation!(

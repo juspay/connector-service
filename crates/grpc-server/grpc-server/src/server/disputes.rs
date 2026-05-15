@@ -113,14 +113,14 @@ impl DisputeService for Disputes {
                         tenant_id,
                         ..
                     } = request_data.extracted_metadata;
-                    let payments_connector = connector.as_payment().ok_or(
-                        tonic::Status::invalid_argument(format!(
-                            "Invalid Connector Recieved",
-                        )),
-                    )?;
+                    let payments_connector =
+                        connector
+                            .as_payment()
+                            .ok_or(tonic::Status::invalid_argument(format!(
+                                "Invalid Connector Recieved",
+                            )))?;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&payments_connector)
-                        ;
+                        ConnectorData::get_connector_by_name(&payments_connector);
 
                     let connector_integration: BoxedConnectorIntegrationV2<
                         '_,
@@ -338,11 +338,12 @@ impl DisputeService for Disputes {
                         tenant_id,
                         ..
                     } = request_data.extracted_metadata;
-                    let payments_connector = connector.as_payment().ok_or(
-                        tonic::Status::invalid_argument(format!(
-                            "Invalid Connector Recieved",
-                        )),
-                    )?;
+                    let payments_connector =
+                        connector
+                            .as_payment()
+                            .ok_or(tonic::Status::invalid_argument(format!(
+                                "Invalid Connector Recieved",
+                            )))?;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&payments_connector);
 

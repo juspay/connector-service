@@ -176,7 +176,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-
 macros::create_all_prerequisites!(
     connector_name: Calida,
     generic_type: T,

@@ -287,7 +287,10 @@ mod tests {
         let (connector, config) = connector_and_config_from_metadata(&metadata)
             .expect("typed header config should resolve");
 
-        assert_eq!(connector, connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe));
+        assert_eq!(
+            connector,
+            connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe)
+        );
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "typed-key-value");
@@ -303,7 +306,10 @@ mod tests {
         let (connector, config) = connector_and_config_from_metadata(&metadata)
             .expect("legacy header config should resolve");
 
-        assert_eq!(connector, connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe));
+        assert_eq!(
+            connector,
+            connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe)
+        );
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "legacy-key-value");
@@ -324,7 +330,10 @@ mod tests {
         let (connector, config) = connector_and_config_from_metadata(&metadata)
             .expect("typed header should take precedence");
 
-        assert_eq!(connector, connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe));
+        assert_eq!(
+            connector,
+            connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe)
+        );
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "typed-key-value");
@@ -358,7 +367,10 @@ mod tests {
         let (connector, config) = connector_and_config_from_metadata(&metadata)
             .expect("deprecated x-connector-auth should still resolve");
 
-        assert_eq!(connector, connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe));
+        assert_eq!(
+            connector,
+            connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe)
+        );
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "deprecated-key-value");
@@ -384,7 +396,10 @@ mod tests {
         let (connector, config) = connector_and_config_from_metadata(&metadata)
             .expect("new header should take precedence");
 
-        assert_eq!(connector, connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe));
+        assert_eq!(
+            connector,
+            connector_types::ConnectorVariant::Payment(connector_types::ConnectorEnum::Stripe)
+        );
         match config {
             ConnectorSpecificConfig::Stripe { api_key, .. } => {
                 assert_eq!(api_key.expose(), "new-key");

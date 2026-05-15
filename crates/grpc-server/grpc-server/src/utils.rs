@@ -530,7 +530,7 @@ macro_rules! implement_connector_operation {
             let connector_config = metadata_payload.connector_config.clone();
 
             // Get connector data using ConnectorDataProvider trait
-            let connector_data: $connector_data_type = 
+            let connector_data: $connector_data_type =
                 connector_integration::types::ConnectorDataProvider::from_connector_variant(&metadata_payload.connector)
                     .ok_or_else(|| tonic::Status::unimplemented("Invalid connector type for this flow"))?;
 
@@ -699,7 +699,7 @@ macro_rules! implement_connector_operation {
             let connector_config = metadata_payload.connector_config.clone();
 
             // Get connector data using ConnectorDataProvider trait
-            let connector_data: $connector_data_type = 
+            let connector_data: $connector_data_type =
                 connector_integration::types::ConnectorDataProvider::from_connector_variant(&metadata_payload.connector)
                     .ok_or_else(|| tonic::Status::unimplemented("Invalid connector type for this flow"))?;
 
@@ -844,7 +844,7 @@ macro_rules! implement_connector_operation {
             let connector_config = metadata_payload.connector_config.clone();
 
             // Get connector data using ConnectorDataProvider trait
-            let connector_data: $connector_data_type = 
+            let connector_data: $connector_data_type =
                 connector_integration::types::ConnectorDataProvider::from_connector_variant(&metadata_payload.connector)
                     .ok_or_else(|| tonic::Status::unimplemented("Invalid connector type for this flow"))?;
 
