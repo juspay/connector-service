@@ -154,11 +154,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 {
 }
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Adyen,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
 
 macros::create_all_prerequisites!(
     connector_name: Adyen,

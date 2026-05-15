@@ -303,9 +303,9 @@ def discover_flows(desc_set=None) -> tuple[list[dict], list[dict]]:
             continue
         service_name = proto_rpcs[flow]["service"]
         connector_data_type = (
-            "connector_integration::types::SurchargeConnectorData"
+            "domain_types::connector_types::SurchargeConnectorEnum"
             if service_name == "SurchargeService"
-            else "connector_integration::types::ConnectorData<domain_types::payment_method_data::DefaultPCIHolder>"
+            else "domain_types::connector_types::ConnectorEnum"
         )
         flows.append({"name": flow, "module": service_flows[flow], "connector_data_type": connector_data_type, **proto_rpcs[flow]})
 
@@ -318,9 +318,9 @@ def discover_flows(desc_set=None) -> tuple[list[dict], list[dict]]:
             continue
         service_name = proto_rpcs[flow]["service"]
         connector_data_type = (
-            "connector_integration::types::SurchargeConnectorData"
+            "domain_types::connector_types::SurchargeConnectorEnum"
             if service_name == "SurchargeService"
-            else "connector_integration::types::ConnectorData<domain_types::payment_method_data::DefaultPCIHolder>"
+            else "domain_types::connector_types::ConnectorEnum"
         )
         single_flows.append({"name": flow, "module": single_flow_names[flow], "connector_data_type": connector_data_type, **proto_rpcs[flow]})
 

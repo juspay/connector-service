@@ -196,12 +196,6 @@ macros::macro_connector_payout_implementation!(
 // PREREQUISITES MACRO — creates Easebuzz<T> struct + bridges for Authorize
 // ============================================================================
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Easebuzz,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 macros::create_all_prerequisites!(
     connector_name: Easebuzz,
     generic_type: T,

@@ -161,7 +161,9 @@ pub enum ConnectorEnum {
     Serialize,
 )]
 #[strum(serialize_all = "snake_case")]
-pub enum SurchargeConnectorEnum {}
+pub enum SurchargeConnectorEnum {
+    InterPayments
+}
 
 /// Unified connector enum that can represent either payment or surcharge connectors
 #[derive(Debug, Clone)]

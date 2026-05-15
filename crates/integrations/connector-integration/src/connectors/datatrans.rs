@@ -119,17 +119,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== CONNECTOR CUSTOMER TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Datatrans<T>
-{
-}
-
-macros::macro_connector_surcharge_implementation!(
-    connector: Datatrans,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 macros::create_all_prerequisites!(
     connector_name: Datatrans,
     generic_type: T,

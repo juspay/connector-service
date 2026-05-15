@@ -305,12 +305,6 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Imerchantsolutions,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const X_API_KEY: &str = "X-Api-Key";

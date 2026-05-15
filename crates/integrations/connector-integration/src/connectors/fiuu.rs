@@ -111,12 +111,6 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Fiuu,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 macros::create_all_prerequisites!(
     connector_name: Fiuu,
     generic_type: T,

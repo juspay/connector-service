@@ -445,12 +445,6 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Ppro,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 static PPRO_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Ppro",
     description: "Ppro is a global provider of local payment infrastructure.",

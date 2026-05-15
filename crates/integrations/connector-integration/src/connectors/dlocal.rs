@@ -118,12 +118,6 @@ pub(crate) mod headers {
     pub(crate) const X_VERSION: &str = "X-Version";
 }
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Dlocal,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 macros::create_all_prerequisites!(
     connector_name: Dlocal,
     generic_type: T,

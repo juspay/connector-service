@@ -99,27 +99,6 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Payu<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Payu<T>
-{
-}
-
-macros::macro_connector_surcharge_implementation!(
-    connector: Payu,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 // Set up connector using macros with all framework integrations
 macros::create_all_prerequisites!(
     connector_name: Payu,

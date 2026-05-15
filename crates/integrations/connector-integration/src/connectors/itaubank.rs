@@ -74,12 +74,6 @@ macros::macro_connector_payout_implementation!(
     ]
 );
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Itaubank,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 fn construct_itaubank_error_message(error_res: &ItaubankErrorResponse) -> String {
     let campos_msg = if error_res.campos.is_empty() {
         None

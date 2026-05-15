@@ -698,9 +698,3 @@ macros::macro_connector_flow_status_impls!(
         VoidPC,
     ],
 );
-
-macros::macro_connector_surcharge_implementation!(
-    connector: PinelabsOnline,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);

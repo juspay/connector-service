@@ -54,12 +54,6 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Forte,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Forte<T>
 {

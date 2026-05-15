@@ -161,11 +161,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 macros::create_amount_converter_wrapper!(connector_name: Cryptopay, amount_type: StringMajorUnit);
-macros::macro_connector_surcharge_implementation!(
-    connector: Cryptopay,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
 
 macros::create_all_prerequisites!(
     connector_name: Cryptopay,

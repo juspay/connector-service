@@ -41,12 +41,6 @@ use transformers::{
     BamboraVoidRequest, BamboraVoidResponse,
 };
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Bambora,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 macros::create_all_prerequisites!(
     connector_name: Bambora,
     generic_type: T,

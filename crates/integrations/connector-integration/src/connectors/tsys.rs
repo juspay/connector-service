@@ -111,12 +111,6 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
-macros::macro_connector_surcharge_implementation!(
-    connector: Tsys,
-    generic_type: T,
-    [Debug + Sync + Send + 'static + Serialize]
-);
-
 // ===== VALIDATION TRAIT IMPLEMENTATION =====
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Tsys<T>
