@@ -226,8 +226,6 @@ _wait-for-server:
 		sleep 1; \
 	done; \
 	echo "Server did not start within 30s"; \
-	echo "=== grpc-server startup log ==="; \
-	cat /tmp/grpc-server-new.log 2>/dev/null || echo "(no log found)"; \
 	exit 1
 
 _cleanup-grpc:
