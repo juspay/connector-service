@@ -1861,6 +1861,7 @@ pub struct WebhookDetailsResponse {
     pub minor_amount_captured: Option<MinorUnit>,
     pub network_txn_id: Option<String>,
     pub payment_method_update: Option<PaymentMethodUpdate>,
+    pub sender_payment_instrument_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]

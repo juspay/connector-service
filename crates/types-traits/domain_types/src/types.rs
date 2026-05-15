@@ -5275,7 +5275,10 @@ pub fn generate_payment_sync_response(
                     captured_at: None,
                     customer_name: None,
                     email: None,
-                    connector_customer_id: None,
+                    connector_customer_id: router_data_v2
+                        .resource_common_data
+                        .connector_customer
+                        .clone(),
                     merchant_order_id: None,
                     metadata: None,
                     status_code: status_code as u32,
@@ -5288,6 +5291,7 @@ pub fn generate_payment_sync_response(
                     connector_response,
                     incremental_authorization_allowed,
                     payment_method_update: None,
+                    sender_payment_instrument_id: None,
                 })
             }
             PaymentsResponseData::MultipleCaptureResponse {
@@ -5379,6 +5383,7 @@ pub fn generate_payment_sync_response(
                     connector_response,
                     incremental_authorization_allowed: None,
                     payment_method_update: None,
+                    sender_payment_instrument_id: None,
                 })
             }
             _ => Err(report!(ConnectorError::UnexpectedResponseError {
@@ -5450,6 +5455,7 @@ pub fn generate_payment_sync_response(
                 redirection_data: None,
                 incremental_authorization_allowed: None,
                 payment_method_update: None,
+                sender_payment_instrument_id: None,
             })
         }
     }
@@ -6249,6 +6255,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             redirection_data: None,
             incremental_authorization_allowed: None,
             payment_method_update: payment_method_update_grpc,
+            sender_payment_instrument_id: value.sender_payment_instrument_id,
         })
     }
 }
