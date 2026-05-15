@@ -712,10 +712,6 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
             item.response.payment_token.as_ref(),
         );
 
-        // Extract network-specific fields from processor object using helper function
-        let (network_txn_id, _network_decline_code, _network_error_message) =
-            extract_network_fields(item.response.processor.as_ref());
-
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
@@ -724,8 +720,8 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata,
-                network_txn_id: network_txn_id.or(item.response.api_trace_id.clone()),
-                connector_response_reference_id: item.response.client_request_id.clone(),
+                network_txn_id: item.response.scheme_transaction_id.clone(),
+                connector_response_reference_id: item.response.order_id.clone(),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
