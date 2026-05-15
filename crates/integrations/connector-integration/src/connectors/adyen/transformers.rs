@@ -13,6 +13,7 @@ use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, ClientAuthenticationToken, CreateOrder, DefendDispute,
         IncrementalAuthorization, PSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        VoidPC,
     },
     connector_types::{
         AcceptDisputeData,
@@ -21,7 +22,7 @@ use domain_types::{
         ConnectorSpecificClientAuthenticationResponse, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, EventType, MandateReference, MandateReferenceId,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodUpdate,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData, SubmitEvidenceData,
@@ -1308,6 +1309,14 @@ pub struct SetupMandateRequest<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdyenVoidRequest {
+    merchant_account: Secret<String>,
+    reference: String,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenVoidPCRequest {
     merchant_account: Secret<String>,
     reference: String,
 }
@@ -3931,6 +3940,43 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for AdyenVoidPCRequest
+{
+    type Error = Error;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
+        Ok(Self {
+            merchant_account: auth_type.merchant_account,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum AdyenPaymentResponse {
@@ -3972,6 +4018,14 @@ pub struct AdyenResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdyenVoidResponse {
+    payment_psp_reference: String,
+    status: AdyenVoidStatus,
+    reference: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenVoidPCResponse {
     payment_psp_reference: String,
     status: AdyenVoidStatus,
     reference: String,
@@ -4184,18 +4238,16 @@ impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
             }
             AdyenWebhookStatus::AuthorisationFailed
             | AdyenWebhookStatus::AdjustAuthorizationFailed => Ok(Self::Failure),
-            AdyenWebhookStatus::Cancelled => Ok(Self::Voided),
+            AdyenWebhookStatus::Cancelled | AdyenWebhookStatus::Reversed => Ok(Self::Voided),
             AdyenWebhookStatus::CancelFailed => Ok(Self::VoidFailed),
             AdyenWebhookStatus::Captured => Ok(Self::Charged),
             AdyenWebhookStatus::CaptureFailed => Ok(Self::CaptureFailed),
             AdyenWebhookStatus::Expired => Ok(Self::Expired),
             //If Unexpected Event is received, need to understand how it reached this point
             //Webhooks with Payment Events only should try to consume this resource object.
-            AdyenWebhookStatus::UnexpectedEvent | AdyenWebhookStatus::Reversed => {
-                Err(error_stack::report!(
-                    ConnectorError::response_handling_failed_http_status_unknown()
-                ))
-            }
+            AdyenWebhookStatus::UnexpectedEvent => Err(error_stack::report!(
+                ConnectorError::response_handling_failed_http_status_unknown()
+            )),
         }
     }
 }
@@ -4457,6 +4509,43 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             http_code,
         } = value;
         let status = AttemptStatus::Pending;
+
+        let payment_void_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(response.payment_psp_reference),
+            redirection_data: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: Some(response.reference),
+            incremental_authorization_allowed: None,
+            mandate_reference: None,
+            status_code: http_code,
+        };
+
+        Ok(Self {
+            response: Ok(payment_void_response_data),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            ..router_data
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<AdyenVoidPCResponse, Self>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(value: ResponseRouterData<AdyenVoidPCResponse, Self>) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let status = match response.status {
+            AdyenVoidStatus::Received => AttemptStatus::VoidedPostCapture,
+            AdyenVoidStatus::Processing => AttemptStatus::VoidPostCaptureInitiated,
+        };
 
         let payment_void_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.payment_psp_reference),

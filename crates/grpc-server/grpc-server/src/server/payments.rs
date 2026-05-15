@@ -999,7 +999,9 @@ impl PaymentService for Payments {
                         payment_flow_data
                     };
 
-                    // Create router data
+                    // Create router data with a pre-populated Ok response so that
+                    // connectors returning None from build_request_v2 (no external
+                    // call needed) yield the current known status instead of a 500.
                     let router_data = RouterDataV2::<
                         PSync,
                         PaymentFlowData,
@@ -1010,7 +1012,16 @@ impl PaymentService for Payments {
                         resource_common_data: payment_flow_data,
                         connector_config: metadata_payload.connector_config.clone(),
                         request: payments_sync_data.clone(),
-                        response: Err(ErrorResponse::default()),
+                        response: Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: payments_sync_data.connector_transaction_id.clone(),
+                            redirection_data: None,
+                            connector_metadata: None,
+                            mandate_reference: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: None,
+                            incremental_authorization_allowed: None,
+                            status_code: 200,
+                        }),
                     };
 
                     // Execute connector processing
