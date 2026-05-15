@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.04.15.0-hotfix4
+
+### Features
+
+- **connector:** Add sender_payment_instrument_id in webhooks to support closed loop payouts ([#1354](https://github.com/juspay/connector-service/pull/1354)) ([`dfe270d`](https://github.com/juspay/connector-service/commit/dfe270da8daa0028bdb722813d9573968f884753))
+
+**Full Changelog:** [`2026.04.15.0-hotfix3...2026.04.15.0-hotfix4`](https://github.com/juspay/connector-service/compare/2026.04.15.0-hotfix3...2026.04.15.0-hotfix4)
+
+- - -
+
 ## 2026.04.15.0-hotfix3
 
 ### Bug Fixes
