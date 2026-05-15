@@ -3943,7 +3943,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AdyenRouterData<
-            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for AdyenVoidPCRequest
@@ -3951,7 +3956,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = Error;
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -4235,11 +4245,9 @@ impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
             AdyenWebhookStatus::Expired => Ok(Self::Expired),
             //If Unexpected Event is received, need to understand how it reached this point
             //Webhooks with Payment Events only should try to consume this resource object.
-            AdyenWebhookStatus::UnexpectedEvent => {
-                Err(error_stack::report!(
-                    ConnectorError::response_handling_failed_http_status_unknown()
-                ))
-            }
+            AdyenWebhookStatus::UnexpectedEvent => Err(error_stack::report!(
+                ConnectorError::response_handling_failed_http_status_unknown()
+            )),
         }
     }
 }
