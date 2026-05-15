@@ -8,15 +8,17 @@ use super::PproRouterData;
 use crate::types::ResponseRouterData;
 use domain_types::errors::{ConnectorError, IntegrationError, WebhookError};
 use domain_types::{
-    connector_flow::{Capture, ClientAuthenticationToken, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Capture, ClientAuthenticationToken, RSync, Refund, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::{
         ClientAuthenticationTokenData, ClientAuthenticationTokenRequestData,
-        ConnectorSpecificClientAuthenticationResponse,
-        EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData,
-        PproClientAuthenticationResponse as PproClientAuthenticationResponseDomain,
-        RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        ConnectorSpecificClientAuthenticationResponse, EventType, MandateReference,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData,
+        PproClientAuthenticationResponse as PproClientAuthenticationResponseDomain, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     mandates::MandateDataType,
     payment_method_data::PaymentMethodDataTypes,

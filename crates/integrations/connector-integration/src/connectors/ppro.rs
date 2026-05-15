@@ -10,14 +10,17 @@ use common_utils::{
     ext_traits::ByteSliceExt,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, ClientAuthenticationToken, PSync, RSync, Refund, RepeatPayment,
+        SetupMandate, Void,
+    },
     connector_types::{
-        ClientAuthenticationTokenRequestData,
-        ConnectorSpecifications, ConnectorWebhookSecrets, EventContext, EventType, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
-        SetupMandateRequestData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        ClientAuthenticationTokenRequestData, ConnectorSpecifications, ConnectorWebhookSecrets,
+        EventContext, EventType, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RedirectDetailsResponse,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, ResponseId, SetupMandateRequestData, SupportedPaymentMethodsExt,
+        WebhookDetailsResponse,
     },
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
