@@ -1081,7 +1081,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
             response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
                 post_capture_void_status,
                 connector_reference_id: Some(item.response.ipg_transaction_id.clone()),
-                description: item.response.transaction_state.clone(),
+                description: None,
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
