@@ -1037,7 +1037,11 @@ impl From<FiservemeaVoidPCStatus> for (AttemptStatus, common_enums::PostCaptureV
                 AttemptStatus::Pending,
                 common_enums::PostCaptureVoidStatus::Succeeded,
             ),
-            _ => match value.transaction_result {
+            Some(FiservemeaPaymentStatus::Partial)
+            | Some(FiservemeaPaymentStatus::ValidationFailed)
+            | Some(FiservemeaPaymentStatus::ProcessingFailed)
+            | Some(FiservemeaPaymentStatus::Declined)
+            | None => match value.transaction_result {
                 Some(FiservemeaPaymentResult::Approved) => (
                     AttemptStatus::VoidPostCaptureInitiated,
                     common_enums::PostCaptureVoidStatus::Succeeded,
@@ -1046,7 +1050,11 @@ impl From<FiservemeaVoidPCStatus> for (AttemptStatus, common_enums::PostCaptureV
                     AttemptStatus::Pending,
                     common_enums::PostCaptureVoidStatus::Succeeded,
                 ),
-                _ => (
+                Some(FiservemeaPaymentResult::Declined)
+                | Some(FiservemeaPaymentResult::Failed)
+                | Some(FiservemeaPaymentResult::Partial)
+                | Some(FiservemeaPaymentResult::Fraud)
+                | None => (
                     AttemptStatus::Failure,
                     common_enums::PostCaptureVoidStatus::Failed,
                 ),
@@ -1073,7 +1081,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
             response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
                 post_capture_void_status,
                 connector_reference_id: Some(item.response.ipg_transaction_id.clone()),
-                description: None,
+                description: item.response.transaction_state.clone(),
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
