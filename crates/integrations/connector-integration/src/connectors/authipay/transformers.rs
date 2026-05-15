@@ -475,11 +475,17 @@ fn extract_connector_metadata(
 ) -> Option<serde_json::Value> {
     let mut metadata = serde_json::Map::new();
     if let Some(id) = order_id {
-        metadata.insert("order_id".to_string(), serde_json::Value::String(id.to_string()));
+        metadata.insert(
+            "order_id".to_string(),
+            serde_json::Value::String(id.to_string()),
+        );
     }
     if let Some(token) = payment_token {
         if let Some(reusable) = token.reusable {
-            metadata.insert("token_reusable".to_string(), serde_json::Value::Bool(reusable));
+            metadata.insert(
+                "token_reusable".to_string(),
+                serde_json::Value::Bool(reusable),
+            );
         }
     }
     if metadata.is_empty() {
@@ -1172,9 +1178,7 @@ mod tests {
     use common_utils::types::MinorUnit;
     use domain_types::{
         connector_flow::Authorize,
-        connector_types::{
-            PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        },
+        connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
         payment_method_data::{DefaultPCIHolder, PaymentMethodData},
         router_data::{ConnectorSpecificConfig, ErrorResponse},
         router_data_v2::RouterDataV2,
@@ -1203,9 +1207,7 @@ mod tests {
                 description: None,
                 return_url: None,
                 order_details: None,
-                address: domain_types::payment_address::PaymentAddress::new(
-                    None, None, None, None,
-                ),
+                address: domain_types::payment_address::PaymentAddress::new(None, None, None, None),
                 auth_type: common_enums::AuthenticationType::NoThreeDs,
                 connector_feature_data: None,
                 amount_captured: None,
@@ -1336,7 +1338,9 @@ mod tests {
             } => {
                 assert_eq!(
                     connector_metadata,
-                    Some(serde_json::json!({"order_id": "R-c6342b58-test", "token_reusable": true})),
+                    Some(
+                        serde_json::json!({"order_id": "R-c6342b58-test", "token_reusable": true})
+                    ),
                 );
                 assert_eq!(network_txn_id, Some("MCC4668980327".to_string()));
                 assert_eq!(
