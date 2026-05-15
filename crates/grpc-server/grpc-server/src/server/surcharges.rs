@@ -41,7 +41,7 @@ impl SurchargeOperationsInternal for Surcharges {
         request_data_constructor: SurchargeCalculateRequest::foreign_try_from,
         common_flow_data_constructor: SurchargeFlowData::foreign_try_from,
         generate_response_fn: domain_types::types::generate_surcharge_calculate_response,
-        connector_data_type: connector_integration::types::SurchargeConnectorData<domain_types::payment_method_data::DefaultPCIHolder>,
+        connector_data_type: SurchargeConnectorData,
         all_keys_required: None
     );
 }

@@ -239,9 +239,10 @@ where
             "<masked serialization error>".to_string()
         }
     };
+    let connector_name = connector.get_connector_name();
     current_span.record("service_name", service_name);
     current_span.record("request_body", req_body_json);
-    current_span.record("gateway", connector.to_string());
+    current_span.record("gateway", connector_name);
     current_span.record("merchant_id", merchant_id);
     current_span.record("tenant_id", tenant_id);
     current_span.record("request_id", request_id);
@@ -418,11 +419,14 @@ fn create_and_emit_grpc_event<R>(
 ) where
     R: serde::Serialize,
 {
+    let connector = metadata_payload
+        .map(|md| md.connector.get_connector_name())
+        .unwrap_or_else(|| "unknown".to_string());
     let mut grpc_event = Event {
         request_id: metadata_payload.map_or("unknown".to_string(), |md| md.request_id.clone()),
         timestamp: chrono::Utc::now().timestamp_millis().into(),
         flow_type: flow_name,
-        connector: metadata_payload.map_or("unknown".to_string(), |md| md.connector.to_string()),
+        connector,
         url: None,
         method: None,
         stage: EventStage::GrpcRequest,
@@ -493,6 +497,7 @@ macro_rules! implement_connector_operation {
         request_data_constructor: $request_data_constructor:path,
         common_flow_data_constructor: $common_flow_data_constructor:path,
         generate_response_fn: $generate_response_fn:path,
+        connector_data_type: $connector_data_type:ty,
         all_keys_required: $all_keys_required:expr,
         has_payment_method_data: true
     ) => {
@@ -662,6 +667,7 @@ macro_rules! implement_connector_operation {
         request_data_constructor: $request_data_constructor:path,
         common_flow_data_constructor: $common_flow_data_constructor:path,
         generate_response_fn: $generate_response_fn:path,
+        connector_data_type: $connector_data_type:ty,
         all_keys_required: $all_keys_required:expr,
         has_payment_method_data: option
     ) => {
@@ -758,7 +764,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let event_params = external_services::service::EventProcessingParams {
-                connector_name: &connector.to_string(),
+                connector_name: &metadata_payload.connector.get_connector_name(),
                 service_name: &service_name,
                 service_type: $crate::utils::service_type_str(&config.server.type_),
                 flow_name,
@@ -808,6 +814,7 @@ macro_rules! implement_connector_operation {
         request_data_constructor: $request_data_constructor:path,
         common_flow_data_constructor: $common_flow_data_constructor:path,
         generate_response_fn: $generate_response_fn:path,
+        connector_data_type: $connector_data_type:ty,
         all_keys_required: $all_keys_required:expr
     ) => {
         async fn $fn_name(
@@ -886,7 +893,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let event_params = external_services::service::EventProcessingParams {
-                connector_name: &connector.to_string(),
+                connector_name: &metadata_payload.connector.get_connector_name(),
                 service_name: &service_name,
                 service_type: $crate::utils::service_type_str(&config.server.type_),
                 flow_name,
