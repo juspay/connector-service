@@ -4436,7 +4436,12 @@ impl
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-            status: common_enums::AttemptStatus::Pending,
+            status: match value.previous_attempt_status() {
+                grpc_payment_types::PaymentStatus::Unspecified => {
+                    common_enums::AttemptStatus::Pending
+                }
+                s => common_enums::AttemptStatus::foreign_try_from(s)?,
+            },
             payment_method: PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
