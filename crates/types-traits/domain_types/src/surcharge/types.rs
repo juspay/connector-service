@@ -3,7 +3,7 @@ use crate::surcharge::surcharge_types::{
     SurchargeCalculateRequest, SurchargeFlowData, SurchargeStrategy,
 };
 use crate::types::Connectors;
-use crate::utils::{extract_merchant_id_from_metadata, ForeignTryFrom};
+use crate::utils::{extract_merchant_id_from_metadata, extract_connector_request_reference_id, ForeignTryFrom};
 use common_utils::metadata::MaskedMetadata;
 use common_utils::types::MinorUnit;
 use error_stack::ResultExt;
@@ -27,7 +27,9 @@ impl
 
         Ok(Self {
             merchant_id,
-            connector_request_reference_id: value.merchant_surcharge_id.clone().unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.merchant_surcharge_id,
+            ),
             connectors,
             raw_connector_response: None,
             raw_connector_request: None,
