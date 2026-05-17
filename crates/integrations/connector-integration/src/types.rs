@@ -135,7 +135,9 @@ impl SurchargeConnectorData {
 
     fn convert_connector(connector_name: SurchargeConnectorEnum) -> BoxedSurchargeConnector {
         match connector_name {
-            SurchargeConnectorEnum::Interpayments => Box::new(crate::surcharge_connectors::InterPayments::new()),
+            SurchargeConnectorEnum::Interpayments => {
+                Box::new(crate::surcharge_connectors::InterPayments::new())
+            }
         }
     }
 }

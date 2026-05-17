@@ -1,5 +1,6 @@
 pub mod transformers;
 
+use crate::{common_macros, with_error_response_body, with_response_body};
 use common_utils::{
     consts::NO_ERROR_MESSAGE,
     errors::CustomResult,
@@ -18,9 +19,8 @@ use domain_types::{
     },
     types::Connectors,
 };
-use crate::{with_error_response_body, with_response_body, common_macros};
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, Mask, PeekInterface};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -89,11 +89,13 @@ impl ConnectorCommon for InterPayments {
 
         with_error_response_body!(event_builder, response);
 
-
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.reason_code.clone(),
-            message: response.message.clone().unwrap_or(NO_ERROR_MESSAGE.to_string()),
+            message: response
+                .message
+                .clone()
+                .unwrap_or(NO_ERROR_MESSAGE.to_string()),
             reason: response.reason.clone(),
             attempt_status: None,
             connector_transaction_id: None,
@@ -118,12 +120,13 @@ impl InterPayments {
     }
 }
 
-impl ConnectorIntegrationV2<
-    SurchargeCalculate,
-    SurchargeFlowData,
-    SurchargeCalculateRequest,
-    SurchargeCalculateResponse,
-> for InterPayments
+impl
+    ConnectorIntegrationV2<
+        SurchargeCalculate,
+        SurchargeFlowData,
+        SurchargeCalculateRequest,
+        SurchargeCalculateResponse,
+    > for InterPayments
 {
     fn get_headers(
         &self,

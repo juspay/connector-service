@@ -4433,7 +4433,9 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Easebuzz(_) => Ok(Self::Payment(ConnectorEnum::Easebuzz)),
             AuthType::Imerchantsolutions(_) => Ok(Self::Payment(ConnectorEnum::Imerchantsolutions)),
             AuthType::TwocTwopPaco(_) => Ok(Self::Payment(ConnectorEnum::TwocTwopPaco)),
-            AuthType::Interpayments(_) => Ok(Self::Surcharge(SurchargeConnectorEnum::Interpayments)),
+            AuthType::Interpayments(_) => {
+                Ok(Self::Surcharge(SurchargeConnectorEnum::Interpayments))
+            }
         }
     }
 }

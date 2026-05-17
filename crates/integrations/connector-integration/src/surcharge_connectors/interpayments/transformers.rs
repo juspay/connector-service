@@ -1,17 +1,18 @@
+use crate::types::ResponseRouterData;
+use common_enums::CountryAlpha2;
 use common_utils::types::FloatMajorUnit;
 use domain_types::{
     connector_flow::SurchargeCalculate,
     errors::{ConnectorError, IntegrationError},
-    router_data::{ErrorResponse,ConnectorSpecificConfig},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    surcharge::surcharge_types::{SurchargeCalculateRequest, SurchargeCalculateResponse, SurchargeFlowData},
+    surcharge::surcharge_types::{
+        SurchargeCalculateRequest, SurchargeCalculateResponse, SurchargeFlowData,
+    },
 };
 use error_stack::ResultExt;
-use serde::{Deserialize, Serialize};
-use common_enums::CountryAlpha2;
-use crate::types::ResponseRouterData;
 use hyperswitch_masking::Secret;
-
+use serde::{Deserialize, Serialize};
 
 const INTERPAYMENTS_OK_MESSAGE: &str = "ok";
 pub struct InterpaymentsAuthType {
@@ -21,10 +22,7 @@ pub struct InterpaymentsAuthType {
 impl TryFrom<&ConnectorSpecificConfig> for InterpaymentsAuthType {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(item: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificConfig::Interpayments {
-            api_key, ..
-        } = item
-        {
+        if let ConnectorSpecificConfig::Interpayments { api_key, .. } = item {
             Ok(Self {
                 api_key: api_key.to_owned(),
             })
@@ -44,27 +42,38 @@ pub struct InterpaymentsErrorResponse {
     pub reason: Option<String>,
 }
 
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InterPaymentsSurchargeRequest {
     pub amount: FloatMajorUnit,
     pub region: CountryAlpha2,
-    // Card Bin 
+    // Card Bin
     pub nicn: String,
     pub m_tx_id: Option<String>,
 }
 
-impl TryFrom<&RouterDataV2<SurchargeCalculate, SurchargeFlowData, SurchargeCalculateRequest, SurchargeCalculateResponse>> for InterPaymentsSurchargeRequest {
+impl
+    TryFrom<
+        &RouterDataV2<
+            SurchargeCalculate,
+            SurchargeFlowData,
+            SurchargeCalculateRequest,
+            SurchargeCalculateResponse,
+        >,
+    > for InterPaymentsSurchargeRequest
+{
     type Error = error_stack::Report<IntegrationError>;
 
     fn try_from(
-        req: &RouterDataV2<SurchargeCalculate, SurchargeFlowData, SurchargeCalculateRequest, SurchargeCalculateResponse>,
+        req: &RouterDataV2<
+            SurchargeCalculate,
+            SurchargeFlowData,
+            SurchargeCalculateRequest,
+            SurchargeCalculateResponse,
+        >,
     ) -> Result<Self, Self::Error> {
-        let amount = super::InterPaymentsAmountConvertor::convert(
-            req.request.amount,
-            req.request.currency,
-        )?;
+        let amount =
+            super::InterPaymentsAmountConvertor::convert(req.request.amount, req.request.currency)?;
 
         let region = req.request.country.ok_or_else(|| {
             error_stack::report!(IntegrationError::MissingRequiredField {
@@ -77,7 +86,11 @@ impl TryFrom<&RouterDataV2<SurchargeCalculate, SurchargeFlowData, SurchargeCalcu
             amount,
             region,
             nicn: req.request.card_bin.clone(),
-            m_tx_id: Some(req.resource_common_data.connector_request_reference_id.clone()),
+            m_tx_id: Some(
+                req.resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
         })
     }
 }
@@ -92,15 +105,18 @@ pub struct InterPaymentsSurchargeResponse {
     pub transaction_fee_percent: f64,
 }
 
-
-
-impl TryFrom<ResponseRouterData<InterPaymentsSurchargeResponse, Self>> for 
-RouterDataV2<SurchargeCalculate, SurchargeFlowData, SurchargeCalculateRequest, SurchargeCalculateResponse> {
+impl TryFrom<ResponseRouterData<InterPaymentsSurchargeResponse, Self>>
+    for RouterDataV2<
+        SurchargeCalculate,
+        SurchargeFlowData,
+        SurchargeCalculateRequest,
+        SurchargeCalculateResponse,
+    >
+{
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ResponseRouterData<InterPaymentsSurchargeResponse, Self>,
     ) -> Result<Self, Self::Error> {
-
         let response = if item.response.message.to_lowercase() == INTERPAYMENTS_OK_MESSAGE {
             Ok(SurchargeCalculateResponse {
                 connector_response_reference_id: Some(item.response.s_tx_id.clone()),
@@ -108,29 +124,37 @@ RouterDataV2<SurchargeCalculate, SurchargeFlowData, SurchargeCalculateRequest, S
                 surcharge_amount: super::InterPaymentsAmountConvertor::convert_back(
                     item.response.transaction_fee,
                     item.router_data.request.currency,
-                ).change_context(
-                    crate::utils::response_handling_fail_for_connector(item.http_code, "interpayments"),
+                )
+                .change_context(
+                    crate::utils::response_handling_fail_for_connector(
+                        item.http_code,
+                        "interpayments",
+                    ),
                 )?,
                 surcharge_rate_percent: item.response.transaction_fee_percent,
                 currency: item.router_data.request.currency,
             })
         } else {
             Err(ErrorResponse {
-            status_code: item.http_code,
-            code: item.response.reason_code.clone().unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
-            message: item.response.message.clone(),
-            reason: Some(item.response.message.clone()),
-            attempt_status: None,
-            connector_transaction_id: item.response.s_tx_id.clone().into(),
-            network_advice_code: None,
-            network_decline_code: None,
-            network_error_message: None,
-        })
+                status_code: item.http_code,
+                code: item
+                    .response
+                    .reason_code
+                    .clone()
+                    .unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
+                message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                attempt_status: None,
+                connector_transaction_id: item.response.s_tx_id.clone().into(),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
         };
 
         Ok(Self {
-                response,
-                ..item.router_data
+            response,
+            ..item.router_data
         })
     }
 }
