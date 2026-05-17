@@ -3,7 +3,9 @@ use crate::surcharge::surcharge_types::{
     SurchargeCalculateRequest, SurchargeFlowData, SurchargeStrategy,
 };
 use crate::types::Connectors;
-use crate::utils::{extract_merchant_id_from_metadata, extract_connector_request_reference_id, ForeignTryFrom};
+use crate::utils::{
+    extract_connector_request_reference_id, extract_merchant_id_from_metadata, ForeignTryFrom,
+};
 use common_utils::metadata::MaskedMetadata;
 use common_utils::types::MinorUnit;
 use error_stack::ResultExt;
