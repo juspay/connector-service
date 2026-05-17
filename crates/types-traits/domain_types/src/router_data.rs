@@ -262,6 +262,10 @@ pub enum ConnectorSpecificConfig {
         merchant_id: Option<Secret<String>>,
         base_url: Option<String>,
     },
+    Interpayments {
+        api_key: Secret<String>,
+        base_url: Option<String>,
+    },
     Bambora {
         merchant_id: Secret<String>,
         api_key: Secret<String>,
@@ -1070,6 +1074,7 @@ impl ConnectorSpecificConfig {
                 client_secret
             },
             Imerchantsolutions { api_key },
+            Interpayments { api_key },
             TwocTwopPaco {
                 access_token,
                 office_id,
@@ -1481,6 +1486,7 @@ impl ConnectorSpecificConfig {
                     client_secret
                 },
                 Imerchantsolutions { api_key },
+                Interpayments { api_key },
                 TwocTwopPaco {
                     access_token,
                     office_id,
@@ -2019,6 +2025,10 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 merchant_id: imerchantsolutions.merchant_id,
                 base_url: imerchantsolutions.base_url,
             }),
+            AuthType::Interpayments(interpayments) => Ok(Self::Interpayments {
+                api_key: interpayments.api_key.ok_or_else(err)?,
+                base_url: interpayments.base_url,
+            }),
             AuthType::TwocTwopPaco(twoc_twop_paco) => Ok(Self::TwocTwopPaco {
                 access_token: twoc_twop_paco.access_token.ok_or_else(err)?,
                 office_id: twoc_twop_paco.office_id.ok_or_else(err)?,
@@ -2048,7 +2058,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
     fn foreign_try_from(
         (auth, connector): (&ConnectorAuthType, &connector_types::ConnectorVariant),
     ) -> Result<Self, Error> {
-        use connector_types::{ConnectorEnum, ConnectorVariant};
+        use connector_types::{ConnectorEnum, ConnectorVariant, SurchargeConnectorEnum};
 
         let err = || errors::IntegrationError::FailedToObtainAuthType {
             context: Default::default(),
@@ -2177,7 +2187,6 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     }),
                     _ => Err(err().into()),
                 },
-
                 // --- BodyKey connectors ---
                 ConnectorEnum::Aci => match auth {
                     ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Aci {
@@ -3105,8 +3114,15 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                 },
                 ConnectorEnum::TwocTwopPaco => Err(err().into()),
             },
-            connector_types::ConnectorVariant::Surcharge(_) => {
-                unimplemented!("Surcharge connectors not yet available")
+            connector_types::ConnectorVariant::Surcharge(connector_enum) => {
+                match connector_enum {
+                SurchargeConnectorEnum::Interpayments => match auth {
+                    ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Interpayments {
+                        api_key: api_key.clone(),
+                        base_url: None,
+                    }),
+                    _ => Err(err().into()),
+                }}
             }
         }
     }

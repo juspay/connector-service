@@ -397,6 +397,7 @@ pub struct Connectors {
     pub imerchantsolutions: ConnectorParams,
     pub axisbank: ConnectorParams,
     pub twoc_twop_paco: ConnectorParams,
+    pub interpayments: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -13678,7 +13679,7 @@ pub fn generate_surcharge_calculate_response(
                     surcharge_amount: Some(surcharge_amount),
                     surcharge_percentage: Some(response.surcharge_rate_percent),
                     connector_surcharge_id: Some(response.connector_surcharge_id),
-                    status_code: response.status_code.into(),
+                    status_code: 200, 
                     error: None,
                 },
             )

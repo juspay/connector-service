@@ -162,7 +162,7 @@ pub enum ConnectorEnum {
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum SurchargeConnectorEnum {
-    InterPayments,
+    Interpayments,
 }
 
 /// Unified connector enum that can represent either payment or surcharge connectors
@@ -4433,6 +4433,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Easebuzz(_) => Ok(Self::Payment(ConnectorEnum::Easebuzz)),
             AuthType::Imerchantsolutions(_) => Ok(Self::Payment(ConnectorEnum::Imerchantsolutions)),
             AuthType::TwocTwopPaco(_) => Ok(Self::Payment(ConnectorEnum::TwocTwopPaco)),
+            AuthType::Interpayments(_) => Ok(Self::Surcharge(SurchargeConnectorEnum::Interpayments)),
         }
     }
 }

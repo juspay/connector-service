@@ -58,7 +58,6 @@ pub enum SurchargeStrategy {
 /// Request data for surcharge calculation
 #[derive(Debug, Clone)]
 pub struct SurchargeCalculateRequest {
-    pub connector_request_reference_id: Option<String>,
     pub amount: MinorUnit,
     pub currency: Currency,
     pub previous_connector_surcharge_id: Option<String>,
@@ -83,5 +82,4 @@ pub struct SurchargeCalculateResponse {
     pub surcharge_rate_percent: f64,
     pub connector_surcharge_id: String,
     pub currency: Currency,
-    pub status_code: u16,
 }

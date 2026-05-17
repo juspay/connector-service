@@ -133,9 +133,10 @@ impl SurchargeConnectorData {
         }
     }
 
-    fn convert_connector(_connector_name: SurchargeConnectorEnum) -> BoxedSurchargeConnector {
-        // TODO: Add surcharge connectors as they are implemented
-        unimplemented!("Surcharge connectors not yet available")
+    fn convert_connector(connector_name: SurchargeConnectorEnum) -> BoxedSurchargeConnector {
+        match connector_name {
+            SurchargeConnectorEnum::Interpayments => Box::new(crate::surcharge_connectors::InterPayments::new()),
+        }
     }
 }
 

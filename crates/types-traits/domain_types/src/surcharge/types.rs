@@ -112,7 +112,6 @@ impl ForeignTryFrom<grpc_api_types::surcharge::SurchargeServiceCalculateRequest>
         })?;
 
         Ok(Self {
-            connector_request_reference_id: value.merchant_surcharge_id,
             amount: MinorUnit::new(amount.minor_amount),
             currency,
             previous_connector_surcharge_id: value.previous_connector_surcharge_id,
