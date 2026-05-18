@@ -17,7 +17,7 @@ use domain_types::{
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
         RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
-        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        ResponseId, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
         ServerSessionAuthenticationTokenRequestData, ServerSessionAuthenticationTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
         WebhookDetailsResponse, WebhookResourceReference,
@@ -50,6 +50,35 @@ use crate::{
 pub enum IncomingWebhookFlowError {
     ResourceNotFound,
     InternalError,
+}
+
+/// Dimensions of a webhook payment response that Euler can verify for integrity.
+///
+/// A connector declares which checks it supports by returning the relevant variants
+/// from [`IncomingWebhook::get_webhook_integrity_checks`]. This enum is intentionally
+/// non-exhaustive so new dimensions (e.g., status, card BIN) can be added without
+/// breaking connector overrides that use explicit `vec![...]` construction.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum WebhookIntegrityCheck {
+    /// Verify the gateway/connector transaction ID sent in the webhook matches stored data.
+    GatewayTxnId,
+    /// Verify the payment amount sent in the webhook matches stored data.
+    Amount,
+    /// Verify the payment currency sent in the webhook matches stored data.
+    Currency,
+}
+
+impl WebhookIntegrityCheck {
+    /// Returns the snake_case string representation used in the JSON / proto wire format.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::GatewayTxnId => "gateway_txn_id",
+            Self::Amount => "amount",
+            Self::Currency => "currency",
+        }
+    }
 }
 
 pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
@@ -379,6 +408,19 @@ pub trait IncomingWebhook {
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<WebhookError>> {
         Ok(false)
+    }
+
+    /// Returns which integrity dimensions this connector populates in its payment webhook.
+    ///
+    /// Each variant in the returned [`Vec`] means the connector *will* provide that value
+    /// in its webhook payload, so Euler (or any caller) should verify it against stored data.
+    ///
+    /// The default implementation returns an empty [`Vec`] (no checks).
+    /// Connectors **override** this to declare their support statically (e.g.,
+    /// a connector that always provides a gateway transaction ID can return
+    /// `vec![WebhookIntegrityCheck::GatewayTxnId]`).
+    fn get_webhook_integrity_checks(&self) -> Vec<WebhookIntegrityCheck> {
+        vec![]
     }
 
     /// fn get_webhook_source_verification_signature

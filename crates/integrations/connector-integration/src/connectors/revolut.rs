@@ -388,6 +388,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             response
         })
     }
+
+    fn get_webhook_integrity_checks(&self) -> Vec<connector_types::WebhookIntegrityCheck> {
+        // Revolut only provides the gateway transaction ID in its webhook payload
+        // (via `connector_response_reference_id`). Amount and currency are not
+        // sent reliably, so those checks are intentionally omitted.
+        vec![connector_types::WebhookIntegrityCheck::GatewayTxnId]
+    }
+
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

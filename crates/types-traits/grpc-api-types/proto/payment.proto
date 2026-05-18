@@ -1359,6 +1359,11 @@ message EventServiceHandleResponse {
 
   // Suggested HTTP response to send back to the connector for webhook acknowledgement
   optional EventAckResponse event_ack_response = 5;
+
+  // Integrity dimensions the connector confirms are present in this webhook payload.
+  // Empty for refund/dispute events or connectors that support no integrity checks.
+  // Values are snake_case strings: "gateway_txn_id", "amount", "currency".
+  repeated string integrity_checks = 6;
 }
 
 // Suggested HTTP response for webhook acknowledgement (status, headers, body).
