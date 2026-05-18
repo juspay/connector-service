@@ -1056,11 +1056,12 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let post_capture_void_status: common_enums::PostCaptureVoidStatus = FiservemeaVoidPCStatus {
-            transaction_status: item.response.transaction_status.clone(),
-            transaction_result: item.response.transaction_result.clone(),
-        }
-        .into();
+        let post_capture_void_status: common_enums::PostCaptureVoidStatus =
+            FiservemeaVoidPCStatus {
+                transaction_status: item.response.transaction_status.clone(),
+                transaction_result: item.response.transaction_result.clone(),
+            }
+            .into();
 
         Ok(Self {
             response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
