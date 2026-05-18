@@ -54,6 +54,7 @@ impl DisputeOperationsInternal for Disputes {
         request_data_constructor: DisputeDefendData::foreign_try_from,
         common_flow_data_constructor: DisputeFlowData::foreign_try_from,
         generate_response_fn: generate_defend_dispute_response,
+        connector_data_type: ConnectorData<DefaultPCIHolder>,
         all_keys_required: None
     );
 }
@@ -112,8 +113,14 @@ impl DisputeService for Disputes {
                         tenant_id,
                         ..
                     } = request_data.extracted_metadata;
+                    let payments_connector =
+                        connector
+                            .as_payment()
+                            .ok_or(tonic::Status::invalid_argument(
+                                "Invalid Connector Received".to_string(),
+                            ))?;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&connector);
+                        ConnectorData::get_connector_by_name(&payments_connector);
 
                     let connector_integration: BoxedConnectorIntegrationV2<
                         '_,
@@ -149,7 +156,7 @@ impl DisputeService for Disputes {
                         response: Err(ErrorResponse::default()),
                     };
                     let event_params = external_services::service::EventProcessingParams {
-                        connector_name: &connector.to_string(),
+                        connector_name: &payments_connector.to_string(),
                         service_name: &service_name,
                         service_type: utils::service_type_str(&config.server.type_),
                         flow_name: common_utils::events::FlowName::SubmitEvidence,
@@ -331,9 +338,14 @@ impl DisputeService for Disputes {
                         tenant_id,
                         ..
                     } = request_data.extracted_metadata;
-
+                    let payments_connector =
+                        connector
+                            .as_payment()
+                            .ok_or(tonic::Status::invalid_argument(
+                                "Invalid Connector Received".to_string(),
+                            ))?;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
-                        ConnectorData::get_connector_by_name(&connector);
+                        ConnectorData::get_connector_by_name(&payments_connector);
 
                     let connector_integration: BoxedConnectorIntegrationV2<
                         '_,
@@ -370,7 +382,7 @@ impl DisputeService for Disputes {
                     };
 
                     let event_params = external_services::service::EventProcessingParams {
-                        connector_name: &connector.to_string(),
+                        connector_name: &payments_connector.to_string(),
                         service_name: &service_name,
                         service_type: utils::service_type_str(&config.server.type_),
                         flow_name: common_utils::events::FlowName::AcceptDispute,
