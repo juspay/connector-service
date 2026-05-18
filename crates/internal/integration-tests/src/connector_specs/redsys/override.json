@@ -1,1 +1,62 @@
-{}
+{
+  "PaymentService/Authorize": {
+    "no3ds_auto_capture_credit_card": {
+      "grpc_req": {
+        "merchant_transaction_id": "nocc01"
+      }
+    },
+    "no3ds_auto_capture_debit_card": {
+      "grpc_req": {
+        "merchant_transaction_id": "nodc01"
+      }
+    },
+    "no3ds_manual_capture_credit_card": {
+      "grpc_req": {
+        "merchant_transaction_id": "mncc01"
+      }
+    },
+    "no3ds_manual_capture_debit_card": {
+      "grpc_req": {
+        "merchant_transaction_id": "mndc01"
+      }
+    },
+    "threeds_manual_capture_credit_card": {
+      "grpc_req": {
+        "merchant_transaction_id": "3dcc01"
+      }
+    },
+    "no3ds_fail_payment": {
+      "grpc_req": {
+        "merchant_transaction_id": "nofp01",
+        "payment_method": {
+          "card": {
+            "card_exp_month": {
+              "value": "01"
+            },
+            "card_exp_year": {
+              "value": "20"
+            }
+          }
+        }
+      }
+    }
+  },
+  "PaymentService/Void": {
+    "void_authorized_payment": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      }
+    },
+    "void_without_cancellation_reason": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      }
+    }
+  }
+}
