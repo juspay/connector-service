@@ -82,6 +82,17 @@ Variables:
 
 **Gate**: If the tech spec agent returns FAILED (no spec generated), report this connector as FAILED and go directly to Phase 6 (report). No code was generated, so there is nothing to commit or PR.
 
+**Capture the tech spec issue reference (HARD GATE)**: The Tech Spec Agent publishes a tracking issue to `juspay/grace` (see Phase 4 of `2.2_techspec.md`) and returns:
+
+- `ISSUE_URL` — full URL of the issue in `juspay/grace`
+- `ISSUE_NUMBER` — the issue number `N`
+
+Store these as `{TECHSPEC_ISSUE_URL}` and `{TECHSPEC_ISSUE_NUMBER}`.
+
+**HARD GATE — non-empty required**: If the Tech Spec Agent returned STATUS=SUCCESS but either `ISSUE_URL` or `ISSUE_NUMBER` is empty/missing/zero, treat this as a Phase 2 FAILURE. Do NOT proceed to Phase 3, 4, or 5. Report this connector as FAILED in Phase 6 with REASON=`"Tech spec issue gate failed: Tech Spec Agent returned SUCCESS without a valid juspay/grace issue reference."`
+
+This gate exists because the implementation PR opened in Phase 5 MUST cross-reference the tech spec issue — there is no valid path forward without it. The Tech Spec Agent is contractually required to either produce both fields or return FAILED itself; an inconsistent return is a bug worth surfacing rather than papering over.
+
 ---
 
 ## Phase 3: Setup & Discover Files (you do this yourself)
@@ -188,7 +199,9 @@ Variables:
   CONNECTOR_STATUS: <SUCCESS or FAILED>
   FAILURE_REASON: <reason string, empty if SUCCESS>
   GRPCURL_OUTPUT: <the full grpcurl test output from the Codegen Agent, raw text>
-  CONNECTOR_SOURCE_FILES: <paths to connector source files from Phase 3>"
+  CONNECTOR_SOURCE_FILES: <paths to connector source files from Phase 3>
+  TECHSPEC_ISSUE_URL: <the ISSUE_URL captured from the Tech Spec Agent in Phase 2, or empty>
+  TECHSPEC_ISSUE_NUMBER: <the ISSUE_NUMBER captured from the Tech Spec Agent in Phase 2, or empty>"
 )
 ```
 
