@@ -1122,9 +1122,7 @@ impl TryFrom<ResponseRouterData<FiservVoidPCResponse, Self>>
     }
 }
 
-fn map_fiserv_void_pc_status(
-    status: &FiservPaymentStatus,
-) -> common_enums::PostCaptureVoidStatus {
+fn map_fiserv_void_pc_status(status: &FiservPaymentStatus) -> common_enums::PostCaptureVoidStatus {
     match status {
         FiservPaymentStatus::Voided => common_enums::PostCaptureVoidStatus::Succeeded,
         FiservPaymentStatus::Captured
