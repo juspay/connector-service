@@ -15,7 +15,9 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        GpayTokenizationData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
@@ -132,6 +134,8 @@ impl Default for AuthipayErrorResponse {
 pub enum AuthipayRequestType {
     PaymentCardSaleTransaction,
     PaymentCardPreAuthTransaction,
+    WalletSaleTransaction,
+    WalletPreAuthTransaction,
     PostAuthTransaction,
     ReturnTransaction,
     VoidPreAuthTransactions,
@@ -164,8 +168,76 @@ pub struct OrderDetails {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PaymentMethod<T: PaymentMethodDataTypes> {
+pub struct CardPaymentMethod<T: PaymentMethodDataTypes> {
     pub payment_card: PaymentCard<T>,
+}
+
+// ===== GOOGLE PAY WALLET STRUCTURES =====
+
+/// Helper struct to parse the outer Google Pay token JSON (PAYMENT_GATEWAY mode)
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePayTokenOuter {
+    pub signature: String,
+    pub protocol_version: String,
+    pub signed_message: String,
+}
+
+/// Helper struct to parse the `signedMessage` inner JSON from Google Pay token
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GooglePaySignedMessage {
+    pub encrypted_message: String,
+    pub ephemeral_public_key: String,
+    pub tag: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthipayEncryptedGooglePayData {
+    pub encrypted_message: String,
+    pub ephemeral_public_key: String,
+    pub tag: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthipayEncryptedGooglePay {
+    pub data: AuthipayEncryptedGooglePayData,
+    pub signature: String,
+    pub version: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthipayDecryptedGooglePay {
+    pub account_number: Secret<String>,
+    pub expiration: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cardholder_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cryptogram: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub eci_indicator: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WalletPaymentMethodData {
+    pub wallet_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encrypted_google_pay: Option<AuthipayEncryptedGooglePay>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub decrypted_google_pay: Option<AuthipayDecryptedGooglePay>,
+}
+
+/// Untagged enum so that the card variant serializes as `{"paymentCard": {...}}`
+/// and the wallet variant serializes as `{"walletType": "...", ...}`
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum PaymentMethod<T: PaymentMethodDataTypes> {
+    Card(CardPaymentMethod<T>),
+    Wallet(WalletPaymentMethodData),
 }
 
 #[derive(Debug, Serialize)]
@@ -216,7 +288,7 @@ impl<T: PaymentMethodDataTypes>
         };
 
         // Extract payment method data
-        let payment_method = match &item.request.payment_method_data {
+        let (payment_method, is_wallet) = match &item.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Use utility function to get year in YY format (2 digits)
                 let year_yy = card_data.get_card_expiry_year_2_digit()?;
@@ -230,11 +302,82 @@ impl<T: PaymentMethodDataTypes>
                     security_code: Some(card_data.card_cvc.clone()),
                     holder: item.request.customer_name.clone().map(Secret::new),
                 };
-                PaymentMethod { payment_card }
+                (
+                    PaymentMethod::Card(CardPaymentMethod { payment_card }),
+                    false,
+                )
+            }
+            PaymentMethodData::Wallet(WalletData::GooglePay(ref gpay_data)) => {
+                let wallet_pm = match &gpay_data.tokenization_data {
+                    GpayTokenizationData::Encrypted(ref encrypted_data) => {
+                        // Parse the outer Google Pay token JSON
+                        let outer: GooglePayTokenOuter =
+                            serde_json::from_str(&encrypted_data.token).change_context(
+                                IntegrationError::RequestEncodingFailed {
+                                    context: Default::default(),
+                                },
+                            )?;
+
+                        // Parse the signed_message inner JSON
+                        let signed: GooglePaySignedMessage = serde_json::from_str(
+                            &outer.signed_message,
+                        )
+                        .change_context(IntegrationError::RequestEncodingFailed {
+                            context: Default::default(),
+                        })?;
+
+                        WalletPaymentMethodData {
+                            wallet_type: "EncryptedGooglePay".to_string(),
+                            encrypted_google_pay: Some(AuthipayEncryptedGooglePay {
+                                data: AuthipayEncryptedGooglePayData {
+                                    encrypted_message: signed.encrypted_message,
+                                    ephemeral_public_key: signed.ephemeral_public_key,
+                                    tag: signed.tag,
+                                },
+                                signature: outer.signature,
+                                version: outer.protocol_version,
+                            }),
+                            decrypted_google_pay: None,
+                        }
+                    }
+                    GpayTokenizationData::Decrypted(ref decrypted_data) => {
+                        // Expiration in MMYYYY format as required by Authipay
+                        let exp_month = decrypted_data.get_expiry_month().change_context(
+                            IntegrationError::RequestEncodingFailed {
+                                context: Default::default(),
+                            },
+                        )?;
+                        let exp_year = decrypted_data.get_four_digit_expiry_year().change_context(
+                            IntegrationError::RequestEncodingFailed {
+                                context: Default::default(),
+                            },
+                        )?;
+                        // Combine as MMYYYY
+                        let expiration =
+                            Secret::new(format!("{}{}", exp_month.peek(), exp_year.peek()));
+
+                        WalletPaymentMethodData {
+                            wallet_type: "DecryptedGooglePay".to_string(),
+                            encrypted_google_pay: None,
+                            decrypted_google_pay: Some(AuthipayDecryptedGooglePay {
+                                account_number: Secret::new(
+                                    decrypted_data
+                                        .application_primary_account_number
+                                        .get_card_no(),
+                                ),
+                                expiration,
+                                cardholder_name: None,
+                                cryptogram: decrypted_data.cryptogram.clone(),
+                                eci_indicator: decrypted_data.eci_indicator.clone(),
+                            }),
+                        }
+                    }
+                };
+                (PaymentMethod::Wallet(wallet_pm), true)
             }
             _ => {
                 return Err(error_stack::report!(IntegrationError::NotImplemented(
-                    "Only card payments are supported".to_string(),
+                    "Only card and Google Pay wallet payments are supported".to_string(),
                     Default::default()
                 )))
             }
@@ -258,23 +401,25 @@ impl<T: PaymentMethodDataTypes>
             order_id: merchant_transaction_id.clone(),
         };
 
-        if is_manual_capture {
-            Ok(Self {
-                request_type: AuthipayRequestType::PaymentCardPreAuthTransaction,
-                merchant_transaction_id,
-                transaction_amount,
-                order,
-                payment_method,
-            })
+        let request_type = if is_wallet {
+            if is_manual_capture {
+                AuthipayRequestType::WalletPreAuthTransaction
+            } else {
+                AuthipayRequestType::WalletSaleTransaction
+            }
+        } else if is_manual_capture {
+            AuthipayRequestType::PaymentCardPreAuthTransaction
         } else {
-            Ok(Self {
-                request_type: AuthipayRequestType::PaymentCardSaleTransaction,
-                merchant_transaction_id,
-                transaction_amount,
-                order,
-                payment_method,
-            })
-        }
+            AuthipayRequestType::PaymentCardSaleTransaction
+        };
+
+        Ok(Self {
+            request_type,
+            merchant_transaction_id,
+            transaction_amount,
+            order,
+            payment_method,
+        })
     }
 }
 
@@ -297,10 +442,6 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
     fn try_from(
         item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        // Validate connector_transaction_id is present
-        // The get_connector_transaction_id() method will validate this in get_url()
-        // No validation needed here
-
         // Get capture amount from minor_amount_to_capture
         let capture_amount = item.request.minor_amount_to_capture;
 
