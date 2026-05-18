@@ -2827,6 +2827,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+fn map_cybersource_void_pc_status(
+    status: CybersourcePaymentStatus,
+) -> common_enums::PostCaptureVoidStatus {
+    match status {
+        CybersourcePaymentStatus::Voided
+        | CybersourcePaymentStatus::Reversed
+        | CybersourcePaymentStatus::Cancelled => common_enums::PostCaptureVoidStatus::Succeeded,
+        CybersourcePaymentStatus::Failed
+        | CybersourcePaymentStatus::Declined
+        | CybersourcePaymentStatus::AuthorizedRiskDeclined
+        | CybersourcePaymentStatus::Rejected
+        | CybersourcePaymentStatus::InvalidRequest
+        | CybersourcePaymentStatus::ServerError => common_enums::PostCaptureVoidStatus::Failed,
+        CybersourcePaymentStatus::Authorized
+        | CybersourcePaymentStatus::Succeeded
+        | CybersourcePaymentStatus::Transmitted
+        | CybersourcePaymentStatus::Pending
+        | CybersourcePaymentStatus::Challenge
+        | CybersourcePaymentStatus::AuthorizedPendingReview
+        | CybersourcePaymentStatus::PendingAuthentication
+        | CybersourcePaymentStatus::PendingReview
+        | CybersourcePaymentStatus::Accepted
+        | CybersourcePaymentStatus::StatusNotReceived => common_enums::PostCaptureVoidStatus::Pending,
+    }
+}
+
 impl<F> TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
 {
@@ -2834,38 +2860,35 @@ impl<F> TryFrom<ResponseRouterData<CybersourcePaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<CybersourcePaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = map_cybersource_attempt_status(
+        let post_capture_void_status = map_cybersource_void_pc_status(
             item.response
                 .status
                 .clone()
                 .unwrap_or(CybersourcePaymentStatus::StatusNotReceived),
-            false,
         );
-        let error_response =
-            get_error_response_if_failure((&item.response, status, item.http_code));
-        let response = match error_response {
-            Some(error) => Err(error),
-            None => {
-                let post_capture_void_status = if status == common_enums::AttemptStatus::Voided {
-                    common_enums::PostCaptureVoidStatus::Succeeded
-                } else if domain_types::utils::is_payment_failure(status) {
-                    common_enums::PostCaptureVoidStatus::Failed
-                } else {
-                    common_enums::PostCaptureVoidStatus::Pending
-                };
-                Ok(PaymentsResponseData::PostCaptureVoidResponse {
-                    post_capture_void_status,
-                    connector_reference_id: Some(item.response.id.clone()),
-                    description: None,
-                    status_code: item.http_code,
-                })
-            }
+        let response = if post_capture_void_status.is_post_capture_void_failure() {
+            // Build the error response manually so we can ensure `attempt_status` is
+            // `None`. The VoidPC flow must not propagate an attempt status that
+            // would update the payment's overall status.
+            let mut error = get_error_response(
+                &item.response.error_information,
+                &item.response.processor_information,
+                &item.response.risk_information,
+                None,
+                item.http_code,
+                item.response.id.clone(),
+            );
+            error.attempt_status = None;
+            Err(error)
+        } else {
+            Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status,
+                connector_reference_id: Some(item.response.id.clone()),
+                description: None,
+                status_code: item.http_code,
+            })
         };
         Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
             response,
             ..item.router_data
         })
