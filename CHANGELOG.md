@@ -19,6 +19,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.18.0
+
+### Features
+
+- **composite_service:** Extend CompositeAuthorize with stateless 3DS authN decider ([#1036](https://github.com/juspay/connector-service/pull/1036)) ([`4f6bbfc`](https://github.com/juspay/connector-service/commit/4f6bbfca3f70f5b2573e970a48fcd3148b1f4dea))
+
+**Full Changelog:** [`2026.05.15.1...2026.05.18.0`](https://github.com/juspay/connector-service/compare/2026.05.15.1...2026.05.18.0)
+
+- - -
+
+## 2026.05.15.1
+
+### Features
+
+- **connector:**
+  - Implement Reverse (VoidPostCapture) for datatrans ([#1293](https://github.com/juspay/connector-service/pull/1293)) ([`c16b7de`](https://github.com/juspay/connector-service/commit/c16b7de95211c6a34845f9efb10d2908663c3202))
+  - Implement Reverse (VoidPostCapture) for braintree ([#1292](https://github.com/juspay/connector-service/pull/1292)) ([`d864a9f`](https://github.com/juspay/connector-service/commit/d864a9fce121b41177edd4a9076efc03653e6a17))
+  - Add sender_payment_instrument_id in webhooks to support closed loop payouts ([#1350](https://github.com/juspay/connector-service/pull/1350)) ([`1a23e63`](https://github.com/juspay/connector-service/commit/1a23e638a5d273d62638bc81b35cd9e71d974cd5))
+
+**Full Changelog:** [`2026.05.15.0...2026.05.15.1`](https://github.com/juspay/connector-service/compare/2026.05.15.0...2026.05.15.1)
+
+- - -
+
+## 2026.05.15.0
+
+### Features
+
+- **connector:** Add 2C2P PACO connector ([#1273](https://github.com/juspay/connector-service/pull/1273)) ([`f028335`](https://github.com/juspay/connector-service/commit/f02833532cfbe123a4be6b9468d8fbb6bd57846f))
+
+### Bug Fixes
+
+- **hardening:** Test overrides for nmi and payload connectors ([#1263](https://github.com/juspay/connector-service/pull/1263)) ([`090ef8c`](https://github.com/juspay/connector-service/commit/090ef8c5d517e3597889aa9007c43716a211cfef))
+
+### Testing
+
+- **mollie:** Harden integration test overrides ([#1319](https://github.com/juspay/connector-service/pull/1319)) ([`4951d88`](https://github.com/juspay/connector-service/commit/4951d8873556752ce1a3105c188d7b440bad2e87))
+
+### Miscellaneous Tasks
+
+- **codegen:** Migrate add_connector.sh to macro-based flow stubs ([#1345](https://github.com/juspay/connector-service/pull/1345)) ([`26fb651`](https://github.com/juspay/connector-service/commit/26fb6513c5edab970c5c139c3f42b47e1deff574))
+- **grace:** Dual-path tech spec generation + self-healing recovery ([#1344](https://github.com/juspay/connector-service/pull/1344)) ([`9400ef2`](https://github.com/juspay/connector-service/commit/9400ef23f6028e46f4e4fd671a4fc80f719f9f47))
+
+**Full Changelog:** [`2026.05.14.0...2026.05.15.0`](https://github.com/juspay/connector-service/compare/2026.05.14.0...2026.05.15.0)
+
+- - -
+
 ## 2026.05.14.0
 
 ### Features
