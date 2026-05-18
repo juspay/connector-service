@@ -2849,7 +2849,9 @@ fn map_cybersource_void_pc_status(
         | CybersourcePaymentStatus::PendingAuthentication
         | CybersourcePaymentStatus::PendingReview
         | CybersourcePaymentStatus::Accepted
-        | CybersourcePaymentStatus::StatusNotReceived => common_enums::PostCaptureVoidStatus::Pending,
+        | CybersourcePaymentStatus::StatusNotReceived => {
+            common_enums::PostCaptureVoidStatus::Pending
+        }
     }
 }
 
