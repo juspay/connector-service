@@ -88,6 +88,7 @@ pub enum ConnectorEnum {
     Aci,
     Trustpay,
     Stripe,
+    Dummy,
     Cybersource,
     Worldpay,
     Worldpayvantiv,
@@ -183,6 +184,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Aci => Ok(Self::Aci),
             grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
+            grpc_api_types::payments::Connector::Dummy => Ok(Self::Dummy),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
             grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpay),
             grpc_api_types::payments::Connector::Worldpayxml => Ok(Self::Worldpayxml),
@@ -3612,11 +3614,19 @@ pub enum ConnectorSpecificClientAuthenticationResponse {
     Nexixpay(NexixpayClientAuthenticationResponse),
     /// Revolut SDK initialization data — order_id and token for Revolut Pay widget initialization
     Revolut(RevolutClientAuthenticationResponse),
+    /// Dummy SDK initialization data — mock client_secret for local testing
+    Dummy(DummyClientAuthenticationResponse),
 }
 
 /// Stripe's client_secret for browser-side stripe.confirmPayment()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StripeClientAuthenticationResponse {
+    pub client_secret: Secret<String>,
+}
+
+/// Dummy's mock client_secret for local testing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DummyClientAuthenticationResponse {
     pub client_secret: Secret<String>,
 }
 
@@ -4164,6 +4174,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Cybersource(_) => Ok(Self::Cybersource),
             AuthType::Datatrans(_) => Ok(Self::Datatrans),
             AuthType::Dlocal(_) => Ok(Self::Dlocal),
+            AuthType::Dummy(_) => Ok(Self::Dummy),
             AuthType::Elavon(_) => Ok(Self::Elavon),
             AuthType::Fiserv(_) => Ok(Self::Fiserv),
             AuthType::Fiservemea(_) => Ok(Self::Fiservemea),
