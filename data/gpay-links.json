@@ -1,0 +1,42 @@
+{
+  "Mollie": [
+    "https://docs.mollie.com/docs/direct-integration-of-google-pay",
+    "https://docs.mollie.com/docs/google-pay",
+    "https://docs.mollie.com/reference/create-payment"
+  ],
+  "Datatrans": [
+    "https://docs.datatrans.ch/docs/payment-methods#google-pay",
+    "https://api-reference.datatrans.ch/#tag/v1transactions/operation/authorize",
+    "https://api-reference.datatrans.ch/#tag/v1transactions/operation/validate"
+  ],
+  "fiservemea": [
+    "https://docs.fiserv.dev/public/docs/wallets",
+    "https://docs.fiserv.dev/public/docs/google-pay"
+  ],
+  "Barclaycard": [
+    "https://docs.adyen.com/payment-methods/google-pay/api-only",
+    "https://docs.adyen.com/payment-methods/google-pay/api-only/google-pay-token-decryption"
+  ],
+  "Redsys": [
+    "https://pagosonline.redsys.es/desarrolladores-inicio/documentacion-otros-metodos-de-pago/otros-metodos-de-pago-google-pay/",
+    "https://pagosonline.redsys.es/desarrolladores-inicio/documentacion-tipos-de-integracion/desarrolladores-rest/"
+  ],
+  "TSYS": [
+    "https://raw.githubusercontent.com/globalpayments/java-sdk/master/src/main/java/com/global/api/builders/requestbuilder/gpApi/GpApiAuthorizationRequestBuilder.java",
+    "https://raw.githubusercontent.com/globalpayments/java-sdk/master/src/main/java/com/global/api/entities/enums/EncyptedMobileType.java",
+    "https://raw.githubusercontent.com/globalpayments/java-sdk/master/src/main/java/com/global/api/entities/enums/DigitalWalletTokenFormat.java"
+  ],
+  "authipay": [
+    "https://raw.githubusercontent.com/GBSEcom/java/master/docs/DecryptedGooglePay.md",
+    "https://raw.githubusercontent.com/GBSEcom/java/master/docs/EncryptedGooglePay.md",
+    "https://raw.githubusercontent.com/GBSEcom/java/master/docs/EncryptedGooglePayData.md",
+    "https://raw.githubusercontent.com/GBSEcom/java/master/docs/WalletPaymentMethod.md"
+  ],
+  "bankofamerica": [
+    "https://developer.cybersource.com/docs/cybs/en-us/google-pay/developer/ctv/rest/googlepay/googpay-intro.html",
+    "https://developer.cybersource.com/docs/cybs/en-us/google-pay/developer/ctv/rest/googlepay/googpay-pay-auth-intro/googpay-pay-auth-ex-rest.html"
+  ],
+  "Celero": [
+    "https://sandbox.gotnpgateway.com/docs/wallets/walletjs"
+  ]
+}
