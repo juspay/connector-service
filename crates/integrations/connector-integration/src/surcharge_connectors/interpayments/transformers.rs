@@ -119,7 +119,7 @@ impl TryFrom<ResponseRouterData<InterPaymentsSurchargeResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let response = if item.response.message.to_lowercase() == INTERPAYMENTS_OK_MESSAGE {
             Ok(SurchargeCalculateResponse {
-                connector_response_reference_id: Some(item.response.s_tx_id.clone()),
+                connector_response_reference_id: None,
                 connector_surcharge_id: item.response.s_tx_id.clone(),
                 surcharge_amount: super::InterPaymentsAmountConvertor::convert_back(
                     item.response.transaction_fee,

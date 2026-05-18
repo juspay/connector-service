@@ -116,9 +116,9 @@ impl DisputeService for Disputes {
                     let payments_connector =
                         connector
                             .as_payment()
-                            .ok_or(tonic::Status::invalid_argument(format!(
-                                "Invalid Connector Received",
-                            )))?;
+                            .ok_or(tonic::Status::invalid_argument(
+                                "Invalid Connector Received".to_string(),
+                            ))?;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&payments_connector);
 
@@ -341,9 +341,9 @@ impl DisputeService for Disputes {
                     let payments_connector =
                         connector
                             .as_payment()
-                            .ok_or(tonic::Status::invalid_argument(format!(
-                                "Invalid Connector Received",
-                            )))?;
+                            .ok_or(tonic::Status::invalid_argument(
+                                "Invalid Connector Received".to_string(),
+                            ))?;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&payments_connector);
 

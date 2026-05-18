@@ -13670,7 +13670,8 @@ pub fn generate_surcharge_calculate_response(
         Ok(response) => {
             let surcharge_amount = grpc_api_types::surcharge::Money {
                 minor_amount: response.surcharge_amount.get_amount_as_i64(),
-                currency: response.currency as i32,
+                currency: grpc_api_types::payments::Currency::foreign_try_from(response.currency)?
+                    .into(),
             };
 
             Ok(
