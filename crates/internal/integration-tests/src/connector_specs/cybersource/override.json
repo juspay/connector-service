@@ -140,7 +140,7 @@
         }
       },
       "assert": {
-        "error.connector_details.message": null
+        "error.connector_details.message": { "must_exist": true }
       }
     }
   },
