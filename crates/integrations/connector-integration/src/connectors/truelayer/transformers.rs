@@ -495,7 +495,6 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPaymentsResponseData, Self>>
             Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status,
-                    connector_customer: Some(item.response.user.id.clone()),
                     ..item.router_data.resource_common_data
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -981,6 +980,13 @@ pub struct TruelayerWebhookBody {
     pub refund_id: Option<String>,
     pub failure_reason: Option<String>,
     pub failure_stage: Option<String>,
+    pub user_id: Option<String>,
+    pub payment_source: Option<TruelayerPaymentSource>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TruelayerPaymentSource {
+    pub id: Option<String>,
 }
 
 pub fn get_webhook_event(
