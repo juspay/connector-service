@@ -414,20 +414,7 @@ impl TryFrom<ResponseRouterData<PlacetopayVoidPcResponse, Self>>
                 common_enums::PostCaptureVoidStatus::Pending
             }
         };
-        let attempt_status = match post_capture_void_status {
-            common_enums::PostCaptureVoidStatus::Succeeded => {
-                common_enums::AttemptStatus::VoidedPostCapture
-            }
-            common_enums::PostCaptureVoidStatus::Failed => common_enums::AttemptStatus::Failure,
-            common_enums::PostCaptureVoidStatus::Pending => {
-                common_enums::AttemptStatus::VoidPostCaptureInitiated
-            }
-        };
         Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status: attempt_status,
-                ..item.router_data.resource_common_data
-            },
             response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
                 post_capture_void_status,
                 connector_reference_id: Some(inner.internal_reference.to_string()),
