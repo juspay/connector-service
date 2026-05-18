@@ -2479,45 +2479,46 @@ impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         match item.response {
             BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
-                let attempt_status = map_boa_attempt_status((info_response.status.clone(), false));
-                let error_opt =
-                    get_error_response_if_failure((&info_response, attempt_status, item.http_code));
-                let response = match error_opt {
-                    Some(err) => Err(err),
-                    None => {
-                        let void_status = match info_response.status {
-                            BankofamericaPaymentStatus::Voided
-                            | BankofamericaPaymentStatus::Reversed
-                            | BankofamericaPaymentStatus::Cancelled => {
-                                common_enums::PostCaptureVoidStatus::Succeeded
-                            }
-                            BankofamericaPaymentStatus::Pending
-                            | BankofamericaPaymentStatus::PendingReview
-                            | BankofamericaPaymentStatus::Challenge
-                            | BankofamericaPaymentStatus::Accepted => {
-                                common_enums::PostCaptureVoidStatus::Pending
-                            }
-                            _ => common_enums::PostCaptureVoidStatus::Failed,
-                        };
-                        Ok(PaymentsResponseData::PostCaptureVoidResponse {
-                            post_capture_void_status: void_status,
-                            connector_reference_id: Some(
-                                info_response
-                                    .client_reference_information
-                                    .code
-                                    .clone()
-                                    .unwrap_or(info_response.id.clone()),
-                            ),
-                            description: None,
-                            status_code: item.http_code,
-                        })
+                let void_status = match info_response.status {
+                    BankofamericaPaymentStatus::Voided
+                    | BankofamericaPaymentStatus::Reversed
+                    | BankofamericaPaymentStatus::Cancelled => {
+                        common_enums::PostCaptureVoidStatus::Succeeded
                     }
+                    BankofamericaPaymentStatus::Pending
+                    | BankofamericaPaymentStatus::PendingReview
+                    | BankofamericaPaymentStatus::Challenge
+                    | BankofamericaPaymentStatus::Accepted => {
+                        common_enums::PostCaptureVoidStatus::Pending
+                    }
+                    _ => common_enums::PostCaptureVoidStatus::Failed,
+                };
+                let response = if void_status.is_post_capture_void_failure() {
+                    let mut error = get_error_response(
+                        &info_response.error_information,
+                        &info_response.processor_information,
+                        &info_response.risk_information,
+                        None,
+                        item.http_code,
+                        info_response.id.clone(),
+                    );
+                    error.attempt_status = None;
+                    Err(error)
+                } else {
+                    Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                        post_capture_void_status: void_status,
+                        connector_reference_id: Some(
+                            info_response
+                                .client_reference_information
+                                .code
+                                .clone()
+                                .unwrap_or(info_response.id.clone()),
+                        ),
+                        description: None,
+                        status_code: item.http_code,
+                    })
                 };
                 Ok(Self {
-                    resource_common_data: PaymentFlowData {
-                        status: attempt_status,
-                        ..item.router_data.resource_common_data
-                    },
                     response,
                     ..item.router_data
                 })
