@@ -53,11 +53,11 @@ message PaymentMethod {
     
     // --- SDK-BASED WALLETS ---
     // Native wallet SDK integrations with encrypted token exchange
-    AppleWallet apple_pay = 10;                          // Apple Pay
-    GoogleWallet google_pay = 11;                        // Google Pay
+    AppleWallet apple_pay_sdk = 10;                          // Apple Pay
+    GoogleWallet google_pay_sdk = 11;                        // Google Pay
     PaypalSdkWallet paypal_sdk = 12;                     // PayPal SDK
-    PazeWallet paze = 13;                                // Paze
-    SamsungWallet samsung_pay = 14;                      // Samsung Pay
+    PazeWallet paze_sdk = 13;                                // Paze
+    SamsungWallet samsung_pay_sdk = 14;                      // Samsung Pay
     
     // --- THIRD PARTY SDK WALLETS ---
     // Third-party SDK integrations providing tokenized payment data

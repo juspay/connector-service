@@ -1190,7 +1190,7 @@ impl<
                         language_preference: mifinity_data.language_preference,
                     },
                 ))),
-                grpc_api_types::payments::payment_method::PaymentMethod::ApplePay(apple_wallet) => {
+                grpc_api_types::payments::payment_method::PaymentMethod::ApplePaySdk(apple_wallet) => {
                     let payment_data = apple_wallet.payment_data.ok_or_else(|| {
                         IntegrationError::InvalidDataFormat { field_name: "payment_method.apple_pay.payment_data", context: IntegrationErrorContext { additional_context: Some("Apple Pay payment data is required".to_string()), ..Default::default() } }
                     })?;
@@ -1239,7 +1239,7 @@ impl<
                         wallet_data,
                     )))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::GooglePay(
+                grpc_api_types::payments::payment_method::PaymentMethod::GooglePaySdk(
                     google_wallet,
                 ) => {
                     let info = google_wallet.info.ok_or_else(|| {
@@ -1345,7 +1345,7 @@ impl<
                         },
                     ),
                 )),
-                grpc_api_types::payments::payment_method::PaymentMethod::Paze(paze_wallet) => {
+                grpc_api_types::payments::payment_method::PaymentMethod::PazeSdk(paze_wallet) => {
                     let paze_wallet_data = match paze_wallet.paze_data {
                         Some(grpc_api_types::payments::paze_wallet::PazeData::CompleteResponse(
                             complete_response,
@@ -1366,7 +1366,7 @@ impl<
                         paze_wallet_data,
                     ))))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::SamsungPay(
+                grpc_api_types::payments::payment_method::PaymentMethod::SamsungPaySdk(
                     samsung_pay,
                 ) => {
                 let credential = samsung_pay
@@ -2247,8 +2247,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 // ============================================================================
                 // DIGITAL WALLETS - PaymentMethodType mappings
                 // ============================================================================
-                grpc_api_types::payments::payment_method::PaymentMethod::ApplePay(_) => Ok(Some(PaymentMethodType::ApplePay)),
-                grpc_api_types::payments::payment_method::PaymentMethod::GooglePay(_) => Ok(Some(PaymentMethodType::GooglePay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::ApplePaySdk(_) => Ok(Some(PaymentMethodType::ApplePay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::GooglePaySdk(_) => Ok(Some(PaymentMethodType::GooglePay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::ApplePayThirdPartySdk(_) => Ok(Some(PaymentMethodType::ApplePay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::GooglePayThirdPartySdk(_) => Ok(Some(PaymentMethodType::GooglePay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::PaypalSdk(_) => Ok(Some(PaymentMethodType::Paypal)),
@@ -2261,7 +2261,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::RevolutPay(_) => Ok(Some(PaymentMethodType::RevolutPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MifinityRedirect(_) => Ok(Some(PaymentMethodType::Mifinity)),
                 grpc_api_types::payments::payment_method::PaymentMethod::BluecodeRedirect(_) => Ok(Some(PaymentMethodType::Bluecode)),
-                grpc_api_types::payments::payment_method::PaymentMethod::Paze(_) => Ok(Some(PaymentMethodType::Paze)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PazeSdk(_) => Ok(Some(PaymentMethodType::Paze)),
                 grpc_api_types::payments::payment_method::PaymentMethod::AliPayHkRedirect(_) => Ok(Some(PaymentMethodType::AliPayHk)),
                 grpc_api_types::payments::payment_method::PaymentMethod::DanaRedirect(_) => Ok(Some(PaymentMethodType::Dana)),
                 grpc_api_types::payments::payment_method::PaymentMethod::GcashRedirect(_) => Ok(Some(PaymentMethodType::Gcash)),
@@ -2273,7 +2273,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::TwintRedirect(_) => Ok(Some(PaymentMethodType::Twint)),
                 grpc_api_types::payments::payment_method::PaymentMethod::VippsRedirect(_) => Ok(Some(PaymentMethodType::Vipps)),
                 grpc_api_types::payments::payment_method::PaymentMethod::SwishQr(_) => Ok(Some(PaymentMethodType::Swish)),
-                grpc_api_types::payments::payment_method::PaymentMethod::SamsungPay(_) => Ok(Some(PaymentMethodType::SamsungPay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::SamsungPaySdk(_) => Ok(Some(PaymentMethodType::SamsungPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MbWay(_) => Ok(Some(PaymentMethodType::MbWay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Satispay(_) => Ok(Some(PaymentMethodType::Satispay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Wero(_) => Ok(Some(PaymentMethodType::Wero)),
@@ -5158,15 +5158,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Reward),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::ApplePay(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::ApplePaySdk(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::GooglePay(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::GooglePaySdk(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SamsungPay(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SamsungPaySdk(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
