@@ -474,6 +474,7 @@ pub struct PaymentFlowData {
     /// Required by connectors (e.g. 2C2P PACO) that demand a per-request
     /// idempotency token on their wire envelope.
     pub merchant_request_id: Option<String>,
+    pub sender_payment_instrument_id: Option<String>,
 }
 
 impl PaymentFlowData {
