@@ -109,6 +109,7 @@ impl DisputeService for Disputes {
                         reference_id,
                         resource_id,
                         shadow_mode,
+                        proxy_name,
                         tenant_id,
                         ..
                     } = request_data.extracted_metadata;
@@ -159,6 +160,7 @@ impl DisputeService for Disputes {
                         reference_id: &reference_id,
                         resource_id: &resource_id,
                         shadow_mode,
+                        proxy_name: proxy_name.as_deref(),
                         tenant_id: &tenant_id,
                         return_raw_connector_data: config.common.return_raw_connector_data,
                     };
@@ -328,6 +330,7 @@ impl DisputeService for Disputes {
                         reference_id,
                         resource_id,
                         shadow_mode,
+                        proxy_name,
                         tenant_id,
                         ..
                     } = request_data.extracted_metadata;
@@ -380,6 +383,7 @@ impl DisputeService for Disputes {
                         reference_id: &reference_id,
                         resource_id: &resource_id,
                         shadow_mode,
+                        proxy_name: proxy_name.as_deref(),
                         tenant_id: &tenant_id,
                         return_raw_connector_data: config.common.return_raw_connector_data,
                     };

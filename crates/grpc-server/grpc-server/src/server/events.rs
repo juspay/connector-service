@@ -303,6 +303,7 @@ async fn verify_webhook_source_external(
         reference_id: &metadata_payload.reference_id,
         resource_id: &metadata_payload.resource_id,
         shadow_mode: metadata_payload.shadow_mode,
+        proxy_name: metadata_payload.proxy_name.as_deref(),
         tenant_id: &metadata_payload.tenant_id,
         return_raw_connector_data: config.common.return_raw_connector_data,
     };

@@ -102,6 +102,7 @@ struct EventParams<'a> {
     reference_id: &'a Option<String>,
     resource_id: &'a Option<String>,
     shadow_mode: bool,
+    proxy_name: Option<&'a str>,
     tenant_id: &'a str,
 }
 
@@ -407,6 +408,7 @@ impl CustomerService for Customer {
                         reference_id: &metadata_payload.reference_id,
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
+                        proxy_name: metadata_payload.proxy_name.as_deref(),
                         tenant_id: &metadata_payload.tenant_id,
                         return_raw_connector_data: config.common.return_raw_connector_data,
                     };
@@ -535,6 +537,7 @@ impl Payments {
             reference_id: &metadata_payload.reference_id,
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
+            proxy_name: metadata_payload.proxy_name.as_deref(),
             tenant_id: &metadata_payload.tenant_id,
             return_raw_connector_data: config.common.return_raw_connector_data,
         };
@@ -655,6 +658,7 @@ impl Payments {
             reference_id: &metadata_payload.reference_id,
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
+            proxy_name: metadata_payload.proxy_name.as_deref(),
             tenant_id: &metadata_payload.tenant_id,
             return_raw_connector_data: config.common.return_raw_connector_data,
         };
@@ -1040,6 +1044,7 @@ impl PaymentService for Payments {
                         reference_id: &metadata_payload.reference_id,
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
+                        proxy_name: metadata_payload.proxy_name.as_deref(),
                         tenant_id: &metadata_payload.tenant_id,
                         return_raw_connector_data: config.common.return_raw_connector_data,
                     };
@@ -2168,6 +2173,7 @@ impl PaymentMethod {
             reference_id: &metadata_payload.reference_id,
             resource_id: &metadata_payload.resource_id,
             shadow_mode: metadata_payload.shadow_mode,
+            proxy_name: metadata_payload.proxy_name.as_deref(),
             tenant_id: &metadata_payload.tenant_id,
             return_raw_connector_data: config.common.return_raw_connector_data,
         };
@@ -2276,6 +2282,7 @@ impl MerchantAuthentication {
             reference_id: event_params.reference_id,
             resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
+            proxy_name: event_params.proxy_name,
             tenant_id: event_params.tenant_id,
             return_raw_connector_data: config.common.return_raw_connector_data,
         };
@@ -2390,6 +2397,7 @@ impl MerchantAuthentication {
             reference_id: event_params.reference_id,
             resource_id: event_params.resource_id,
             shadow_mode: event_params.shadow_mode,
+            proxy_name: event_params.proxy_name,
             tenant_id: event_params.tenant_id,
             return_raw_connector_data: config.common.return_raw_connector_data,
         };
@@ -2564,6 +2572,7 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         reference_id: &metadata_payload.reference_id,
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
+                        proxy_name: metadata_payload.proxy_name.as_deref(),
                         tenant_id: &metadata_payload.tenant_id,
                     };
 
@@ -2680,6 +2689,7 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         reference_id: &metadata_payload.reference_id,
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
+                        proxy_name: metadata_payload.proxy_name.as_deref(),
                         tenant_id: &metadata_payload.tenant_id,
                     };
 
@@ -2892,6 +2902,7 @@ impl RecurringPaymentService for RecurringPayments {
                         reference_id: &metadata_payload.reference_id,
                         resource_id: &metadata_payload.resource_id,
                         shadow_mode: metadata_payload.shadow_mode,
+                        proxy_name: metadata_payload.proxy_name.as_deref(),
                         tenant_id: &metadata_payload.tenant_id,
                         return_raw_connector_data: config.common.return_raw_connector_data,
                     };
