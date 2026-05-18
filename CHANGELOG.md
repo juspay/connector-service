@@ -19,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.15.1
+
+### Features
+
+- **connector:**
+  - Implement Reverse (VoidPostCapture) for datatrans ([#1293](https://github.com/juspay/connector-service/pull/1293)) ([`c16b7de`](https://github.com/juspay/connector-service/commit/c16b7de95211c6a34845f9efb10d2908663c3202))
+  - Implement Reverse (VoidPostCapture) for braintree ([#1292](https://github.com/juspay/connector-service/pull/1292)) ([`d864a9f`](https://github.com/juspay/connector-service/commit/d864a9fce121b41177edd4a9076efc03653e6a17))
+  - Add sender_payment_instrument_id in webhooks to support closed loop payouts ([#1350](https://github.com/juspay/connector-service/pull/1350)) ([`1a23e63`](https://github.com/juspay/connector-service/commit/1a23e638a5d273d62638bc81b35cd9e71d974cd5))
+
+**Full Changelog:** [`2026.05.15.0...2026.05.15.1`](https://github.com/juspay/connector-service/compare/2026.05.15.0...2026.05.15.1)
+
+- - -
+
 ## 2026.05.15.0
 
 ### Features
