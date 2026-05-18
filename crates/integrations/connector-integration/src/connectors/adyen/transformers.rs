@@ -4541,12 +4541,13 @@ pub struct AdyenReversalResponse {
     pub merchant_account: String,
     pub reference: Option<String>,
     pub status: AdyenReversalStatus,
+    pub refusal_reason: Option<String>,
+    pub refusal_reason_code: Option<String>,
 }
 
-#[derive(Default, Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AdyenReversalStatus {
-    #[default]
     Received,
 }
 
@@ -4566,10 +4567,22 @@ impl TryFrom<ResponseRouterData<AdyenReversalResponse, Self>>
         // Preserve the existing attempt status; do not override it here.
         let status = router_data.resource_common_data.status;
 
+        let post_capture_void_status = if response.refusal_reason.is_some()
+            || response.refusal_reason_code.is_some()
+        {
+            common_enums::PostCaptureVoidStatus::Failed
+        } else {
+            common_enums::PostCaptureVoidStatus::Pending
+        };
+        let description = post_capture_void_status
+            .is_post_capture_void_failure()
+            .then(|| response.refusal_reason.clone())
+            .flatten();
+
         let payments_response_data = PaymentsResponseData::PostCaptureVoidResponse {
-            post_capture_void_status: common_enums::PostCaptureVoidStatus::Pending,
+            post_capture_void_status,
             connector_reference_id: Some(response.payment_psp_reference),
-            description: None,
+            description,
             status_code: http_code,
         };
 
