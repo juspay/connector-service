@@ -47,47 +47,61 @@ message PaymentMethod {
     ProxyCardDetails card_proxy = 7;                         // Generic card proxy payment
     TokenPaymentMethodType token = 8;                   // Payment tokens
     
-    // DIGITAL WALLETS (10-29) - Direct variants
-    AppleWallet apple_pay = 10;                         // Apple Pay
-    GoogleWallet google_pay = 11;                       // Google Pay
-    ApplePayThirdPartySdkWallet apple_pay_third_party_sdk = 12;  // Apple Pay Third Party SDK
-    GooglePayThirdPartySdkWallet google_pay_third_party_sdk = 13; // Google Pay Third Party SDK
-    PaypalSdkWallet paypal_sdk = 14;                    // PayPal SDK
-    AmazonPayRedirectWallet amazon_pay_redirect = 15;   // Amazon Pay
-    CashappQrWallet cashapp_qr = 16;                    // Cash App
-    PaypalRedirectWallet paypal_redirect = 17;          // PayPal
-    WeChatPayQrWallet we_chat_pay_qr = 18;              // WeChat Pay QR
-    AliPayRedirectWallet ali_pay_redirect = 19;         // AliPay
-    RevolutPayWallet revolut_pay = 20;                  // Revolut Pay
-    MifinityWallet mifinity = 21;                       // Mifinity
-    Bluecode bluecode = 22;                             // Bluecode
-    PazeWallet paze = 23;                               // Paze
-    SamsungWallet samsung_pay = 24;                     // Samsung
-    MBWay mb_way = 25;                                  // MB WAY
-    Satispay satispay = 26;                             // Satispay
-    Wero wero = 27;                                     // Wero
-    LazyPayRedirectWallet lazypay_redirect = 28;
-    PhonePeRedirectWallet phonepe_redirect = 29;
-    BillDeskRedirectWallet billdesk_redirect = 159;
-    CashfreeRedirectWallet cashfree_redirect = 160;
-    PayURedirectWallet payu_redirect = 161;
-    EaseBuzzRedirectWallet easebuzz_redirect = 162;
-    KakaoPayRedirectWallet kakao_pay_redirect = 163;     // KakaoPay Redirect
+    // ============================================================================
+    // DIGITAL WALLETS (10-178)
+    // ============================================================================
+    
+    // --- SDK-BASED WALLETS ---
+    // Native wallet SDK integrations with encrypted token exchange
+    AppleWallet apple_pay = 10;                          // Apple Pay
+    GoogleWallet google_pay = 11;                        // Google Pay
+    PaypalSdkWallet paypal_sdk = 14;                     // PayPal SDK
+    PazeWallet paze = 23;                                // Paze
+    SamsungWallet samsung_pay = 24;                      // Samsung Pay
+    
+    // --- THIRD PARTY SDK WALLETS ---
+    // Third-party SDK integrations providing tokenized payment data
+    ApplePayThirdPartySdkWallet apple_pay_third_party_sdk = 12;   // Apple Pay Third Party SDK
+    GooglePayThirdPartySdkWallet google_pay_third_party_sdk = 13;  // Google Pay Third Party SDK
+    
+    // --- REDIRECT WALLETS ---
+    // User redirects to wallet provider to authorize payment
+    AmazonPayRedirectWallet amazon_pay_redirect = 15;    // Amazon Pay
+    PaypalRedirectWallet paypal_redirect = 17;           // PayPal
+    AliPayRedirectWallet ali_pay_redirect = 19;          // AliPay
+    RevolutPayWallet revolut_pay = 20;                   // Revolut Pay
+    MifinityWallet mifinity = 21;                        // Mifinity
+    Bluecode bluecode = 22;                              // Bluecode
+    MBWay mb_way = 25;                                   // MB WAY
+    Satispay satispay = 26;                              // Satispay
+    Wero wero = 27;                                      // Wero
+    LazyPayRedirectWallet lazypay_redirect = 28;         // LazyPay
+    PhonePeRedirectWallet phonepe_redirect = 29;         // PhonePe
+    BillDeskRedirectWallet billdesk_redirect = 159;      // BillDesk
+    CashfreeRedirectWallet cashfree_redirect = 160;      // Cashfree
+    PayURedirectWallet payu_redirect = 161;              // PayU
+    EaseBuzzRedirectWallet easebuzz_redirect = 162;      // EaseBuzz
+    KakaoPayRedirectWallet kakao_pay_redirect = 163;     // KakaoPay
     MbWayRedirectWallet mb_way_redirect = 164;           // MB WAY Redirect
-    MomoRedirectWallet momo_redirect = 165;             // MoMo Redirect
-    TouchNGoRedirectWallet touch_n_go_redirect = 166;   // Touch 'n Go Redirect
-    TwintRedirectWallet twint_redirect = 167;           // TWINT Redirect
-    VippsRedirectWallet vipps_redirect = 168;           // Vipps Redirect
-    WeChatPayRedirectWallet we_chat_pay_redirect = 169; // WeChat Pay Redirect
-    AliPayHKWallet ali_pay_hk = 170;                    // AliPay HK Redirect
-    DanaRedirectWallet dana_redirect = 171;             // Dana Redirect
-    GcashRedirectWallet gcash_redirect = 172;           // GCash Redirect
-    GoPayRedirectWallet go_pay_redirect = 173;          // GoPay Redirect
-    SwishQrWallet swish_qr = 174;                       // Swish QR
-    MobilePayRedirectWallet mobile_pay_redirect = 175;  // MobilePay Redirect
-    VenmoWallet venmo = 176;                            // Venmo
-    SkrillWallet skrill = 177;                          // Skrill
-    PayseraWallet paysera = 178;                        // Paysera
+    MomoRedirectWallet momo_redirect = 165;              // MoMo
+    TouchNGoRedirectWallet touch_n_go_redirect = 166;    // Touch 'n Go
+    TwintRedirectWallet twint_redirect = 167;            // TWINT
+    VippsRedirectWallet vipps_redirect = 168;            // Vipps
+    WeChatPayRedirectWallet we_chat_pay_redirect = 169;  // WeChat Pay
+    AliPayHKWallet ali_pay_hk = 170;                     // AliPay HK
+    DanaRedirectWallet dana_redirect = 171;              // Dana
+    GcashRedirectWallet gcash_redirect = 172;            // GCash
+    GoPayRedirectWallet go_pay_redirect = 173;           // GoPay
+    MobilePayRedirectWallet mobile_pay_redirect = 175;   // MobilePay
+    VenmoWallet venmo = 176;                             // Venmo
+    SkrillWallet skrill = 177;                           // Skrill
+    PayseraWallet paysera = 178;                         // Paysera
+    
+    // --- QR CODE WALLETS ---
+    // User scans QR code with wallet app to complete payment
+    CashappQrWallet cashapp_qr = 16;                     // Cash App
+    WeChatPayQrWallet we_chat_pay_qr = 18;               // WeChat Pay QR
+    SwishQrWallet swish_qr = 174;                        // Swish QR
 
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
