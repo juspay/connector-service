@@ -730,11 +730,30 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::try_from(&item.response)?;
+        // Map JPMorgan's transaction state directly to `PostCaptureVoidStatus` —
+        // the Reverse flow has its own status enum, so we don't go through
+        // `AttemptStatus`. `Closed` / `Authorized` mean the PATCH was accepted
+        // but the transaction did not move to `Voided`, so the reversal did
+        // not apply. `Declined` / `Error` are matched explicitly to keep the
+        // match exhaustive.
+        let post_capture_void_status = match item.response.transaction_state {
+            responses::JpmorganTransactionState::Voided => {
+                common_enums::PostCaptureVoidStatus::Succeeded
+            }
+            responses::JpmorganTransactionState::Pending => {
+                common_enums::PostCaptureVoidStatus::Pending
+            }
+            responses::JpmorganTransactionState::Closed
+            | responses::JpmorganTransactionState::Authorized
+            | responses::JpmorganTransactionState::Declined
+            | responses::JpmorganTransactionState::Error => {
+                common_enums::PostCaptureVoidStatus::Failed
+            }
+        };
 
-        let response = if is_payment_failure(status) {
+        let response = if post_capture_void_status.is_post_capture_void_failure() {
             Err(ErrorResponse {
-                attempt_status: Some(status),
+                attempt_status: None,
                 code: item.response.response_code.clone(),
                 message: item
                     .response
@@ -749,27 +768,6 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
                 network_error_message: None,
             })
         } else {
-            // Reverse PATCH was accepted (response_status=Success) but the resulting
-            // `transaction_state` decides whether the reversal actually took effect.
-            // `Closed` / `Authorized` mean the transaction did not move to `Voided`,
-            // i.e. the reversal did not apply, so surface them as Failed.
-            // `Declined` / `Error` are already caught upstream by `is_payment_failure`,
-            // but are matched explicitly to keep the match exhaustive.
-            let post_capture_void_status = match item.response.transaction_state {
-                responses::JpmorganTransactionState::Voided => {
-                    common_enums::PostCaptureVoidStatus::Succeeded
-                }
-                responses::JpmorganTransactionState::Pending => {
-                    common_enums::PostCaptureVoidStatus::Pending
-                }
-                responses::JpmorganTransactionState::Closed
-                | responses::JpmorganTransactionState::Authorized
-                | responses::JpmorganTransactionState::Declined
-                | responses::JpmorganTransactionState::Error => {
-                    common_enums::PostCaptureVoidStatus::Failed
-                }
-            };
-
             Ok(PaymentsResponseData::PostCaptureVoidResponse {
                 post_capture_void_status,
                 connector_reference_id: Some(item.response.transaction_id.clone()),
@@ -780,10 +778,6 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
 
         Ok(Self {
             response,
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
             ..item.router_data
         })
     }
