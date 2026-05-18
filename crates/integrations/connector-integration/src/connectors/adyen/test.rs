@@ -282,7 +282,6 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
-                    
                     merchant_request_id: None,
                     sender_payment_instrument_id: None,
 },
