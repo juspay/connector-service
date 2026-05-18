@@ -2576,10 +2576,12 @@ impl From<SyncStatus> for AttemptStatus {
             SyncStatus::Voided => Self::Voided,
             SyncStatus::CouldNotVoid => Self::VoidFailed,
             SyncStatus::GeneralError => Self::Failure,
-            SyncStatus::RefundSettledSuccessfully
-            | SyncStatus::RefundPendingSettlement
-            | SyncStatus::FDSPendingReview
-            | SyncStatus::FDSAuthorizedPendingReview => Self::Pending,
+            SyncStatus::RefundSettledSuccessfully | SyncStatus::RefundPendingSettlement => {
+                Self::Charged
+            }
+            SyncStatus::FDSPendingReview | SyncStatus::FDSAuthorizedPendingReview => {
+                Self::Unresolved
+            }
         }
     }
 }
