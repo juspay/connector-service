@@ -1063,11 +1063,16 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
             }
             .into();
 
+        let description = post_capture_void_status
+            .is_post_capture_void_failure()
+            .then(|| item.response.error_message.clone())
+            .flatten();
+
         Ok(Self {
             response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
                 post_capture_void_status,
                 connector_reference_id: Some(item.response.ipg_transaction_id.clone()),
-                description: None,
+                description,
                 status_code: item.http_code,
             }),
             ..item.router_data
