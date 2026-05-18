@@ -1398,29 +1398,104 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidPCResponse, Self>>
             router_data,
             http_code,
         } = value;
-        // Use our helper function to convert the response
-        let (_status, response_result, connector_response_data) =
-            convert_to_payments_response_data_or_error(
-                &response.0,
+        let inner = &response.0;
+        let raw_connector_response = router_data
+            .resource_common_data
+            .raw_connector_response
+            .clone();
+
+        // VoidPC carries its outcome through PostCaptureVoidStatus, so map the
+        // Authorize.net response directly instead of going through the generic
+        // AttemptStatus-deriving helper used by the other payment flows.
+        let connector_response_data = match &inner.transaction_response {
+            Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
+                convert_to_additional_payment_method_connector_response(trans_res).map(
+                    domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data,
+                )
+            }
+            _ => None,
+        };
+
+        // Carry the connector's top-level message text through as the
+        // PostCaptureVoidResponse description (e.g. "This transaction has been approved.").
+        let response_description = inner
+            .messages
+            .message
+            .first()
+            .map(|m| m.text.clone());
+
+        let response_result = if inner.messages.result_code == ResultCode::Error {
+            let (error_code, error_message) = extract_error_details(inner, None);
+            Err(create_error_response(
                 http_code,
-                Operation::VoidPostCapture,
+                error_code,
+                error_message,
+                AttemptStatus::VoidFailed,
                 None,
-                router_data
-                    .resource_common_data
-                    .raw_connector_response
-                    .clone(),
-            );
+                raw_connector_response,
+            ))
+        } else {
+            match &inner.transaction_response {
+                Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
+                    match trans_res.response_code {
+                        AuthorizedotnetPaymentStatus::Approved => {
+                            Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                                post_capture_void_status:
+                                    common_enums::PostCaptureVoidStatus::Succeeded,
+                                connector_reference_id: Some(trans_res.transaction_id.clone()),
+                                description: response_description.clone(),
+                                status_code: http_code,
+                            })
+                        }
+                        AuthorizedotnetPaymentStatus::HeldForReview
+                        | AuthorizedotnetPaymentStatus::RequiresAction => {
+                            Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                                post_capture_void_status:
+                                    common_enums::PostCaptureVoidStatus::Pending,
+                                connector_reference_id: Some(trans_res.transaction_id.clone()),
+                                description: response_description.clone(),
+                                status_code: http_code,
+                            })
+                        }
+                        AuthorizedotnetPaymentStatus::Declined
+                        | AuthorizedotnetPaymentStatus::Error => {
+                            let (error_code, error_message) =
+                                extract_error_details(inner, Some(trans_res));
+                            Err(create_error_response(
+                                http_code,
+                                error_code,
+                                error_message,
+                                AttemptStatus::VoidFailed,
+                                Some(trans_res.transaction_id.clone()),
+                                raw_connector_response,
+                            ))
+                        }
+                    }
+                }
+                Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) => {
+                    let (error_code, error_message) = extract_error_details(inner, None);
+                    Err(create_error_response(
+                        http_code,
+                        error_code,
+                        error_message,
+                        AttemptStatus::VoidFailed,
+                        None,
+                        raw_connector_response,
+                    ))
+                }
+                None => Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                    post_capture_void_status: common_enums::PostCaptureVoidStatus::Succeeded,
+                    connector_reference_id: None,
+                    description: response_description.clone(),
+                    status_code: http_code,
+                }),
+            }
+        };
 
-        // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
-
-        // Update connector_response in resource_common_data; status is carried
-        // by PaymentsResponseData::PostCaptureVoidResponse.post_capture_void_status.
         let mut resource_common_data = new_router_data.resource_common_data.clone();
         resource_common_data.connector_response = connector_response_data;
         new_router_data.resource_common_data = resource_common_data;
-
-        // Set the response
         new_router_data.response = response_result;
 
         Ok(new_router_data)
