@@ -1349,9 +1349,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 recipient: requests::WorldpayxmlPayoutRecipient {
                     payment_instrument: requests::WorldpayxmlPayoutPaymentInstrument {
                         card_details: requests::WorldpayxmlPayoutCardDetails {
-                            card_number: Secret::new(
-                                card.card_number.peek().to_string(),
-                            ),
+                            card_number: Secret::new(card.card_number.peek().to_string()),
                             expiry_date: requests::WorldpayxmlExpiryDate {
                                 date: requests::WorldpayxmlDate {
                                     month: card.expiry_month.clone(),
@@ -1388,9 +1386,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         currency_code: request.destination_currency,
                         exponent: worldpayxml_amount_exponent(request.destination_currency),
                     },
-                    payment_details: requests::WorldpayxmlPayoutPaymentDetails {
-                        payment_method,
-                    },
+                    payment_details: requests::WorldpayxmlPayoutPaymentDetails { payment_method },
                 },
             },
         })
@@ -1398,8 +1394,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ----- PayoutTransfer response -----
-impl
-    TryFrom<ResponseRouterData<responses::WorldpayxmlPayoutTransferResponse, Self>>
+impl TryFrom<ResponseRouterData<responses::WorldpayxmlPayoutTransferResponse, Self>>
     for RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>
 {
     type Error = Report<ConnectorError>;
@@ -1451,12 +1446,14 @@ impl
             });
         }
 
-        let payment = order_status.payment.as_ref().ok_or(
-            crate::utils::response_deserialization_fail(
-                item.http_code,
-                "worldpayxml: payout response missing payment.",
-            ),
-        )?;
+        let payment =
+            order_status
+                .payment
+                .as_ref()
+                .ok_or(crate::utils::response_deserialization_fail(
+                    item.http_code,
+                    "worldpayxml: payout response missing payment.",
+                ))?;
 
         Ok(Self {
             response: Ok(PayoutTransferResponse {
@@ -1560,12 +1557,14 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlPayoutGetResponse, Self>>
             });
         }
 
-        let payment = order_status.payment.as_ref().ok_or(
-            crate::utils::response_deserialization_fail(
-                item.http_code,
-                "worldpayxml: payout sync response missing payment.",
-            ),
-        )?;
+        let payment =
+            order_status
+                .payment
+                .as_ref()
+                .ok_or(crate::utils::response_deserialization_fail(
+                    item.http_code,
+                    "worldpayxml: payout sync response missing payment.",
+                ))?;
 
         Ok(Self {
             response: Ok(PayoutGetResponse {
@@ -1648,12 +1647,14 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlPayoutVoidResponse, Self>>
             });
         }
 
-        let ok = response.reply.ok.as_ref().ok_or(
-            crate::utils::response_deserialization_fail(
+        let ok = response
+            .reply
+            .ok
+            .as_ref()
+            .ok_or(crate::utils::response_deserialization_fail(
                 item.http_code,
                 "worldpayxml: payout cancel response missing ok element.",
-            ),
-        )?;
+            ))?;
 
         Ok(Self {
             response: Ok(PayoutVoidResponse {

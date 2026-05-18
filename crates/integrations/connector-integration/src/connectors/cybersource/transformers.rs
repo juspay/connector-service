@@ -5864,18 +5864,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 fn build_recipient_info(
     request: &PayoutTransferRequest,
 ) -> Result<CybersourceRecipientInfo, error_stack::Report<IntegrationError>> {
-    let first_name = request
-        .get_billing_first_name()
-        .change_context(IntegrationError::MissingRequiredField {
+    let first_name = request.get_billing_first_name().change_context(
+        IntegrationError::MissingRequiredField {
             field_name: "address.billing_address.address.first_name",
             context: Default::default(),
-        })?;
-    let last_name = request
-        .get_billing_last_name()
-        .change_context(IntegrationError::MissingRequiredField {
-            field_name: "address.billing_address.address.last_name",
-            context: Default::default(),
-        })?;
+        },
+    )?;
+    let last_name =
+        request
+            .get_billing_last_name()
+            .change_context(IntegrationError::MissingRequiredField {
+                field_name: "address.billing_address.address.last_name",
+                context: Default::default(),
+            })?;
     let address1 = request.get_optional_billing_line1().ok_or_else(|| {
         IntegrationError::MissingRequiredField {
             field_name: "address.billing_address.address.line1",

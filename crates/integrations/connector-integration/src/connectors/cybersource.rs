@@ -1011,7 +1011,7 @@ macros::macro_connector_implementation!(
                     network_error_message: None,
                 });
             }
-            
+
             let error_message = match res.status_code {
                 500 => "internal_server_error",
                 501 => "not_implemented",
