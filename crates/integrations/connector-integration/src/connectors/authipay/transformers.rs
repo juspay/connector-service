@@ -1094,8 +1094,58 @@ impl
 }
 
 // ===== VOIDPC RESPONSE TRANSFORMATION =====
-// VoidPostCapture reuses AuthipayPaymentsResponse structure (same format as all other flows)
-// Status mapping reuses the existing map_void_status function
+
+fn map_void_pc_status(
+    transaction_type: AuthipayTransactionType,
+    transaction_status: Option<AuthipayPaymentStatus>,
+    transaction_result: Option<AuthipayPaymentResult>,
+    transaction_state: Option<AuthipayTransactionState>,
+) -> common_enums::PostCaptureVoidStatus {
+    if transaction_type != AuthipayTransactionType::Void {
+        return common_enums::PostCaptureVoidStatus::Failed;
+    }
+
+    if let Some(state) = transaction_state {
+        match state {
+            AuthipayTransactionState::Voided => {
+                return common_enums::PostCaptureVoidStatus::Succeeded;
+            }
+            AuthipayTransactionState::Declined => {
+                return common_enums::PostCaptureVoidStatus::Failed;
+            }
+            AuthipayTransactionState::Pending | AuthipayTransactionState::Waiting => {
+                return common_enums::PostCaptureVoidStatus::Pending;
+            }
+            _ => {}
+        }
+    }
+
+    if let Some(result) = transaction_result {
+        return match result {
+            AuthipayPaymentResult::Approved => common_enums::PostCaptureVoidStatus::Succeeded,
+            AuthipayPaymentResult::Waiting | AuthipayPaymentResult::Partial => {
+                common_enums::PostCaptureVoidStatus::Pending
+            }
+            AuthipayPaymentResult::Declined
+            | AuthipayPaymentResult::Failed
+            | AuthipayPaymentResult::Fraud => common_enums::PostCaptureVoidStatus::Failed,
+        };
+    }
+
+    if let Some(status) = transaction_status {
+        return match status {
+            AuthipayPaymentStatus::Approved => common_enums::PostCaptureVoidStatus::Succeeded,
+            AuthipayPaymentStatus::Waiting | AuthipayPaymentStatus::Partial => {
+                common_enums::PostCaptureVoidStatus::Pending
+            }
+            AuthipayPaymentStatus::ValidationFailed
+            | AuthipayPaymentStatus::ProcessingFailed
+            | AuthipayPaymentStatus::Declined => common_enums::PostCaptureVoidStatus::Failed,
+        };
+    }
+
+    common_enums::PostCaptureVoidStatus::Pending
+}
 
 impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
     for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
@@ -1105,33 +1155,32 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        // Map void status with CRITICAL validation of ALL fields
-        // Reuse the existing map_void_status function — same response format as Void flow
-        let attempt_status = map_void_status(
+        let post_capture_void_status = map_void_pc_status(
             item.response.transaction_type.clone(),
             item.response.transaction_status.clone(),
             item.response.transaction_result.clone(),
             item.response.transaction_state.clone(),
         );
 
-        // Convert AttemptStatus to PostCaptureVoidStatus for the new response variant
-        let post_capture_void_status = match attempt_status {
-            AttemptStatus::Voided => common_enums::PostCaptureVoidStatus::Succeeded,
-            AttemptStatus::Pending => common_enums::PostCaptureVoidStatus::Pending,
-            _ => common_enums::PostCaptureVoidStatus::Failed,
-        };
+        let description = post_capture_void_status
+            .is_post_capture_void_failure()
+            .then(|| {
+                item.response.error_message.clone().or_else(|| {
+                    item.response
+                        .processor
+                        .as_ref()
+                        .and_then(|p| p.response_message.clone())
+                })
+            })
+            .flatten();
 
         Ok(Self {
             response: Ok(PaymentsResponseData::PostCaptureVoidResponse {
                 post_capture_void_status,
                 connector_reference_id: Some(item.response.ipg_transaction_id.clone()),
-                description: None,
+                description,
                 status_code: item.http_code,
             }),
-            resource_common_data: PaymentFlowData {
-                status: attempt_status,
-                ..item.router_data.resource_common_data
-            },
             ..item.router_data
         })
     }

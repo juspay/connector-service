@@ -436,10 +436,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, IntegrationError> {
-            // Extract the captured transaction ID to void
             let transaction_id = &req.request.connector_transaction_id;
             let base_url = self.connector_base_url_payments(req);
-            // Secondary transaction pattern: POST {base_url}/{transaction_id}
             Ok(format!("{base_url}/{transaction_id}"))
         }
     }
