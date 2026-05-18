@@ -1259,16 +1259,12 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidPCResponse, Self>>
         // Check for top-level error first
         if let Some(error) = &response.reply.error {
             return Ok(Self {
-                resource_common_data: PaymentFlowData {
-                    status: AttemptStatus::Failure,
-                    ..router_data.resource_common_data.clone()
-                },
                 response: Err(ErrorResponse {
                     code: error.code.clone(),
                     message: error.message.clone(),
                     reason: Some(error.message.clone()),
                     status_code: item.http_code,
-                    attempt_status: Some(AttemptStatus::Failure),
+                    attempt_status: None,
                     connector_transaction_id: None,
                     network_decline_code: None,
                     network_advice_code: None,
@@ -1316,10 +1312,6 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidPCResponse, Self>>
         };
 
         Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status: AttemptStatus::VoidedPostCapture,
-                ..router_data.resource_common_data.clone()
-            },
             response: Ok(payments_response_data),
             ..router_data.clone()
         })
