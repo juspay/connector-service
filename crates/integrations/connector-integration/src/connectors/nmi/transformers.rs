@@ -233,6 +233,10 @@ impl NmiMerchantDefinedField {
 #[derive(Debug, Serialize)]
 pub struct NmiBillingDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
+    first_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     address1: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     address2: Option<Secret<String>>,
@@ -531,6 +535,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .as_ref()
                     .map(|m| NmiMerchantDefinedField::new(m.peek())),
                 billing_details: Some(NmiBillingDetails {
+                    first_name: router_data
+                        .resource_common_data
+                        .get_optional_billing_first_name(),
+                    last_name: router_data
+                        .resource_common_data
+                        .get_optional_billing_last_name(),
                     address1: router_data
                         .resource_common_data
                         .get_optional_billing_line1(),
