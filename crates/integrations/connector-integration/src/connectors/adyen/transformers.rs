@@ -4567,13 +4567,12 @@ impl TryFrom<ResponseRouterData<AdyenReversalResponse, Self>>
         // Preserve the existing attempt status; do not override it here.
         let status = router_data.resource_common_data.status;
 
-        let post_capture_void_status = if response.refusal_reason.is_some()
-            || response.refusal_reason_code.is_some()
-        {
-            common_enums::PostCaptureVoidStatus::Failed
-        } else {
-            common_enums::PostCaptureVoidStatus::Pending
-        };
+        let post_capture_void_status =
+            if response.refusal_reason.is_some() || response.refusal_reason_code.is_some() {
+                common_enums::PostCaptureVoidStatus::Failed
+            } else {
+                common_enums::PostCaptureVoidStatus::Pending
+            };
         let description = post_capture_void_status
             .is_post_capture_void_failure()
             .then(|| response.refusal_reason.clone())
