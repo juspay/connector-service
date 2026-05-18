@@ -1074,36 +1074,14 @@ impl TryFrom<ResponseRouterData<FiservVoidPCResponse, Self>>
 
         let gateway_resp = &response.gateway_response;
 
-        // Map VOIDED state to VoidPostCaptureInitiated; any other state is a failure
-        let status = match gateway_resp.transaction_state {
-            FiservPaymentStatus::Voided => enums::AttemptStatus::VoidPostCaptureInitiated,
-            _ => enums::AttemptStatus::Failure,
-        };
+        // Map FiservPaymentStatus directly to PostCaptureVoidStatus. The VoidPC
+        // flow must not update the overall payment attempt status, so we leave
+        // `resource_common_data.status` untouched.
+        let post_capture_void_status = map_fiserv_void_pc_status(&gateway_resp.transaction_state);
 
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = status;
 
-        let response_payload = PaymentsResponseData::PostCaptureVoidResponse {
-            post_capture_void_status: match gateway_resp.transaction_state {
-                FiservPaymentStatus::Voided => common_enums::PostCaptureVoidStatus::Succeeded,
-                _ => common_enums::PostCaptureVoidStatus::Failed,
-            },
-            connector_reference_id: Some(
-                gateway_resp
-                    .gateway_transaction_id
-                    .clone()
-                    .unwrap_or_else(|| {
-                        gateway_resp
-                            .transaction_processing_details
-                            .transaction_id
-                            .clone()
-                    }),
-            ),
-            description: None,
-            status_code: http_code,
-        };
-
-        if status == enums::AttemptStatus::Failure {
+        if post_capture_void_status.is_post_capture_void_failure() {
             router_data_out.response = Err(ErrorResponse {
                 code: gateway_resp
                     .transaction_processing_details
@@ -1115,17 +1093,49 @@ impl TryFrom<ResponseRouterData<FiservVoidPCResponse, Self>>
                 ),
                 reason: None,
                 status_code: http_code,
-                attempt_status: Some(status),
+                attempt_status: None,
                 connector_transaction_id: gateway_resp.gateway_transaction_id.clone(),
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
             });
         } else {
-            router_data_out.response = Ok(response_payload);
+            router_data_out.response = Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                post_capture_void_status,
+                connector_reference_id: Some(
+                    gateway_resp
+                        .gateway_transaction_id
+                        .clone()
+                        .unwrap_or_else(|| {
+                            gateway_resp
+                                .transaction_processing_details
+                                .transaction_id
+                                .clone()
+                        }),
+                ),
+                description: None,
+                status_code: http_code,
+            });
         }
 
         Ok(router_data_out)
+    }
+}
+
+fn map_fiserv_void_pc_status(
+    status: &FiservPaymentStatus,
+) -> common_enums::PostCaptureVoidStatus {
+    match status {
+        FiservPaymentStatus::Voided => common_enums::PostCaptureVoidStatus::Succeeded,
+        FiservPaymentStatus::Captured
+        | FiservPaymentStatus::Authorized
+        | FiservPaymentStatus::Succeeded => common_enums::PostCaptureVoidStatus::Failed,
+        FiservPaymentStatus::Declined | FiservPaymentStatus::Failed => {
+            common_enums::PostCaptureVoidStatus::Failed
+        }
+        FiservPaymentStatus::Processing | FiservPaymentStatus::Created => {
+            common_enums::PostCaptureVoidStatus::Pending
+        }
     }
 }
 
