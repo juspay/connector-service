@@ -1033,7 +1033,7 @@ impl<
                 // ============================================================================
                 // DIGITAL WALLETS - Direct conversions
                 // ============================================================================
-                grpc_api_types::payments::payment_method::PaymentMethod::Bluecode(_) => Ok(
+                grpc_api_types::payments::payment_method::PaymentMethod::BluecodeRedirect(_) => Ok(
                     Self::Wallet(payment_method_data::WalletData::BluecodeRedirect {}),
                 ),
                 grpc_api_types::payments::payment_method::PaymentMethod::RevolutPay(_) => {
@@ -1046,7 +1046,22 @@ impl<
                         payment_method_data::AliPayRedirection {},
                     )),
                 ),
-                grpc_api_types::payments::payment_method::PaymentMethod::AliPayHk(_) => Ok(
+                grpc_api_types::payments::payment_method::PaymentMethod::RevolutPayRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::RevolutPay(
+                        payment_method_data::RevolutPayData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::SatispayRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::Satispay(
+                        payment_method_data::SatispayData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::WeroRedirect(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::Wero(
+                        payment_method_data::WeroData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::AliPayHkRedirect(_) => Ok(
                     Self::Wallet(payment_method_data::WalletData::AliPayHkRedirect(
                         payment_method_data::AliPayHkRedirection {},
                     )),
@@ -1162,7 +1177,7 @@ impl<
                         Box::new(payment_method_data::WeChatPayRedirection {}),
                     )))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(
+                grpc_api_types::payments::payment_method::PaymentMethod::MifinityRedirect(
                     mifinity_data,
                 ) => Ok(Self::Wallet(payment_method_data::WalletData::Mifinity(
                     payment_method_data::MifinityData {
@@ -2244,10 +2259,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::WeChatPayRedirect(_) => Ok(Some(PaymentMethodType::WeChatPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::AliPayRedirect(_) => Ok(Some(PaymentMethodType::AliPay)),
                 grpc_api_types::payments::payment_method::PaymentMethod::RevolutPay(_) => Ok(Some(PaymentMethodType::RevolutPay)),
-                grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(_) => Ok(Some(PaymentMethodType::Mifinity)),
-                grpc_api_types::payments::payment_method::PaymentMethod::Bluecode(_) => Ok(Some(PaymentMethodType::Bluecode)),
+                grpc_api_types::payments::payment_method::PaymentMethod::MifinityRedirect(_) => Ok(Some(PaymentMethodType::Mifinity)),
+                grpc_api_types::payments::payment_method::PaymentMethod::BluecodeRedirect(_) => Ok(Some(PaymentMethodType::Bluecode)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Paze(_) => Ok(Some(PaymentMethodType::Paze)),
-                grpc_api_types::payments::payment_method::PaymentMethod::AliPayHk(_) => Ok(Some(PaymentMethodType::AliPayHk)),
+                grpc_api_types::payments::payment_method::PaymentMethod::AliPayHkRedirect(_) => Ok(Some(PaymentMethodType::AliPayHk)),
                 grpc_api_types::payments::payment_method::PaymentMethod::DanaRedirect(_) => Ok(Some(PaymentMethodType::Dana)),
                 grpc_api_types::payments::payment_method::PaymentMethod::GcashRedirect(_) => Ok(Some(PaymentMethodType::Gcash)),
                 grpc_api_types::payments::payment_method::PaymentMethod::GoPayRedirect(_) => Ok(Some(PaymentMethodType::GoPay)),
@@ -2269,9 +2284,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::PayuRedirect(_) => Ok(Some(PaymentMethodType::PayU)),
                 grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_) => Ok(Some(PaymentMethodType::EaseBuzz)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MobilePayRedirect(_) => Ok(Some(PaymentMethodType::MobilePay)),
-                grpc_api_types::payments::payment_method::PaymentMethod::Venmo(_) => Ok(Some(PaymentMethodType::Venmo)),
-                grpc_api_types::payments::payment_method::PaymentMethod::Skrill(_) => Ok(Some(PaymentMethodType::Skrill)),
-                grpc_api_types::payments::payment_method::PaymentMethod::Paysera(_) => Ok(Some(PaymentMethodType::Paysera)),
+                grpc_api_types::payments::payment_method::PaymentMethod::VenmoRedirect(_) => Ok(Some(PaymentMethodType::Venmo)),
+                grpc_api_types::payments::payment_method::PaymentMethod::SkrillRedirect(_) => Ok(Some(PaymentMethodType::Skrill)),
+                grpc_api_types::payments::payment_method::PaymentMethod::PayseraRedirect(_) => Ok(Some(PaymentMethodType::Paysera)),
+                grpc_api_types::payments::payment_method::PaymentMethod::RevolutPayRedirect(_) => Ok(Some(PaymentMethodType::RevolutPay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::SatispayRedirect(_) => Ok(Some(PaymentMethodType::Satispay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::WeroRedirect(_) => Ok(Some(PaymentMethodType::Wero)),
+
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
@@ -5175,11 +5194,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::MifinityRedirect(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Bluecode(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::BluecodeRedirect(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
@@ -5199,7 +5218,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::AliPayHk(_)),
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::AliPayHkRedirect(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
@@ -5276,6 +5295,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::EasebuzzRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::RevolutPayRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::SatispayRedirect(_)),
+            } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::WeroRedirect(_)),
             } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:

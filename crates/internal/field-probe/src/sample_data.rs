@@ -335,7 +335,7 @@ pub(crate) fn revolut_pay_method() -> PaymentMethod {
 
 pub(crate) fn mifinity_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::Mifinity(proto::MifinityWallet {
+        payment_method: Some(PmVariant::MifinityRedirect(proto::MifinityRedirectWallet {
             date_of_birth: Some(Secret::new("1990-01-01".to_string())),
             language_preference: Some("en".to_string()),
         })),
@@ -344,7 +344,9 @@ pub(crate) fn mifinity_method() -> PaymentMethod {
 
 pub(crate) fn bluecode_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::Bluecode(proto::Bluecode::default())),
+        payment_method: Some(PmVariant::BluecodeRedirect(
+            proto::BluecodeRedirectWallet::default(),
+        )),
     }
 }
 
@@ -453,13 +455,17 @@ pub(crate) fn mobile_pay_redirect_method() -> PaymentMethod {
 
 pub(crate) fn skrill_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::Skrill(proto::SkrillWallet::default())),
+        payment_method: Some(PmVariant::SkrillRedirect(
+            proto::SkrillRedirectWallet::default(),
+        )),
     }
 }
 
 pub(crate) fn paysera_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::Paysera(proto::PayseraWallet::default())),
+        payment_method: Some(PmVariant::PayseraRedirect(
+            proto::PayseraRedirectWallet::default(),
+        )),
     }
 }
 
