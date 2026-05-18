@@ -1418,11 +1418,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidPCResponse, Self>>
 
         // Carry the connector's top-level message text through as the
         // PostCaptureVoidResponse description (e.g. "This transaction has been approved.").
-        let response_description = inner
-            .messages
-            .message
-            .first()
-            .map(|m| m.text.clone());
+        let response_description = inner.messages.message.first().map(|m| m.text.clone());
 
         let response_result = if inner.messages.result_code == ResultCode::Error {
             let (error_code, error_message) = extract_error_details(inner, None);
