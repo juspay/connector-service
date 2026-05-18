@@ -756,6 +756,11 @@ pub enum ConnectorSpecificConfig {
         response_audience: Option<Secret<String>>,
         base_url: Option<String>,
     },
+    Juspay {
+        api_key: Secret<String>,
+        merchant_id: Secret<String>,
+        base_url: Option<String>,
+    },
 }
 
 impl ConnectorSpecificConfig {
@@ -1069,6 +1074,7 @@ impl ConnectorSpecificConfig {
                 client_id,
                 client_secret
             },
+            Juspay { api_key, merchant_id },
             Imerchantsolutions { api_key },
             TwocTwopPaco {
                 access_token,
@@ -1480,6 +1486,7 @@ impl ConnectorSpecificConfig {
                     client_id,
                     client_secret
                 },
+                Juspay { api_key, merchant_id },
                 Imerchantsolutions { api_key },
                 TwocTwopPaco {
                     access_token,
@@ -2013,6 +2020,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_salt: easebuzz.api_salt.ok_or_else(err)?,
                 base_url: easebuzz.base_url,
                 secondary_base_url: easebuzz.secondary_base_url,
+            }),
+            AuthType::Juspay(juspay) => Ok(Self::Juspay {
+                api_key: juspay.api_key.ok_or_else(err)?,
+                merchant_id: juspay.merchant_id.ok_or_else(err)?,
+                base_url: juspay.base_url,
             }),
             AuthType::Imerchantsolutions(imerchantsolutions) => Ok(Self::Imerchantsolutions {
                 api_key: imerchantsolutions.api_key.ok_or_else(err)?,
@@ -3091,6 +3103,14 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     client_secret: key1.clone(),
                     certificates: Some(api_secret.clone()),
                     private_key: Some(key2.clone()),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Juspay => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Juspay {
+                    api_key: api_key.clone(),
+                    merchant_id: key1.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),
