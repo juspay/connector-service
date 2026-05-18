@@ -74,12 +74,16 @@ impl RefundService for Refunds {
             .cloned()
             .unwrap_or_else(|| "RefundService".to_string());
         let config = utils::get_config_from_request(&request)?;
-        Box::pin(utils::grpc_logging_wrapper(
+        Box::pin(utils::grpc_logging_wrapper_with_parser(
             request,
             &service_name,
             config.clone(),
             common_utils::events::FlowName::Rsync,
-            |request_data| async move { self.internal_get(request_data).await },
+            RequestData::from_grpc_request,
+            |request_data| {
+                let refunds_service = self.clone();
+                Box::pin(async move { refunds_service.internal_get(request_data).await })
+            },
         ))
         .await
     }
