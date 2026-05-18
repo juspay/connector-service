@@ -50,7 +50,7 @@ examples_python: examples/airwallex/airwallex.py
 connector_id: authipay
 doc: docs/connectors/authipay.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
-payment_methods: Card
+payment_methods: Card, GooglePayDecrypted
 flows: authorize, capture, get, proxy_authorize, refund, refund_get, void
 examples_python: examples/authipay/authipay.py
 
