@@ -1026,38 +1026,23 @@ struct FiservemeaVoidPCStatus {
     transaction_result: Option<FiservemeaPaymentResult>,
 }
 
-impl From<FiservemeaVoidPCStatus> for (AttemptStatus, common_enums::PostCaptureVoidStatus) {
+impl From<FiservemeaVoidPCStatus> for common_enums::PostCaptureVoidStatus {
     fn from(value: FiservemeaVoidPCStatus) -> Self {
         match value.transaction_status {
-            Some(FiservemeaPaymentStatus::Approved) => (
-                AttemptStatus::VoidPostCaptureInitiated,
-                common_enums::PostCaptureVoidStatus::Succeeded,
-            ),
-            Some(FiservemeaPaymentStatus::Waiting) => (
-                AttemptStatus::Pending,
-                common_enums::PostCaptureVoidStatus::Succeeded,
-            ),
+            Some(FiservemeaPaymentStatus::Approved) => Self::Succeeded,
+            Some(FiservemeaPaymentStatus::Waiting) => Self::Pending,
             Some(FiservemeaPaymentStatus::Partial)
             | Some(FiservemeaPaymentStatus::ValidationFailed)
             | Some(FiservemeaPaymentStatus::ProcessingFailed)
             | Some(FiservemeaPaymentStatus::Declined)
             | None => match value.transaction_result {
-                Some(FiservemeaPaymentResult::Approved) => (
-                    AttemptStatus::VoidPostCaptureInitiated,
-                    common_enums::PostCaptureVoidStatus::Succeeded,
-                ),
-                Some(FiservemeaPaymentResult::Waiting) => (
-                    AttemptStatus::Pending,
-                    common_enums::PostCaptureVoidStatus::Succeeded,
-                ),
+                Some(FiservemeaPaymentResult::Approved) => Self::Succeeded,
+                Some(FiservemeaPaymentResult::Waiting) => Self::Pending,
                 Some(FiservemeaPaymentResult::Declined)
                 | Some(FiservemeaPaymentResult::Failed)
                 | Some(FiservemeaPaymentResult::Partial)
                 | Some(FiservemeaPaymentResult::Fraud)
-                | None => (
-                    AttemptStatus::Failure,
-                    common_enums::PostCaptureVoidStatus::Failed,
-                ),
+                | None => Self::Failed,
             },
         }
     }
@@ -1071,7 +1056,7 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<FiservemeaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let (status, post_capture_void_status) = FiservemeaVoidPCStatus {
+        let post_capture_void_status: common_enums::PostCaptureVoidStatus = FiservemeaVoidPCStatus {
             transaction_status: item.response.transaction_status.clone(),
             transaction_result: item.response.transaction_result.clone(),
         }
@@ -1084,10 +1069,6 @@ impl TryFrom<ResponseRouterData<FiservemeaPaymentsResponse, Self>>
                 description: None,
                 status_code: item.http_code,
             }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
             ..item.router_data
         })
     }
