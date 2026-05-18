@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.05.18.0
+
+### Features
+
+- **composite_service:** Extend CompositeAuthorize with stateless 3DS authN decider ([#1036](https://github.com/juspay/connector-service/pull/1036)) ([`4f6bbfc`](https://github.com/juspay/connector-service/commit/4f6bbfca3f70f5b2573e970a48fcd3148b1f4dea))
+
+**Full Changelog:** [`2026.05.15.1...2026.05.18.0`](https://github.com/juspay/connector-service/compare/2026.05.15.1...2026.05.18.0)
+
+- - -
+
 ## 2026.05.15.1
 
 ### Features
