@@ -14,11 +14,12 @@ use crate::{connectors::bankofamerica::BankofamericaRouterData, types::ResponseR
 use cards;
 use common_enums;
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void, VoidPC},
     connector_types::{
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        SetupMandateRequestData,
     },
     errors::{ConnectorError, IntegrationError},
     payment_address::Address,
@@ -921,6 +922,9 @@ pub type BankOfAmericaPaymentsResponseForSetupMandate = BankofamericaPaymentsRes
 
 pub type BankofamericaVoidRequestForVoid = BankofamericaVoidRequest;
 pub type BankOfAmericaPaymentsResponseForVoid = BankofamericaPaymentsResponse;
+
+pub type BankofamericaVoidPCRequestForVoidPC = BankofamericaVoidPCRequest;
+pub type BankOfAmericaPaymentsResponseForVoidPC = BankofamericaPaymentsResponse;
 
 pub type BankOfAmericaRefundRequestForRefund = BankOfAmericaRefundRequest;
 pub type BankOfAmericaRefundResponseForRefund = BankOfAmericaRefundResponse;
@@ -2415,5 +2419,113 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             merchant_defined_information,
         })
+    }
+}
+
+// VoidPC (post-capture void) request — used with PaymentsCancelPostCaptureData.
+// Uses the POST /pts/v2/captures/{capture_id}/voids endpoint which only requires
+// clientReferenceInformation. No lineItems or amountDetails needed.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BankofamericaVoidPCRequest {
+    client_reference_information: ClientReferenceInformation,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BankofamericaRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BankofamericaVoidPCRequest
+{
+    type Error = error_stack::Report<IntegrationError>;
+
+    fn try_from(
+        item: BankofamericaRouterData<
+            RouterDataV2<
+                VoidPC,
+                PaymentFlowData,
+                PaymentsCancelPostCaptureData,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            client_reference_information: ClientReferenceInformation {
+                code: Some(
+                    item.router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+            },
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BankofamericaPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            BankofamericaPaymentsResponse::ClientReferenceInformation(info_response) => {
+                let void_status = match info_response.status {
+                    BankofamericaPaymentStatus::Voided
+                    | BankofamericaPaymentStatus::Reversed
+                    | BankofamericaPaymentStatus::Cancelled => {
+                        common_enums::PostCaptureVoidStatus::Succeeded
+                    }
+                    BankofamericaPaymentStatus::Pending
+                    | BankofamericaPaymentStatus::PendingReview
+                    | BankofamericaPaymentStatus::Challenge
+                    | BankofamericaPaymentStatus::Accepted => {
+                        common_enums::PostCaptureVoidStatus::Pending
+                    }
+                    _ => common_enums::PostCaptureVoidStatus::Failed,
+                };
+                let response = if void_status.is_post_capture_void_failure() {
+                    let mut error = get_error_response(
+                        &info_response.error_information,
+                        &info_response.processor_information,
+                        &info_response.risk_information,
+                        None,
+                        item.http_code,
+                        info_response.id.clone(),
+                    );
+                    error.attempt_status = None;
+                    Err(error)
+                } else {
+                    Ok(PaymentsResponseData::PostCaptureVoidResponse {
+                        post_capture_void_status: void_status,
+                        connector_reference_id: Some(
+                            info_response
+                                .client_reference_information
+                                .code
+                                .clone()
+                                .unwrap_or(info_response.id.clone()),
+                        ),
+                        description: None,
+                        status_code: item.http_code,
+                    })
+                };
+                Ok(Self {
+                    response,
+                    ..item.router_data
+                })
+            }
+            BankofamericaPaymentsResponse::ErrorInformation(ref error_response) => {
+                Ok(map_error_response(&error_response.clone(), item, None))
+            }
+        }
     }
 }
