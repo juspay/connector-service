@@ -4555,8 +4555,8 @@ message ConnectorSpecificConfig {
     // FINIX = 111
     FinixConfig finix = 124;
 
-    // ACI = 122
-    AciConfig aci = 122;
+    // ACI = 125
+    AciConfig aci = 125;
   }
 }
 
