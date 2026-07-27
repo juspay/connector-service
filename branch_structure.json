@@ -1,0 +1,18 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "chore/fix-windows-clone",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "chore/fix-windows-clone": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "chore/fix-windows-clone",
+    "origin"
+  ]
+}
