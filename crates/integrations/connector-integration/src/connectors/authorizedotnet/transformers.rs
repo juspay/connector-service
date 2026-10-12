@@ -1,5 +1,9 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{consts, pii::Email, types::FloatMajorUnit};
+use common_utils::{
+    consts,
+    pii::Email,
+    types::{FloatMajorUnit, MinorUnit},
+};
 use domain_types::{
     connector_flow::{
         Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment,
@@ -15,9 +19,10 @@ use domain_types::{
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext, WebhookError},
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
+    payment_address::Address,
     payment_method_data::{
-        BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        VaultTokenHolder, WalletData,
+        ApplePayPaymentData, BankDebitData, DefaultPCIHolder, GpayTokenizationData,
+        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VaultTokenHolder, WalletData,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse, FlowStatus},
     router_data_v2::RouterDataV2,
@@ -41,6 +46,9 @@ type ResponseError = error_stack::Report<ConnectorError>;
 // Constants
 const MAX_ID_LENGTH: usize = 20;
 const ADDRESS_MAX_LENGTH: usize = 60; // Authorize.Net address field max length
+const PHONE_MAX_LENGTH: usize = 25; // billTo.phoneNumber max length (API reference field table)
+const PO_NUMBER_MAX_LENGTH: usize = 25; // poNumber max length (API reference field table)
+const MAX_LINE_ITEMS: usize = 30; // lineItems.lineItem[]: "up to 30" (API reference field table)
 
 // Authorize.Net transient server-side error codes: returned (HTTP 200) with no
 // transaction record while the underlying payment is unchanged. On a psync poll
@@ -355,6 +363,23 @@ pub struct CreditCardDetails<T: PaymentMethodDataTypes> {
     card_code: Option<Secret<String>>,
 }
 
+/// `payment.creditCard` for a wallet token the merchant side already decrypted
+/// (Apple Pay / Google Pay "Hyperswitch decryption"): the device PAN travels as
+/// `cardNumber` with `isPaymentToken` and the network `cryptogram`; no `cardCode`.
+/// Shape from the XSD `creditCardType`, whose element order is cardNumber,
+/// expirationDate, cardCode, isPaymentToken, cryptogram - keep the fields in
+/// that order. No ECI is sent: the in-app guide forbids 3-D Secure data next to
+/// wallet payment data and `tokenRequestorEci` has no documented meaning.
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DecryptedWalletCardDetails {
+    card_number: cards::CardNumber,
+    expiration_date: Secret<String>, // YYYY-MM
+    is_payment_token: Option<bool>,
+    cryptogram: Option<Secret<String>>,
+}
+
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -371,6 +396,10 @@ pub enum PaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
     BankAccount(BankAccountDetails),
     OpaqueData(WalletDetails),
+    /// Serialised under the same `creditCard` key as `CreditCard`; the type only
+    /// differs because a device PAN is not the generic `RawCardNumber<T>`.
+    #[serde(rename(serialize = "creditCard", deserialize = "decryptedWalletCreditCard"))]
+    DecryptedWalletCard(DecryptedWalletCardDetails),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -469,6 +498,100 @@ impl<T: PaymentMethodDataTypes> TryFrom<&WalletData> for PaymentDetails<T> {
     }
 }
 
+/// Resolves a wallet token that arrives already decrypted into `payment.creditCard`.
+/// Returns `None` for an encrypted token (and for every other wallet), which
+/// stays on the `opaqueData` path above.
+///
+/// - Apple Pay decrypted data always carries an online payment cryptogram.
+/// - Google Pay decrypted data carries one for `CRYPTOGRAM_3DS` tokens only; a
+///   `PAN_ONLY` token has none and is a plain card, so `isPaymentToken` is omitted.
+fn get_decrypted_wallet_card(
+    wallet_data: &WalletData,
+) -> Result<Option<DecryptedWalletCardDetails>, Error> {
+    match wallet_data {
+        WalletData::ApplePay(apple_pay) => match &apple_pay.payment_data {
+            ApplePayPaymentData::Decrypted(decrypted) => Ok(Some(DecryptedWalletCardDetails {
+                card_number: decrypted.application_primary_account_number.clone(),
+                expiration_date: decrypted.get_expiry_date_as_yyyymm("-"),
+                is_payment_token: Some(true),
+                cryptogram: Some(decrypted.payment_data.online_payment_cryptogram.clone()),
+            })),
+            ApplePayPaymentData::Encrypted(_) => Ok(None),
+        },
+        WalletData::GooglePay(google_pay) => match &google_pay.tokenization_data {
+            GpayTokenizationData::Decrypted(decrypted) => {
+                let expiration_date = decrypted.get_expiry_date_as_yyyymm("-").change_context(
+                    IntegrationError::InvalidDataFormat {
+                        field_name: "google_pay.tokenization_data.card_exp_month/card_exp_year",
+                        context: IntegrationErrorContext {
+                            suggested_action: Some(
+                                "Send the decrypted Google Pay expiry as a 1-12 month and a 2 or 4 digit year"
+                                    .to_owned(),
+                            ),
+                            doc_url: None,
+                            additional_context: Some(
+                                "Authorize.Net expects creditCard.expirationDate as YYYY-MM"
+                                    .to_owned(),
+                            ),
+                        },
+                    },
+                )?;
+                Ok(Some(DecryptedWalletCardDetails {
+                    card_number: decrypted.application_primary_account_number.clone(),
+                    expiration_date,
+                    is_payment_token: decrypted.cryptogram.as_ref().map(|_| true),
+                    cryptogram: decrypted.cryptogram.clone(),
+                }))
+            }
+            GpayTokenizationData::Encrypted(_) => Ok(None),
+        },
+        WalletData::PaypalRedirect(_)
+        | WalletData::AliPayQr(_)
+        | WalletData::AliPayRedirect(_)
+        | WalletData::AliPayHkRedirect(_)
+        | WalletData::BluecodeRedirect {}
+        | WalletData::AmazonPayRedirect(_)
+        | WalletData::MomoRedirect(_)
+        | WalletData::KakaoPayRedirect(_)
+        | WalletData::GoPayRedirect(_)
+        | WalletData::GcashRedirect(_)
+        | WalletData::ApplePayRedirect(_)
+        | WalletData::ApplePayThirdPartySdk(_)
+        | WalletData::DanaRedirect {}
+        | WalletData::GrabpayRedirect {}
+        | WalletData::GooglePayRedirect(_)
+        | WalletData::GooglePayThirdPartySdk(_)
+        | WalletData::MbWayRedirect(_)
+        | WalletData::MobilePayRedirect(_)
+        | WalletData::PaypalSdk(_)
+        | WalletData::Paze(_)
+        | WalletData::SamsungPay(_)
+        | WalletData::TwintRedirect {}
+        | WalletData::VippsRedirect {}
+        | WalletData::TouchNGoRedirect(_)
+        | WalletData::WeChatPayRedirect(_)
+        | WalletData::WeChatPayQr(_)
+        | WalletData::CashappQr(_)
+        | WalletData::SwishQr(_)
+        | WalletData::Mifinity(_)
+        | WalletData::RevolutPay(_)
+        | WalletData::MbWay(_)
+        | WalletData::Satispay(_)
+        | WalletData::Wero(_)
+        | WalletData::LazyPayRedirect(_)
+        | WalletData::PhonePeRedirect(_)
+        | WalletData::BillDeskRedirect(_)
+        | WalletData::CashfreeRedirect(_)
+        | WalletData::PayURedirect(_)
+        | WalletData::EaseBuzzRedirect(_)
+        | WalletData::PaymayaRedirect(_)
+        | WalletData::PayhereRedirect {}
+        | WalletData::QwikcilverWalletDirect(_)
+        | WalletData::Skrill(_)
+        | WalletData::Neteller(_) => Ok(None),
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum AccountType {
@@ -543,6 +666,32 @@ pub struct BillTo {
     state: Option<Secret<String>>,
     zip: Option<Secret<String>>,
     country: Option<enums::CountryAlpha2>,
+    // XSD `customerAddressType` order: ..., country, phoneNumber, faxNumber, email.
+    phone_number: Option<Secret<String>>,
+    email: Option<Email>,
+}
+
+/// Builds `billTo` from a billing address. Shared by every createTransactionRequest
+/// that sends card data with a billing address, so the shape cannot drift per flow.
+fn build_bill_to(billing: &Address) -> BillTo {
+    let details = billing.address.as_ref();
+    BillTo {
+        first_name: details.and_then(|a| a.first_name.clone()),
+        last_name: details.and_then(|a| a.last_name.clone()),
+        // line1, line2 and line3 joined under the 60-character limit
+        address: details.and_then(|a| get_address_line(&a.line1, &a.line2, &a.line3)),
+        city: details.and_then(|a| a.city.clone()),
+        state: details.and_then(|a| a.state.clone()),
+        zip: details.and_then(|a| a.zip.clone()),
+        country: details.and_then(|a| a.country),
+        // Country code + number. `phoneNumber` is limited to 25 characters and an
+        // over-long value fails the whole request on schema validation, so it is
+        // omitted instead - the same rule `refId` and `customer.id` follow.
+        phone_number: billing
+            .get_e123_phone_number()
+            .filter(|phone| phone.peek().len() <= PHONE_MAX_LENGTH),
+        email: billing.email.clone(),
+    }
 }
 
 #[skip_serializing_none]
@@ -551,12 +700,67 @@ pub struct BillTo {
 pub struct ShipTo {
     first_name: Option<Secret<String>>,
     last_name: Option<Secret<String>>,
-    company: Option<String>,
     address: Option<Secret<String>>,
-    city: Option<String>,
-    state: Option<String>,
+    city: Option<Secret<String>>,
+    state: Option<Secret<String>>,
     zip: Option<Secret<String>>,
     country: Option<enums::CountryAlpha2>,
+}
+
+/// Builds `shipTo` from the shipping address; `None` when the address carries
+/// nothing to send, so an empty `shipTo` object never reaches the wire.
+fn build_ship_to(shipping: &Address) -> Option<ShipTo> {
+    let details = shipping.address.as_ref()?;
+    let ship_to = ShipTo {
+        first_name: details.first_name.clone(),
+        last_name: details.last_name.clone(),
+        // Same 60-character joining rule as billTo.address
+        address: get_address_line(&details.line1, &details.line2, &details.line3),
+        city: details.city.clone(),
+        state: details.state.clone(),
+        zip: details.zip.clone(),
+        country: details.country,
+    };
+    let has_content = ship_to.first_name.is_some()
+        || ship_to.last_name.is_some()
+        || ship_to.address.is_some()
+        || ship_to.city.is_some()
+        || ship_to.state.is_some()
+        || ship_to.zip.is_some()
+        || ship_to.country.is_some();
+    has_content.then_some(ship_to)
+}
+
+/// Level 3 line items: `lineItems.lineItem[]`.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LineItems {
+    line_item: Vec<LineItem>,
+}
+
+/// One Level 3 line item. Field order follows the XSD `lineItemType`: itemId, name,
+/// description, quantity, unitPrice, ..., unitOfMeasure, ..., taxAmount, ...,
+/// totalAmount, commodityCode.
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LineItem {
+    item_id: String,
+    name: String,
+    description: Option<String>,
+    quantity: u16,
+    unit_price: FloatMajorUnit,
+    unit_of_measure: Option<String>,
+    tax_amount: Option<FloatMajorUnit>,
+    total_amount: Option<FloatMajorUnit>,
+    commodity_code: Option<String>,
+}
+
+/// Level 2 `tax` / `duty` / `shipping`: only `amount` is sent.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtendedAmount {
+    amount: FloatMajorUnit,
 }
 
 #[skip_serializing_none]
@@ -646,12 +850,119 @@ pub struct AuthorizedotnetTransactionRequest<T: PaymentMethodDataTypes> {
     payment: Option<PaymentDetails<T>>,
     profile: Option<ProfileDetails>,
     order: Option<Order>,
+    // Authorize.Net validates the element order of `transactionRequest` against its
+    // XSD (`transactionRequestType`); a field in the wrong position is rejected with
+    // E00003. Keep: order, lineItems, tax, duty, shipping, taxExempt, poNumber,
+    // customer, billTo, shipTo, cardholderAuthentication, userFields,
+    // merchantDescriptor, processingOptions, subsequentAuthInformation.
+    line_items: Option<LineItems>,
+    tax: Option<ExtendedAmount>,
+    duty: Option<ExtendedAmount>,
+    shipping: Option<ExtendedAmount>,
+    tax_exempt: Option<bool>,
+    po_number: Option<String>,
     customer: Option<CustomerDetails>,
     bill_to: Option<BillTo>,
+    ship_to: Option<ShipTo>,
+    cardholder_authentication: Option<CardholderAuthentication>,
     user_fields: Option<UserFields>,
+    merchant_descriptor: Option<String>,
     processing_options: Option<ProcessingOptions>,
     subsequent_auth_information: Option<SubsequentAuthInformation>,
     ref_trans_id: Option<String>,
+}
+
+/// `transactionRequest.cardholderAuthentication`: the result of a 3D Secure
+/// authentication performed outside Authorize.Net (the gateway has no enrolment,
+/// challenge or validation call of its own). Both elements are required when the
+/// element is sent.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardholderAuthentication {
+    /// ECI (Visa) or UCAF collection indicator (Mastercard)
+    authentication_indicator: String,
+    /// CAVV (Visa) or AAV / UCAF (Mastercard)
+    cardholder_authentication_value: Secret<String>,
+}
+
+/// Builds `cardholderAuthentication` for a card payment from externally obtained
+/// 3DS data, refusing before any connector call when the data cannot be honoured:
+/// - a 3DS payment with no authentication data: Authorize.Net cannot authenticate
+///   the cardholder, and charging it anyway would silently downgrade it to non-3DS;
+/// - authentication data carrying only one of indicator / CAVV: the gateway
+///   requires both elements together.
+fn build_cardholder_authentication(
+    authentication_data: Option<&domain_types::router_request_types::AuthenticationData>,
+    is_three_ds: bool,
+) -> Result<Option<CardholderAuthentication>, Error> {
+    // authenticationIndicator is "ECI (Visa) or UCAF collection indicator
+    // (Mastercard)": the ECI is used when present, the UCAF indicator otherwise.
+    let authentication_indicator = authentication_data.and_then(|data| {
+        data.eci
+            .as_ref()
+            .filter(|eci| !eci.is_empty())
+            .or(data
+                .ucaf_collection_indicator
+                .as_ref()
+                .filter(|indicator| !indicator.is_empty()))
+            .cloned()
+    });
+    let cardholder_authentication_value = authentication_data
+        .and_then(|data| data.cavv.clone())
+        .filter(|cavv| !cavv.peek().is_empty());
+
+    match (authentication_indicator, cardholder_authentication_value) {
+        (Some(authentication_indicator), Some(cardholder_authentication_value)) => {
+            Ok(Some(CardholderAuthentication {
+                authentication_indicator,
+                cardholder_authentication_value,
+            }))
+        }
+        (Some(_), None) => Err(error_stack::report!(IntegrationError::MissingRequiredField {
+            field_name: "authentication_data.cavv",
+            context: IntegrationErrorContext {
+                suggested_action: Some(
+                    "Send authentication_data.cavv together with the ECI, or omit authentication_data"
+                        .to_owned(),
+                ),
+                doc_url: None,
+                additional_context: Some(
+                    "Authorize.Net requires both authenticationIndicator and cardholderAuthenticationValue when cardholderAuthentication is sent"
+                        .to_owned(),
+                ),
+            },
+        })),
+        (None, Some(_)) => Err(error_stack::report!(IntegrationError::MissingRequiredField {
+            field_name: "authentication_data.eci",
+            context: IntegrationErrorContext {
+                suggested_action: Some(
+                    "Send authentication_data.eci (or ucaf_collection_indicator for Mastercard) together with the CAVV, or omit authentication_data"
+                        .to_owned(),
+                ),
+                doc_url: None,
+                additional_context: Some(
+                    "Authorize.Net requires both authenticationIndicator and cardholderAuthenticationValue when cardholderAuthentication is sent"
+                        .to_owned(),
+                ),
+            },
+        })),
+        (None, None) if is_three_ds => Err(error_stack::report!(IntegrationError::NotSupported {
+            message: "3DS flow".to_string(),
+            connector: "authorizedotnet",
+            context: IntegrationErrorContext {
+                suggested_action: Some(
+                    "Authenticate the cardholder with an external 3DS provider and send the result in authentication_data (eci and cavv), or use auth_type no_three_ds"
+                        .to_owned(),
+                ),
+                doc_url: None,
+                additional_context: Some(
+                    "Authorize.Net performs no 3D Secure authentication of its own; it only accepts externally obtained authentication data on the charge"
+                        .to_owned(),
+                ),
+            },
+        })),
+        (None, None) => Ok(None),
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -751,8 +1062,17 @@ fn create_regular_transaction_request<
     >,
     currency: api_enums::Currency,
 ) -> Result<AuthorizedotnetTransactionRequest<T>, Error> {
+    // External 3DS data is carried on card payments only (never on the wallet or
+    // bank arms: Apple Pay opaque data may not include 3D Secure data).
+    let mut cardholder_authentication = None;
     let payment_details = match &item.router_data.request.payment_method_data {
         PaymentMethodData::Card(card) => {
+            // Refusals come first, before any field of the request is built.
+            cardholder_authentication = build_cardholder_authentication(
+                item.router_data.request.authentication_data.as_ref(),
+                item.router_data.resource_common_data.is_three_ds(),
+            )?;
+
             let expiry_month = card.card_exp_month.peek().clone();
             let expiry_year =
                 domain_types::utils::expand_expiry_year_to_four_digits(&card.card_exp_year);
@@ -822,7 +1142,12 @@ fn create_regular_transaction_request<
                 }
             }
         }
-        PaymentMethodData::Wallet(wallet_data) => PaymentDetails::try_from(wallet_data),
+        PaymentMethodData::Wallet(wallet_data) => match get_decrypted_wallet_card(wallet_data)? {
+            Some(decrypted_wallet_card) => {
+                Ok(PaymentDetails::DecryptedWalletCard(decrypted_wallet_card))
+            }
+            None => PaymentDetails::try_from(wallet_data),
+        },
         pm => Err(error_stack::report!(IntegrationError::NotSupported {
             message: format!("Payment method {:?}", pm),
             connector: "authorizedotnet",
@@ -837,11 +1162,22 @@ fn create_regular_transaction_request<
         | Some(enums::CaptureMethod::SequentialAutomatic) => {
             TransactionType::AuthCaptureTransaction
         }
-        Some(_) => {
+        // Single capture only: authOnlyTransaction or authCaptureTransaction. Refused
+        // for every payment method arm before the connector is called.
+        Some(enums::CaptureMethod::ManualMultiple) | Some(enums::CaptureMethod::Scheduled) => {
             return Err(error_stack::report!(IntegrationError::NotSupported {
                 message: "Capture method not supported".to_string(),
                 connector: "authorizedotnet",
-                context: Default::default()
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Use capture_method automatic or manual (a single capture)".to_owned(),
+                    ),
+                    doc_url: None,
+                    additional_context: Some(
+                        "Authorize.Net supports authCaptureTransaction and authOnlyTransaction with one priorAuthCaptureTransaction; multiple and scheduled captures are not available"
+                            .to_owned(),
+                    ),
+                },
             }))
         }
     };
@@ -867,38 +1203,133 @@ fn create_regular_transaction_request<
         false,
     )?;
 
-    // Process billing address
-    let billing_address = item
+    // billTo (with phoneNumber and email) from the payment's billing address
+    let bill_to = item
         .router_data
         .resource_common_data
         .address
-        .get_payment_billing();
-    let bill_to = billing_address.as_ref().map(|billing| {
-        let first_name = billing.address.as_ref().and_then(|a| a.first_name.clone());
-        let last_name = billing.address.as_ref().and_then(|a| a.last_name.clone());
+        .get_payment_billing()
+        .map(build_bill_to);
 
-        // Concatenate line1, line2, and line3 to form the complete street address
-        let address = billing
-            .address
-            .as_ref()
-            .and_then(|a| get_address_line(&a.line1, &a.line2, &a.line3));
+    // shipTo from the shipping address, omitted when there is none
+    let ship_to = item
+        .router_data
+        .resource_common_data
+        .address
+        .get_shipping()
+        .and_then(build_ship_to);
 
-        BillTo {
-            first_name,
-            last_name,
-            address,
-            city: billing.address.as_ref().and_then(|a| a.city.clone()),
-            state: billing.address.as_ref().and_then(|a| a.state.clone()),
-            zip: billing.address.as_ref().and_then(|a| a.zip.clone()),
-            country: billing
-                .address
-                .as_ref()
-                .and_then(|a| a.country)
-                .and_then(|api_country| {
-                    enums::CountryAlpha2::from_str(&api_country.to_string()).ok()
-                }),
-        }
-    });
+    // Level 2 / Level 3 data. Every amount goes through the connector's
+    // FloatMajorUnit converter; nothing is computed here.
+    let to_major_unit =
+        |amount: MinorUnit, currency: enums::Currency| -> Result<FloatMajorUnit, Error> {
+            item.connector
+                .amount_converter
+                .convert(amount, currency)
+                .change_context(IntegrationError::AmountConversionFailed {
+                    context: IntegrationErrorContext {
+                        suggested_action: None,
+                        doc_url: None,
+                        additional_context: Some(
+                            "Failed to convert a Level 2/3 amount for the authorize transaction"
+                                .to_owned(),
+                        ),
+                    },
+                })
+        };
+    let request_currency = item.router_data.request.currency;
+    let l2_l3_data = item.router_data.resource_common_data.l2_l3_data.as_deref();
+    let order_info = l2_l3_data.and_then(|data| data.order_info.as_ref());
+    let tax_info = l2_l3_data.and_then(|data| data.tax_info.as_ref());
+
+    // lineItems.lineItem[]: every order detail is forwarded. The API accepts at most
+    // 30 line items; a longer list would fail the whole payment on schema
+    // validation, so lineItems is omitted then instead of sending a partial order.
+    let line_items = order_info
+        .and_then(|info| info.order_details.as_ref())
+        .filter(|details| !details.is_empty() && details.len() <= MAX_LINE_ITEMS)
+        .map(|details| {
+            details
+                .iter()
+                .enumerate()
+                .map(|(index, detail)| {
+                    Ok(LineItem {
+                        // product_id when given, else the 1-based position
+                        item_id: detail
+                            .product_id
+                            .clone()
+                            .unwrap_or_else(|| (index + 1).to_string()),
+                        name: detail.product_name.clone(),
+                        description: detail.description.clone(),
+                        quantity: detail.quantity,
+                        unit_price: to_major_unit(detail.amount, request_currency)?,
+                        unit_of_measure: detail.unit_of_measure.clone(),
+                        tax_amount: detail
+                            .total_tax_amount
+                            .map(|amount| to_major_unit(amount, request_currency))
+                            .transpose()?,
+                        total_amount: detail
+                            .total_amount
+                            .map(|amount| to_major_unit(amount, request_currency))
+                            .transpose()?,
+                        commodity_code: detail.commodity_code.clone(),
+                    })
+                })
+                .collect::<Result<Vec<_>, Error>>()
+                .map(|line_item| LineItems { line_item })
+        })
+        .transpose()?;
+
+    // tax: the request's order_tax_amount, else the L2/L3 tax info
+    let tax = item
+        .router_data
+        .request
+        .order_tax_amount
+        .as_ref()
+        .or_else(|| tax_info.and_then(|info| info.order_tax_amount.as_ref()))
+        .map(|money| to_major_unit(money.amount, money.currency))
+        .transpose()?
+        .map(|amount| ExtendedAmount { amount });
+
+    let duty = order_info
+        .and_then(|info| info.duty_amount.as_ref())
+        .map(|money| to_major_unit(money.amount, money.currency))
+        .transpose()?
+        .map(|amount| ExtendedAmount { amount });
+
+    // shipping: the request's shipping_cost, else the L2/L3 order info
+    let shipping = item
+        .router_data
+        .request
+        .shipping_cost
+        .as_ref()
+        .or_else(|| order_info.and_then(|info| info.shipping_cost.as_ref()))
+        .map(|money| to_major_unit(money.amount, money.currency))
+        .transpose()?
+        .map(|amount| ExtendedAmount { amount });
+
+    let tax_exempt = tax_info
+        .and_then(|info| info.tax_status)
+        .map(|tax_status| match tax_status {
+            common_enums::TaxStatus::Exempt => true,
+            common_enums::TaxStatus::Taxable => false,
+        });
+
+    // poNumber: the L2/L3 merchant order reference (merchant_order_id itself stays
+    // order.invoiceNumber). Limited to 25 characters; omitted when longer.
+    let po_number = order_info
+        .and_then(|info| info.merchant_order_reference_id.clone())
+        .filter(|po_number| !po_number.is_empty() && po_number.len() <= PO_NUMBER_MAX_LENGTH);
+
+    // merchantDescriptor (dynamic descriptor): the statement descriptor, passed
+    // unchanged - Authorize.Net documents no length or format for it.
+    let merchant_descriptor = item
+        .router_data
+        .request
+        .billing_descriptor
+        .as_ref()
+        .and_then(|descriptor| descriptor.statement_descriptor.clone())
+        .filter(|descriptor| !descriptor.is_empty());
 
     let customer_details = item
         .router_data
@@ -954,9 +1385,18 @@ fn create_regular_transaction_request<
         payment: Some(payment_details),
         profile,
         order: Some(order),
+        line_items,
+        tax,
+        duty,
+        shipping,
+        tax_exempt,
+        po_number,
         customer: customer_details,
         bill_to,
+        ship_to,
+        cardholder_authentication,
         user_fields,
+        merchant_descriptor,
         processing_options: None,
         subsequent_auth_information: None,
         ref_trans_id: None,
@@ -966,29 +1406,38 @@ fn create_regular_transaction_request<
 // RepeatPayment request structures
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetRepeatPaymentRequest {
-    create_transaction_request: CreateRepeatPaymentRequest,
+pub struct AuthorizedotnetRepeatPaymentRequest<T: PaymentMethodDataTypes> {
+    create_transaction_request: CreateRepeatPaymentRequest<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateRepeatPaymentRequest {
+pub struct CreateRepeatPaymentRequest<T: PaymentMethodDataTypes> {
     merchant_authentication: AuthorizedotnetAuthType,
     ref_id: Option<String>,
-    transaction_request: AuthorizedotnetRepeatPaymentTransactionRequest,
+    transaction_request: AuthorizedotnetRepeatPaymentTransactionRequest<T>,
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
+pub struct AuthorizedotnetRepeatPaymentTransactionRequest<T: PaymentMethodDataTypes> {
+    // Element order is validated against the XSD `transactionRequestType` (a field
+    // in the wrong position is rejected with E00003). Keep: transactionType, amount,
+    // currencyCode, payment, profile, order, customer, billTo, userFields,
+    // merchantDescriptor, processingOptions, subsequentAuthInformation.
     transaction_type: TransactionType,
     amount: FloatMajorUnit,
     currency_code: api_enums::Currency,
+    // The card of a network-transaction-id MIT (no cardCode); absent when a stored
+    // payment profile is charged.
+    payment: Option<PaymentDetails<T>>,
     profile: Option<ProfileDetails>,
     order: Option<Order>,
     customer: Option<CustomerDetails>,
+    bill_to: Option<BillTo>,
     user_fields: Option<UserFields>,
+    merchant_descriptor: Option<String>,
     processing_options: Option<ProcessingOptions>,
     subsequent_auth_information: Option<SubsequentAuthInformation>,
 }
@@ -1005,7 +1454,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for AuthorizedotnetRepeatPaymentRequest
+    > for AuthorizedotnetRepeatPaymentRequest<T>
 {
     type Error = Error;
     fn try_from(
@@ -1024,8 +1473,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let currency = item.router_data.request.currency;
 
+        // Single capture only, decided before the mandate reference is read so the
+        // refusal holds for every MIT shape (stored profile and network transaction
+        // id) and no connector call is made.
+        let transaction_type = match item.router_data.request.capture_method {
+            Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
+            Some(enums::CaptureMethod::Automatic)
+            | None
+            | Some(enums::CaptureMethod::SequentialAutomatic) => {
+                TransactionType::AuthCaptureTransaction
+            }
+            Some(enums::CaptureMethod::ManualMultiple) | Some(enums::CaptureMethod::Scheduled) => {
+                return Err(error_stack::report!(IntegrationError::NotSupported {
+                    message: "Capture method not supported".to_string(),
+                    connector: "authorizedotnet",
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Use capture_method automatic or manual (a single capture)".to_owned(),
+                        ),
+                        doc_url: None,
+                        additional_context: Some(
+                            "Authorize.Net supports authCaptureTransaction and authOnlyTransaction with one priorAuthCaptureTransaction; multiple and scheduled captures are not available"
+                                .to_owned(),
+                        ),
+                    },
+                }))
+            }
+        };
+
         // Handle different mandate reference types with appropriate MIT structures
-        let (profile, processing_options, subsequent_auth_information) = match &item
+        let (payment, profile, bill_to, processing_options, subsequent_auth_information) = match &item
             .router_data
             .request
             .mandate_reference
@@ -1037,7 +1514,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
                             field_name: "connector_mandate_id",
-                            context: Default::default()
+                            context: IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "Send the connector_mandate_id returned by SetupRecurring (or by the mandate-creating Authorize)"
+                                        .to_owned(),
+                                ),
+                                doc_url: None,
+                                additional_context: Some(
+                                    "A stored-profile charge needs the Authorize.Net customer profile and payment profile ids"
+                                        .to_owned(),
+                                ),
+                            },
                         })
                     })?;
 
@@ -1055,12 +1542,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .ok_or_else(|| {
                         error_stack::report!(IntegrationError::MissingRequiredField {
                             field_name: "valid mandate_id format (should contain '-')",
-                            context: Default::default()
+                            context: IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "Send connector_mandate_id as <customerProfileId>-<customerPaymentProfileId>"
+                                        .to_owned(),
+                                ),
+                                doc_url: None,
+                                additional_context: Some(
+                                    "The customer profile id and the payment profile id are read from either side of the first '-'"
+                                        .to_owned(),
+                                ),
+                            },
                         })
                     })?;
 
                 (
+                    None, // The stored payment profile carries the card
                     Some(profile),
+                    None, // No billTo: the payment profile holds the billing address
                     Some(ProcessingOptions {
                         is_subsequent_auth: true,
                     }),
@@ -1068,26 +1567,101 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
             }
 
-            // Case 2: Network mandate ID flow (PG agnostic with network trans ID)
-            MandateReferenceId::NetworkMandateId(network_trans_id) => (
-                None, // No customer profile for network transaction flow
-                Some(ProcessingOptions {
-                    is_subsequent_auth: true,
-                }),
-                Some(SubsequentAuthInformation {
-                    original_network_trans_id: Secret::new(
-                        network_trans_id.network_transaction_id.clone(),
-                    ),
-                    reason: Reason::Resubmission,
-                }),
-            ),
+            // Case 2: Network mandate ID flow (PG agnostic with network trans ID).
+            // The gateway has no stored profile to charge here, so the card itself is
+            // sent - cardNumber and expirationDate only, never cardCode (a merchant
+            // may not store it) - next to the network transaction id of the original
+            // customer-initiated charge. Without the card the gateway answers reason
+            // code 33. Same shape as the Hyperswitch connector.
+            MandateReferenceId::NetworkMandateId(network_trans_id) => {
+                let credit_card = match &item.router_data.request.payment_method_data {
+                    PaymentMethodData::Card(card) => CreditCardDetails {
+                        card_number: card.card_number.clone(),
+                        expiration_date: card.get_expiry_date_as_yyyymm("-"),
+                        card_code: None,
+                    },
+                    PaymentMethodData::CardDetailsForNetworkTransactionId(card_details) => {
+                        CreditCardDetails {
+                            card_number: card_details.card_number.clone(),
+                            expiration_date: card_details.get_expiry_date_as_yyyymm("-"),
+                            card_code: None,
+                        }
+                    }
+                    PaymentMethodData::CardWithNoCvc(_)
+                    | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
+                    | PaymentMethodData::CardRedirect(_)
+                    | PaymentMethodData::Wallet(_)
+                    | PaymentMethodData::PayLater(_)
+                    | PaymentMethodData::BankRedirect(_)
+                    | PaymentMethodData::BankDebit(_)
+                    | PaymentMethodData::BankTransfer(_)
+                    | PaymentMethodData::Crypto(_)
+                    | PaymentMethodData::MandatePayment
+                    | PaymentMethodData::Reward
+                    | PaymentMethodData::RealTimePayment(_)
+                    | PaymentMethodData::Upi(_)
+                    | PaymentMethodData::Voucher(_)
+                    | PaymentMethodData::GiftCard(_)
+                    | PaymentMethodData::PaymentMethodToken(_)
+                    | PaymentMethodData::OpenBanking(_)
+                    | PaymentMethodData::NetworkToken(_)
+                    | PaymentMethodData::MobilePayment(_) => {
+                        return Err(error_stack::report!(IntegrationError::NotImplemented(
+                            get_unimplemented_payment_method_error_message("authorizedotnet"),
+                            IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "Send the card (card or card_details_for_network_transaction_id) with the network transaction id, or charge a stored profile through connector_mandate_id"
+                                        .to_owned(),
+                                ),
+                                doc_url: None,
+                                additional_context: Some(
+                                    "A network-transaction-id charge on Authorize.Net needs payment.creditCard (cardNumber, expirationDate)"
+                                        .to_owned(),
+                                ),
+                            },
+                        )))
+                    }
+                };
+
+                (
+                    Some(PaymentDetails::CreditCard(credit_card)),
+                    None, // No customer profile for network transaction flow
+                    // billTo from the payment's billing address, built by the same
+                    // helper as Authorize
+                    item.router_data
+                        .resource_common_data
+                        .address
+                        .get_payment_billing()
+                        .map(build_bill_to),
+                    Some(ProcessingOptions {
+                        is_subsequent_auth: true,
+                    }),
+                    Some(SubsequentAuthInformation {
+                        original_network_trans_id: Secret::new(
+                            network_trans_id.network_transaction_id.clone(),
+                        ),
+                        // Always `resubmission`, as the Hyperswitch connector sends
+                        reason: Reason::Resubmission,
+                    }),
+                )
+            }
 
             // Case 3: Network token with NTI - NOT SUPPORTED (same as Hyperswitch)
             MandateReferenceId::NetworkTokenWithNTI(_) => {
                 return Err(error_stack::report!(IntegrationError::NotSupported {
                     message: "Network token with NTI not supported for authorizedotnet".to_string(),
                     connector: "authorizedotnet",
-                    context: Default::default(),
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Charge the stored profile (connector_mandate_id) or the card with its network transaction id"
+                                .to_owned(),
+                        ),
+                        doc_url: None,
+                        additional_context: Some(
+                            "Authorize.Net merchant-initiated charges take a customer payment profile or a card with subsequentAuthInformation; a network token is not accepted"
+                                .to_owned(),
+                        ),
+                    },
                 }))
             }
         };
@@ -1144,21 +1718,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             email: item.router_data.request.email.clone(),
         });
 
-        let transaction_type = match item.router_data.request.capture_method {
-            Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
-            Some(enums::CaptureMethod::Automatic)
-            | None
-            | Some(enums::CaptureMethod::SequentialAutomatic) => {
-                TransactionType::AuthCaptureTransaction
-            }
-            Some(_) => {
-                return Err(error_stack::report!(IntegrationError::NotSupported {
-                    message: "Capture method not supported".to_string(),
-                    connector: "authorizedotnet",
-                    context: Default::default()
-                }))
-            }
-        };
+        // merchantDescriptor (dynamic descriptor) on both MIT shapes: the statement
+        // descriptor, passed unchanged - Authorize.Net documents no length or format.
+        let merchant_descriptor = item
+            .router_data
+            .request
+            .billing_descriptor
+            .as_ref()
+            .and_then(|descriptor| descriptor.statement_descriptor.clone())
+            .filter(|descriptor| !descriptor.is_empty());
 
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type,
@@ -1176,10 +1744,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "Failed to convert payment amount for repeat payment transaction",
                 )?,
             currency_code: currency,
+            payment,
             profile,
             order: Some(order),
             customer: customer_details,
+            bill_to,
             user_fields,
+            merchant_descriptor,
             processing_options,
             subsequent_auth_information,
         };
@@ -1575,8 +2146,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidPCResponse, Self>>
                                 Some(trans_res.transaction_id.clone()),
                                 response_description.clone(),
                             ),
+                            // An undocumented responseCode is not a verdict either way.
                             AuthorizedotnetPaymentStatus::HeldForReview
-                            | AuthorizedotnetPaymentStatus::RequiresAction => (
+                            | AuthorizedotnetPaymentStatus::RequiresAction
+                            | AuthorizedotnetPaymentStatus::Unknown => (
                                 common_enums::PostCaptureVoidStatus::Pending,
                                 Some(trans_res.transaction_id.clone()),
                                 response_description.clone(),
@@ -1888,6 +2461,34 @@ pub struct AuthorizedotnetTransactionResponse {
     profile: Option<TransactionProfileInfo>,
     #[serde(default, rename = "avsResultCode")]
     avs_result_code: Option<String>,
+    /// CVV check result: M, N, P, S or U.
+    #[serde(default)]
+    cvv_result_code: Option<String>,
+    /// CAVV validation result of an external 3-D Secure authentication.
+    #[serde(default)]
+    cavv_result_code: Option<String>,
+    /// Merchant advice code and text (returned for TSYS only).
+    #[serde(default)]
+    merchant_advice: Option<MerchantAdvice>,
+    /// Processor response code. Present in the XSD without a documented meaning;
+    /// surfaced only when the gateway returns it.
+    #[serde(default)]
+    raw_response_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MerchantAdvice {
+    #[serde(default)]
+    code: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+}
+
+/// Authorize.Net returns an empty string for a result code it has nothing to say
+/// about; treat that the same as an absent field.
+fn non_empty_code(code: Option<&String>) -> Option<&str> {
+    code.map(|code| code.trim()).filter(|code| !code.is_empty())
 }
 
 // Create flow-specific response types
@@ -1923,30 +2524,59 @@ fn get_avs_response_description(code: &str) -> Option<&'static str> {
     }
 }
 
-// Convert transaction response to additional payment method connector response
+// Helper function to get CVV response description based on the code
+// (API reference, transactionResponse.cvvResultCode)
+fn get_cvv_response_description(code: &str) -> Option<&'static str> {
+    match code {
+        "M" => Some("CVV matched."),
+        "N" => Some("CVV did not match."),
+        "P" => Some("CVV was not processed."),
+        "S" => Some("CVV should have been present but was not indicated."),
+        "U" => Some("The issuer was unable to process the CVV check."),
+        _ => None,
+    }
+}
+
+// Convert transaction response to additional payment method connector response.
+// `payment_checks` carries the AVS, CVV and CAVV results the gateway returned; the
+// Card connector response is emitted when at least one of the three is present.
 fn convert_to_additional_payment_method_connector_response(
     transaction_response: &AuthorizedotnetTransactionResponse,
 ) -> Option<domain_types::router_data::AdditionalPaymentMethodConnectorResponse> {
-    match transaction_response.avs_result_code.as_deref() {
-        Some("P") | None => None,
-        Some(code) => {
-            let description = get_avs_response_description(code);
-            let payment_checks = serde_json::json!({
-                "avs_result_code": code,
-                "description": description
-            });
+    // AVS "P" means "not applicable for this transaction": nothing to report.
+    let avs_result_code =
+        non_empty_code(transaction_response.avs_result_code.as_ref()).filter(|code| *code != "P");
+    let cvv_result_code = non_empty_code(transaction_response.cvv_result_code.as_ref());
+    let cavv_result_code = non_empty_code(transaction_response.cavv_result_code.as_ref());
 
-            Some(
-                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
-                    authentication_data: None,
-                    payment_checks: Some(payment_checks),
-                    card_network: None,
-                    domestic_network: None,
-                    auth_code: None,
-                },
-            )
-        }
+    let mut payment_checks = serde_json::Map::new();
+    if let Some(code) = avs_result_code {
+        payment_checks.insert("avs_result_code".to_string(), serde_json::json!(code));
+        payment_checks.insert(
+            "description".to_string(),
+            serde_json::json!(get_avs_response_description(code)),
+        );
     }
+    if let Some(code) = cvv_result_code {
+        payment_checks.insert("cvv_result_code".to_string(), serde_json::json!(code));
+        payment_checks.insert(
+            "cvv_description".to_string(),
+            serde_json::json!(get_cvv_response_description(code)),
+        );
+    }
+    if let Some(code) = cavv_result_code {
+        payment_checks.insert("cavv_result_code".to_string(), serde_json::json!(code));
+    }
+
+    (!payment_checks.is_empty()).then(|| {
+        domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
+            authentication_data: None,
+            payment_checks: Some(serde_json::Value::Object(payment_checks)),
+            card_network: None,
+            domestic_network: None,
+            auth_code: None,
+        }
+    })
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -2348,6 +2978,7 @@ impl<
                     error_message,
                     status,
                     None,
+                    None,
                     router_data
                         .resource_common_data
                         .raw_connector_response
@@ -2595,6 +3226,11 @@ pub enum AuthorizedotnetPaymentStatus {
     HeldForReview,
     #[serde(rename = "5")]
     RequiresAction, // Maps to hyperswitch_common_enums::enums::AttemptStatus::AuthenticationPending
+    /// Any responseCode the API reference does not list. Parsed instead of failing
+    /// the whole body, and mapped to a non-terminal status so the caller keeps
+    /// the status it already holds.
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
@@ -2608,6 +3244,10 @@ pub enum AuthorizedotnetRefundStatus {
     #[serde(rename = "4")]
     #[default]
     HeldForReview,
+    /// Any responseCode the API reference does not list; see
+    /// `AuthorizedotnetPaymentStatus::Unknown`.
+    #[serde(other)]
+    Unknown,
 }
 
 /// Helper function to extract error code and message from response
@@ -2643,8 +3283,24 @@ fn create_error_response(
     error_message: String,
     status: AttemptStatus,
     connector_transaction_id: Option<String>,
+    transaction_response: Option<&AuthorizedotnetTransactionResponse>,
     _raw_connector_response: Option<Secret<String>>,
 ) -> ErrorResponse {
+    // Issuer-side detail of a failed transaction, each only when the gateway
+    // returned it: merchantAdvice.code / .description (merchant advice code, TSYS
+    // only) and rawResponseCode (processor response code).
+    let merchant_advice =
+        transaction_response.and_then(|response| response.merchant_advice.as_ref());
+    let network_advice_code = merchant_advice
+        .and_then(|advice| non_empty_code(advice.code.as_ref()))
+        .map(str::to_string);
+    let network_error_message = merchant_advice
+        .and_then(|advice| non_empty_code(advice.description.as_ref()))
+        .map(str::to_string);
+    let network_decline_code = transaction_response
+        .and_then(|response| non_empty_code(response.raw_response_code.as_ref()))
+        .map(str::to_string);
+
     ErrorResponse {
         status_code: http_status_code,
         code: error_code,
@@ -2652,9 +3308,9 @@ fn create_error_response(
         reason: Some(error_message),
         attempt_status: Some(FlowStatus::Payment(status)),
         connector_transaction_id,
-        network_decline_code: None,
-        network_advice_code: None,
-        network_error_message: None,
+        network_decline_code,
+        network_advice_code,
+        network_error_message,
         typed_connector_response: None,
         raw_connector_response: None,
         raw_connector_request: None,
@@ -2671,6 +3327,8 @@ impl From<AuthorizedotnetRefundStatus> for RefundStatus {
             AuthorizedotnetRefundStatus::Approved | AuthorizedotnetRefundStatus::HeldForReview => {
                 Self::Pending
             }
+            // Undocumented responseCode: not a verdict, so the refund is left for sync.
+            AuthorizedotnetRefundStatus::Unknown => Self::Unknown,
         }
     }
 }
@@ -2748,15 +3406,27 @@ fn get_hs_status(
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
 ) -> AttemptStatus {
+    // A failed void is reported with the void's own status, not the payment status
+    // `Failure`: the authorization it targeted is still open.
+    let failure_status = match operation {
+        Operation::Void => AttemptStatus::VoidFailed,
+        Operation::Authorize
+        | Operation::Capture
+        | Operation::VoidPostCapture
+        | Operation::Refund => AttemptStatus::Failure,
+    };
+
     // Return failure immediately if result code is Error
     if response.messages.result_code == ResultCode::Error {
-        return AttemptStatus::Failure;
+        return failure_status;
     }
 
     // Handle case when transaction_response is None
     if response.transaction_response.is_none() {
         return match operation {
-            Operation::Void => AttemptStatus::Voided,
+            // A void response always carries `transactionResponse` unless the API call
+            // itself failed, so a body without one is never a completed void.
+            Operation::Void => AttemptStatus::VoidFailed,
             Operation::VoidPostCapture => AttemptStatus::VoidedPostCapture,
             Operation::Authorize | Operation::Capture => AttemptStatus::Pending,
             Operation::Refund => AttemptStatus::Failure,
@@ -2767,17 +3437,26 @@ fn get_hs_status(
     // Safety: transaction_response is checked above to be Some
     match response.transaction_response.as_ref() {
         Some(trans_resp) => match trans_resp {
-            TransactionResponse::AuthorizedotnetTransactionResponseError(_) => {
-                AttemptStatus::Failure
-            }
+            TransactionResponse::AuthorizedotnetTransactionResponseError(_) => failure_status,
             TransactionResponse::AuthorizedotnetTransactionResponse(trans_res) => {
                 match trans_res.response_code {
+                    // transactionResponse.responseCode: 2 = Declined, 3 = Error.
                     AuthorizedotnetPaymentStatus::Declined
-                    | AuthorizedotnetPaymentStatus::Error => AttemptStatus::Failure,
-                    AuthorizedotnetPaymentStatus::HeldForReview => AttemptStatus::Unresolved,
+                    | AuthorizedotnetPaymentStatus::Error => failure_status,
+                    // responseCode 4 = Held for Review: accepted, not terminal.
+                    AuthorizedotnetPaymentStatus::HeldForReview => match operation {
+                        Operation::Void => AttemptStatus::VoidInitiated,
+                        Operation::Authorize
+                        | Operation::Capture
+                        | Operation::VoidPostCapture
+                        | Operation::Refund => AttemptStatus::Unresolved,
+                    },
                     AuthorizedotnetPaymentStatus::RequiresAction => {
                         AttemptStatus::AuthenticationPending
                     }
+                    // Undocumented responseCode, for every operation: no verdict.
+                    // `Unspecified` lets the caller keep its stored status.
+                    AuthorizedotnetPaymentStatus::Unknown => AttemptStatus::Unspecified,
                     AuthorizedotnetPaymentStatus::Approved => {
                         // For Approved status, determine specific status based on operation and capture method
                         match operation {
@@ -2867,6 +3546,10 @@ pub fn convert_to_payments_response_data_or_error(
             | AttemptStatus::Voided
             | AttemptStatus::VoidedPostCapture
             | AttemptStatus::Unresolved
+            // A void held for review (responseCode "4") is accepted and non-terminal too.
+            | AttemptStatus::VoidInitiated
+            // An undocumented responseCode is returned as Ok, never as a failure.
+            | AttemptStatus::Unspecified
     );
 
     // Extract connector response data from transaction response if available
@@ -2944,6 +3627,7 @@ pub fn convert_to_payments_response_data_or_error(
                 error_message,
                 status,
                 Some(trans_res.transaction_id.clone()),
+                Some(trans_res),
                 raw_connector_response.clone(),
             ))
         }
@@ -2955,23 +3639,9 @@ pub fn convert_to_payments_response_data_or_error(
                 error_message,
                 status,
                 None,
+                None,
                 raw_connector_response.clone(),
             ))
-        }
-        None if status == AttemptStatus::Voided && operation == Operation::Void => {
-            Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::NoResponseId,
-                redirection_data: None,
-                connector_metadata: None,
-                mandate_reference: None,
-                network_txn_id: None,
-                network_txn_link_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: http_status_code,
-                splits: None,
-                payment_account_reference: None,
-            })
         }
         None if status == AttemptStatus::VoidedPostCapture
             && operation == Operation::VoidPostCapture =>
@@ -2990,6 +3660,7 @@ pub fn convert_to_payments_response_data_or_error(
                 error_code,
                 error_message,
                 status,
+                None,
                 None,
                 raw_connector_response.clone(),
             ))
@@ -3239,6 +3910,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 state: address.state.clone(),
                 zip: address.zip.clone(),
                 country: address.country,
+                // The stored payment profile keeps its existing billTo shape.
+                phone_number: None,
+                email: None,
             });
 
         let payment = match &item.router_data.request.payment_method_data {
@@ -3418,6 +4092,9 @@ pub struct AuthorizedotnetWebhookObjectId {
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetWebhookPayload {
     pub id: Option<String>,
+    /// `payload.merchantReferenceId`: echo of the request `refId`; absent when no
+    /// `refId` was sent (techspec "IncomingWebhook").
+    pub merchant_reference_id: Option<String>,
     // Fields specific to customer creation webhooks
     pub payment_profiles: Option<Vec<PaymentProfileInfo>>,
     pub merchant_customer_id: Option<String>,
