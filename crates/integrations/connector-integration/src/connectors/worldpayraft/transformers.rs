@@ -942,6 +942,8 @@ pub struct WorldpayraftEcommerceData {
 #[serde(rename_all = "PascalCase")]
 pub struct WorldpayraftCardAuthInner<T: PaymentMethodDataTypes> {
     pub misc_amounts_balances: WorldpayraftAmounts,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    account_codes_and_data: Option<WorldpayraftCreditAccountData>,
     pub card_info: WorldpayraftCardInfo<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub encryption_token_data: Option<WorldpayraftStoredTokenData>,
@@ -1278,6 +1280,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_str();
         let inner = WorldpayraftCardAuthInner {
             misc_amounts_balances: WorldpayraftAmounts { transaction_amount },
+            account_codes_and_data: (request.request_incremental_authorization == Some(true))
+                .then_some(WorldpayraftCreditAccountData {
+                    from_account_selected: "CC",
+                }),
             card_info: WorldpayraftCardInfo {
                 pan: Some(card.pan),
                 expiration_date: Some(card.expiration_date),
@@ -2323,6 +2329,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             });
         let inner = WorldpayraftCardAuthInner {
             misc_amounts_balances: WorldpayraftAmounts { transaction_amount },
+            account_codes_and_data: None,
             card_info,
             encryption_token_data,
             card_verification_data: None,
@@ -2666,7 +2673,9 @@ struct WorldpayraftCreditAccountData {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
 struct WorldpayraftIncrementalAuthorizationTraceNumbers {
+    authorization_number: String,
     #[serde(rename = "RetrievalREFNumber")]
     retrieval_ref_number: String,
 }
@@ -2760,9 +2769,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "connector_transaction_id",
             ))?;
         let references: Vec<&str> = connector_transaction_id.split('|').collect();
-        let retrieval_ref_number = match references.as_slice() {
-            [TXN_TYPE_CREDIT, _, retrieval_ref_number, _] | [_, retrieval_ref_number, _]
-                if !retrieval_ref_number.trim().is_empty() => *retrieval_ref_number,
+        let (authorization_number, retrieval_ref_number) = match references.as_slice() {
+            [TXN_TYPE_CREDIT, authorization_number, retrieval_ref_number, _]
+            | [authorization_number, retrieval_ref_number, _]
+                if !authorization_number.trim().is_empty()
+                    && !retrieval_ref_number.trim().is_empty() => (*authorization_number, *retrieval_ref_number),
             _ => return Err(errors::IntegrationError::InvalidDataFormat {
                 field_name: "connector_transaction_id",
                 context: errors::IntegrationErrorContext {
@@ -2838,6 +2849,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 proc_flags_indicators: WorldpayraftProcFlags {
                     incremental_auth: Some(WorldpayraftFlag::Yes),
                     estimated_auth: Some(WorldpayraftFlag::Yes),
+                    partial_allowed: metadata
+                        .proc_flags_indicators
+                        .and_then(|flags| flags.partial_allowed),
                     ..WorldpayraftProcFlags::default()
                 },
                 brand_specific_data: WorldpayraftBrandSpecificData::for_transaction(
@@ -2849,6 +2863,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ),
                 ),
                 reference_trace_numbers: WorldpayraftIncrementalAuthorizationTraceNumbers {
+                    authorization_number: authorization_number.to_string(),
                     retrieval_ref_number: retrieval_ref_number.to_string(),
                 },
                 world_pay_merchant_id: auth.merchant_id,
