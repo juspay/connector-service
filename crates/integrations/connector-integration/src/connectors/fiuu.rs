@@ -674,7 +674,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         Err(error_stack::Report::from(crate::utils::response_deserialization_fail(res.status_code, "fiuu: response body did not match the expected format; confirm API version and connector documentation.")))
                             .attach_printable(format!("Expected content type to be text/plain;charset=UTF-8 , but received different content type as {content_header} in response"))?
                     };
-                    
+
                 match response {
                     Ok(response) => {
                         finalize_connector_response!(event_builder, response, data, res.status_code)
