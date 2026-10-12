@@ -1,7 +1,11 @@
 use super::PaysafePayoutsRouterData;
 use crate::connectors::paysafe::transformers::PaysafeAuthType;
 use crate::types::ResponseRouterData;
-use common_utils::{pii::Email, MinorUnit};
+use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    pii::Email,
+    MinorUnit,
+};
 use domain_types::{
     connector_flow::{PayoutCreateRecipient, PayoutTransfer},
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
@@ -13,7 +17,7 @@ use domain_types::{
             PayoutTransferRequest, PayoutTransferResponse,
         },
     },
-    router_data::PaysafeAccountKind,
+    router_data::{ErrorResponse, FlowStatus, PaysafeAccountKind},
     router_data_v2::RouterDataV2,
 };
 use error_stack::Report;
@@ -60,6 +64,30 @@ fn invalid_date_of_birth(flow: &str) -> Report<IntegrationError> {
         },
     }
     .into()
+}
+
+fn build_status_failure_response(
+    status_code: u16,
+    gateway_response: Option<&PaysafeGatewayResponse>,
+    connector_transaction_id: String,
+) -> ErrorResponse {
+    let code = gateway_response
+        .and_then(|gateway_response| gateway_response.code.clone())
+        .filter(|code| !code.is_empty())
+        .unwrap_or_else(|| NO_ERROR_CODE.to_owned());
+    let message = gateway_response
+        .and_then(|gateway_response| gateway_response.description.clone())
+        .filter(|description| !description.is_empty())
+        .unwrap_or_else(|| NO_ERROR_MESSAGE.to_owned());
+    ErrorResponse {
+        status_code,
+        code,
+        message: message.clone(),
+        reason: Some(message),
+        attempt_status: Some(FlowStatus::Payout(common_enums::PayoutStatus::Failure)),
+        connector_transaction_id: Some(connector_transaction_id),
+        ..Default::default()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -292,6 +320,7 @@ pub struct PaysafePaymentHandleResponse {
     pub payment_handle_token: Secret<String>,
     pub status: PaysafeHandleStatus,
     pub gateway_reconciliation_id: Option<String>,
+    pub gateway_response: Option<PaysafeGatewayResponse>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -303,6 +332,12 @@ pub enum PaysafeHandleStatus {
     Failed,
     Expired,
     Completed,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub struct PaysafeGatewayResponse {
+    pub code: Option<String>,
+    pub description: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -329,18 +364,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaysafeHandleStatus::Completed => common_enums::PayoutStatus::RequiresFulfillment,
         };
 
-        let payout_connector_metadata = Some(Secret::new(serde_json::json!({
-            "payment_handle_token": item.response.payment_handle_token,
-        })));
-
-        Ok(Self {
-            response: Ok(PayoutCreateRecipientResponse {
+        let response = if payout_status == common_enums::PayoutStatus::Failure {
+            Err(build_status_failure_response(
+                item.http_code,
+                item.response.gateway_response.as_ref(),
+                item.response.id.clone(),
+            ))
+        } else {
+            let payout_connector_metadata = Some(Secret::new(serde_json::json!({
+                "payment_handle_token": item.response.payment_handle_token,
+            })));
+            Ok(PayoutCreateRecipientResponse {
                 merchant_payout_id: item.router_data.request.merchant_payout_id.clone(),
                 payout_status,
                 connector_payout_id: Some(item.response.id),
                 status_code: item.http_code,
                 payout_connector_metadata,
-            }),
+            })
+        };
+
+        Ok(Self {
+            response,
             ..item.router_data
         })
     }
