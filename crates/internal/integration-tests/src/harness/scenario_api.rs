@@ -35,15 +35,15 @@ use crate::harness::{
     scenario_loader::{
         configured_all_connectors, get_the_assertion as get_the_assertion_impl,
         get_the_grpc_req as get_the_grpc_req_impl, is_suite_supported_for_connector,
-        load_connector_browser_automation_spec, load_connector_spec, load_default_scenario_name,
-        load_scenario, load_suite_scenarios, load_suite_spec,
-        load_supported_payment_methods_for_connector, load_supported_suites_for_connector,
-        merge_connector_specific_scenarios, scenario_matches_supported_payment_methods,
-        scenario_unsupported_reason,
+        load_connector_browser_automation_spec, load_connector_spec,
+        load_connector_specific_scenarios, load_default_scenario_name, load_scenario,
+        load_suite_scenarios, load_suite_spec, load_supported_payment_methods_for_connector,
+        load_supported_suites_for_connector, merge_connector_specific_scenarios,
+        scenario_matches_supported_payment_methods, scenario_unsupported_reason,
     },
     scenario_types::{
         BrowserAutomationHook, BrowserAutomationPhase, CliPreRequestHookConfig, ContextMap,
-        DependencyScope, FieldAssert, ScenarioError, SuiteDependency, SuiteSpec,
+        DependencyScope, FieldAssert, ScenarioDef, ScenarioError, SuiteDependency, SuiteSpec,
     },
     sdk_executor::execute_sdk_request_from_payload,
 };
@@ -61,13 +61,36 @@ pub fn get_the_assertion(
     get_the_assertion_impl(suite, scenario)
 }
 
+/// Loads one scenario the way a connector sees its suite: the global baseline
+/// first, then the connector's own `connector_specific_scenarios.json`.
+///
+/// The baseline wins by construction; a private name that shadows a global one
+/// is already rejected by `merge_connector_specific_scenarios`.
+fn load_scenario_for_connector(
+    suite: &str,
+    scenario: &str,
+    connector: &str,
+) -> Result<ScenarioDef, ScenarioError> {
+    match load_scenario(suite, scenario) {
+        Err(ScenarioError::ScenarioNotFound { .. }) => {
+            load_connector_specific_scenarios(connector, suite)?
+                .remove(scenario)
+                .ok_or_else(|| ScenarioError::ScenarioNotFound {
+                    suite: suite.to_string(),
+                    scenario: scenario.to_string(),
+                })
+        }
+        result => result,
+    }
+}
+
 /// Loads scenario and applies connector-specific request/assertion patches.
 fn load_effective_scenario_for_connector(
     suite: &str,
     scenario: &str,
     connector: &str,
 ) -> Result<(Value, BTreeMap<String, FieldAssert>), ScenarioError> {
-    let base_scenario = load_scenario(suite, scenario)?;
+    let base_scenario = load_scenario_for_connector(suite, scenario, connector)?;
     let mut grpc_req = base_scenario.grpc_req;
     let mut assertions = base_scenario.assert_rules;
 
@@ -4907,7 +4930,7 @@ fn execute_single_scenario_with_context(
 ) -> Result<ExecutedScenario, ScenarioError> {
     run_test(Some(suite), Some(scenario), Some(connector))?;
 
-    let base_scenario = load_scenario(suite, scenario)?;
+    let base_scenario = load_scenario_for_connector(suite, scenario, connector)?;
     let mut effective_req = base_scenario.grpc_req;
     let mut assertions = base_scenario.assert_rules;
 
