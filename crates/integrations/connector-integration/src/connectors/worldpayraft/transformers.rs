@@ -5,7 +5,7 @@ use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{
     consts,
     crypto::{GenerateDigest, Sha256},
-    types::{AmountConvertor, MinorUnit, StringMajorUnit, StringMinorUnit},
+    types::{AmountConvertor, MinorUnit, Money, StringMajorUnit, StringMinorUnit},
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, RepeatPayment, SetupMandate, Void},
@@ -584,7 +584,7 @@ pub fn select_operation<T: PaymentMethodDataTypes>(
         PaymentMethodData::Card(card) if is_debit_card(card) => WorldpayraftCardKind::Debit,
         _ => WorldpayraftCardKind::Credit,
     };
-    let operation = if request.minor_amount == MinorUnit::zero() {
+    let operation = if request.amount.amount == MinorUnit::zero() {
         WorldpayraftOperation::Verification
     } else if request.is_auto_capture() {
         WorldpayraftOperation::Purchase
@@ -1573,10 +1573,12 @@ fn build_addresses(
         let avs_zip_code = details
             .zip
             .as_ref()
+            .filter(|zip| !zip.peek().trim().is_empty())
             .map(|zip| truncate_secret_string(zip, MAX_AVS_ZIP));
         let avs_address = details
             .line1
             .as_ref()
+            .filter(|line1| !line1.peek().trim().is_empty())
             .map(|line1| truncate_secret_string(line1, MAX_AVS_ADDRESS));
         (avs_zip_code.is_some() || avs_address.is_some()).then_some(
             WorldpayraftAddressVerificationData {
@@ -1773,15 +1775,15 @@ fn build_level2_level3<
     let sales_tax_amount = l2_l3
         .tax_info
         .as_ref()
-        .and_then(|tax| tax.order_tax_amount)
+        .and_then(|tax| tax.order_tax_amount.as_ref().map(|money| money.amount))
         .map(convert_major)
         .transpose()?;
     let invoice_discount_amount = order_info
-        .and_then(|order| order.discount_amount)
+        .and_then(|order| order.discount_amount.as_ref().map(|money| money.amount))
         .map(convert_major)
         .transpose()?;
     let invoice_shipping_amount = order_info
-        .and_then(|order| order.shipping_cost)
+        .and_then(|order| order.shipping_cost.as_ref().map(|money| money.amount))
         .map(convert_major)
         .transpose()?;
     // G-Authorize-05: RefInvoiceNumber is maxLength 20; a longer reference is refused, never
@@ -2294,7 +2296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction_amount = item
             .connector
             .amount_converter
-            .convert(request.minor_amount, request.currency)
+            .convert(request.amount.amount, request.currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -2331,6 +2333,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             router_data.resource_common_data.get_optional_shipping(),
             card_kind,
         )?;
+        // AVS is opt-in per payment (prism #2488). Debit never carries AVS, so the requirement
+        // is enforced on credit only.
+        let address_verification_data = if card_kind == WorldpayraftCardKind::Credit
+            && request.enable_avs_check == Some(true)
+        {
+            Some(
+                addresses
+                    .address_verification_data
+                    .filter(|avs| avs.avs_zip_code.is_some() && avs.avs_address.is_some())
+                    .ok_or_else(|| {
+                        error_stack::report!(errors::IntegrationError::MissingRequiredField {
+                            field_name: "billing.address.zip and billing.address.line1",
+                            context: errors::IntegrationErrorContext {
+                                additional_context: Some(
+                                    "Worldpay RAFT requires a non-empty billing postal code and address line 1 for AVS when enable_avs_check is true".to_string(),
+                                ),
+                                ..Default::default()
+                            },
+                        })
+                    })?,
+            )
+        } else {
+            None
+        };
         let (soft_descriptor_data, merchant_specific_data) =
             build_descriptor_and_merchant_data(request, card_kind);
         let level2_level3 = build_level2_level3(&item, card_kind)?;
@@ -2404,7 +2430,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 expiration_date: Some(expiration_date),
             },
             card_verification_data,
-            address_verification_data: addresses.address_verification_data,
+            address_verification_data,
             online_bill_to_address: addresses.online_bill_to_address,
             online_ship_to_address: addresses.online_ship_to_address,
             customer_information: addresses.customer_information,
@@ -2623,7 +2649,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             api_transaction_id: api_transaction_id.clone(),
             operation,
             card_kind,
-            authorized_amount: partial_amount.unwrap_or(request.minor_amount),
+            authorized_amount: partial_amount.unwrap_or(request.amount.amount),
             captured_amount: None,
             currency: request.currency,
             tokenized_pan: tokenized_pan.clone(),
@@ -2673,26 +2699,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // A purchase moves money: a partial approval reports the approved amount as both authorized
         // and captured, and a full approval reports the requested amount as captured. An
         // authorization reports only the authorized amount.
-        let (minor_amount_authorized, captured_amount) = match (operation, decision) {
+        let (amount_authorized, captured_amount) = match (operation, decision) {
             (WorldpayraftOperation::Authorization, _) => (
-                partial_amount.or(item
-                    .router_data
-                    .resource_common_data
-                    .minor_amount_authorized),
+                partial_amount
+                    .map(|amount| Money {
+                        amount,
+                        currency: request.currency,
+                    })
+                    .or_else(|| {
+                        item.router_data
+                            .resource_common_data
+                            .amount_authorized
+                            .clone()
+                    }),
                 None,
             ),
             (WorldpayraftOperation::Purchase, WorldpayraftDecision::PartialApproval) => (
-                partial_amount.or(item
-                    .router_data
-                    .resource_common_data
-                    .minor_amount_authorized),
+                partial_amount
+                    .map(|amount| Money {
+                        amount,
+                        currency: request.currency,
+                    })
+                    .or_else(|| {
+                        item.router_data
+                            .resource_common_data
+                            .amount_authorized
+                            .clone()
+                    }),
                 partial_amount,
             ),
             (WorldpayraftOperation::Purchase, WorldpayraftDecision::Approved) => (
                 item.router_data
                     .resource_common_data
-                    .minor_amount_authorized,
-                Some(request.minor_amount),
+                    .amount_authorized
+                    .clone(),
+                Some(request.amount.amount),
             ),
             (
                 WorldpayraftOperation::Purchase,
@@ -2704,15 +2745,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | (WorldpayraftOperation::Verification, _) => (
                 item.router_data
                     .resource_common_data
-                    .minor_amount_authorized,
+                    .amount_authorized
+                    .clone(),
                 None,
             ),
         };
-        let minor_amount_captured =
-            captured_amount.or(item.router_data.resource_common_data.minor_amount_captured);
         let amount_captured = captured_amount
-            .map(MinorUnit::get_amount_as_i64)
-            .or(item.router_data.resource_common_data.amount_captured);
+            .map(|amount| Money {
+                amount,
+                currency: request.currency,
+            })
+            .or_else(|| {
+                item.router_data
+                    .resource_common_data
+                    .amount_captured
+                    .clone()
+            });
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2737,8 +2785,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             resource_common_data: PaymentFlowData {
                 status,
                 connector_response: inner.card_connector_response(),
-                minor_amount_authorized,
-                minor_amount_captured,
+                amount_authorized,
                 amount_captured,
                 ..item.router_data.resource_common_data
             },
@@ -2888,7 +2935,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction_amount = item
             .connector
             .amount_converter
-            .convert(request.minor_amount_to_capture, request.currency)
+            .convert(request.amount_to_capture.amount, request.currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -3019,7 +3066,7 @@ impl TryFrom<ResponseRouterData<WorldpayraftCaptureResponse, Self>>
                     ),
                 )?;
                 feature_data.captured_amount =
-                    Some(item.router_data.request.minor_amount_to_capture);
+                    Some(item.router_data.request.amount_to_capture.amount);
                 serde_json::to_value(&feature_data).change_context(
                     errors::ConnectorError::response_handling_failed_with_context(
                         item.http_code,
@@ -3525,7 +3572,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let refundable_amount = feature_data
             .captured_amount
             .unwrap_or(feature_data.authorized_amount);
-        if request.minor_refund_amount > refundable_amount {
+        if request.refund_amount.amount > refundable_amount {
             return Err(error_stack::report!(
                 errors::IntegrationError::InvalidDataFormat {
                     field_name: "refund_amount",
@@ -3550,7 +3597,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction_amount = item
             .connector
             .amount_converter
-            .convert(request.minor_refund_amount, request.currency)
+            .convert(request.refund_amount.amount, request.currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -3742,12 +3789,14 @@ fn setup_mandate_card<T: PaymentMethodDataTypes>(
 }
 
 /// `TerminalData.POSEnvironment` of a stored-credential setup, from the MIT category the
-/// credential will serve: Recurring → R, Installment → I, anything else → C (credential on file).
+/// credential will serve: Recurring and Subscription → R, Installment → I, anything else → C
+/// (credential on file).
 fn setup_mandate_pos_environment(
     mit_category: Option<&common_enums::MitCategory>,
 ) -> WorldpayraftPosEnvironment {
     match mit_category {
-        Some(common_enums::MitCategory::Recurring) => WorldpayraftPosEnvironment::Recurring,
+        Some(common_enums::MitCategory::Recurring)
+        | Some(common_enums::MitCategory::Subscription) => WorldpayraftPosEnvironment::Recurring,
         Some(common_enums::MitCategory::Installment) => WorldpayraftPosEnvironment::Installment,
         Some(common_enums::MitCategory::Unscheduled)
         | Some(common_enums::MitCategory::Resubmission)
@@ -4453,13 +4502,16 @@ fn mit_credential<T: PaymentMethodDataTypes>(
     }
 }
 
-/// `E-commerceData.E-commerceIndicator` of a MIT by MIT category (UD-05): Recurring → 02,
-/// Installment → 03, anything else → 07.
+/// `E-commerceData.E-commerceIndicator` of a MIT by MIT category (UD-05): Recurring and
+/// Subscription → 02, Installment → 03, anything else → 07.
 fn mit_ecommerce_indicator(
     mit_category: Option<&common_enums::MitCategory>,
 ) -> WorldpayraftEcommerceIndicator {
     match mit_category {
-        Some(common_enums::MitCategory::Recurring) => WorldpayraftEcommerceIndicator::Recurring,
+        Some(common_enums::MitCategory::Recurring)
+        | Some(common_enums::MitCategory::Subscription) => {
+            WorldpayraftEcommerceIndicator::Recurring
+        }
         Some(common_enums::MitCategory::Installment) => WorldpayraftEcommerceIndicator::Installment,
         Some(common_enums::MitCategory::Unscheduled)
         | Some(common_enums::MitCategory::Resubmission)
@@ -4592,7 +4644,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction_amount = item
             .connector
             .amount_converter
-            .convert(request.minor_amount, request.currency)
+            .convert(request.amount.amount, request.currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -4894,7 +4946,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             api_transaction_id: api_transaction_id.clone(),
             operation,
             card_kind: WorldpayraftCardKind::Credit,
-            authorized_amount: partial_amount.unwrap_or(request.minor_amount),
+            authorized_amount: partial_amount.unwrap_or(request.amount.amount),
             captured_amount: None,
             currency: request.currency,
             tokenized_pan: response_token
@@ -4942,26 +4994,41 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // A purchase moves money: a partial approval reports the approved amount as both authorized
         // and captured, and a full approval reports the requested amount as captured. An
         // authorization reports only the authorized amount.
-        let (minor_amount_authorized, captured_amount) = match (operation, decision) {
+        let (amount_authorized, captured_amount) = match (operation, decision) {
             (WorldpayraftOperation::Authorization, _) => (
-                partial_amount.or(item
-                    .router_data
-                    .resource_common_data
-                    .minor_amount_authorized),
+                partial_amount
+                    .map(|amount| Money {
+                        amount,
+                        currency: request.currency,
+                    })
+                    .or_else(|| {
+                        item.router_data
+                            .resource_common_data
+                            .amount_authorized
+                            .clone()
+                    }),
                 None,
             ),
             (WorldpayraftOperation::Purchase, WorldpayraftDecision::PartialApproval) => (
-                partial_amount.or(item
-                    .router_data
-                    .resource_common_data
-                    .minor_amount_authorized),
+                partial_amount
+                    .map(|amount| Money {
+                        amount,
+                        currency: request.currency,
+                    })
+                    .or_else(|| {
+                        item.router_data
+                            .resource_common_data
+                            .amount_authorized
+                            .clone()
+                    }),
                 partial_amount,
             ),
             (WorldpayraftOperation::Purchase, WorldpayraftDecision::Approved) => (
                 item.router_data
                     .resource_common_data
-                    .minor_amount_authorized,
-                Some(request.minor_amount),
+                    .amount_authorized
+                    .clone(),
+                Some(request.amount.amount),
             ),
             (
                 WorldpayraftOperation::Purchase,
@@ -4973,15 +5040,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | (WorldpayraftOperation::Verification, _) => (
                 item.router_data
                     .resource_common_data
-                    .minor_amount_authorized,
+                    .amount_authorized
+                    .clone(),
                 None,
             ),
         };
-        let minor_amount_captured =
-            captured_amount.or(item.router_data.resource_common_data.minor_amount_captured);
         let amount_captured = captured_amount
-            .map(MinorUnit::get_amount_as_i64)
-            .or(item.router_data.resource_common_data.amount_captured);
+            .map(|amount| Money {
+                amount,
+                currency: request.currency,
+            })
+            .or_else(|| {
+                item.router_data
+                    .resource_common_data
+                    .amount_captured
+                    .clone()
+            });
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -5006,8 +5080,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             resource_common_data: PaymentFlowData {
                 status,
                 connector_response: inner.card_connector_response(),
-                minor_amount_authorized,
-                minor_amount_captured,
+                amount_authorized,
                 amount_captured,
                 ..item.router_data.resource_common_data
             },
