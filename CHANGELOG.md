@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.12.1
+
+### Features
+
+- **connector:** Add avs check for worldpay raft authorize ([#2488](https://github.com/juspay/connector-service/pull/2488)) ([`8eaddb0`](https://github.com/juspay/connector-service/commit/8eaddb0b85e6879c8930d613a0eef29472f05e0b))
+
+### Bug Fixes
+
+- **stripe:** Forward external 3DS authentication data ([#2501](https://github.com/juspay/connector-service/pull/2501)) ([`9d8050b`](https://github.com/juspay/connector-service/commit/9d8050b2345adcda6e64a542c27e274cafad0fff))
+
+**Full Changelog:** [`2026.10.12.0...2026.10.12.1`](https://github.com/juspay/connector-service/compare/2026.10.12.0...2026.10.12.1)
+
+- - -
+
 
 ## 2026.10.09.1
 
