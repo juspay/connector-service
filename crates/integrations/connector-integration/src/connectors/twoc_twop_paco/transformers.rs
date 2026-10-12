@@ -915,6 +915,19 @@ where
     };
 
     let common = &item.resource_common_data;
+    let bill_addr_state = common
+        .address
+        .get_payment_method_billing()
+        .and_then(|billing| billing.address.as_ref())
+        .map(|billing_details| {
+            if let Some(state_code_iso) = billing_details.state_code_iso.clone() {
+                Ok(Some(state_code_iso))
+            } else {
+                billing_details.to_state_code_as_optional()
+            }
+        })
+        .transpose()?
+        .flatten();
     let paco_billing_address = common
         .get_optional_billing()
         .and_then(|billing| billing.address.as_ref())
@@ -927,9 +940,7 @@ where
             bill_addr_line2: common.get_optional_billing_line2(),
             bill_addr_line3: common.get_optional_billing_line3(),
             bill_addr_post_code: common.get_optional_billing_zip(),
-            bill_addr_state: common
-                .get_optional_billing_state()
-                .filter(|state| state.peek().chars().count() <= 3),
+            bill_addr_state,
         });
 
     let paco_shipping_address = common

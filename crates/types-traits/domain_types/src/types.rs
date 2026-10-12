@@ -5806,6 +5806,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             line3: value.line3,
             zip: value.zip_code,
             state: value.state,
+            state_code_iso: value.state_code_iso,
             first_name: value.first_name,
             last_name: value.last_name,
             origin_zip: None,
