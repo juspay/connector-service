@@ -173,8 +173,8 @@ fn metadata_to_user_fields(
     needs_serialization: bool,
 ) -> Result<Option<UserFields>, Error> {
     let meta = match metadata {
+        Some(serde_json::Value::Null) | None => return Ok(None),
         Some(m) => m,
-        None => return Ok(None),
     };
 
     let value = if needs_serialization {
@@ -184,6 +184,16 @@ fn metadata_to_user_fields(
     } else {
         meta
     };
+
+    // userFields are name/value pairs, so only a JSON object can be converted. Any
+    // other value is rejected (as hyperswitch does) instead of going out as an empty
+    // `userFields` element.
+    if !value.is_object() {
+        return Err(error_stack::report!(IntegrationError::InvalidDataFormat {
+            field_name: "metadata",
+            context: Default::default(),
+        }));
+    }
 
     Ok(Some(UserFields {
         user_field: Vec::<UserField>::foreign_try_from(value)?,
@@ -2509,7 +2519,9 @@ fn get_avs_response_description(code: &str) -> Option<&'static str> {
     match code {
         "A" => Some("The street address matched, but the postal code did not."),
         "B" => Some("No address information was provided."),
-        "E" => Some("The AVS check returned an error."),
+        "E" => Some(
+            "AVS data provided is invalid or AVS is not allowed for the card type that was used.",
+        ),
         "G" => Some("The card was issued by a bank outside the U.S. and does not support AVS."),
         "N" => Some("Neither the street address nor postal code matched."),
         "P" => Some("AVS is not applicable for this transaction."),
@@ -2909,22 +2921,20 @@ impl<
 
         let response_result = match &response.0.transaction_response {
             Some(TransactionResponse::AuthorizedotnetTransactionResponse(transaction_response)) => {
-                // Check for errors in the response
+                // Check for errors in the response. Built through `create_error_response`
+                // so a declined MIT carries the merchant advice code / processor
+                // response code like Authorize does.
                 let error = transaction_response.errors.as_ref().and_then(|errors| {
-                    errors.first().map(|error| ErrorResponse {
-                        code: error.error_code.clone(),
-                        message: error.error_text.clone(),
-                        reason: Some(error.error_text.clone()),
-                        status_code: http_code,
-                        attempt_status: Some(FlowStatus::Payment(status)),
-                        connector_transaction_id: Some(transaction_response.transaction_id.clone()),
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                        typed_connector_response: None,
-                        raw_connector_response: None,
-                        raw_connector_request: None,
-                        typed_connector_request: None,
+                    errors.first().map(|error| {
+                        create_error_response(
+                            http_code,
+                            error.error_code.clone(),
+                            error.error_text.clone(),
+                            status,
+                            Some(transaction_response.transaction_id.clone()),
+                            Some(transaction_response),
+                            None,
+                        )
                     })
                 });
 
@@ -3060,13 +3070,9 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
     }
 }
 
-/// Build an `ErrorResponse` from Authorize.Net's `ResponseMessages`, mirroring
-/// hyperswitch's `get_err_response`: use the first message's code/text and leave
-/// `attempt_status: None` so the caller preserves the prior attempt status.
-/// Parity with hyperswitch's direct Authorize.net flow: `resultCode` is the error *message*
-/// (`"Error"`), and the reason carries every `messages.message[].text`, joined. Reading
-/// `message[0].text` into both fields diverges on `message` and silently drops every message
-/// after the first.
+/// Error triple for CreateConnectorCustomer and SetupMandate, where hyperswitch's direct
+/// Authorize.net flow uses `resultCode` as the error *message* (`"Error"`) and joins every
+/// `messages.message[].text` into the reason.
 fn error_code_message_and_reason(messages: &ResponseMessages) -> (String, String, String) {
     let code = messages
         .message
@@ -3087,12 +3093,23 @@ fn error_code_message_and_reason(messages: &ResponseMessages) -> (String, String
     (code, messages.result_code.to_string(), reason)
 }
 
+/// Build an `ErrorResponse` from Authorize.Net's `ResponseMessages` for PSync and RSync,
+/// mirroring hyperswitch's `get_err_response`: the first message's code is the error code,
+/// its text is both message and reason, and `attempt_status` stays `None` so the caller
+/// preserves the status it already holds.
 fn get_err_response(status_code: u16, messages: ResponseMessages) -> ErrorResponse {
-    let (code, message, reason) = error_code_message_and_reason(&messages);
+    let first_message = messages.message.into_iter().next();
+    let (code, message) = match first_message {
+        Some(first_message) => (first_message.code, first_message.text),
+        None => (
+            consts::NO_ERROR_CODE.to_string(),
+            consts::NO_ERROR_MESSAGE.to_string(),
+        ),
+    };
     ErrorResponse {
         code,
-        message,
-        reason: Some(reason),
+        message: message.clone(),
+        reason: Some(message),
         status_code,
         attempt_status: None,
         connector_transaction_id: None,
@@ -3365,6 +3382,10 @@ pub enum ResultCode {
     #[default]
     Ok,
     Error,
+    /// Any resultCode the API reference does not list; parsed instead of failing the
+    /// whole body.
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
@@ -3388,7 +3409,9 @@ pub struct AuthorizedotnetPaymentsResponse {
 pub struct AuthorizedotnetNonZeroMandateResponse {
     customer_profile_id: Option<String>,
     customer_payment_profile_id_list: Option<Vec<String>>,
-    pub messages: ResponseMessages,
+    // Never read. Optional so a profileResponse without it cannot fail the body of a
+    // transaction the gateway has already processed.
+    pub messages: Option<ResponseMessages>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -3428,8 +3451,8 @@ fn get_hs_status(
             // itself failed, so a body without one is never a completed void.
             Operation::Void => AttemptStatus::VoidFailed,
             Operation::VoidPostCapture => AttemptStatus::VoidedPostCapture,
-            Operation::Authorize | Operation::Capture => AttemptStatus::Pending,
-            Operation::Refund => AttemptStatus::Failure,
+            // No transaction was created: a failed attempt, as in hyperswitch.
+            Operation::Authorize | Operation::Capture | Operation::Refund => AttemptStatus::Failure,
         };
     }
 
@@ -3472,7 +3495,7 @@ fn get_hs_status(
                 }
             }
         },
-        None => AttemptStatus::Pending,
+        None => failure_status,
     }
 }
 
@@ -3820,34 +3843,13 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
 
                 Ok(new_router_data)
             }
-            None => {
-                // Handle error response
-                let (code, message, reason) = error_code_message_and_reason(&response.messages);
-                let error_response = ErrorResponse {
-                    status_code: http_code,
-                    code,
-                    message,
-                    reason: Some(reason),
-                    attempt_status: Some(FlowStatus::Payment(AttemptStatus::Failure)),
-                    connector_transaction_id: None,
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                    typed_connector_response: None,
-                    raw_connector_response: None,
-                    raw_connector_request: None,
-                    typed_connector_request: None,
-                };
-
-                // Update router data with error response
-                let mut new_router_data = router_data;
-                let mut resource_common_data = new_router_data.resource_common_data.clone();
-                resource_common_data.status = RefundStatus::Failure;
-                new_router_data.resource_common_data = resource_common_data;
-                new_router_data.response = Err(error_response);
-
-                Ok(new_router_data)
-            }
+            // A sync that returned no transaction (record not found, server busy,
+            // auth error) says nothing about the refund itself: surface the error and
+            // leave the refund status untouched, as hyperswitch and the PSync arm do.
+            None => Ok(Self {
+                response: Err(get_err_response(http_code, response.messages)),
+                ..router_data
+            }),
         }
     }
 }
@@ -3994,17 +3996,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?
             .clone();
 
-        // Check if we have a successful response:
-        // 1. resultCode == "Ok" (normal success)
-        // 2. OR we have customer profile ID AND payment profile ID (E00039 duplicate case)
-        //    E00039 = "A duplicate customer payment profile already exists"
-        //    This is acceptable for idempotent SetupMandate - profile is available for use
-        let is_success = response.messages.result_code == ResultCode::Ok
-            || (response.customer_profile_id.is_some()
-                && (response.customer_payment_profile_id.is_some()
-                    || !response.customer_payment_profile_id_list.is_empty()));
-
-        let status = if is_success {
+        // The status follows the outcome returned below (hyperswitch's rule): a
+        // customerProfileId means the profile is available for use - this covers
+        // E00039 "A duplicate customer payment profile already exists", which is
+        // acceptable for an idempotent SetupMandate - and its absence is a failure
+        // whatever the resultCode.
+        let status = if response.customer_profile_id.is_some() {
             AttemptStatus::Charged
         } else {
             AttemptStatus::Failure
@@ -4083,7 +4080,7 @@ pub struct AuthorizedotnetErrorResponse {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetWebhookObjectId {
-    pub webhook_id: String,
+    pub webhook_id: Option<String>,
     pub event_type: AuthorizedotnetWebhookEvent,
     pub payload: AuthorizedotnetWebhookPayload,
 }
@@ -4136,6 +4133,8 @@ pub enum AuthorizedotnetWebhookEvent {
     CustomerCreated,
     #[serde(rename = "net.authorize.customer.paymentProfile.created")]
     CustomerPaymentProfileCreated,
+    #[serde(other)]
+    Unknown,
 }
 
 /// Including Unknown to map unknown webhook events
@@ -4191,6 +4190,8 @@ impl From<AuthorizedotnetWebhookEvent> for AttemptStatus {
             AuthorizedotnetWebhookEvent::RefundCreated => Self::PartialCharged, // This will be used for refund status
             AuthorizedotnetWebhookEvent::CustomerCreated => Self::Charged, // Customer profile creation indicates successful setup mandate
             AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => Self::Charged, // Payment profile creation indicates successful setup mandate
+            // Not a payment event: no verdict, the caller keeps its stored status.
+            AuthorizedotnetWebhookEvent::Unknown => Self::Unspecified,
         }
     }
 }
@@ -4207,6 +4208,7 @@ impl From<AuthorizedotnetWebhookEvent> for SyncStatus {
             AuthorizedotnetWebhookEvent::RefundCreated => Self::RefundSettledSuccessfully,
             AuthorizedotnetWebhookEvent::CustomerCreated => Self::SettledSuccessfully, // Customer profile successfully created and settled
             AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => Self::SettledSuccessfully, // Payment profile successfully created and settled
+            AuthorizedotnetWebhookEvent::Unknown => Self::Unknown,
         }
     }
 }

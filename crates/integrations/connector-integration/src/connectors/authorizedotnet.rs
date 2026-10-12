@@ -27,7 +27,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::{report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,
@@ -222,15 +222,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
                 EventType::MandateActive
             }
+            // Authorize.Net delivers many event types this connector does not act on
+            // (fraud, subscription, settlement, ...). They are acknowledged as
+            // not-supported, as hyperswitch does, instead of failing the delivery.
             transformers::AuthorizedotnetIncomingWebhookEventType::Unknown => {
-                tracing::warn!(
-                    target: "authorizedotnet_webhook",
-                    "Received unknown webhook event type from Authorize.Net - rejecting webhook"
-                );
-                return Err(
-                    report!(WebhookError::WebhookEventTypeNotFound)
-                        .attach_printable("Unknown webhook event type"),
-                );
+                EventType::IncomingWebhookEventUnspecified
             }
         };
         Ok(event_type)
@@ -295,6 +291,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             // Customer profile events identify a profile, not a payment or a refund.
             transformers::AuthorizedotnetWebhookEvent::CustomerCreated
             | transformers::AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => Ok(None),
+            // An event type this connector does not act on has no resource to resolve.
+            transformers::AuthorizedotnetWebhookEvent::Unknown => Ok(None),
         }
     }
 
@@ -314,12 +312,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "Failed to parse Authorize.Net payment webhook body structure"
             })?;
 
-        let transaction_id = get_trans_id(&webhook_body).attach_printable_lazy(|| {
-            format!(
-                "Failed to extract transaction ID from payment webhook for event: {:?}",
-                webhook_body.event_type
-            )
-        })?;
+        let transaction_id = match webhook_body.event_type {
+            // An event type this connector does not act on is acknowledged with
+            // whatever id it carries; a missing id must not fail the delivery.
+            transformers::AuthorizedotnetWebhookEvent::Unknown => webhook_body.payload.id.clone(),
+            _ => Some(get_trans_id(&webhook_body).attach_printable_lazy(|| {
+                format!(
+                    "Failed to extract transaction ID from payment webhook for event: {:?}",
+                    webhook_body.event_type
+                )
+            })?),
+        };
         let status = transformers::SyncStatus::from(webhook_body.event_type.clone());
         // The merchant's own reference is payload.merchantReferenceId (the echoed refId);
         // it is absent when the request carried no refId, and is never the transId.
@@ -327,11 +330,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         Ok(WebhookDetailsResponse {
             connector_returned_payment_method_details: None,
-            resource_id: Some(ResponseId::ConnectorTransactionId(transaction_id.clone())),
+            resource_id: transaction_id
+                .clone()
+                .map(ResponseId::ConnectorTransactionId),
             status: common_enums::AttemptStatus::from(status),
             status_code: 200,
             mandate_reference: None,
-            connector_response_reference_id: Some(transaction_id),
+            connector_response_reference_id: transaction_id,
             connector_request_reference_id: merchant_reference_id,
             error_code: None,
             error_message: None,
@@ -449,8 +454,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         event_builder: Option<&mut events::Event>,
         _connector_config: &ConnectorSpecificConfig,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        let response: transformers::ResponseMessages =
-            res.response.parse_struct("ResponseMessages").map_err(|_| {
+        // Authorize.Net prefixes its JSON with a UTF-8 BOM; this path does not go
+        // through `preprocess_response_bytes`, so strip it here.
+        let (body, _) = encoding_rs::UTF_8.decode_with_bom_removal(&res.response);
+
+        if body.trim().is_empty() {
+            return Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: consts::NO_ERROR_CODE.to_string(),
+                message: consts::NO_ERROR_MESSAGE.to_string(),
+                reason: None,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+                typed_connector_response: None,
+                raw_connector_response: None,
+                raw_connector_request: None,
+                typed_connector_request: None,
+            });
+        }
+
+        // The error body is the regular envelope: `messages` nested at the root, with
+        // an optional `transactionResponse` whose `errors[0]` takes precedence.
+        let response: transformers::AuthorizedotnetPaymentsResponse = body
+            .as_bytes()
+            .parse_struct("AuthorizedotnetPaymentsResponse")
+            .map_err(|_| {
                 crate::utils::response_deserialization_fail(
                     res.status_code,
                 "authorizedotnet: response body did not match the expected format; confirm API version and connector documentation.")
@@ -460,19 +491,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let typed =
             macros::serialize_typed_connector_payload(&response, "typed_connector_response");
 
+        let transaction_error = match response.transaction_response.as_ref() {
+            Some(transformers::TransactionResponse::AuthorizedotnetTransactionResponse(
+                transaction_response,
+            )) => transaction_response
+                .errors
+                .as_ref()
+                .and_then(|errors| errors.first())
+                .map(|error| (error.error_code.clone(), error.error_text.clone())),
+            Some(transformers::TransactionResponse::AuthorizedotnetTransactionResponseError(_))
+            | None => None,
+        };
+        let (code, message) = transaction_error
+            .or_else(|| {
+                response
+                    .messages
+                    .message
+                    .first()
+                    .map(|message| (message.code.clone(), message.text.clone()))
+            })
+            .unwrap_or_else(|| {
+                (
+                    consts::NO_ERROR_CODE.to_string(),
+                    consts::NO_ERROR_MESSAGE.to_string(),
+                )
+            });
+
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response
-                .message
-                .first()
-                .map(|m| m.code.clone())
-                .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-            message: response
-                .message
-                .first()
-                .map(|m| m.text.clone())
-                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-            reason: None,
+            code,
+            message: message.clone(),
+            reason: Some(message),
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
