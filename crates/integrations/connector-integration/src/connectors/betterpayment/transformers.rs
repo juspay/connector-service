@@ -2,7 +2,7 @@ use common_enums::AttemptStatus;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     request::Method,
-    types::FloatMajorUnit,
+    types::{FloatMajorUnit, MinorUnit},
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
@@ -151,7 +151,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let amount = utils::convert_amount(
             item.connector.amount_converter,
-            request.minor_amount,
+            request.amount,
             request.currency,
         )
         .change_context(errors::IntegrationError::AmountConversionFailed {
@@ -493,7 +493,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let amount = utils::convert_amount(
             item.connector.amount_converter,
-            item.router_data.request.minor_refund_amount,
+            MinorUnit::new(item.router_data.request.refund_amount),
             item.router_data.request.currency,
         )
         .change_context(errors::IntegrationError::AmountConversionFailed {
@@ -715,20 +715,22 @@ pub fn get_webhook_event_type(body: &BetterpaymentWebhookBody) -> EventType {
 }
 
 /// Maps Betterpayment's `refund_status_code` to a UCS EventType.
-/// 0 = Started (processing), 1 = Successful, anything else = failure.
+/// 0 = Started, 1 = Success, 2 = Error, 3 = Local, 4 = Reversed, 5 = Declined.
+/// Started, Local, missing, and unknown codes remain processing.
 pub fn get_refund_webhook_event_type(refund_status_code: Option<i64>) -> EventType {
     match refund_status_code {
-        Some(0) => EventType::RefundProcessing,
         Some(1) => EventType::RefundSuccess,
-        _ => EventType::RefundFailure,
+        Some(2 | 4 | 5) => EventType::RefundFailure,
+        _ => EventType::RefundProcessing,
     }
 }
 
 /// Maps Betterpayment's `refund_status_code` to a UCS RefundStatus.
+/// Missing or unknown codes remain pending until a recognized status arrives.
 pub fn get_refund_webhook_status(refund_status_code: Option<i64>) -> common_enums::RefundStatus {
     match refund_status_code {
-        Some(0) => common_enums::RefundStatus::Pending,
         Some(1) => common_enums::RefundStatus::Success,
-        _ => common_enums::RefundStatus::Failure,
+        Some(2 | 4 | 5) => common_enums::RefundStatus::Failure,
+        _ => common_enums::RefundStatus::Pending,
     }
 }
