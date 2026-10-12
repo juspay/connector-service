@@ -1517,8 +1517,8 @@ pub(super) fn get_amount_captured(
     http_code: u16,
 ) -> Result<
     (
-        Option<common_utils::types::MinorUnit>,
-        Option<common_utils::types::MinorUnit>,
+        Option<common_utils::types::Money>,
+        Option<common_utils::types::Money>,
     ),
     Report<ConnectorError>,
 > {
@@ -1542,6 +1542,10 @@ pub(super) fn get_amount_captured(
             ))
         },
     )?;
+    let amount = common_utils::types::Money {
+        amount,
+        currency: processed_currency,
+    };
     Ok(match response.transaction_type {
         Some(NuveiTransactionType::Sale) | Some(NuveiTransactionType::Auth3D) => {
             (Some(amount), None)
@@ -1559,8 +1563,7 @@ pub(super) fn get_amount_captured(
 
 /// Applies a partialApproval to the flow data (hyperswitch runs
 /// `get_amount_captured` on every payment response): processedAmount becomes
-/// amount_captured / minor_amount_captured (Sale, Auth3D) or
-/// minor_amount_capturable (Auth, InitAuth3D). Without a partialApproval the
+/// amount_captured (Sale, Auth3D) or amount_capturable (Auth, InitAuth3D). Without a partialApproval the
 /// existing values are kept.
 pub(super) fn apply_nuvei_partial_approval(
     response: &NuveiPaymentsResponse,
@@ -1569,11 +1572,8 @@ pub(super) fn apply_nuvei_partial_approval(
 ) -> Result<PaymentFlowData, Report<ConnectorError>> {
     let (amount_captured, amount_capturable) = get_amount_captured(response, http_code)?;
     Ok(PaymentFlowData {
-        amount_captured: amount_captured
-            .map(|amount| amount.get_amount_as_i64())
-            .or(resource_common_data.amount_captured),
-        minor_amount_captured: amount_captured.or(resource_common_data.minor_amount_captured),
-        minor_amount_capturable: amount_capturable.or(resource_common_data.minor_amount_capturable),
+        amount_captured: amount_captured.or(resource_common_data.amount_captured),
+        amount_capturable: amount_capturable.or(resource_common_data.amount_capturable),
         ..resource_common_data
     })
 }
@@ -2066,7 +2066,7 @@ fn build_nuvei_three_ds_authorize_request<
             .as_ref()
             .map(|url| url.to_string()),
         return_url: request.router_return_url.clone(),
-        amount: request.minor_amount,
+        amount: request.amount.amount,
         currency: request.currency,
         capture_method: request.capture_method,
         billing_descriptor: request.billing_descriptor.as_ref(),
@@ -2524,15 +2524,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let currency = request.currency;
-        let amount = NuveiAmountConvertor::convert(request.minor_amount, currency)?;
+        let amount = NuveiAmountConvertor::convert(request.amount.amount, currency)?;
 
         let l2_l3_data = resource.l2_l3_data.as_deref();
         let items = get_l2_l3_items(l2_l3_data, currency)?;
         let amount_details = get_amount_details(l2_l3_data, currency)?;
 
         // Determine transaction type based on capture method (Auth for manual or amount 0)
-        let transaction_type =
-            TransactionType::get_from_capture_method(request.capture_method, request.minor_amount)?;
+        let transaction_type = TransactionType::get_from_capture_method(
+            request.capture_method,
+            request.amount.amount,
+        )?;
 
         // Build urlDetails from router_return_url if available
         let url_details = request
@@ -2598,7 +2600,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let request = &router_data.request;
 
         let status = get_nuvei_payment_status(
-            Some(request.minor_amount.get_amount_as_i64()),
+            Some(request.amount.amount.get_amount_as_i64()),
             response.transaction_type.as_ref(),
             response.transaction_status.as_ref(),
             &response.status,
@@ -3139,7 +3141,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let currency = request.currency.ok_or_else(|| {
             nuvei_missing_field("currency", "Send amount.currency for Nuvei initPayment")
         })?;
-        let amount = NuveiAmountConvertor::convert(request.amount, currency)?;
+        let amount = NuveiAmountConvertor::convert(request.amount.amount, currency)?;
 
         // browser_info (deviceDetails.ipAddress) and return_url are required
         let browser_info = request.browser_info.as_ref().ok_or_else(|| {
@@ -3567,7 +3569,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .router_return_url
                 .as_ref()
                 .map(|url| url.to_string()),
-            amount: request.amount,
+            amount: request.amount.amount,
             currency,
             capture_method: request.capture_method,
             billing_descriptor: request.billing_descriptor.as_ref(),
@@ -3613,7 +3615,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // APPROVED+Sale -> Charged, +Auth -> Authorized; DECLINED/ERROR+Auth3D ->
         // AuthenticationFailed
         let status = get_nuvei_payment_status(
-            Some(request.amount.get_amount_as_i64()),
+            Some(request.amount.amount.get_amount_as_i64()),
             response.transaction_type.as_ref(),
             response.transaction_status.as_ref(),
             &response.status,
@@ -3809,12 +3811,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Amount to settle (partial capture passes through); StringMajorUnit
         let amount = NuveiAmountConvertor::convert(
-            router_data.request.minor_amount_to_capture,
+            router_data.request.amount_to_capture.amount,
             router_data.request.currency,
         )
         .change_context(IntegrationError::RequestEncodingFailed {
             context: nuvei_error_context(
-                "Send a valid minor_amount_to_capture and currency",
+                "Send a valid amount_to_capture and currency",
                 "Nuvei settleTransaction amount could not be converted to a major-unit string",
             ),
         })?;
@@ -3906,7 +3908,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         }
 
         let status = get_nuvei_payment_status(
-            Some(request.amount.get_amount_as_i64()),
+            Some(request.amount.amount.get_amount_as_i64()),
             response.transaction_type.as_ref(),
             response.transaction_status.as_ref(),
             &response.status,
@@ -3962,8 +3964,9 @@ impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
         let status = get_nuvei_payment_status(
             router_data
                 .resource_common_data
-                .minor_amount_capturable
-                .map(|amount| amount.get_amount_as_i64()),
+                .amount_capturable
+                .as_ref()
+                .map(|money| money.amount.get_amount_as_i64()),
             response.transaction_type.as_ref(),
             response.transaction_status.as_ref(),
             &response.status,
@@ -4033,7 +4036,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Typed minor refund amount -> Nuvei major-unit string
         let amount =
-            NuveiAmountConvertor::convert(router_data.request.minor_refund_amount, currency)?;
+            NuveiAmountConvertor::convert(router_data.request.refund_amount.amount, currency)?;
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -4354,7 +4357,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let related_transaction_id = router_data.request.connector_transaction_id.clone();
 
         // Nuvei voids the original amount and currency
-        let minor_amount = router_data.request.amount.ok_or_else(|| {
+        let minor_amount = router_data.request.amount.as_ref().ok_or_else(|| {
             nuvei_missing_field(
                 "amount",
                 "Send the original authorized amount on the Void request",
@@ -4369,7 +4372,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         })?;
 
         let amount =
-            NuveiAmountConvertor::convert(minor_amount, currency)
+            NuveiAmountConvertor::convert(minor_amount.amount, currency)
                 .change_context(IntegrationError::RequestEncodingFailed {
                 context: nuvei_error_context(
                     "Send a valid amount and currency",
@@ -4419,7 +4422,8 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
             router_data
                 .request
                 .amount
-                .map(|amount| amount.get_amount_as_i64()),
+                .as_ref()
+                .map(|money| money.amount.get_amount_as_i64()),
             response.transaction_type.as_ref(),
             response.transaction_status.as_ref(),
             &response.status,
@@ -4716,14 +4720,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Convert amount using the connector's amount converter
-        let amount =
-            NuveiAmountConvertor::convert(router_data.request.amount, router_data.request.currency)
-                .change_context(IntegrationError::RequestEncodingFailed {
-                    context: nuvei_error_context(
-                        "Send a valid minor amount and currency",
-                        "Nuvei openOrder amount could not be converted to a major-unit string",
-                    ),
-                })?;
+        let amount = NuveiAmountConvertor::convert(
+            router_data.request.amount.amount,
+            router_data.request.currency,
+        )
+        .change_context(IntegrationError::RequestEncodingFailed {
+            context: nuvei_error_context(
+                "Send a valid minor amount and currency",
+                "Nuvei openOrder amount could not be converted to a major-unit string",
+            ),
+        })?;
 
         let currency = router_data.request.currency;
 
@@ -5030,7 +5036,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let currency = request.currency;
         // Amount is optional for SetupMandate: absent -> zero-amount verification
         let minor_amount = request
-            .minor_amount
+            .amount
+            .as_ref()
+            .map(|money| money.amount)
             .unwrap_or(common_utils::types::MinorUnit::new(0));
         let amount = NuveiAmountConvertor::convert(minor_amount, currency)?;
 
@@ -5115,8 +5123,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let status = get_nuvei_payment_status(
             Some(
                 request
-                    .minor_amount
-                    .map(|amount| amount.get_amount_as_i64())
+                    .amount
+                    .as_ref()
+                    .map(|money| money.amount.get_amount_as_i64())
                     .unwrap_or(0),
             ),
             response.transaction_type.as_ref(),
@@ -5417,7 +5426,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     NuveiRepeatPaymentOptionTypes::NetworkTransactionCard(
                         NuveiRepeatPaymentNtidCardOption {
                             card: NuveiNtidCard {
-                                card_number: card.card_number.clone(),
+                                card_number: card.card_number.try_card_number("nuvei")?,
                                 card_holder_name: card.card_holder_name.clone(),
                                 expiration_month: card.card_exp_month.clone(),
                                 expiration_year: card.card_exp_year.clone(),
@@ -5483,11 +5492,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let currency = request.currency;
-        let amount = NuveiAmountConvertor::convert(request.minor_amount, currency)?;
+        let amount = NuveiAmountConvertor::convert(request.amount.amount, currency)?;
 
         // Auth for manual capture or amount 0, else Sale
-        let transaction_type =
-            TransactionType::get_from_capture_method(request.capture_method, request.minor_amount)?;
+        let transaction_type = TransactionType::get_from_capture_method(
+            request.capture_method,
+            request.amount.amount,
+        )?;
 
         // Checksum: merchantId + merchantSiteId + clientRequestId + amount + currency + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -5543,7 +5554,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let request = &router_data.request;
 
         let status = get_nuvei_payment_status(
-            Some(request.minor_amount.get_amount_as_i64()),
+            Some(request.amount.amount.get_amount_as_i64()),
             response.transaction_type.as_ref(),
             response.transaction_status.as_ref(),
             &response.status,
@@ -6273,7 +6284,6 @@ pub fn build_payment_webhook_details(
         status_code: 200,
         response_headers: None,
         amount_captured: None,
-        minor_amount_captured: None,
         network_txn_id: None,
         payment_method_update: None,
         sender_payment_instrument_id: None,
