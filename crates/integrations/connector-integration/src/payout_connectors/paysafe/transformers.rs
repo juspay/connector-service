@@ -50,10 +50,10 @@ fn missing_field(field_name: &'static str, flow: &str) -> Report<IntegrationErro
 
 fn invalid_date_of_birth(flow: &str) -> Report<IntegrationError> {
     IntegrationError::InvalidDataFormat {
-        field_name: "request.customer.date_of_birth",
+        field_name: "request.vendor_account_details.individual_details.date_of_birth",
         context: IntegrationErrorContext {
             additional_context: Some(format!(
-                "Paysafe {flow} - date of birth year is out of range for the Paysafe API"
+                "Paysafe {flow} - date of birth is invalid for the Paysafe API"
             )),
             suggested_action: None,
             doc_url: None,
@@ -226,14 +226,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             psc_id,
         };
 
-        let customer_date_of_birth = customer_details
-            .and_then(|customer| customer.date_of_birth.as_ref())
-            .map(PeekInterface::peek)
-            .ok_or_else(|| {
-                missing_field("request.customer.date_of_birth", "Payout Create Recipient")
-            })?;
+        let (dob_day, dob_month, dob_year) = match item.request.get_date_of_birth_parts()? {
+            Some(date_of_birth_parts) => date_of_birth_parts,
+            None => {
+                return Err(missing_field(
+                    "request.vendor_account_details.individual_details.date_of_birth",
+                    "Payout Create Recipient",
+                ))
+            }
+        };
 
-        let year = u16::try_from(customer_date_of_birth.year())
+        let day = dob_day
+            .peek()
+            .parse::<u8>()
+            .map_err(|_| invalid_date_of_birth("Payout Create Recipient"))?;
+        let month = dob_month
+            .peek()
+            .parse::<u8>()
+            .map_err(|_| invalid_date_of_birth("Payout Create Recipient"))?;
+        let year = dob_year
+            .peek()
+            .parse::<u16>()
             .map_err(|_| invalid_date_of_birth("Payout Create Recipient"))?;
 
         let profile = PaysafeCustomerProfileDetails {
@@ -256,11 +269,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     )
                 })?,
             email,
-            date_of_birth: CustomerDateOfBirth {
-                day: customer_date_of_birth.day(),
-                month: u8::from(customer_date_of_birth.month()),
-                year,
-            },
+            date_of_birth: CustomerDateOfBirth { day, month, year },
         };
 
         Ok(Self {
