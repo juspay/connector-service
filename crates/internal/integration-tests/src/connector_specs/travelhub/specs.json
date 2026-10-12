@@ -9,6 +9,12 @@
     "RefundService/Get"
   ],
   "supported_payment_methods": [
-    "card"
-  ]
+    "card",
+    "apple_pay_sdk"
+  ],
+  "unsupported_scenarios": {
+    "PaymentService/Authorize": {
+      "no3ds_auto_capture_apple_pay_encrypted": "An encrypted Apple Pay token is minted on a real device bound to the merchant's Apple Pay certificate and carries an expiry, so a durable fixture cannot be committed. The encrypted variant is defined in connector_specific_scenarios.json for local runs with a fresh token and was verified against Worldline preprod by grpcurl instead."
+    }
+  }
 }

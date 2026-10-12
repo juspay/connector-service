@@ -6,8 +6,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsResponseData, PaymentsSyncData, RawConnectorStatus, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{ConnectorError, IntegrationError, IntegrationErrorContext},
     payment_method_data::{
@@ -305,6 +305,42 @@ pub struct TravelhubPaymentMethod {
 }
 
 const TRAVELHUB_APPLE_PAY_PAYMENT_METHOD_CODE: &str = "212";
+const TRAVELHUB_MAX_CARD_NAME_LENGTH: usize = 51;
+const TRAVELHUB_MAX_ORDER_ID_LENGTH: usize = 30;
+
+fn validate_travelhub_order_id(
+    order_id: &str,
+) -> Result<String, error_stack::Report<IntegrationError>> {
+    let received_length = order_id.chars().count();
+
+    if received_length > TRAVELHUB_MAX_ORDER_ID_LENGTH {
+        Err(error_stack::report!(
+            IntegrationError::MaxFieldLengthViolated {
+                connector: "travelhub".to_string(),
+                field_name: "orderId".to_string(),
+                max_length: TRAVELHUB_MAX_ORDER_ID_LENGTH,
+                received_length,
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Use a TravelHub order reference of at most 30 characters. \
+                         The same value is reused for authorize, capture, void, \
+                         refund, and sync requests."
+                            .to_string(),
+                    ),
+                    doc_url: None,
+                    additional_context: Some(
+                        "TravelHub rejects longer orderId values as INVALID, so the \
+                         connector refuses the request locally instead of sending a \
+                         gateway-side validation failure."
+                            .to_string(),
+                    ),
+                },
+            }
+        ))
+    } else {
+        Ok(order_id.to_owned())
+    }
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -462,7 +498,7 @@ fn build_travelhub_apple_pay(
                         .payment_data
                         .eci_indicator
                         .clone()
-                        .unwrap_or_else(|| "07".to_string()),
+                        .unwrap_or_else(|| "07".to_string()), //testing purpose harcoded
                 ),
             }),
         }),
@@ -485,7 +521,7 @@ fn build_travelhub_billing_address<T: PaymentMethodDataTypes>(
         country: item
             .resource_common_data
             .get_optional_billing_country()
-            .or(Some(common_enums::CountryAlpha2::US)),
+            .or(Some(common_enums::CountryAlpha2::US)), //testing purpose harcoded
     })
 }
 
@@ -519,7 +555,9 @@ impl<T: PaymentMethodDataTypes>
                     item.resource_common_data.get_optional_billing_first_name(),
                     item.resource_common_data.get_optional_billing_last_name(),
                 )
-                .map(|name| crate::utils::truncate_secret_string(&name, 51));
+                .map(|name| {
+                    crate::utils::truncate_secret_string(&name, TRAVELHUB_MAX_CARD_NAME_LENGTH)
+                });
 
                 let expiry_date = card_data.get_expiry_date_as_mmyy()?;
 
@@ -593,50 +631,14 @@ impl<T: PaymentMethodDataTypes>
 
         Ok(Self {
             merchant_id: auth.get_merchant_id(),
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
-            amount: item.request.minor_amount,
-            currency: item.request.currency,
-            capture: is_auto_capture,
-            travel: build_travel_data(item.request.domain_data.as_ref()),
-            payment,
-        Ok(Self {
-            merchant_id: auth.get_merchant_id(),
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            order_id: validate_travelhub_order_id(
+                &item.resource_common_data.connector_request_reference_id,
+            )?,
             amount: item.request.amount.amount,
             currency: item.request.currency,
             capture: is_auto_capture,
             travel: build_travel_data(item.request.domain_data.as_ref()),
-            payment: TravelhubPayment {
-                payment_method: TravelhubPaymentMethod {
-                    code: payment_method_code,
-                },
-                payment_card: TravelhubPaymentCard {
-                    card_name: cardholder_name,
-                    card_number: card_data.card_number.clone(),
-                    expiry_date,
-                    cvc: card_data.card_cvc.clone(),
-                    request3ds,
-                    authentication,
-                },
-                billing_address: item
-                    .resource_common_data
-                    .get_billing_address()
-                    .ok()
-                    .map(|_| TravelhubBillingAddress {
-                        number: None,
-                        street: item.resource_common_data.get_optional_billing_line1(),
-                        city: item.resource_common_data.get_optional_billing_city(),
-                        state: item.resource_common_data.get_optional_billing_state(),
-                        postal_code: item.resource_common_data.get_optional_billing_zip(),
-                        country: item.resource_common_data.get_optional_billing_country(),
-                    }),
-            },
+            payment,
         })
     }
 }
@@ -763,6 +765,31 @@ fn map_travelhub_refund_status(result: &TravelhubResult) -> RefundStatus {
     }
 }
 
+fn travelhub_result_literal(result: &TravelhubResult) -> &'static str {
+    match result {
+        TravelhubResult::Approved => "APPROVED",
+        TravelhubResult::Captured => "CAPTURED",
+        TravelhubResult::Settled => "SETTLED",
+        TravelhubResult::Declined => "DECLINED",
+        TravelhubResult::Error => "ERROR",
+        TravelhubResult::Invalid => "INVALID",
+        TravelhubResult::Redirected => "REDIRECTED",
+        TravelhubResult::Cancelled => "CANCELLED",
+        TravelhubResult::Refunded => "REFUNDED",
+        TravelhubResult::Pending => "PENDING",
+        TravelhubResult::Unknown => "UNKNOWN",
+    }
+}
+
+fn travelhub_raw_connector_status(result: &TravelhubResult) -> RawConnectorStatus {
+    let code = travelhub_result_literal(result).to_string();
+    RawConnectorStatus {
+        code: Some(code.clone()),
+        message: Some(code),
+        reason: None,
+    }
+}
+
 /// Wire-format code for a failure `result`. TravelHub reports business failures on HTTP 200
 /// through the `result` field alone — the payments envelope has no error code/message fields
 /// to deserialize — so the result literal itself is carried as the error code rather than
@@ -770,9 +797,9 @@ fn map_travelhub_refund_status(result: &TravelhubResult) -> RefundStatus {
 /// detail via the Spring Boot envelope parsed in `build_error_response`.)
 fn travelhub_result_code(result: &TravelhubResult) -> &'static str {
     match result {
-        TravelhubResult::Declined => "DECLINED",
-        TravelhubResult::Error => "ERROR",
-        TravelhubResult::Invalid => "INVALID",
+        TravelhubResult::Declined | TravelhubResult::Error | TravelhubResult::Invalid => {
+            travelhub_result_literal(result)
+        }
         _ => "UNKNOWN",
     }
 }
@@ -840,6 +867,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TravelhubPaymentsResp
                 )),
                 resource_common_data: PaymentFlowData {
                     status: map_travelhub_status(result),
+                    raw_connector_status: Some(travelhub_raw_connector_status(result)),
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -900,6 +928,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TravelhubPaymentsResp
             }),
             resource_common_data: PaymentFlowData {
                 status,
+                raw_connector_status: Some(travelhub_raw_connector_status(result)),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -930,10 +959,9 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 
         Ok(Self {
             merchant_id: auth.get_merchant_id(),
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            order_id: validate_travelhub_order_id(
+                &item.resource_common_data.connector_request_reference_id,
+            )?,
             amount: item.request.amount_to_capture.amount,
             currency: item.request.currency,
         })
@@ -969,6 +997,7 @@ impl TryFrom<ResponseRouterData<TravelhubCaptureResponse, Self>>
                 )),
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::CaptureFailed,
+                    raw_connector_status: Some(travelhub_raw_connector_status(result)),
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -1004,6 +1033,7 @@ impl TryFrom<ResponseRouterData<TravelhubCaptureResponse, Self>>
             }),
             resource_common_data: PaymentFlowData {
                 status,
+                raw_connector_status: Some(travelhub_raw_connector_status(result)),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1032,10 +1062,9 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 
         Ok(Self {
             merchant_id: auth.get_merchant_id(),
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            order_id: validate_travelhub_order_id(
+                &item.resource_common_data.connector_request_reference_id,
+            )?,
         })
     }
 }
@@ -1069,6 +1098,7 @@ impl TryFrom<ResponseRouterData<TravelhubVoidResponse, Self>>
                 )),
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::VoidFailed,
+                    raw_connector_status: Some(travelhub_raw_connector_status(result)),
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -1103,6 +1133,7 @@ impl TryFrom<ResponseRouterData<TravelhubVoidResponse, Self>>
             }),
             resource_common_data: PaymentFlowData {
                 status,
+                raw_connector_status: Some(travelhub_raw_connector_status(result)),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1131,10 +1162,9 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
 
         Ok(Self {
             merchant_id: auth.get_merchant_id(),
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            order_id: validate_travelhub_order_id(
+                &item.resource_common_data.connector_request_reference_id,
+            )?,
         })
     }
 }
@@ -1165,6 +1195,7 @@ impl TryFrom<ResponseRouterData<TravelhubPSyncResponse, Self>>
                 )),
                 resource_common_data: PaymentFlowData {
                     status: map_travelhub_status(result),
+                    raw_connector_status: Some(travelhub_raw_connector_status(result)),
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -1204,6 +1235,7 @@ impl TryFrom<ResponseRouterData<TravelhubPSyncResponse, Self>>
             }),
             resource_common_data: PaymentFlowData {
                 status,
+                raw_connector_status: Some(travelhub_raw_connector_status(result)),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -1229,9 +1261,8 @@ impl TryFrom<ResponseRouterData<TravelhubPSyncResponse, Self>>
 fn resolve_original_order_id(
     connector_order_id: Option<&str>,
 ) -> Result<String, error_stack::Report<IntegrationError>> {
-    connector_order_id
+    let order_id = connector_order_id
         .filter(|value| !value.is_empty())
-        .map(ToOwned::to_owned)
         .ok_or_else(|| {
             error_stack::report!(IntegrationError::MissingRequiredField {
                 field_name: "connector_order_id",
@@ -1253,7 +1284,9 @@ fn resolve_original_order_id(
                     ),
                 },
             })
-        })
+        })?;
+
+    validate_travelhub_order_id(order_id)
 }
 
 #[derive(Debug, Serialize)]
@@ -1308,6 +1341,10 @@ impl TryFrom<ResponseRouterData<TravelhubRefundResponse, Self>>
                     item.response.transaction_id.clone(),
                     Some(FlowStatus::Refund(map_travelhub_refund_status(result))),
                 )),
+                resource_common_data: RefundFlowData {
+                    raw_connector_status: Some(travelhub_raw_connector_status(result)),
+                    ..item.router_data.resource_common_data
+                },
                 ..item.router_data
             });
         }
@@ -1328,6 +1365,10 @@ impl TryFrom<ResponseRouterData<TravelhubRefundResponse, Self>>
                 status_code: item.http_code,
                 acquirer_reference_number: None,
             }),
+            resource_common_data: RefundFlowData {
+                raw_connector_status: Some(travelhub_raw_connector_status(result)),
+                ..item.router_data.resource_common_data
+            },
             ..item.router_data
         })
     }
@@ -1383,6 +1424,10 @@ impl TryFrom<ResponseRouterData<TravelhubRSyncResponse, Self>>
                     item.response.transaction_id.clone(),
                     Some(FlowStatus::Refund(map_travelhub_refund_status(result))),
                 )),
+                resource_common_data: RefundFlowData {
+                    raw_connector_status: Some(travelhub_raw_connector_status(result)),
+                    ..item.router_data.resource_common_data
+                },
                 ..item.router_data
             });
         }
@@ -1403,6 +1448,10 @@ impl TryFrom<ResponseRouterData<TravelhubRSyncResponse, Self>>
                 status_code: item.http_code,
                 acquirer_reference_number: None,
             }),
+            resource_common_data: RefundFlowData {
+                raw_connector_status: Some(travelhub_raw_connector_status(result)),
+                ..item.router_data.resource_common_data
+            },
             ..item.router_data
         })
     }
@@ -1537,302 +1586,5 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&wrapper.router_data)
-    }
-}
-
-#[cfg(test)]
-#[allow(clippy::expect_used)]
-#[allow(clippy::indexing_slicing)]
-mod tests {
-    use std::borrow::Cow;
-    use std::str::FromStr;
-
-    use cards::CardNumber;
-    use common_enums::{AttemptStatus, AuthenticationType, Currency, PaymentMethod};
-    use common_utils::{id_type::MerchantId, types::MinorUnit};
-    use domain_types::{
-        connector_flow::Authorize,
-        connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
-        payment_address::{Address, AddressDetails, PaymentAddress},
-        payment_method_data::{
-            ApplePayCryptogramData, ApplePayDecryptedData, ApplePayPaymentData, ApplePayWalletData,
-            ApplepayPaymentMethod, DefaultPCIHolder, PaymentMethodData, WalletData,
-        },
-        router_data::{ConnectorSpecificConfig, ErrorResponse},
-        router_data_v2::RouterDataV2,
-        types::{ConnectorParams, Connectors},
-    };
-    use hyperswitch_masking::Secret;
-    use serde_json::json;
-
-    use super::TravelhubPaymentsRequest;
-
-    fn apple_pay_wallet(payment_data: ApplePayPaymentData) -> PaymentMethodData<DefaultPCIHolder> {
-        PaymentMethodData::Wallet(WalletData::ApplePay(Box::new(ApplePayWalletData {
-            payment_data,
-            payment_method: ApplepayPaymentMethod {
-                display_name: "Apple Pay".to_string(),
-                network: "Visa".to_string(),
-                pm_type: "debit".to_string(),
-            },
-            transaction_identifier: "apple-pay-txn-1".to_string(),
-        })))
-    }
-
-    fn authorize_router_data(
-        payment_method_data: PaymentMethodData<DefaultPCIHolder>,
-    ) -> RouterDataV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<DefaultPCIHolder>,
-        PaymentsResponseData,
-    > {
-        RouterDataV2 {
-            flow: std::marker::PhantomData,
-            resource_common_data: PaymentFlowData {
-                raw_connector_status: None,
-                merchant_id: MerchantId::default(),
-                customer_id: None,
-                connector_customer: None,
-                payment_id: "pay_travelhub_applepay".to_string(),
-                attempt_id: "attempt_travelhub_applepay".to_string(),
-                status: AttemptStatus::Pending,
-                payment_method: PaymentMethod::Wallet,
-                payment_method_type: Some(common_enums::PaymentMethodType::ApplePay),
-                description: None,
-                return_url: None,
-                order_details: None,
-                address: PaymentAddress::new(
-                    None,
-                    Some(Address {
-                        address: Some(AddressDetails {
-                            first_name: Some(Secret::new("Ada".to_string())),
-                            last_name: Some(Secret::new("Lovelace".to_string())),
-                            line1: Some(Secret::new("1 Apple Park Way".to_string())),
-                            city: Some(Secret::new("Cupertino".to_string())),
-                            zip: Some(Secret::new("95014".to_string())),
-                            country: Some(common_enums::CountryAlpha2::US),
-                            ..Default::default()
-                        }),
-                        phone: None,
-                        email: None,
-                    }),
-                    None,
-                    None,
-                ),
-                auth_type: AuthenticationType::NoThreeDs,
-                connector_feature_data: None,
-                amount_captured: None,
-                minor_amount_captured: None,
-                minor_amount_capturable: None,
-                amount: None,
-                minor_amount_authorized: None,
-                access_token: None,
-                session_token: None,
-                reference_id: None,
-                connector_order_id: None,
-                preprocessing_id: None,
-                connector_api_version: None,
-                connector_request_reference_id: "travelhub-apple-pay-ref".to_string(),
-                test_mode: None,
-                connector_http_status_code: None,
-                external_latency: None,
-                raw_connector_response: None,
-                typed_connector_response: None,
-                connectors: Connectors {
-                    travelhub: ConnectorParams {
-                        base_url: "https://preprod.travel.worldline-solutions.com/travelhub/"
-                            .to_string(),
-                        dispute_base_url: None,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }
-                .into(),
-                vault_headers: None,
-                connector_response_headers: None,
-                raw_connector_request: None,
-                typed_connector_request: None,
-                connector_response: None,
-                recurring_mandate_payment_data: None,
-                l2_l3_data: None,
-                merchant_request_id: None,
-                sender_payment_instrument_id: None,
-                connector_returned_payment_method_details: None,
-                settlement_status: None,
-            },
-            connector_config: ConnectorSpecificConfig::Travelhub {
-                username: Secret::new("travelhub-user".to_string()),
-                password: Secret::new("travelhub-password".to_string()),
-                merchant_id: Secret::new("travelhub-merchant".to_string()),
-                base_url: None,
-            },
-            request: PaymentsAuthorizeData {
-                split_settlement: None,
-                customer_document_details: None,
-                customer_date_of_birth: None,
-                payment_channel: None,
-                authentication_data: None,
-                connector_testing_data: None,
-                currency_conversion_data: None,
-                access_token: None,
-                payment_method_data,
-                amount: MinorUnit::new(1000),
-                order_tax_amount: None,
-                surcharge_amount: None,
-                email: None,
-                customer_name: None,
-                currency: Currency::USD,
-                confirm: true,
-                capture_method: None,
-                integrity_object: None,
-                router_return_url: None,
-                webhook_url: None,
-                complete_authorize_url: None,
-                mandate_id: None,
-                setup_future_usage: None,
-                off_session: None,
-                browser_info: None,
-                order_category: None,
-                session_token: None,
-                enrolled_for_3ds: Some(false),
-                related_transaction_id: None,
-                payment_experience: None,
-                payment_method_type: Some(common_enums::PaymentMethodType::ApplePay),
-                customer_id: Some(
-                    common_utils::id_type::CustomerId::try_from(Cow::from(
-                        "cust_travelhub_applepay".to_string(),
-                    ))
-                    .expect("customer id"),
-                ),
-                request_incremental_authorization: None,
-                metadata: None,
-                minor_amount: MinorUnit::new(1000),
-                merchant_order_id: None,
-                shipping_cost: None,
-                merchant_account_id: None,
-                merchant_config_currency: None,
-                all_keys_required: None,
-                customer_acceptance: None,
-                split_payments: None,
-                request_extended_authorization: None,
-                setup_mandate_details: None,
-                enable_overcapture: None,
-                connector_feature_data: None,
-                billing_descriptor: None,
-                enable_partial_authorization: None,
-                locale: None,
-                continue_redirection_url: None,
-                redirect_response: None,
-                threeds_method_comp_ind: None,
-                tokenization: None,
-                is_account_funding_transaction: None,
-                recipient_details: None,
-                business_country: None,
-                additional_connector_details: None,
-                customer: None,
-                mit_category: None,
-                domain_data: None,
-                partner_merchant_identifier_details: None,
-            },
-            response: Err(ErrorResponse::default()),
-        }
-    }
-
-    #[test]
-    fn authorize_request_maps_encrypted_apple_pay_to_travelhub_payload() {
-        let router_data = authorize_router_data(apple_pay_wallet(ApplePayPaymentData::Encrypted(
-            "encrypted-apple-pay-token".to_string(),
-        )));
-
-        let request =
-            TravelhubPaymentsRequest::try_from(&router_data).expect("travelhub apple pay request");
-        let payload = serde_json::to_value(request).expect("serialized request");
-
-        assert_eq!(payload["payment"]["paymentMethod"]["code"], json!("212"));
-        assert_eq!(
-            payload["payment"]["applePay"]["encryptedPaymentData"],
-            json!("encrypted-apple-pay-token")
-        );
-        assert!(
-            payload["payment"].get("paymentCard").is_none(),
-            "Apple Pay requests must not serialize card details: {payload}"
-        );
-    }
-
-    #[test]
-    fn authorize_request_maps_decrypted_apple_pay_to_travelhub_payload() {
-        let router_data = authorize_router_data(apple_pay_wallet(ApplePayPaymentData::Decrypted(
-            ApplePayDecryptedData {
-                application_primary_account_number: CardNumber::from_str("4761739001010010")
-                    .expect("valid card number"),
-                application_expiration_month: Secret::new("12".to_string()),
-                application_expiration_year: Secret::new("2027".to_string()),
-                payment_data: ApplePayCryptogramData {
-                    online_payment_cryptogram: Secret::new(
-                        "YwAAAB4EEI0Vn70BcjyTgFhgAgA=".to_string(),
-                    ),
-                    eci_indicator: Some("05".to_string()),
-                },
-                device_manufacturer_identifier: None,
-                merchant_token_identifier: None,
-            },
-        )));
-
-        let request =
-            TravelhubPaymentsRequest::try_from(&router_data).expect("travelhub apple pay request");
-        let payload = serde_json::to_value(request).expect("serialized request");
-
-        assert_eq!(payload["payment"]["paymentMethod"]["code"], json!("212"));
-        assert_eq!(
-            payload["payment"]["applePay"]["decryptedPaymentData"]["dpan"],
-            json!("4761739001010010")
-        );
-        assert_eq!(
-            payload["payment"]["applePay"]["decryptedPaymentData"]["expiryDate"],
-            json!("1227")
-        );
-        assert_eq!(
-            payload["payment"]["applePay"]["decryptedPaymentData"]["cryptogram"],
-            json!("YwAAAB4EEI0Vn70BcjyTgFhgAgA=")
-        );
-        assert_eq!(
-            payload["payment"]["applePay"]["decryptedPaymentData"]["eci"],
-            json!("05")
-        );
-        assert!(
-            payload["payment"].get("paymentCard").is_none(),
-            "Apple Pay requests must not serialize card details: {payload}"
-        );
-    }
-}
-
-#[cfg(test)]
-#[allow(clippy::expect_used)]
-#[allow(clippy::indexing_slicing)]
-mod tests {
-    use domain_types::connector_types::{AirlineData, AirlinePassenger, DomainData};
-    use serde_json::json;
-
-    use super::build_travel_data;
-
-    #[test]
-    fn build_travel_data_normalizes_iata_passenger_type_for_travelhub() {
-        let domain_data = DomainData {
-            airline_data: Some(AirlineData {
-                airline_code: Some("6E".to_string()),
-                passengers: vec![AirlinePassenger {
-                    passenger_type: Some("ADT".to_string()),
-                    ..Default::default()
-                }],
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-
-        let travel = build_travel_data(Some(&domain_data)).expect("travel data");
-        let payload = serde_json::to_value(travel).expect("serialized travel data");
-
-        assert_eq!(payload["passenger"][0]["type"], json!("ADULT"));
     }
 }
