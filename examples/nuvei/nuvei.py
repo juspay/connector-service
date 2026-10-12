@@ -156,7 +156,7 @@ def _build_pre_authenticate_request():
             accept_language="en-US,en;q=0.9",
             ip_address="1.2.3.4",  # Device Information.
         ),
-        session_token="probe_session_token",  # Connector session token, if applicable.
+        session_token="probe_session_token",  # Connector session token, set by the caller from the session_token returned by MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
     )
 
 def _build_recurring_charge_request():
@@ -198,7 +198,7 @@ def _build_recurring_charge_request():
         ),
         payment_method_type=payment_pb2.PaymentMethodType.Value("PAY_PAL"),
         off_session=True,  # Behavioral Flags and Preferences.
-        session_token="probe_session_token",  # Connector session token, if applicable.
+        session_token="probe_session_token",  # Connector session token, set by the caller from the session_token returned by MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
     )
 
 def _build_refund_request(connector_transaction_id: str):

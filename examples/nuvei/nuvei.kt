@@ -367,7 +367,7 @@ fun preAuthenticate(txnId: String, config: ConnectorConfig = _defaultConfig) {
             acceptLanguage = "en-US,en;q=0.9"
             ipAddress = "1.2.3.4"  // Device Information.
         }
-        sessionToken = "probe_session_token"  // Connector session token, if applicable.
+        sessionToken = "probe_session_token"  // Connector session token, set by the caller from the session_token returned by MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
     }.build()
     val response = client.pre_authenticate(request)
     println("Status: ${response.status.name}")
@@ -416,7 +416,7 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
         }
         paymentMethodType = PaymentMethodType.PAY_PAL
         offSession = true  // Behavioral Flags and Preferences.
-        sessionToken = "probe_session_token"  // Connector session token, if applicable.
+        sessionToken = "probe_session_token"  // Connector session token, set by the caller from the session_token returned by MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
     }.build()
     val response = client.charge(request)
     if (response.status.name == "FAILED")

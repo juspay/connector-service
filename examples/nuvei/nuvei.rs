@@ -227,7 +227,7 @@ pub fn build_pre_authenticate_request() -> PaymentMethodAuthenticationServicePre
             ip_address: Some("1.2.3.4".to_string()), // Device Information.
             ..Default::default()
         }),
-        session_token: Some("probe_session_token".to_string()), // Connector session token, if applicable.
+        session_token: Some("probe_session_token".to_string()), // Connector session token, set by the caller from the session_token returned by MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
         ..Default::default()
     }
 }
@@ -282,7 +282,7 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
         }),
         payment_method_type: Some(PaymentMethodType::PayPal.into()),
         off_session: Some(true), // Behavioral Flags and Preferences.
-        session_token: Some("probe_session_token".to_string()), // Connector session token, if applicable.
+        session_token: Some("probe_session_token".to_string()), // Connector session token, set by the caller from the session_token returned by MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
         ..Default::default()
     }
 }
