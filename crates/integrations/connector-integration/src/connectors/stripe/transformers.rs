@@ -5719,6 +5719,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Ok(Self::try_from((
                     ccard,
                     payment_method_auth_type,
+                    None,
                     item.router_data.request.request_incremental_authorization,
                     None,
                     None,
