@@ -1111,10 +1111,14 @@ pub enum NovalnetResponsePaymentData {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NovalnetResponseCard {
     pub card_brand: Option<Secret<String>>,
-    pub card_expiry_month: Secret<u8>,
-    pub card_expiry_year: Secret<u16>,
-    pub card_holder: Secret<String>,
-    pub card_number: Secret<String>,
+    // Wallet (apple_pay / google_pay) responses carry no full card number, so these required
+    // fields made the untagged `Card` variant fail to deserialize and silently fall through to
+    // `Paypal`, whose arm drops `scheme_tid` — losing `network_txn_id` on every wallet payment.
+    // Mirrors hyperswitch's novalnet deserialization resilience (#13214).
+    pub card_expiry_month: Option<Secret<u8>>,
+    pub card_expiry_year: Option<Secret<u16>>,
+    pub card_holder: Option<Secret<String>>,
+    pub card_number: Option<Secret<String>>,
     pub cc_3d: Option<Secret<u8>>,
     pub last_four: Option<Secret<String>>,
     pub token: Option<Secret<String>>,
@@ -2818,5 +2822,45 @@ impl TryFrom<ResponseRouterData<NovalnetIncrementalAuthResponse, Self>>
                 })
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod wallet_network_txn_id_tests {
+    use hyperswitch_masking::ExposeInterface;
+
+    use super::NovalnetResponsePaymentData;
+
+    /// `payment_data` is an untagged enum, so a `Card` variant carrying required fields
+    /// silently falls through to `Paypal` whenever Novalnet omits them — which it does on
+    /// every wallet payment, taking `scheme_tid` (`network_txn_id`) with it. The parse is
+    /// collapsed into an `Option` so the assertions stay in a unit-returning test fn.
+    fn scheme_tid_of(payload: &str) -> Option<String> {
+        match serde_json::from_str::<NovalnetResponsePaymentData>(payload).ok()? {
+            NovalnetResponsePaymentData::Card(card) => card.scheme_tid.map(|tid| tid.expose()),
+            NovalnetResponsePaymentData::Paypal(_) => None,
+        }
+    }
+
+    #[test]
+    fn wallet_response_without_a_pan_keeps_the_network_txn_id() {
+        // An apple_pay / google_pay authorize response: brand and last four only — no PAN,
+        // no expiry, no cardholder.
+        let tid = scheme_tid_of(
+            r#"{"card_brand":"VISA","last_four":"1111","token":"tok_1","scheme_tid":"ntid_1"}"#,
+        );
+        assert!(tid.is_some(), "wallet payment_data failed to deserialize");
+        assert_eq!(tid.as_deref(), Some("ntid_1"));
+    }
+
+    #[test]
+    fn full_card_response_still_yields_the_network_txn_id() {
+        let tid = scheme_tid_of(
+            r#"{"card_brand":"VISA","card_expiry_month":12,"card_expiry_year":2030,
+                "card_holder":"Jane Doe","card_number":"411111******1111",
+                "token":"tok_2","scheme_tid":"ntid_2"}"#,
+        );
+        assert!(tid.is_some(), "card payment_data failed to deserialize");
+        assert_eq!(tid.as_deref(), Some("ntid_2"));
     }
 }
