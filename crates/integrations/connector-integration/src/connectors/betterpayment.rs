@@ -6,7 +6,7 @@ use base64::Engine;
 use common_enums::{AttemptStatus, CurrencyUnit};
 use common_utils::{
     consts::{BASE64_ENGINE, NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    crypto::{self, SignMessage},
+    crypto::{self, VerifySignature},
     errors::CustomResult,
     events,
     ext_traits::ByteSliceExt,
@@ -303,7 +303,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .headers
             .get("gateway-webhook-signature")
             .ok_or_else(|| error_stack::report!(errors::WebhookError::WebhookSignatureNotFound))
-            .map(|s| s.as_bytes().to_vec())
+            .and_then(|signature| {
+                BASE64_ENGINE
+                    .decode(signature.as_bytes())
+                    .change_context(errors::WebhookError::WebhookSourceVerificationFailed)
+            })
     }
 
     fn get_webhook_source_verification_message(
@@ -336,15 +340,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             self.get_webhook_source_verification_signature(&request, &webhook_secret)?;
         let message = self.get_webhook_source_verification_message(&request, &webhook_secret)?;
 
-        let computed = crypto::HmacSha256
-            .sign_message(&webhook_secret.secret, &message)
-            .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
-
-        let computed_b64 = BASE64_ENGINE.encode(&computed);
-        let incoming = std::str::from_utf8(&signature)
-            .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
-
-        Ok(computed_b64 == incoming)
+        crypto::HmacSha256
+            .verify_signature(&webhook_secret.secret, &signature, &message)
+            .change_context(errors::WebhookError::WebhookSourceVerificationFailed)
     }
 
     fn process_payment_webhook(

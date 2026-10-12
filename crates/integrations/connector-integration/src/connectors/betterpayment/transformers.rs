@@ -110,14 +110,20 @@ pub struct BetterpaymentAuthorizeRequest<
     pub wero_checkout_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<common_utils::pii::Email>,
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub billing: Option<BetterpaymentBillingAddress>,
+    #[serde(skip)]
+    pub _phantom: std::marker::PhantomData<T>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BetterpaymentBillingAddress {
     pub address: Secret<String>,
     pub city: Secret<String>,
     pub postal_code: Secret<String>,
     pub country: common_enums::CountryAlpha2,
     pub first_name: Secret<String>,
     pub last_name: Secret<String>,
-    #[serde(skip)]
-    pub _phantom: std::marker::PhantomData<T>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -166,7 +172,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         match &request.payment_method_data {
             PaymentMethodData::Wallet(WalletData::Wero(_)) => {
-                let billing = router_data.resource_common_data.get_billing_address()?;
+                if !matches!(
+                    request.capture_method,
+                    None | Some(common_enums::CaptureMethod::Automatic)
+                ) {
+                    return Err(errors::IntegrationError::CaptureMethodNotSupported {
+                        context: Default::default(),
+                    }
+                    .into());
+                }
+                let billing = router_data
+                    .resource_common_data
+                    .get_optional_billing()
+                    .and_then(|billing| billing.address.as_ref())
+                    .map(
+                        |billing| -> Result<BetterpaymentBillingAddress, Self::Error> {
+                            Ok(BetterpaymentBillingAddress {
+                                address: billing.get_line1()?.clone(),
+                                city: billing.get_city()?.clone(),
+                                postal_code: billing.get_zip()?.clone(),
+                                country: *billing.get_country()?,
+                                first_name: billing.get_first_name()?.clone(),
+                                last_name: billing.get_last_name()?.clone(),
+                            })
+                        },
+                    )
+                    .transpose()?;
                 let postback_url = request
                     .webhook_url
                     .clone()
@@ -178,21 +209,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 Ok(Self {
                     payment_type: BetterpaymentPaymentType::Wero,
-                    order_id: order_id.clone(),
+                    order_id,
                     amount,
                     currency: request.currency.to_string(),
-                    merchant_reference: Some(order_id),
+                    merchant_reference: request.merchant_order_id.clone(),
                     postback_url: Some(postback_url),
                     success_url: Some(return_url.clone()),
                     error_url: Some(return_url.clone()),
                     wero_checkout_url: Some(return_url),
                     email: request.email.clone(),
-                    address: billing.get_line1()?.clone(),
-                    city: billing.get_city()?.clone(),
-                    postal_code: billing.get_zip()?.clone(),
-                    country: *billing.get_country()?,
-                    first_name: billing.get_first_name()?.clone(),
-                    last_name: billing.get_last_name()?.clone(),
+                    billing,
                     _phantom: std::marker::PhantomData,
                 })
             }
