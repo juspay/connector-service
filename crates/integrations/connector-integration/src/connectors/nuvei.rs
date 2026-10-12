@@ -1,9 +1,10 @@
 use common_utils::{
     consts,
+    crypto::{self, VerifySignature},
     errors::CustomResult,
     events,
     ext_traits::BytesExt,
-    types::{FloatMajorUnit, StringMajorUnit, StringMinorUnit},
+    types::{FloatMajorUnit, StringMinorUnit},
 };
 use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::{
@@ -36,7 +37,6 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
 };
-use sha2::{Digest, Sha256};
 
 use serde::Serialize;
 use std::fmt::Debug;
@@ -125,11 +125,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         true
     }
 
-    /// Nuvei 3DS card payment: PreAuthenticate (/initPayment.do) ->
-    /// Authenticate (/payment.do with threeD) -> Authorize (/payment.do without
-    /// threeD, relatedTransactionId of the Auth3D transaction). There is no
-    /// PostAuthenticate leg; the return from the ACS challenge goes straight to
-    /// the charging Authorize call.
+    /// Nuvei 3DS card payment, matching hyperswitch's direct integration:
+    /// PreAuthenticate (/initPayment.do) -> Authorize (/payment.do with threeD
+    /// and the initPayment relatedTransactionId; returns the ACS challenge, or
+    /// charges when frictionless). After the challenge the caller calls
+    /// Authorize again with the returned connector_feature_data and the ACS
+    /// return (/payment.do without threeD, relatedTransactionId of the Auth3D
+    /// transaction). There is no Authenticate or PostAuthenticate leg; the
+    /// standalone Authenticate flow stays available but is not stepped into.
     fn next_authentication_step(
         &self,
         auth_type: common_enums::AuthenticationType,
@@ -144,14 +147,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         {
             match (redirect_state, completed_step) {
                 (RedirectState::InitialRequest, None) => AuthenticationStep::PreAuthenticate,
-                (RedirectState::InitialRequest, Some(AuthenticationStep::PreAuthenticate)) => {
-                    AuthenticationStep::Authenticate
-                }
-                (RedirectState::InitialRequest, Some(AuthenticationStep::Authenticate)) => {
-                    AuthenticationStep::Authorize
-                }
-                (RedirectState::RedirectWithParams, None) => AuthenticationStep::Authorize,
-                (RedirectState::RedirectWithoutParams, None) => AuthenticationStep::Authorize,
                 _ => AuthenticationStep::Authorize,
             }
         } else {
@@ -185,34 +180,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let secret = std::str::from_utf8(&secrets.secret)
             .change_context(WebhookError::WebhookVerificationSecretInvalid)?;
 
-        let (message, signature) = match transformers::parse_nuvei_webhook(&request.body)? {
-            transformers::NuveiWebhook::PaymentDmn(notification) => {
-                let Some(signature) = notification.advance_response_checksum.clone() else {
-                    return Ok(false);
-                };
-                (
-                    transformers::payment_dmn_checksum_message(&notification, secret)?,
-                    signature,
-                )
-            }
-            transformers::NuveiWebhook::Chargeback(_) => {
-                let Some(signature) = request
-                    .headers
-                    .iter()
-                    .find(|(name, _)| name.eq_ignore_ascii_case(NUVEI_CHARGEBACK_CHECKSUM_HEADER))
-                    .map(|(_, value)| value.clone())
-                else {
-                    return Ok(false);
-                };
-                (
-                    transformers::chargeback_checksum_message(&request.body, secret)?,
-                    signature,
-                )
-            }
+        let message_and_signature = match transformers::parse_nuvei_webhook(&request.body)? {
+            transformers::NuveiWebhook::PaymentDmn(notification) => notification
+                .advance_response_checksum
+                .clone()
+                .map(|signature| {
+                    transformers::payment_dmn_checksum_message(&notification, secret)
+                        .map(|message| (message, signature))
+                })
+                .transpose()?,
+            transformers::NuveiWebhook::Chargeback(_) => request
+                .headers
+                .iter()
+                .find(|(name, _)| name.eq_ignore_ascii_case(NUVEI_CHARGEBACK_CHECKSUM_HEADER))
+                .map(|(_, signature)| {
+                    transformers::chargeback_checksum_message(&request.body, secret)
+                        .map(|message| (message, signature.clone()))
+                })
+                .transpose()?,
         };
 
-        let expected = hex::encode(Sha256::digest(message.as_bytes()));
-        Ok(expected.eq_ignore_ascii_case(signature.trim()))
+        match message_and_signature {
+            Some((message, signature)) => match hex::decode(signature.trim()) {
+                Ok(signature) => crypto::Sha256
+                    .verify_signature(&secrets.secret, &signature, message.as_bytes())
+                    .change_context(WebhookError::WebhookSourceVerificationFailed),
+                Err(_) => Ok(false),
+            },
+            None => Ok(false),
+        }
     }
 
     fn get_event_type(&self, request: RequestDetails) -> Result<EventType, Report<WebhookError>> {
@@ -251,9 +247,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     Some(NuveiTransactionType::Auth)
                     | Some(NuveiTransactionType::Sale)
                     | Some(NuveiTransactionType::Settle)
-                    | Some(NuveiTransactionType::Void)
-                    | Some(NuveiTransactionType::Auth3D)
-                    | Some(NuveiTransactionType::InitAuth3D) => Ok(Some(
+                    | Some(NuveiTransactionType::Void) => Ok(Some(
                         WebhookResourceReference::Payment(PaymentWebhookReference {
                             connector_transaction_id: Some(
                                 notification
@@ -275,9 +269,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             merchant_transaction_id: None,
                         }),
                     )),
-                    Some(NuveiTransactionType::Unknown) | None => {
-                        Err(WebhookError::WebhookEventTypeNotFound.into())
-                    }
+                    Some(NuveiTransactionType::Auth3D)
+                    | Some(NuveiTransactionType::InitAuth3D)
+                    | Some(NuveiTransactionType::Unknown)
+                    | None => Err(WebhookError::WebhookEventTypeNotFound.into()),
                 }
             }
             transformers::NuveiWebhook::Chargeback(notification) => Ok(Some(
@@ -341,7 +336,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .reported_currency
             .to_uppercase()
             .parse::<common_enums::Currency>()
-            .map_err(|_| WebhookError::WebhookBodyDecodingFailed)
+            .change_context(WebhookError::WebhookBodyDecodingFailed)
             .attach_printable("Nuvei chargeback ReportedCurrency is not an ISO currency")?;
         let minor_amount = domain_types::utils::convert_back_amount_to_minor_units_for_webhook(
             self.amount_converter_float_major,
@@ -401,6 +396,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ServerSessionAuthentication for Nuvei<T>
 {
 }
+macros::create_amount_converter_wrapper!(connector_name: Nuvei, amount_type: StringMajorUnit);
 // Create all prerequisites using macros
 macros::create_all_prerequisites!(
     connector_name: Nuvei,
@@ -486,7 +482,6 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter_webhooks: StringMajorUnit,
         amount_converter_float_major: FloatMajorUnit,
         amount_converter_string_minor: StringMinorUnit
     ],

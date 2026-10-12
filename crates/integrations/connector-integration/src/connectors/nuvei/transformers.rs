@@ -1,3 +1,4 @@
+use common_enums::{AttemptStatus, DisputeStage, DisputeStatus};
 use common_utils::{consts, pii, request::Method, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
@@ -33,7 +34,7 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use super::NuveiRouterData;
+use super::{NuveiAmountConvertor, NuveiRouterData};
 use crate::types::ResponseRouterData;
 use domain_types::errors::{
     ConnectorError, IntegrationError, IntegrationErrorContext, WebhookError,
@@ -43,6 +44,17 @@ use domain_types::errors::{
 // per Nuvei's API; reused by both BankTransfer::AchBankTransfer and
 // BankDebit::AchBankDebit. See https://docs.nuvei.com/documentation/us-and-canada-guides/ach/
 const NUVEI_ACH_PAYMENT_METHOD: &str = "apmgw_ACH";
+
+// The maximum length of the clientUniqueId field in the Nuvei API request.
+const MAX_CLIENT_UNIQUE_ID_LENGTH: usize = 45;
+// The maximum length of dynamicDescriptor.merchantPhone.
+const MAX_DESCRIPTOR_PHONE_LENGTH: usize = 13;
+// dynamicDescriptor.merchantName is truncated to this many characters.
+const MAX_DESCRIPTOR_NAME_LENGTH: usize = 25;
+const NUVEI_API_DOC_URL: &str = "https://docs.nuvei.com/api/main/indexMain_v1_0.html";
+
+/// threeD.v2AdditionalParams.rebillFrequency for a CIT that stores the card.
+const NUVEI_REBILL_FREQUENCY: &str = "0";
 
 // Auth Type
 #[derive(Debug, Clone)]
@@ -528,36 +540,32 @@ pub struct NuveiBillingAddress {
     pub state: Option<Secret<String>>,
 }
 
-/// 2-letter state code for the billing address (US/CA full names converted),
-/// as hyperswitch `to_state_code_as_optional`; Nuvei rejects longer values.
-fn get_billing_state_code(resource_data: &PaymentFlowData) -> Option<Secret<String>> {
-    resource_data
-        .get_optional_billing()
-        .and_then(|billing| billing.address.as_ref())
-        .and_then(|details| details.to_state_code_as_optional().ok().flatten())
-}
-
-fn build_billing_address(
-    resource_data: &PaymentFlowData,
-    email: pii::Email,
-    country: common_enums::CountryAlpha2,
-) -> NuveiBillingAddress {
-    let address_line3 = resource_data
-        .get_optional_billing()
-        .and_then(|billing| billing.address.as_ref())
-        .and_then(|addr| addr.line3.clone());
-    NuveiBillingAddress {
-        email,
-        country,
-        first_name: resource_data.get_optional_billing_first_name(),
-        last_name: resource_data.get_optional_billing_last_name(),
-        phone: resource_data.get_optional_billing_phone_number(),
-        city: resource_data.get_optional_billing_city(),
-        address: resource_data.get_optional_billing_line1(),
-        address_line2: resource_data.get_optional_billing_line2(),
-        address_line3,
-        zip: resource_data.get_optional_billing_zip(),
-        state: get_billing_state_code(resource_data),
+impl From<(&PaymentFlowData, pii::Email, common_enums::CountryAlpha2)> for NuveiBillingAddress {
+    fn from(
+        (resource_data, email, country): (
+            &PaymentFlowData,
+            pii::Email,
+            common_enums::CountryAlpha2,
+        ),
+    ) -> Self {
+        Self {
+            email,
+            country,
+            first_name: resource_data.get_optional_billing_first_name(),
+            last_name: resource_data.get_optional_billing_last_name(),
+            phone: resource_data.get_optional_billing_phone_number(),
+            city: resource_data.get_optional_billing_city(),
+            address: resource_data.get_optional_billing_line1(),
+            address_line2: resource_data.get_optional_billing_line2(),
+            address_line3: resource_data.get_optional_billing_line3(),
+            zip: resource_data.get_optional_billing_zip(),
+            // 2-letter state code (US/CA full names converted), as hyperswitch
+            // `to_state_code_as_optional`; Nuvei rejects longer values.
+            state: resource_data
+                .get_billing_address()
+                .ok()
+                .and_then(|details| details.to_state_code_as_optional().ok().flatten()),
+        }
     }
 }
 
@@ -597,7 +605,7 @@ fn get_required_billing_address(
                 "Send address.billing_address.country_alpha2_code",
             )
         })?;
-    Ok(build_billing_address(resource_data, email, country))
+    Ok(NuveiBillingAddress::from((resource_data, email, country)))
 }
 
 #[serde_with::skip_serializing_none]
@@ -621,20 +629,21 @@ pub struct NuveiShippingAddress {
 /// Nuvei `shippingAddress`, emitted whenever a shipping country is present.
 /// `email` carries the shipping email only: the billing email describes the
 /// payer, not the consignee, so it is never copied here.
-fn get_shipping_address(resource_data: &PaymentFlowData) -> Option<NuveiShippingAddress> {
-    let country = resource_data.get_optional_shipping_country()?;
-    Some(NuveiShippingAddress {
-        email: resource_data.get_optional_shipping_email(),
-        country,
-        first_name: resource_data.get_optional_shipping_first_name(),
-        last_name: resource_data.get_optional_shipping_last_name(),
-        phone: resource_data.get_optional_shipping_phone_number(),
-        city: resource_data.get_optional_shipping_city(),
-        address: resource_data.get_optional_shipping_line1(),
-        address_line2: resource_data.get_optional_shipping_line2(),
-        address_line3: resource_data.get_optional_shipping_line3(),
-        zip: resource_data.get_optional_shipping_zip(),
-    })
+impl From<(&PaymentFlowData, common_enums::CountryAlpha2)> for NuveiShippingAddress {
+    fn from((resource_data, country): (&PaymentFlowData, common_enums::CountryAlpha2)) -> Self {
+        Self {
+            email: resource_data.get_optional_shipping_email(),
+            country,
+            first_name: resource_data.get_optional_shipping_first_name(),
+            last_name: resource_data.get_optional_shipping_last_name(),
+            phone: resource_data.get_optional_shipping_phone_number(),
+            city: resource_data.get_optional_shipping_city(),
+            address: resource_data.get_optional_shipping_line1(),
+            address_line2: resource_data.get_optional_shipping_line2(),
+            address_line3: resource_data.get_optional_shipping_line3(),
+            zip: resource_data.get_optional_shipping_zip(),
+        }
+    }
 }
 
 // Payment Response.
@@ -781,6 +790,18 @@ pub enum NuveiTransactionType {
     Unknown,
 }
 
+/// Request-level `status` fallback when Nuvei omits `transactionStatus`.
+impl From<&NuveiPaymentStatus> for AttemptStatus {
+    fn from(status: &NuveiPaymentStatus) -> Self {
+        match status {
+            NuveiPaymentStatus::Failed | NuveiPaymentStatus::Error => Self::Failure,
+            NuveiPaymentStatus::Success
+            | NuveiPaymentStatus::Processing
+            | NuveiPaymentStatus::Unknown => Self::Pending,
+        }
+    }
+}
+
 /// Single attempt-status mapping for Nuvei payment responses
 /// (port of hyperswitch `get_payment_status`). Every arm is explicit.
 pub(super) fn get_nuvei_payment_status(
@@ -788,16 +809,7 @@ pub(super) fn get_nuvei_payment_status(
     transaction_type: Option<&NuveiTransactionType>,
     transaction_status: Option<&NuveiTransactionStatus>,
     status: &NuveiPaymentStatus,
-) -> common_enums::AttemptStatus {
-    use common_enums::AttemptStatus;
-
-    let from_request_status = |status: &NuveiPaymentStatus| match status {
-        NuveiPaymentStatus::Failed | NuveiPaymentStatus::Error => AttemptStatus::Failure,
-        NuveiPaymentStatus::Success
-        | NuveiPaymentStatus::Processing
-        | NuveiPaymentStatus::Unknown => AttemptStatus::Pending,
-    };
-
+) -> AttemptStatus {
     // Zero-amount authorization (card verification)
     if amount == Some(0) && transaction_type == Some(&NuveiTransactionType::Auth) {
         return match transaction_status {
@@ -809,7 +821,7 @@ pub(super) fn get_nuvei_payment_status(
             | Some(NuveiTransactionStatus::Processing)
             | Some(NuveiTransactionStatus::Unknown) => AttemptStatus::Pending,
             Some(NuveiTransactionStatus::Redirect) => AttemptStatus::AuthenticationPending,
-            None => from_request_status(status),
+            None => AttemptStatus::from(status),
         };
     }
 
@@ -845,7 +857,7 @@ pub(super) fn get_nuvei_payment_status(
         | Some(NuveiTransactionStatus::Pending)
         | Some(NuveiTransactionStatus::Unknown) => AttemptStatus::Pending,
         Some(NuveiTransactionStatus::Redirect) => AttemptStatus::AuthenticationPending,
-        None => from_request_status(status),
+        None => AttemptStatus::from(status),
     }
 }
 
@@ -898,29 +910,17 @@ pub(super) fn build_nuvei_error_response(
         status_code: http_code,
         attempt_status,
         connector_transaction_id: response.transaction_id.clone(),
-        network_decline_code: response
-            .issuer_decline_code
-            .clone()
-            .or_else(|| response.gw_error_code.map(|code| code.to_string())),
+        // Only the issuer's own codes belong here: gwErrorCode is a Nuvei gateway code and is
+        // already reported in `code`, and downstream retry logic reads these as network codes.
+        network_decline_code: response.issuer_decline_code.clone(),
         network_advice_code: response.merchant_advice_code.clone(),
-        network_error_message: response
-            .issuer_decline_reason
-            .clone()
-            .or_else(|| response.gw_error_reason.clone()),
+        network_error_message: response.issuer_decline_reason.clone(),
         typed_connector_response: None,
         raw_connector_response: None,
         raw_connector_request: None,
         typed_connector_request: None,
     })
 }
-
-// The maximum length of the clientUniqueId field in the Nuvei API request.
-const MAX_CLIENT_UNIQUE_ID_LENGTH: usize = 45;
-// The maximum length of dynamicDescriptor.merchantPhone.
-const MAX_DESCRIPTOR_PHONE_LENGTH: usize = 13;
-// dynamicDescriptor.merchantName is truncated to this many characters.
-const MAX_DESCRIPTOR_NAME_LENGTH: usize = 25;
-const NUVEI_API_DOC_URL: &str = "https://docs.nuvei.com/api/main/indexMain_v1_0.html";
 
 /// Non-default error context for Nuvei request-side refusals.
 fn nuvei_error_context(
@@ -940,6 +940,75 @@ fn nuvei_missing_field(field_name: &'static str, suggested_action: &str) -> Inte
         context: nuvei_error_context(
             suggested_action,
             format!("Nuvei requires {field_name} on this request"),
+        ),
+    }
+}
+
+// ---- Request-side refusal helpers ----
+
+// Authorize request refusal for a payment-method arm this integration does not offer.
+fn nuvei_authorize_not_implemented(what: &str, suggested_action: &str) -> IntegrationError {
+    IntegrationError::NotImplemented(
+        format!("{what} is not implemented for Nuvei Authorize"),
+        nuvei_error_context(
+            suggested_action,
+            format!(
+                "This UCS Nuvei integration does not build a /payment.do request for {what} yet"
+            ),
+        ),
+    )
+}
+
+fn nuvei_authorize_not_supported(what: String) -> IntegrationError {
+    IntegrationError::NotSupported {
+        message: format!("{what} is not supported by Nuvei"),
+        connector: "nuvei",
+        context: nuvei_error_context(
+            "Use a payment method Nuvei supports (card, network token, iDEAL, Sofort, EPS, Giropay, ACH)",
+            format!("Nuvei has no /payment.do payment option for {what}"),
+        ),
+    }
+}
+
+fn nuvei_three_ds_not_implemented(what: &str, flow: &str) -> IntegrationError {
+    IntegrationError::NotImplemented(
+        format!("{what} is not implemented for Nuvei {flow}"),
+        nuvei_error_context(
+            "Use a card payment method for Nuvei 3DS",
+            format!("Nuvei 3DS ({flow}) authenticates card payments only"),
+        ),
+    )
+}
+
+fn nuvei_three_ds_authentication_failed(detail: String) -> IntegrationError {
+    IntegrationError::NotSupported {
+        message: format!("Charging a payment whose 3DS authentication failed ({detail})"),
+        connector: "nuvei",
+        context: nuvei_error_context(
+            "Do not retry the charge; start a new payment and authenticate the card again",
+            format!("Nuvei 3DS authentication failed: {detail}"),
+        ),
+    }
+}
+
+fn nuvei_setup_mandate_not_supported(what: &str, suggested_action: &str) -> IntegrationError {
+    IntegrationError::NotSupported {
+        message: format!("{what} is not supported for Nuvei SetupRecurring"),
+        connector: "nuvei",
+        context: nuvei_error_context(
+            suggested_action,
+            format!("Nuvei SetupRecurring (/payment.do CIT) does not offer {what}"),
+        ),
+    }
+}
+
+fn nuvei_repeat_payment_not_supported(what: &str, suggested_action: &str) -> IntegrationError {
+    IntegrationError::NotSupported {
+        message: format!("{what} is not supported for Nuvei RecurringPaymentService/Charge"),
+        connector: "nuvei",
+        context: nuvei_error_context(
+            suggested_action,
+            format!("Nuvei MIT (/payment.do) does not offer {what}"),
         ),
     }
 }
@@ -964,8 +1033,10 @@ pub(super) fn get_valid_client_unique_id(id: &str) -> Result<String, Report<Inte
     }
 }
 
-/// The 3DS leg that wrote a NuveiMeta. The final Authorize keys the 3DS
-/// completion behaviour on `Authenticate`.
+/// The 3DS leg that wrote a NuveiMeta. `PreAuthenticate`: initPayment ran, so
+/// Authorize sends the payment with threeD. `Authenticate`: the payment with
+/// threeD ran (as the 3DS leg of Authorize, or the standalone Authenticate
+/// flow), so the next Authorize is the final payment after the ACS challenge.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NuveiThreeDsLeg {
@@ -973,7 +1044,7 @@ pub enum NuveiThreeDsLeg {
     Authenticate,
 }
 
-/// Stored-credential reference returned by a charging 3DS Authenticate leg
+/// Stored-credential reference returned by a charging 3DS payment-with-threeD leg
 /// (userPaymentOptionId, with the CIT browser IP as mandate metadata).
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -985,9 +1056,9 @@ pub struct NuveiMetaMandateReference {
 
 /// Connector state carried between Nuvei calls in connector_feature_data:
 /// the order-bound sessionToken and, after a 3DS authentication leg, the
-/// transaction the final payment must reference. The CIT markers are written
-/// by a caller that cannot send them as request fields; the mandate reference
-/// and transaction link id are written when the Authenticate leg charges.
+/// transaction the final payment must reference. The mandate reference and
+/// transaction link id are written when the 3DS payment-with-threeD leg
+/// (Authorize after PreAuthenticate, or Authenticate) charges.
 /// Every field but session_token is optional, so older NuveiMeta JSON parses.
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1001,10 +1072,6 @@ pub struct NuveiMeta {
     #[serde(default)]
     pub v2supported: Option<String>,
     #[serde(default)]
-    pub is_customer_initiated_mandate_payment: Option<bool>,
-    #[serde(default)]
-    pub customer_id: Option<Secret<String>>,
-    #[serde(default)]
     pub mandate_reference: Option<NuveiMetaMandateReference>,
     #[serde(default)]
     pub network_txn_link_id: Option<String>,
@@ -1014,7 +1081,9 @@ pub(super) fn parse_nuvei_meta(
     connector_feature_data: Option<&pii::SecretSerdeValue>,
 ) -> Option<NuveiMeta> {
     connector_feature_data
-        .and_then(|data| serde_json::from_value::<NuveiMeta>(data.peek().clone()).ok())
+        .and_then(|data| {
+            crate::utils::to_connector_meta_from_secret::<NuveiMeta>(Some(data.clone())).ok()
+        })
         .filter(|meta| !meta.session_token.peek().is_empty())
 }
 
@@ -1023,11 +1092,11 @@ pub(super) fn parse_nuvei_meta(
 /// compatibility). Empty values count as absent.
 pub(super) fn resolve_session_token(
     meta: Option<&NuveiMeta>,
-    session_token: Option<&String>,
+    session_token: Option<&str>,
     access_token: Option<&domain_types::connector_types::ServerAuthenticationTokenResponseData>,
 ) -> Result<Secret<String>, Report<IntegrationError>> {
     meta.map(|meta| meta.session_token.peek().clone())
-        .or_else(|| session_token.cloned())
+        .or_else(|| session_token.map(str::to_owned))
         .filter(|token| !token.is_empty())
         .or_else(|| {
             access_token
@@ -1120,24 +1189,6 @@ pub struct NuveiAmountDetails {
     pub total_discount: Option<StringMajorUnit>,
 }
 
-type NuveiAmountConverter =
-    dyn common_utils::types::AmountConvertor<Output = StringMajorUnit> + Sync;
-
-fn convert_nuvei_amount(
-    converter: &NuveiAmountConverter,
-    amount: common_utils::types::MinorUnit,
-    currency: common_enums::Currency,
-) -> Result<StringMajorUnit, Report<IntegrationError>> {
-    converter
-        .convert(amount, currency)
-        .change_context(IntegrationError::AmountConversionFailed {
-            context: nuvei_error_context(
-                "Send amounts in minor units valid for the currency",
-                format!("failed to convert {amount:?} {currency} to Nuvei major units"),
-            ),
-        })
-}
-
 /// dynamicDescriptor from billing_descriptor: name trimmed to 25 characters,
 /// phone refused above 13 characters (hyperswitch `get_dynamic_descriptor`).
 pub(super) fn get_dynamic_descriptor(
@@ -1176,24 +1227,13 @@ pub(super) fn get_dynamic_descriptor(
     }))
 }
 
-pub(super) fn get_partial_approval_flag(
-    enable_partial_authorization: Option<bool>,
-) -> Option<NuveiPartialApprovalFlag> {
-    enable_partial_authorization.map(|enabled| {
+impl From<bool> for NuveiPartialApprovalFlag {
+    fn from(enabled: bool) -> Self {
         if enabled {
-            NuveiPartialApprovalFlag::Enabled
+            Self::Enabled
         } else {
-            NuveiPartialApprovalFlag::Disabled
+            Self::Disabled
         }
-    })
-}
-
-/// isMoto for mail-order / telephone-order payments.
-pub(super) fn get_is_moto(payment_channel: Option<&common_enums::PaymentChannel>) -> Option<bool> {
-    match payment_channel {
-        Some(common_enums::PaymentChannel::MailOrder)
-        | Some(common_enums::PaymentChannel::TelephoneOrder) => Some(true),
-        Some(common_enums::PaymentChannel::Ecommerce) | None => None,
     }
 }
 
@@ -1201,7 +1241,6 @@ pub(super) fn get_is_moto(payment_channel: Option<&common_enums::PaymentChannel>
 pub(super) fn get_l2_l3_items(
     l2_l3_data: Option<&domain_types::connector_types::L2L3Data>,
     currency: common_enums::Currency,
-    converter: &NuveiAmountConverter,
 ) -> Result<Option<Vec<NuveiItem>>, Report<IntegrationError>> {
     l2_l3_data
         .and_then(|data| data.get_order_details())
@@ -1212,16 +1251,16 @@ pub(super) fn get_l2_l3_items(
                     Ok(NuveiItem {
                         name: order.product_name.clone(),
                         item_type: NuveiItemType::from(order.product_type.as_ref()),
-                        price: convert_nuvei_amount(converter, order.amount, currency)?,
+                        price: NuveiAmountConvertor::convert(order.amount, currency)?,
                         quantity: order.quantity.to_string(),
                         group_id: order.product_id.clone(),
                         discount: order
                             .unit_discount_amount
-                            .map(|amount| convert_nuvei_amount(converter, amount, currency))
+                            .map(|amount| NuveiAmountConvertor::convert(amount, currency))
                             .transpose()?,
                         tax: order
                             .total_tax_amount
-                            .map(|amount| convert_nuvei_amount(converter, amount, currency))
+                            .map(|amount| NuveiAmountConvertor::convert(amount, currency))
                             .transpose()?,
                         tax_rate: order.tax_rate.map(|rate| rate.to_string()),
                         image_url: order.product_img_link.clone(),
@@ -1236,9 +1275,8 @@ pub(super) fn get_l2_l3_items(
 pub(super) fn get_amount_details(
     l2_l3_data: Option<&domain_types::connector_types::L2L3Data>,
     currency: common_enums::Currency,
-    converter: &NuveiAmountConverter,
 ) -> Result<Option<NuveiAmountDetails>, Report<IntegrationError>> {
-    let convert = |amount| convert_nuvei_amount(converter, amount, currency);
+    let convert = |amount| NuveiAmountConvertor::convert(amount, currency);
     l2_l3_data
         .map(|data| {
             Ok(NuveiAmountDetails {
@@ -1253,31 +1291,89 @@ pub(super) fn get_amount_details(
 
 // ---- Shared response-side helpers ----
 
+/// Nuvei `paymentOption.card.cvv2Reply` codes.
+#[derive(Debug, Clone, Copy, strum::EnumString)]
+enum NuveiCvv2Reply {
+    #[strum(serialize = "M")]
+    Match,
+    #[strum(serialize = "N")]
+    NoMatch,
+    #[strum(serialize = "P")]
+    NotProcessed,
+    #[strum(serialize = "U")]
+    IssuerNotCertified,
+    #[strum(serialize = "S")]
+    ProcessorUnavailable,
+}
+
+impl NuveiCvv2Reply {
+    fn description(self) -> &'static str {
+        match self {
+            Self::Match => "CVV2 Match",
+            Self::NoMatch => "CVV2 No Match",
+            Self::NotProcessed => "Not Processed. For EU card-on-file (COF) and ecommerce (ECOM) network token transactions, Visa removes any CVV and sends P. If you have fraud or security concerns, Visa recommends using 3DS.",
+            Self::IssuerNotCertified => {
+                "Issuer is not certified and/or has not provided Visa the encryption keys"
+            }
+            Self::ProcessorUnavailable => "CVV2 processor is unavailable.",
+        }
+    }
+}
+
 fn get_cvv2_response_description(code: &str) -> Option<&'static str> {
-    match code {
-        "M" => Some("CVV2 Match"),
-        "N" => Some("CVV2 No Match"),
-        "P" => Some("Not Processed. For EU card-on-file (COF) and ecommerce (ECOM) network token transactions, Visa removes any CVV and sends P. If you have fraud or security concerns, Visa recommends using 3DS."),
-        "U" => Some("Issuer is not certified and/or has not provided Visa the encryption keys"),
-        "S" => Some("CVV2 processor is unavailable."),
-        _ => None,
+    code.parse::<NuveiCvv2Reply>()
+        .ok()
+        .map(NuveiCvv2Reply::description)
+}
+
+/// Nuvei `paymentOption.card.avsCode` codes.
+#[derive(Debug, Clone, Copy, strum::EnumString)]
+enum NuveiAvsCode {
+    #[strum(serialize = "A")]
+    StreetMatchZipNoMatch,
+    #[strum(serialize = "W")]
+    PostalMatchStreetNoMatch,
+    #[strum(serialize = "Y")]
+    PostalAndStreetMatch,
+    #[strum(serialize = "X")]
+    ExactMatchNineDigitZip,
+    #[strum(serialize = "Z")]
+    PostalMatchStreetCodeNoMatch,
+    #[strum(serialize = "U")]
+    IssuerUnavailable,
+    #[strum(serialize = "S")]
+    NotSupportedByIssuer,
+    #[strum(serialize = "R")]
+    Retry,
+    #[strum(serialize = "B")]
+    NotAuthorized,
+    #[strum(serialize = "N")]
+    NoMatch,
+}
+
+impl NuveiAvsCode {
+    fn description(self) -> &'static str {
+        match self {
+            Self::StreetMatchZipNoMatch => "The street address matches, the ZIP code does not.",
+            Self::PostalMatchStreetNoMatch => "Postal code matches, the street address does not.",
+            Self::PostalAndStreetMatch => "Postal code and the street address match.",
+            Self::ExactMatchNineDigitZip => {
+                "An exact match of both the 9-digit ZIP code and the street address."
+            }
+            Self::PostalMatchStreetCodeNoMatch => "Postal code matches, the street code does not.",
+            Self::IssuerUnavailable => "Issuer is unavailable.",
+            Self::NotSupportedByIssuer => "AVS not supported by issuer.",
+            Self::Retry => "Retry.",
+            Self::NotAuthorized => "Not authorized (declined).",
+            Self::NoMatch => "Both the street address and postal code do not match.",
+        }
     }
 }
 
 fn get_avs_response_description(code: &str) -> Option<&'static str> {
-    match code {
-        "A" => Some("The street address matches, the ZIP code does not."),
-        "W" => Some("Postal code matches, the street address does not."),
-        "Y" => Some("Postal code and the street address match."),
-        "X" => Some("An exact match of both the 9-digit ZIP code and the street address."),
-        "Z" => Some("Postal code matches, the street code does not."),
-        "U" => Some("Issuer is unavailable."),
-        "S" => Some("AVS not supported by issuer."),
-        "R" => Some("Retry."),
-        "B" => Some("Not authorized (declined)."),
-        "N" => Some("Both the street address and postal code do not match."),
-        _ => None,
-    }
+    code.parse::<NuveiAvsCode>()
+        .ok()
+        .map(NuveiAvsCode::description)
 }
 
 /// AVS / CVV2 / card brand / 3DS results from paymentOption.card
@@ -1380,8 +1476,6 @@ pub(super) fn build_nuvei_transaction_response(
                 related_transaction_id: None,
                 three_ds_leg: None,
                 v2supported: None,
-                is_customer_initiated_mandate_payment: None,
-                customer_id: None,
                 mandate_reference: None,
                 network_txn_link_id: None,
             })
@@ -1420,7 +1514,6 @@ pub(super) fn build_nuvei_transaction_response(
 /// Auth/InitAuth3D. Returns (amount_captured, amount_capturable).
 pub(super) fn get_amount_captured(
     response: &NuveiPaymentsResponse,
-    converter: &NuveiAmountConverter,
     http_code: u16,
 ) -> Result<
     (
@@ -1439,16 +1532,16 @@ pub(super) fn get_amount_captured(
     else {
         return Ok((None, None));
     };
-    let amount = converter
-        .convert_back(processed_amount, processed_currency)
-        .map_err(|error| {
+    let amount = NuveiAmountConvertor::convert_back(processed_amount, processed_currency).map_err(
+        |error| {
             Report::new(ConnectorError::response_handling_failed_with_context(
                 http_code,
                 Some(format!(
                     "failed to convert Nuvei partialApproval.processedAmount: {error:?}"
                 )),
             ))
-        })?;
+        },
+    )?;
     Ok(match response.transaction_type {
         Some(NuveiTransactionType::Sale) | Some(NuveiTransactionType::Auth3D) => {
             (Some(amount), None)
@@ -1474,11 +1567,7 @@ pub(super) fn apply_nuvei_partial_approval(
     resource_common_data: PaymentFlowData,
     http_code: u16,
 ) -> Result<PaymentFlowData, Report<ConnectorError>> {
-    let (amount_captured, amount_capturable) = get_amount_captured(
-        response,
-        &common_utils::types::StringMajorUnitForConnector,
-        http_code,
-    )?;
+    let (amount_captured, amount_capturable) = get_amount_captured(response, http_code)?;
     Ok(PaymentFlowData {
         amount_captured: amount_captured
             .map(|amount| amount.get_amount_as_i64())
@@ -1913,28 +2002,86 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-// Authorize request refusal for a payment-method arm this integration does not offer.
-fn nuvei_authorize_not_implemented(what: &str, suggested_action: &str) -> IntegrationError {
-    IntegrationError::NotImplemented(
-        format!("{what} is not implemented for Nuvei Authorize"),
-        nuvei_error_context(
-            suggested_action,
-            format!(
-                "This UCS Nuvei integration does not build a /payment.do request for {what} yet"
-            ),
-        ),
-    )
+/// The 3DS leg of a Nuvei card Authorize: 3DS requested, no external 3DS
+/// data, and the NuveiMeta was written by PreAuthenticate (initPayment ran,
+/// the payment with threeD has not). Mirrors hyperswitch, whose Authorize
+/// after PreAuthenticate sends the payment with threeD.
+fn is_nuvei_three_ds_authorize_leg<T: PaymentMethodDataTypes>(
+    request: &PaymentsAuthorizeData<T>,
+    resource: &PaymentFlowData,
+    nuvei_meta: Option<&NuveiMeta>,
+) -> bool {
+    matches!(request.payment_method_data, PaymentMethodData::Card(_))
+        && resource.auth_type == common_enums::AuthenticationType::ThreeDs
+        && request.authentication_data.is_none()
+        && nuvei_meta.and_then(|meta| meta.three_ds_leg.as_ref())
+            == Some(&NuveiThreeDsLeg::PreAuthenticate)
 }
 
-fn nuvei_authorize_not_supported(what: String) -> IntegrationError {
-    IntegrationError::NotSupported {
-        message: format!("{what} is not supported by Nuvei"),
-        connector: "nuvei",
-        context: nuvei_error_context(
-            "Use a payment method Nuvei supports (card, network token, iDEAL, Sofort, EPS, Giropay, ACH)",
-            format!("Nuvei has no /payment.do payment option for {what}"),
-        ),
-    }
+/// Authorize request for the 3DS leg (see `is_nuvei_three_ds_authorize_leg`).
+#[allow(clippy::too_many_arguments)]
+fn build_nuvei_three_ds_authorize_request<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
+    auth: NuveiAuthType,
+    card: &domain_types::payment_method_data::Card<T>,
+    card_holder_name: Option<Secret<String>>,
+    request: &PaymentsAuthorizeData<T>,
+    resource: &PaymentFlowData,
+    nuvei_meta: Option<&NuveiMeta>,
+    email: Option<pii::Email>,
+    is_cit: bool,
+    cit_user_token_id: Option<Secret<String>>,
+) -> Result<NuveiPaymentRequest<T>, Report<IntegrationError>> {
+    let related_transaction_id = nuvei_meta
+        .and_then(|meta| meta.related_transaction_id.clone())
+        .ok_or_else(|| {
+            nuvei_missing_field(
+                "connector_feature_data.related_transaction_id",
+                "Pass the connector_feature_data returned by PaymentMethodAuthenticationService/PreAuthenticate",
+            )
+        })?;
+    let session_token = resolve_session_token(nuvei_meta, resource.session_token.as_deref(), None)?;
+
+    // browser_info is required (deviceDetails.ipAddress)
+    let browser_info = request.browser_info.as_ref().ok_or_else(|| {
+        nuvei_missing_field(
+            "browser_info",
+            "Send browser_info of the customer for Nuvei 3DS",
+        )
+    })?;
+
+    let billing_address = get_required_billing_address(resource, email)?;
+    let shipping_address = resource
+        .get_optional_shipping_country()
+        .map(|country| NuveiShippingAddress::from((resource, country)));
+
+    build_nuvei_three_ds_payment_request(NuveiThreeDsPaymentParams {
+        auth,
+        card,
+        card_holder_name,
+        browser_info,
+        notification_url: request
+            .continue_redirection_url
+            .as_ref()
+            .map(|url| url.to_string()),
+        return_url: request.router_return_url.clone(),
+        amount: request.minor_amount,
+        currency: request.currency,
+        capture_method: request.capture_method,
+        billing_descriptor: request.billing_descriptor.as_ref(),
+        l2_l3_data: resource.l2_l3_data.as_deref(),
+        enable_partial_authorization: request.enable_partial_authorization,
+        payment_channel: request.payment_channel.as_ref(),
+        authentication_data: request.authentication_data.as_ref(),
+        is_cit,
+        customer_id: cit_user_token_id,
+        session_token,
+        related_transaction_id,
+        billing_address,
+        shipping_address,
+        client_request_id: resource.connector_request_reference_id.clone(),
+    })
 }
 
 // Request Transformation
@@ -1988,8 +2135,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let mut user_token_id: Option<Secret<String>> = None;
         let mut is_rebilling: Option<NuveiIsRebilling> = None;
 
-        // Connector state from earlier calls (session token; after the 3DS
-        // Authenticate leg also the Auth3D transaction to reference).
+        // Connector state from earlier calls (session token; after
+        // PreAuthenticate the initPayment transaction, after the 3DS leg the
+        // Auth3D transaction to reference).
         let nuvei_meta = parse_nuvei_meta(
             resource
                 .connector_feature_data
@@ -2009,9 +2157,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 if is_three_ds_final_leg {
                     // Final 3DS payment after the ACS challenge (G-Authorize-12):
                     // the challenge result must be present and parseable, else
-                    // refuse before any HTTP call. A frictionless Authenticate
-                    // that returned CHARGED/AUTHORIZED already charged and has
-                    // no final leg; an abandoned or malformed challenge must not
+                    // refuse before any HTTP call. A frictionless 3DS leg that
+                    // returned CHARGED/AUTHORIZED already charged and has no
+                    // final leg; an abandoned or malformed challenge must not
                     // charge the Auth3D.
                     let redirect_response = request
                         .redirect_response
@@ -2020,23 +2168,40 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .ok_or_else(|| {
                             nuvei_missing_field(
                                 "redirection_response",
-                                "Call Authorize after an Authenticate challenge only, passing the ACS return (cres or error) unchanged in redirection_response; a CHARGED or AUTHORIZED Authenticate response is already final",
+                                "Call Authorize again only after a 3DS Authorize returned a challenge, passing the ACS return (cres or error) unchanged in redirection_response; a CHARGED or AUTHORIZED 3DS Authorize response is already final",
                             )
                         })?;
                     validate_nuvei_challenge_result(Some(redirect_response))?;
+                } else if is_nuvei_three_ds_authorize_leg(request, resource, nuvei_meta.as_ref()) {
+                    // 3DS leg after PreAuthenticate (hyperswitch Authorize):
+                    // /payment.do with threeD and the initPayment
+                    // relatedTransactionId. It returns the ACS challenge, or
+                    // charges when frictionless.
+                    return build_nuvei_three_ds_authorize_request(
+                        auth,
+                        card_data,
+                        card_holder_name,
+                        request,
+                        resource,
+                        nuvei_meta.as_ref(),
+                        email,
+                        is_cit,
+                        cit_user_token_id,
+                    );
                 } else if resource.auth_type == common_enums::AuthenticationType::ThreeDs
                     && request.authentication_data.is_none()
                 {
-                    // Never charge a 3DS-requested card payment unless the
-                    // Authenticate leg ran (NuveiMeta three_ds_leg authenticate) or
-                    // external 3DS data is sent: a session-token-only or
-                    // PreAuthenticate NuveiMeta does not prove authentication.
+                    // Never charge a 3DS-requested card payment unless
+                    // PreAuthenticate ran (NuveiMeta three_ds_leg
+                    // pre_authenticate: this call sends the threeD leg), the
+                    // threeD leg ran (three_ds_leg authenticate: final payment)
+                    // or external 3DS data is sent: a session-token-only
+                    // NuveiMeta does not prove authentication.
                     return Err(IntegrationError::NotSupported {
-                        message: "3DS card Authorize without PreAuthenticate/Authenticate"
-                            .to_string(),
+                        message: "3DS card Authorize without PreAuthenticate".to_string(),
                         connector: "nuvei",
                         context: nuvei_error_context(
-                            "Run PaymentMethodAuthenticationService/PreAuthenticate and Authenticate first. If Authenticate returned a challenge, pass its connector_feature_data and the ACS return (redirection_response) to Authorize; if it returned CHARGED or AUTHORIZED the payment is complete. Or send external authentication_data",
+                            "Run PaymentMethodAuthenticationService/PreAuthenticate first, then Authorize with its connector_feature_data. If that Authorize returned a challenge, call Authorize again with the returned connector_feature_data and the ACS return (redirection_response); if it returned CHARGED or AUTHORIZED the payment is complete. Or send external authentication_data",
                             "Nuvei 3DS runs initPayment and payment-with-threeD before the final payment",
                         ),
                     }
@@ -2327,7 +2492,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // order-bound session token (NuveiMeta, else request session_token)
         let session_token =
-            resolve_session_token(nuvei_meta.as_ref(), resource.session_token.as_ref(), None)?;
+            resolve_session_token(nuvei_meta.as_ref(), resource.session_token.as_deref(), None)?;
 
         // clientUniqueId is String(45)
         let client_request_id = resource.connector_request_reference_id.clone();
@@ -2335,7 +2500,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // billing email and country are mandatory
         let billing_address = get_required_billing_address(resource, email.clone())?;
-        let shipping_address = get_shipping_address(resource);
+        let shipping_address = resource
+            .get_optional_shipping_country()
+            .map(|country| NuveiShippingAddress::from((resource, country)));
 
         // deviceDetails.ipAddress is mandatory
         let ip_address = request
@@ -2357,12 +2524,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let currency = request.currency;
-        let converter = item.connector.amount_converter_webhooks;
-        let amount = convert_nuvei_amount(converter, request.minor_amount, currency)?;
+        let amount = NuveiAmountConvertor::convert(request.minor_amount, currency)?;
 
         let l2_l3_data = resource.l2_l3_data.as_deref();
-        let items = get_l2_l3_items(l2_l3_data, currency, converter)?;
-        let amount_details = get_amount_details(l2_l3_data, currency, converter)?;
+        let items = get_l2_l3_items(l2_l3_data, currency)?;
+        let amount_details = get_amount_details(l2_l3_data, currency)?;
 
         // Determine transaction type based on capture method (Auth for manual or amount 0)
         let transaction_type =
@@ -2404,12 +2570,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             shipping_address,
             url_details,
             dynamic_descriptor,
-            is_partial_approval: get_partial_approval_flag(request.enable_partial_authorization),
+            is_partial_approval: request
+                .enable_partial_authorization
+                .map(NuveiPartialApprovalFlag::from),
             items,
             amount_details,
             is_rebilling,
             related_transaction_id: nuvei_meta.and_then(|meta| meta.related_transaction_id),
-            is_moto: get_is_moto(request.payment_channel.as_ref()),
+            is_moto: crate::utils::is_moto_payment_channel(request.payment_channel.as_ref())
+                .then_some(true),
             time_stamp,
             checksum,
         })
@@ -2455,16 +2624,47 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Some(FlowStatus::Payment(status)),
         ) {
             Some(error) => Err(error),
-            None => Ok(build_nuvei_transaction_response(
-                response,
-                router_data.resource_common_data.payment_method,
-                request
-                    .browser_info
-                    .as_ref()
-                    .and_then(|browser_info| browser_info.ip_address)
-                    .map(|ip| ip.to_string()),
-                item.http_code,
-            )?),
+            None => {
+                let transaction_response = build_nuvei_transaction_response(
+                    response,
+                    router_data.resource_common_data.payment_method,
+                    request
+                        .browser_info
+                        .as_ref()
+                        .and_then(|browser_info| browser_info.ip_address)
+                        .map(|ip| ip.to_string()),
+                    item.http_code,
+                )?;
+                // The 3DS leg after PreAuthenticate (payment with threeD):
+                // the ACS redirect is already in redirection_data and the
+                // status maps as the Authenticate leg's (REDIRECT /
+                // APPROVED+Auth3D -> AuthenticationPending, frictionless
+                // Sale -> Charged, Auth -> Authorized). Hand the Auth3D
+                // transaction to the follow-up Authorize as the final leg.
+                let nuvei_meta = parse_nuvei_meta(
+                    router_data
+                        .resource_common_data
+                        .connector_feature_data
+                        .as_ref()
+                        .or(request.connector_feature_data.as_ref()),
+                );
+                if is_nuvei_three_ds_authorize_leg(
+                    request,
+                    &router_data.resource_common_data,
+                    nuvei_meta.as_ref(),
+                ) {
+                    Ok(with_nuvei_three_ds_leg_meta(
+                        transaction_response,
+                        response,
+                        status,
+                        &router_data.resource_common_data,
+                        nuvei_meta.as_ref(),
+                        item.http_code,
+                    )?)
+                } else {
+                    Ok(transaction_response)
+                }
+            }
         };
 
         Ok(Self {
@@ -2475,12 +2675,92 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
+/// Replaces the connector_metadata of a 3DS-leg Authorize response with the
+/// NuveiMeta the final Authorize keys on: the Auth3D transaction as
+/// relatedTransactionId and `three_ds_leg: authenticate` (as the Authenticate
+/// flow writes), plus the stored-credential reference and link id when this
+/// leg charged (frictionless).
+fn with_nuvei_three_ds_leg_meta(
+    transaction_response: PaymentsResponseData,
+    response: &NuveiPaymentsResponse,
+    status: AttemptStatus,
+    resource: &PaymentFlowData,
+    nuvei_meta: Option<&NuveiMeta>,
+    http_code: u16,
+) -> Result<PaymentsResponseData, Report<ConnectorError>> {
+    let PaymentsResponseData::TransactionResponse {
+        resource_id,
+        redirection_data,
+        mandate_reference,
+        connector_metadata: _,
+        network_txn_id,
+        network_txn_link_id,
+        connector_response_reference_id,
+        incremental_authorization_allowed,
+        status_code,
+        splits,
+        payment_account_reference,
+    } = transaction_response
+    else {
+        return Ok(transaction_response);
+    };
+
+    let transaction_id = get_nuvei_transaction_id(response, http_code)?;
+    let charged = matches!(
+        status,
+        AttemptStatus::Charged | AttemptStatus::Authorized | AttemptStatus::PartialCharged
+    );
+    let meta_mandate_reference =
+        mandate_reference
+            .as_ref()
+            .filter(|_| charged)
+            .and_then(|mandate| {
+                mandate
+                    .connector_mandate_id
+                    .clone()
+                    .map(|connector_mandate_id| NuveiMetaMandateReference {
+                        connector_mandate_id: Secret::new(connector_mandate_id),
+                        mandate_metadata: mandate.mandate_metadata.clone(),
+                    })
+            });
+    let session_token =
+        get_nuvei_leg_session_token(response, resource, http_code).or_else(|error| {
+            nuvei_meta
+                .map(|meta| meta.session_token.clone())
+                .ok_or(error)
+        })?;
+    let meta = NuveiMeta {
+        session_token,
+        related_transaction_id: Some(transaction_id),
+        three_ds_leg: Some(NuveiThreeDsLeg::Authenticate),
+        v2supported: None,
+        mandate_reference: meta_mandate_reference,
+        network_txn_link_id: network_txn_link_id.clone().filter(|_| charged),
+    };
+
+    Ok(PaymentsResponseData::TransactionResponse {
+        resource_id,
+        redirection_data,
+        mandate_reference,
+        connector_metadata: Some(encode_nuvei_meta(&meta, http_code)?),
+        network_txn_id,
+        network_txn_link_id,
+        connector_response_reference_id,
+        incremental_authorization_allowed,
+        status_code,
+        splits,
+        payment_account_reference,
+    })
+}
+
 // ---- ThreeDS: PreAuthenticate (/initPayment.do) and Authenticate (/payment.do + threeD) ----
 //
-// Nuvei 3DS card payment: initPayment -> payment with threeD -> (ACS
-// challenge) -> final payment without threeD referencing the Auth3D transaction.
-// The legs share the order-bound sessionToken and chain relatedTransactionId through
-// NuveiMeta in connector_feature_data.
+// Nuvei 3DS card payment: initPayment (PreAuthenticate) -> payment with threeD
+// (Authorize, as hyperswitch; the standalone Authenticate flow builds the same
+// request) -> (ACS challenge) -> final payment without threeD referencing the
+// Auth3D transaction (Authorize again). The legs share the order-bound
+// sessionToken and chain relatedTransactionId through NuveiMeta in
+// connector_feature_data.
 
 /// initPayment request (hyperswitch `NuveiThreeDSInitPaymentRequest`). No
 /// timeStamp/checksum, as hyperswitch.
@@ -2515,8 +2795,9 @@ pub struct NuveiInitPaymentOption<
 /// initPayment response body.
 pub type NuveiInitPaymentResponse = NuveiPaymentsResponse;
 
-/// Authenticate request: the Authorize /payment.do body carrying
-/// paymentOption.card.threeD and the initPayment relatedTransactionId.
+/// Authenticate request: the /payment.do body carrying paymentOption.card.threeD
+/// and the initPayment relatedTransactionId (`build_nuvei_three_ds_payment_request`,
+/// shared with the 3DS leg of Authorize).
 #[derive(Debug, Serialize)]
 #[serde(transparent)]
 pub struct NuveiAuthenticateRequest<
@@ -2558,16 +2839,6 @@ struct NuveiAcsErrorResponse {
     error_code: Option<String>,
     error_message: Option<String>,
     error_detail: Option<String>,
-}
-
-fn nuvei_three_ds_not_implemented(what: &str, flow: &str) -> IntegrationError {
-    IntegrationError::NotImplemented(
-        format!("{what} is not implemented for Nuvei {flow}"),
-        nuvei_error_context(
-            "Use a card payment method for Nuvei 3DS",
-            format!("Nuvei 3DS ({flow}) authenticates card payments only"),
-        ),
-    )
 }
 
 /// The 3DS legs take a raw card only.
@@ -2692,17 +2963,6 @@ fn decode_nuvei_challenge_field<R: serde::de::DeserializeOwned>(
     serde_json::from_slice::<R>(&bytes).change_context(invalid())
 }
 
-fn nuvei_three_ds_authentication_failed(detail: String) -> IntegrationError {
-    IntegrationError::NotSupported {
-        message: format!("Charging a payment whose 3DS authentication failed ({detail})"),
-        connector: "nuvei",
-        context: nuvei_error_context(
-            "Do not retry the charge; start a new payment and authenticate the card again",
-            format!("Nuvei 3DS authentication failed: {detail}"),
-        ),
-    }
-}
-
 /// Port of hyperswitch `ConnectorRedirectResponse::get_flow_type`: the
 /// final payment is refused, with no HTTP call, when the decoded `cres` has a
 /// transStatus other than Y or the challenge returned an `error`.
@@ -2754,7 +3014,7 @@ fn get_nuvei_leg_session_token(
         .or_else(|| {
             resolve_session_token(
                 parse_nuvei_meta(resource.connector_feature_data.as_ref()).as_ref(),
-                resource.session_token.as_ref(),
+                resource.session_token.as_deref(),
                 None,
             )
             .ok()
@@ -2793,10 +3053,7 @@ fn get_nuvei_transaction_id(
 
 /// initPayment status: APPROVED (InitAuth3D) only authenticates, so it maps to
 /// AuthenticationPending, never Authorized.
-fn get_nuvei_pre_authenticate_status(
-    response: &NuveiPaymentsResponse,
-) -> common_enums::AttemptStatus {
-    use common_enums::AttemptStatus;
+fn get_nuvei_pre_authenticate_status(response: &NuveiPaymentsResponse) -> AttemptStatus {
     match response.transaction_status {
         Some(NuveiTransactionStatus::Approved) | Some(NuveiTransactionStatus::Redirect) => {
             AttemptStatus::AuthenticationPending
@@ -2817,9 +3074,6 @@ fn get_nuvei_pre_authenticate_status(
         },
     }
 }
-
-/// threeD.v2AdditionalParams.rebillFrequency for a CIT that stores the card.
-const NUVEI_REBILL_FREQUENCY: &str = "0";
 
 /// threeD.v2AdditionalParams.rebillExpiry for a CIT: today + 5 years as
 /// YYYYMMDD (hyperswitch `get_card_info`).
@@ -2878,18 +3132,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Order-bound session token: NuveiMeta (HS carrier), else request session_token
         let session_token = resolve_session_token(
             parse_nuvei_meta(resource.connector_feature_data.as_ref()).as_ref(),
-            resource.session_token.as_ref(),
+            resource.session_token.as_deref(),
             None,
         )?;
 
         let currency = request.currency.ok_or_else(|| {
             nuvei_missing_field("currency", "Send amount.currency for Nuvei initPayment")
         })?;
-        let amount = convert_nuvei_amount(
-            item.connector.amount_converter_webhooks,
-            request.amount,
-            currency,
-        )?;
+        let amount = NuveiAmountConvertor::convert(request.amount, currency)?;
 
         // browser_info (deviceDetails.ipAddress) and return_url are required
         let browser_info = request.browser_info.as_ref().ok_or_else(|| {
@@ -2920,7 +3170,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_optional_billing_email()
             .or_else(|| request.email.clone())
             .zip(resource.get_optional_billing_country())
-            .map(|(email, country)| build_billing_address(resource, email, country));
+            .map(|(email, country)| NuveiBillingAddress::from((resource, email, country)));
 
         Ok(Self {
             session_token,
@@ -3005,8 +3255,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .and_then(|option| option.card.as_ref())
                 .and_then(|card| card.three_d.as_ref())
                 .and_then(|three_d| three_d.v2supported.clone()),
-            is_customer_initiated_mandate_payment: None,
-            customer_id: None,
             mandate_reference: None,
             network_txn_link_id: None,
         };
@@ -3028,6 +3276,212 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ..router_data.clone()
         })
     }
+}
+
+/// Inputs of the 3DS `/payment.do` (threeD + initPayment relatedTransactionId),
+/// shared by the Authenticate flow and the 3DS leg of Authorize.
+struct NuveiThreeDsPaymentParams<'a, T: PaymentMethodDataTypes> {
+    auth: NuveiAuthType,
+    card: &'a domain_types::payment_method_data::Card<T>,
+    card_holder_name: Option<Secret<String>>,
+    /// deviceDetails.ipAddress on both arms; threeD.browserDetails on the
+    /// challenge arm only.
+    browser_info: &'a BrowserInformation,
+    /// threeD.notificationUrl (challenge arm only).
+    notification_url: Option<String>,
+    /// urlDetails and threeD.merchantUrl (required on the challenge arm only).
+    return_url: Option<String>,
+    amount: common_utils::types::MinorUnit,
+    currency: common_enums::Currency,
+    capture_method: Option<common_enums::CaptureMethod>,
+    billing_descriptor: Option<&'a domain_types::connector_types::BillingDescriptor>,
+    l2_l3_data: Option<&'a domain_types::connector_types::L2L3Data>,
+    enable_partial_authorization: Option<bool>,
+    payment_channel: Option<&'a common_enums::PaymentChannel>,
+    authentication_data: Option<&'a AuthenticationData>,
+    is_cit: bool,
+    /// userTokenId when `is_cit`.
+    customer_id: Option<Secret<String>>,
+    session_token: Secret<String>,
+    related_transaction_id: String,
+    billing_address: NuveiBillingAddress,
+    shipping_address: Option<NuveiShippingAddress>,
+    client_request_id: String,
+}
+
+/// Builds the 3DS `/payment.do` body: paymentOption.card.threeD (external MPI
+/// result, else the Nuvei challenge parameters) and the initPayment
+/// relatedTransactionId.
+fn build_nuvei_three_ds_payment_request<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
+    params: NuveiThreeDsPaymentParams<'_, T>,
+) -> Result<NuveiPaymentRequest<T>, Report<IntegrationError>> {
+    let NuveiThreeDsPaymentParams {
+        auth,
+        card,
+        card_holder_name,
+        browser_info,
+        notification_url,
+        return_url,
+        amount: minor_amount,
+        currency,
+        capture_method,
+        billing_descriptor,
+        l2_l3_data,
+        enable_partial_authorization,
+        payment_channel,
+        authentication_data,
+        is_cit,
+        customer_id,
+        session_token,
+        related_transaction_id,
+        billing_address,
+        shipping_address,
+        client_request_id,
+    } = params;
+
+    let client_unique_id = get_valid_client_unique_id(&client_request_id)?;
+
+    let amount = NuveiAmountConvertor::convert(minor_amount, currency)?;
+    let transaction_type = TransactionType::get_from_capture_method(capture_method, minor_amount)?;
+
+    // dynamicDescriptor.merchantPhone is at most 13 characters
+    let dynamic_descriptor = get_dynamic_descriptor(billing_descriptor)?;
+    let items = get_l2_l3_items(l2_l3_data, currency)?;
+    let amount_details = get_amount_details(l2_l3_data, currency)?;
+
+    // CIT (stores the card for future MIT) when this leg charges: isRebilling
+    // "0" + userTokenId, and the rebill parameters on the 3DS request.
+    let (user_token_id, is_rebilling) = if is_cit {
+        (customer_id, Some(NuveiIsRebilling::False))
+    } else {
+        (None, None)
+    };
+
+    let time_stamp = NuveiAuthType::get_timestamp();
+    // checksum: merchantId + merchantSiteId + clientRequestId + amount + currency + timeStamp + merchantSecretKey
+    let checksum = auth.generate_checksum(&[
+        auth.merchant_id.peek(),
+        auth.merchant_site_id.peek(),
+        &client_request_id,
+        &amount.get_amount_as_string(),
+        &currency.to_string(),
+        &time_stamp.to_string(),
+    ]);
+
+    // External 3DS (merchant-performed authentication) takes precedence over
+    // the challenge parameters: only threeD.externalMpi is sent, cavv is
+    // mandatory there. authentication_data without an MPI result (eci, cavv
+    // or dsTransID), e.g. only a 3DS transaction reference, is not external
+    // 3DS data and keeps the Nuvei challenge.
+    let external_mpi_data = authentication_data.filter(|auth_data| {
+        auth_data.cavv.is_some() || auth_data.eci.is_some() || auth_data.ds_trans_id.is_some()
+    });
+    let three_d = match external_mpi_data {
+        Some(auth_data) => {
+            let cavv = auth_data.cavv.clone().ok_or_else(|| {
+                nuvei_missing_field(
+                    "authentication_data.cavv",
+                    "Send authentication_data.cavv with external 3DS data",
+                )
+            })?;
+            NuveiCardThreeD {
+                external_mpi: Some(NuveiExternalMpi {
+                    eci: auth_data.eci.clone(),
+                    cavv,
+                    ds_trans_id: auth_data.ds_trans_id.clone(),
+                }),
+                ..Default::default()
+            }
+        }
+        None => {
+            // the challenge needs the full browser_info and the challenge URLs
+            let browser_details = get_nuvei_browser_details(browser_info)?;
+            let notification_url = notification_url.clone().ok_or_else(|| {
+                nuvei_missing_field(
+                    "continue_redirection_url",
+                    "Send continue_redirection_url (the 3DS challenge notification URL)",
+                )
+            })?;
+            let merchant_url = return_url.clone().ok_or_else(|| {
+                nuvei_missing_field("return_url", "Send return_url for Nuvei 3DS")
+            })?;
+            let (rebill_expiry, rebill_frequency) = if is_cit {
+                (
+                    Some(get_nuvei_rebill_expiry()?),
+                    Some(NUVEI_REBILL_FREQUENCY.to_string()),
+                )
+            } else {
+                (None, None)
+            };
+            NuveiCardThreeD {
+                method_completion_ind: Some(NuveiMethodCompletion::Unavailable),
+                browser_details: Some(browser_details),
+                notification_url: Some(notification_url),
+                merchant_url: Some(merchant_url),
+                external_mpi: None,
+                platform_type: Some(NuveiPlatformType::Browser),
+                v2_additional_params: Some(NuveiV2AdditionalParams {
+                    challenge_window_size: Some(NuveiChallengeWindowSize::FullScreen),
+                    challenge_preference: Some(NuveiChallengePreference::NoPreference),
+                    rebill_expiry,
+                    rebill_frequency,
+                }),
+            }
+        }
+    };
+
+    Ok(NuveiPaymentRequest {
+        session_token,
+        merchant_id: auth.merchant_id,
+        merchant_site_id: auth.merchant_site_id,
+        client_request_id,
+        amount,
+        currency,
+        user_token_id,
+        client_unique_id,
+        payment_option: NuveiPaymentOption {
+            card: Some(NuveiCardPaymentOption::Raw(NuveiCard {
+                card_number: card.card_number.clone(),
+                card_holder_name,
+                expiration_month: card.card_exp_month.clone(),
+                expiration_year: card.card_exp_year.clone(),
+                cvv: card.card_cvc.clone(),
+                three_d: Some(Box::new(three_d)),
+            })),
+            alternative_payment_method: None,
+            user_payment_option_id: None,
+        },
+        transaction_type,
+        device_details: NuveiDeviceDetails {
+            ip_address: browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+                .ok_or_else(|| {
+                    nuvei_missing_field(
+                        "browser_info.ip_address",
+                        "Send browser_info.ip_address of the customer",
+                    )
+                })?,
+        },
+        billing_address,
+        shipping_address,
+        url_details: return_url.map(|return_url| NuveiUrlDetails {
+            success_url: return_url.clone(),
+            failure_url: return_url.clone(),
+            pending_url: return_url,
+        }),
+        dynamic_descriptor,
+        is_partial_approval: enable_partial_authorization.map(NuveiPartialApprovalFlag::from),
+        items,
+        amount_details,
+        is_rebilling,
+        related_transaction_id: Some(related_transaction_id),
+        is_moto: crate::utils::is_moto_payment_channel(payment_channel).then_some(true),
+        time_stamp,
+        checksum,
+    })
 }
 
 // Authenticate Request Transformation (payment.do with threeD)
@@ -3078,194 +3532,61 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
             })?;
         let session_token =
-            resolve_session_token(nuvei_meta.as_ref(), resource.session_token.as_ref(), None)?;
+            resolve_session_token(nuvei_meta.as_ref(), resource.session_token.as_deref(), None)?;
 
-        // browser_info and the challenge URLs are required
+        // browser_info is required (deviceDetails.ipAddress)
         let browser_info = request.browser_info.as_ref().ok_or_else(|| {
             nuvei_missing_field(
                 "browser_info",
                 "Send browser_info of the customer for Nuvei 3DS",
             )
         })?;
-        let browser_details = get_nuvei_browser_details(browser_info)?;
-        let notification_url = request
-            .continue_redirection_url
-            .as_ref()
-            .map(|url| url.to_string())
-            .ok_or_else(|| {
-                nuvei_missing_field(
-                    "continue_redirection_url",
-                    "Send continue_redirection_url (the 3DS challenge notification URL)",
-                )
-            })?;
-        let return_url = request
-            .router_return_url
-            .as_ref()
-            .map(|url| url.to_string())
-            .ok_or_else(|| nuvei_missing_field("return_url", "Send return_url for Nuvei 3DS"))?;
 
         let email = resource
             .get_optional_billing_email()
             .or_else(|| request.email.clone());
         let billing_address = get_required_billing_address(resource, email)?;
-        let shipping_address = get_shipping_address(resource);
-
-        let client_request_id = resource.connector_request_reference_id.clone();
-        let client_unique_id = get_valid_client_unique_id(&client_request_id)?;
+        let shipping_address = resource
+            .get_optional_shipping_country()
+            .map(|country| NuveiShippingAddress::from((resource, country)));
 
         let currency = request
             .currency
             .ok_or_else(|| nuvei_missing_field("currency", "Send amount.currency for Nuvei 3DS"))?;
-        let amount = convert_nuvei_amount(
-            item.connector.amount_converter_webhooks,
-            request.amount,
-            currency,
-        )?;
-        let transaction_type =
-            TransactionType::get_from_capture_method(request.capture_method, request.amount)?;
 
-        // dynamicDescriptor.merchantPhone is at most 13 characters
-        let dynamic_descriptor = get_dynamic_descriptor(request.billing_descriptor.as_ref())?;
-        let converter = item.connector.amount_converter_webhooks;
-        let l2_l3_data = resource.l2_l3_data.as_deref();
-        let items = get_l2_l3_items(l2_l3_data, currency, converter)?;
-        let amount_details = get_amount_details(l2_l3_data, currency, converter)?;
-
-        // CIT (stores the card for future MIT) when this leg charges: isRebilling
-        // "0" + userTokenId, and the rebill parameters on the 3DS request. A
-        // caller without the typed fields sends the markers in NuveiMeta.
-        let is_cit = request.is_customer_initiated_mandate_payment()
-            || nuvei_meta
+        build_nuvei_three_ds_payment_request(NuveiThreeDsPaymentParams {
+            auth,
+            card,
+            card_holder_name: get_nuvei_card_holder_name(card, resource),
+            browser_info,
+            notification_url: request
+                .continue_redirection_url
                 .as_ref()
-                .and_then(|meta| meta.is_customer_initiated_mandate_payment)
-                == Some(true);
-        let (user_token_id, is_rebilling) = if is_cit {
-            let user_token_id = resource
+                .map(|url| url.to_string()),
+            return_url: request
+                .router_return_url
+                .as_ref()
+                .map(|url| url.to_string()),
+            amount: request.amount,
+            currency,
+            capture_method: request.capture_method,
+            billing_descriptor: request.billing_descriptor.as_ref(),
+            l2_l3_data: resource.l2_l3_data.as_deref(),
+            enable_partial_authorization: request.enable_partial_authorization,
+            payment_channel: request.payment_channel.as_ref(),
+            authentication_data: request.authentication_data.as_ref(),
+            is_cit: request.is_customer_initiated_mandate_payment(),
+            customer_id: resource
                 .customer_id
                 .as_ref()
-                .map(|customer_id| Secret::new(customer_id.get_string_repr().to_string()))
-                .or_else(|| {
-                    nuvei_meta
-                        .as_ref()
-                        .and_then(|meta| meta.customer_id.clone())
-                });
-            (user_token_id, Some(NuveiIsRebilling::False))
-        } else {
-            (None, None)
-        };
-
-        let time_stamp = NuveiAuthType::get_timestamp();
-        // checksum: merchantId + merchantSiteId + clientRequestId + amount + currency + timeStamp + merchantSecretKey
-        let checksum = auth.generate_checksum(&[
-            auth.merchant_id.peek(),
-            auth.merchant_site_id.peek(),
-            &client_request_id,
-            &amount.get_amount_as_string(),
-            &currency.to_string(),
-            &time_stamp.to_string(),
-        ]);
-
-        // External 3DS (merchant-performed authentication) takes precedence over
-        // the challenge parameters: only threeD.externalMpi is sent, cavv is
-        // mandatory there. authentication_data without an MPI result (eci, cavv
-        // or dsTransID), e.g. only a 3DS transaction reference, is not external
-        // 3DS data and keeps the Nuvei challenge.
-        let external_mpi_data = request.authentication_data.as_ref().filter(|auth_data| {
-            auth_data.cavv.is_some() || auth_data.eci.is_some() || auth_data.ds_trans_id.is_some()
-        });
-        let three_d = match external_mpi_data {
-            Some(auth_data) => {
-                let cavv = auth_data.cavv.clone().ok_or_else(|| {
-                    nuvei_missing_field(
-                        "authentication_data.cavv",
-                        "Send authentication_data.cavv with external 3DS data",
-                    )
-                })?;
-                NuveiCardThreeD {
-                    external_mpi: Some(NuveiExternalMpi {
-                        eci: auth_data.eci.clone(),
-                        cavv,
-                        ds_trans_id: auth_data.ds_trans_id.clone(),
-                    }),
-                    ..Default::default()
-                }
-            }
-            None => {
-                let (rebill_expiry, rebill_frequency) = if is_cit {
-                    (
-                        Some(get_nuvei_rebill_expiry()?),
-                        Some(NUVEI_REBILL_FREQUENCY.to_string()),
-                    )
-                } else {
-                    (None, None)
-                };
-                NuveiCardThreeD {
-                    method_completion_ind: Some(NuveiMethodCompletion::Unavailable),
-                    browser_details: Some(browser_details),
-                    notification_url: Some(notification_url),
-                    merchant_url: Some(return_url.clone()),
-                    external_mpi: None,
-                    platform_type: Some(NuveiPlatformType::Browser),
-                    v2_additional_params: Some(NuveiV2AdditionalParams {
-                        challenge_window_size: Some(NuveiChallengeWindowSize::FullScreen),
-                        challenge_preference: Some(NuveiChallengePreference::NoPreference),
-                        rebill_expiry,
-                        rebill_frequency,
-                    }),
-                }
-            }
-        };
-
-        Ok(Self(NuveiPaymentRequest {
+                .map(|customer_id| Secret::new(customer_id.get_string_repr().to_string())),
             session_token,
-            merchant_id: auth.merchant_id,
-            merchant_site_id: auth.merchant_site_id,
-            client_request_id,
-            amount,
-            currency,
-            user_token_id,
-            client_unique_id,
-            payment_option: NuveiPaymentOption {
-                card: Some(NuveiCardPaymentOption::Raw(NuveiCard {
-                    card_number: card.card_number.clone(),
-                    card_holder_name: get_nuvei_card_holder_name(card, resource),
-                    expiration_month: card.card_exp_month.clone(),
-                    expiration_year: card.card_exp_year.clone(),
-                    cvv: card.card_cvc.clone(),
-                    three_d: Some(Box::new(three_d)),
-                })),
-                alternative_payment_method: None,
-                user_payment_option_id: None,
-            },
-            transaction_type,
-            device_details: NuveiDeviceDetails {
-                ip_address: browser_info
-                    .ip_address
-                    .map(|ip| Secret::new(ip.to_string()))
-                    .ok_or_else(|| {
-                        nuvei_missing_field(
-                            "browser_info.ip_address",
-                            "Send browser_info.ip_address of the customer",
-                        )
-                    })?,
-            },
+            related_transaction_id,
             billing_address,
             shipping_address,
-            url_details: Some(NuveiUrlDetails {
-                success_url: return_url.clone(),
-                failure_url: return_url.clone(),
-                pending_url: return_url,
-            }),
-            dynamic_descriptor,
-            is_partial_approval: get_partial_approval_flag(request.enable_partial_authorization),
-            items,
-            amount_details,
-            is_rebilling,
-            related_transaction_id: Some(related_transaction_id),
-            is_moto: get_is_moto(request.payment_channel.as_ref()),
-            time_stamp,
-            checksum,
-        }))
+            client_request_id: resource.connector_request_reference_id.clone(),
+        })
+        .map(Self)
     }
 }
 
@@ -3372,9 +3693,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // returns the stored-credential reference, NTID and link id the same way
         // the Authorize response does.
         let (mandate_reference, network_txn_id, network_txn_link_id) = match status {
-            common_enums::AttemptStatus::Charged
-            | common_enums::AttemptStatus::Authorized
-            | common_enums::AttemptStatus::PartialCharged => {
+            AttemptStatus::Charged | AttemptStatus::Authorized | AttemptStatus::PartialCharged => {
                 match build_nuvei_transaction_response(
                     response,
                     router_data.resource_common_data.payment_method,
@@ -3416,8 +3735,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             related_transaction_id: Some(transaction_id.clone()),
             three_ds_leg: Some(NuveiThreeDsLeg::Authenticate),
             v2supported: None,
-            is_customer_initiated_mandate_payment: None,
-            customer_id: None,
             mandate_reference: meta_mandate_reference,
             network_txn_link_id: network_txn_link_id.clone(),
         };
@@ -3491,19 +3808,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Amount to settle (partial capture passes through); StringMajorUnit
-        let amount = item
-            .connector
-            .amount_converter_webhooks
-            .convert(
-                router_data.request.minor_amount_to_capture,
-                router_data.request.currency,
-            )
-            .change_context(IntegrationError::RequestEncodingFailed {
-                context: nuvei_error_context(
-                    "Send a valid minor_amount_to_capture and currency",
-                    "Nuvei settleTransaction amount could not be converted to a major-unit string",
-                ),
-            })?;
+        let amount = NuveiAmountConvertor::convert(
+            router_data.request.minor_amount_to_capture,
+            router_data.request.currency,
+        )
+        .change_context(IntegrationError::RequestEncodingFailed {
+            context: nuvei_error_context(
+                "Send a valid minor_amount_to_capture and currency",
+                "Nuvei settleTransaction amount could not be converted to a major-unit string",
+            ),
+        })?;
 
         let currency = router_data.request.currency;
 
@@ -3718,11 +4032,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let currency = router_data.request.currency;
 
         // Typed minor refund amount -> Nuvei major-unit string
-        let amount = convert_nuvei_amount(
-            item.connector.amount_converter_webhooks,
-            router_data.request.minor_refund_amount,
-            currency,
-        )?;
+        let amount =
+            NuveiAmountConvertor::convert(router_data.request.minor_refund_amount, currency)?;
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + clientUniqueId + amount + currency + relatedTransactionId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -3815,12 +4126,13 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
         let response = &item.response;
         let router_data = &item.router_data;
 
-        // HS get_refund_response: status ERROR or transactionStatus ERROR is a
-        // failed refund returned as Err, attempt_status Refund(Failure).
+        // HS get_refund_response: status ERROR or transactionStatus ERROR/DECLINED is a
+        // failed refund returned as Err, attempt_status Refund(Failure), carrying
+        // gwErrorCode/gwErrorReason.
         let is_error = matches!(response.status, NuveiPaymentStatus::Error)
             || matches!(
                 response.transaction_status,
-                Some(NuveiTransactionStatus::Error)
+                Some(NuveiTransactionStatus::Error) | Some(NuveiTransactionStatus::Declined)
             );
         if let Some(error) = is_error
             .then(|| {
@@ -3842,7 +4154,8 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
             });
         }
 
-        // HS refund status map; an absent transactionStatus is a Failure (never Success)
+        // HS refund status map. An absent transactionStatus is Pending (never Success, never
+        // a terminal Failure), matching RSync: a later RSync or the refund DMN settles it.
         let refund_status = match response.transaction_status {
             Some(NuveiTransactionStatus::Approved) => common_enums::RefundStatus::Success,
             Some(NuveiTransactionStatus::Declined) | Some(NuveiTransactionStatus::Error) => {
@@ -3852,7 +4165,7 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
             | Some(NuveiTransactionStatus::Processing)
             | Some(NuveiTransactionStatus::Redirect)
             | Some(NuveiTransactionStatus::Unknown) => common_enums::RefundStatus::Pending,
-            None => common_enums::RefundStatus::Failure,
+            None => common_enums::RefundStatus::Pending,
         };
 
         // Get connector refund ID
@@ -3933,13 +4246,13 @@ impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
             });
         }
 
-        // HS: status ERROR or transactionDetails.transactionStatus ERROR of the
+        // HS: status ERROR or transactionDetails.transactionStatus ERROR/DECLINED of the
         // Credit transaction is a failed refund returned as Err, attempt_status
         // Refund(Failure).
         let is_error = matches!(response.status, NuveiPaymentStatus::Error)
             || matches!(
                 response.transaction_status,
-                Some(NuveiTransactionStatus::Error)
+                Some(NuveiTransactionStatus::Error) | Some(NuveiTransactionStatus::Declined)
             );
         if let Some(error) = is_error
             .then(|| {
@@ -4055,11 +4368,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             )
         })?;
 
-        let amount = item
-            .connector
-            .amount_converter_webhooks
-            .convert(minor_amount, currency)
-            .change_context(IntegrationError::RequestEncodingFailed {
+        let amount =
+            NuveiAmountConvertor::convert(minor_amount, currency)
+                .change_context(IntegrationError::RequestEncodingFailed {
                 context: nuvei_error_context(
                     "Send a valid amount and currency",
                     "Nuvei voidTransaction amount could not be converted to a major-unit string",
@@ -4119,9 +4430,9 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
         let (status, response_data) = match build_nuvei_error_response(
             response,
             item.http_code,
-            Some(FlowStatus::Payment(common_enums::AttemptStatus::VoidFailed)),
+            Some(FlowStatus::Payment(AttemptStatus::VoidFailed)),
         ) {
-            Some(error) => (common_enums::AttemptStatus::VoidFailed, Err(error)),
+            Some(error) => (AttemptStatus::VoidFailed, Err(error)),
             None => (
                 status,
                 Ok(build_nuvei_transaction_response(
@@ -4405,16 +4716,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Convert amount using the connector's amount converter
-        let amount = item
-            .connector
-            .amount_converter_webhooks
-            .convert(router_data.request.amount, router_data.request.currency)
-            .change_context(IntegrationError::RequestEncodingFailed {
-                context: nuvei_error_context(
-                    "Send a valid minor amount and currency",
-                    "Nuvei openOrder amount could not be converted to a major-unit string",
-                ),
-            })?;
+        let amount =
+            NuveiAmountConvertor::convert(router_data.request.amount, router_data.request.currency)
+                .change_context(IntegrationError::RequestEncodingFailed {
+                    context: nuvei_error_context(
+                        "Send a valid minor amount and currency",
+                        "Nuvei openOrder amount could not be converted to a major-unit string",
+                    ),
+                })?;
 
         let currency = router_data.request.currency;
 
@@ -4500,7 +4809,7 @@ impl TryFrom<ResponseRouterData<NuveiOpenOrderResponse, Self>>
             // openOrder precedes the payment: no attempt status on its error
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
-                    status: common_enums::AttemptStatus::Failure,
+                    status: AttemptStatus::Failure,
                     ..item.router_data.resource_common_data
                 },
                 response: Err(domain_types::router_data::ErrorResponse {
@@ -4536,7 +4845,7 @@ impl TryFrom<ResponseRouterData<NuveiOpenOrderResponse, Self>>
         Ok(Self {
             response: Ok(order_response),
             resource_common_data: PaymentFlowData {
-                status: common_enums::AttemptStatus::Pending,
+                status: AttemptStatus::Pending,
                 reference_id: Some(order_id.clone()),
                 connector_order_id: Some(order_id),
                 // Store session_token for use by subsequent payment flows
@@ -4588,17 +4897,6 @@ pub struct NuveiSetupMandateRequest<
     pub is_moto: Option<bool>,
     pub time_stamp: common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss>,
     pub checksum: String,
-}
-
-fn nuvei_setup_mandate_not_supported(what: &str, suggested_action: &str) -> IntegrationError {
-    IntegrationError::NotSupported {
-        message: format!("{what} is not supported for Nuvei SetupRecurring"),
-        connector: "nuvei",
-        context: nuvei_error_context(
-            suggested_action,
-            format!("Nuvei SetupRecurring (/payment.do CIT) does not offer {what}"),
-        ),
-    }
 }
 
 // Build the SetupMandate request from the router data.
@@ -4686,7 +4984,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // order-bound session token (NuveiMeta, else request session_token)
         let nuvei_meta = parse_nuvei_meta(resource.connector_feature_data.as_ref());
         let session_token =
-            resolve_session_token(nuvei_meta.as_ref(), resource.session_token.as_ref(), None)?;
+            resolve_session_token(nuvei_meta.as_ref(), resource.session_token.as_deref(), None)?;
 
         // userTokenId (customer_id) is required for UPO creation
         let user_token_id = resource
@@ -4722,22 +5020,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Billing email and country are mandatory; shipping only when present
         let billing_address = get_required_billing_address(resource, request.email.clone())?;
-        let shipping_address = get_shipping_address(resource);
+        let shipping_address = resource
+            .get_optional_shipping_country()
+            .map(|country| NuveiShippingAddress::from((resource, country)));
 
         let dynamic_descriptor = get_dynamic_descriptor(request.billing_descriptor.as_ref())?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let currency = request.currency;
-        let converter = item.connector.amount_converter_webhooks;
         // Amount is optional for SetupMandate: absent -> zero-amount verification
         let minor_amount = request
             .minor_amount
             .unwrap_or(common_utils::types::MinorUnit::new(0));
-        let amount = convert_nuvei_amount(converter, minor_amount, currency)?;
+        let amount = NuveiAmountConvertor::convert(minor_amount, currency)?;
 
         let l2_l3_data = resource.l2_l3_data.as_deref();
-        let items = get_l2_l3_items(l2_l3_data, currency, converter)?;
-        let amount_details = get_amount_details(l2_l3_data, currency, converter)?;
+        let items = get_l2_l3_items(l2_l3_data, currency)?;
+        let amount_details = get_amount_details(l2_l3_data, currency)?;
 
         // Auth for manual capture or amount 0, else Sale
         let transaction_type =
@@ -4779,10 +5078,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             shipping_address,
             url_details,
             dynamic_descriptor,
-            is_partial_approval: get_partial_approval_flag(request.enable_partial_authorization),
+            is_partial_approval: request
+                .enable_partial_authorization
+                .map(NuveiPartialApprovalFlag::from),
             items,
             amount_details,
-            is_moto: get_is_moto(request.payment_channel.as_ref()),
+            is_moto: crate::utils::is_moto_payment_channel(request.payment_channel.as_ref())
+                .then_some(true),
             time_stamp,
             checksum,
         })
@@ -4962,17 +5264,6 @@ pub struct NuveiRepeatPaymentCardOption {
     pub card: NuveiNetworkTokenCard,
 }
 
-fn nuvei_repeat_payment_not_supported(what: &str, suggested_action: &str) -> IntegrationError {
-    IntegrationError::NotSupported {
-        message: format!("{what} is not supported for Nuvei RecurringPaymentService/Charge"),
-        connector: "nuvei",
-        context: nuvei_error_context(
-            suggested_action,
-            format!("Nuvei MIT (/payment.do) does not offer {what}"),
-        ),
-    }
-}
-
 /// externalSchemeDetails.brand must be one of
 /// VISA/MASTERCARD/AMEX/DISCOVER/DINERS (card_network, else BIN issuer).
 fn get_nuvei_mit_card_brand(
@@ -5025,7 +5316,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let nuvei_meta = parse_nuvei_meta(resource.connector_feature_data.as_ref());
         let request_session_token = resource
             .session_token
-            .as_ref()
+            .as_deref()
             .filter(|token| !token.is_empty());
         let session_token = resolve_session_token(
             nuvei_meta
@@ -5192,11 +5483,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let currency = request.currency;
-        let amount = convert_nuvei_amount(
-            item.connector.amount_converter_webhooks,
-            request.minor_amount,
-            currency,
-        )?;
+        let amount = NuveiAmountConvertor::convert(request.minor_amount, currency)?;
 
         // Auth for manual capture or amount 0, else Sale
         let transaction_type =
@@ -5229,8 +5516,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             external_scheme_details,
             transaction_link_id,
             dynamic_descriptor,
-            is_partial_approval: get_partial_approval_flag(request.enable_partial_authorization),
-            is_moto: get_is_moto(request.payment_channel.as_ref()),
+            is_partial_approval: request
+                .enable_partial_authorization
+                .map(NuveiPartialApprovalFlag::from),
+            is_moto: crate::utils::is_moto_payment_channel(request.payment_channel.as_ref())
+                .then_some(true),
             time_stamp,
             checksum,
         })
@@ -5711,10 +6001,7 @@ pub fn map_notification_to_event(
 /// Unified status code -> dispute status (hyperswitch
 /// `map_dispute_notification_to_event`, first half; each hyperswitch
 /// `Dispute*` event is the same-named `DisputeStatus`).
-fn dispute_status_from_unified_code(
-    code: &DisputeUnifiedStatusCode,
-) -> Option<common_enums::DisputeStatus> {
-    use common_enums::DisputeStatus;
+fn dispute_status_from_unified_code(code: &DisputeUnifiedStatusCode) -> Option<DisputeStatus> {
     use DisputeUnifiedStatusCode as C;
     match code {
         C::FirstChargebackInitiatedByIssuer
@@ -5776,8 +6063,7 @@ fn dispute_status_from_unified_code(
 /// ChargebackStatusCategory (hyperswitch `map_dispute_notification_to_event`).
 pub fn get_dispute_status(
     chargeback: &ChargebackData,
-) -> Result<common_enums::DisputeStatus, Report<WebhookError>> {
-    use common_enums::DisputeStatus;
+) -> Result<DisputeStatus, Report<WebhookError>> {
     chargeback
         .dispute_unified_status_code
         .as_ref()
@@ -5795,24 +6081,21 @@ pub fn get_dispute_status(
 }
 
 /// Dispute status -> webhook event.
-pub fn dispute_event_from_status(status: common_enums::DisputeStatus) -> EventType {
+pub fn dispute_event_from_status(status: DisputeStatus) -> EventType {
     match status {
-        common_enums::DisputeStatus::DisputeOpened => EventType::DisputeOpened,
-        common_enums::DisputeStatus::DisputeExpired => EventType::DisputeExpired,
-        common_enums::DisputeStatus::DisputeAccepted => EventType::DisputeAccepted,
-        common_enums::DisputeStatus::DisputeCancelled => EventType::DisputeCancelled,
-        common_enums::DisputeStatus::DisputeChallenged => EventType::DisputeChallenged,
-        common_enums::DisputeStatus::DisputeWon => EventType::DisputeWon,
-        common_enums::DisputeStatus::DisputeLost => EventType::DisputeLost,
+        DisputeStatus::DisputeOpened => EventType::DisputeOpened,
+        DisputeStatus::DisputeExpired => EventType::DisputeExpired,
+        DisputeStatus::DisputeAccepted => EventType::DisputeAccepted,
+        DisputeStatus::DisputeCancelled => EventType::DisputeCancelled,
+        DisputeStatus::DisputeChallenged => EventType::DisputeChallenged,
+        DisputeStatus::DisputeWon => EventType::DisputeWon,
+        DisputeStatus::DisputeLost => EventType::DisputeLost,
     }
 }
 
 /// Unified status code -> dispute stage (hyperswitch
 /// `From<DisputeUnifiedStatusCode> for DisputeStage`).
-fn dispute_stage_from_unified_code(
-    code: &DisputeUnifiedStatusCode,
-) -> Option<common_enums::DisputeStage> {
-    use common_enums::DisputeStage;
+fn dispute_stage_from_unified_code(code: &DisputeUnifiedStatusCode) -> Option<DisputeStage> {
     use DisputeUnifiedStatusCode as C;
     match code {
         C::Rdr
@@ -5877,8 +6160,7 @@ fn dispute_stage_from_unified_code(
 /// (hyperswitch `get_dispute_stage`).
 pub fn get_dispute_stage(
     chargeback: &ChargebackData,
-) -> Result<common_enums::DisputeStage, Report<WebhookError>> {
-    use common_enums::DisputeStage;
+) -> Result<DisputeStage, Report<WebhookError>> {
     chargeback
         .dispute_unified_status_code
         .as_ref()
@@ -6015,7 +6297,8 @@ pub fn build_refund_webhook_details(
         | Some(NuveiTransactionStatus::Processing)
         | Some(NuveiTransactionStatus::Redirect)
         | Some(NuveiTransactionStatus::Unknown) => common_enums::RefundStatus::Pending,
-        None => common_enums::RefundStatus::Failure,
+        // Absent Status: not terminal; RSync settles it (same as Refund/RSync).
+        None => common_enums::RefundStatus::Pending,
     };
     let error = build_nuvei_error_response(&response, 200, None);
     let connector_refund_id = notification

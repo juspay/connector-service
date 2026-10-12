@@ -1949,8 +1949,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     }
 
     pub fn is_mandate_payment(&self) -> bool {
-        ((self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
+        self.is_customer_initiated_mandate_payment()
             || self
                 .mandate_id
                 .as_ref()

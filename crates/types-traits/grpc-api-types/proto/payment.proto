@@ -3962,8 +3962,10 @@ message RecurringPaymentServiceChargeRequest {
   // Additional connector-specific information received from the merchant for the transaction
   optional AdditionalConnectorDetails additional_connector_details = 42;
 
-  // Session and Token Information
-  optional string session_token = 43; // Connector session token, if applicable
+  // Connector session token, set by the caller from the session_token returned by
+  // MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's
+  // /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
+  optional string session_token = 43;
 }
 
 // Response message for repeat payment operation
@@ -4108,8 +4110,10 @@ message PaymentMethodAuthenticationServicePreAuthenticateRequest {
   // Sandbox/test mode flag
   optional bool test_mode = 17;
 
-  // Session and Token Information
-  optional string session_token = 18; // Connector session token, if applicable
+  // Connector session token, set by the caller from the session_token returned by
+  // MerchantAuthenticationService.CreateServerSessionAuthenticationToken (e.g. Nuvei's
+  // /getSessionToken.do sessionToken). Leave unset for connectors that do not use one.
+  optional string session_token = 18;
 }
 
 // Response message for pre-authentication step
