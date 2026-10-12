@@ -144,7 +144,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             RouterDataV2<
                 PayoutCreateRecipient,
                 PayoutFlowData,
-                PayoutCreateRecipientRequest,
+                PayoutCreateRecipientRequest<T>,
                 PayoutCreateRecipientResponse,
             >,
             T,
@@ -158,7 +158,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             RouterDataV2<
                 PayoutCreateRecipient,
                 PayoutFlowData,
-                PayoutCreateRecipientRequest,
+                PayoutCreateRecipientRequest<T>,
                 PayoutCreateRecipientResponse,
             >,
             T,
@@ -296,11 +296,12 @@ pub enum PaysafeHandleStatus {
     Completed,
 }
 
-impl TryFrom<ResponseRouterData<PaysafePaymentHandleResponse, Self>>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaysafePaymentHandleResponse, Self>>
     for RouterDataV2<
         PayoutCreateRecipient,
         PayoutFlowData,
-        PayoutCreateRecipientRequest,
+        PayoutCreateRecipientRequest<T>,
         PayoutCreateRecipientResponse,
     >
 {
@@ -352,7 +353,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             RouterDataV2<
                 PayoutTransfer,
                 PayoutFlowData,
-                PayoutTransferRequest,
+                PayoutTransferRequest<T>,
                 PayoutTransferResponse,
             >,
             T,
@@ -366,7 +367,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             RouterDataV2<
                 PayoutTransfer,
                 PayoutFlowData,
-                PayoutTransferRequest,
+                PayoutTransferRequest<T>,
                 PayoutTransferResponse,
             >,
             T,
@@ -439,8 +440,14 @@ impl From<PaysafeTransactionRequestStatus> for common_enums::PayoutStatus {
     }
 }
 
-impl TryFrom<ResponseRouterData<PaysafeStandaloneCreditResponse, Self>>
-    for RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<PaysafeStandaloneCreditResponse, Self>>
+    for RouterDataV2<
+        PayoutTransfer,
+        PayoutFlowData,
+        PayoutTransferRequest<T>,
+        PayoutTransferResponse,
+    >
 {
     type Error = Report<ConnectorError>;
 

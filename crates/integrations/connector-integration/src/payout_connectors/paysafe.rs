@@ -59,13 +59,13 @@ macros::create_all_prerequisites!(
             flow: PayoutCreateRecipient,
             request_body: PaysafePaymentHandleRequest,
             response_body: PaysafePaymentHandleResponse,
-            router_data: RouterDataV2<PayoutCreateRecipient, PayoutFlowData, PayoutCreateRecipientRequest, PayoutCreateRecipientResponse>,
+            router_data: RouterDataV2<PayoutCreateRecipient, PayoutFlowData, PayoutCreateRecipientRequest<T>, PayoutCreateRecipientResponse>,
         ),
         (
             flow: PayoutTransfer,
             request_body: PaysafeStandaloneCreditRequest,
             response_body: PaysafeStandaloneCreditResponse,
-            router_data: RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest, PayoutTransferResponse>,
+            router_data: RouterDataV2<PayoutTransfer, PayoutFlowData, PayoutTransferRequest<T>, PayoutTransferResponse>,
         )
     ],
     amount_converters: [],
@@ -201,17 +201,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== PAYOUT SERVICE TRAIT =====
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PayoutServiceTrait
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PayoutServiceTrait<T>
     for PaysafePayouts<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PayoutCreateRecipientV2
-    for PaysafePayouts<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    PayoutCreateRecipientV2<T> for PaysafePayouts<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PayoutTransferV2
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PayoutTransferV2<T>
     for PaysafePayouts<T>
 {
 }
@@ -223,7 +223,7 @@ macros::macro_connector_implementation!(
     curl_response: PaysafePaymentHandleResponse,
     flow_name: PayoutCreateRecipient,
     resource_common_data: PayoutFlowData,
-    flow_request: PayoutCreateRecipientRequest,
+    flow_request: PayoutCreateRecipientRequest<T>,
     flow_response: PayoutCreateRecipientResponse,
     http_method: Post,
     generic_type: T,
@@ -234,7 +234,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<
                 PayoutCreateRecipient,
                 PayoutFlowData,
-                PayoutCreateRecipientRequest,
+                PayoutCreateRecipientRequest<T>,
                 PayoutCreateRecipientResponse,
             >,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
@@ -246,7 +246,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<
                 PayoutCreateRecipient,
                 PayoutFlowData,
-                PayoutCreateRecipientRequest,
+                PayoutCreateRecipientRequest<T>,
                 PayoutCreateRecipientResponse,
             >,
         ) -> CustomResult<String, IntegrationError> {
@@ -265,7 +265,7 @@ macros::macro_connector_implementation!(
     curl_response: PaysafeStandaloneCreditResponse,
     flow_name: PayoutTransfer,
     resource_common_data: PayoutFlowData,
-    flow_request: PayoutTransferRequest,
+    flow_request: PayoutTransferRequest<T>,
     flow_response: PayoutTransferResponse,
     http_method: Post,
     generic_type: T,
@@ -276,7 +276,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<
                 PayoutTransfer,
                 PayoutFlowData,
-                PayoutTransferRequest,
+                PayoutTransferRequest<T>,
                 PayoutTransferResponse,
             >,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
@@ -288,7 +288,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<
                 PayoutTransfer,
                 PayoutFlowData,
-                PayoutTransferRequest,
+                PayoutTransferRequest<T>,
                 PayoutTransferResponse,
             >,
         ) -> CustomResult<String, IntegrationError> {
@@ -316,7 +316,7 @@ macros::macro_connector_payout_implementation!(
     ]
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PayoutEligibilityV2
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PayoutEligibilityV2<T>
     for PaysafePayouts<T>
 {
 }
@@ -325,7 +325,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PayoutEligibility,
         PayoutFlowData,
-        PayoutEligibilityRequest,
+        PayoutEligibilityRequest<T>,
         PayoutEligibilityResponse,
     > for PaysafePayouts<T>
 {
@@ -334,7 +334,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _req: &RouterDataV2<
             PayoutEligibility,
             PayoutFlowData,
-            PayoutEligibilityRequest,
+            PayoutEligibilityRequest<T>,
             PayoutEligibilityResponse,
         >,
     ) -> CustomResult<String, IntegrationError> {
