@@ -1032,7 +1032,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let amount = value
                     .connector
                     .amount_converter
-                    .convert(item.request.amount.amount, item.request.currency)
+                    .convert(item.request.minor_amount, item.request.currency)
                     .change_context(amount_conversion_error(
                         "Failed to convert authorize amount to MinorUnit for the Pay.com \
                          POST /v1/charges|/v1/holds request",
@@ -1215,12 +1215,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Zero-amount card-on-file setup is the normal shape for this flow; default to
         // MinorUnit::zero() rather than erroring before any wire call.
-        let minor_amount = item
-            .request
-            .amount
-            .as_ref()
-            .map(|amount| amount.amount)
-            .unwrap_or_else(MinorUnit::zero);
+        let minor_amount = item.request.minor_amount.unwrap_or_else(MinorUnit::zero);
 
         let amount = value
             .connector
@@ -1519,7 +1514,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = value
             .connector
             .amount_converter
-            .convert(item.request.amount.amount, currency)
+            .convert(item.request.amount, currency)
             .change_context(amount_conversion_error(
                 "Failed to convert pre-authenticate amount to MinorUnit for the Pay.com \
                  POST /v1/charges|/v1/holds request",
@@ -1679,7 +1674,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount_to_capture = value
             .connector
             .string_amount_converter
-            .convert(item.request.amount_to_capture.amount, item.request.currency)
+            .convert(item.request.minor_amount_to_capture, item.request.currency)
             .change_context(amount_conversion_error(
                 "Failed to convert capture amount to StringMinorUnit for the Pay.com \
                  POST /v1/holds/{id}/capture request",
@@ -1748,7 +1743,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount_to_refund = value
             .connector
             .string_amount_converter
-            .convert(item.request.refund_amount.amount, item.request.currency)
+            .convert(item.request.minor_refund_amount, item.request.currency)
             .change_context(amount_conversion_error(
                 "Failed to convert refund amount to StringMinorUnit for the Pay.com \
                  POST /v1/refunds request",
@@ -2312,10 +2307,8 @@ impl TryFrom<ResponseRouterData<PaydotcomPaymentsResponse, Self>>
             response,
             resource_common_data: PaymentFlowData {
                 status,
-                amount_captured: captured_amount.map(|amount| common_utils::types::Money {
-                    amount,
-                    currency: item.router_data.request.currency,
-                }),
+                amount_captured: captured_amount.map(|amount| amount.get_amount_as_i64()),
+                minor_amount_captured: captured_amount,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -2655,7 +2648,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = value
             .connector
             .amount_converter
-            .convert(item.request.amount.amount, item.request.currency)
+            .convert(item.request.minor_amount, item.request.currency)
             .change_context(amount_conversion_error(
                 "Failed to convert repeat-payment amount to MinorUnit for the Pay.com \
                  POST /v1/charges (off_session) request",
@@ -2839,4 +2832,40 @@ pub fn hold_capture_path(
             },
         )))
     }
+}
+
+/// Minimal Charge sample for flow status macros — the mapping only inspects `status`
+/// (and `id` via `.attempt_status()`); every other field is a placeholder.
+pub fn status_mapping_charge_sample(status: PaydotcomChargeStatus) -> PaydotcomPaymentsResponse {
+    PaydotcomPaymentsResponse::Charge(Box::new(PaydotcomChargeResponse {
+        id: String::new(),
+        status,
+        amount: None,
+        amount_refunded: None,
+        currency: None,
+        reference: None,
+        hold: None,
+        failure_code: None,
+        failure_message: None,
+        underlying_network_id: None,
+        source: None,
+    }))
+}
+
+/// Minimal canceled-Hold sample for the Void flow status macro — `attempt_status()`
+/// maps `canceled: true` to `AttemptStatus::Voided`.
+pub fn status_mapping_void_sample() -> PaydotcomPaymentsResponse {
+    PaydotcomPaymentsResponse::Hold(Box::new(PaydotcomHoldResponse {
+        id: String::new(),
+        status: PaydotcomHoldStatus::Canceled,
+        amount: None,
+        amount_capturable: None,
+        currency: None,
+        reference: None,
+        canceled: Some(true),
+        failure_code: None,
+        failure_message: None,
+        underlying_network_id: None,
+        source: None,
+    }))
 }

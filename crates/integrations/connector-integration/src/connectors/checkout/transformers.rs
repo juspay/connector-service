@@ -174,14 +174,10 @@ pub struct MandateSource {
 }
 
 #[derive(Debug, Serialize)]
-pub struct CheckoutRawCardDetails<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct CheckoutRawCardDetails {
     #[serde(rename = "type")]
     pub source_type: CheckoutSourceTypes,
-    /// A PAN or a vault alias, depending on the holder — the latter carries the injector's
-    /// substitution placeholder, so this cannot narrow to `cards::CardNumber`.
-    pub number: RawCardNumber<T>,
+    pub number: cards::CardNumber,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -196,7 +192,7 @@ pub enum PaymentSource<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardSource<T>),
-    RawCardForNTI(CheckoutRawCardDetails<T>),
+    RawCardForNTI(CheckoutRawCardDetails),
     Wallets(WalletSource),
     ApplePayPredecrypt(Box<ApplePayPredecrypt>),
     MandatePayment(MandateSource),
@@ -584,6 +580,14 @@ pub enum CheckoutPaymentIntent {
     Unknown,
 }
 
+impl Default for CheckoutPaymentIntent {
+    /// Auto-capture is the canonical intent — used as the default mapping
+    /// context by `ConnectorTerminalMapping` (PSync flow).
+    fn default() -> Self {
+        Self::Capture
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum CheckoutChallengeIndicator {
@@ -799,11 +803,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }
                         _ => Ok(Self::RawCardForNTI(CheckoutRawCardDetails {
                             source_type: CheckoutSourceTypes::Card,
-                            number: RawCardNumber(T::inner_from_card_number(
-                                google_pay_decrypted_data
-                                    .application_primary_account_number
-                                    .clone(),
-                            )),
+                            number: google_pay_decrypted_data
+                                .application_primary_account_number
+                                .clone(),
                             expiry_month,
                             expiry_year,
                             cvv: None,
@@ -1059,14 +1061,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         } else if item.router_data.request.is_mandate_payment() {
             match item.router_data.request.mit_category {
                 Some(common_enums::MitCategory::Installment) => CheckoutPaymentType::Installment,
-                Some(
-                    common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription,
-                ) => CheckoutPaymentType::Recurring,
-                Some(
-                    common_enums::MitCategory::Unscheduled
-                    | common_enums::MitCategory::Resubmission,
-                )
-                | None => CheckoutPaymentType::Unscheduled,
+                Some(common_enums::MitCategory::Recurring) => CheckoutPaymentType::Recurring,
+                _ => CheckoutPaymentType::Unscheduled,
             }
         } else {
             CheckoutPaymentType::Regular
@@ -1453,7 +1449,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let request = Self {
             source: source_var,
-            amount: item.router_data.request.amount.amount,
+            amount: item.router_data.request.minor_amount,
             currency: item.router_data.request.currency.to_string(),
             processing_channel_id,
             three_ds,
@@ -1556,15 +1552,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Some(common_enums::MitCategory::Installment) => {
                         CheckoutPaymentType::Installment
                     }
-                    Some(
-                        common_enums::MitCategory::Recurring
-                        | common_enums::MitCategory::Subscription,
-                    ) => CheckoutPaymentType::Recurring,
-                    Some(
-                        common_enums::MitCategory::Unscheduled
-                        | common_enums::MitCategory::Resubmission,
-                    )
-                    | None => CheckoutPaymentType::Unscheduled,
+                    Some(common_enums::MitCategory::Recurring) => CheckoutPaymentType::Recurring,
+                    Some(common_enums::MitCategory::Unscheduled) | None => {
+                        CheckoutPaymentType::Unscheduled
+                    }
+                    _ => CheckoutPaymentType::Unscheduled,
                 };
                 Ok((mandate_source, previous_id, Some(true), p_type, None))
             }
@@ -1590,10 +1582,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Some(common_enums::MitCategory::Installment) => {
                                 CheckoutPaymentType::Installment
                             }
-                            Some(common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription) => {
+                            Some(common_enums::MitCategory::Recurring) => {
                                 CheckoutPaymentType::Recurring
                             }
-                            Some(common_enums::MitCategory::Unscheduled | common_enums::MitCategory::Resubmission) | None => CheckoutPaymentType::Unscheduled,
+                            Some(common_enums::MitCategory::Unscheduled) | None => {
+                                CheckoutPaymentType::Unscheduled
+                            }
+                            _ => CheckoutPaymentType::Unscheduled,
                         };
                         Ok((
                             payment_source,
@@ -1610,10 +1605,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Some(common_enums::MitCategory::Installment) => {
                                 CheckoutPaymentType::Installment
                             }
-                            Some(common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription) => {
+                            Some(common_enums::MitCategory::Recurring) => {
                                 CheckoutPaymentType::Recurring
                             }
-                            Some(common_enums::MitCategory::Unscheduled | common_enums::MitCategory::Resubmission) | None => CheckoutPaymentType::Unscheduled,
+                            Some(common_enums::MitCategory::Unscheduled) | None => {
+                                CheckoutPaymentType::Unscheduled
+                            }
+                            _ => CheckoutPaymentType::Unscheduled,
                         };
 
                         let token_type = match network_token_data.token_source {
@@ -1683,15 +1681,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Some(common_enums::MitCategory::Installment) => {
                                 CheckoutPaymentType::Installment
                             }
-                            Some(
-                                common_enums::MitCategory::Recurring
-                                | common_enums::MitCategory::Subscription,
-                            ) => CheckoutPaymentType::Recurring,
-                            Some(
-                                common_enums::MitCategory::Unscheduled
-                                | common_enums::MitCategory::Resubmission,
-                            )
-                            | None => CheckoutPaymentType::Unscheduled,
+                            Some(common_enums::MitCategory::Recurring) => {
+                                CheckoutPaymentType::Recurring
+                            }
+                            _ => CheckoutPaymentType::Unscheduled,
                         };
 
                         let payment_source =
@@ -1918,7 +1911,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let request = Self {
             source: source_var,
-            amount: item.router_data.request.amount.amount,
+            amount: item.router_data.request.minor_amount,
             currency: item.router_data.request.currency.to_string(),
             processing_channel_id,
             three_ds,
@@ -1982,14 +1975,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         } else {
             match item.router_data.request.mit_category {
                 Some(common_enums::MitCategory::Installment) => CheckoutPaymentType::Installment,
-                Some(
-                    common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription,
-                ) => CheckoutPaymentType::Recurring,
-                Some(
-                    common_enums::MitCategory::Unscheduled
-                    | common_enums::MitCategory::Resubmission,
-                )
-                | None => CheckoutPaymentType::Unscheduled,
+                Some(common_enums::MitCategory::Recurring) => CheckoutPaymentType::Recurring,
+                _ => CheckoutPaymentType::Unscheduled,
             }
         };
 
@@ -2540,7 +2527,7 @@ pub struct PaymentsResponse {
     scheme_id: Option<String>,
     processing: Option<PaymentProcessingDetails>,
     action_id: Option<String>,
-    status: CheckoutPaymentStatus,
+    pub status: CheckoutPaymentStatus,
     #[serde(rename = "_links")]
     links: Links,
     balances: Option<Balances>,
@@ -2696,31 +2683,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .and_then(|source| source.payment_account_reference.clone()),
         };
 
-        let currency = item.router_data.request.currency;
-        let to_money = |amount| common_utils::types::Money { amount, currency };
-        let (amount_captured, amount_capturable) = match item.router_data.request.capture_method {
-            Some(common_enums::CaptureMethod::Manual)
-            | Some(common_enums::CaptureMethod::ManualMultiple) => {
-                (None, item.response.amount.map(to_money))
-            }
-            _ => (item.response.amount.map(to_money), None),
-        };
+        let (amount_captured, minor_amount_capturable) =
+            match item.router_data.request.capture_method {
+                Some(common_enums::CaptureMethod::Manual)
+                | Some(common_enums::CaptureMethod::ManualMultiple) => (None, item.response.amount),
+                _ => (item.response.amount.map(MinorUnit::get_amount_as_i64), None),
+            };
 
-        let amount_authorized = item
+        let minor_amount_authorized = item
             .router_data
             .request
             .enable_partial_authorization
             .filter(|flag| *flag)
-            .and(item.response.amount)
-            .map(to_money);
+            .and(item.response.amount);
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
                 connector_response: additional_information,
-                amount_authorized,
+                minor_amount_authorized,
                 amount_captured,
-                amount_capturable,
+                minor_amount_capturable,
                 ..item.router_data.resource_common_data
             },
             response: Ok(payments_response_data),
@@ -2831,32 +2814,29 @@ impl<
                         .and_then(|source| source.payment_account_reference.clone()),
                 };
 
-                let currency = item.router_data.request.currency;
-                let to_money = |amount| common_utils::types::Money { amount, currency };
-                let (amount_captured, amount_capturable) =
+                let (amount_captured, minor_amount_capturable) =
                     match item.router_data.request.capture_method {
                         Some(common_enums::CaptureMethod::Manual)
                         | Some(common_enums::CaptureMethod::ManualMultiple) => {
-                            (None, item.response.amount.map(to_money))
+                            (None, item.response.amount)
                         }
-                        _ => (item.response.amount.map(to_money), None),
+                        _ => (item.response.amount.map(MinorUnit::get_amount_as_i64), None),
                     };
 
-                let amount_authorized = item
+                let minor_amount_authorized = item
                     .router_data
                     .request
                     .enable_partial_authorization
                     .filter(|flag| *flag)
-                    .and(item.response.amount)
-                    .map(to_money);
+                    .and(item.response.amount);
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status,
                         connector_response: additional_information,
-                        amount_authorized,
+                        minor_amount_authorized,
                         amount_captured,
-                        amount_capturable,
+                        minor_amount_capturable,
                         ..item.router_data.resource_common_data
                     },
                     response: Ok(payments_response_data),
@@ -3239,7 +3219,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_ref()
             .map(|multiple_capture_data| multiple_capture_data.capture_reference.clone());
         Ok(Self {
-            amount: Some(item.router_data.request.amount_to_capture.amount.to_owned()),
+            amount: Some(item.router_data.request.minor_amount_to_capture.to_owned()),
             capture_type: Some(capture_type),
             processing_channel_id,
             reference, // hyperswitch's reference for this capture
@@ -3267,10 +3247,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
         let (status, amount_captured) = if item.http_code == 202 {
             (
                 common_enums::AttemptStatus::Charged,
-                Some(common_utils::types::Money {
-                    amount: item.router_data.request.amount_to_capture.amount,
-                    currency: item.router_data.request.currency,
-                }),
+                Some(item.router_data.request.amount_to_capture),
             )
         } else {
             (common_enums::AttemptStatus::Pending, None)
@@ -3337,7 +3314,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     ) -> Result<Self, Self::Error> {
         let reference = item.router_data.request.refund_id.clone();
         Ok(Self {
-            amount: Some(item.router_data.request.refund_amount.amount.to_owned()),
+            amount: Some(item.router_data.request.minor_refund_amount.to_owned()),
             reference,
         })
     }
@@ -3349,11 +3326,50 @@ pub struct RefundResponse {
     reference: Option<String>,
 }
 
+/// Typed verdict of a Checkout.com refund-create call. The refund endpoint
+/// answers 202 with only ids in the body, so the outcome is decided by the
+/// HTTP status alone: 202 → `Accepted`, anything else → `Other` (which the
+/// mapping reads as `Failure`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum CheckoutRefundVerdict {
+    /// 202 Accepted — refund accepted for processing
+    Accepted,
+    /// Any other HTTP code
+    #[default]
+    Other,
+}
+
+/// Typed view of `ActionResponse.approved` — the tri-state flag on the refund
+/// action located in the actions list during RSync.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum CheckoutActionApproval {
+    /// `approved: true`
+    Approved,
+    /// `approved: false`
+    Rejected,
+    /// `approved` absent — action not yet decided
+    #[default]
+    Pending,
+}
+
+impl From<Option<bool>> for CheckoutActionApproval {
+    fn from(approved: Option<bool>) -> Self {
+        match approved {
+            Some(true) => Self::Approved,
+            Some(false) => Self::Rejected,
+            None => Self::Pending,
+        }
+    }
+}
+
 fn http_code_to_refund_status(http_code: u16) -> common_enums::RefundStatus {
-    if http_code == 202 {
-        common_enums::RefundStatus::Success
+    match if http_code == 202 {
+        CheckoutRefundVerdict::Accepted
     } else {
-        common_enums::RefundStatus::Failure
+        CheckoutRefundVerdict::Other
+    } {
+        CheckoutRefundVerdict::Accepted => common_enums::RefundStatus::Success,
+        CheckoutRefundVerdict::Other => common_enums::RefundStatus::Failure,
     }
 }
 
@@ -3472,10 +3488,10 @@ pub struct CheckoutRedirectResponse {
 
 impl From<&ActionResponse> for common_enums::RefundStatus {
     fn from(item: &ActionResponse) -> Self {
-        match item.approved {
-            Some(true) => Self::Success,
-            Some(false) => Self::Failure,
-            None => Self::Pending,
+        match CheckoutActionApproval::from(item.approved) {
+            CheckoutActionApproval::Approved => Self::Success,
+            CheckoutActionApproval::Rejected => Self::Failure,
+            CheckoutActionApproval::Pending => Self::Pending,
         }
     }
 }

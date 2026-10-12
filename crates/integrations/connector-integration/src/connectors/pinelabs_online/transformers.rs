@@ -315,7 +315,7 @@ pub struct RefundPaymentDetails {
 
 // ========== Status Mapping ==========
 
-fn get_payment_status(status: &str, pre_auth: Option<bool>) -> AttemptStatus {
+pub fn get_payment_status(status: &str, pre_auth: Option<bool>) -> AttemptStatus {
     match (status, pre_auth) {
         // Manual capture: AUTHORIZED means payment is authorized, awaiting capture
         ("AUTHORIZED", Some(true)) => AttemptStatus::Authorized,
@@ -328,7 +328,7 @@ fn get_payment_status(status: &str, pre_auth: Option<bool>) -> AttemptStatus {
     }
 }
 
-fn get_capture_status(status: &str) -> Option<AttemptStatus> {
+pub fn get_capture_status(status: &str) -> Option<AttemptStatus> {
     match status {
         "PROCESSED" => Some(AttemptStatus::Charged),
         "FAILED" => Some(AttemptStatus::CaptureFailed),
@@ -338,7 +338,7 @@ fn get_capture_status(status: &str) -> Option<AttemptStatus> {
     }
 }
 
-fn get_void_status(status: &str) -> Option<AttemptStatus> {
+pub fn get_void_status(status: &str) -> Option<AttemptStatus> {
     match status {
         "FAILED" => Some(AttemptStatus::VoidFailed),
         "PENDING" => Some(AttemptStatus::VoidInitiated),
@@ -347,7 +347,7 @@ fn get_void_status(status: &str) -> Option<AttemptStatus> {
     }
 }
 
-fn get_refund_status(status: &str) -> RefundStatus {
+pub fn get_refund_status(status: &str) -> RefundStatus {
     match status {
         "PROCESSED" => RefundStatus::Success,
         "FAILED" => RefundStatus::Failure,
@@ -490,7 +490,7 @@ impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.amount.amount.get_amount_as_i64();
+        let amount = item.router_data.request.amount.get_amount_as_i64();
         let currency = item.router_data.request.currency.to_string();
 
         // `capture_method` is not part of `PaymentCreateOrderData` or `PaymentFlowData` —
@@ -745,7 +745,7 @@ impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.amount.amount.0;
+        let amount = item.router_data.request.minor_amount.0;
         let currency = item.router_data.request.currency.to_string();
 
         let payment_method_data = &item.router_data.request.payment_method_data;
@@ -794,7 +794,7 @@ impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.amount_to_capture.amount.0;
+        let amount = item.router_data.request.minor_amount_to_capture.0;
         let currency = item.router_data.request.currency.to_string();
 
         Ok(Self {
@@ -829,7 +829,7 @@ impl<T: PaymentMethodDataTypes + Debug + Send + Sync + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.refund_amount.amount.0;
+        let amount = item.router_data.request.minor_refund_amount.0;
         let currency = item.router_data.request.currency.to_string();
 
         Ok(Self {

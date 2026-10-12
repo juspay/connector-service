@@ -8,7 +8,7 @@ use cards;
 use common_enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    types::{MinorUnit, StringMajorUnit},
+    types::StringMajorUnit,
     CustomResult, Method,
 };
 use domain_types::{
@@ -138,14 +138,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
         // Hyperswitch treats `shipping_cost` as optional for the Authorize flow,
-        // defaulting to zero when absent (req.request.shipping_cost.as_ref().map(|money| money.amount).unwrap_or(MinorUnit::zero())).
+        // defaulting to zero when absent (req.request.shipping_cost.unwrap_or(MinorUnit::zero())).
         // Mirror that here instead of hard-failing with MissingRequiredField, otherwise UCS
         // returns gRPC InvalidArgument for card payments that carry no shipping_cost.
         let shipping_value = item
@@ -155,9 +155,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data
                     .request
                     .shipping_cost
-                    .as_ref()
-                    .map(|money| money.amount)
-                    .unwrap_or(MinorUnit::zero()),
+                    .unwrap_or(common_utils::types::MinorUnit::zero()),
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -211,7 +209,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -224,9 +222,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data
                     .request
                     .shipping_cost
-                    .as_ref()
-                    .map(|money| money.amount)
-                    .unwrap_or(MinorUnit::zero()),
+                    .unwrap_or(common_utils::types::MinorUnit::zero()),
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -311,7 +307,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -364,7 +360,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -865,10 +861,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let value = item
             .connector
             .amount_converter
-            .convert(
-                router_data.request.amount.amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: Default::default(),
             })?;
@@ -1575,7 +1568,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(
-                            item.router_data.request.amount.amount,
+                            item.router_data.request.minor_amount,
                             item.router_data.request.currency,
                         )
                         .change_context(IntegrationError::AmountConversionFailed {
@@ -2104,7 +2097,7 @@ pub struct PaymentsCollectionItem {
     expiration_time: Option<String>,
     id: String,
     final_capture: Option<bool>,
-    status: PaypalPaymentStatus,
+    pub status: PaypalPaymentStatus,
     processor_response: Option<ProcessorResponse>,
 }
 
@@ -2117,8 +2110,8 @@ pub struct ProcessorResponse {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentsCollection {
-    authorizations: Option<Vec<PaymentsCollectionItem>>,
-    captures: Option<Vec<PaymentsCollectionItem>>,
+    pub authorizations: Option<Vec<PaymentsCollectionItem>>,
+    pub captures: Option<Vec<PaymentsCollectionItem>>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -2131,7 +2124,7 @@ pub struct PurchaseUnitItem {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaypalThreeDsResponse {
     id: String,
-    status: PaypalOrderStatus,
+    pub status: PaypalOrderStatus,
     links: Vec<PaypalLinks>,
 }
 
@@ -2225,7 +2218,7 @@ pub struct PaypalOrdersResponse {
     // anyway: for orders it is taken from the capture/authorization status inside `purchase_units`
     // (see `TryFrom<ResponseRouterData<PaypalOrdersResponse, ..>>`).
     status: Option<PaypalOrderStatus>,
-    purchase_units: Vec<PurchaseUnitItem>,
+    pub purchase_units: Vec<PurchaseUnitItem>,
     payment_source: Option<PaymentSourceItemResponse>,
     payer: Option<Payer>,
 }
@@ -2249,8 +2242,8 @@ pub struct RedirectPurchaseUnitItem {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaypalRedirectResponse {
     id: String,
-    intent: PaypalPaymentIntent,
-    status: PaypalOrderStatus,
+    pub intent: PaypalPaymentIntent,
+    pub status: PaypalOrderStatus,
     purchase_units: Vec<RedirectPurchaseUnitItem>,
     links: Vec<PaypalLinks>,
     payment_source: Option<PaymentSourceItemResponse>,
@@ -2285,7 +2278,7 @@ pub enum NextActionCall {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PaypalPaymentsSyncResponse {
     id: String,
-    status: PaypalPaymentStatus,
+    pub status: PaypalPaymentStatus,
     amount: OrderAmount,
     invoice_id: Option<String>,
     supplementary_data: PaypalSupplementaryData,
@@ -2933,7 +2926,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount_to_capture.amount,
+                item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -2969,7 +2962,7 @@ pub enum PaypalPaymentStatus {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PaypalCaptureResponse {
     id: String,
-    status: PaypalPaymentStatus,
+    pub status: PaypalPaymentStatus,
     amount: Option<OrderAmount>,
     invoice_id: Option<String>,
     final_capture: bool,
@@ -3032,12 +3025,9 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
             common_enums::AttemptStatus::Charged
             | common_enums::AttemptStatus::PartialCharged
             | common_enums::AttemptStatus::PartialChargedAndChargeable
-            | common_enums::AttemptStatus::IntegrityFailure => item
-                .router_data
-                .request
-                .amount_to_capture
-                .amount
-                .get_amount_as_i64(),
+            | common_enums::AttemptStatus::IntegrityFailure => {
+                item.router_data.request.amount_to_capture
+            }
         };
         let connector_payment_id: PaypalMeta = match to_connector_meta(
             item.router_data
@@ -3067,10 +3057,7 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
-                amount_captured: Some(common_utils::types::Money {
-                    amount: MinorUnit::new(amount_captured),
-                    currency: item.router_data.request.currency,
-                }),
+                amount_captured: Some(amount_captured),
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -3107,7 +3094,7 @@ pub enum PaypalCancelStatus {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct PaypalPaymentsCancelResponse {
     id: String,
-    status: PaypalCancelStatus,
+    pub status: PaypalCancelStatus,
     amount: Option<OrderAmount>,
     invoice_id: Option<String>,
 }
@@ -3488,7 +3475,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.refund_amount.amount,
+                item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -3506,7 +3493,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RefundResponse {
     id: String,
-    status: RefundStatus,
+    pub status: RefundStatus,
     amount: Option<OrderAmount>,
 }
 
@@ -3535,7 +3522,7 @@ impl TryFrom<ResponseRouterData<RefundResponse, Self>>
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RefundSyncResponse {
     id: String,
-    status: RefundStatus,
+    pub status: RefundStatus,
 }
 
 impl TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
@@ -4260,7 +4247,7 @@ impl TryFrom<ResponseRouterData<PaypalClientAuthTokenResponse, Self>>
                 transaction_info: Some(PaypalTransactionInfoDomain {
                     flow: PaypalFlowDomain::Checkout,
                     currency_code: item.router_data.request.currency,
-                    total_price: item.router_data.request.amount.amount,
+                    total_price: item.router_data.request.amount,
                 }),
             },
         ));

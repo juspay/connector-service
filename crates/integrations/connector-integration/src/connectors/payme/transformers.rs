@@ -76,6 +76,30 @@ pub enum SaleStatus {
     Chargeback,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub enum PaymeVoidFlowStatus {
+    Voided,
+    Pending,
+    Failed,
+    #[default]
+    DefaultVoided,
+}
+
+impl PaymePaymentResponse {
+    pub fn void_flow_status(&self) -> PaymeVoidFlowStatus {
+        if self.status_code != 0 || self.payme_status != "success" {
+            return PaymeVoidFlowStatus::Failed;
+        }
+
+        match self.payme_sale_status.as_deref() {
+            Some("voided") => PaymeVoidFlowStatus::Voided,
+            Some("pending") => PaymeVoidFlowStatus::Pending,
+            Some("failed") => PaymeVoidFlowStatus::Failed,
+            _ => PaymeVoidFlowStatus::DefaultVoided,
+        }
+    }
+}
+
 impl From<SaleStatus> for AttemptStatus {
     fn from(item: SaleStatus) -> Self {
         match item {
@@ -584,7 +608,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
             payme_sale_id,
-            sale_price: item.request.amount_to_capture.amount,
+            sale_price: item.request.minor_amount_to_capture,
         })
     }
 }
@@ -734,7 +758,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
             payme_sale_id,
-            sale_refund_amount: item.request.refund_amount.amount,
+            sale_refund_amount: item.request.minor_refund_amount,
             language: LANGUAGE.to_string(),
         })
     }
@@ -1134,7 +1158,7 @@ impl
         Ok(Self {
             seller_payme_id: auth.seller_payme_id,
             sale_type: sale_type.to_string(),
-            sale_price: item.request.amount.amount,
+            sale_price: item.request.amount,
             currency: item.request.currency,
             sale_payment_method: "credit-card".to_string(), // Only card for no3ds
             product_name: item

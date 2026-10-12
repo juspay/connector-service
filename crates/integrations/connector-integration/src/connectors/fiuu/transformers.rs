@@ -283,7 +283,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -527,7 +527,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -617,7 +617,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
                 WalletData::GooglePay(google_pay_data) => {
-                    FiuuPaymentMethodData::try_from(google_pay_data.as_ref())
+                    FiuuPaymentMethodData::try_from(google_pay_data)
                 }
                 WalletData::ApplePay(_apple_pay_data) => {
                     match _apple_pay_data
@@ -748,7 +748,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -874,9 +874,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let minor_amount = item
             .router_data
             .request
-            .amount
-            .as_ref()
-            .map(|money| money.amount)
+            .minor_amount
             .unwrap_or(common_utils::types::MinorUnit::new(0));
         let amount = item
             .connector
@@ -994,7 +992,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
                 WalletData::GooglePay(google_pay_data) => {
-                    FiuuPaymentMethodData::try_from(google_pay_data.as_ref())
+                    FiuuPaymentMethodData::try_from(google_pay_data)
                 }
                 WalletData::ApplePay(_apple_pay_data) => match _apple_pay_data
                     .payment_data
@@ -1139,15 +1137,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<(&CardDetailsForNetworkTransactionId<T>, String)> for FiuuPaymentMethodData<T>
+    TryFrom<(&CardDetailsForNetworkTransactionId, String)> for FiuuPaymentMethodData<T>
 {
     type Error = error_stack::Report<IntegrationError>;
     fn try_from(
-        (raw_card_data, network_transaction_id): (&CardDetailsForNetworkTransactionId<T>, String),
+        (raw_card_data, network_transaction_id): (&CardDetailsForNetworkTransactionId, String),
     ) -> Result<Self, Self::Error> {
         Ok(Self::FiuuCardWithNTI(Box::new(FiuuCardWithNTI {
             txn_channel: TxnChannel::Creditan,
-            cc_pan: raw_card_data.card_number.try_card_number("Fiuu")?,
+            cc_pan: raw_card_data.card_number.clone(),
             cc_month: raw_card_data.card_exp_month.clone(),
             cc_year: raw_card_data.card_exp_year.clone(),
             original_scheme_id: Secret::new(network_transaction_id),
@@ -1220,6 +1218,141 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             // Equal to 0 by default and 1 for non-3DS transaction, That is why it is hardcoded to 1 for apple pay decrypt flow transactions.
             non_3ds: 1,
         })))
+    }
+}
+
+// =============================================================================
+// FLOW-STATUS MAPPING TYPES
+// =============================================================================
+// Typed status enums consumed by the `impl_flow_status_mapping!` /
+// `impl_refund_flow_status_mapping!` declarations in `fiuu.rs`. Each collapses
+// a raw-string match in one of the TryFrom impls below into a unit-variant
+// enum so the macro bodies match variants instead of magic strings.
+
+/// Typed version of the `stat_code` string leg inside
+/// [`NonThreeDSResponseData::status`] (Authorize / SetupMandate non-3DS
+/// responses). `Other` covers anything outside `"00"`/`"11"`/`"22"`, which the
+/// TryFrom rejects as an unexpected response.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum FiuuAuthorizeStatus {
+    /// `stat_code "00"` — the transaction succeeded; the request's capture
+    /// method (ctx) decides Charged vs. Authorized.
+    Approved,
+    /// `stat_code "11"` — the transaction failed.
+    Failed,
+    /// `stat_code "22"` — the transaction is pending.
+    Pending,
+    /// Any other `stat_code` (the default).
+    #[default]
+    Other,
+}
+
+impl FiuuAuthorizeStatus {
+    /// Parse the raw `stat_code` string into the typed variant.
+    pub fn from_stat_code(raw: &str) -> Self {
+        match raw {
+            "00" => Self::Approved,
+            "11" => Self::Failed,
+            "22" => Self::Pending,
+            _ => Self::Other,
+        }
+    }
+}
+
+/// Context for Authorize / SetupMandate / RepeatPayment flow-status mappings:
+/// whether the request was an automatic capture. Fiuu's `stat_code "00"` does
+/// not distinguish a settled sale from a bare authorisation — the original
+/// request's capture method is the only disambiguator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FiuuCaptureMethodCtx {
+    /// Auto capture — a success means `Charged`.
+    #[default]
+    Auto,
+    /// Manual capture — a success means `Authorized`.
+    Manual,
+}
+
+/// Typed version of the `stat_code` string in [`PaymentCaptureResponse`]. The
+/// TryFrom maps `"00"` → Charged, `"22"` → Pending, a fixed list of failure
+/// codes → Failure, and rejects anything else; `Other` covers both the listed
+/// failures and the unexpected ones since both land on the failure arm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum FiuuCaptureStatus {
+    /// `stat_code "00"` — capture successful.
+    Success,
+    /// `stat_code "22"` — capture pending.
+    Pending,
+    /// Every other `stat_code` (the failure list `"11"|"12"|"13"|"15"|"16"|
+    /// "17"|"18"|"19"|"20"|"21"|"23"|"24"|"25"|"99"` and any unexpected code)
+    /// — the TryFrom treats unlisted codes as an error, which also surfaces as
+    /// a failure outcome.
+    #[default]
+    Other,
+}
+
+impl FiuuCaptureStatus {
+    /// Parse the raw `stat_code` string into the typed variant.
+    pub fn from_stat_code(raw: &str) -> Self {
+        match raw {
+            "00" => Self::Success,
+            "22" => Self::Pending,
+            _ => Self::Other,
+        }
+    }
+}
+
+/// Typed version of the `stat_code` string in [`FiuuPaymentCancelResponse`]:
+/// `"00"` voids, `"11".."21"` fail the void; `Other` covers the unexpected
+/// codes the TryFrom rejects (an error response surfacing as failure).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum FiuuVoidStatus {
+    /// `stat_code "00"` — the authorisation was voided.
+    Voided,
+    /// Known void failures (`"11"`.."21"`).
+    Failed,
+    /// Any other `stat_code` (the default).
+    #[default]
+    Other,
+}
+
+impl FiuuVoidStatus {
+    /// Parse the raw `stat_code` string into the typed variant.
+    pub fn from_stat_code(raw: &str) -> Self {
+        match raw {
+            "00" => Self::Voided,
+            "11" | "12" | "13" | "14" | "15" | "16" | "17" | "18" | "19" | "20" | "21" => {
+                Self::Failed
+            }
+            _ => Self::Other,
+        }
+    }
+}
+
+/// Typed version of the `status` string in [`FiuuRefundSuccessResponse`] —
+/// the Refund initiation response. Same code set as the refund sync: `"00"`
+/// success, `"11"` failure, `"22"` pending; `Other` covers unexpected codes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum FiuuRefundStatus {
+    /// `status "00"` — refund succeeded.
+    Success,
+    /// `status "11"` — refund failed.
+    Failed,
+    /// `status "22"` — refund is pending.
+    Pending,
+    /// Any other status string (the default).
+    #[default]
+    Other,
+}
+
+impl FiuuRefundStatus {
+    /// Parse the raw `status` string into the typed variant.
+    pub fn from_status_str(raw: &str) -> Self {
+        match raw {
+            "00" => Self::Success,
+            "11" => Self::Failed,
+            "22" => Self::Pending,
+            _ => Self::Other,
+        }
     }
 }
 
@@ -1655,7 +1788,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.refund_amount.amount,
+                item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1889,7 +2022,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -2209,7 +2342,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount_to_capture.amount,
+                item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -2351,7 +2484,7 @@ pub struct FiuuPaymentCancelRequest {
 pub struct FiuuPaymentCancelResponse {
     #[serde(rename = "TranID")]
     tran_id: String,
-    stat_code: String,
+    pub stat_code: String,
     #[serde(rename = "miscellaneous")]
     miscellaneous: Option<HashMap<String, Secret<String>>>,
 }

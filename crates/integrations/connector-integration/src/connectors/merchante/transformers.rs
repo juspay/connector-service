@@ -193,9 +193,7 @@ fn sale_txn_type(is_auto_capture: bool) -> MerchanteTransactionType {
 /// `Resubmission` (retry has no distinct Mastercard indicator).
 fn mit_indicator(category: Option<MitCategory>) -> MerchanteCoFMitIndicator {
     match category {
-        Some(MitCategory::Recurring | MitCategory::Subscription) => {
-            MerchanteCoFMitIndicator::Subscription
-        }
+        Some(MitCategory::Recurring) => MerchanteCoFMitIndicator::Subscription,
         Some(MitCategory::Installment) => MerchanteCoFMitIndicator::Installment,
         Some(MitCategory::Unscheduled) | Some(MitCategory::Resubmission) | None => {
             MerchanteCoFMitIndicator::Unscheduled
@@ -327,6 +325,23 @@ impl From<MerchantePaymentStatus> for RefundStatus {
     }
 }
 
+/// Capture-intent context for `to_attempt_status` (transformers.rs:310): an approved
+/// auth is `Charged` when the request was auto-capture, `Authorized` otherwise.
+/// `Default` = auto-capture (the canonical path; `is_auto_capture()` itself
+/// defaults to true at the request layer).
+#[derive(Debug, Clone, Copy)]
+pub struct MerchanteCaptureIntent {
+    pub is_auto_capture: bool,
+}
+
+impl Default for MerchanteCaptureIntent {
+    fn default() -> Self {
+        Self {
+            is_auto_capture: true,
+        }
+    }
+}
+
 // ============================================================================
 // AUTHORIZE (CIT — transaction_type = D or P)
 // ============================================================================
@@ -395,7 +410,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = connector
             .amount_converter
             .convert(
-                router_data.request.amount.amount,
+                router_data.request.minor_amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -407,7 +422,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     ),
                     doc_url: None,
                     additional_context: Some(
-                        "Merchante Authorize: failed to convert PaymentsAuthorizeData.amount.amount \
+                        "Merchante Authorize: failed to convert PaymentsAuthorizeData.minor_amount \
                          into Merchante's decimal-string amount (StringMajorUnit)."
                             .to_string(),
                     ),
@@ -733,7 +748,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = connector
             .amount_converter
             .convert(
-                router_data.request.amount_to_capture.amount,
+                router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -746,7 +761,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     doc_url: None,
                     additional_context: Some(
                         "Merchante Capture (transaction_type=S): failed to convert \
-                         PaymentsCaptureData.amount_to_capture.amount into Merchante's \
+                         PaymentsCaptureData.minor_amount_to_capture into Merchante's \
                          decimal-string amount (StringMajorUnit)."
                             .to_string(),
                     ),
@@ -953,7 +968,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         // Full refund when refund_amount == payment_amount; partial otherwise.
         let is_full_refund =
-            router_data.request.refund_amount.amount == router_data.request.payment_amount.amount;
+            router_data.request.minor_refund_amount == router_data.request.minor_payment_amount;
 
         let amount = if is_full_refund {
             None
@@ -962,7 +977,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 connector
                     .amount_converter
                     .convert(
-                        router_data.request.refund_amount.amount,
+                        router_data.request.minor_refund_amount,
                         router_data.request.currency,
                     )
                     .change_context(IntegrationError::AmountConversionFailed {
@@ -975,7 +990,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             doc_url: None,
                             additional_context: Some(
                                 "Merchante Refund (transaction_type=U, partial): failed to convert \
-                                 RefundsData.refund_amount.amount into Merchante's decimal-string \
+                                 RefundsData.minor_refund_amount into Merchante's decimal-string \
                                  amount."
                                     .to_string(),
                             ),
@@ -1086,7 +1101,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = connector
             .amount_converter
             .convert(
-                router_data.request.amount.amount,
+                router_data.request.minor_amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1099,7 +1114,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     doc_url: None,
                     additional_context: Some(
                         "Merchante RepeatPayment (MIT): failed to convert \
-                         RepeatPaymentData.amount.amount into Merchante's decimal-string amount."
+                         RepeatPaymentData.minor_amount into Merchante's decimal-string amount."
                             .to_string(),
                     ),
                 },

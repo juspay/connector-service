@@ -845,36 +845,6 @@ macros::macro_connector_implementation!(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
-
-            // A Stripe *direct* charge routes by the `Stripe-Account` header, not by
-            // `on_behalf_of`, so a SetupMandate on a connected account has to carry it -- the
-            // sibling CreateConnectorCustomer flow below already does.
-            let transfer_account_id = req
-                .request
-                .split_payments
-                .as_ref()
-                .and_then(|split_payments| {
-                    if let domain_types::connector_types::SplitPaymentsDetails::StripeSplitPayment(stripe_split_payment) =
-                        split_payments
-                    {
-                        Some(stripe_split_payment)
-                    } else {
-                        None
-                    }
-                })
-                .filter(|stripe_split_payment| {
-                    matches!(stripe_split_payment.charge_type, common_enums::PaymentChargeType::Stripe(common_enums::StripeChargeType::Direct))
-                })
-                .map(|stripe_split_payment| stripe_split_payment.transfer_account_id.clone());
-
-            if let Some(transfer_account_id) = transfer_account_id {
-                let mut customer_account_header = vec![(
-                    headers::STRIPE_COMPATIBLE_CONNECT_ACCOUNT.to_string(),
-                    transfer_account_id.clone().into_masked(),
-                )];
-                header.append(&mut customer_account_header);
-            };
-
             let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
@@ -1277,6 +1247,49 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+// Refund: source is the refund's own status; stripe refunds have a Failed
+// terminal so failure targets are not declared here (the From impl drives it).
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Stripe<T>,
+    flow:      Refund,
+    source:    stripe::RefundStatus,
+    context:   (),
+    params:    [status, _ctx],
+    success:   _ => [Success],
+    failure:   none,
+    extractors: {
+        request: RefundsData,
+        response: RefundResponse,
+        source: |response| response.status.clone(),
+        context: |_request, _response| (),
+    },
+    {
+        common_enums::RefundStatus::from(status)
+    }
+}
+
+// RSync mirrors Refund — same `RefundResponse` shape on the sync RPC.
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Stripe<T>,
+    flow:      RSync,
+    source:    stripe::RefundStatus,
+    context:   (),
+    params:    [status, _ctx],
+    success:   _ => [Success],
+    failure:   none,
+    extractors: {
+        request: RefundSyncData,
+        response: RefundSyncResponse,
+        source: |response| response.status.clone(),
+        context: |_request, _response| (),
+    },
+    {
+        common_enums::RefundStatus::from(status)
+    }
+}
 
 macros::macro_connector_flow_status_impls!(
     connector: Stripe,

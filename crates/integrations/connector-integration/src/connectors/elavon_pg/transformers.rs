@@ -293,7 +293,7 @@ pub struct ElavonPgThreeDSecure {
 }
 
 /// EPG accepts only `Y`, `N`, `U` or `A` for `threeDSecure.transactionStatus`
-/// (pattern `[YNUA]`). `C`/`D`/`S` mean the challenge is still outstanding and `R`
+/// (pattern `[YNUA]`). `C`/`D` mean the challenge is still outstanding and `R`
 /// means the issuer refused authorization outright — none of them may be presented
 /// as a finished authentication (spec §5.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -316,7 +316,6 @@ impl TryFrom<common_enums::TransactionStatus> for ElavonPgThreeDsTransactionStat
             common_enums::TransactionStatus::Rejected
             | common_enums::TransactionStatus::ChallengeRequired
             | common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication
-            | common_enums::TransactionStatus::SecurePaymentConfirmationRequired
             | common_enums::TransactionStatus::InformationOnly => {
                 Err(error_stack::report!(IntegrationError::NotSupported {
                     message: format!(
@@ -1154,7 +1153,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount.amount, request.currency)
+            .convert(request.amount, request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: IntegrationErrorContext {
                     additional_context: Some(
@@ -1440,7 +1439,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount.amount, request.currency)
+            .convert(request.minor_amount, request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: IntegrationErrorContext {
                     additional_context: Some(
@@ -1544,7 +1543,7 @@ impl TryFrom<ResponseRouterData<ElavonPgPsyncResponse, Self>>
 /// the response — which keeps Authorize and PSync (which has no request-side capture
 /// method of the connector's own) on exactly the same code path. The request-side
 /// value is only a fallback, and taking it is warned about.
-fn resolve_auto_capture(
+pub(crate) fn resolve_auto_capture(
     response_do_capture: Option<bool>,
     request_is_auto_capture: bool,
     transaction_id: &str,
@@ -1645,7 +1644,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount_to_capture.amount, request.currency)
+            .convert(request.minor_amount_to_capture, request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: IntegrationErrorContext {
                     additional_context: Some(
@@ -1868,7 +1867,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.refund_amount.amount, request.currency)
+            .convert(request.minor_refund_amount, request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: IntegrationErrorContext {
                     additional_context: Some(

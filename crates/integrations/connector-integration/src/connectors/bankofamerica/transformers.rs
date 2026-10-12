@@ -611,7 +611,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .get_decrypted_apple_pay_payment_data_optional()
                     {
                         Some(decrypt_data) => {
-                            Self::try_from((&item, Box::new(decrypt_data.clone()), *apple_pay_data))
+                            Self::try_from((&item, Box::new(decrypt_data.clone()), apple_pay_data))
                         }
                         None => {
                             let email = item
@@ -992,7 +992,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(
-                            item.router_data.request.refund_amount.amount,
+                            item.router_data.request.minor_refund_amount,
                             item.router_data.request.currency,
                         )
                         .change_context(IntegrationError::AmountConversionFailed {
@@ -1012,8 +1012,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[serde(rename_all = "camelCase")]
 pub struct BankOfAmericaRefundResponse {
     id: String,
-    status: BankofamericaRefundStatus,
-    error_information: Option<BankOfAmericaErrorInformation>,
+    pub status: BankofamericaRefundStatus,
+    pub error_information: Option<BankOfAmericaErrorInformation>,
 }
 
 impl From<BankOfAmericaRefundResponse> for common_enums::RefundStatus {
@@ -1214,7 +1214,7 @@ impl<F> TryFrom<ResponseRouterData<BankofamericaPaymentsResponseForCapture, Self
 #[serde(rename_all = "camelCase")]
 pub struct BankOfAmericaClientReferenceResponse {
     id: String,
-    status: BankofamericaPaymentStatus,
+    pub status: BankofamericaPaymentStatus,
     client_reference_information: ClientReferenceInformation,
     processor_information: Option<ClientProcessorInformation>,
     processing_information: Option<ProcessingInformationResponse>,
@@ -1447,7 +1447,7 @@ pub struct BankOfAmericaTokenInformation {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BankOfAmericaErrorInformation {
-    reason: Option<String>,
+    pub(crate) reason: Option<String>,
     message: Option<String>,
     details: Option<Vec<Details>>,
 }
@@ -2175,7 +2175,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -2607,7 +2607,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(
-                            item.router_data.request.amount_to_capture.amount,
+                            item.router_data.request.minor_amount_to_capture,
                             item.router_data.request.currency,
                         )
                         .change_context(IntegrationError::AmountConversionFailed {
@@ -2685,7 +2685,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     total_amount: item
                         .connector
                         .amount_converter
-                        .convert(amount.amount, currency)
+                        .convert(amount, currency)
                         .change_context(IntegrationError::AmountConversionFailed {
                             context: Default::default(),
                         })?,

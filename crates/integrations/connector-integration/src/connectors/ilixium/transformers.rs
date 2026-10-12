@@ -729,7 +729,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount.amount, request.currency)
+            .convert(request.minor_amount, request.currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: None,
@@ -737,7 +737,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     additional_context: Some(format!(
                         "Failed to convert minor_amount {} {} into Ilixium's \
                          transaction.amount (minor units, digits only, sent as a JSON string).",
-                        request.amount.amount.get_amount_as_i64(),
+                        request.minor_amount.get_amount_as_i64(),
                         request.currency
                     )),
                 },
@@ -830,7 +830,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount.amount, currency)
+            .convert(request.amount, currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: None,
@@ -838,7 +838,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     additional_context: Some(format!(
                         "Failed to convert amount {} {} into Ilixium's transaction.amount \
                          (minor units, digits only, sent as a JSON string).",
-                        request.amount.amount.get_amount_as_i64(),
+                        request.amount.get_amount_as_i64(),
                         currency
                     )),
                 },
@@ -1048,7 +1048,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount_to_capture.amount, request.currency)
+            .convert(request.minor_amount_to_capture, request.currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: None,
@@ -1056,7 +1056,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     additional_context: Some(format!(
                         "Failed to convert minor_amount_to_capture {} {} into Ilixium's \
                          transaction.amount (minor units, digits only, sent as a JSON string).",
-                        request.amount_to_capture.amount.get_amount_as_i64(),
+                        request.minor_amount_to_capture.get_amount_as_i64(),
                         request.currency
                     )),
                 },
@@ -1117,7 +1117,7 @@ pub struct IlixiumVoidRequest {
 /// wire — a caller may legitimately omit it. Ilixium, however, makes `transaction.amount`
 /// mandatory *and* requires it to equal the original transaction's amount exactly. There is no
 /// second source to fall back on: `PaymentFlowData` is built for the Void flow with `amount`,
-/// `amount_captured`, `amount_capturable` and `amount_authorized` all set to
+/// `minor_amount_captured`, `minor_amount_capturable` and `minor_amount_authorized` all set to
 /// `None`, so `resource_common_data` knows nothing about the payment's value either.
 ///
 /// Every way of papering over that would be worse than failing:
@@ -1175,10 +1175,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
         };
 
-        let minor_amount = request
-            .amount
-            .as_ref()
-            .ok_or_else(|| missing("amount", "amount"))?;
+        let minor_amount = request.amount.ok_or_else(|| missing("amount", "amount"))?;
         let currency = request
             .currency
             .ok_or_else(|| missing("currency", "currency"))?;
@@ -1186,7 +1183,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(minor_amount.amount, currency)
+            .convert(minor_amount, currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: None,
@@ -1194,7 +1191,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     additional_context: Some(format!(
                         "Failed to convert void amount {} {} into Ilixium's \
                          transaction.amount (minor units, digits only, sent as a JSON string).",
-                        minor_amount.amount.get_amount_as_i64(),
+                        minor_amount.get_amount_as_i64(),
                         currency
                     )),
                 },
@@ -1401,7 +1398,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.refund_amount.amount, request.currency)
+            .convert(request.minor_refund_amount, request.currency)
             .change_context(errors::IntegrationError::AmountConversionFailed {
                 context: errors::IntegrationErrorContext {
                     suggested_action: None,
@@ -1409,7 +1406,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     additional_context: Some(format!(
                         "Failed to convert minor_refund_amount {} {} into Ilixium's \
                          transaction.amount (minor units, digits only, sent as a JSON string).",
-                        request.refund_amount.amount.get_amount_as_i64(),
+                        request.minor_refund_amount.get_amount_as_i64(),
                         request.currency
                     )),
                 },
@@ -1428,6 +1425,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             merchant: IlixiumMerchant::from(&auth),
         })
     }
+}
+
+/// Context bundle for the Authorize flow status macro.
+/// Mirrors the three inputs that `map_attempt_status` uses beyond the status code itself.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct IlixiumAuthorizeCtx {
+    pub operation_type: Option<IlixiumOperationType>,
+    pub has_three_ds_url: bool,
+    pub is_auto_capture: bool,
 }
 
 /// Request-level outcome. **Every** business failure is returned as HTTP 200 with one of these
@@ -1809,6 +1815,13 @@ fn map_attempt_status(
     }
 }
 
+pub fn pre_authenticate_status<T: PaymentMethodDataTypes>(
+    request: &PaymentsPreAuthenticateData<T>,
+    response: &IlixiumPreAuthenticateResponse,
+) -> AttemptStatus {
+    map_attempt_status(response, request.is_auto_capture().unwrap_or(true))
+}
+
 /// Maps a `/direct/capture` response onto a UCS attempt status.
 ///
 /// Kept separate from [`map_attempt_status`] because the same `status.code` means something
@@ -1820,7 +1833,7 @@ fn map_capture_status(response: &IlixiumPaymentResponse) -> AttemptStatus {
     match response.status.code {
         IlixiumStatusCode::Success => AttemptStatus::Charged,
         IlixiumStatusCode::Pending => AttemptStatus::CaptureInitiated,
-        IlixiumStatusCode::Cancelled => AttemptStatus::Voided,
+        IlixiumStatusCode::Cancelled => AttemptStatus::CaptureFailed,
         IlixiumStatusCode::Declined | IlixiumStatusCode::Rejected | IlixiumStatusCode::Error => {
             AttemptStatus::CaptureFailed
         }
@@ -2963,6 +2976,27 @@ impl IlixiumHistoryResponse {
                     .then_with(|| left_index.cmp(right_index))
             })
             .map(|(_, operation)| operation)
+    }
+
+    pub fn payment_sync_flow_status(
+        &self,
+        merchant_ref: &str,
+        current_status: AttemptStatus,
+        requested_auto_capture: bool,
+    ) -> AttemptStatus {
+        if self.status.code != IlixiumHistoryStatusCode::Success {
+            return current_status;
+        }
+
+        let Some(operation) = self.latest_payment_operation(merchant_ref) else {
+            return current_status;
+        };
+
+        let Some(operation_status) = operation.status.as_ref() else {
+            return current_status;
+        };
+
+        map_history_sync_status(operation, operation_status, requested_auto_capture)
     }
 }
 

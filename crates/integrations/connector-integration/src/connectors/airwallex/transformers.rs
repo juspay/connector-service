@@ -1328,7 +1328,7 @@ pub struct AirwallexPaymentAttempt {
     pub updated_at: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AirwallexPaymentStatus {
     RequiresPaymentMethod,
@@ -1370,7 +1370,7 @@ pub struct AirwallexCardInfo {
     pub fingerprint: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum AirwallexNextActionType {
     Redirect,
@@ -1679,13 +1679,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         // Extract capture amount from the capture data
-        let capture_amount = item.router_data.request.amount_to_capture.amount;
+        let capture_amount = item.router_data.request.amount_to_capture;
 
         // Use connector amount converter for proper amount formatting in major units (hyperswitch pattern)
         let amount = item
             .connector
             .amount_converter
-            .convert(capture_amount, item.router_data.request.currency)
+            .convert(
+                common_utils::MinorUnit::new(capture_amount),
+                item.router_data.request.currency,
+            )
             .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1785,7 +1788,7 @@ pub struct AirwallexRefundResponse {
     pub metadata: Option<serde_json::Value>,        // Additional metadata
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AirwallexRefundStatus {
     Received,
@@ -1815,11 +1818,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_intent_id = item.router_data.request.connector_transaction_id.clone();
 
         // Extract refund amount from RefundsData and convert to major units (hyperswitch pattern)
-        let refund_amount = item.router_data.request.refund_amount.amount;
+        let refund_amount = item.router_data.request.refund_amount;
         let amount = item
             .connector
             .amount_converter
-            .convert(refund_amount, item.router_data.request.currency)
+            .convert(
+                common_utils::MinorUnit::new(refund_amount),
+                item.router_data.request.currency,
+            )
             .map_err(|_| IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -2201,7 +2207,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.amount,
                 item.router_data.request.currency,
             )
             .map_err(|_| IntegrationError::RequestEncodingFailed {
