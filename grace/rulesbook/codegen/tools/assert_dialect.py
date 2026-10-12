@@ -4,9 +4,9 @@
 Why this exists. Two independent GRACE runs on the same connector wrote §8 assertions in a
 dialect `crates/internal/integration-tests/src/harness` does not implement -- rule names
 `not_one_of` / `not_contains_text`, and path operators `#json` / `#b64json` / `a|b`. The
-first run deleted the scenario file and never tracked it; the second escalated three
-PLAN_CONFLICTs and burned three plan revisions discovering the same thing one layer at a
-time. Neither had a mechanical check, because `2.3a_plan.md` Phase 9 authors assertions
+first run deleted the scenario file and never tracked it; the second raised three
+PLAN_CONFLICT reports and burned three plan revisions discovering the same thing one
+layer at a time. Neither had a mechanical check, because `2.3a_plan.md` Phase 9 authors assertions
 without being required to read the code that must run them.
 
 The failure is not graceful. `FieldAssert` is `#[serde(untagged)]`, and its own source says
@@ -156,9 +156,9 @@ def disk_scenarios(root, suite):
     try:
         obj = json.load(open(path))
     except Exception as e:
-        return None, "UNPARSEABLE %s: %s" % (path, str(e)[:80])
+        return None, "UNPARSABLE %s: %s" % (path, str(e)[:80])
     if not isinstance(obj, dict):
-        return None, "UNPARSEABLE %s: top level is %s, not a scenario map" % (path, type(obj).__name__)
+        return None, "UNPARSABLE %s: top level is %s, not a scenario map" % (path, type(obj).__name__)
     return set(obj), None
 
 
@@ -188,7 +188,7 @@ def check_loadability(plan, root):
                     continue
                 ids, err = ids_for(suite)
                 if ids is None:
-                    (inconclusive if err.startswith("UNPARSEABLE") else unresolved).append(
+                    (inconclusive if err.startswith("UNPARSABLE") else unresolved).append(
                         {"unit": unit, "bucket": key, "suite": suite, "scenario": name,
                          "why": err})
                     continue
@@ -213,7 +213,7 @@ def check_loadability(plan, root):
                 continue
             ids, err = ids_for(suite)
             if ids is None:
-                if err.startswith("UNPARSEABLE"):
+                if err.startswith("UNPARSABLE"):
                     inconclusive.append({"unit": unit, "bucket": "connector_scenarios",
                                          "suite": suite, "scenario": name, "why": err})
                 continue  # a missing suite dir is already reported by the reference pass
@@ -287,7 +287,7 @@ def main():
     load_checks, inconclusive = check_loadability(plan, suite_root(a.repo_root))
     checks += load_checks
     ok = all(c["pass"] for c in checks)
-    # an unparseable suite file means we could not evaluate loadability -- reporting that as a
+    # an unparsable suite file means we could not evaluate loadability -- reporting that as a
     # pass would be the same "passes for the wrong reason" failure the brace matcher above fixes
     if inconclusive:
         return emit({"pass": False, "checks": checks, "inconclusive": inconclusive,
@@ -434,11 +434,11 @@ def _replay():
              "reason": "PM_NOT_OFFERED: docs - n/a"}]}]}
         assert not [x for x in check_loadability(w, root)[0] if x["id"] == "DIAL-03"][0]["pass"]
 
-        # an unparseable suite file is could-not-evaluate, never a pass
+        # an unparsable suite file is could-not-evaluate, never a pass
         with open(os.path.join(d, "scenario.json"), "w") as fh:
             fh.write("{ not json")
         c, inc = check_loadability(ok_plan, root)
-        assert inc and all(i["why"].startswith("UNPARSEABLE") for i in inc), inc
+        assert inc and all(i["why"].startswith("UNPARSABLE") for i in inc), inc
         assert all(x["pass"] for x in c), "an unreadable file must not manufacture findings"
 
     print("replay OK: the supported set is parsed from the harness enum (not hardcoded), an "
@@ -446,7 +446,7 @@ def _replay():
           "#json/alternation paths fail DIAL-02, the negation asymmetry is asserted, and a rule "
           "added to the harness stops being a finding with no edit here; DIAL-03 does the literal "
           "load_scenario lookup and names both legal outcomes, DIAL-04 catches the on-disk "
-          "collision the plan's jq cannot see, and an unparseable suite file is "
+          "collision the plan's jq cannot see, and an unparsable suite file is "
           "could-not-evaluate rather than a pass")
     return 0
 

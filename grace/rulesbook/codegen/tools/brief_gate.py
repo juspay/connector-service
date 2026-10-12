@@ -248,9 +248,9 @@ def _replay():
     assert not [x for x in c if x["id"] == "BRIEF-07"][0]["pass"], "an invented item must fail"
     # plan §2 foundation items in the first unit's brief are legitimate, not invented --
     # this is what the live run caught: BRIEF-07 reported invented=[P-foundation-01..07]
-    fnd = json.loads(json.dumps(good))
-    fnd["items"].append(dict(good["items"][0], item_id="P-foundation-01"))
-    c, _, _ = check_brief(fnd, ["P-Refund-01"], ["P-foundation-01"])
+    foundation = json.loads(json.dumps(good))
+    foundation["items"].append(dict(good["items"][0], item_id="P-foundation-01"))
+    c, _, _ = check_brief(foundation, ["P-Refund-01"], ["P-foundation-01"])
     assert [x for x in c if x["id"] == "BRIEF-07"][0]["pass"], "foundation ids must be allowed"
     # ...but a genuinely invented id still fails even with foundation allowed
     inv = json.loads(json.dumps(good))
