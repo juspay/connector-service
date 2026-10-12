@@ -18,7 +18,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Maskable};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, decode::BodyDecoding,
     verification::ConnectorSourceVerificationSecrets,
@@ -282,7 +282,7 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Basic {}", encoded).into(),
+                    format!("Basic {}", encoded).into_masked(),
                 ),
             ])
         }
@@ -361,7 +361,7 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into(),
+                    format!("Bearer {}", access_token).into_masked(),
                 ),
             ])
         }
