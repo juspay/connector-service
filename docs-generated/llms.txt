@@ -906,7 +906,7 @@ examples_python: none
 connector_id: travelhub
 doc: docs/connectors/travelhub.md
 scenarios: checkout_autocapture, checkout_card, refund, void_payment, get_payment
-payment_methods: Card
+payment_methods: ApplePay, ApplePayDecrypted, Card
 flows: authorize, capture, get, proxy_authorize, refund, void
 examples_python: examples/travelhub/travelhub.py
 
