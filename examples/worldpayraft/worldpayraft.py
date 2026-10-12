@@ -112,11 +112,9 @@ def _build_proxy_setup_recurring_request():
 
 def _build_recurring_charge_request():
     return payment_pb2.RecurringPaymentServiceChargeRequest(
-        merchant_charge_id="probe_charge_001",  # Reference ID for tracking.
         connector_recurring_payment_id=payment_pb2.MandateReference(  # Reference to existing mandate.
-            connector_mandate_id=payment_pb2.ConnectorMandateReferenceId(
+            connector_mandate_id=payment_pb2.ConnectorMandateReferenceId(  # mandate_id sent by the connector.
                 connector_mandate_id="probe-mandate-123",
-                mandate_metadata=payment_methods_pb2.SecretString(value="{\"is_stored_credential\":true,\"card_network\":\"Visa\",\"expiration_date\":\"3003\"}"),
             ),
         ),
         amount=payment_pb2.Money(  # Amount Information.
@@ -130,7 +128,7 @@ def _build_recurring_charge_request():
         ),
         return_url="https://example.com/recurring-return",
         connector_customer_id="cust_probe_123",
-        payment_method_type=payment_pb2.PaymentMethodType.Value("CREDIT"),
+        payment_method_type=payment_pb2.PaymentMethodType.Value("PAY_PAL"),
         off_session=True,  # Behavioral Flags and Preferences.
     )
 

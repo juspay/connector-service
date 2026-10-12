@@ -434,7 +434,9 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
         connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate.
             connectorMandateIdBuilder.apply {  // mandate_id sent by the connector.
-                connectorMandateId = "probe-mandate-123"
+                connectorMandateIdBuilder.apply {
+                    connectorMandateId = "probe-mandate-123"
+                }
             }
         }
         amountBuilder.apply {  // Amount Information.
