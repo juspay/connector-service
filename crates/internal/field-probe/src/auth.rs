@@ -518,6 +518,11 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             application_identifier: Secret::new("probe_app_id".to_string()),
             base_url: None,
         },
+        ConnectorEnum::Kora => ConnectorSpecificConfig::Kora {
+            secret_key: k(),
+            encryption_key: k(),
+            base_url: None,
+        },
         ConnectorEnum::Novalnet => ConnectorSpecificConfig::Novalnet {
             product_activation_key: k(),
             payment_access_key: Secret::new("probe_payment_access".to_string()),

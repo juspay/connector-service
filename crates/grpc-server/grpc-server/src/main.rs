@@ -5,8 +5,19 @@ use grpc_server::{self, app};
 use ucs_env::{configs, logger};
 
 #[allow(clippy::unwrap_in_result)]
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Debug builds of the connector flow chain (grpc handler → macro-generated
+    // dispatch → execute_connector_processing_step → call_connector_api) exceed
+    // tokio's default 2 MiB worker stack for the deeper flows (e.g.
+    // Authenticate). 16 MiB keeps every flow safely inside the stack budget.
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .thread_stack_size(16 * 1024 * 1024)
+        .build()?;
+    runtime.block_on(async_main())
+}
+
+async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(debug_assertions)]
     verify_other_config_files();
 

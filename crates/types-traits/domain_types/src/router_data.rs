@@ -947,6 +947,12 @@ pub enum ConnectorSpecificConfig {
         auth_server_id: Option<String>,
         base_url: Option<String>,
     },
+    Kora {
+        secret_key: Secret<String>,
+        /// AES-256-GCM key used to encrypt the direct card charge payload.
+        encryption_key: Secret<String>,
+        base_url: Option<String>,
+    },
     Grabpay {
         partner_id: Secret<String>,
         partner_secret: Secret<String>,
@@ -1333,6 +1339,10 @@ impl ConnectorSpecificConfig {
             },
             Tamara { api_key },
             Kount { api_key },
+            Kora {
+                secret_key,
+                encryption_key
+            },
             Hyperswitch { api_key },
             Grabpay {
                 partner_id,
@@ -1818,6 +1828,10 @@ impl ConnectorSpecificConfig {
                 },
                 Tamara { api_key },
                 Kount { api_key },
+                Kora {
+                    secret_key,
+                    encryption_key
+                },
                 Hyperswitch { api_key },
                 Grabpay {
                     partner_id,
@@ -2446,6 +2460,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: kount.api_key.ok_or_else(err)?,
                 auth_server_id: kount.auth_server_id,
                 base_url: kount.base_url,
+            }),
+            AuthType::Kora(kora) => Ok(Self::Kora {
+                secret_key: kora.secret_key.ok_or_else(err)?,
+                encryption_key: kora.encryption_key.ok_or_else(err)?,
+                base_url: kora.base_url,
             }),
             AuthType::Hyperswitch(hyperswitch) => Ok(Self::Hyperswitch {
                 api_key: hyperswitch.api_key.ok_or_else(err)?,
@@ -3675,6 +3694,19 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                     ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Kount {
                         api_key: api_key.clone(),
                         auth_server_id: None,
+                        base_url: None,
+                    }),
+                    _ => Err(err().into()),
+                },
+                ConnectorEnum::Kora => match auth {
+                    ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Kora {
+                        secret_key: api_key.clone(),
+                        encryption_key: api_key.clone(),
+                        base_url: None,
+                    }),
+                    ConnectorAuthType::BodyKey { api_key, .. } => Ok(Self::Kora {
+                        secret_key: api_key.clone(),
+                        encryption_key: api_key.clone(),
                         base_url: None,
                     }),
                     _ => Err(err().into()),

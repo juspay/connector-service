@@ -53,6 +53,9 @@ pub use self::nexinets::Nexinets;
 pub mod noon;
 pub use self::noon::Noon;
 
+pub mod kora;
+pub use self::kora::Kora;
+
 pub mod braintree;
 pub use self::braintree::Braintree;
 

@@ -2640,6 +2640,7 @@ pub enum RoutableConnectors {
     Inespay,
     Itaubank,
     Jpmorgan,
+    Kora,
     Klarna,
     Mifinity,
     Mollie,

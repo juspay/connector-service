@@ -39,14 +39,38 @@ where
     type Rejection = Response;
 
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        // Buffer the body so a decode failure can log the offending payload —
+        // otherwise the JSON rejection hides the bytes that failed to parse.
+        let (parts, body) = req.into_parts();
+        let bytes = match axum::body::to_bytes(body, 10 * 1024 * 1024).await {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                return Err(HttpError {
+                    status: StatusCode::BAD_REQUEST,
+                    message: format!("Failed to read request body: {err}"),
+                    details: None,
+                }
+                .into_response())
+            }
+        };
+        let req = Request::from_parts(parts, axum::body::Body::from(bytes.clone()));
         match Json::<T>::from_request(req, state).await {
             Ok(Json(value)) => Ok(Self(value)),
-            Err(rejection) => Err(HttpError {
-                status: StatusCode::BAD_REQUEST,
-                message: rejection.to_string(),
-                details: None,
+            Err(rejection) => {
+                // The rejection message names the field but not the payload;
+                // log both to make decode failures diagnosable.
+                tracing::error!(
+                    uri = ?std::string::ToString::to_string(&rejection),
+                    body = %String::from_utf8_lossy(&bytes),
+                    "JSON body failed to deserialize"
+                );
+                Err(HttpError {
+                    status: StatusCode::BAD_REQUEST,
+                    message: rejection.to_string(),
+                    details: None,
+                }
+                .into_response())
             }
-            .into_response()),
         }
     }
 }

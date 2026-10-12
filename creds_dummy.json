@@ -213,6 +213,11 @@
     "api_secret": { "value": "<REPLACE_WITH_YOUR_VALUE>" },
     "_comment": "Configuration for noon connector"
   },
+  "kora": {
+    "secret_key": { "value": "<REPLACE_WITH_YOUR_VALUE>" },
+    "encryption_key": { "value": "<REPLACE_WITH_YOUR_VALUE>" },
+    "_comment": "Configuration for kora (korapay) connector"
+  },
   "novalnet": {
     "api_key": { "value": "<REPLACE_WITH_YOUR_VALUE>" },
     "_comment": "Configuration for novalnet connector"

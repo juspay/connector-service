@@ -903,6 +903,7 @@ enum Connector {
   CITIGATE = 137;
   ILIXIUM = 138;
   WORLDPAYRAFT = 139;
+  KORA = 140;
 }
 
 // Payment method types
@@ -5244,6 +5245,15 @@ message NoonConfig {
   optional string base_url = 50;
 }
 
+message KoraConfig {
+  // Merchant secret key (e.g. sk_live_... / sk_test_...) used as the Bearer token
+  SecretString secret_key = 1;
+  // Encryption key (dashboard → Settings → API configuration) used for
+  // AES-256-GCM encryption of the direct card charge payload
+  SecretString encryption_key = 2;
+  optional string base_url = 50;
+}
+
 message RedsysConfig {
   SecretString merchant_id = 1;
   SecretString terminal_id = 2;
@@ -6042,6 +6052,8 @@ message ConnectorSpecificConfig {
     IlixiumConfig ilixium = 148;
     // WORLDPAYRAFT = 139
     WorldpayraftConfig worldpayraft = 149;
+    // KORA = 140
+    KoraConfig kora = 150;
   }
 }
 

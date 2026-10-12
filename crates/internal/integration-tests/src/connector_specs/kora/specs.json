@@ -1,0 +1,10 @@
+{
+  "connector": "kora",
+  "supported_suites": [
+    "PaymentService/Authorize",
+    "PaymentService/Get",
+    "PaymentService/Refund",
+    "RefundService/Get"
+  ],
+  "sync_poll_until_terminal_seconds": 60
+}

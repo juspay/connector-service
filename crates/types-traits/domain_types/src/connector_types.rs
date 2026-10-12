@@ -128,6 +128,7 @@ pub enum ConnectorEnum {
     Powertranz,
     Getnet,
     Jpmorgan,
+    Kora,
     Bambora,
     Payme,
     Revolut,
@@ -452,6 +453,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
+            grpc_api_types::payments::Connector::Kora => Ok(Self::Kora),
             grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
             grpc_api_types::payments::Connector::Braintree => Ok(Self::Braintree),
             grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
@@ -2342,6 +2344,10 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub domain_data: Option<DomainData>,
     pub sdk_information: Option<SdkInformation>,
     pub device_channel: Option<DeviceChannel>,
+    /// Raw request metadata passthrough. Connectors that need extra
+    /// user-supplied auth factors (e.g. Kora's `{"otp": ...}` /
+    /// `{"pin": ...}` authorize continuation) read named keys off this.
+    pub metadata: Option<SecretSerdeValue>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
@@ -5701,6 +5707,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Helcim(_) => Ok(Self::Payment(ConnectorEnum::Helcim)),
             AuthType::Iatapay(_) => Ok(Self::Payment(ConnectorEnum::Iatapay)),
             AuthType::Jpmorgan(_) => Ok(Self::Payment(ConnectorEnum::Jpmorgan)),
+            AuthType::Kora(_) => Ok(Self::Payment(ConnectorEnum::Kora)),
             AuthType::Mifinity(_) => Ok(Self::Payment(ConnectorEnum::Mifinity)),
             AuthType::Mollie(_) => Ok(Self::Payment(ConnectorEnum::Mollie)),
             AuthType::Multisafepay(_) => Ok(Self::Payment(ConnectorEnum::Multisafepay)),

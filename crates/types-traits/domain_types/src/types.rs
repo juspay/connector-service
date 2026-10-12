@@ -342,6 +342,7 @@ pub struct Connectors {
     pub nexinets: ConnectorParams,
     pub netcetera: ConnectorParams,
     pub noon: ConnectorParams,
+    pub kora: ConnectorParams,
     pub braintree: ConnectorParams,
     pub volt: ConnectorParams,
     pub calida: ConnectorParams,
@@ -18152,6 +18153,11 @@ impl<
                 .as_ref()
                 .and_then(|m| serde_json::from_str::<AuthenticateSdkMetadata>(m.peek()).ok())
                 .and_then(|m| m.device_channel),
+            metadata: value.metadata.as_ref().and_then(|m| {
+                serde_json::from_str::<serde_json::Value>(m.peek())
+                    .ok()
+                    .map(hyperswitch_masking::Secret::new)
+            }),
         })
     }
 }

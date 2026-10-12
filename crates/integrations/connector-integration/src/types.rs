@@ -60,6 +60,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Netcetera => Box::new(connectors::Netcetera::new()),
             ConnectorEnum::Nexinets => Box::new(connectors::Nexinets::new()),
             ConnectorEnum::Noon => Box::new(connectors::Noon::new()),
+            ConnectorEnum::Kora => Box::new(connectors::Kora::new()),
             ConnectorEnum::Volt => Box::new(connectors::Volt::new()),
             ConnectorEnum::Braintree => Box::new(connectors::Braintree::new()),
             ConnectorEnum::Calida => Box::new(connectors::Calida::new()),
