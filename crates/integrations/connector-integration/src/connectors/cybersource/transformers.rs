@@ -502,7 +502,14 @@ pub struct ProcessingInformation {
     #[serde(skip_serializing_if = "Option::is_none")]
     bank_transfer_options: Option<BankTransferOptions>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    purchase_level: Option<String>,
+    purchase_level: Option<CybersourcePurchaseLevel>,
+}
+
+/// `processingInformation.purchaseLevel`.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum CybersourcePurchaseLevel {
+    #[serde(rename = "3")]
+    Three,
 }
 
 #[derive(Debug, Serialize)]
@@ -525,6 +532,31 @@ pub enum CybersourceParesStatus {
     AuthenticationFailed,
     #[serde(rename = "U")]
     AuthenticationNotCompleted,
+}
+
+/// `consumerAuthenticationInformation.veresEnrolled` of the enrollment check.
+/// https://raw.githubusercontent.com/CyberSource/cybersource-rest-client-java/master/docs/RiskV1DecisionsPost201ResponseConsumerAuthenticationInformation.md
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, strum::Display)]
+pub enum CybersourceVeresEnrolled {
+    /// Card enrolled; the outcome is in `paresStatus`.
+    #[serde(rename = "Y")]
+    #[strum(serialize = "Y")]
+    Enrolled,
+    /// Card not enrolled or cardholder not participating.
+    #[serde(rename = "N")]
+    #[strum(serialize = "N")]
+    NotEnrolled,
+    /// Unable to authenticate (not available on lookup, enrollment error, time out).
+    #[serde(rename = "U")]
+    #[strum(serialize = "U")]
+    Unavailable,
+    /// Authentication bypassed.
+    #[serde(rename = "B")]
+    #[strum(serialize = "B")]
+    Bypassed,
+    /// Any value this connector does not list.
+    #[serde(other)]
+    Unknown,
 }
 
 impl From<CybersourceParesStatus> for common_enums::TransactionStatus {
@@ -617,6 +649,7 @@ fn get_three_ds_data_for_authenticate_response(
         "specificationVersion": validate_response.specification_version,
         "directoryServerTransactionId": validate_response.directory_server_transaction_id,
         "paresStatus": validate_response.pares_status,
+        "veresEnrolled": validate_response.veres_enrolled,
         "indicator": validate_response.indicator,
         "ecommerceIndicator": validate_response.ecommerce_indicator,
     })
@@ -675,15 +708,30 @@ fn get_commerce_indicator_for_three_ds_data(
 /// authentication leg's `three_ds_data`.
 ///
 /// `paresStatus` is the outcome Cybersource returned for the enrollment or the
-/// validation, never a constant. An authentication that failed, was rejected or
-/// stopped at an unvalidated challenge is refused here, before any connector call,
-/// and so is a `three_ds_data` that states neither an outcome nor an authentication
-/// value.
+/// validation, never a constant. Refused here, before any connector call:
+/// an authentication that failed (`N`), was rejected (`R`) or stopped at an
+/// unvalidated challenge (`C`), and a `three_ds_data` that states no outcome at all
+/// (no `paresStatus`, no authentication value, no enrollment answer).
+///
+/// Everything else is sent, because Cybersource documents "submit your authorization
+/// request" for it: attempted (`A`), unavailable (`U`), and an enrollment check that
+/// answered without authenticating - `veresEnrolled` `U` (authentication not available
+/// on lookup, enrollment error, time out), `B` (bypassed) or `N` (card not enrolled).
+/// Those carry no `paresStatus` and no CAVV; the authorization goes out with the
+/// enrollment's own `ecommerceIndicator` and no liability shift is claimed.
+/// https://developer.cybersource.com/docs/cybs/en-us/payer-authentication/developer/all/rest/payer-auth/pa-testing-intro/pa-testing-3ds-2x-intro/pa-testing-3ds-2x-auth-not-available-lookup.md
+/// https://developer.cybersource.com/docs/cybs/en-us/payer-authentication/developer/all/rest/payer-auth/pa-testing-intro/pa-testing-3ds-2x-intro/pa-testing-3ds-2x-bypassed-auth.md
 fn build_consumer_auth_information_from_three_ds_data(
     three_ds_data: CybersourceConsumerAuthValidateResponse,
 ) -> Result<CybersourceConsumerAuthInformation, error_stack::Report<IntegrationError>> {
     let has_authentication_value =
         three_ds_data.cavv.is_some() || three_ds_data.ucaf_authentication_data.is_some();
+    let enrollment_answered_without_authentication = matches!(
+        three_ds_data.veres_enrolled,
+        Some(CybersourceVeresEnrolled::Unavailable)
+            | Some(CybersourceVeresEnrolled::Bypassed)
+            | Some(CybersourceVeresEnrolled::NotEnrolled)
+    );
     let refused = match three_ds_data.pares_status {
         // failed, rejected, or a challenge that was never validated
         Some(CybersourceParesStatus::AuthenticationFailed)
@@ -692,21 +740,23 @@ fn build_consumer_auth_information_from_three_ds_data(
         Some(CybersourceParesStatus::AuthenticationSuccessful)
         | Some(CybersourceParesStatus::AuthenticationAttempted)
         | Some(CybersourceParesStatus::AuthenticationNotCompleted) => false,
-        // no stated outcome: only acceptable together with an authentication value
-        None => !has_authentication_value,
+        // no paresStatus: acceptable with an authentication value, or when the
+        // enrollment check itself says no authentication took place
+        None => !has_authentication_value && !enrollment_answered_without_authentication,
     };
     if refused {
         return Err(IntegrationError::InvalidDataFormat {
             field_name: "connector_feature_data.three_ds_data.paresStatus",
             context: utils::integration_ctx(
-                "the payer authentication forwarded in three_ds_data did not succeed (failed, rejected, challenge not completed, or no outcome and no authentication value)",
+                "the payer authentication forwarded in three_ds_data failed, was rejected, stopped at an unfinished challenge, or states no outcome at all (no paresStatus, no authentication value, no veresEnrolled U / B / N)",
                 "Do not authorize after a failed authentication; complete the challenge (PostAuthenticate) or send the payment without three_ds_data",
             ),
         }
         .into());
     }
     Ok(CybersourceConsumerAuthInformation {
-        // The outcome Cybersource returned (Y / A / U), never a constant.
+        // The outcome Cybersource returned (Y / A / U), never a constant; absent when
+        // the enrollment check returned none.
         pares_status: three_ds_data.pares_status,
         ucaf_collection_indicator: three_ds_data.ucaf_collection_indicator,
         cavv: three_ds_data.cavv,
@@ -715,7 +765,12 @@ fn build_consumer_auth_information_from_three_ds_data(
         directory_server_transaction_id: three_ds_data.directory_server_transaction_id,
         specification_version: three_ds_data.specification_version.clone(),
         pa_specification_version: three_ds_data.specification_version,
-        veres_enrolled: None,
+        // "Authorization after authentication" field mapping: the enrollment's
+        // veresEnrolled is copied; a value this connector does not list is not.
+        veres_enrolled: three_ds_data
+            .veres_enrolled
+            .filter(|veres_enrolled| !matches!(veres_enrolled, CybersourceVeresEnrolled::Unknown))
+            .map(|veres_enrolled| veres_enrolled.to_string()),
         eci_raw: None,
         authentication_date: None,
         effective_authentication_type: None,
@@ -1482,7 +1537,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             purchase_level: has_l2_l3_line_items(
                 item.router_data.resource_common_data.l2_l3_data.as_deref(),
             )
-            .then(|| CYBERSOURCE_PURCHASE_LEVEL_THREE.to_string()),
+            .then_some(CybersourcePurchaseLevel::Three),
         })
     }
 }
@@ -1813,8 +1868,6 @@ const VERES_ENROLLED_AUTHENTICATED: &str = "Y";
 const DEFAULT_CAVV_ALGORITHM: &str = "2";
 /// Cybersource card type code of Mastercard (`paymentInformation.card.type`).
 const CYBERSOURCE_MASTERCARD_CARD_TYPE: &str = "002";
-/// `processingInformation.purchaseLevel` value declaring Level III data.
-const CYBERSOURCE_PURCHASE_LEVEL_THREE: &str = "3";
 
 /// Builds the Cybersource `consumerAuthenticationInformation` block from external 3DS
 /// authentication data, mirroring Hyperswitch's construction at every call site: the
@@ -2746,7 +2799,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     bank_transfer_options: Some(BankTransferOptions {
                         sec_code: String::from("WEB"),
                     }),
-                    // Level III is card data: never sent on an eCheck.
+                    // purchaseLevel is card data and is not declared on an eCheck; the line
+                    // items and level amounts of orderInformation are still sent.
                     purchase_level: None,
                 };
 
@@ -4877,6 +4931,8 @@ pub struct CybersourceConsumerAuthValidateResponse {
     /// Also needed for Credit Mutuel-CIC in France and Mastercard Identity Check transactions
     /// This field is only applicable for Mastercard and Visa Transactions
     pares_status: Option<CybersourceParesStatus>,
+    /// Answer of the enrollment check; absent on a validation response.
+    veres_enrolled: Option<CybersourceVeresEnrolled>,
     ucaf_collection_indicator: Option<String>,
     cavv: Option<Secret<String>>,
     ucaf_authentication_data: Option<Secret<String>>,
@@ -5286,7 +5342,9 @@ impl<F> TryFrom<ResponseRouterData<CybersourceTransactionResponse, Self>>
                     common_enums::AttemptStatus::Authorized
                 } else {
                     match item.router_data.resource_common_data.status {
-                        common_enums::AttemptStatus::Unspecified => {
+                        // the gRPC surface seeds PSync with `Unknown`
+                        common_enums::AttemptStatus::Unspecified
+                        | common_enums::AttemptStatus::Unknown => {
                             common_enums::AttemptStatus::Pending
                         }
                         current_status => current_status,
@@ -6492,10 +6550,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .authentication_data
             .as_ref()
             .and_then(|authn_data| {
-                authn_data
-                    .eci
-                    .clone()
-                    .map(|eci| get_commerce_indicator_for_external_authentication(network, eci))
+                authn_data.eci.clone().map(|eci| {
+                    get_commerce_indicator_for_authentication_result(
+                        network,
+                        eci,
+                        authn_data.trans_status.as_ref(),
+                    )
+                })
             });
 
         Ok(Self {
@@ -6651,7 +6712,6 @@ fn get_commerce_indicator_for_authentication_result(
         // 07 = failed / not authenticated for most networks. Cybersource maps
         // ECI 07 for Mastercard/Maestro to an authenticated MIT (`spa`).
         "07" => match card_network {
-            Some("amex") | Some("discover") | Some("diners") => "internet",
             Some("unionpay") => "up3ds_failure",
             Some("visa") => "vbv_failure",
             Some("jcb") => "js_failure",
@@ -6919,9 +6979,10 @@ impl TryFrom<ResponseRouterData<CybersourceClientAuthResponse, Self>>
 
 // ---- Webhook types ----
 //
-// Cybersource webhook notifications (product `payments`). Envelope, event list and signature
-// scheme: technical specification "### IncomingWebhook", "## Webhook Events",
-// "### Webhook Payload Structure" and "### Webhook Authentication & Signature Verification".
+// Cybersource webhook notifications (product `payments`).
+// Envelope: https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-notification-format.html
+// Event list: https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-intro/wh-fg-product-event-types.html
+// Signature scheme: https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-key-dig-sig-intro.html
 
 /// Name of the header that carries the notification signature.
 pub const CYBERSOURCE_WEBHOOK_SIGNATURE_HEADER: &str = "v-c-signature";
@@ -6929,7 +6990,7 @@ pub const CYBERSOURCE_WEBHOOK_SIGNATURE_HEADER: &str = "v-c-signature";
 /// `eventType` of a notification. Only the `payments` product events that describe a payment
 /// or a refund are mapped; every other value (credits, token management, Decision Manager, ...)
 /// deserializes to `Unknown` and is refused.
-/// Source: technical specification "### Event Types".
+/// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-intro/wh-fg-product-event-types.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum CybersourceWebhookEventType {
     #[serde(rename = "payments.authorization.status.accepted")]
@@ -6963,7 +7024,7 @@ pub enum CybersourceWebhookEventType {
 impl CybersourceWebhookEventType {
     /// Whether the event describes a payment (authorization, capture, void, reversal). Needs no
     /// payment context, so the stateless `ParseEvent` path classifies an event with it.
-    /// Source: technical specification "### Event Types".
+    /// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-intro/wh-fg-product-event-types.html
     pub fn is_payment_event(self) -> bool {
         match self {
             Self::AuthorizationAccepted
@@ -6981,34 +7042,40 @@ impl CybersourceWebhookEventType {
     }
 
     /// Payment status carried by the event; `None` for refund events and unsupported events.
-    /// Source: technical specification "## Webhook Events" (event descriptions and the unified
-    /// mapping table: an accepted authorization is `Authorized`, `Charged` for a sale). A partial
-    /// approval stays `Pending`, as `PARTIAL_AUTHORIZED` does on the payment responses.
+    /// An accepted authorization is `Authorized`, `Charged` for a sale; an accepted capture is
+    /// `PENDING` at Cybersource whatever the capture method, and becomes `Charged` only with
+    /// `payments.capture.status.updated` (`PENDING` to `BATCHED`). A partial approval stays
+    /// `Pending`, as `PARTIAL_AUTHORIZED` does on the payment responses.
+    /// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-intro/wh-fg-product-event-types.html
     ///
-    /// `payments.authorization.status.accepted` and `payments.capture.status.accepted` do not say
-    /// whether the payment was a sale (capture bundled with the authorization) or an
-    /// authorization only, so they are read together with the payment's capture method, exactly
-    /// as `map_cybersource_attempt_status` reads `AUTHORIZED` on Authorize / PSync. For these two
-    /// events an absent capture method is refused, never defaulted; every other event has one
-    /// status and needs no context.
+    /// `payments.authorization.status.accepted` does not say whether the payment was a sale
+    /// (capture bundled with the authorization) or an authorization only, so it is read together
+    /// with the payment's capture method, exactly as `map_cybersource_attempt_status` reads
+    /// `AUTHORIZED` on Authorize / PSync: a payment context without a capture method is a sale,
+    /// because that is what the Authorize request sent for it (`capture: true` when the capture
+    /// method is absent). With no payment context at all the event is refused. Every other
+    /// event has one status and needs no context.
     pub fn payment_status(
         self,
-        capture_method: Option<common_enums::CaptureMethod>,
+        event_context: Option<&domain_types::connector_types::EventContext>,
     ) -> Result<
         Option<common_enums::AttemptStatus>,
         error_stack::Report<domain_types::errors::WebhookError>,
     > {
         // `true` = the payment is a sale (capture bundled with the authorization).
-        let is_sale = || match capture_method {
+        let is_sale = || match event_context.map(|context| context.capture_method) {
             Some(
-                common_enums::CaptureMethod::Automatic
-                | common_enums::CaptureMethod::SequentialAutomatic,
+                Some(
+                    common_enums::CaptureMethod::Automatic
+                    | common_enums::CaptureMethod::SequentialAutomatic,
+                )
+                | None,
             ) => Ok(true),
-            Some(
+            Some(Some(
                 common_enums::CaptureMethod::Manual
                 | common_enums::CaptureMethod::ManualMultiple
                 | common_enums::CaptureMethod::Scheduled,
-            ) => Ok(false),
+            )) => Ok(false),
             None => Err(error_stack::report!(
                 domain_types::errors::WebhookError::WebhookMissingRequiredContext {
                     field: "capture_method",
@@ -7023,14 +7090,9 @@ impl CybersourceWebhookEventType {
                 common_enums::AttemptStatus::Authorized
             }),
             Self::AuthorizationRejected => Some(common_enums::AttemptStatus::Failure),
-            Self::AuthorizationReviewed | Self::AuthorizationPartiallyApproved => {
-                Some(common_enums::AttemptStatus::Pending)
-            }
-            Self::CaptureAccepted => Some(if is_sale()? {
-                common_enums::AttemptStatus::Charged
-            } else {
-                common_enums::AttemptStatus::Pending
-            }),
+            Self::AuthorizationReviewed
+            | Self::AuthorizationPartiallyApproved
+            | Self::CaptureAccepted => Some(common_enums::AttemptStatus::Pending),
             Self::CaptureUpdated => Some(common_enums::AttemptStatus::Charged),
             Self::VoidAccepted | Self::ReversalAccepted => {
                 Some(common_enums::AttemptStatus::Voided)
@@ -7043,8 +7105,9 @@ impl CybersourceWebhookEventType {
     }
 
     /// Refund status carried by the event; `None` for payment events and unsupported events.
-    /// Source: technical specification "## Webhook Events" (`payments.refund.status.accepted`
-    /// is `PENDING`, `payments.refund.status.updated` is the move to `BATCHED`).
+    /// `payments.refund.status.accepted` is `PENDING`, `payments.refund.status.updated` is the
+    /// move to `BATCHED`.
+    /// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-intro/wh-fg-product-event-types.html
     pub fn refund_status(self) -> Option<common_enums::RefundStatus> {
         match self {
             Self::RefundAccepted => Some(common_enums::RefundStatus::Pending),
@@ -7067,7 +7130,7 @@ impl CybersourceWebhookEventType {
 impl TryFrom<CybersourceWebhookEventType> for domain_types::connector_types::EventType {
     type Error = error_stack::Report<domain_types::errors::WebhookError>;
 
-    /// Source: technical specification "## Webhook Events".
+    /// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-intro/wh-fg-product-event-types.html
     fn try_from(event_type: CybersourceWebhookEventType) -> Result<Self, Self::Error> {
         match event_type {
             CybersourceWebhookEventType::AuthorizationAccepted => {
@@ -7152,7 +7215,7 @@ pub struct CybersourceWebhookSignature {
 
 /// Splits the `v-c-signature` header on `;` into its `t`, `keyId` and `sig` parameters.
 /// Each parameter is split on its first `=` only, because the Base64 `sig` may end in `=`.
-/// Source: technical specification "### Webhook Authentication & Signature Verification".
+/// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-key-dig-sig-intro.html
 pub fn parse_cybersource_webhook_signature(
     header: &str,
 ) -> Result<CybersourceWebhookSignature, error_stack::Report<domain_types::errors::WebhookError>> {

@@ -204,7 +204,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 
     /// HMAC-SHA256 over `<t>.<raw body>` keyed with the Base64-decoded digital-signature key.
-    /// Source: technical specification "### Webhook Authentication & Signature Verification".
+    /// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-key-dig-sig-intro.html
     /// A mismatch is `Ok(false)`; a missing secret or header is an error (the caller reports
     /// both as an unverified source). Nothing here depends on the HTTP method.
     fn verify_webhook_source(
@@ -281,17 +281,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<WebhookDetailsResponse, Report<WebhookError>> {
         let body = parse_cybersource_webhook_body(&request)?;
 
-        // The capture method is never defaulted: an accepted authorization / capture is
-        // `Charged` for a sale and `Authorized` / `Pending` otherwise.
-        let capture_method = event_context.and_then(|ctx| ctx.capture_method);
+        // An accepted authorization is `Charged` for a sale and `Authorized` otherwise. A
+        // payment context without a capture method is read as the Authorize request reads it
+        // (a sale); only an event with no payment context at all is refused.
         let status = body
             .event_type
-            .payment_status(capture_method)
+            .payment_status(event_context.as_ref())
             .attach_printable(
-                "Cybersource webhook: an accepted authorization / capture is ambiguous without \
-                 capture_method: AUTOMATIC capture means the payment was Charged, MANUAL means \
-                 Authorized. Pass EventContext.payment.capture_method from the original authorize \
-                 request.",
+                "Cybersource webhook: an accepted authorization is ambiguous without the payment \
+                 context: AUTOMATIC (or omitted) capture means the payment was Charged, MANUAL \
+                 means Authorized. Pass EventContext.payment from the original authorize request.",
             )?
             .ok_or_else(|| Report::new(WebhookError::WebhookEventTypeNotFound))
             .attach_printable("Cybersource webhook: eventType is not a payment event")?;

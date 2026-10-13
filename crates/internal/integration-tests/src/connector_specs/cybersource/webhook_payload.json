@@ -161,7 +161,31 @@
       "merchant_event_id": "cybersource_webhook_payment_accepted_manual_capture_authorized"
     }
   },
-  "cybersource_capture_accepted_auto_capture_not_pending": {
+  "cybersource_payment_accepted_absent_capture_method_charged": {
+    "grpc_req": {
+      "request_details": {
+        "headers": {},
+        "body": {
+          "eventType": "payments.authorization.status.accepted",
+          "webhookId": "e339e8b1-d540-4efd-e053-8d588e0a2de5",
+          "productId": "payments",
+          "organizationId": "sampleSubscriptionHolder",
+          "eventDate": "2022-07-20T11:38:48",
+          "transactionTraceId": "7ac2ad9f-6a89-d3e9-e053-34b8d30aaf44",
+          "retryNumber": 0,
+          "payload": {
+            "data": {
+              "id": "7000000000000000004"
+            },
+            "organizationId": "sampleSubscriptionHolder"
+          },
+          "requestType": "NEW"
+        }
+      },
+      "merchant_event_id": "cybersource_webhook_payment_accepted_absent_capture_method_charged"
+    }
+  },
+  "cybersource_capture_accepted_auto_capture_pending": {
     "grpc_req": {
       "request_details": {
         "headers": {},
@@ -182,7 +206,31 @@
           "requestType": "NEW"
         }
       },
-      "merchant_event_id": "cybersource_webhook_capture_accepted_auto_capture_not_pending"
+      "merchant_event_id": "cybersource_webhook_capture_accepted_auto_capture_pending"
+    }
+  },
+  "cybersource_capture_accepted_manual_capture_pending": {
+    "grpc_req": {
+      "request_details": {
+        "headers": {},
+        "body": {
+          "eventType": "payments.capture.status.accepted",
+          "webhookId": "e339e8b1-d540-4efd-e053-8d588e0a2de5",
+          "productId": "payments",
+          "organizationId": "sampleSubscriptionHolder",
+          "eventDate": "2022-07-20T11:38:50",
+          "transactionTraceId": "7ac2ad9f-6a89-d3e9-e053-34b8d30aaf46",
+          "retryNumber": 0,
+          "payload": {
+            "data": {
+              "id": "7000000000000000006"
+            },
+            "organizationId": "sampleSubscriptionHolder"
+          },
+          "requestType": "NEW"
+        }
+      },
+      "merchant_event_id": "cybersource_webhook_capture_accepted_manual_capture_pending"
     }
   },
   "cybersource_payment_accepted_without_context_refused": {
