@@ -2326,7 +2326,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             amount,
                             item.router_data.request.currency,
                             item.http_code,
-                            "paydotcom",
+                            domain_types::connector_types::ConnectorEnum::Paydotcom,
                         )
                     })
                     .transpose()?,

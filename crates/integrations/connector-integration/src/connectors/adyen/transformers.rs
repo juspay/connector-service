@@ -4427,7 +4427,13 @@ where
                 .map(|money| money.currency)
                 .unwrap_or_default();
 
-            utils::response_amount_to_money(&connector, amount, currency, http_code, "adyen")
+            utils::response_amount_to_money(
+                &connector,
+                amount,
+                currency,
+                http_code,
+                connector_types::ConnectorEnum::Adyen,
+            )
         })
         .transpose()?;
 
@@ -4563,7 +4569,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 amount,
                 router_data.request.currency,
                 http_code,
-                "adyen",
+                connector_types::ConnectorEnum::Adyen,
             )
         })
         .transpose()?;
@@ -7010,7 +7016,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 amount,
                 router_data.request.currency,
                 http_code,
-                "adyen",
+                connector_types::ConnectorEnum::Adyen,
             )
         })
         .transpose()?;

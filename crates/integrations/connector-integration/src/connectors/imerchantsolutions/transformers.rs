@@ -804,7 +804,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         item.response.amount.value,
                         item.router_data.request.currency,
                         item.http_code,
-                        IMERCHANTSOLUTIONS,
+                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
                     )?),
                     ..item.router_data.resource_common_data
                 },
@@ -1036,7 +1036,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         item.response.amount.value,
                         item.router_data.request.currency,
                         item.http_code,
-                        IMERCHANTSOLUTIONS,
+                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
                     )?),
                     ..item.router_data.resource_common_data
                 },
@@ -1274,7 +1274,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                                         amount,
                                         router_data.request.currency,
                                         http_code,
-                                        IMERCHANTSOLUTIONS,
+                                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
                                     )
                                 })
                                 .transpose()?,
@@ -1286,7 +1286,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                                         amount,
                                         router_data.request.currency,
                                         http_code,
-                                        IMERCHANTSOLUTIONS,
+                                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
                                     )
                                 })
                                 .transpose()?,
@@ -1310,7 +1310,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                                         amount,
                                         router_data.request.currency,
                                         http_code,
-                                        IMERCHANTSOLUTIONS,
+                                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
                                     )
                                 })
                                 .transpose()?,
@@ -1322,7 +1322,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                                         amount,
                                         router_data.request.currency,
                                         http_code,
-                                        IMERCHANTSOLUTIONS,
+                                        domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
                                     )
                                 })
                                 .transpose()?,
@@ -1400,7 +1400,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                                 amount,
                                 router_data.request.currency,
                                 http_code,
-                                IMERCHANTSOLUTIONS,
+                                domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
                             )
                         })
                         .transpose()?;
@@ -1411,7 +1411,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                                 amount,
                                 router_data.request.currency,
                                 http_code,
-                                IMERCHANTSOLUTIONS,
+                                domain_types::connector_types::ConnectorEnum::Imerchantsolutions,
                             )
                         })
                         .transpose()?;

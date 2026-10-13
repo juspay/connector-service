@@ -15,8 +15,9 @@ use common_utils::{
 };
 use domain_types::{
     connector_types::{
-        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsSyncData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        CaptureSyncResponse, ConnectorEnum, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsSyncData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -222,16 +223,17 @@ pub fn response_amount_to_money<AC>(
     amount: AC::Output,
     currency: enums::Currency,
     http_status: u16,
-    connector_name: &str,
+    connector: ConnectorEnum,
 ) -> Result<Money, Report<ConnectorError>>
 where
     AC: AmountConvertor + ?Sized,
 {
+    let connector_name = connector.to_string();
     let amount = amount_converter
         .convert_back(amount, currency)
         .change_context(response_handling_fail_for_connector(
             http_status,
-            connector_name,
+            &connector_name,
         ))?;
 
     Ok(Money { amount, currency })

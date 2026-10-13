@@ -880,7 +880,7 @@ where
                     minor,
                     currency,
                     item.http_code,
-                    "ppro",
+                    domain_types::connector_types::ConnectorEnum::Ppro,
                 )
             })
             .transpose()?;
@@ -944,7 +944,7 @@ where
                             amount,
                             response_currency,
                             item.http_code,
-                            "ppro",
+                            domain_types::connector_types::ConnectorEnum::Ppro,
                         )
                     })
                     .transpose()?
