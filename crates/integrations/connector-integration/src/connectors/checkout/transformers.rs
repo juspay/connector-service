@@ -2690,7 +2690,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 amount,
                 currency,
                 item.http_code,
-                "checkout",
+                domain_types::connector_types::ConnectorEnum::Checkout,
             )
         };
         let (amount_captured, amount_capturable) = match item.router_data.request.capture_method {
@@ -2842,7 +2842,7 @@ impl<
                         amount,
                         currency,
                         item.http_code,
-                        "checkout",
+                        domain_types::connector_types::ConnectorEnum::Checkout,
                     )
                 };
                 let (amount_captured, amount_capturable) =

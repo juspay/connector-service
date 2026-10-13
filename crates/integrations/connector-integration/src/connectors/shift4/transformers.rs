@@ -1251,7 +1251,7 @@ fn get_shift4_captured_money(
                 amount,
                 currency,
                 http_code,
-                "shift4",
+                domain_types::connector_types::ConnectorEnum::Shift4,
             )
         })
         .transpose()

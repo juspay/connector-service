@@ -718,7 +718,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             response.amount,
             response.currency,
             item.http_code,
-            "revolut",
+            domain_types::connector_types::ConnectorEnum::Revolut,
         )?);
 
         let merchant_reference = response

@@ -3283,7 +3283,7 @@ where
                             amount,
                             response_currency,
                             item.http_code,
-                            "stripe",
+                            domain_types::connector_types::ConnectorEnum::Stripe,
                         )
                     })
                     .transpose()?,
@@ -3295,7 +3295,7 @@ where
                             amount,
                             response_currency,
                             item.http_code,
-                            "stripe",
+                            domain_types::connector_types::ConnectorEnum::Stripe,
                         )
                     })
                     .transpose()?,
@@ -3615,7 +3615,7 @@ impl<F, PM: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             amount,
                             item.router_data.request.currency,
                             item.http_code,
-                            "stripe",
+                            domain_types::connector_types::ConnectorEnum::Stripe,
                         )
                     })
                     .transpose()?,

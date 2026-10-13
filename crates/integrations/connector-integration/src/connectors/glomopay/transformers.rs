@@ -994,7 +994,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         amount,
                         currency,
                         item.http_code,
-                        "glomopay",
+                        domain_types::connector_types::ConnectorEnum::Glomopay,
                     )?;
                     (
                         Some(amount.clone()),
