@@ -437,7 +437,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             )
                             .as_deref(),
                         )
-                    }),
+                    })
+                    .transpose()?,
                 _ => None,
             };
 
@@ -1877,11 +1878,37 @@ const CYBERSOURCE_MASTERCARD_CARD_TYPE: &str = "002";
 /// `card_type` is the resolved Cybersource card type code. Mastercard is recognised
 /// from either input, so a request without `card_network` still sends the UCAF pair
 /// instead of `cavv`.
+///
+/// An authentication with no usable outcome is refused here, before any connector call,
+/// so every caller is covered: failed (`N`), rejected (`R`), and a challenge that was
+/// started but never validated. `ChallengeRequired`,
+/// `ChallengeRequiredDecoupledAuthentication` and `SecurePaymentConfirmationRequired` all
+/// map to `paresStatus` `C`, which is the value the internal path
+/// (`build_consumer_auth_information_from_three_ds_data`) already refuses - the two paths
+/// must not disagree on an unfinished challenge.
 fn build_consumer_auth_information(
     authn_data: &router_request_types::AuthenticationData,
     card_network: Option<&common_enums::CardNetwork>,
     card_type: Option<&str>,
-) -> CybersourceConsumerAuthInformation {
+) -> Result<CybersourceConsumerAuthInformation, error_stack::Report<IntegrationError>> {
+    if matches!(
+        authn_data.trans_status,
+        Some(common_enums::TransactionStatus::Failure)
+            | Some(common_enums::TransactionStatus::Rejected)
+            | Some(common_enums::TransactionStatus::ChallengeRequired)
+            | Some(common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication)
+            | Some(common_enums::TransactionStatus::SecurePaymentConfirmationRequired)
+    ) {
+        return Err(error_stack::Report::from(
+            IntegrationError::InvalidDataFormat {
+                field_name: "authentication_data.trans_status",
+                context: utils::integration_ctx(
+                    "the external 3DS authentication failed, was rejected, or stopped at a challenge that was never validated",
+                    "Do not authorize after a failed authentication; complete the challenge before authorizing",
+                ),
+            },
+        ));
+    }
     let effective_authentication_type = authn_data.authentication_type.as_ref().map(Into::into);
     let (ucaf_authentication_data, cavv, ucaf_collection_indicator) = if card_network
         == Some(&common_enums::CardNetwork::Mastercard)
@@ -1907,7 +1934,7 @@ fn build_consumer_auth_information(
                 .ok()
                 .and_then(|exts| extract_score_id(&exts))
         });
-    CybersourceConsumerAuthInformation {
+    Ok(CybersourceConsumerAuthInformation {
         // The result the external authentication produced; omitted when the caller states none.
         pares_status: authn_data
             .trans_status
@@ -1936,7 +1963,7 @@ fn build_consumer_auth_information(
         network_score,
         acs_transaction_id: authn_data.acs_transaction_id.clone(),
         cavv_algorithm: Some(DEFAULT_CAVV_ALGORITHM.to_string()),
-    }
+    })
 }
 
 impl From<&common_enums::DecoupledAuthenticationType> for EffectiveAuthenticationType {
@@ -2047,26 +2074,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .authentication_data
                 .as_ref()
                 .map(|authn_data| {
-                    if matches!(
-                        authn_data.trans_status,
-                        Some(common_enums::TransactionStatus::Failure)
-                            | Some(common_enums::TransactionStatus::Rejected)
-                    ) {
-                        return Err(error_stack::Report::from(
-                            IntegrationError::InvalidDataFormat {
-                                field_name: "authentication_data.trans_status",
-                                context: utils::integration_ctx(
-                                    "the external 3DS authentication failed or was rejected",
-                                    "Do not authorize after a failed authentication",
-                                ),
-                            },
-                        ));
-                    }
-                    Ok(build_consumer_auth_information(
+                    build_consumer_auth_information(
                         authn_data,
                         card_network.as_ref(),
                         card_type.as_deref(),
-                    ))
+                    )
                 })
                 .transpose()?,
         };
@@ -5255,11 +5267,16 @@ impl ApplicationInformation {
                     .as_ref()
                     .is_some_and(|code| code.is(TSS_R_CODE_SUCCESS))
         });
-        let capture_ran = self
-            .applications
-            .iter()
-            .flatten()
-            .any(|application| application.name.as_deref() == Some(TSS_APPLICATION_BILL));
+        // A capture that was attempted and declined (`rCode` 0 / -1) leaves the
+        // authorization standing, so it must not suppress it. A capture with no `rCode`
+        // yet is still in flight and does count.
+        let capture_ran = self.applications.iter().flatten().any(|application| {
+            application.name.as_deref() == Some(TSS_APPLICATION_BILL)
+                && application
+                    .r_code
+                    .as_ref()
+                    .is_none_or(|code| code.is(TSS_R_CODE_SUCCESS))
+        });
         request_succeeded && auth_succeeded && !capture_ran
     }
 }
@@ -6127,7 +6144,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ccard.card_network.as_ref(),
                     card_type.as_deref(),
                 )
-            });
+            })
+            .transpose()?;
 
         Ok(Self {
             processing_information,
@@ -6222,7 +6240,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     token_data.card_network.as_ref(),
                     card_type.as_deref(),
                 )
-            });
+            })
+            .transpose()?;
 
         Ok(Self {
             processing_information,
@@ -7196,12 +7215,12 @@ impl CybersourceWebhookBody {
             .as_ref()
             .and_then(|payload| payload.data.as_ref())
             .and_then(|data| data.id.as_ref())
-            .filter(|id| !id.trim().is_empty())
-            .cloned()
+            .map(|id| id.trim().to_owned())
+            .filter(|id| !id.is_empty())
             .ok_or_else(|| {
                 error_stack::report!(domain_types::errors::WebhookError::WebhookReferenceIdNotFound)
             })
-            .attach_printable("Cybersource webhook: payload.data.id is absent")
+            .attach_printable("Cybersource webhook: payload.data.id is absent or empty")
     }
 }
 

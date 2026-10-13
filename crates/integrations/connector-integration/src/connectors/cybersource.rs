@@ -222,7 +222,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .attach_printable("Cybersource webhook: the webhook secret is not valid Base64")?;
         // An empty key would make the HMAC computable by anyone.
         if key.is_empty() {
-            return Err(Report::new(WebhookError::WebhookVerificationSecretNotFound))
+            return Err(Report::new(WebhookError::WebhookVerificationSecretInvalid))
                 .attach_printable("Cybersource webhook: the webhook secret is empty");
         }
 
