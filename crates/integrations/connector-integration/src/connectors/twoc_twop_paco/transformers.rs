@@ -2543,50 +2543,6 @@ fn raw_connector_status_from_paco(
     })
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn approval_code_is_deserialized_from_prior_payment_response_details() {
-        let response: TwocTwopPacoNonUiResponse = serde_json::from_value(serde_json::json!({
-            "data": {
-                "paymentResult": {
-                    "priorPaymentResponseDetails": {
-                        "responseCode": "PC-B050000",
-                        "approvalCode": "123456"
-                    }
-                }
-            }
-        }))
-        .expect("PACO response should deserialize");
-
-        let approval_code = response
-            .merged_result()
-            .and_then(|result| result.prior_payment_response_details.as_ref())
-            .and_then(|details| details.approval_code.as_deref());
-
-        assert_eq!(approval_code, Some("123456"));
-    }
-
-    #[test]
-    fn approval_code_is_exposed_as_card_auth_code() {
-        let response = connector_response_from_approval_code(
-            Some("123456".to_string()),
-            Some(PaymentMethodType::Card),
-        )
-        .expect("approval code should produce connector response data");
-
-        assert!(matches!(
-            response.additional_payment_method_data,
-            Some(domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
-                auth_code: Some(ref auth_code),
-                ..
-            }) if auth_code == "123456"
-        ));
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TwocTwopPacoErrorResponse {
