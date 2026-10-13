@@ -1646,6 +1646,9 @@ impl ClearSaleFeatureData {
             installments: self
                 .installments
                 .or_else(|| custom_str("installments").and_then(|v| v.parse::<i32>().ok())),
+            product: self
+                .product
+                .or_else(|| custom_str("product").and_then(|v| v.parse::<i32>().ok())),
             social_network: self.social_network.or_else(|| {
                 let opt_in = custom_str("optInCompreConfie")
                     .and_then(|v| v.parse::<i32>().ok())
