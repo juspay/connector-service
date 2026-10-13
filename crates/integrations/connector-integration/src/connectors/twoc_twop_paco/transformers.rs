@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use common_enums::{AttemptStatus, CountryAlpha2, Currency, RefundStatus};
+use common_enums::{AttemptStatus, CountryAlpha2, Currency, PaymentMethodType, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     crypto::jose::JoseConfig,
@@ -17,7 +17,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
-    router_data::{ConnectorSpecificConfig, ErrorResponse, FlowStatus},
+    router_data::{ConnectorResponseData, ConnectorSpecificConfig, ErrorResponse, FlowStatus},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -1560,6 +1560,19 @@ pub struct PacoPriorPaymentResponseDetails {
     pub response_code: Option<String>,
     #[serde(default)]
     pub response_description: Option<String>,
+    #[serde(default)]
+    pub approval_code: Option<String>,
+}
+
+fn connector_response_from_approval_code(
+    approval_code: Option<String>,
+    payment_method_type: Option<PaymentMethodType>,
+) -> Option<ConnectorResponseData> {
+    approval_code.and_then(|approval_code| {
+        payment_method_type.map(|payment_method_type| {
+            ConnectorResponseData::with_auth_code(approval_code, payment_method_type)
+        })
+    })
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1812,6 +1825,12 @@ where
             });
         }
 
+        let connector_response = connector_response_from_approval_code(
+            prior
+                .as_ref()
+                .and_then(|details| details.approval_code.clone()),
+            router_data.resource_common_data.payment_method_type,
+        );
         let resource_id = connector_txn_id
             .clone()
             .map(ResponseId::ConnectorTransactionId)
@@ -1823,6 +1842,7 @@ where
                 status,
                 raw_connector_response: serde_json::to_string(&response).ok().map(Secret::new),
                 raw_connector_status,
+                connector_response,
                 ..router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2526,6 +2546,50 @@ fn raw_connector_status_from_paco(
         message,
         reason: None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn approval_code_is_deserialized_from_prior_payment_response_details() {
+        let response: TwocTwopPacoNonUiResponse = serde_json::from_value(serde_json::json!({
+            "data": {
+                "paymentResult": {
+                    "priorPaymentResponseDetails": {
+                        "responseCode": "PC-B050000",
+                        "approvalCode": "123456"
+                    }
+                }
+            }
+        }))
+        .expect("PACO response should deserialize");
+
+        let approval_code = response
+            .merged_result()
+            .and_then(|result| result.prior_payment_response_details.as_ref())
+            .and_then(|details| details.approval_code.as_deref());
+
+        assert_eq!(approval_code, Some("123456"));
+    }
+
+    #[test]
+    fn approval_code_is_exposed_as_card_auth_code() {
+        let response = connector_response_from_approval_code(
+            Some("123456".to_string()),
+            Some(PaymentMethodType::Card),
+        )
+        .expect("approval code should produce connector response data");
+
+        assert!(matches!(
+            response.additional_payment_method_data,
+            Some(domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
+                auth_code: Some(ref auth_code),
+                ..
+            }) if auth_code == "123456"
+        ));
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
