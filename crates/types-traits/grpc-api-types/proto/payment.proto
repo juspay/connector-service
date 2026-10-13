@@ -930,6 +930,7 @@ enum Connector {
   MERCHANTE = 150;
   ELAVON_PG = 151;
   GLOBALPAYMENTS_REALEX = 152;
+  ASIAPAY = 153;
 }
 
 // Payment method types
@@ -5213,6 +5214,17 @@ message BraintreeConfig {
   optional string gpay_gateway_merchant_id = 61;
 }
 
+// AsiaPay (PayDollar) — merchantId plus Merchant-API login/password; the
+// optional secure_hash_secret signs the payment-page post once the account's
+// Secure Hash function is enabled (production); sandbox runs unsigned.
+message AsiapayConfig {
+  SecretString merchant_id = 1;
+  SecretString username = 2;
+  SecretString password = 3;
+  optional SecretString secure_hash_secret = 4;
+  optional string base_url = 50;
+}
+
 message AirwallexConfig {
   SecretString api_key = 1;
   SecretString client_id = 2;
@@ -6482,6 +6494,9 @@ message ConnectorSpecificConfig {
     ElavonPgConfig elavon_pg = 162;
     // GLOBALPAYMENTS_REALEX = 152
     GlobalpaymentsRealexConfig globalpayments_realex = 163;
+
+    // ASIAPAY = 153
+    AsiapayConfig asiapay = 164;
   }
 }
 

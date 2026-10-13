@@ -1,0 +1,51 @@
+{
+  "connector": "asiapay",
+  "supported_suites": [
+    "PaymentService/Authorize",
+    "PaymentService/Get",
+    "PaymentService/Refund",
+    "RefundService/Get"
+  ],
+  "supported_payment_methods": [
+    "card"
+  ],
+  "unsupported_scenarios": {
+    "PaymentService/Authorize": {
+      "no3ds_auto_capture_google_pay_encrypted": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory (pMethod = card schemes only) — cards-only integration, wallets not offered",
+      "no3ds_auto_capture_debit_card": "PM_NOT_OFFERED: spec:## Authorize params pMethod (VISA/Master/Diners/JCB/AMEX) — debit carriers not documented for this integration",
+      "no3ds_manual_capture_debit_card": "PM_NOT_OFFERED: spec:## Authorize params pMethod — debit carriers not documented",
+      "no3ds_auto_capture_ideal": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — bank redirects out of scope",
+      "no3ds_auto_capture_giropay": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — bank redirects out of scope",
+      "no3ds_auto_capture_bancontact": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — bank redirects out of scope",
+      "no3ds_auto_capture_klarna": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — BNPL out of scope",
+      "no3ds_auto_capture_affirm": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — BNPL out of scope",
+      "no3ds_auto_capture_afterpay_clearpay": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — BNPL out of scope",
+      "no3ds_auto_capture_przelewy24": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — bank redirects out of scope",
+      "no3ds_auto_capture_alipay": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — wallets out of scope",
+      "no3ds_auto_capture_eps": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — bank redirects out of scope",
+      "no3ds_auto_capture_sepa_bank_transfer": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — bank transfers out of scope",
+      "no3ds_auto_capture_ach_bank_transfer": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — bank transfers out of scope",
+      "no3ds_auto_capture_bacs_bank_transfer": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — bank transfers out of scope",
+      "no3ds_auto_capture_upi_collect": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — UPI out of scope",
+      "no3ds_auto_capture_upi_intent": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — UPI out of scope",
+      "no3ds_auto_capture_upi_qr": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — UPI out of scope",
+      "no3ds_auto_capture_apple_pay_decrypted": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — wallets out of scope",
+      "no3ds_auto_capture_google_pay_decrypted": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — wallets out of scope",
+      "no3ds_auto_capture_apple_pay_decrypted_cit": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — wallets out of scope",
+      "no3ds_auto_capture_google_pay_decrypted_cit": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — wallets out of scope",
+      "no3ds_manual_capture_incremental_auth": "FLOW_NOT_IN_SCOPE: run.json units (Authorize,PSync,Refund,RSync) — IncrementalAuthorization not in this run",
+      "no3ds_fail_payment": "CONNECTOR_API_LACKS: declines on the hosted payForm.jsp channel are asynchronous (a rejected card still returns the payment-page HTML → PENDING; orderStatus=Rejected is observable only afterwards via PSync/Query — run:test/grpc/r2 decline transcript)"
+    },
+    "PaymentService/Get": {
+      "sync_upi_collect": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — UPI not offered by AsiaPay integration",
+      "sync_upi_intent": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — UPI not offered",
+      "sync_upi_qr": "PM_NOT_OFFERED: spec:## Complete Endpoint Inventory — UPI not offered"
+    },
+    "PaymentService/Refund": {
+      "refund_with_reason": "CONNECTOR_API_LACKS: spec:## Refund params (merchantId/loginId/password/actionType/payRef/amount only) — no reason/metadata field on RequestRefund"
+    },
+    "RefundService/Get": {
+      "refund_sync_with_reason": "CONNECTOR_API_LACKS: spec:## Refund params — no reason field exists on RequestRefund; RSync queries by payRef only"
+    }
+  }
+}

@@ -729,6 +729,13 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             refund_password: p(),
             base_url: None,
         },
+        ConnectorEnum::Asiapay => ConnectorSpecificConfig::Asiapay {
+            merchant_id: m(),
+            username: u(),
+            password: p(),
+            secure_hash_secret: None,
+            base_url: None,
+        },
         ConnectorEnum::TsysTransit => ConnectorSpecificConfig::TsysTransit {
             device_id: id(),
             transaction_key: k(),

@@ -145,6 +145,9 @@ pub use self::globalpay::Globalpay;
 pub mod globalpayments_realex;
 pub use self::globalpayments_realex::GlobalpaymentsRealex;
 
+pub mod asiapay;
+pub use self::asiapay::Asiapay;
+
 pub mod billwerk;
 pub use self::billwerk::Billwerk;
 

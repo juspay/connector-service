@@ -5,6 +5,9 @@ mod auto_populate;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=codegen/auto_populate.rs");
+    // Protos feed the codegen below; without this a proto edit never re-runs
+    // the script and dependent crates silently compile against stale types.
+    println!("cargo:rerun-if-changed=proto");
 
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
 
