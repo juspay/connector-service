@@ -1137,6 +1137,17 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         base_url: Option<String>,
     },
+    /// AsiaPay (PayDollar). `merchant_id` = merchantId; `username` = Merchant
+    /// API loginId; `password` = Merchant API password; `secure_hash_secret` is
+    /// absent on accounts without the Secure Hash function (sandbox runs
+    /// unsigned) and required once AsiaPay support enables it (production).
+    Asiapay {
+        merchant_id: Secret<String>,
+        username: Secret<String>,
+        password: Secret<String>,
+        secure_hash_secret: Option<Secret<String>>,
+        base_url: Option<String>,
+    },
 }
 
 /// Config-patch key for a `ConnectorSpecificConfig` variant.
@@ -1179,6 +1190,12 @@ impl ConnectorSpecificConfig {
             };
         }
         extract_base_url!(
+            Asiapay {
+                merchant_id,
+                username,
+                password,
+                secure_hash_secret
+            },
             Stripe { api_key },
             Calida { api_key },
             Celero { api_key },
@@ -1715,6 +1732,12 @@ impl ConnectorSpecificConfig {
         let mut connectors = serde_json::Map::new();
         connectors.insert(
             connector_key!(
+                Asiapay {
+                    merchant_id,
+                    username,
+                    password,
+                    secure_hash_secret
+                },
                 Stripe { api_key },
                 Calida { api_key },
                 Celero { api_key },
@@ -2193,6 +2216,13 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 api_key: airwallex.api_key.ok_or_else(err)?,
                 client_id: airwallex.client_id.ok_or_else(err)?,
                 base_url: airwallex.base_url,
+            }),
+            AuthType::Asiapay(asiapay) => Ok(Self::Asiapay {
+                merchant_id: asiapay.merchant_id.ok_or_else(err)?,
+                username: asiapay.username.ok_or_else(err)?,
+                password: asiapay.password.ok_or_else(err)?,
+                secure_hash_secret: asiapay.secure_hash_secret,
+                base_url: asiapay.base_url,
             }),
             AuthType::Bambora(bambora) => Ok(Self::Bambora {
                 merchant_id: bambora.merchant_id.ok_or_else(err)?,
@@ -4155,6 +4185,25 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                 ConnectorEnum::GlobalpaymentsHeartland => match auth {
                     ConnectorAuthType::HeaderKey { api_key } => Ok(Self::GlobalpaymentsHeartland {
                         api_key: api_key.clone(),
+                        base_url: None,
+                    }),
+                    _ => Err(err().into()),
+                },
+                // Legacy x-auth multi-auth-key mapping: api_key=merchantId,
+                // key1=loginId, key2=API password. The x-connector-config
+                // header path above is the primary one; this exists only so
+                // the legacy header pair stays usable.
+                ConnectorEnum::Asiapay => match auth {
+                    ConnectorAuthType::MultiAuthKey {
+                        api_key,
+                        key1,
+                        key2,
+                        ..
+                    } => Ok(Self::Asiapay {
+                        merchant_id: api_key.clone(),
+                        username: key1.clone(),
+                        password: key2.clone(),
+                        secure_hash_secret: None,
                         base_url: None,
                     }),
                     _ => Err(err().into()),

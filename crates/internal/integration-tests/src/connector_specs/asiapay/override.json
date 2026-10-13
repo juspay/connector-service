@@ -1,0 +1,119 @@
+{
+  "PaymentService/Authorize": {
+    "no3ds_auto_capture_credit_card": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "SGD"
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4333880000200019"
+            },
+            "card_exp_month": {
+              "value": "07"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            },
+            "card_holder_name": {
+              "value": "TEST CARD"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "CHARGED",
+            "PENDING"
+          ]
+        },
+        "error": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "no3ds_manual_capture_credit_card": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "SGD"
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4333880000200019"
+            },
+            "card_exp_month": {
+              "value": "07"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            },
+            "card_holder_name": {
+              "value": "TEST CARD"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "AUTHORIZED",
+            "PENDING"
+          ]
+        },
+        "error": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "threeds_manual_capture_credit_card": {
+      "grpc_req": {
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "SGD"
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4333880000200019"
+            },
+            "card_exp_month": {
+              "value": "07"
+            },
+            "card_exp_year": {
+              "value": "2030"
+            },
+            "card_cvc": {
+              "value": "123"
+            },
+            "card_holder_name": {
+              "value": "TEST CARD"
+            }
+          }
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "AUTHORIZED",
+            "PENDING",
+            "AUTHENTICATION_PENDING"
+          ]
+        },
+        "error": {
+          "must_not_exist": true
+        }
+      }
+    }
+  }
+}

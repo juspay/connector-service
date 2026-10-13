@@ -6,6 +6,9 @@
   "connectors": {
     "absa_sanlam": {},
     "affirm": {},
+    "asiapay": {
+      "reason": "No AsiaPay (PayDollar) sandbox credentials are configured in CI; the sandbox account (merchantId + Merchant API login/password, SGD-settling MID, unsigned posts) exists only as local run credentials. The four flows were verified live against test.paydollar.com in the run's BASELINE probes and gRPC rounds (hosted SPC-chain card sale with the 3DS 2.2 frictionless card 4333880000200019; no-3DS cards are host-rejected on this MID). Remove this entry once credentials are added so CI starts certifying it."
+    },
     "axisbank": {},
     "bluesnap": {},
     "boost": {},

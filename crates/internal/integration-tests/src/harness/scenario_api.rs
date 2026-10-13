@@ -35,11 +35,11 @@ use crate::harness::{
     scenario_loader::{
         configured_all_connectors, get_the_assertion as get_the_assertion_impl,
         get_the_grpc_req as get_the_grpc_req_impl, is_suite_supported_for_connector,
-        load_connector_browser_automation_spec, load_connector_spec, load_default_scenario_name,
-        load_scenario, load_suite_scenarios, load_suite_spec,
-        load_supported_payment_methods_for_connector, load_supported_suites_for_connector,
-        merge_connector_specific_scenarios, scenario_matches_supported_payment_methods,
-        scenario_unsupported_reason,
+        load_connector_browser_automation_spec, load_connector_spec,
+        load_connector_specific_scenarios, load_default_scenario_name, load_scenario,
+        load_suite_scenarios, load_suite_spec, load_supported_payment_methods_for_connector,
+        load_supported_suites_for_connector, merge_connector_specific_scenarios,
+        scenario_matches_supported_payment_methods, scenario_unsupported_reason,
     },
     scenario_types::{
         BrowserAutomationHook, BrowserAutomationPhase, CliPreRequestHookConfig, ContextMap,
@@ -67,7 +67,19 @@ fn load_effective_scenario_for_connector(
     scenario: &str,
     connector: &str,
 ) -> Result<(Value, BTreeMap<String, FieldAssert>), ScenarioError> {
-    let base_scenario = load_scenario(suite, scenario)?;
+    let base_scenario = match load_scenario(suite, scenario) {
+        Ok(base) => base,
+        Err(ScenarioError::ScenarioNotFound { .. }) => {
+            load_connector_specific_scenarios(connector, suite)?
+                .get(scenario)
+                .cloned()
+                .ok_or_else(|| ScenarioError::ScenarioNotFound {
+                    suite: suite.to_string(),
+                    scenario: scenario.to_string(),
+                })?
+        }
+        Err(err) => return Err(err),
+    };
     let mut grpc_req = base_scenario.grpc_req;
     let mut assertions = base_scenario.assert_rules;
 
