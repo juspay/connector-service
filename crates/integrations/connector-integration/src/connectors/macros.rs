@@ -232,6 +232,47 @@ macro_rules! expand_router_data_with_connector_router_data {
 }
 pub(crate) use expand_router_data_with_connector_router_data;
 
+macro_rules! expand_xml_response_parser {
+    () => {
+        fn response(
+            &self,
+            bytes: bytes::Bytes,
+            status_code: u16,
+        ) -> common_utils::errors::CustomResult<
+            Self::ResponseBody,
+            domain_types::errors::ConnectorError,
+        > {
+            use common_utils::ext_traits::XmlExt;
+            use error_stack::ResultExt;
+
+            if bytes.is_empty() {
+                return Err($crate::utils::response_handling_fail_for_connector(
+                    status_code,
+                    "macros",
+                )
+                .into());
+            }
+
+            let response_str = String::from_utf8(bytes.to_vec())
+                .change_context($crate::utils::response_handling_fail_for_connector(
+                    status_code,
+                    "macros",
+                ))
+                .attach_printable("Failed to convert response bytes to UTF-8 string")?;
+
+            response_str
+                .as_str()
+                .parse_xml::<Self::ResponseBody>()
+                .change_context($crate::utils::response_handling_fail_for_connector(
+                    status_code,
+                    "macros",
+                ))
+                .attach_printable("Failed to parse XML response")
+        }
+    };
+}
+pub(crate) use expand_xml_response_parser;
+
 macro_rules! expand_fn_get_request_body {
     ($connector: ident, $curl_res: ty, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty) => {
         paste::paste! {
@@ -1260,35 +1301,7 @@ macro_rules! impl_templating_mixed {
 
                 crate::connectors::macros::expand_router_data_with_connector_router_data!();
 
-                fn response(
-                    &self,
-                    bytes: bytes::Bytes,
-                    status_code: u16,
-                ) -> CustomResult<Self::ResponseBody, domain_types::errors::ConnectorError> {
-                    use common_utils::ext_traits::XmlExt;
-                    use error_stack::ResultExt;
-
-                    if bytes.is_empty() {
-                        return Err(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros")
-                                .into(),
-                        );
-                    }
-
-                    let response_str = String::from_utf8(bytes.to_vec())
-                        .change_context(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
-                        )
-                        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
-
-                    response_str
-                        .as_str()
-                        .parse_xml::<Self::ResponseBody>()
-                        .change_context(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
-                        )
-                        .attach_printable("Failed to parse XML response")
-                }
+                crate::connectors::macros::expand_xml_response_parser!();
             }
         }
     };
@@ -1313,35 +1326,7 @@ macro_rules! impl_templating_mixed {
 
                 crate::connectors::macros::expand_router_data_with_inner_router_data!();
 
-                fn response(
-                    &self,
-                    bytes: bytes::Bytes,
-                    status_code: u16,
-                ) -> CustomResult<Self::ResponseBody, domain_types::errors::ConnectorError> {
-                    use common_utils::ext_traits::XmlExt;
-                    use error_stack::ResultExt;
-
-                    if bytes.is_empty() {
-                        return Err(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros")
-                                .into(),
-                        );
-                    }
-
-                    let response_str = String::from_utf8(bytes.to_vec())
-                        .change_context(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
-                        )
-                        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
-
-                    response_str
-                        .as_str()
-                        .parse_xml::<Self::ResponseBody>()
-                        .change_context(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
-                        )
-                        .attach_printable("Failed to parse XML response")
-                }
+                crate::connectors::macros::expand_xml_response_parser!();
             }
         }
     };
@@ -1367,35 +1352,7 @@ macro_rules! impl_templating_mixed {
 
                 crate::connectors::macros::expand_router_data_with_connector_router_data!();
 
-                fn response(
-                    &self,
-                    bytes: bytes::Bytes,
-                    status_code: u16,
-                ) -> CustomResult<Self::ResponseBody, domain_types::errors::ConnectorError> {
-                    use common_utils::ext_traits::XmlExt;
-                    use error_stack::ResultExt;
-
-                    if bytes.is_empty() {
-                        return Err(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros")
-                                .into(),
-                        );
-                    }
-
-                    let response_str = String::from_utf8(bytes.to_vec())
-                        .change_context(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
-                        )
-                        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
-
-                    response_str
-                        .as_str()
-                        .parse_xml::<Self::ResponseBody>()
-                        .change_context(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
-                        )
-                        .attach_printable("Failed to parse XML response")
-                }
+                crate::connectors::macros::expand_xml_response_parser!();
             }
         }
     };
@@ -1420,35 +1377,7 @@ macro_rules! impl_templating_mixed {
 
                 crate::connectors::macros::expand_router_data_with_inner_router_data!();
 
-                fn response(
-                    &self,
-                    bytes: bytes::Bytes,
-                    status_code: u16,
-                ) -> CustomResult<Self::ResponseBody, domain_types::errors::ConnectorError> {
-                    use common_utils::ext_traits::XmlExt;
-                    use error_stack::ResultExt;
-
-                    if bytes.is_empty() {
-                        return Err(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros")
-                                .into(),
-                        );
-                    }
-
-                    let response_str = String::from_utf8(bytes.to_vec())
-                        .change_context(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
-                        )
-                        .attach_printable("Failed to convert response bytes to UTF-8 string")?;
-
-                    response_str
-                        .as_str()
-                        .parse_xml::<Self::ResponseBody>()
-                        .change_context(
-                            crate::utils::response_handling_fail_for_connector(status_code, "macros"),
-                        )
-                        .attach_printable("Failed to parse XML response")
-                }
+                crate::connectors::macros::expand_xml_response_parser!();
             }
         }
     };

@@ -3001,7 +3001,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         item: ResponseRouterData<PaypalCaptureResponse, PaypalRouterData<Self, T>>,
     ) -> Result<Self, Self::Error> {
-        let connector = item.router_data.connector;
         let item = ResponseRouterData {
             response: item.response,
             router_data: item.router_data.router_data,
@@ -3035,24 +3034,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | common_enums::AttemptStatus::VoidPostCaptureInitiated
             | common_enums::AttemptStatus::Expired
             | common_enums::AttemptStatus::Unknown
-            | common_enums::AttemptStatus::PartiallyAuthorized => None,
+            | common_enums::AttemptStatus::PartiallyAuthorized => {
+                Some(common_utils::types::Money {
+                    amount: MinorUnit::zero(),
+                    currency: item.router_data.request.currency,
+                })
+            }
             common_enums::AttemptStatus::Charged
             | common_enums::AttemptStatus::PartialCharged
             | common_enums::AttemptStatus::PartialChargedAndChargeable
-            | common_enums::AttemptStatus::IntegrityFailure => item
-                .response
-                .amount
-                .map(|amount| {
-                    let currency = amount.currency_code;
-                    crate::utils::response_amount_to_money(
-                        connector.amount_converter,
-                        amount.value,
-                        currency,
-                        item.http_code,
-                        "paypal",
-                    )
-                })
-                .transpose()?,
+            | common_enums::AttemptStatus::IntegrityFailure => {
+                Some(item.router_data.request.amount_to_capture.clone())
+            }
         };
         let connector_payment_id: PaypalMeta = match to_connector_meta(
             item.router_data
