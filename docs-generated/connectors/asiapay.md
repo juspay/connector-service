@@ -135,19 +135,13 @@ Simple payment that authorizes and captures in one call. Use for immediate charg
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/asiapay/asiapay.py#L108) · [JavaScript](../../examples/asiapay/asiapay.js) · [Kotlin](../../examples/asiapay/asiapay.kt#L98) · [Rust](../../examples/asiapay/asiapay.rs#L140)
-
-### Refund
-
-Return funds to the customer for a completed payment.
-
-**Examples:** [Python](../../examples/asiapay/asiapay.py#L127) · [JavaScript](../../examples/asiapay/asiapay.js) · [Kotlin](../../examples/asiapay/asiapay.kt#L114) · [Rust](../../examples/asiapay/asiapay.rs#L156)
+**Examples:** [Python](../../examples/asiapay/asiapay.py#L95) · [JavaScript](../../examples/asiapay/asiapay.js) · [Kotlin](../../examples/asiapay/asiapay.kt#L84) · [Rust](../../examples/asiapay/asiapay.rs#L125)
 
 ### Get Payment Status
 
 Retrieve current payment status from the connector.
 
-**Examples:** [Python](../../examples/asiapay/asiapay.py#L152) · [JavaScript](../../examples/asiapay/asiapay.js) · [Kotlin](../../examples/asiapay/asiapay.kt#L136) · [Rust](../../examples/asiapay/asiapay.rs#L179)
+**Examples:** [Python](../../examples/asiapay/asiapay.py#L114) · [JavaScript](../../examples/asiapay/asiapay.js) · [Kotlin](../../examples/asiapay/asiapay.kt#L100) · [Rust](../../examples/asiapay/asiapay.rs#L141)
 
 ## API Reference
 
@@ -156,7 +150,6 @@ Retrieve current payment status from the connector.
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
 | [PaymentService.ProxyAuthorize](#paymentserviceproxyauthorize) | Payments | `PaymentServiceProxyAuthorizeRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [RefundService.Get](#refundserviceget) | Refunds | `RefundServiceGetRequest` |
 
 ### Payments
@@ -287,13 +280,12 @@ Authorize a payment amount on a payment method. This reserves funds without capt
     "card_exp_month": "03",
     "card_exp_year": "2030",
     "card_cvc": "737",
-    "card_holder_name": "John Doe",
-    "card_network": "VISA"
+    "card_holder_name": "John Doe"
   }
 }
 ```
 
-**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L182) · [Kotlin](../../examples/asiapay/asiapay.kt#L154) · [Rust](../../examples/asiapay/asiapay.rs)
+**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L142) · [Kotlin](../../examples/asiapay/asiapay.kt#L118) · [Rust](../../examples/asiapay/asiapay.rs)
 
 #### PaymentService.Get
 
@@ -304,7 +296,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L191) · [Kotlin](../../examples/asiapay/asiapay.kt#L166) · [Rust](../../examples/asiapay/asiapay.rs)
+**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L151) · [Kotlin](../../examples/asiapay/asiapay.kt#L130) · [Rust](../../examples/asiapay/asiapay.rs)
 
 #### PaymentService.ProxyAuthorize
 
@@ -315,18 +307,7 @@ Authorize using vault-aliased card data. Proxy substitutes before connector.
 | **Request** | `PaymentServiceProxyAuthorizeRequest` |
 | **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L200) · [Kotlin](../../examples/asiapay/asiapay.kt#L174) · [Rust](../../examples/asiapay/asiapay.rs)
-
-#### PaymentService.Refund
-
-Process a partial or full refund for a captured payment. Returns funds to the customer when goods are returned or services are cancelled.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
-
-**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L209) · [Kotlin](../../examples/asiapay/asiapay.kt#L203) · [Rust](../../examples/asiapay/asiapay.rs)
+**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L160) · [Kotlin](../../examples/asiapay/asiapay.kt#L138) · [Rust](../../examples/asiapay/asiapay.rs)
 
 ### Refunds
 
@@ -339,4 +320,4 @@ Retrieve refund status from the payment processor. Tracks refund progress throug
 | **Request** | `RefundServiceGetRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L218) · [Kotlin](../../examples/asiapay/asiapay.kt#L213) · [Rust](../../examples/asiapay/asiapay.rs)
+**Examples:** [Python](../../examples/asiapay/asiapay.py) · [TypeScript](../../examples/asiapay/asiapay.ts#L169) · [Kotlin](../../examples/asiapay/asiapay.kt#L167) · [Rust](../../examples/asiapay/asiapay.rs)

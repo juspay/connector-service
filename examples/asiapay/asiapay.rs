@@ -14,13 +14,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 #[allow(dead_code)]
-pub const SUPPORTED_FLOWS: &[&str] = &[
-    "authorize",
-    "get",
-    "proxy_authorize",
-    "refund",
-    "refund_get",
-];
+pub const SUPPORTED_FLOWS: &[&str] = &["authorize", "get", "proxy_authorize", "refund_get"];
 
 #[allow(dead_code)]
 fn build_client() -> ConnectorClient {
@@ -67,7 +61,6 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
                 card_exp_year: Some(Secret::new("2030".to_string())),
                 card_cvc: Some(Secret::new("737".to_string())),
                 card_holder_name: Some(Secret::new("John Doe".to_string())), // Cardholder Information.
-                card_network: Some(CardNetwork::Visa.into()),
                 ..Default::default()
             })),
             ..Default::default()
@@ -133,20 +126,6 @@ pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
     }
 }
 
-pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
-    PaymentServiceRefundRequest {
-        merchant_refund_id: Some("probe_refund_001".to_string()), // Identification.
-        connector_transaction_id: connector_transaction_id.to_string(),
-        payment_amount: 1000, // Amount Information.
-        refund_amount: Some(Money {
-            minor_amount: 1000,             // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
-        }),
-        reason: Some("customer_request".to_string()), // Reason for the refund.
-        ..Default::default()
-    }
-}
-
 pub fn build_refund_get_request() -> RefundServiceGetRequest {
     RefundServiceGetRequest {
         merchant_refund_id: Some("probe_refund_001".to_string()), // Identification.
@@ -184,47 +163,6 @@ pub async fn process_checkout_autocapture(
             .as_deref()
             .unwrap_or("")
     ))
-}
-
-// Scenario: Refund
-// Return funds to the customer for a completed payment.
-#[allow(dead_code)]
-pub async fn process_refund(
-    client: &ConnectorClient,
-    _merchant_transaction_id: &str,
-) -> Result<String, Box<dyn std::error::Error>> {
-    // Step 1: Authorize — reserve funds on the payment method
-    let authorize_response = client
-        .authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None)
-        .await?;
-
-    match authorize_response.status() {
-        PaymentStatus::Failure | PaymentStatus::AuthorizationFailed => {
-            return Err(format!("Payment failed: {:?}", authorize_response.error).into())
-        }
-        PaymentStatus::Pending => return Ok("pending — awaiting webhook".to_string()),
-        _ => {}
-    }
-
-    // Step 2: Refund — return funds to the customer
-    let refund_response = client
-        .refund(
-            build_refund_request(
-                authorize_response
-                    .connector_transaction_id
-                    .as_deref()
-                    .unwrap_or(""),
-            ),
-            &HashMap::new(),
-            None,
-        )
-        .await?;
-
-    if refund_response.status() == RefundStatus::RefundFailure {
-        return Err(format!("Refund failed: {:?}", refund_response.error).into());
-    }
-
-    Ok(format!("Refunded: {:?}", refund_response.status()))
 }
 
 // Scenario: Get Payment Status
@@ -334,14 +272,13 @@ async fn main() {
         .unwrap_or_else(|| "process_checkout_autocapture".to_string());
     let result: Result<String, Box<dyn std::error::Error>> = match flow.as_str() {
         "process_checkout_autocapture" => process_checkout_autocapture(&client, "order_001").await,
-        "process_refund" => process_refund(&client, "order_001").await,
         "process_get_payment" => process_get_payment(&client, "order_001").await,
         "process_authorize" => process_authorize(&client, "txn_001").await,
         "process_get" => process_get(&client, "txn_001").await,
         "process_proxy_authorize" => process_proxy_authorize(&client, "txn_001").await,
         "process_refund_get" => process_refund_get(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_refund, process_get_payment, process_authorize, process_get, process_proxy_authorize, process_refund_get", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_get_payment, process_authorize, process_get, process_proxy_authorize, process_refund_get", flow);
             return;
         }
     };
