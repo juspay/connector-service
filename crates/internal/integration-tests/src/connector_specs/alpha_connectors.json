@@ -125,6 +125,9 @@
     "volt": {},
     "wellsfargo": {},
     "worldpay": {},
+    "worldpayraft": {
+      "reason": "No Worldpay Native RAFT credentials exist, so certification cannot run; Authorize, Capture, Void, Refund, SetupMandate, RepeatPayment, external 3DS and webhooks were validated only against a documentation-derived mock of the RAFT API (request shape, response parsing, status and error mapping). Remove this entry once credentials are added so CI starts certifying it."
+    },
     "worldpayvantiv": {},
     "worldpayraft": {
       "reason": "Only temporary sandbox credentials are available for WorldpayRaft in CI; these credentials do not support all flows (e.g. refunds, captures, and void require a settled transaction that cannot be produced with the temporary access). Remove this entry once full sandbox credentials are provisioned so CI can certify all flows."
