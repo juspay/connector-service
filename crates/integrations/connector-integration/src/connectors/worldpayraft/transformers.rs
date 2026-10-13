@@ -116,43 +116,6 @@ fn is_debit_card_type(card_type: Option<&str>) -> bool {
     card_type.is_some_and(|card_type| card_type.eq_ignore_ascii_case(CARD_TYPE_DEBIT))
 }
 
-fn expiry_as_yymm(
-    year: &Secret<String>,
-    month: &Secret<String>,
-) -> Result<Secret<String>, error_stack::Report<errors::IntegrationError>> {
-    let invalid_expiry = |field_name| errors::IntegrationError::InvalidDataFormat {
-        field_name,
-        context: errors::IntegrationErrorContext {
-            additional_context: Some(
-                "Worldpay RAFT expects card expiry in YYMM format".to_string(),
-            ),
-            ..Default::default()
-        },
-    };
-    // Preserve external-vault placeholders for substitution by the injector.
-    let year = year.peek();
-    let year = if year.contains("{{") {
-        year.as_str()
-    } else {
-        year.len()
-            .checked_sub(2)
-            .and_then(|start| year.get(start..))
-            .ok_or_else(|| invalid_expiry("card.card_exp_year"))?
-    };
-    let month = month.peek();
-    let month = if month.contains("{{") {
-        month.clone()
-    } else {
-        let month = month
-            .parse::<u8>()
-            .change_context(invalid_expiry("card.card_exp_month"))?;
-        cards::validate::CardExpirationMonth::try_from(month)
-            .change_context(invalid_expiry("card.card_exp_month"))?
-            .two_digits()
-    };
-    Ok(Secret::new(format!("{year}{month}")))
-}
-
 /// Returns true when the payment method data indicates a debit card.
 /// Includes raw cards, no-CVC cards, and cards carrying a network transaction reference.
 pub fn is_debit_card<T: PaymentMethodDataTypes>(
@@ -368,6 +331,9 @@ impl WorldpayraftPaymentKind {
         request: &PaymentsAuthorizeData<T>,
         was_stored: bool,
     ) -> Self {
+        // Saving a card for future on-session use establishes COF through a CIT.
+        let is_on_session_card_setup = request.setup_future_usage == Some(FutureUsage::OnSession)
+            && request.customer_acceptance.is_some();
         let has_mandate = request
             .mandate_id
             .as_ref()
@@ -379,8 +345,7 @@ impl WorldpayraftPaymentKind {
             Self::StoredCredentialCit
         } else if request.mit_category.is_some()
             || request.setup_future_usage == Some(FutureUsage::OffSession)
-            || (request.setup_future_usage == Some(FutureUsage::OnSession)
-                && request.customer_acceptance.is_some())
+            || is_on_session_card_setup
         {
             Self::InitialStoredCredential
         } else {
@@ -710,6 +675,7 @@ impl TryFrom<Option<&SecretSerdeValue>> for WorldpayraftConnectorMetadata {
 struct WorldpayraftMandateMetadata {
     #[serde(flatten)]
     connector_metadata: WorldpayraftConnectorMetadata,
+    // Connector-token MITs need this alongside TokenizedPAN. NetworkMandateId carries it directly.
     network_transaction_id: Option<String>,
     expiration_date: Option<Secret<String>>,
 }
@@ -800,15 +766,15 @@ impl WorldpayraftMandateMetadata {
         let (network, expiry) = match payment_method {
             PaymentMethodData::Card(card) => (
                 resolve_card_network(card.card_network.clone(), card.card_number.peek()),
-                expiry_as_yymm(&card.card_exp_year, &card.card_exp_month).ok(),
+                card.get_expiry_date_as_yymm().ok(),
             ),
             PaymentMethodData::CardWithNoCvc(card) => (
                 resolve_card_network(card.card_network.clone(), card.card_number.peek()),
-                expiry_as_yymm(&card.card_exp_year, &card.card_exp_month).ok(),
+                card.get_expiry_date_as_yymm().ok(),
             ),
             PaymentMethodData::CardDetailsForNetworkTransactionId(card) => (
                 resolve_card_network(card.card_network.clone(), card.card_number.peek()),
-                expiry_as_yymm(&card.card_exp_year, &card.card_exp_month).ok(),
+                card.get_expiry_date_as_yymm().ok(),
             ),
             _ => (None, None),
         };
@@ -1102,7 +1068,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(card: &Card<T>) -> Result<Self, Self::Error> {
         let pan = WorldpayraftAuthorizePan::Card(card.card_number.clone());
-        let expiration_date = expiry_as_yymm(&card.card_exp_year, &card.card_exp_month)?;
+        let expiration_date = card.get_expiry_date_as_yymm()?;
         let is_debit = is_debit_card_type(card.card_type.as_deref());
         Ok(Self {
             pan,
@@ -1118,7 +1084,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&CardWithNoCvc> for CardFields<T> {
 
     fn try_from(card: &CardWithNoCvc) -> Result<Self, Self::Error> {
         let pan = WorldpayraftAuthorizePan::CardWithNoCvc(card.card_number.clone());
-        let expiration_date = expiry_as_yymm(&card.card_exp_year, &card.card_exp_month)?;
+        let expiration_date = card.get_expiry_date_as_yymm()?;
         let is_debit = is_debit_card_type(card.card_type.as_deref());
         Ok(Self {
             pan,
@@ -1133,7 +1099,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&CardDetailsForNetworkTransactionId<T>> 
     type Error = error_stack::Report<errors::IntegrationError>;
 
     fn try_from(card: &CardDetailsForNetworkTransactionId<T>) -> Result<Self, Self::Error> {
-        let expiration_date = expiry_as_yymm(&card.card_exp_year, &card.card_exp_month)?;
+        let expiration_date = card.get_expiry_date_as_yymm()?;
         Ok(Self {
             pan: WorldpayraftAuthorizePan::Card(card.card_number.clone()),
             expiration_date,
@@ -2033,7 +1999,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        let expiration_date = expiry_as_yymm(&card.card_exp_year, &card.card_exp_month)?;
+        let expiration_date = card.get_expiry_date_as_yymm()?;
 
         let pan = card.card_number.clone();
 
