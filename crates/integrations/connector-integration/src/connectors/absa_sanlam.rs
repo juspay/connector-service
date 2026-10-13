@@ -53,10 +53,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// NOTE: no flow-status mapping for Authorize. The enqueue response carries a
-// real connector status, but it has no terminal success state:
-// `Queued | Unknown -> Pending`, `Rejected -> Failure`. Modeling `Queued` as a
-// terminal success would not match the transformer.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: AbsaSanlam<T>,
+    flow: Authorize,
+    source: absa_sanlam::AbsaSanlamPaymentEnqueueStatus,
+    mapping: |status| {
+        match status {
+            absa_sanlam::AbsaSanlamPaymentEnqueueStatus::Queued
+            | absa_sanlam::AbsaSanlamPaymentEnqueueStatus::Unknown => non_terminal!(Pending),
+            absa_sanlam::AbsaSanlamPaymentEnqueueStatus::Rejected => failure!(Failure),
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: AbsaSanlamPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| {
+            Ok(response.status)
+        },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for AbsaSanlam<T>
 {
