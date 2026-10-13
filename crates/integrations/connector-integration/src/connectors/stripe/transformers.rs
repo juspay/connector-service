@@ -3648,21 +3648,13 @@ fn extract_payment_method_connector_response_from_latest_attempt(
     .map(ConnectorResponseData::with_additional_payment_method_data)
 }
 
-impl<F, Req, PM> TryFrom<ResponseRouterData<SetupMandateResponse, StripeRouterData<Self, PM>>>
+impl<F, Req> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 where
     Req: SplitPaymentData,
-    PM: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<SetupMandateResponse, StripeRouterData<Self, PM>>,
-    ) -> Result<Self, Self::Error> {
-        let item = ResponseRouterData {
-            response: item.response,
-            router_data: item.router_data.router_data,
-            http_code: item.http_code,
-        };
+    fn try_from(item: ResponseRouterData<SetupMandateResponse, Self>) -> Result<Self, Self::Error> {
         let redirect_data = item.response.next_action.clone();
         let redirection_data = redirect_data
             .and_then(|redirection_data| redirection_data.get_url())
@@ -5048,7 +5040,7 @@ impl<F, PM: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentSyncResponse::SetupMandateResponse(setup_intent_response) => {
                 Self::try_from(ResponseRouterData {
                     response: setup_intent_response,
-                    router_data: item.router_data,
+                    router_data: item.router_data.router_data,
                     http_code: item.http_code,
                 })
             }

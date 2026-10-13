@@ -216,6 +216,7 @@ pub fn response_handling_fail_for_connector(http_status: u16, connector: &str) -
     response_handling_fail(http_status, response_http_status_detail(connector))
 }
 
+/// Converts a connector response amount into domain money through the connector's amount converter.
 pub fn response_amount_to_money<AC>(
     amount_converter: &AC,
     amount: AC::Output,
@@ -233,27 +234,22 @@ where
             connector_name,
         ))?;
 
-    Ok(minor_amount_to_money(amount, currency))
+    Ok(Money { amount, currency })
 }
 
+/// Converts a webhook amount conversion result into domain money while preserving parsing failures.
 pub fn webhook_amount_to_money(
     amount: Result<MinorUnit, Report<ParsingError>>,
     currency: enums::Currency,
 ) -> Result<Money, Report<errors::WebhookError>> {
-    let amount = amount.map_err(|_| {
-        error_stack::report!(errors::WebhookError::WebhookAmountConversionFailed {
-            reason: format!(
-                "Failed to convert amount to minor units: currency={}",
-                currency
-            ),
-        })
+    let amount = amount.change_context(errors::WebhookError::WebhookAmountConversionFailed {
+        reason: format!(
+            "Failed to convert amount to minor units: currency={}",
+            currency
+        ),
     })?;
 
-    Ok(minor_amount_to_money(amount, currency))
-}
-
-pub fn minor_amount_to_money(amount: MinorUnit, currency: enums::Currency) -> Money {
-    Money { amount, currency }
+    Ok(Money { amount, currency })
 }
 
 /// Response bytes could not be parsed into the expected response type (JSON/XML, schema drift).
