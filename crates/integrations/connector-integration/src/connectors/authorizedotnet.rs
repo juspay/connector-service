@@ -2,7 +2,12 @@ pub mod transformers;
 
 use common_enums;
 use common_utils::{
-    consts, errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit,
+    consts,
+    crypto::{HmacSha512, VerifySignature},
+    errors::CustomResult,
+    events,
+    ext_traits::ByteSliceExt,
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -55,7 +60,7 @@ use self::transformers::{
     AuthorizedotnetVoidResponse, AuthorizedotnetWebhookEventType, AuthorizedotnetWebhookObjectId,
 };
 use super::macros;
-use crate::{types::ResponseRouterData, with_response_body};
+use crate::{types::ResponseRouterData, utils, with_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -165,7 +170,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // HMAC-SHA512 over the raw request body bytes, keyed with the Signature Key as
         // stored. `verify_signature` does the comparison in constant time.
-        use common_utils::crypto::{HmacSha512, VerifySignature};
         match HmacSha512.verify_signature(&webhook_secret, &expected_signature, &request.body) {
             Ok(verified) => Ok(verified),
             Err(crypto_error) => {
@@ -481,11 +485,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: transformers::AuthorizedotnetPaymentsResponse = body
             .as_bytes()
             .parse_struct("AuthorizedotnetPaymentsResponse")
-            .map_err(|_| {
-                crate::utils::response_deserialization_fail(
-                    res.status_code,
-                "authorizedotnet: response body did not match the expected format; confirm API version and connector documentation.")
-            })?;
+            .change_context(utils::response_deserialization_fail(
+                res.status_code,
+                "authorizedotnet: response body did not match the expected format; confirm API version and connector documentation.",
+            ))?;
 
         with_response_body!(event_builder, response);
         let typed =
