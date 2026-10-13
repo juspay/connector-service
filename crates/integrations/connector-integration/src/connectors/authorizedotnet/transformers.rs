@@ -191,7 +191,15 @@ fn metadata_to_user_fields(
     if !value.is_object() {
         return Err(error_stack::report!(IntegrationError::InvalidDataFormat {
             field_name: "metadata",
-            context: Default::default(),
+            context: IntegrationErrorContext {
+                suggested_action: Some(
+                    "Send `metadata` as a JSON object of name/value pairs".to_string(),
+                ),
+                doc_url: None,
+                additional_context: Some(
+                    "Authorize.Net `userFields` are name/value pairs, so `metadata` must be a JSON object, not an array or a scalar".to_string(),
+                ),
+            },
         }));
     }
 
@@ -681,26 +689,28 @@ pub struct BillTo {
     email: Option<Email>,
 }
 
-/// Builds `billTo` from a billing address. Shared by every createTransactionRequest
-/// that sends card data with a billing address, so the shape cannot drift per flow.
-fn build_bill_to(billing: &Address) -> BillTo {
-    let details = billing.address.as_ref();
-    BillTo {
-        first_name: details.and_then(|a| a.first_name.clone()),
-        last_name: details.and_then(|a| a.last_name.clone()),
-        // line1, line2 and line3 joined under the 60-character limit
-        address: details.and_then(|a| get_address_line(&a.line1, &a.line2, &a.line3)),
-        city: details.and_then(|a| a.city.clone()),
-        state: details.and_then(|a| a.state.clone()),
-        zip: details.and_then(|a| a.zip.clone()),
-        country: details.and_then(|a| a.country),
-        // Country code + number. `phoneNumber` is limited to 25 characters and an
-        // over-long value fails the whole request on schema validation, so it is
-        // omitted instead - the same rule `refId` and `customer.id` follow.
-        phone_number: billing
-            .get_e123_phone_number()
-            .filter(|phone| phone.peek().len() <= PHONE_MAX_LENGTH),
-        email: billing.email.clone(),
+/// `billTo` from a billing address. Shared by every createTransactionRequest that
+/// sends card data with a billing address, so the shape cannot drift per flow.
+impl From<&Address> for BillTo {
+    fn from(billing: &Address) -> Self {
+        let details = billing.address.as_ref();
+        Self {
+            first_name: details.and_then(|a| a.first_name.clone()),
+            last_name: details.and_then(|a| a.last_name.clone()),
+            // line1, line2 and line3 joined under the 60-character limit
+            address: details.and_then(|a| get_address_line(&a.line1, &a.line2, &a.line3)),
+            city: details.and_then(|a| a.city.clone()),
+            state: details.and_then(|a| a.state.clone()),
+            zip: details.and_then(|a| a.zip.clone()),
+            country: details.and_then(|a| a.country),
+            // Country code + number. `phoneNumber` is limited to 25 characters and an
+            // over-long value fails the whole request on schema validation, so it is
+            // omitted instead - the same rule `refId` and `customer.id` follow.
+            phone_number: billing
+                .get_e123_phone_number()
+                .filter(|phone| phone.peek().len() <= PHONE_MAX_LENGTH),
+            email: billing.email.clone(),
+        }
     }
 }
 
@@ -717,28 +727,35 @@ pub struct ShipTo {
     country: Option<enums::CountryAlpha2>,
 }
 
-/// Builds `shipTo` from the shipping address; `None` when the address carries
-/// nothing to send, so an empty `shipTo` object never reaches the wire.
-fn build_ship_to(shipping: &Address) -> Option<ShipTo> {
-    let details = shipping.address.as_ref()?;
-    let ship_to = ShipTo {
-        first_name: details.first_name.clone(),
-        last_name: details.last_name.clone(),
-        // Same 60-character joining rule as billTo.address
-        address: get_address_line(&details.line1, &details.line2, &details.line3),
-        city: details.city.clone(),
-        state: details.state.clone(),
-        zip: details.zip.clone(),
-        country: details.country,
-    };
-    let has_content = ship_to.first_name.is_some()
-        || ship_to.last_name.is_some()
-        || ship_to.address.is_some()
-        || ship_to.city.is_some()
-        || ship_to.state.is_some()
-        || ship_to.zip.is_some()
-        || ship_to.country.is_some();
-    has_content.then_some(ship_to)
+/// `shipTo` from the shipping address. Pair with `has_content` so an empty `shipTo`
+/// object never reaches the wire.
+impl From<&Address> for ShipTo {
+    fn from(shipping: &Address) -> Self {
+        let details = shipping.address.as_ref();
+        Self {
+            first_name: details.and_then(|a| a.first_name.clone()),
+            last_name: details.and_then(|a| a.last_name.clone()),
+            // Same 60-character joining rule as billTo.address
+            address: details.and_then(|a| get_address_line(&a.line1, &a.line2, &a.line3)),
+            city: details.and_then(|a| a.city.clone()),
+            state: details.and_then(|a| a.state.clone()),
+            zip: details.and_then(|a| a.zip.clone()),
+            country: details.and_then(|a| a.country),
+        }
+    }
+}
+
+impl ShipTo {
+    /// Whether the address carried anything to send.
+    fn has_content(&self) -> bool {
+        self.first_name.is_some()
+            || self.last_name.is_some()
+            || self.address.is_some()
+            || self.city.is_some()
+            || self.state.is_some()
+            || self.zip.is_some()
+            || self.country.is_some()
+    }
 }
 
 /// Level 3 line items: `lineItems.lineItem[]`.
@@ -1219,7 +1236,7 @@ fn create_regular_transaction_request<
         .resource_common_data
         .address
         .get_payment_billing()
-        .map(build_bill_to);
+        .map(BillTo::from);
 
     // shipTo from the shipping address, omitted when there is none
     let ship_to = item
@@ -1227,7 +1244,8 @@ fn create_regular_transaction_request<
         .resource_common_data
         .address
         .get_shipping()
-        .and_then(build_ship_to);
+        .map(ShipTo::from)
+        .filter(ShipTo::has_content);
 
     // Level 2 / Level 3 data. Every amount goes through the connector's
     // FloatMajorUnit converter; nothing is computed here.
@@ -1255,8 +1273,16 @@ fn create_regular_transaction_request<
     // lineItems.lineItem[]: every order detail is forwarded. The API accepts at most
     // 30 line items; a longer list would fail the whole payment on schema
     // validation, so lineItems is omitted then instead of sending a partial order.
-    let line_items = order_info
-        .and_then(|info| info.order_details.as_ref())
+    let order_details = order_info.and_then(|info| info.order_details.as_ref());
+    if let Some(dropped) = order_details.filter(|details| details.len() > MAX_LINE_ITEMS) {
+        tracing::warn!(
+            line_items = dropped.len(),
+            max_line_items = MAX_LINE_ITEMS,
+            "Order carries more line items than Authorize.Net accepts: lineItems omitted \
+             while tax, duty and shipping are still sent"
+        );
+    }
+    let line_items = order_details
         .filter(|details| !details.is_empty() && details.len() <= MAX_LINE_ITEMS)
         .map(|details| {
             details
@@ -1642,7 +1668,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .address
                         .get_payment_billing()
-                        .map(build_bill_to),
+                        .map(BillTo::from),
                     Some(ProcessingOptions {
                         is_subsequent_auth: true,
                     }),
@@ -2469,29 +2495,23 @@ pub struct AuthorizedotnetTransactionResponse {
     secure_acceptance: Option<SecureAcceptance>,
     #[serde(default)]
     profile: Option<TransactionProfileInfo>,
-    #[serde(default, rename = "avsResultCode")]
-    avs_result_code: Option<String>,
-    /// CVV check result: M, N, P, S or U.
-    #[serde(default)]
-    cvv_result_code: Option<String>,
+    #[serde(rename = "avsResultCode")]
+    avs_result_code: Option<AvsResultCode>,
+    /// CVV check result.
+    cvv_result_code: Option<CvvResultCode>,
     /// CAVV validation result of an external 3-D Secure authentication.
-    #[serde(default)]
     cavv_result_code: Option<String>,
     /// Merchant advice code and text (returned for TSYS only).
-    #[serde(default)]
     merchant_advice: Option<MerchantAdvice>,
     /// Processor response code. Present in the XSD without a documented meaning;
     /// surfaced only when the gateway returns it.
-    #[serde(default)]
     raw_response_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MerchantAdvice {
-    #[serde(default)]
     code: Option<String>,
-    #[serde(default)]
     description: Option<String>,
 }
 
@@ -2514,38 +2534,86 @@ pub struct AuthorizedotnetVoidResponse(pub AuthorizedotnetPaymentsResponse);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AuthorizedotnetRepeatPaymentResponse(pub AuthorizedotnetPaymentsResponse);
 
-// Helper function to get AVS response description based on the code
-fn get_avs_response_description(code: &str) -> Option<&'static str> {
-    match code {
-        "A" => Some("The street address matched, but the postal code did not."),
-        "B" => Some("No address information was provided."),
-        "E" => Some(
-            "AVS data provided is invalid or AVS is not allowed for the card type that was used.",
-        ),
-        "G" => Some("The card was issued by a bank outside the U.S. and does not support AVS."),
-        "N" => Some("Neither the street address nor postal code matched."),
-        "P" => Some("AVS is not applicable for this transaction."),
-        "R" => Some("Retry — AVS was unavailable or timed out."),
-        "S" => Some("AVS is not supported by card issuer."),
-        "U" => Some("Address information is unavailable."),
-        "W" => Some("The US ZIP+4 code matches, but the street address does not."),
-        "X" => Some("Both the street address and the US ZIP+4 code matched."),
-        "Y" => Some("The street address and postal code matched."),
-        "Z" => Some("The postal code matched, but the street address did not."),
-        _ => None,
+/// `transactionResponse.avsResultCode` (API reference). A code the reference does not
+/// list is kept verbatim in `Other`, so the raw gateway value still reaches
+/// `payment_checks` and an unlisted code never fails the response.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum AvsResultCode {
+    A,
+    B,
+    E,
+    G,
+    N,
+    P,
+    R,
+    S,
+    U,
+    W,
+    X,
+    Y,
+    Z,
+    #[serde(untagged)]
+    Other(String),
+}
+
+impl AvsResultCode {
+    fn description(&self) -> Option<&'static str> {
+        match self {
+            Self::A => Some("The street address matched, but the postal code did not."),
+            Self::B => Some("No address information was provided."),
+            Self::E => Some(
+                "AVS data provided is invalid or AVS is not allowed for the card type that was used.",
+            ),
+            Self::G => {
+                Some("The card was issued by a bank outside the U.S. and does not support AVS.")
+            }
+            Self::N => Some("Neither the street address nor postal code matched."),
+            Self::P => Some("AVS is not applicable for this transaction."),
+            Self::R => Some("Retry — AVS was unavailable or timed out."),
+            Self::S => Some("AVS is not supported by card issuer."),
+            Self::U => Some("Address information is unavailable."),
+            Self::W => Some("The US ZIP+4 code matches, but the street address does not."),
+            Self::X => Some("Both the street address and the US ZIP+4 code matched."),
+            Self::Y => Some("The street address and postal code matched."),
+            Self::Z => Some("The postal code matched, but the street address did not."),
+            Self::Other(_) => None,
+        }
+    }
+
+    /// `P` is "not applicable for this transaction" and an empty string is the gateway
+    /// saying it has nothing to report: neither earns a `payment_checks` row.
+    fn is_reportable(&self) -> bool {
+        !matches!(self, Self::P) && !matches!(self, Self::Other(code) if code.trim().is_empty())
     }
 }
 
-// Helper function to get CVV response description based on the code
-// (API reference, transactionResponse.cvvResultCode)
-fn get_cvv_response_description(code: &str) -> Option<&'static str> {
-    match code {
-        "M" => Some("CVV matched."),
-        "N" => Some("CVV did not match."),
-        "P" => Some("CVV was not processed."),
-        "S" => Some("CVV should have been present but was not indicated."),
-        "U" => Some("The issuer was unable to process the CVV check."),
-        _ => None,
+/// `transactionResponse.cvvResultCode` (API reference), same `Other` rule as
+/// `AvsResultCode`.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum CvvResultCode {
+    M,
+    N,
+    P,
+    S,
+    U,
+    #[serde(untagged)]
+    Other(String),
+}
+
+impl CvvResultCode {
+    fn description(&self) -> Option<&'static str> {
+        match self {
+            Self::M => Some("CVV matched."),
+            Self::N => Some("CVV did not match."),
+            Self::P => Some("CVV was not processed."),
+            Self::S => Some("CVV should have been present but was not indicated."),
+            Self::U => Some("The issuer was unable to process the CVV check."),
+            Self::Other(_) => None,
+        }
+    }
+
+    fn is_reportable(&self) -> bool {
+        !matches!(self, Self::Other(code) if code.trim().is_empty())
     }
 }
 
@@ -2555,10 +2623,14 @@ fn get_cvv_response_description(code: &str) -> Option<&'static str> {
 fn convert_to_additional_payment_method_connector_response(
     transaction_response: &AuthorizedotnetTransactionResponse,
 ) -> Option<domain_types::router_data::AdditionalPaymentMethodConnectorResponse> {
-    // AVS "P" means "not applicable for this transaction": nothing to report.
-    let avs_result_code =
-        non_empty_code(transaction_response.avs_result_code.as_ref()).filter(|code| *code != "P");
-    let cvv_result_code = non_empty_code(transaction_response.cvv_result_code.as_ref());
+    let avs_result_code = transaction_response
+        .avs_result_code
+        .as_ref()
+        .filter(|code| code.is_reportable());
+    let cvv_result_code = transaction_response
+        .cvv_result_code
+        .as_ref()
+        .filter(|code| code.is_reportable());
     let cavv_result_code = non_empty_code(transaction_response.cavv_result_code.as_ref());
 
     let mut payment_checks = serde_json::Map::new();
@@ -2566,14 +2638,14 @@ fn convert_to_additional_payment_method_connector_response(
         payment_checks.insert("avs_result_code".to_string(), serde_json::json!(code));
         payment_checks.insert(
             "description".to_string(),
-            serde_json::json!(get_avs_response_description(code)),
+            serde_json::json!(code.description()),
         );
     }
     if let Some(code) = cvv_result_code {
         payment_checks.insert("cvv_result_code".to_string(), serde_json::json!(code));
         payment_checks.insert(
             "cvv_description".to_string(),
-            serde_json::json!(get_cvv_response_description(code)),
+            serde_json::json!(code.description()),
         );
     }
     if let Some(code) = cavv_result_code {
@@ -3444,6 +3516,18 @@ fn get_hs_status(
         return failure_status;
     }
 
+    // An unlisted resultCode is not a verdict of its own: `transactionResponse` below
+    // carries the transaction's outcome and stays authoritative (as in hyperswitch, which
+    // only guards against `Error`), so an approved transaction is not thrown away. Logged
+    // because an unlisted code means the API reference and this mapping have drifted.
+    if response.messages.result_code == ResultCode::Unknown {
+        tracing::warn!(
+            ?operation,
+            "Authorize.Net returned a resultCode the API reference does not list; \
+             falling through to transactionResponse.responseCode"
+        );
+    }
+
     // Handle case when transaction_response is None
     if response.transaction_response.is_none() {
         return match operation {
@@ -4013,27 +4097,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         new_router_data.resource_common_data = resource_common_data;
 
         if response.customer_profile_id.is_some() {
-            // Extract payment profile ID from response
-            let payment_profile_id = response
+            // {customer_profile_id}-{payment_profile_id}, and `None` when the profile came
+            // back without a payment profile to pair with it. Hyperswitch leaves the mandate
+            // id empty there instead of failing the transformation, so a later MIT fails on a
+            // missing mandate rather than this response failing as a deserialization error.
+            let connector_mandate_id = response
                 .customer_payment_profile_id_list
                 .first()
                 .or(response.customer_payment_profile_id.as_ref())
-                .ok_or_else(|| {
-                    error_stack::report!(crate::utils::response_handling_fail_for_connector(
-                        http_code,
-                        "authorizedotnet"
-                    ))
-                })?;
-
-            // Create composite mandate ID: {customer_profile_id}-{payment_profile_id}
-            let connector_mandate_id = format!("{connector_customer_id}-{payment_profile_id}");
+                .map(|payment_profile_id| format!("{connector_customer_id}-{payment_profile_id}"));
 
             new_router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::NoResponseId,
                 redirection_data: None,
                 connector_metadata: None,
                 mandate_reference: Some(Box::new(MandateReference {
-                    connector_mandate_id: Some(connector_mandate_id),
+                    connector_mandate_id,
                     payment_method_id: None,
                     connector_mandate_request_reference_id: None,
                     mandate_metadata: None,
@@ -4619,5 +4698,47 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetSdkSessionTokenResponse, Self>>
             response: Ok(ServerSessionAuthenticationTokenResponseData { session_token }),
             ..router_data.clone()
         })
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used)]
+mod tests {
+    use super::{AvsResultCode, CvvResultCode};
+
+    /// A documented code parses to its variant and a code the reference does not list
+    /// survives verbatim, so `payment_checks` still carries what the gateway sent.
+    #[test]
+    fn result_codes_round_trip_including_unlisted_values() {
+        for (raw, reportable, has_description) in [
+            ("Y", true, true),
+            ("P", false, true),
+            ("Q", true, false),
+            ("", false, false),
+        ] {
+            let code: AvsResultCode = serde_json::from_value(serde_json::json!(raw))
+                .expect("every string is a valid avsResultCode");
+            assert_eq!(code.is_reportable(), reportable, "avs {raw}");
+            assert_eq!(code.description().is_some(), has_description, "avs {raw}");
+            assert_eq!(
+                serde_json::to_value(&code).expect("serializable"),
+                serde_json::json!(raw),
+                "avs {raw}"
+            );
+        }
+
+        for (raw, reportable, has_description) in
+            [("M", true, true), ("Q", true, false), ("", false, false)]
+        {
+            let code: CvvResultCode = serde_json::from_value(serde_json::json!(raw))
+                .expect("every string is a valid cvvResultCode");
+            assert_eq!(code.is_reportable(), reportable, "cvv {raw}");
+            assert_eq!(code.description().is_some(), has_description, "cvv {raw}");
+            assert_eq!(
+                serde_json::to_value(&code).expect("serializable"),
+                serde_json::json!(raw),
+                "cvv {raw}"
+            );
+        }
     }
 }
