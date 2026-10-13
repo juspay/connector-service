@@ -9,6 +9,22 @@
             }
           }
         }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "AUTHENTICATION_PENDING"
+          ]
+        },
+        "redirection_data": {
+          "must_exist": true
+        },
+        "connector_transaction_id": {
+          "must_exist": true
+        },
+        "error": {
+          "must_not_exist": true
+        }
       }
     },
     "no3ds_auto_capture_ideal": {
@@ -80,17 +96,148 @@
         }
       },
       "assert": {
-        "status": null,
+        "status": {
+          "one_of": [
+            "FAILURE"
+          ]
+        },
+        "error": {
+          "must_exist": true
+        },
         "error.connector_details.message": {
           "contains": "declin"
+        },
+        "error.connector_details.code": {
+          "equals": "card_declined"
+        },
+        "error.issuer_details.network_details.error_message": {
+          "equals": "generic_decline"
+        }
+      }
+    },
+    "no3ds_auto_capture_apple_pay_decrypted": {
+      "assert": {
+        "status": {
+          "must_not_exist": true
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        },
+        "error": {
+          "must_exist": true
+        },
+        "error.connector_details.code": {
+          "equals": "parameter_unknown"
+        },
+        "error.connector_details.message": {
+          "contains": "Received unknown parameter: card"
+        },
+        "status_code": {
+          "equals": 400
+        }
+      }
+    },
+    "no3ds_auto_capture_apple_pay_decrypted_cit": {
+      "assert": {
+        "status": {
+          "must_not_exist": true
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        },
+        "error": {
+          "must_exist": true
+        },
+        "error.connector_details.code": {
+          "equals": "parameter_unknown"
+        },
+        "error.connector_details.message": {
+          "contains": "Received unknown parameter: card"
+        },
+        "status_code": {
+          "equals": 400
+        },
+        "mandate_reference.connector_mandate_id.connector_mandate_id": {
+          "must_not_exist": true
+        }
+      }
+    },
+    "no3ds_auto_capture_google_pay_decrypted": {
+      "assert": {
+        "status": {
+          "must_not_exist": true
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        },
+        "error": {
+          "must_exist": true
+        },
+        "error.connector_details.code": {
+          "equals": "parameter_unknown"
+        },
+        "error.connector_details.message": {
+          "contains": "Received unknown parameter: card"
+        },
+        "status_code": {
+          "equals": 400
+        }
+      }
+    },
+    "no3ds_auto_capture_google_pay_decrypted_cit": {
+      "assert": {
+        "status": {
+          "must_not_exist": true
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        },
+        "error": {
+          "must_exist": true
+        },
+        "error.connector_details.code": {
+          "equals": "parameter_unknown"
+        },
+        "error.connector_details.message": {
+          "contains": "Received unknown parameter: card"
+        },
+        "status_code": {
+          "equals": 400
+        },
+        "mandate_reference.connector_mandate_id.connector_mandate_id": {
+          "must_not_exist": true
         }
       }
     }
   },
   "PaymentService/SetupRecurring": {
-    "setup_recurring_with_order_context": {
+    "setup_recurring": {
+      "assert": {
+        "status": {
+          "one_of": [
+            "CHARGED"
+          ]
+        },
+        "connector_recurring_payment_id": {
+          "must_exist": true
+        }
+      }
+    },
+    "setup_recurring_with_webhook": {
       "grpc_req": {
-        "off_session": null
+        "amount": {
+          "minor_amount": 0
+        }
+      },
+      "assert": {
+        "status": {
+          "one_of": [
+            "CHARGED"
+          ]
+        },
+        "connector_recurring_payment_id": {
+          "must_exist": true
+        }
       }
     }
   },
@@ -105,6 +252,70 @@
           ]
         },
         "error": null
+      }
+    }
+  },
+  "PaymentService/TokenSetupRecurring": {
+    "token_setup_mandate": {
+      "assert": {
+        "connector_transaction_id": null,
+        "mandate_id": null,
+        "status": {
+          "one_of": [
+            "CHARGED"
+          ]
+        },
+        "connector_recurring_payment_id": {
+          "must_exist": true
+        },
+        "mandate_reference.connector_mandate_id.connector_mandate_id": {
+          "must_exist": true
+        },
+        "error": {
+          "must_not_exist": true
+        }
+      }
+    }
+  },
+  "EventService/HandleEvent": {
+    "payment_succeeded": {
+      "assert": {
+        "event_status": null,
+        "event_content.payments_response.status": {
+          "one_of": [
+            "CHARGED"
+          ]
+        }
+      }
+    },
+    "payment_failed": {
+      "assert": {
+        "event_status": null,
+        "event_content.payments_response.status": {
+          "one_of": [
+            "FAILURE"
+          ]
+        }
+      }
+    },
+    "refund_succeeded": {
+      "assert": {
+        "event_status": null,
+        "event_content.refunds_response.status": {
+          "one_of": [
+            "REFUND_SUCCESS"
+          ]
+        }
+      }
+    },
+    "invalid_signature": {
+      "assert": {
+        "event_status": null,
+        "event_type": {
+          "one_of": [
+            "PAYMENT_INTENT_SUCCESS"
+          ]
+        }
       }
     }
   }

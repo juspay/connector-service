@@ -21,10 +21,15 @@
               "amount": 2000,
               "amount_capturable": 0,
               "amount_received": 2000,
+              "created": 1680614390,
               "currency": "usd",
+              "livemode": false,
+              "metadata": {},
               "status": "succeeded"
             }
           },
+          "livemode": false,
+          "pending_webhooks": 1,
           "type": "payment_intent.succeeded"
         }
       },
@@ -47,14 +52,21 @@
               "amount": 2000,
               "amount_capturable": 0,
               "amount_received": 0,
+              "created": 1680614391,
               "currency": "usd",
-              "status": "failed",
+              "livemode": false,
+              "metadata": {},
+              "status": "requires_payment_method",
               "last_payment_error": {
                 "code": "card_declined",
-                "message": "Your card was declined."
+                "decline_code": "generic_decline",
+                "message": "Your card was declined.",
+                "type": "card_error"
               }
             }
           },
+          "livemode": false,
+          "pending_webhooks": 1,
           "type": "payment_intent.payment_failed"
         }
       },
@@ -66,45 +78,174 @@
       "request_details": {
         "headers": {},
         "body": {
-          "id": "evt_refund_123",
+          "id": "evt_1MqLnJHfXbQ8wWVU6JZvN3Cf",
           "object": "event",
           "api_version": "2022-11-15",
           "created": 1680614500,
           "data": {
             "object": {
-              "id": "re_1234567890",
+              "id": "re_3MqLnJHfXbQ8wWVU0Zp1Kd2a",
               "object": "refund",
               "amount": 2000,
+              "charge": "ch_3MqLnJHfXbQ8wWVU0QyL7mVx",
+              "created": 1680614490,
               "currency": "usd",
-              "status": "succeeded",
-              "charge": "ch_1234567890"
+              "metadata": {},
+              "payment_intent": "pi_3MqLnJHfXbQ8wWVU0K8m5V6p",
+              "status": "succeeded"
             }
           },
-          "type": "charge.refunded"
+          "livemode": false,
+          "pending_webhooks": 1,
+          "type": "refund.updated"
         }
       },
-      "merchant_event_id": "stripe_webhook_refund"
+      "merchant_event_id": "stripe_webhook_refund_succeeded"
     }
   },
   "invalid_signature": {
     "grpc_req": {
       "request_details": {
         "headers": {
-          "Stripe-Signature": "t=1234567890,v1=0000000000000000000000000000000000000000000000000000000000000000"
+          "Stripe-Signature": "t=1680614600,v1=0000000000000000000000000000000000000000000000000000000000000000"
         },
         "body": {
-          "id": "evt_invalid",
+          "id": "evt_1MqLnJHfXbQ8wWVU6JZvN3Cg",
           "object": "event",
-          "type": "payment_intent.succeeded",
+          "api_version": "2022-11-15",
+          "created": 1680614600,
           "data": {
             "object": {
-              "id": "pi_invalid",
+              "id": "pi_3MqLnJHfXbQ8wWVU0K8m5V6r",
+              "object": "payment_intent",
+              "amount": 2000,
+              "amount_capturable": 0,
+              "amount_received": 2000,
+              "created": 1680614590,
+              "currency": "usd",
+              "livemode": false,
+              "metadata": {},
               "status": "succeeded"
             }
-          }
+          },
+          "livemode": false,
+          "pending_webhooks": 1,
+          "type": "payment_intent.succeeded"
         }
       },
-      "merchant_event_id": "stripe_webhook_invalid_sig"
+      "merchant_event_id": "stripe_webhook_invalid_sig",
+      "webhook_secrets": {
+        "secret": "whsec_test_dummy_not_a_real_secret"
+      }
+    }
+  },
+  "refund_failed": {
+    "grpc_req": {
+      "request_details": {
+        "headers": {},
+        "body": {
+          "id": "evt_1MqLnJHfXbQ8wWVU6JZvN3Ch",
+          "object": "event",
+          "api_version": "2022-11-15",
+          "created": 1680614700,
+          "data": {
+            "object": {
+              "id": "re_3MqLnJHfXbQ8wWVU0Zp1Kd2b",
+              "object": "refund",
+              "amount": 2000,
+              "charge": "ch_3MqLnJHfXbQ8wWVU0QyL7mVx",
+              "created": 1680614690,
+              "currency": "usd",
+              "metadata": {},
+              "payment_intent": "pi_3MqLnJHfXbQ8wWVU0K8m5V6p",
+              "status": "failed",
+              "failure_reason": "expired_or_canceled_card"
+            }
+          },
+          "livemode": false,
+          "pending_webhooks": 1,
+          "type": "refund.failed"
+        }
+      },
+      "merchant_event_id": "stripe_webhook_refund_failed"
+    }
+  },
+  "dispute_opened": {
+    "grpc_req": {
+      "request_details": {
+        "headers": {},
+        "body": {
+          "id": "evt_1MqLnJHfXbQ8wWVU6JZvN3Ci",
+          "object": "event",
+          "api_version": "2022-11-15",
+          "created": 1680651737,
+          "data": {
+            "object": {
+              "id": "du_1MtJUT2eZvKYlo2CNaw2HvEv",
+              "object": "dispute",
+              "amount": 1000,
+              "charge": "ch_3MqLnJHfXbQ8wWVU0QyL7mVx",
+              "created": 1680651737,
+              "currency": "usd",
+              "evidence_details": {
+                "due_by": 1682294399,
+                "has_evidence": false,
+                "past_due": false,
+                "submission_count": 0
+              },
+              "is_charge_refundable": false,
+              "livemode": false,
+              "metadata": {},
+              "payment_intent": "pi_3MqLnJHfXbQ8wWVU0K8m5V6p",
+              "reason": "general",
+              "status": "needs_response"
+            }
+          },
+          "livemode": false,
+          "pending_webhooks": 1,
+          "type": "charge.dispute.created"
+        }
+      },
+      "merchant_event_id": "stripe_webhook_dispute_opened"
+    }
+  },
+  "dispute_lost": {
+    "grpc_req": {
+      "request_details": {
+        "headers": {},
+        "body": {
+          "id": "evt_1MqLnJHfXbQ8wWVU6JZvN3Cj",
+          "object": "event",
+          "api_version": "2022-11-15",
+          "created": 1682300000,
+          "data": {
+            "object": {
+              "id": "du_1MtJUT2eZvKYlo2CNaw2HvEv",
+              "object": "dispute",
+              "amount": 1000,
+              "charge": "ch_3MqLnJHfXbQ8wWVU0QyL7mVx",
+              "created": 1680651737,
+              "currency": "usd",
+              "evidence_details": {
+                "due_by": 1682294399,
+                "has_evidence": false,
+                "past_due": false,
+                "submission_count": 0
+              },
+              "is_charge_refundable": false,
+              "livemode": false,
+              "metadata": {},
+              "payment_intent": "pi_3MqLnJHfXbQ8wWVU0K8m5V6p",
+              "reason": "general",
+              "status": "lost"
+            }
+          },
+          "livemode": false,
+          "pending_webhooks": 1,
+          "type": "charge.dispute.closed"
+        }
+      },
+      "merchant_event_id": "stripe_webhook_dispute_lost"
     }
   }
 }
