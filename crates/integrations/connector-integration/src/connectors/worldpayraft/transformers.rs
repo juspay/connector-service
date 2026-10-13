@@ -2832,10 +2832,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     pan: Some(WorldpayraftAuthorizePan::CardWithNoCvc(
                         card.card_number.clone(),
                     )),
-                    expiration_date: Some(expiry_as_yymm(
-                        &card.card_exp_year,
-                        &card.card_exp_month,
-                    )?),
+                    expiration_date: Some(card.get_expiry_date_as_yymm()?),
                 },
                 terminal_data: WorldpayraftTerminalData {
                     entry_mode: WorldpayraftEntryMode::Keyed,
