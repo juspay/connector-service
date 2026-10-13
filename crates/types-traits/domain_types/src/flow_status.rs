@@ -9,7 +9,7 @@ use crate::connector_flow;
 
 pub trait FlowSpec {
     const NAME: &'static str;
-    type Status: Copy;
+    type Status;
     type Success: Copy + std::fmt::Debug + Eq + Into<Self::Status>;
     type Failure: Copy + std::fmt::Debug + Eq + Into<Self::Status>;
     type NonTerminal: Copy + std::fmt::Debug + Eq + Into<Self::Status>;
@@ -32,7 +32,6 @@ pub enum ConnectorFlowStatus<Flow: FlowSpec> {
     Success(Flow::Success),
     Failure(Flow::Failure),
     NonTerminal(Flow::NonTerminal),
-    Raw(Flow::Status),
 }
 
 impl<Flow: FlowSpec> ConnectorFlowStatus<Flow> {
@@ -41,7 +40,6 @@ impl<Flow: FlowSpec> ConnectorFlowStatus<Flow> {
             Self::Success(status) => (*status).into(),
             Self::Failure(status) => (*status).into(),
             Self::NonTerminal(status) => (*status).into(),
-            Self::Raw(status) => *status,
         }
     }
 
@@ -50,7 +48,6 @@ impl<Flow: FlowSpec> ConnectorFlowStatus<Flow> {
             Self::Success(status) => status.into(),
             Self::Failure(status) => status.into(),
             Self::NonTerminal(status) => status.into(),
-            Self::Raw(status) => status,
         }
     }
 }
