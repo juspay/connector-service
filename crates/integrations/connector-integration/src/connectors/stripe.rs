@@ -1253,42 +1253,32 @@ macros::macro_connector_implementation!(
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Stripe<T>,
-    flow:      Refund,
-    source:    stripe::RefundStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Success],
-    failure:   none,
-    extractors: {
+    flow: Refund,
+    source: stripe::RefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { common_enums::RefundStatus::from(status) },
+    runtime: {
         request: RefundsData,
         response: RefundResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        common_enums::RefundStatus::from(status)
-    }
 }
 
 // RSync mirrors Refund — same `RefundResponse` shape on the sync RPC.
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Stripe<T>,
-    flow:      RSync,
-    source:    stripe::RefundStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Success],
-    failure:   none,
-    extractors: {
+    flow: RSync,
+    source: stripe::RefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { common_enums::RefundStatus::from(status) },
+    runtime: {
         request: RefundSyncData,
         response: RefundSyncResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        common_enums::RefundStatus::from(status)
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

@@ -33,7 +33,7 @@ use interfaces::{
 };
 use serde::Serialize;
 pub mod transformers;
-use error_stack::{ResultExt, report};
+use error_stack::{report, ResultExt};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use transformers::{
@@ -803,36 +803,37 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Noon<T>,
-    flow:      Authorize,
-    source:    noon::NoonPaymentStatus,
-    success:   Authorized => Authorized,
-    failure:   Failed     => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
-        response: NoonPaymentsResponse,
-        source:   |response| response.result.order.status.clone(),
-        context:  |_request, _response| (),
+    flow: Authorize,
+    source: noon::NoonPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            noon::NoonPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            noon::NoonPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::PartiallyRefunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Reversed => common_enums::AttemptStatus::Voided,
+            noon::NoonPaymentStatus::PartiallyReversed => common_enums::AttemptStatus::Voided,
+            noon::NoonPaymentStatus::Cancelled => common_enums::AttemptStatus::AuthenticationFailed,
+            noon::NoonPaymentStatus::Expired => common_enums::AttemptStatus::AuthenticationFailed,
+            noon::NoonPaymentStatus::ThreeDsEnrollInitiated => common_enums::AttemptStatus::AuthenticationPending,
+            noon::NoonPaymentStatus::ThreeDsEnrollChecked => common_enums::AttemptStatus::AuthenticationPending,
+            noon::NoonPaymentStatus::ThreeDsResultVerified => common_enums::AttemptStatus::AuthenticationSuccessful,
+            noon::NoonPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::MarkedForReview => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Initiated => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::PaymentInfoAdded => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::Authenticated => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::Locked => common_enums::AttemptStatus::Unspecified,
+        }
     },
-    {
-        Captured            => Charged,
-        PartiallyCaptured   => Charged,
-        PartiallyRefunded   => Charged,
-        Refunded            => Charged,
-        Reversed            => Voided,
-        PartiallyReversed   => Voided,
-        Cancelled           => AuthenticationFailed,
-        Expired             => AuthenticationFailed,
-        ThreeDsEnrollInitiated => AuthenticationPending,
-        ThreeDsEnrollChecked   => AuthenticationPending,
-        ThreeDsResultVerified  => AuthenticationSuccessful,
-        Rejected            => Failure,
-        Pending             => Pending,
-        MarkedForReview     => Pending,
-        Initiated           => Started,
-        PaymentInfoAdded    => Started,
-        Authenticated       => Started,
-        Locked              => Unspecified,
-    }
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: NoonPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.result.order.status.clone()) },
+    },
 }
 
 // PSync — same shared `get_payment_status` (PSync TryFrom uses the generic
@@ -841,36 +842,37 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Noon<T>,
-    flow:      PSync,
-    source:    noon::NoonPaymentStatus,
-    success:   Captured => Charged,
-    failure:   Failed   => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: NoonPaymentsResponse,
-        source:   |response| response.result.order.status.clone(),
-        context:  |_request, _response| (),
+    flow: PSync,
+    source: noon::NoonPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            noon::NoonPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            noon::NoonPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::PartiallyRefunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Reversed => common_enums::AttemptStatus::Voided,
+            noon::NoonPaymentStatus::PartiallyReversed => common_enums::AttemptStatus::Voided,
+            noon::NoonPaymentStatus::Cancelled => common_enums::AttemptStatus::AuthenticationFailed,
+            noon::NoonPaymentStatus::Expired => common_enums::AttemptStatus::AuthenticationFailed,
+            noon::NoonPaymentStatus::ThreeDsEnrollInitiated => common_enums::AttemptStatus::AuthenticationPending,
+            noon::NoonPaymentStatus::ThreeDsEnrollChecked => common_enums::AttemptStatus::AuthenticationPending,
+            noon::NoonPaymentStatus::ThreeDsResultVerified => common_enums::AttemptStatus::AuthenticationSuccessful,
+            noon::NoonPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::MarkedForReview => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Initiated => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::PaymentInfoAdded => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::Authenticated => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::Locked => common_enums::AttemptStatus::Unspecified,
+        }
     },
-    {
-        Authorized          => Authorized,
-        PartiallyCaptured   => Charged,
-        PartiallyRefunded   => Charged,
-        Refunded            => Charged,
-        Reversed            => Voided,
-        PartiallyReversed   => Voided,
-        Cancelled           => AuthenticationFailed,
-        Expired             => AuthenticationFailed,
-        ThreeDsEnrollInitiated => AuthenticationPending,
-        ThreeDsEnrollChecked   => AuthenticationPending,
-        ThreeDsResultVerified  => AuthenticationSuccessful,
-        Rejected            => Failure,
-        Pending             => Pending,
-        MarkedForReview     => Pending,
-        Initiated           => Started,
-        PaymentInfoAdded    => Started,
-        Authenticated       => Started,
-        Locked              => Unspecified,
-    }
+    runtime: {
+        request: PaymentsSyncData,
+        response: NoonPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.result.order.status.clone()) },
+    },
 }
 
 // Capture — capture response shares the same `NoonPaymentsResponse` → `get_payment_status`
@@ -881,36 +883,37 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Noon<T>,
-    flow:      Capture,
-    source:    noon::NoonPaymentStatus,
-    success:   Captured => Charged,
-    failure:   Failed   => Failure,
-    extractors: {
-        request:  PaymentsCaptureData,
-        response: NoonPaymentsResponse,
-        source:   |response| response.result.order.status.clone(),
-        context:  |_request, _response| (),
+    flow: Capture,
+    source: noon::NoonPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            noon::NoonPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::PartialCharged,
+            noon::NoonPaymentStatus::PartiallyRefunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Authorized => common_enums::AttemptStatus::CaptureInitiated,
+            noon::NoonPaymentStatus::Reversed => common_enums::AttemptStatus::CaptureFailed,
+            noon::NoonPaymentStatus::PartiallyReversed => common_enums::AttemptStatus::CaptureFailed,
+            noon::NoonPaymentStatus::Cancelled => common_enums::AttemptStatus::CaptureFailed,
+            noon::NoonPaymentStatus::Expired => common_enums::AttemptStatus::CaptureFailed,
+            noon::NoonPaymentStatus::ThreeDsEnrollInitiated => common_enums::AttemptStatus::CaptureInitiated,
+            noon::NoonPaymentStatus::ThreeDsEnrollChecked => common_enums::AttemptStatus::CaptureInitiated,
+            noon::NoonPaymentStatus::ThreeDsResultVerified => common_enums::AttemptStatus::CaptureInitiated,
+            noon::NoonPaymentStatus::Rejected => common_enums::AttemptStatus::CaptureFailed,
+            noon::NoonPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::MarkedForReview => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Initiated => common_enums::AttemptStatus::CaptureInitiated,
+            noon::NoonPaymentStatus::PaymentInfoAdded => common_enums::AttemptStatus::CaptureInitiated,
+            noon::NoonPaymentStatus::Authenticated => common_enums::AttemptStatus::CaptureInitiated,
+            noon::NoonPaymentStatus::Locked => common_enums::AttemptStatus::Pending,
+        }
     },
-    {
-        PartiallyCaptured   => PartialCharged,
-        PartiallyRefunded   => Charged,
-        Refunded            => Charged,
-        Authorized          => CaptureInitiated,
-        Reversed            => CaptureFailed,
-        PartiallyReversed   => CaptureFailed,
-        Cancelled           => CaptureFailed,
-        Expired             => CaptureFailed,
-        ThreeDsEnrollInitiated => CaptureInitiated,
-        ThreeDsEnrollChecked   => CaptureInitiated,
-        ThreeDsResultVerified  => CaptureInitiated,
-        Rejected            => CaptureFailed,
-        Pending             => Pending,
-        MarkedForReview     => Pending,
-        Initiated           => CaptureInitiated,
-        PaymentInfoAdded    => CaptureInitiated,
-        Authenticated       => CaptureInitiated,
-        Locked              => Pending,
-    }
+    runtime: {
+        request: PaymentsCaptureData,
+        response: NoonPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.result.order.status.clone()) },
+    },
 }
 
 // Void — void response also shares `get_payment_status` via the generic impl.
@@ -920,36 +923,37 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Noon<T>,
-    flow:      Void,
-    source:    noon::NoonPaymentStatus,
-    success:   Reversed => Voided,
-    failure:   Failed   => VoidFailed,
-    extractors: {
-        request:  PaymentVoidData,
-        response: NoonPaymentsResponse,
-        source:   |response| response.result.order.status.clone(),
-        context:  |_request, _response| (),
+    flow: Void,
+    source: noon::NoonPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            noon::NoonPaymentStatus::Reversed => common_enums::AttemptStatus::Voided,
+            noon::NoonPaymentStatus::Failed => common_enums::AttemptStatus::VoidFailed,
+            noon::NoonPaymentStatus::PartiallyReversed => common_enums::AttemptStatus::Voided,
+            noon::NoonPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            noon::NoonPaymentStatus::Expired => common_enums::AttemptStatus::Voided,
+            noon::NoonPaymentStatus::Authorized => common_enums::AttemptStatus::VoidInitiated,
+            noon::NoonPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::MarkedForReview => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Initiated => common_enums::AttemptStatus::VoidInitiated,
+            noon::NoonPaymentStatus::PaymentInfoAdded => common_enums::AttemptStatus::VoidInitiated,
+            noon::NoonPaymentStatus::Authenticated => common_enums::AttemptStatus::VoidInitiated,
+            noon::NoonPaymentStatus::ThreeDsEnrollInitiated => common_enums::AttemptStatus::VoidInitiated,
+            noon::NoonPaymentStatus::ThreeDsEnrollChecked => common_enums::AttemptStatus::VoidInitiated,
+            noon::NoonPaymentStatus::ThreeDsResultVerified => common_enums::AttemptStatus::VoidInitiated,
+            noon::NoonPaymentStatus::Locked => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Captured => common_enums::AttemptStatus::VoidFailed,
+            noon::NoonPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::VoidFailed,
+            noon::NoonPaymentStatus::PartiallyRefunded => common_enums::AttemptStatus::VoidFailed,
+            noon::NoonPaymentStatus::Refunded => common_enums::AttemptStatus::VoidFailed,
+            noon::NoonPaymentStatus::Rejected => common_enums::AttemptStatus::VoidFailed,
+        }
     },
-    {
-        PartiallyReversed   => Voided,
-        Cancelled           => Voided,
-        Expired             => Voided,
-        Authorized          => VoidInitiated,
-        Pending             => Pending,
-        MarkedForReview     => Pending,
-        Initiated           => VoidInitiated,
-        PaymentInfoAdded    => VoidInitiated,
-        Authenticated       => VoidInitiated,
-        ThreeDsEnrollInitiated => VoidInitiated,
-        ThreeDsEnrollChecked   => VoidInitiated,
-        ThreeDsResultVerified  => VoidInitiated,
-        Locked              => Pending,
-        Captured            => VoidFailed,
-        PartiallyCaptured   => VoidFailed,
-        PartiallyRefunded   => VoidFailed,
-        Refunded            => VoidFailed,
-        Rejected            => VoidFailed,
-    }
+    runtime: {
+        request: PaymentVoidData,
+        response: NoonPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.result.order.status.clone()) },
+    },
 }
 
 // SetupMandate — the mandate TryFrom reuses `get_payment_status`
@@ -960,36 +964,37 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Noon<T>,
-    flow:      SetupMandate,
-    source:    noon::NoonPaymentStatus,
-    success:   Authorized => Charged,
-    failure:   Failed     => Failure,
-    extractors: {
-        request:  SetupMandateRequestData<T>,
-        response: SetupMandateResponse,
-        source:   |response| response.result.order.status.clone(),
-        context:  |_request, _response| (),
+    flow: SetupMandate,
+    source: noon::NoonPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            noon::NoonPaymentStatus::Authorized => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::PartiallyRefunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Reversed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::PartiallyReversed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Cancelled => common_enums::AttemptStatus::AuthenticationFailed,
+            noon::NoonPaymentStatus::Expired => common_enums::AttemptStatus::AuthenticationFailed,
+            noon::NoonPaymentStatus::ThreeDsEnrollInitiated => common_enums::AttemptStatus::AuthenticationPending,
+            noon::NoonPaymentStatus::ThreeDsEnrollChecked => common_enums::AttemptStatus::AuthenticationPending,
+            noon::NoonPaymentStatus::ThreeDsResultVerified => common_enums::AttemptStatus::AuthenticationSuccessful,
+            noon::NoonPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::MarkedForReview => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Initiated => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::PaymentInfoAdded => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::Authenticated => common_enums::AttemptStatus::Started,
+            noon::NoonPaymentStatus::Locked => common_enums::AttemptStatus::Pending,
+        }
     },
-    {
-        Captured            => Charged,
-        PartiallyCaptured   => Charged,
-        PartiallyRefunded   => Charged,
-        Refunded            => Charged,
-        Reversed            => Failure,
-        PartiallyReversed   => Failure,
-        Cancelled           => AuthenticationFailed,
-        Expired             => AuthenticationFailed,
-        ThreeDsEnrollInitiated => AuthenticationPending,
-        ThreeDsEnrollChecked   => AuthenticationPending,
-        ThreeDsResultVerified  => AuthenticationSuccessful,
-        Rejected            => Failure,
-        Pending             => Pending,
-        MarkedForReview     => Pending,
-        Initiated           => Started,
-        PaymentInfoAdded    => Started,
-        Authenticated       => Started,
-        Locked              => Pending,
-    }
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: SetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.result.order.status.clone()) },
+    },
 }
 
 // RepeatPayment — MIT responses share `get_payment_status`. Adjusted to
@@ -999,36 +1004,37 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Noon<T>,
-    flow:      RepeatPayment,
-    source:    noon::NoonPaymentStatus,
-    success:   Captured => Charged,
-    failure:   Failed   => Failure,
-    extractors: {
-        request:  RepeatPaymentData<T>,
-        response: NoonRepeatPaymentResponse,
-        source:   |response| response.0.result.order.status.clone(),
-        context:  |_request, _response| (),
+    flow: RepeatPayment,
+    source: noon::NoonPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            noon::NoonPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            noon::NoonPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::PartiallyRefunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            noon::NoonPaymentStatus::Reversed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::PartiallyReversed => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Cancelled => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::ThreeDsEnrollInitiated => common_enums::AttemptStatus::AuthenticationPending,
+            noon::NoonPaymentStatus::ThreeDsEnrollChecked => common_enums::AttemptStatus::AuthenticationPending,
+            noon::NoonPaymentStatus::ThreeDsResultVerified => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            noon::NoonPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::MarkedForReview => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Initiated => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::PaymentInfoAdded => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Authenticated => common_enums::AttemptStatus::Pending,
+            noon::NoonPaymentStatus::Locked => common_enums::AttemptStatus::Pending,
+        }
     },
-    {
-        Authorized          => Authorized,
-        PartiallyCaptured   => Charged,
-        PartiallyRefunded   => Charged,
-        Refunded            => Charged,
-        Reversed            => Failure,
-        PartiallyReversed   => Failure,
-        Cancelled           => Failure,
-        Expired             => Failure,
-        ThreeDsEnrollInitiated => AuthenticationPending,
-        ThreeDsEnrollChecked   => AuthenticationPending,
-        ThreeDsResultVerified  => Failure,
-        Rejected            => Failure,
-        Pending             => Pending,
-        MarkedForReview     => Pending,
-        Initiated           => Pending,
-        PaymentInfoAdded    => Pending,
-        Authenticated       => Pending,
-        Locked              => Pending,
-    }
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: NoonRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.0.result.order.status.clone()) },
+    },
 }
 
 // NOTE: no impl_flow_status_mapping! for MandateRevoke. That flow answers with a
@@ -1041,19 +1047,20 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Noon<T>,
-    flow:      Refund,
-    source:    noon::RefundStatus,
-    success:   Success => Success,
-    failure:   Failed  => Failure,
-    extractors: {
-        request:  RefundsData,
-        response: RefundResponse,
-        source:   |response| response.result.transaction.status.clone(),
-        context:  |_request, _response| (),
+    flow: Refund,
+    source: noon::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            noon::RefundStatus::Success => common_enums::RefundStatus::Success,
+            noon::RefundStatus::Failed => common_enums::RefundStatus::Failure,
+            noon::RefundStatus::Pending => common_enums::RefundStatus::Pending,
+        }
     },
-    {
-        Pending => Pending,
-    }
+    runtime: {
+        request: RefundsData,
+        response: RefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.result.transaction.status.clone()) },
+    },
 }
 
 // RSync — mirrors the RSync TryFrom (transformers.rs:1017), same

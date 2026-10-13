@@ -585,35 +585,36 @@ domain_types::impl_connector_flow_allowed_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Juspay<T>,
-    flow:      Authorize,
-    source:    transformers::JuspayOrderStatus,
-    success:   Charged => Charged,
-    failure:   AuthorizationFailed => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
-        response: transformers::JuspayAuthorizeResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+    flow: Authorize,
+    source: transformers::JuspayOrderStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::JuspayOrderStatus::Charged => common_enums::AttemptStatus::Charged,
+            transformers::JuspayOrderStatus::AuthorizationFailed => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::New => common_enums::AttemptStatus::Started,
+            transformers::JuspayOrderStatus::Created => common_enums::AttemptStatus::Started,
+            transformers::JuspayOrderStatus::Started => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Authorizing => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::VbvSuccessful => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::CodInitiated => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::PendingVbv => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::JuspayOrderStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            transformers::JuspayOrderStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::JuspayOrderStatus::VoidInitiated => common_enums::AttemptStatus::AuthorizationFailed,
+            transformers::JuspayOrderStatus::CaptureInitiated => common_enums::AttemptStatus::AuthorizationFailed,
+            transformers::JuspayOrderStatus::CaptureFailed => common_enums::AttemptStatus::AuthorizationFailed,
+            transformers::JuspayOrderStatus::VoidFailed => common_enums::AttemptStatus::AuthorizationFailed,
+            transformers::JuspayOrderStatus::AutoRefunded => common_enums::AttemptStatus::AutoRefunded,
+            transformers::JuspayOrderStatus::AuthenticationFailed => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::JuspayDeclined => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::NotFound => common_enums::AttemptStatus::Failure,
+        }
     },
-    {
-        New => Started,
-        Created => Started,
-        Started => Pending,
-        Authorizing => Pending,
-        VbvSuccessful => Pending,
-        CodInitiated => Pending,
-        PendingVbv => AuthenticationPending,
-        Authorized => Authorized,
-        Voided => Voided,
-        VoidInitiated => AuthorizationFailed,
-        CaptureInitiated => AuthorizationFailed,
-        CaptureFailed => AuthorizationFailed,
-        VoidFailed => AuthorizationFailed,
-        AutoRefunded => AutoRefunded,
-        AuthenticationFailed => Failure,
-        JuspayDeclined => Failure,
-        NotFound => Failure
-    }
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: transformers::JuspayAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Juspay<T>
@@ -625,35 +626,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Juspay<T>,
-    flow:      PSync,
-    source:    transformers::JuspayOrderStatus,
-    success:   Charged => Charged,
-    failure:   AuthorizationFailed => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: transformers::JuspayOrderStatusResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+    flow: PSync,
+    source: transformers::JuspayOrderStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::JuspayOrderStatus::Charged => common_enums::AttemptStatus::Charged,
+            transformers::JuspayOrderStatus::AuthorizationFailed => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::New => common_enums::AttemptStatus::Started,
+            transformers::JuspayOrderStatus::Created => common_enums::AttemptStatus::Started,
+            transformers::JuspayOrderStatus::Started => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Authorizing => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::VbvSuccessful => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::CodInitiated => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::PendingVbv => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::JuspayOrderStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            transformers::JuspayOrderStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::JuspayOrderStatus::VoidInitiated => common_enums::AttemptStatus::VoidInitiated,
+            transformers::JuspayOrderStatus::CaptureInitiated => common_enums::AttemptStatus::CaptureInitiated,
+            transformers::JuspayOrderStatus::CaptureFailed => common_enums::AttemptStatus::CaptureFailed,
+            transformers::JuspayOrderStatus::VoidFailed => common_enums::AttemptStatus::VoidFailed,
+            transformers::JuspayOrderStatus::AutoRefunded => common_enums::AttemptStatus::AutoRefunded,
+            transformers::JuspayOrderStatus::AuthenticationFailed => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::JuspayDeclined => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::NotFound => common_enums::AttemptStatus::Failure,
+        }
     },
-    {
-        New => Started,
-        Created => Started,
-        Started => Pending,
-        Authorizing => Pending,
-        VbvSuccessful => Pending,
-        CodInitiated => Pending,
-        PendingVbv => AuthenticationPending,
-        Authorized => Authorized,
-        Voided => Voided,
-        VoidInitiated => VoidInitiated,
-        CaptureInitiated => CaptureInitiated,
-        CaptureFailed => CaptureFailed,
-        VoidFailed => VoidFailed,
-        AutoRefunded => AutoRefunded,
-        AuthenticationFailed => Failure,
-        JuspayDeclined => Failure,
-        NotFound => Failure
-    }
+    runtime: {
+        request: PaymentsSyncData,
+        response: transformers::JuspayOrderStatusResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Juspay<T>
@@ -668,35 +670,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Juspay<T>,
-    flow:      Capture,
-    source:    transformers::JuspayOrderStatus,
-    success:   Charged => Charged,
-    failure:   CaptureFailed => CaptureFailed,
-    extractors: {
-        request:  PaymentsCaptureData,
-        response: transformers::JuspayCaptureResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+    flow: Capture,
+    source: transformers::JuspayOrderStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::JuspayOrderStatus::Charged => common_enums::AttemptStatus::Charged,
+            transformers::JuspayOrderStatus::CaptureFailed => common_enums::AttemptStatus::CaptureFailed,
+            transformers::JuspayOrderStatus::CaptureInitiated => common_enums::AttemptStatus::CaptureInitiated,
+            transformers::JuspayOrderStatus::New => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Created => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Started => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Authorizing => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::VbvSuccessful => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::CodInitiated => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Authorized => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::PendingVbv => common_enums::AttemptStatus::CaptureFailed,
+            transformers::JuspayOrderStatus::Voided => common_enums::AttemptStatus::CaptureFailed,
+            transformers::JuspayOrderStatus::VoidInitiated => common_enums::AttemptStatus::CaptureFailed,
+            transformers::JuspayOrderStatus::VoidFailed => common_enums::AttemptStatus::CaptureFailed,
+            transformers::JuspayOrderStatus::AutoRefunded => common_enums::AttemptStatus::CaptureFailed,
+            transformers::JuspayOrderStatus::AuthenticationFailed => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::AuthorizationFailed => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::JuspayDeclined => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::NotFound => common_enums::AttemptStatus::Failure,
+        }
     },
-    {
-        CaptureInitiated => CaptureInitiated,
-        New => Pending,
-        Created => Pending,
-        Started => Pending,
-        Authorizing => Pending,
-        VbvSuccessful => Pending,
-        CodInitiated => Pending,
-        Authorized => Pending,
-        PendingVbv => CaptureFailed,
-        Voided => CaptureFailed,
-        VoidInitiated => CaptureFailed,
-        VoidFailed => CaptureFailed,
-        AutoRefunded => CaptureFailed,
-        AuthenticationFailed => Failure,
-        AuthorizationFailed => Failure,
-        JuspayDeclined => Failure,
-        NotFound => Failure
-    }
+    runtime: {
+        request: PaymentsCaptureData,
+        response: transformers::JuspayCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Juspay<T>
@@ -735,35 +738,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Juspay<T>,
-    flow:      Void,
-    source:    transformers::JuspayOrderStatus,
-    success:   Voided => Voided,
-    failure:   VoidFailed => VoidFailed,
-    extractors: {
-        request:  PaymentVoidData,
-        response: transformers::JuspayVoidResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+    flow: Void,
+    source: transformers::JuspayOrderStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::JuspayOrderStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::JuspayOrderStatus::VoidFailed => common_enums::AttemptStatus::VoidFailed,
+            transformers::JuspayOrderStatus::VoidInitiated => common_enums::AttemptStatus::VoidInitiated,
+            transformers::JuspayOrderStatus::New => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Created => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Started => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Authorizing => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::VbvSuccessful => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::CodInitiated => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::PendingVbv => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Authorized => common_enums::AttemptStatus::Pending,
+            transformers::JuspayOrderStatus::Charged => common_enums::AttemptStatus::VoidFailed,
+            transformers::JuspayOrderStatus::CaptureInitiated => common_enums::AttemptStatus::VoidFailed,
+            transformers::JuspayOrderStatus::CaptureFailed => common_enums::AttemptStatus::VoidFailed,
+            transformers::JuspayOrderStatus::AutoRefunded => common_enums::AttemptStatus::VoidFailed,
+            transformers::JuspayOrderStatus::AuthenticationFailed => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::AuthorizationFailed => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::JuspayDeclined => common_enums::AttemptStatus::Failure,
+            transformers::JuspayOrderStatus::NotFound => common_enums::AttemptStatus::Failure,
+        }
     },
-    {
-        VoidInitiated => VoidInitiated,
-        New => Pending,
-        Created => Pending,
-        Started => Pending,
-        Authorizing => Pending,
-        VbvSuccessful => Pending,
-        CodInitiated => Pending,
-        PendingVbv => Pending,
-        Authorized => Pending,
-        Charged => VoidFailed,
-        CaptureInitiated => VoidFailed,
-        CaptureFailed => VoidFailed,
-        AutoRefunded => VoidFailed,
-        AuthenticationFailed => Failure,
-        AuthorizationFailed => Failure,
-        JuspayDeclined => Failure,
-        NotFound => Failure
-    }
+    runtime: {
+        request: PaymentVoidData,
+        response: transformers::JuspayVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Juspay<T>

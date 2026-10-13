@@ -458,13 +458,15 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: (String, String),
     context: (),
-    params: [codes, _ctx],
-    success: _ => [Authorized],
-    failure: none,
-    extractors: {
+    mapping_status: |codes, _ctx| { if codes.0 == "0000" && codes.1 == "000" {
+            AttemptStatus::Authorized
+        } else {
+            AttemptStatus::Failure
+        } },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: WorldpayraftAuthorizeResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             WorldpayraftAuthorizeResponse::Credit { creditauthresponse } => (
                 creditauthresponse.return_code.clone(),
                 creditauthresponse.response_code.clone(),
@@ -475,16 +477,9 @@ domain_types::impl_flow_status_mapping! {
                 debitpreauthresponse.return_code.clone(),
                 debitpreauthresponse.response_code.clone(),
             ),
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if codes.0 == "0000" && codes.1 == "000" {
-            AttemptStatus::Authorized
-        } else {
-            AttemptStatus::Failure
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -493,13 +488,15 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: (String, String),
     context: (),
-    params: [codes, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |codes, _ctx| { if codes.0 == "0000" && codes.1 == "000" {
+            AttemptStatus::Charged
+        } else {
+            AttemptStatus::Failure
+        } },
+    runtime: {
         request: PaymentsCaptureData,
         response: WorldpayraftCaptureResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             WorldpayraftCaptureResponse::Credit {
                 creditcompletionresponse,
             } => (
@@ -512,16 +509,9 @@ domain_types::impl_flow_status_mapping! {
                 debitcompletionresponse.return_code.clone(),
                 debitcompletionresponse.response_code.clone(),
             ),
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if codes.0 == "0000" && codes.1 == "000" {
-            AttemptStatus::Charged
-        } else {
-            AttemptStatus::Failure
-        }
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -530,13 +520,15 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: (String, String),
     context: (),
-    params: [codes, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |codes, _ctx| { if codes.0 == "0000" && codes.1 == "000" {
+            RefundStatus::Success
+        } else {
+            RefundStatus::Failure
+        } },
+    runtime: {
         request: RefundsData,
         response: WorldpayraftRefundResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             WorldpayraftRefundResponse::Credit {
                 creditrefundresponse,
             } => (
@@ -549,16 +541,9 @@ domain_types::impl_refund_flow_status_mapping! {
                 debitrefundresponse.return_code.clone(),
                 debitrefundresponse.response_code.clone(),
             ),
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if codes.0 == "0000" && codes.1 == "000" {
-            RefundStatus::Success
-        } else {
-            RefundStatus::Failure
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -567,25 +552,20 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: (String, String),
     context: (),
-    params: [codes, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: WorldpayraftSetupMandateResponse,
-        source: |response| {
-            let inner = &response.tokenizeresponse;
-            (inner.return_code.clone(), inner.response_code.clone())
-        },
-        context: |_request, _response| (),
-    },
-    {
-        if codes.0 == "0000" && codes.1 == "000" {
+    mapping_status: |codes, _ctx| { if codes.0 == "0000" && codes.1 == "000" {
             AttemptStatus::Charged
         } else {
             AttemptStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: WorldpayraftSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            let inner = &response.tokenizeresponse;
+            (inner.return_code.clone(), inner.response_code.clone())
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -594,25 +574,20 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: (String, String),
     context: (),
-    params: [codes, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: WorldpayraftRepeatPaymentResponse,
-        source: |response| {
-            let inner = &response.creditauthresponse;
-            (inner.return_code.clone(), inner.response_code.clone())
-        },
-        context: |_request, _response| (),
-    },
-    {
-        if codes.0 == "0000" && codes.1 == "000" {
+    mapping_status: |codes, _ctx| { if codes.0 == "0000" && codes.1 == "000" {
             AttemptStatus::Charged
         } else {
             AttemptStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: WorldpayraftRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            let inner = &response.creditauthresponse;
+            (inner.return_code.clone(), inner.response_code.clone())
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 // not_implemented: flows that will be implemented later

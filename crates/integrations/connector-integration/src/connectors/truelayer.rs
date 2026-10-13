@@ -1034,18 +1034,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: truelayer::TruelayerPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { truelayer::get_attempt_status(status) },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: TruelayerPaymentsResponseData,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        truelayer::get_attempt_status(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1054,13 +1049,19 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (AttemptStatus, Option<String>),
     context: (),
-    params: [source, _ctx],
-    success: _ => [Authorized, Charged, Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |source, _ctx| { let (status, failure_reason) = source;
+        // A failed payment whose failure_reason is "canceled" is a voided payment.
+        if failure_reason.as_deref() == Some("canceled")
+            && domain_types::utils::is_payment_failure(status)
+        {
+            AttemptStatus::Voided
+        } else {
+            status
+        } },
+    runtime: {
         request: PaymentsSyncData,
         response: TruelayerPSyncResponseData,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             TruelayerPSyncResponseData::PSyncResponse(response) => (
                 truelayer::get_attempt_status(response.status.clone()),
                 response.failure_reason.clone(),
@@ -1070,20 +1071,9 @@ domain_types::impl_flow_status_mapping! {
                     .unwrap_or(AttemptStatus::Pending),
                 webhook.failure_reason.clone(),
             ),
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        let (status, failure_reason) = source;
-        // A failed payment whose failure_reason is "canceled" is a voided payment.
-        if failure_reason.as_deref() == Some("canceled")
-            && domain_types::utils::is_payment_failure(status)
-        {
-            AttemptStatus::Voided
-        } else {
-            status
-        }
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1092,20 +1082,15 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: (),
     context: (),
-    params: [_ack, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |_ack, _ctx| { // The refund-create response only echoes an id; the request is accepted and the
+        // refund settles asynchronously.
+        RefundStatus::Pending },
+    runtime: {
         request: RefundsData,
         response: TruelayerRefundResponse,
-        source: |_response| (),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        // The refund-create response only echoes an id; the request is accepted and the
-        // refund settles asynchronously.
-        RefundStatus::Pending
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1114,13 +1099,11 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: common_enums::RefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { status },
+    runtime: {
         request: RefundSyncData,
         response: TruelayerRsyncResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             TruelayerRsyncResponse::RsyncResponse(response) => {
                 truelayer::get_refund_status(response.status.clone())
             }
@@ -1128,12 +1111,9 @@ domain_types::impl_refund_flow_status_mapping! {
                 truelayer::get_truelayer_refund_webhook_status(webhook._type.clone())
                     .unwrap_or(common_enums::RefundStatus::Pending)
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        status
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

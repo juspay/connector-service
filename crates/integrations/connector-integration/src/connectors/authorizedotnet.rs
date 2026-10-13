@@ -78,26 +78,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
     connector: Authorizedotnet<T>,
-    flow:      SetupMandate,
-    source:    bool,
-    params:    [is_success],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: AuthorizedotnetSetupMandateResponse,
-        source: |_resource_common_data, _request, response| response.messages.result_code == transformers::ResultCode::Ok
-            || (response.customer_profile_id.is_some()
-                && (response.customer_payment_profile_id.is_some()
-                    || !response.customer_payment_profile_id_list.is_empty())),
-    },
-    {
-        if is_success {
+    flow: SetupMandate,
+    source: bool,
+    mapping_status: |is_success| { if is_success {
             common_enums::AttemptStatus::Charged
         } else {
             common_enums::AttemptStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: AuthorizedotnetSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.messages.result_code == transformers::ResultCode::Ok
+            || (response.customer_profile_id.is_some()
+                && (response.customer_payment_profile_id.is_some()
+                    || !response.customer_payment_profile_id_list.is_empty()))) },
+    },
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     SetupMandateV2<T> for Authorizedotnet<T>
@@ -383,28 +378,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // `ctx.is_result_code_ok` mirrors the ResultCode::Error short-circuit which
 // overrides any transaction-level status.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
-    connector:       Authorizedotnet<T>,
-    flow:            Authorize,
-    source:          transformers::AuthorizedotnetPaymentsResponse,
-    context:         Option<common_enums::CaptureMethod>,
-    params:          [response, capture_method],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: AuthorizedotnetAuthorizeResponse,
-        source: |_resource_common_data, _request, response| response.0.clone(),
-        context: |_resource_common_data, request, _response| request.capture_method,
-    },
-    {
-        transformers::get_hs_status(
+    generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    connector: Authorizedotnet<T>,
+    flow: Authorize,
+    source: transformers::AuthorizedotnetPaymentsResponse,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |response, capture_method| { transformers::get_hs_status(
             &response,
             0,
             transformers::Operation::Authorize,
             capture_method,
-        )
-    }
+        ) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: AuthorizedotnetAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.0.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     PaymentAuthorizeV2<T> for Authorizedotnet<T>

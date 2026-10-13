@@ -700,14 +700,12 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: (),
     context: AttemptStatus,
-    params: [_source, status],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: PinelabsOnlineAuthorizeResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the mapped status into the context: `PinelabsOnlineResponse` is not Clone.
             match response {
                 PinelabsOnlineResponse::Success(data_response) => {
@@ -724,11 +722,8 @@ domain_types::impl_flow_status_mapping! {
                 }
                 PinelabsOnlineResponse::Error(_) => AttemptStatus::Failure,
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -737,14 +732,12 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (),
     context: AttemptStatus,
-    params: [_source, status],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentsSyncData,
         response: PinelabsOnlinePSyncResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the mapped status into the context: `PinelabsOnlineResponse` is not Clone.
             match response {
                 PinelabsOnlineResponse::Success(data_response) => {
@@ -761,11 +754,8 @@ domain_types::impl_flow_status_mapping! {
                 }
                 PinelabsOnlineResponse::Error(_) => AttemptStatus::Failure,
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -774,14 +764,12 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: (),
     context: AttemptStatus,
-    params: [_source, status],
-    success: _ => [Charged, PartialCharged],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentsCaptureData,
         response: PinelabsOnlineCaptureResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the mapped status into the context: `PinelabsOnlineResponse` is not Clone.
             match &response.0 {
                 PinelabsOnlineResponse::Success(data_response) => {
@@ -791,11 +779,8 @@ domain_types::impl_flow_status_mapping! {
                 }
                 PinelabsOnlineResponse::Error(_) => AttemptStatus::CaptureFailed,
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -804,14 +789,12 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: (),
     context: AttemptStatus,
-    params: [_source, status],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentVoidData,
         response: PinelabsOnlineVoidResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the mapped status into the context: `PinelabsOnlineResponse` is not Clone.
             match &response.0 {
                 PinelabsOnlineResponse::Success(data_response) => {
@@ -821,11 +804,8 @@ domain_types::impl_flow_status_mapping! {
                 }
                 PinelabsOnlineResponse::Error(_) => AttemptStatus::VoidFailed,
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -834,21 +814,16 @@ domain_types::impl_flow_status_mapping! {
     flow: CreateOrder,
     source: (),
     context: (),
-    params: [_response, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentCreateOrderData,
-        response: PinelabsOnlineCreateOrderResponse,
-        source: |_response| (),
-        context: |_request, _response| (),
-    },
-    {
-        // The handler parks every successful order creation in Pending (the order is
+    mapping_status: |_response, _ctx| { // The handler parks every successful order creation in Pending (the order is
         // only charged by the later Authorize call). Both declared terminals satisfy
         // the mandatory success-set check; the body only ever yields Pending.
-        AttemptStatus::Pending
-    }
+        AttemptStatus::Pending },
+    runtime: {
+        request: PaymentCreateOrderData,
+        response: PinelabsOnlineCreateOrderResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -857,14 +832,12 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: (),
     context: RefundStatus,
-    params: [_source, status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: RefundsData,
         response: PinelabsOnlineRefundResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the mapped status into the context: `PinelabsOnlineRefundResponse` is not Clone.
             match response {
                 PinelabsOnlineRefundResponse::Success(refund_response) => {
@@ -873,11 +846,8 @@ domain_types::impl_refund_flow_status_mapping! {
                 }
                 PinelabsOnlineRefundResponse::Error(_) => RefundStatus::Failure,
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -886,14 +856,12 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: (),
     context: RefundStatus,
-    params: [_source, status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: RefundSyncData,
         response: PinelabsOnlineRSyncResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the mapped status into the context: `PinelabsOnlineRefundResponse` is not Clone.
             match &response.0 {
                 PinelabsOnlineRefundResponse::Success(refund_response) => {
@@ -902,11 +870,8 @@ domain_types::impl_refund_flow_status_mapping! {
                 }
                 PinelabsOnlineRefundResponse::Error(_) => RefundStatus::Failure,
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

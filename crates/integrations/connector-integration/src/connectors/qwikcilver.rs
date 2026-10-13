@@ -663,47 +663,37 @@ macros::macro_connector_implementation!(
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Qwikcilver<T>,
-    flow:      Authorize,
-    source:    i64,
-    context:   (),
-    params:    [response_code, _ctx],
-    success:   _ => [Charged],
-    failure:   none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: QwikcilverRedeemResponse,
-        source: |response| response.response_code,
-        context: |_request, _response| (),
-    },
-    {
-        match response_code {
+    flow: Authorize,
+    source: i64,
+    context: (),
+    mapping_status: |response_code, _ctx| { match response_code {
             qwikcilver::QWIKCILVER_SUCCESS_CODE => common_enums::AttemptStatus::Charged,
             _ => common_enums::AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: QwikcilverRedeemResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Qwikcilver<T>,
-    flow:      Refund,
-    source:    i64,
-    context:   (),
-    params:    [response_code, _ctx],
-    success:   _ => [Success],
-    failure:   none,
-    extractors: {
-        request: RefundsData,
-        response: QwikcilverCancelRedeemResponse,
-        source: |response| response.response_code,
-        context: |_request, _response| (),
-    },
-    {
-        match response_code {
+    flow: Refund,
+    source: i64,
+    context: (),
+    mapping_status: |response_code, _ctx| { match response_code {
             qwikcilver::QWIKCILVER_SUCCESS_CODE => common_enums::RefundStatus::Success,
             _ => common_enums::RefundStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: QwikcilverCancelRedeemResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

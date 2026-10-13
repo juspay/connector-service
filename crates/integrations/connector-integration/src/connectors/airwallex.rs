@@ -109,22 +109,12 @@ domain_types::impl_connector_flow_allowed_status_mapping! {
 // so the mapping is context-aware via `Option<AirwallexNextActionType>`.
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Airwallex<T>,
-    flow:            Authorize,
-    source:          transformers::AirwallexPaymentStatus,
-    context:         Option<transformers::AirwallexNextActionType>,
-    params:          [status, next_action],
-    success: Succeeded => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: AirwallexPaymentsResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response.next_action.as_ref().map(|action| action.action_type.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Airwallex<T>,
+    flow: Authorize,
+    source: transformers::AirwallexPaymentStatus,
+    context: Option<transformers::AirwallexNextActionType>,
+    mapping_status: |status, next_action| { use common_enums::AttemptStatus;
         use transformers::{AirwallexNextActionType, AirwallexPaymentStatus};
         match status {
             AirwallexPaymentStatus::Succeeded
@@ -148,8 +138,13 @@ domain_types::impl_flow_status_mapping! {
                 AttemptStatus::Authorized
             }
             AirwallexPaymentStatus::Cancelled => AttemptStatus::Voided,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: AirwallexPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.next_action.as_ref().map(|action| action.action_type.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Airwallex<T>
@@ -157,22 +152,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Airwallex<T>,
-    flow:            PSync,
-    source:          transformers::AirwallexPaymentStatus,
-    context:         Option<transformers::AirwallexNextActionType>,
-    params:          [status, next_action],
-    success: Succeeded => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: PaymentsSyncData,
-        response: AirwallexSyncResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response.next_action.as_ref().map(|action| action.action_type.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Airwallex<T>,
+    flow: PSync,
+    source: transformers::AirwallexPaymentStatus,
+    context: Option<transformers::AirwallexNextActionType>,
+    mapping_status: |status, next_action| { use common_enums::AttemptStatus;
         use transformers::{AirwallexNextActionType, AirwallexPaymentStatus};
         match status {
             AirwallexPaymentStatus::Succeeded
@@ -196,8 +181,13 @@ domain_types::impl_flow_status_mapping! {
                 AttemptStatus::Authorized
             }
             AirwallexPaymentStatus::Cancelled => AttemptStatus::Voided,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: AirwallexSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.next_action.as_ref().map(|action| action.action_type.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Airwallex<T>
@@ -211,22 +201,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // payment-lifecycle meaning; here they (like RequiresCapture/Processing/Pending)
 // mean the pre-capture intent is still mid-flight, i.e. the cancel is in progress.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Airwallex<T>,
-    flow:            Void,
-    source:          transformers::AirwallexPaymentStatus,
-    context:         Option<transformers::AirwallexNextActionType>,
-    params:          [status, next_action],
-    success: Cancelled => [Voided],
-    failure: Succeeded => Failure,
-    extractors: {
-        request: PaymentVoidData,
-        response: AirwallexVoidResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response.next_action.as_ref().map(|action| action.action_type.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Airwallex<T>,
+    flow: Void,
+    source: transformers::AirwallexPaymentStatus,
+    context: Option<transformers::AirwallexNextActionType>,
+    mapping_status: |status, next_action| { use common_enums::AttemptStatus;
         use transformers::AirwallexPaymentStatus;
         let _ = next_action;
         match status {
@@ -244,8 +224,13 @@ domain_types::impl_flow_status_mapping! {
             | AirwallexPaymentStatus::CaptureRequested
             | AirwallexPaymentStatus::Settled
             | AirwallexPaymentStatus::Failed => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: AirwallexVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.next_action.as_ref().map(|action| action.action_type.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Airwallex<T>
@@ -253,22 +238,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Airwallex<T>,
-    flow:            Capture,
-    source:          transformers::AirwallexPaymentStatus,
-    context:         Option<transformers::AirwallexNextActionType>,
-    params:          [status, next_action],
-    success: Succeeded => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: AirwallexCaptureResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response.next_action.as_ref().map(|action| action.action_type.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Airwallex<T>,
+    flow: Capture,
+    source: transformers::AirwallexPaymentStatus,
+    context: Option<transformers::AirwallexNextActionType>,
+    mapping_status: |status, next_action| { use common_enums::AttemptStatus;
         use transformers::AirwallexPaymentStatus;
         let _ = next_action;
         match status {
@@ -288,8 +263,13 @@ domain_types::impl_flow_status_mapping! {
             | AirwallexPaymentStatus::Authorized
             | AirwallexPaymentStatus::Processing
             | AirwallexPaymentStatus::Pending => AttemptStatus::CaptureInitiated,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: AirwallexCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.next_action.as_ref().map(|action| action.action_type.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Airwallex<T>
@@ -301,20 +281,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Airwallex<T>,
-    flow:      Refund,
-    source:    transformers::AirwallexRefundStatus,
-    success:   Settled => Success,
-    failure:   Failed  => Failure,
-    extractors: {
+    flow: Refund,
+    source: transformers::AirwallexRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::AirwallexRefundStatus::Settled => common_enums::RefundStatus::Success,
+            transformers::AirwallexRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::AirwallexRefundStatus::Received => common_enums::RefundStatus::Pending,
+            transformers::AirwallexRefundStatus::Accepted => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundsData,
         response: AirwallexRefundResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-        Received => Pending,
-        Accepted => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Airwallex<T>
@@ -326,20 +307,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Airwallex<T>,
-    flow:      RSync,
-    source:    transformers::AirwallexRefundStatus,
-    success:   Settled => Success,
-    failure:   Failed  => Failure,
-    extractors: {
+    flow: RSync,
+    source: transformers::AirwallexRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::AirwallexRefundStatus::Settled => common_enums::RefundStatus::Success,
+            transformers::AirwallexRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::AirwallexRefundStatus::Received => common_enums::RefundStatus::Pending,
+            transformers::AirwallexRefundStatus::Accepted => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundSyncData,
         response: AirwallexRefundSyncResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-        Received => Pending,
-        Accepted => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Airwallex<T>
@@ -349,22 +331,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // SetupMandate: `Authorized` is not in this flow's ALLOWED set — a successful CIT
 // verification is Charged (mirrors how the TryFrom's Charged-producing variants map).
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Airwallex<T>,
-    flow:            SetupMandate,
-    source:          transformers::AirwallexPaymentStatus,
-    context:         Option<transformers::AirwallexNextActionType>,
-    params:          [status, next_action],
-    success: Succeeded => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: AirwallexSetupMandateResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response.next_action.as_ref().map(|action| action.action_type.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Airwallex<T>,
+    flow: SetupMandate,
+    source: transformers::AirwallexPaymentStatus,
+    context: Option<transformers::AirwallexNextActionType>,
+    mapping_status: |status, next_action| { use common_enums::AttemptStatus;
         use transformers::{AirwallexNextActionType, AirwallexPaymentStatus};
         match status {
             AirwallexPaymentStatus::Succeeded
@@ -385,8 +357,13 @@ domain_types::impl_flow_status_mapping! {
                 | Some(AirwallexNextActionType::Other)
                 | None => AttemptStatus::AuthenticationPending,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: AirwallexSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.next_action.as_ref().map(|action| action.action_type.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Airwallex<T>
@@ -394,22 +371,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Airwallex<T>,
-    flow:            RepeatPayment,
-    source:          transformers::AirwallexPaymentStatus,
-    context:         Option<transformers::AirwallexNextActionType>,
-    params:          [status, next_action],
-    success: Succeeded => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: AirwallexRepeatPaymentResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response.next_action.as_ref().map(|action| action.action_type.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Airwallex<T>,
+    flow: RepeatPayment,
+    source: transformers::AirwallexPaymentStatus,
+    context: Option<transformers::AirwallexNextActionType>,
+    mapping_status: |status, next_action| { use common_enums::AttemptStatus;
         use transformers::{AirwallexNextActionType, AirwallexPaymentStatus};
         match status {
             AirwallexPaymentStatus::Succeeded
@@ -431,8 +398,13 @@ domain_types::impl_flow_status_mapping! {
             AirwallexPaymentStatus::RequiresCapture | AirwallexPaymentStatus::Authorized => {
                 AttemptStatus::Authorized
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: AirwallexRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.next_action.as_ref().map(|action| action.action_type.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Airwallex<T>

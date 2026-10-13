@@ -1192,20 +1192,11 @@ domain_types::impl_connector_flow_allowed_status_mapping! {
 // the `Unknown(String)` catch-all variant carries data and cannot be written in
 // the declarative `variant => target` body.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Grabpay<T>,
-    flow:            Authorize,
-    source:          grabpay::GrabpayPaymentStatus,
-    params:          [status],
-    success: Success => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: GrabpayAuthorizeResponse,
-        source: |_resource_common_data, _request, response| response.tx_status.clone(),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Grabpay<T>,
+    flow: Authorize,
+    source: grabpay::GrabpayPaymentStatus,
+    mapping_status: |status| { use common_enums::AttemptStatus;
         use grabpay::GrabpayPaymentStatus;
         match status {
             GrabpayPaymentStatus::Success => AttemptStatus::Charged,
@@ -1216,8 +1207,12 @@ domain_types::impl_flow_status_mapping! {
             | GrabpayPaymentStatus::TransactionAlreadyExist => AttemptStatus::Pending,
             GrabpayPaymentStatus::Authorised => AttemptStatus::Authorized,
             GrabpayPaymentStatus::Unknown(_) => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: GrabpayAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.tx_status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Grabpay<T>
@@ -1228,20 +1223,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // The PSync TryFrom (`GrabpayChargeCompleteResponse`) uses the identical
 // `AttemptStatus::from(GrabpayPaymentStatus)` mapping as Authorize.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Grabpay<T>,
-    flow:            PSync,
-    source:          grabpay::GrabpayPaymentStatus,
-    params:          [status],
-    success: Success => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: PaymentsSyncData,
-        response: GrabpayChargeCompleteResponse,
-        source: |_resource_common_data, _request, response| response.tx_status.clone(),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Grabpay<T>,
+    flow: PSync,
+    source: grabpay::GrabpayPaymentStatus,
+    mapping_status: |status| { use common_enums::AttemptStatus;
         use grabpay::GrabpayPaymentStatus;
         match status {
             GrabpayPaymentStatus::Success => AttemptStatus::Charged,
@@ -1252,8 +1238,12 @@ domain_types::impl_flow_status_mapping! {
             | GrabpayPaymentStatus::TransactionAlreadyExist => AttemptStatus::Pending,
             GrabpayPaymentStatus::Authorised => AttemptStatus::Authorized,
             GrabpayPaymentStatus::Unknown(_) => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: GrabpayChargeCompleteResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.tx_status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Grabpay<T>
@@ -1265,20 +1255,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // string, so the declarative `variant => target` body cannot express it — use
 // the context form with `()` (mirrors the Authorize/PSync `_ctx!` above).
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Grabpay<T>,
-    flow:           Refund,
-    source:         grabpay::GrabpayRefundStatus,
-    params:         [status],
-    success: Success => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request: RefundsData,
-        response: GrabpayRefundResponse,
-        source: |_resource_common_data, _request, response| response.tx_status.clone(),
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Grabpay<T>,
+    flow: Refund,
+    source: grabpay::GrabpayRefundStatus,
+    mapping_status: |status| { use common_enums::RefundStatus;
         use grabpay::GrabpayRefundStatus;
         match status {
             GrabpayRefundStatus::Success => RefundStatus::Success,
@@ -1288,8 +1269,12 @@ domain_types::impl_refund_flow_status_mapping! {
             GrabpayRefundStatus::Processing
             | GrabpayRefundStatus::TransactionAlreadyExist
             | GrabpayRefundStatus::Unknown(_) => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: GrabpayRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.tx_status.clone()) },
+    },
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -1298,20 +1283,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Grabpay<T>,
-    flow:           RSync,
-    source:         grabpay::GrabpayRefundStatus,
-    params:         [status],
-    success: Success => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request: RefundSyncData,
-        response: GrabpayRefundSyncResponse,
-        source: |_resource_common_data, _request, response| response.tx_status.clone(),
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Grabpay<T>,
+    flow: RSync,
+    source: grabpay::GrabpayRefundStatus,
+    mapping_status: |status| { use common_enums::RefundStatus;
         use grabpay::GrabpayRefundStatus;
         match status {
             GrabpayRefundStatus::Success => RefundStatus::Success,
@@ -1321,8 +1297,12 @@ domain_types::impl_refund_flow_status_mapping! {
             GrabpayRefundStatus::Processing
             | GrabpayRefundStatus::TransactionAlreadyExist
             | GrabpayRefundStatus::Unknown(_) => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: GrabpayRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.tx_status.clone()) },
+    },
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

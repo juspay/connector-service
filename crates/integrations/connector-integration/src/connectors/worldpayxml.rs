@@ -696,30 +696,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: (bool, bool, Option<responses::WorldpayxmlLastEvent>),
     context: bool,
-    params: [status, is_auto_capture],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: WorldpayxmlAuthorizeResponse,
-        source: |response| {
-            let reply = &response.reply;
-            let order_status = reply.order_status.as_ref();
-            let error = reply.error.is_some()
-                || order_status.is_some_and(|os| os.error.is_some());
-            let challenge = order_status.is_some_and(|os| os.challenge_required.is_some());
-            let last_event = order_status
-                .and_then(|os| os.payment.as_ref())
-                .map(|payment| payment.last_event);
-            (error, challenge, last_event)
-        },
-        context: |request, _response| {
-            request.capture_method != Some(CaptureMethod::Manual)
-                && request.capture_method != Some(CaptureMethod::ManualMultiple)
-        },
-    },
-    {
-        match status {
+    mapping_status: |status, is_auto_capture| { match status {
             (true, _, _) => AttemptStatus::Failure,
             (false, true, _) => AttemptStatus::AuthenticationPending,
             (false, false, None) => AttemptStatus::Pending,
@@ -742,8 +719,26 @@ domain_types::impl_flow_status_mapping! {
                 }
                 _ => AttemptStatus::Pending,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: WorldpayxmlAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            let reply = &response.reply;
+            let order_status = reply.order_status.as_ref();
+            let error = reply.error.is_some()
+                || order_status.is_some_and(|os| os.error.is_some());
+            let challenge = order_status.is_some_and(|os| os.challenge_required.is_some());
+            let last_event = order_status
+                .and_then(|os| os.payment.as_ref())
+                .map(|payment| payment.last_event);
+            (error, challenge, last_event)
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok({
+            request.capture_method != Some(CaptureMethod::Manual)
+                && request.capture_method != Some(CaptureMethod::ManualMultiple)
+        }) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -752,13 +747,33 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (bool, Option<responses::WorldpayxmlLastEvent>),
     context: bool,
-    params: [status, is_auto_capture],
-    success: _ => [Authorized, Charged, Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |status, is_auto_capture| { match status {
+            (true, _) => AttemptStatus::Failure,
+            (false, None) => AttemptStatus::Pending,
+            (false, Some(last_event)) => match last_event {
+                responses::WorldpayxmlLastEvent::Authorised => {
+                    if is_auto_capture {
+                        AttemptStatus::Charged
+                    } else {
+                        AttemptStatus::Authorized
+                    }
+                }
+                responses::WorldpayxmlLastEvent::Refused
+                | responses::WorldpayxmlLastEvent::Expired => AttemptStatus::Failure,
+                responses::WorldpayxmlLastEvent::Cancelled => AttemptStatus::Voided,
+                responses::WorldpayxmlLastEvent::Captured
+                | responses::WorldpayxmlLastEvent::Settled
+                | responses::WorldpayxmlLastEvent::SettledByMerchant => AttemptStatus::Charged,
+                responses::WorldpayxmlLastEvent::SentForAuthorisation => {
+                    AttemptStatus::Authorizing
+                }
+                _ => AttemptStatus::Pending,
+            },
+        } },
+    runtime: {
         request: PaymentsSyncData,
         response: WorldpayxmlTransactionResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             responses::WorldpayxmlTransactionResponse::Payment(xml_response) => {
                 let reply = &xml_response.reply;
                 let order_status = reply.order_status.as_ref();
@@ -774,37 +789,12 @@ domain_types::impl_flow_status_mapping! {
             responses::WorldpayxmlTransactionResponse::Webhook(webhook_response) => {
                 (false, Some(webhook_response.payment_status))
             }
-        },
-        context: |request, _response| {
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok({
             request.capture_method != Some(CaptureMethod::Manual)
                 && request.capture_method != Some(CaptureMethod::ManualMultiple)
-        },
+        }) },
     },
-    {
-        match status {
-            (true, _) => AttemptStatus::Failure,
-            (false, None) => AttemptStatus::Pending,
-            (false, Some(last_event)) => match last_event {
-                responses::WorldpayxmlLastEvent::Authorised => {
-                    if is_auto_capture {
-                        AttemptStatus::Charged
-                    } else {
-                        AttemptStatus::Authorized
-                    }
-                }
-                responses::WorldpayxmlLastEvent::Refused
-                | responses::WorldpayxmlLastEvent::Expired => AttemptStatus::Failure,
-                responses::WorldpayxmlLastEvent::Cancelled => AttemptStatus::Voided,
-                responses::WorldpayxmlLastEvent::Captured
-                | responses::WorldpayxmlLastEvent::Settled
-                | responses::WorldpayxmlLastEvent::SettledByMerchant => AttemptStatus::Charged,
-                responses::WorldpayxmlLastEvent::SentForAuthorisation => {
-                    AttemptStatus::Authorizing
-                }
-                _ => AttemptStatus::Pending,
-            },
-        }
-    }
 }
 
 // Mirrors `map_worldpayxml_setup_mandate_status`.
@@ -814,26 +804,7 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: (bool, Option<responses::WorldpayxmlLastEvent>),
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: WorldpayxmlSetupMandateResponse,
-        source: |response| {
-            let reply = &response.reply;
-            let order_status = reply.order_status.as_ref();
-            let error = reply.error.is_some()
-                || order_status.is_some_and(|os| os.error.is_some());
-            let last_event = order_status
-                .and_then(|os| os.payment.as_ref())
-                .map(|payment| payment.last_event);
-            (error, last_event)
-        },
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             (true, _) => AttemptStatus::Failure,
             (false, None) => AttemptStatus::Pending,
             (false, Some(last_event)) => match last_event {
@@ -849,8 +820,22 @@ domain_types::impl_flow_status_mapping! {
                 }
                 _ => AttemptStatus::Pending,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: WorldpayxmlSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            let reply = &response.reply;
+            let order_status = reply.order_status.as_ref();
+            let error = reply.error.is_some()
+                || order_status.is_some_and(|os| os.error.is_some());
+            let last_event = order_status
+                .and_then(|os| os.payment.as_ref())
+                .map(|payment| payment.last_event);
+            (error, last_event)
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 // Mirrors `map_worldpayxml_authorize_status` as used by the RepeatPayment TryFrom.
@@ -860,29 +845,7 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: (bool, Option<responses::WorldpayxmlLastEvent>),
     context: bool,
-    params: [status, is_auto_capture],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: WorldpayxmlRepeatPaymentResponse,
-        source: |response| {
-            let reply = &response.reply;
-            let order_status = reply.order_status.as_ref();
-            let error = reply.error.is_some()
-                || order_status.is_some_and(|os| os.error.is_some());
-            let last_event = order_status
-                .and_then(|os| os.payment.as_ref())
-                .map(|payment| payment.last_event);
-            (error, last_event)
-        },
-        context: |request, _response| {
-            request.capture_method != Some(CaptureMethod::Manual)
-                && request.capture_method != Some(CaptureMethod::ManualMultiple)
-        },
-    },
-    {
-        match status {
+    mapping_status: |status, is_auto_capture| { match status {
             (true, _) => AttemptStatus::Failure,
             (false, None) => AttemptStatus::Pending,
             (false, Some(last_event)) => match last_event {
@@ -904,8 +867,25 @@ domain_types::impl_flow_status_mapping! {
                 }
                 _ => AttemptStatus::Pending,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: WorldpayxmlRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            let reply = &response.reply;
+            let order_status = reply.order_status.as_ref();
+            let error = reply.error.is_some()
+                || order_status.is_some_and(|os| os.error.is_some());
+            let last_event = order_status
+                .and_then(|os| os.payment.as_ref())
+                .map(|payment| payment.last_event);
+            (error, last_event)
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok({
+            request.capture_method != Some(CaptureMethod::Manual)
+                && request.capture_method != Some(CaptureMethod::ManualMultiple)
+        }) },
+    },
 }
 
 // WorldpayXML acknowledges a capture with `<captureReceived>`; completion is confirmed via
@@ -917,28 +897,23 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: bool,
     context: (),
-    params: [acknowledged, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |acknowledged, _ctx| { if acknowledged {
+            AttemptStatus::CaptureInitiated
+        } else {
+            AttemptStatus::CaptureFailed
+        } },
+    runtime: {
         request: PaymentsCaptureData,
         response: WorldpayxmlCaptureResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             if response.reply.error.is_some() {
                 false
             } else {
                 response.reply.ok.is_some()
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if acknowledged {
-            AttemptStatus::CaptureInitiated
-        } else {
-            AttemptStatus::CaptureFailed
-        }
-    }
 }
 
 // WorldpayXML acknowledges a void with `<cancelReceived>`; completion is confirmed via PSync,
@@ -950,28 +925,23 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: bool,
     context: (),
-    params: [acknowledged, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |acknowledged, _ctx| { if acknowledged {
+            AttemptStatus::VoidInitiated
+        } else {
+            AttemptStatus::VoidFailed
+        } },
+    runtime: {
         request: PaymentVoidData,
         response: WorldpayxmlVoidResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             if response.reply.error.is_some() {
                 false
             } else {
                 response.reply.ok.is_some()
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if acknowledged {
-            AttemptStatus::VoidInitiated
-        } else {
-            AttemptStatus::VoidFailed
-        }
-    }
 }
 
 // The VoidPC TryFrom confirms the post-capture void synchronously
@@ -982,28 +952,23 @@ domain_types::impl_flow_status_mapping! {
     flow: VoidPC,
     source: bool,
     context: (),
-    params: [acknowledged, _ctx],
-    success: _ => [VoidedPostCapture],
-    failure: none,
-    extractors: {
+    mapping_status: |acknowledged, _ctx| { if acknowledged {
+            AttemptStatus::VoidedPostCapture
+        } else {
+            AttemptStatus::Failure
+        } },
+    runtime: {
         request: PaymentsCancelPostCaptureData,
         response: WorldpayxmlVoidPCResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             if response.reply.error.is_some() {
                 false
             } else {
                 response.reply.ok.is_some()
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if acknowledged {
-            AttemptStatus::VoidedPostCapture
-        } else {
-            AttemptStatus::Failure
-        }
-    }
 }
 
 // WorldpayXML acknowledges a refund with `<refundReceived>` — the refund stays `Pending`
@@ -1014,28 +979,23 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: bool,
     context: (),
-    params: [acknowledged, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |acknowledged, _ctx| { if acknowledged {
+            RefundStatus::Pending
+        } else {
+            RefundStatus::Failure
+        } },
+    runtime: {
         request: RefundsData,
         response: WorldpayxmlRefundResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             if response.reply.error.is_some() {
                 false
             } else {
                 response.reply.ok.is_some()
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if acknowledged {
-            RefundStatus::Pending
-        } else {
-            RefundStatus::Failure
-        }
-    }
 }
 
 // Mirrors `map_worldpayxml_refund_status`, driven by the inquiry `lastEvent`. The mapper's
@@ -1047,30 +1007,7 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: (bool, Option<responses::WorldpayxmlLastEvent>),
     context: RefundStatus,
-    params: [status, previous_status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: WorldpayxmlRsyncResponse,
-        source: |response| match response {
-            responses::WorldpayxmlTransactionResponse::Payment(xml_response) => {
-                let reply = &xml_response.reply;
-                let order_status = reply.order_status.as_ref();
-                let error = reply.error.is_some();
-                let last_event = order_status
-                    .and_then(|os| os.payment.as_ref())
-                    .map(|payment| payment.last_event);
-                (error, last_event)
-            }
-            responses::WorldpayxmlTransactionResponse::Webhook(webhook_response) => {
-                (false, Some(webhook_response.payment_status))
-            }
-        },
-        context: |request, _response| request.refund_status,
-    },
-    {
-        match status {
+    mapping_status: |status, previous_status| { match status {
             (true, _) => RefundStatus::Failure,
             (false, None) => RefundStatus::Pending,
             (false, Some(last_event)) => match last_event {
@@ -1086,8 +1023,26 @@ domain_types::impl_refund_flow_status_mapping! {
                 responses::WorldpayxmlLastEvent::Unknown => previous_status,
                 _ => RefundStatus::Pending,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: WorldpayxmlRsyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            responses::WorldpayxmlTransactionResponse::Payment(xml_response) => {
+                let reply = &xml_response.reply;
+                let order_status = reply.order_status.as_ref();
+                let error = reply.error.is_some();
+                let last_event = order_status
+                    .and_then(|os| os.payment.as_ref())
+                    .map(|payment| payment.last_event);
+                (error, last_event)
+            }
+            responses::WorldpayxmlTransactionResponse::Webhook(webhook_response) => {
+                (false, Some(webhook_response.payment_status))
+            }
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.refund_status) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

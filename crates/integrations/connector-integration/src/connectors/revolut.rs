@@ -695,45 +695,38 @@ macros::macro_connector_implementation!(
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Revolut<T>,
-    flow:      Authorize,
-    source:    revolut::RevolutOrderState,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Authorized, Charged],
-    failure:   none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: RevolutOrderCreateResponse,
-        source: |response| response.state.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    flow: Authorize,
+    source: revolut::RevolutOrderState,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             revolut::RevolutOrderState::Authorised => AttemptStatus::Authorized,
             revolut::RevolutOrderState::Completed => AttemptStatus::Charged,
             revolut::RevolutOrderState::Failed => AttemptStatus::Failure,
             revolut::RevolutOrderState::Cancelled => AttemptStatus::Voided,
             revolut::RevolutOrderState::Pending => AttemptStatus::AuthenticationPending,
             revolut::RevolutOrderState::Processing => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: RevolutOrderCreateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Revolut<T>,
-    flow:      PSync,
-    source:    AttemptStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Authorized, Charged, Voided],
-    failure:   none,
-    extractors: {
+    flow: PSync,
+    source: AttemptStatus,
+    context: (),
+    mapping_status: |status, _ctx| { status },
+    runtime: {
         request: PaymentsSyncData,
         response: RevolutPSyncResponse,
         // Mirrors the PSync `TryFrom`: prefer the first payment's state, falling
-        // back to the order state via `map_order_state`.
-        source: |response| match &response.payments {
+        // back to the order state via `map_order_state`.,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match &response.payments {
             Some(payments) => match payments.first() {
                 Some(first_payment) => match first_payment.state {
                     revolut::RevolutPaymentState::Authorised => AttemptStatus::Authorized,
@@ -765,89 +758,73 @@ domain_types::impl_flow_status_mapping! {
                 revolut::RevolutOrderState::Pending => AttemptStatus::AuthenticationPending,
                 revolut::RevolutOrderState::Processing => AttemptStatus::Pending,
             },
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    { status }
 }
 
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Revolut<T>,
-    flow:      Capture,
-    source:    revolut::RevolutOrderState,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Charged],
-    failure:   none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: RevolutCaptureResponse,
-        source: |response| response.state.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    flow: Capture,
+    source: revolut::RevolutOrderState,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             revolut::RevolutOrderState::Completed => AttemptStatus::Charged,
             revolut::RevolutOrderState::Authorised => AttemptStatus::Authorized,
             revolut::RevolutOrderState::Processing => AttemptStatus::Pending,
             revolut::RevolutOrderState::Pending => AttemptStatus::Pending,
             revolut::RevolutOrderState::Failed => AttemptStatus::Failure,
             revolut::RevolutOrderState::Cancelled => AttemptStatus::Voided,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: RevolutCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Revolut<T>,
-    flow:      Refund,
-    source:    revolut::RevolutOrderState,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Success],
-    failure:   none,
-    extractors: {
+    flow: Refund,
+    source: revolut::RevolutOrderState,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
+            revolut::RevolutOrderState::Completed => common_enums::RefundStatus::Success,
+            revolut::RevolutOrderState::Processing => common_enums::RefundStatus::Pending,
+            revolut::RevolutOrderState::Failed => common_enums::RefundStatus::Failure,
+            revolut::RevolutOrderState::Cancelled => common_enums::RefundStatus::Failure,
+            _ => common_enums::RefundStatus::Pending,
+        } },
+    runtime: {
         request: RefundsData,
         response: RevolutRefundResponse,
-        source: |response| response.state.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match status {
-            revolut::RevolutOrderState::Completed => common_enums::RefundStatus::Success,
-            revolut::RevolutOrderState::Processing => common_enums::RefundStatus::Pending,
-            revolut::RevolutOrderState::Failed => common_enums::RefundStatus::Failure,
-            revolut::RevolutOrderState::Cancelled => common_enums::RefundStatus::Failure,
-            _ => common_enums::RefundStatus::Pending,
-        }
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Revolut<T>,
-    flow:      RSync,
-    source:    revolut::RevolutOrderState,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Success],
-    failure:   none,
-    extractors: {
-        request: RefundSyncData,
-        response: RevolutRSyncResponse,
-        source: |response| response.state.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    flow: RSync,
+    source: revolut::RevolutOrderState,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             revolut::RevolutOrderState::Completed => common_enums::RefundStatus::Success,
             revolut::RevolutOrderState::Processing => common_enums::RefundStatus::Pending,
             revolut::RevolutOrderState::Failed => common_enums::RefundStatus::Failure,
             revolut::RevolutOrderState::Cancelled => common_enums::RefundStatus::Failure,
             _ => common_enums::RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: RevolutRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

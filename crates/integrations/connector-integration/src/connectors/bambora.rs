@@ -127,17 +127,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: Option<transformers::BamboraPaymentType>,
     context: bool,
-    params: [status, manual_capture],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: BamboraAuthorizeResponse,
-        source: |_resource_common_data, _request, response| (response.approved == "1").then(|| response.payment_type.clone()),
-        context: |_resource_common_data, request, _response| request.capture_method.is_some_and(|method| method != common_enums::CaptureMethod::Automatic),
-    },
-    {
-        use transformers::BamboraPaymentType as Type;
+    mapping_status: |status, manual_capture| { use transformers::BamboraPaymentType as Type;
         use common_enums::AttemptStatus;
         match status {
             Some(Type::PreAuth) => AttemptStatus::Authorized,
@@ -146,8 +136,13 @@ domain_types::impl_flow_status_mapping! {
             Some(Type::Return) => AttemptStatus::Pending,
             None if manual_capture => AttemptStatus::AuthorizationFailed,
             None => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: BamboraAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.approved == "1").then(|| response.payment_type.clone())) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method.is_some_and(|method| method != common_enums::CaptureMethod::Automatic)) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Bambora<T>
@@ -161,17 +156,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Bambora<T>,
     flow: Capture,
     source: bool,
-    params: [status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status| { if status { common_enums::AttemptStatus::Charged } else { common_enums::AttemptStatus::Failure } },
+    runtime: {
         request: PaymentsCaptureData,
         response: BamboraCaptureResponse,
-        source: |_resource_common_data, _request, response| response.approved == "1",
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.approved == "1") },
     },
-    {
-        if status { common_enums::AttemptStatus::Charged } else { common_enums::AttemptStatus::Failure }
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Bambora<T>
@@ -185,17 +175,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Bambora<T>,
     flow: Void,
     source: bool,
-    params: [status],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |status| { if status { common_enums::AttemptStatus::Voided } else { common_enums::AttemptStatus::VoidFailed } },
+    runtime: {
         request: PaymentVoidData,
         response: BamboraVoidResponse,
-        source: |_resource_common_data, _request, response| response.approved == "1",
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.approved == "1") },
     },
-    {
-        if status { common_enums::AttemptStatus::Voided } else { common_enums::AttemptStatus::VoidFailed }
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Bambora<T>
@@ -211,17 +196,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: Option<transformers::BamboraPaymentType>,
     context: bool,
-    params: [status, manual_capture],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: BamboraPSyncResponse,
-        source: |_resource_common_data, _request, response| (response.approved == "1").then(|| response.payment_type.clone()),
-        context: |_resource_common_data, request, _response| request.capture_method.is_some_and(|method| method != common_enums::CaptureMethod::Automatic),
-    },
-    {
-        use transformers::BamboraPaymentType as Type;
+    mapping_status: |status, manual_capture| { use transformers::BamboraPaymentType as Type;
         use common_enums::AttemptStatus;
         match status {
             Some(Type::PreAuth) => AttemptStatus::Authorized,
@@ -230,8 +205,13 @@ domain_types::impl_flow_status_mapping! {
             Some(Type::Return) => AttemptStatus::Pending,
             None if manual_capture => AttemptStatus::AuthorizationFailed,
             None => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: BamboraPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.approved == "1").then(|| response.payment_type.clone())) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method.is_some_and(|method| method != common_enums::CaptureMethod::Automatic)) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Bambora<T>
@@ -247,17 +227,12 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Bambora<T>,
     flow: Refund,
     source: bool,
-    params: [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status| { if status { common_enums::RefundStatus::Success } else { common_enums::RefundStatus::Failure } },
+    runtime: {
         request: RefundsData,
         response: BamboraRefundResponse,
-        source: |_resource_common_data, _request, response| response.approved == "1",
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.approved == "1") },
     },
-    {
-        if status { common_enums::RefundStatus::Success } else { common_enums::RefundStatus::Failure }
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Bambora<T>
@@ -271,17 +246,12 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Bambora<T>,
     flow: RSync,
     source: bool,
-    params: [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status| { if status { common_enums::RefundStatus::Success } else { common_enums::RefundStatus::Failure } },
+    runtime: {
         request: RefundSyncData,
         response: BamboraRSyncResponse,
-        source: |_resource_common_data, _request, response| response.approved == "1",
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.approved == "1") },
     },
-    {
-        if status { common_enums::RefundStatus::Success } else { common_enums::RefundStatus::Failure }
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Bambora<T>

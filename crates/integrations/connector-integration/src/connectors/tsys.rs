@@ -503,17 +503,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: TsysAuthorizeResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: TsysAuthorizeResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use common_enums::AttemptStatus;
+    mapping_status: |response, _ctx| { use common_enums::AttemptStatus;
         match response.0 {
             transformers::TsysPaymentsResponse::AuthResponse(resp) => match resp {
                 transformers::TsysResponseTypes::SuccessResponse(auth_response) => {
@@ -536,8 +526,13 @@ domain_types::impl_flow_status_mapping! {
                 transformers::TsysResponseTypes::ErrorResponse(_) => AttemptStatus::Failure,
             },
             _ => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: TsysAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -546,13 +541,11 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: transformers::TsysTransactionDetails,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged, Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { common_enums::AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsSyncData,
         response: TsysPSyncResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             match &response.0.search_transaction_response {
                 transformers::SearchResponseTypes::SuccessResponse(search_response) => {
                     search_response.transaction_details.clone()
@@ -561,12 +554,9 @@ domain_types::impl_flow_status_mapping! {
                     transformers::TsysTransactionDetails::default()
                 }
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        common_enums::AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -575,17 +565,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: TsysCaptureResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: TsysCaptureResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use common_enums::AttemptStatus;
+    mapping_status: |response, _ctx| { use common_enums::AttemptStatus;
         match response.0 {
             transformers::TsysPaymentsResponse::CaptureResponse(resp) => match resp {
                 transformers::TsysResponseTypes::SuccessResponse(capture_response) => {
@@ -597,8 +577,13 @@ domain_types::impl_flow_status_mapping! {
                 transformers::TsysResponseTypes::ErrorResponse(_) => AttemptStatus::CaptureFailed,
             },
             _ => AttemptStatus::CaptureFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: TsysCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -607,17 +592,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: TsysVoidResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request: PaymentVoidData,
-        response: TsysVoidResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use common_enums::AttemptStatus;
+    mapping_status: |response, _ctx| { use common_enums::AttemptStatus;
         match response.0 {
             transformers::TsysPaymentsResponse::VoidResponse(resp) => match resp {
                 transformers::TsysResponseTypes::SuccessResponse(void_response) => {
@@ -629,8 +604,13 @@ domain_types::impl_flow_status_mapping! {
                 transformers::TsysResponseTypes::ErrorResponse(_) => AttemptStatus::VoidFailed,
             },
             _ => AttemptStatus::VoidFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: TsysVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -639,17 +619,7 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: TsysSetupMandateResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: TsysSetupMandateResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use common_enums::AttemptStatus;
+    mapping_status: |response, _ctx| { use common_enums::AttemptStatus;
         match response.0 {
             transformers::TsysPaymentsResponse::AuthResponse(resp) => match resp {
                 transformers::TsysResponseTypes::SuccessResponse(auth_response) => {
@@ -666,8 +636,13 @@ domain_types::impl_flow_status_mapping! {
                 }
             },
             _ => AttemptStatus::AuthorizationFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: TsysSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -676,17 +651,7 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: TsysRepeatPaymentResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: TsysRepeatPaymentResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use common_enums::AttemptStatus;
+    mapping_status: |response, _ctx| { use common_enums::AttemptStatus;
         match response.0 {
             transformers::TsysPaymentsResponse::SaleResponse(resp) => match resp {
                 transformers::TsysResponseTypes::SuccessResponse(sale_response) => {
@@ -712,8 +677,13 @@ domain_types::impl_flow_status_mapping! {
                 }
             },
             _ => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: TsysRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -722,25 +692,20 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: transformers::TsysPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { common_enums::RefundStatus::from(status) },
+    runtime: {
         request: RefundsData,
         response: RefundResponse,
-        source: |response| match &response.return_response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match &response.return_response {
             transformers::TsysResponseTypes::SuccessResponse(success_response) => {
                 success_response.status.clone()
             }
             transformers::TsysResponseTypes::ErrorResponse(_) => {
                 transformers::TsysPaymentStatus::Fail
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        common_enums::RefundStatus::from(status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -749,13 +714,11 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: transformers::TsysTransactionDetails,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { common_enums::RefundStatus::from(status) },
+    runtime: {
         request: RefundSyncData,
         response: TsysRSyncResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             match &response.0.search_transaction_response {
                 transformers::SearchResponseTypes::SuccessResponse(search_response) => {
                     search_response.transaction_details.clone()
@@ -764,12 +727,9 @@ domain_types::impl_refund_flow_status_mapping! {
                     transformers::TsysTransactionDetails::default()
                 }
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        common_enums::RefundStatus::from(status)
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

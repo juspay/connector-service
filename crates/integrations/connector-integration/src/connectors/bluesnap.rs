@@ -55,22 +55,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Bluesnap<T>,
-    flow:            Authorize,
-    source:          bluesnap::BluesnapProcessingStatus,
-    context:         Option<bluesnap::BluesnapTxnType>,
-    params:          [processing_status, txn_type],
-    success: Success => [Authorized, Charged],
-    failure: Fail => Failure,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: BluesnapAuthorizeResponse,
-        source: |_resource_common_data, _request, response| response.processing_info.processing_status.clone(),
-        context: |_resource_common_data, _request, response| response.card_transaction_type.clone(),
-    },
-    {
-        use bluesnap::BluesnapProcessingStatus as P;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bluesnap<T>,
+    flow: Authorize,
+    source: bluesnap::BluesnapProcessingStatus,
+    context: Option<bluesnap::BluesnapTxnType>,
+    mapping_status: |processing_status, txn_type| { use bluesnap::BluesnapProcessingStatus as P;
         use bluesnap::BluesnapTxnType as Tx;
         match processing_status {
             P::Success => match txn_type {
@@ -83,8 +73,13 @@ domain_types::impl_flow_status_mapping! {
             },
             P::Pending | P::PendingMerchantReview => common_enums::AttemptStatus::Pending,
             P::Fail => common_enums::AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: BluesnapAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.processing_info.processing_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.card_transaction_type.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Bluesnap<T>
@@ -92,22 +87,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Bluesnap<T>,
-    flow:            PSync,
-    source:          bluesnap::BluesnapProcessingStatus,
-    context:         Option<bluesnap::BluesnapTxnType>,
-    params:          [processing_status, txn_type],
-    success: Success => [Authorized, Charged, Voided],
-    failure: Fail => Failure,
-    extractors: {
-        request: PaymentsSyncData,
-        response: BluesnapPSyncResponse,
-        source: |_resource_common_data, _request, response| response.processing_info.processing_status.clone(),
-        context: |_resource_common_data, _request, response| response.card_transaction_type.clone(),
-    },
-    {
-        use bluesnap::BluesnapProcessingStatus as P;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bluesnap<T>,
+    flow: PSync,
+    source: bluesnap::BluesnapProcessingStatus,
+    context: Option<bluesnap::BluesnapTxnType>,
+    mapping_status: |processing_status, txn_type| { use bluesnap::BluesnapProcessingStatus as P;
         use bluesnap::BluesnapTxnType as Tx;
         match processing_status {
             P::Success => match txn_type {
@@ -120,8 +105,13 @@ domain_types::impl_flow_status_mapping! {
             },
             P::Pending | P::PendingMerchantReview => common_enums::AttemptStatus::Pending,
             P::Fail => common_enums::AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: BluesnapPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.processing_info.processing_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.card_transaction_type.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Bluesnap<T>
@@ -129,22 +119,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Bluesnap<T>,
-    flow:            Void,
-    source:          bluesnap::BluesnapProcessingStatus,
-    context:         Option<bluesnap::BluesnapTxnType>,
-    params:          [processing_status, txn_type],
-    success: Success => [Voided],
-    failure: Fail => VoidFailed,
-    extractors: {
-        request: PaymentVoidData,
-        response: BluesnapVoidResponse,
-        source: |_resource_common_data, _request, response| response.processing_info.processing_status.clone(),
-        context: |_resource_common_data, _request, response| response.card_transaction_type.clone(),
-    },
-    {
-        use bluesnap::BluesnapProcessingStatus as P;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bluesnap<T>,
+    flow: Void,
+    source: bluesnap::BluesnapProcessingStatus,
+    context: Option<bluesnap::BluesnapTxnType>,
+    mapping_status: |processing_status, txn_type| { use bluesnap::BluesnapProcessingStatus as P;
         use bluesnap::BluesnapTxnType as Tx;
         match processing_status {
             P::Success => match txn_type {
@@ -160,8 +140,13 @@ domain_types::impl_flow_status_mapping! {
             },
             P::Pending | P::PendingMerchantReview => common_enums::AttemptStatus::VoidInitiated,
             P::Fail => common_enums::AttemptStatus::VoidFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: BluesnapVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.processing_info.processing_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.card_transaction_type.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Bluesnap<T>
@@ -180,22 +165,12 @@ macros::macro_connector_payout_implementation!(
 );
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Bluesnap<T>,
-    flow:            Capture,
-    source:          bluesnap::BluesnapProcessingStatus,
-    context:         Option<bluesnap::BluesnapTxnType>,
-    params:          [processing_status, txn_type],
-    success: Success => [Charged],
-    failure: Fail => Failure,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: BluesnapCaptureResponse,
-        source: |_resource_common_data, _request, response| response.processing_info.processing_status.clone(),
-        context: |_resource_common_data, _request, response| response.card_transaction_type.clone(),
-    },
-    {
-        use bluesnap::BluesnapProcessingStatus as P;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bluesnap<T>,
+    flow: Capture,
+    source: bluesnap::BluesnapProcessingStatus,
+    context: Option<bluesnap::BluesnapTxnType>,
+    mapping_status: |processing_status, txn_type| { use bluesnap::BluesnapProcessingStatus as P;
         use bluesnap::BluesnapTxnType as Tx;
         match processing_status {
             P::Success => match txn_type {
@@ -209,8 +184,13 @@ domain_types::impl_flow_status_mapping! {
             },
             P::Pending | P::PendingMerchantReview => common_enums::AttemptStatus::Pending,
             P::Fail => common_enums::AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: BluesnapCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.processing_info.processing_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.card_transaction_type.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Bluesnap<T>
@@ -226,20 +206,15 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Bluesnap<T>,
     flow: Refund,
     source: bluesnap::BluesnapRefundStatus,
-    params: [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: BluesnapRefundResponse,
-        source: |_resource_common_data, _request, response| response.refund_status.clone(),
-    },
-    {
-        match status {
+    mapping_status: |status| { match status {
             bluesnap::BluesnapRefundStatus::Success => common_enums::RefundStatus::Success,
             bluesnap::BluesnapRefundStatus::Pending => common_enums::RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: BluesnapRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.refund_status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Bluesnap<T>
@@ -253,29 +228,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // `card_transaction_type` (unused by the refund mapping) rides along as the
 // mapping context, matching the payment-flow declarations above.
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Bluesnap<T>,
-    flow:           RSync,
-    source:         bluesnap::BluesnapProcessingStatus,
-    context:        Option<bluesnap::BluesnapTxnType>,
-    params:         [status, ctx],
-    success: Success => Success,
-    failure: Fail => Failure,
-    extractors: {
-        request: RefundSyncData,
-        response: BluesnapRefundSyncResponse,
-        source: |_resource_common_data, _request, response| response.processing_info.processing_status.clone(),
-        context: |_resource_common_data, _request, _response| None,
-    },
-    {
-        let _ = ctx;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bluesnap<T>,
+    flow: RSync,
+    source: bluesnap::BluesnapProcessingStatus,
+    context: Option<bluesnap::BluesnapTxnType>,
+    mapping_status: |status, ctx| { let _ = ctx;
         use bluesnap::BluesnapProcessingStatus as P;
         match status {
             P::Success => common_enums::RefundStatus::Success,
             P::Pending | P::PendingMerchantReview => common_enums::RefundStatus::Pending,
             P::Fail => common_enums::RefundStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: BluesnapRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.processing_info.processing_status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(None) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Bluesnap<T>

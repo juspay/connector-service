@@ -79,8 +79,8 @@ impl NuveiAuthType {
         format!("{:x}", hasher.finalize())
     }
 
-    pub fn get_timestamp()
-    -> common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss> {
+    pub fn get_timestamp(
+    ) -> common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss> {
         // Generate timestamp in YYYYMMDDHHmmss format using common_utils date_time
         common_utils::date_time::DateTime::from(common_utils::date_time::now())
     }

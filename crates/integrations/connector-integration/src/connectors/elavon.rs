@@ -482,17 +482,7 @@ domain_types::impl_flow_status_mapping! {
     flow: domain_types::connector_flow::PSync,
     source: elavon::TransactionSyncStatus,
     context: elavon::SyncTransactionType,
-    params: [status, ctx],
-    success: STL => [Authorized, Charged],
-    failure: PST => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: ElavonPSyncResponse,
-        source:   |response| response.ssl_trans_status.clone(),
-        context:  |_request, response| response.ssl_transaction_type.clone(),
-    },
-    {
-        use common_enums::AttemptStatus;
+    mapping_status: |status, ctx| { use common_enums::AttemptStatus;
         use elavon::{SyncTransactionType, TransactionSyncStatus};
         match status {
             TransactionSyncStatus::STL => match ctx {
@@ -511,8 +501,13 @@ domain_types::impl_flow_status_mapping! {
                     AttemptStatus::Failure
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: ElavonPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.ssl_trans_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.ssl_transaction_type.clone()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -521,17 +516,7 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: domain_types::connector_flow::RSync,
     source: elavon::TransactionSyncStatus,
     context: elavon::SyncTransactionType,
-    params: [status, ctx],
-    success: STL => Success,
-    failure: PST => Failure,
-    extractors: {
-        request:  RefundSyncData,
-        response: ElavonRSyncResponse,
-        source:   |response| response.ssl_trans_status.clone(),
-        context:  |_request, response| response.ssl_transaction_type.clone(),
-    },
-    {
-        use common_enums::RefundStatus;
+    mapping_status: |status, ctx| { use common_enums::RefundStatus;
         use elavon::{SyncTransactionType, TransactionSyncStatus};
         match ctx {
             SyncTransactionType::Return => match status {
@@ -543,8 +528,13 @@ domain_types::impl_refund_flow_status_mapping! {
                 }
             },
             _ => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: ElavonRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.ssl_trans_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.ssl_transaction_type.clone()) },
+    },
 }
 
 // NOTE: skipped extractors — the status-mapping context is the HTTP status
@@ -615,16 +605,7 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Elavon<T>,
     flow: domain_types::connector_flow::Refund,
     source: elavon::ElavonResult,
-    params: [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request:  RefundsData,
-        response: ElavonRefundResponse,
-        source:   |response| response.result.clone(),
-    },
-    {
-        match status {
+    mapping_status: |status| { match status {
             elavon::ElavonResult::Success(payload) => {
                 match payload.ssl_transaction_type.as_deref() {
                     Some("RETURN") => match payload.ssl_result {
@@ -636,8 +617,12 @@ domain_types::impl_refund_flow_status_mapping! {
                 }
             }
             elavon::ElavonResult::Error(_) => common_enums::RefundStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: ElavonRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.result.clone()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

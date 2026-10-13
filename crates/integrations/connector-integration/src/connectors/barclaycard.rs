@@ -68,33 +68,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Barclaycard<T>,
-    flow:            Authorize,
-    source:          responses::BarclaycardPaymentStatus,
-    context:         bool,
-    params:          [status, auto_capture],
-    success: Authorized => [Authorized, Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: BarclaycardAuthorizeResponse,
-        source: |_resource_common_data, _request, response| match response {
-            responses::BarclaycardPaymentsResponse::ClientReferenceInformation(info) => info
-                .status
-                .clone()
-                .unwrap_or(responses::BarclaycardPaymentStatus::StatusNotReceived),
-            responses::BarclaycardPaymentsResponse::ErrorInformation(_) => {
-                responses::BarclaycardPaymentStatus::Failed
-            }
-        },
-        context: |_resource_common_data, request, _response| matches!(
-            request.capture_method,
-            Some(common_enums::CaptureMethod::Automatic) | None
-        ),
-    },
-    {
-        use responses::BarclaycardPaymentStatus as S;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Barclaycard<T>,
+    flow: Authorize,
+    source: responses::BarclaycardPaymentStatus,
+    context: bool,
+    mapping_status: |status, auto_capture| { use responses::BarclaycardPaymentStatus as S;
         match status {
             S::Authorized | S::AuthorizedPendingReview => {
                 if auto_capture {
@@ -120,8 +99,24 @@ domain_types::impl_flow_status_mapping! {
             | S::Rejected
             | S::ServerError => common_enums::AttemptStatus::Failure,
             S::PendingReview | S::StatusNotReceived => common_enums::AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: BarclaycardAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            responses::BarclaycardPaymentsResponse::ClientReferenceInformation(info) => info
+                .status
+                .clone()
+                .unwrap_or(responses::BarclaycardPaymentStatus::StatusNotReceived),
+            responses::BarclaycardPaymentsResponse::ErrorInformation(_) => {
+                responses::BarclaycardPaymentStatus::Failed
+            }
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(matches!(
+            request.capture_method,
+            Some(common_enums::CaptureMethod::Automatic) | None
+        )) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Barclaycard<T>
@@ -353,25 +348,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 // which splits on the response's `error_information.reason` (the ctx here) —
 // PROCESSOR_DECLINED fails the refund, anything else keeps it Pending.
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Barclaycard<T>,
-    flow:           Refund,
-    source:         responses::BarclaycardRefundStatus,
-    context:        Option<String>,
-    params:         [status, ctx],
-    success: Succeeded => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request: RefundsData,
-        response: BarclaycardRefundResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response
-            .error_information
-            .as_ref()
-            .and_then(|error| error.reason.clone()),
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Barclaycard<T>,
+    flow: Refund,
+    source: responses::BarclaycardRefundStatus,
+    context: Option<String>,
+    mapping_status: |status, ctx| { use common_enums::RefundStatus;
         use responses::BarclaycardRefundStatus as S;
         match status {
             S::Succeeded | S::Transmitted => RefundStatus::Success,
@@ -384,8 +366,16 @@ domain_types::impl_refund_flow_status_mapping! {
                     RefundStatus::Pending
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: BarclaycardRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .error_information
+            .as_ref()
+            .and_then(|error| error.reason.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Barclaycard<T>

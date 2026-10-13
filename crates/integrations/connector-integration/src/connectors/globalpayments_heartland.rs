@@ -420,32 +420,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // `Charged` / `Authorized`.  The `source:` enum is the issuer decision; the
 // gateway code and the capture flag ride in `GlobalpaymentsHeartlandAuthorizeCtx`.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       GlobalpaymentsHeartland<T>,
-    flow:            Authorize,
-    source:          transformers::GlobalpaymentsHeartlandFlowStatus,
-    context:         transformers::GlobalpaymentsHeartlandAuthorizeCtx,
-    params:          [issuer, ctx],
-    success: Approved => [Charged, Authorized],
-    failure: Other => AuthorizationFailed,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: GlobalpaymentsHeartlandPaymentsResponse,
-        source: |_resource_common_data, _request, response| {
-            use transformers::GlobalpaymentsHeartlandFlowStatus as Status;
-            let body = response.body.pos_response.ver.transaction.as_ref()
-                .and_then(|transaction| transaction.credit_auth.as_ref().or(transaction.credit_sale.as_ref()));
-            if body.is_some_and(|body| matches!(body.rsp_code.as_deref(), Some("00" | "85"))) {
-                Status::Approved
-            } else { Status::Other }
-        },
-        context: |_resource_common_data, request, response| transformers::GlobalpaymentsHeartlandAuthorizeCtx {
-            gateway: if response.body.pos_response.ver.header.gateway_rsp_code.as_deref() == Some("0") { transformers::GlobalpaymentsHeartlandFlowStatus::Approved } else { transformers::GlobalpaymentsHeartlandFlowStatus::Other },
-            is_auto_capture: request.is_auto_capture(),
-        },
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: GlobalpaymentsHeartland<T>,
+    flow: Authorize,
+    source: transformers::GlobalpaymentsHeartlandFlowStatus,
+    context: transformers::GlobalpaymentsHeartlandAuthorizeCtx,
+    mapping_status: |issuer, ctx| { use common_enums::AttemptStatus;
         use transformers::GlobalpaymentsHeartlandFlowStatus;
         // Level 1 — gateway. A rejection carries no transaction body at all.
         if matches!(ctx.gateway, GlobalpaymentsHeartlandFlowStatus::Other) {
@@ -466,8 +446,23 @@ domain_types::impl_flow_status_mapping! {
                     AttemptStatus::AuthorizationFailed
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: GlobalpaymentsHeartlandPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            use transformers::GlobalpaymentsHeartlandFlowStatus as Status;
+            let body = response.body.pos_response.ver.transaction.as_ref()
+                .and_then(|transaction| transaction.credit_auth.as_ref().or(transaction.credit_sale.as_ref()));
+            if body.is_some_and(|body| matches!(body.rsp_code.as_deref(), Some("00" | "85"))) {
+                Status::Approved
+            } else { Status::Other }
+        }) },
+        context: |_resource_common_data, request, response, _http_status_code| { Ok(transformers::GlobalpaymentsHeartlandAuthorizeCtx {
+            gateway: if response.body.pos_response.ver.header.gateway_rsp_code.as_deref() == Some("0") { transformers::GlobalpaymentsHeartlandFlowStatus::Approved } else { transformers::GlobalpaymentsHeartlandFlowStatus::Other },
+            is_auto_capture: request.is_auto_capture(),
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for GlobalpaymentsHeartland<T>
@@ -525,17 +520,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: GlobalpaymentsHeartland<T>,
-    flow:      Capture,
-    source:    transformers::GlobalpaymentsHeartlandFlowStatus,
-    success:   Approved => Charged,
-    failure:   Other    => CaptureFailed,
-    extractors: {
+    flow: Capture,
+    source: transformers::GlobalpaymentsHeartlandFlowStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::GlobalpaymentsHeartlandFlowStatus::Approved => common_enums::AttemptStatus::Charged,
+            transformers::GlobalpaymentsHeartlandFlowStatus::Other => common_enums::AttemptStatus::CaptureFailed,
+        }
+    },
+    runtime: {
         request: PaymentsCaptureData,
         response: GlobalpaymentsHeartlandCaptureResponse,
-        source: |_resource_common_data, _request, response| if response.body.pos_response.ver.header.gateway_rsp_code.as_deref() == Some("0") { transformers::GlobalpaymentsHeartlandFlowStatus::Approved } else { transformers::GlobalpaymentsHeartlandFlowStatus::Other },
-        context: |_resource_common_data, _request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(if response.body.pos_response.ver.header.gateway_rsp_code.as_deref() == Some("0") { transformers::GlobalpaymentsHeartlandFlowStatus::Approved } else { transformers::GlobalpaymentsHeartlandFlowStatus::Other }) },
     },
-    {}
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for GlobalpaymentsHeartland<T>
@@ -547,17 +544,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: GlobalpaymentsHeartland<T>,
-    flow:      Void,
-    source:    transformers::GlobalpaymentsHeartlandFlowStatus,
-    success:   Approved => Voided,
-    failure:   Other    => VoidFailed,
-    extractors: {
+    flow: Void,
+    source: transformers::GlobalpaymentsHeartlandFlowStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::GlobalpaymentsHeartlandFlowStatus::Approved => common_enums::AttemptStatus::Voided,
+            transformers::GlobalpaymentsHeartlandFlowStatus::Other => common_enums::AttemptStatus::VoidFailed,
+        }
+    },
+    runtime: {
         request: PaymentVoidData,
         response: GlobalpaymentsHeartlandVoidResponse,
-        source: |_resource_common_data, _request, response| if response.body.pos_response.ver.header.gateway_rsp_code.as_deref() == Some("0") { transformers::GlobalpaymentsHeartlandFlowStatus::Approved } else { transformers::GlobalpaymentsHeartlandFlowStatus::Other },
-        context: |_resource_common_data, _request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(if response.body.pos_response.ver.header.gateway_rsp_code.as_deref() == Some("0") { transformers::GlobalpaymentsHeartlandFlowStatus::Approved } else { transformers::GlobalpaymentsHeartlandFlowStatus::Other }) },
     },
-    {}
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for GlobalpaymentsHeartland<T>
@@ -571,17 +570,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: GlobalpaymentsHeartland<T>,
-    flow:      Refund,
-    source:    transformers::GlobalpaymentsHeartlandFlowStatus,
-    success:   Approved => Success,
-    failure:   Other    => Failure,
-    extractors: {
+    flow: Refund,
+    source: transformers::GlobalpaymentsHeartlandFlowStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::GlobalpaymentsHeartlandFlowStatus::Approved => common_enums::RefundStatus::Success,
+            transformers::GlobalpaymentsHeartlandFlowStatus::Other => common_enums::RefundStatus::Failure,
+        }
+    },
+    runtime: {
         request: RefundsData,
         response: GlobalpaymentsHeartlandRefundResponse,
-        source: |_resource_common_data, _request, response| if response.body.pos_response.ver.header.gateway_rsp_code.as_deref() == Some("0") { transformers::GlobalpaymentsHeartlandFlowStatus::Approved } else { transformers::GlobalpaymentsHeartlandFlowStatus::Other },
-        context: |_resource_common_data, _request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(if response.body.pos_response.ver.header.gateway_rsp_code.as_deref() == Some("0") { transformers::GlobalpaymentsHeartlandFlowStatus::Approved } else { transformers::GlobalpaymentsHeartlandFlowStatus::Other }) },
     },
-    {}
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for GlobalpaymentsHeartland<T>

@@ -450,20 +450,11 @@ macros::macro_connector_implementation!(
 // (`BoostWebhookBody::get_event_type`, transformers.rs:828) consults the same
 // mapping. All targets land in PSync's intentionally broad ALLOWED set.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Boost<T>,
-    flow:            PSync,
-    source:          boost::BoostPaymentStatus,
-    params:          [status],
-    success: Succeeded => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: BoostPaymentSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-    },
-    {
-        use boost::BoostPaymentStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Boost<T>,
+    flow: PSync,
+    source: boost::BoostPaymentStatus,
+    mapping_status: |status| { use boost::BoostPaymentStatus;
         use common_enums::AttemptStatus;
         match status {
             BoostPaymentStatus::Succeeded => AttemptStatus::Charged,
@@ -476,8 +467,12 @@ domain_types::impl_flow_status_mapping! {
             BoostPaymentStatus::Failed
             | BoostPaymentStatus::Denied
             | BoostPaymentStatus::Error => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: BoostPaymentSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -526,20 +521,10 @@ macros::macro_connector_implementation!(
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Boost<T>,
-    flow:      Refund,
-    source:    boost::BoostReversalStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   Succeeded => Success,
-    failure:   Failed    => Failure,
-    extractors: {
-        request:  RefundsData,
-        response: BoostReversalResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response| (),
-    },
-    {
-        match status {
+    flow: Refund,
+    source: boost::BoostReversalStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             boost::BoostReversalStatus::Succeeded => common_enums::RefundStatus::Success,
             boost::BoostReversalStatus::Failed
             | boost::BoostReversalStatus::Expired
@@ -547,8 +532,13 @@ domain_types::impl_refund_flow_status_mapping! {
             boost::BoostReversalStatus::Pending
             | boost::BoostReversalStatus::PendingApproval
             | boost::BoostReversalStatus::Unknown => common_enums::RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: BoostReversalResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -589,20 +579,10 @@ macros::macro_connector_implementation!(
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Boost<T>,
-    flow:      RSync,
-    source:    boost::BoostReversalStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   Succeeded => Success,
-    failure:   Failed    => Failure,
-    extractors: {
-        request:  RefundSyncData,
-        response: BoostReversalSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response| (),
-    },
-    {
-        match status {
+    flow: RSync,
+    source: boost::BoostReversalStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             boost::BoostReversalStatus::Succeeded => common_enums::RefundStatus::Success,
             boost::BoostReversalStatus::Failed
             | boost::BoostReversalStatus::Expired
@@ -610,8 +590,13 @@ domain_types::impl_refund_flow_status_mapping! {
             boost::BoostReversalStatus::Pending
             | boost::BoostReversalStatus::PendingApproval
             | boost::BoostReversalStatus::Unknown => common_enums::RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: BoostReversalSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],

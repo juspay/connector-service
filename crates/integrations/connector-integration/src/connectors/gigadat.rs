@@ -126,24 +126,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Gigadat<T>,
-    flow:      PSync,
-    source:    transformers::GigadatTransactionStatus,
-    success:   StatusSuccess   => Charged,
-    failure:   StatusFailed    => Failure,
-    extractors: {
+    flow: PSync,
+    source: transformers::GigadatTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::GigadatTransactionStatus::StatusSuccess => common_enums::AttemptStatus::Charged,
+            transformers::GigadatTransactionStatus::StatusFailed => common_enums::AttemptStatus::Failure,
+            transformers::GigadatTransactionStatus::StatusInited => common_enums::AttemptStatus::Pending,
+            transformers::GigadatTransactionStatus::StatusPending => common_enums::AttemptStatus::Pending,
+            transformers::GigadatTransactionStatus::StatusRejected => common_enums::AttemptStatus::Failure,
+            transformers::GigadatTransactionStatus::StatusRejected1 => common_enums::AttemptStatus::Failure,
+            transformers::GigadatTransactionStatus::StatusExpired => common_enums::AttemptStatus::Failure,
+            transformers::GigadatTransactionStatus::StatusAborted1 => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
         request: PaymentsSyncData,
         response: GigadatSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-        StatusInited   => Pending,
-        StatusPending  => Pending,
-        StatusRejected => Failure,
-        StatusRejected1 => Failure,
-        StatusExpired  => Failure,
-        StatusAborted1 => Failure,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Gigadat<T>
@@ -154,25 +155,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Gigadat<T>,
-    flow:      Refund,
-    source:    gigadat::GigadatRefundStatus,
-    success:   Success  => Success,
-    failure:   Failure  => Failure,
-    extractors: {
+    flow: Refund,
+    source: gigadat::GigadatRefundStatus,
+    mapping_status: |status| {
+        match status {
+            gigadat::GigadatRefundStatus::Success => common_enums::RefundStatus::Success,
+            gigadat::GigadatRefundStatus::Failure => common_enums::RefundStatus::Failure,
+            gigadat::GigadatRefundStatus::Pending => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundsData,
         response: GigadatRefundResponse,
-        source: |_resource_common_data, _request, response| Ok({
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             if response.success {
                 gigadat::GigadatRefundStatus::Success
             } else {
                 gigadat::GigadatRefundStatus::Failure
             }
-        }),
-        context: |_resource_common_data, _request, _response | (),
+        }) },
     },
-    {
-        Pending => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Gigadat<T>

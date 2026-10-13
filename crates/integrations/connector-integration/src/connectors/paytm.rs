@@ -249,25 +249,20 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: String,
     context: (),
-    params: [result_code, _ctx],
-    success: _ => [Authorized],
-    failure: none,
-    extractors: {
+    mapping_status: |result_code, _ctx| { paytm::map_paytm_authorize_status_to_attempt_status(&result_code) },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: PaytmProcessTxnResponse,
-        source: |response| match &response.body {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match &response.body {
             response::PaytmProcessRespBodyTypes::SuccessBody(body) => {
                 body.result_info.result_code.clone()
             }
             response::PaytmProcessRespBodyTypes::FailureBody(body) => {
                 body.result_info.result_code.clone()
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        paytm::map_paytm_authorize_status_to_attempt_status(&result_code)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -281,25 +276,20 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: String,
     context: (),
-    params: [result_code, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |result_code, _ctx| { paytm::map_paytm_sync_status_to_attempt_status(&result_code) },
+    runtime: {
         request: PaymentsSyncData,
         response: PaytmTransactionStatusResponse,
-        source: |response| match &response.body {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match &response.body {
             response::PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => {
                 body.result_info.result_code.clone()
             }
             response::PaytmTransactionStatusRespBodyTypes::FailureBody(body) => {
                 body.result_info.result_code.clone()
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        paytm::map_paytm_sync_status_to_attempt_status(&result_code)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

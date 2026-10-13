@@ -56,57 +56,67 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector: Authipay<T>, flow: Authorize,
-    source: (Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>, transformers::AuthipayTransactionType), params: [parts],
-    success: _ => [Authorized, Charged, PartialCharged],
-    failure: none,
-    extractors: { request: PaymentsAuthorizeData<T>, response: AuthipayAuthorizeResponse,
-        source: |_resource_common_data, _request, response| (response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone(), response.transaction_type.clone()), },
-    { let (status, result, state, transaction_type) = parts; transformers::map_status(status, result, state, transaction_type) }
+    connector: Authipay<T>,
+    flow: Authorize,
+    source: (Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>, transformers::AuthipayTransactionType),
+    mapping_status: |parts| { let (status, result, state, transaction_type) = parts; transformers::map_status(status, result, state, transaction_type) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: AuthipayAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone(), response.transaction_type.clone())) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector: Authipay<T>, flow: PSync,
-    source: (Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>, transformers::AuthipayTransactionType), params: [parts],
-    success: _ => [Authorized, Charged, Voided, PartialCharged],
-    failure: none,
-    extractors: { request: PaymentsSyncData, response: AuthipaySyncResponse,
-        source: |_resource_common_data, _request, response| (response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone(), response.transaction_type.clone()), },
-    { let (status, result, state, transaction_type) = parts; transformers::map_status(status, result, state, transaction_type) }
+    connector: Authipay<T>,
+    flow: PSync,
+    source: (Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>, transformers::AuthipayTransactionType),
+    mapping_status: |parts| { let (status, result, state, transaction_type) = parts; transformers::map_status(status, result, state, transaction_type) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: AuthipaySyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone(), response.transaction_type.clone())) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector: Authipay<T>, flow: Void,
-    source: (transformers::AuthipayTransactionType, Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>), params: [parts],
-    success: _ => [Voided],
-    failure: none,
-    extractors: { request: PaymentVoidData, response: AuthipayVoidResponse,
-        source: |_resource_common_data, _request, response| (response.transaction_type.clone(), response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone()), },
-    { let (transaction_type, status, result, state) = parts; transformers::map_void_status(transaction_type, status, result, state) }
+    connector: Authipay<T>,
+    flow: Void,
+    source: (transformers::AuthipayTransactionType, Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>),
+    mapping_status: |parts| { let (transaction_type, status, result, state) = parts; transformers::map_void_status(transaction_type, status, result, state) },
+    runtime: {
+        request: PaymentVoidData,
+        response: AuthipayVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.transaction_type.clone(), response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone())) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector: Authipay<T>, flow: Refund,
-    source: (transformers::AuthipayTransactionType, Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>), params: [parts],
-    success: _ => [Success],
-    failure: none,
-    extractors: { request: RefundsData, response: AuthipayRefundResponse,
-        source: |_resource_common_data, _request, response| (response.transaction_type.clone(), response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone()), },
-    { let (transaction_type, status, result, state) = parts; transformers::map_refund_status(Some(transaction_type), status, result, state) }
+    connector: Authipay<T>,
+    flow: Refund,
+    source: (transformers::AuthipayTransactionType, Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>),
+    mapping_status: |parts| { let (transaction_type, status, result, state) = parts; transformers::map_refund_status(Some(transaction_type), status, result, state) },
+    runtime: {
+        request: RefundsData,
+        response: AuthipayRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.transaction_type.clone(), response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone())) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector: Authipay<T>, flow: RSync,
-    source: (transformers::AuthipayTransactionType, Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>), params: [parts],
-    success: _ => [Success],
-    failure: none,
-    extractors: { request: RefundSyncData, response: AuthipayRefundSyncResponse,
-        source: |_resource_common_data, _request, response| (response.transaction_type.clone(), response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone()), },
-    { let (transaction_type, status, result, state) = parts; transformers::map_refund_status(Some(transaction_type), status, result, state) }
+    connector: Authipay<T>,
+    flow: RSync,
+    source: (transformers::AuthipayTransactionType, Option<transformers::AuthipayPaymentStatus>, Option<transformers::AuthipayPaymentResult>, Option<transformers::AuthipayTransactionState>),
+    mapping_status: |parts| { let (transaction_type, status, result, state) = parts; transformers::map_refund_status(Some(transaction_type), status, result, state) },
+    runtime: {
+        request: RefundSyncData,
+        response: AuthipayRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.transaction_type.clone(), response.transaction_status.clone(), response.transaction_result.clone(), response.transaction_state.clone())) },
+    },
 }
 
 // ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====

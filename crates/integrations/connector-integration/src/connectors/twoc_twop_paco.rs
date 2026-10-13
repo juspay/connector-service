@@ -139,27 +139,22 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
     context: (),
-    params: [info, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
+            None => AttemptStatus::Pending,
+        } },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: TwocTwopPacoAuthorizeResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .0
                 .parsed_response
                 .merged_result()
                 .and_then(|block| block.payment_status_info.clone())
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match info {
-            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
-            None => AttemptStatus::Pending,
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -168,28 +163,23 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
     context: (),
-    params: [info, _ctx],
-    success: _ => [Charged, Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
+            None => AttemptStatus::Pending,
+        } },
+    runtime: {
         request: PaymentsSyncData,
         response: TwocTwopPacoPSyncInquiryResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .0
                 .parsed_response
                 .data
                 .as_ref()
                 .and_then(|data| data.payment_status_info.clone())
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match info {
-            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
-            None => AttemptStatus::Pending,
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -198,27 +188,22 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
     context: (),
-    params: [info, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
+            None => AttemptStatus::CaptureInitiated,
+        } },
+    runtime: {
         request: PaymentsCaptureData,
         response: TwocTwopPacoCaptureResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .0
                 .parsed_response
                 .flat_data_block()
                 .and_then(|block| block.payment_status_info)
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match info {
-            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
-            None => AttemptStatus::CaptureInitiated,
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -227,27 +212,22 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
     context: (),
-    params: [info, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
+            None => AttemptStatus::VoidInitiated,
+        } },
+    runtime: {
         request: PaymentVoidData,
         response: TwocTwopPacoVoidResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .0
                 .parsed_response
                 .flat_data_block()
                 .and_then(|block| block.payment_status_info)
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match info {
-            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
-            None => AttemptStatus::VoidInitiated,
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -256,23 +236,7 @@ domain_types::impl_flow_status_mapping! {
     flow: VoidPC,
     source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
     context: (),
-    params: [info, _ctx],
-    success: _ => [VoidedPostCapture],
-    failure: none,
-    extractors: {
-        request: PaymentsCancelPostCaptureData,
-        response: TwocTwopPacoVoidPcResponse,
-        source: |response| {
-            response
-                .0
-                .parsed_response
-                .flat_data_block()
-                .and_then(|block| block.payment_status_info)
-        },
-        context: |_request, _response| (),
-    },
-    {
-        match info {
+    mapping_status: |info, _ctx| { match info {
             // The VoidPC TryFrom reuses `map_attempt_status`, under which a confirmed
             // (V, VD) pair lands on `Voided`; on the post-capture leg that is the
             // terminal `VoidedPostCapture`.
@@ -281,8 +245,19 @@ domain_types::impl_flow_status_mapping! {
                 status => status,
             },
             None => AttemptStatus::VoidPostCaptureInitiated,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCancelPostCaptureData,
+        response: TwocTwopPacoVoidPcResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .parsed_response
+                .flat_data_block()
+                .and_then(|block| block.payment_status_info)
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -291,27 +266,22 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
     context: (),
-    params: [info, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_refund_status(&info.payment_status, &info.payment_step),
+            None => RefundStatus::Pending,
+        } },
+    runtime: {
         request: RefundsData,
         response: TwocTwopPacoRefundResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .0
                 .parsed_response
                 .flat_data_block()
                 .and_then(|block| block.payment_status_info)
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match info {
-            Some(info) => twoc_twop_paco::map_refund_status(&info.payment_status, &info.payment_step),
-            None => RefundStatus::Pending,
-        }
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -320,28 +290,23 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
     context: (),
-    params: [info, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_refund_status(&info.payment_status, &info.payment_step),
+            None => RefundStatus::Pending,
+        } },
+    runtime: {
         request: RefundSyncData,
         response: TwocTwopPacoRSyncInquiryResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .0
                 .parsed_response
                 .data
                 .as_ref()
                 .and_then(|data| data.payment_status_info.clone())
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match info {
-            Some(info) => twoc_twop_paco::map_refund_status(&info.payment_status, &info.payment_step),
-            None => RefundStatus::Pending,
-        }
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

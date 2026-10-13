@@ -919,25 +919,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: (bool, Option<PayuStatusValue>, Option<String>),
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: PayuPaymentResponse,
-        source: |response| {
-            // Shed the status inputs into a clone-able tuple: `PayuPaymentResponse` is
-            // intentionally not Clone, so it cannot be used as the source value.
-            (
-                response.error.is_some(),
-                response.status.clone(),
-                response.result.as_ref().map(|result| result.status.clone()),
-            )
-        },
-        context: |_request, _response| (),
-    },
-    {
-        // Mirrors the Authorize TryFrom: an `error` field forces Failure; `IntStatus(1)`
+    mapping_status: |response, _ctx| { // Mirrors the Authorize TryFrom: an `error` field forces Failure; `IntStatus(1)`
         // is a UPI-intent redirect (AuthenticationPending); `"success"` unwraps the result
         // status; anything else is Failure.
         if response.0 {
@@ -956,8 +938,21 @@ domain_types::impl_flow_status_mapping! {
                     .unwrap_or(AttemptStatus::AuthenticationPending),
                 _ => AttemptStatus::Failure,
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PayuPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            // Shed the status inputs into a clone-able tuple: `PayuPaymentResponse` is
+            // intentionally not Clone, so it cannot be used as the source value.
+            (
+                response.error.is_some(),
+                response.status.clone(),
+                response.result.as_ref().map(|result| result.status.clone()),
+            )
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -966,14 +961,12 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (),
     context: AttemptStatus,
-    params: [_source, status],
-    success: _ => [Charged, Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentsSyncData,
         response: PayuSyncResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the mapped status into the context: `PayuSyncResponse` is not Clone.
             match (response.status, response.transaction_details.as_ref()) {
                 (Some(1), Some(transaction_details)) => transaction_details
@@ -985,11 +978,8 @@ domain_types::impl_flow_status_mapping! {
                     .unwrap_or(AttemptStatus::Failure),
                 _ => AttemptStatus::Failure,
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -998,22 +988,17 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: Option<payu::PayuStatusValue>,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: PayuCaptureResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        // Per the capture TryFrom: success → Charged, everything else → CaptureFailed.
+    mapping_status: |status, _ctx| { // Per the capture TryFrom: success → Charged, everything else → CaptureFailed.
         match status {
             Some(PayuStatusValue::StringStatus(ref s)) if s == "success" => AttemptStatus::Charged,
             _ => AttemptStatus::CaptureFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PayuCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1022,17 +1007,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: Option<payu::PayuStatusValue>,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request: PaymentVoidData,
-        response: PayuVoidResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        // Mirrors the void TryFrom; the 2xx fallback for a missing/unknown status is
+    mapping_status: |status, _ctx| { // Mirrors the void TryFrom; the 2xx fallback for a missing/unknown status is
         // reproduced here (the runtime mapper cannot observe the HTTP code, and the
         // error branch (int 0 / error_code present) is covered by VoidFailed below).
         match status {
@@ -1045,8 +1020,13 @@ domain_types::impl_flow_status_mapping! {
             Some(PayuStatusValue::IntStatus(_)) => AttemptStatus::VoidFailed,
             Some(PayuStatusValue::StringStatus(_)) => AttemptStatus::Voided,
             None => AttemptStatus::Voided,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: PayuVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1055,21 +1035,16 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: Option<payu::PayuStatusValue>,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: PayuRefundResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        status
+    mapping_status: |status, _ctx| { status
             .as_ref()
             .map(payu::map_payu_refund_status)
-            .unwrap_or(RefundStatus::Pending)
-    }
+            .unwrap_or(RefundStatus::Pending) },
+    runtime: {
+        request: RefundsData,
+        response: PayuRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1078,14 +1053,12 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: (),
     context: RefundStatus,
-    params: [_source, status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: RefundSyncData,
         response: PayuRefundSyncResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the mapped status into the context: `PayuRefundSyncResponse` is not Clone.
             let is_success = matches!(
                 &response.status,
@@ -1103,11 +1076,8 @@ domain_types::impl_refund_flow_status_mapping! {
                     .unwrap_or(RefundStatus::Pending),
                 _ => RefundStatus::Failure,
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

@@ -73,22 +73,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // PSync (Status 360): mirror of `map_transaction_status` — `Success` is
 // disambiguated by the gateway_response_code in the payload (ctx).
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
-    connector:       Axisbank<T>,
-    flow:            PSync,
-    source:          crate::connectors::juspay_upi_stack::types::OuterResponseCode,
-    context:         Option<String>,
-    params:          [status, ctx],
-    success: Success => [Charged],
-    failure: Failure => Failure,
-    extractors: {
-        request: PaymentsSyncData,
-        response: AxisbankSyncResponse,
-        source: |_resource_common_data, _request, response| response.response_code.clone(),
-        context: |_resource_common_data, _request, response| response.payload.as_ref().map(|payload| payload.gateway_response_code.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    connector: Axisbank<T>,
+    flow: PSync,
+    source: crate::connectors::juspay_upi_stack::types::OuterResponseCode,
+    context: Option<String>,
+    mapping_status: |status, ctx| { use common_enums::AttemptStatus;
         use crate::connectors::juspay_upi_stack::types::{
             GatewayResponseCode, OuterResponseCode as Outer,
         };
@@ -131,8 +121,13 @@ domain_types::impl_flow_status_mapping! {
                 },
                 None => AttemptStatus::Pending,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: AxisbankSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payload.as_ref().map(|payload| payload.gateway_response_code.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Axisbank<T>
@@ -149,14 +144,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
     connector: Axisbank<T>,
-    flow:      Refund,
-    source:    crate::connectors::juspay_upi_stack::types::RefundStatus,
-    success:   Success => Success,
-    failure:   Failed  => Failure,
-    extractors: {
+    flow: Refund,
+    source: crate::connectors::juspay_upi_stack::types::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            crate::connectors::juspay_upi_stack::types::RefundStatus::Success => common_enums::RefundStatus::Success,
+            crate::connectors::juspay_upi_stack::types::RefundStatus::Failed => common_enums::RefundStatus::Failure,
+            crate::connectors::juspay_upi_stack::types::RefundStatus::Pending => common_enums::RefundStatus::Pending,
+            crate::connectors::juspay_upi_stack::types::RefundStatus::Deemed => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundsData,
         response: AxisbankRefundResponse,
-        source: |_resource_common_data, _request, response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             use crate::connectors::juspay_upi_stack::types::RefundStatus as Status;
             response.payload.as_ref().map_or(Status::Failed, |payload| {
                 if payload.refund_type.eq_ignore_ascii_case("UDIR") {
@@ -165,13 +166,8 @@ domain_types::impl_refund_flow_status_mapping! {
                     Status::from_offline_gateway_code(&payload.gateway_response_code, &payload.gateway_response_status)
                 }
             })
-        },
-        context: |_resource_common_data, _request, _response| (),
+        }) },
     },
-    {
-        Pending => Pending,
-        Deemed  => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Axisbank<T>
@@ -181,14 +177,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
     connector: Axisbank<T>,
-    flow:      RSync,
-    source:    crate::connectors::juspay_upi_stack::types::RefundStatus,
-    success:   Success => Success,
-    failure:   Failed  => Failure,
-    extractors: {
+    flow: RSync,
+    source: crate::connectors::juspay_upi_stack::types::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            crate::connectors::juspay_upi_stack::types::RefundStatus::Success => common_enums::RefundStatus::Success,
+            crate::connectors::juspay_upi_stack::types::RefundStatus::Failed => common_enums::RefundStatus::Failure,
+            crate::connectors::juspay_upi_stack::types::RefundStatus::Pending => common_enums::RefundStatus::Pending,
+            crate::connectors::juspay_upi_stack::types::RefundStatus::Deemed => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundSyncData,
         response: AxisbankRefundSyncResponse,
-        source: |_resource_common_data, _request, response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             use crate::connectors::juspay_upi_stack::types::RefundStatus as Status;
             response.payload.as_ref().map_or(Status::Failed, |payload| {
                 if payload.refund_type.eq_ignore_ascii_case("UDIR") {
@@ -197,13 +199,8 @@ domain_types::impl_refund_flow_status_mapping! {
                     Status::from_offline_gateway_code(&payload.gateway_response_code, &payload.gateway_response_status)
                 }
             })
-        },
-        context: |_resource_common_data, _request, _response| (),
+        }) },
     },
-    {
-        Pending => Pending,
-        Deemed  => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Axisbank<T>

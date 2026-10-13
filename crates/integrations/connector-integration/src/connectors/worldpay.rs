@@ -687,24 +687,19 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: PaymentOutcome,
     context: common_utils::types::MinorUnit,
-    params: [status, amount],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: WorldpayAuthorizeResponse,
-        source: |response| response.outcome.clone(),
-        context: |request, _response| request.minor_amount,
-    },
-    {
-        if amount == common_utils::types::MinorUnit::zero()
+    mapping_status: |status, amount| { if amount == common_utils::types::MinorUnit::zero()
             && status == PaymentOutcome::Authorized
         {
             AttemptStatus::Charged
         } else {
             AttemptStatus::from(status)
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: WorldpayAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.minor_amount) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -713,18 +708,13 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: EventType,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(&status) },
+    runtime: {
         request: PaymentsSyncData,
         response: WorldpaySyncResponse,
-        source: |response| response.last_event.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.last_event.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(&status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -733,18 +723,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: PaymentOutcome,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsCaptureData,
         response: WorldpayCaptureResponse,
-        source: |response| response.outcome.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -753,18 +738,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: PaymentOutcome,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentVoidData,
         response: WorldpayVoidResponse,
-        source: |response| response.outcome.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -773,18 +753,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: PaymentOutcome,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
         request: RefundsData,
         response: WorldpayRefundResponse,
-        source: |response| response.outcome.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -793,18 +768,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: EventType,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
         request: RefundSyncData,
         response: WorldpayRefundSyncResponse,
-        source: |response| response.last_event.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.last_event.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -813,18 +783,13 @@ domain_types::impl_flow_status_mapping! {
     flow: PreAuthenticate,
     source: PaymentOutcome,
     context: (),
-    params: [status, _ctx],
-    success: _ => [AuthenticationSuccessful],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsPreAuthenticateData<T>,
         response: WorldpayPreAuthenticateResponse,
-        source: |response| response.outcome.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -833,18 +798,13 @@ domain_types::impl_flow_status_mapping! {
     flow: PostAuthenticate,
     source: PaymentOutcome,
     context: (),
-    params: [status, _ctx],
-    success: _ => [AuthenticationSuccessful, Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsPostAuthenticateData<T>,
         response: WorldpayPostAuthenticateResponse,
-        source: |response| response.outcome.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -853,24 +813,19 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: PaymentOutcome,
     context: common_utils::types::MinorUnit,
-    params: [status, amount],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: WorldpayRepeatPaymentResponse,
-        source: |response| response.outcome.clone(),
-        context: |request, _response| request.minor_amount,
-    },
-    {
-        if amount == common_utils::types::MinorUnit::zero()
+    mapping_status: |status, amount| { if amount == common_utils::types::MinorUnit::zero()
             && status == PaymentOutcome::Authorized
         {
             AttemptStatus::Charged
         } else {
             AttemptStatus::from(status)
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: WorldpayRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.minor_amount) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -879,18 +834,13 @@ domain_types::impl_flow_status_mapping! {
     flow: IncrementalAuthorization,
     source: PaymentOutcome,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsIncrementalAuthorizationData,
         response: WorldpayIncrementalAuthResponse,
-        source: |response| response.outcome.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

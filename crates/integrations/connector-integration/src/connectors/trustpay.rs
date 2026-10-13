@@ -86,54 +86,44 @@ domain_types::impl_connector_flow_allowed_status_mapping! {
 }
 
 domain_types::impl_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Trustpay<T>,
-    flow:           Authorize,
-    source:         transformers::TrustpayAuthorizeStatus,
-    context:        common_enums::AttemptStatus,
-    params:         [status, previous_attempt_status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpay<T>,
+    flow: Authorize,
+    source: transformers::TrustpayAuthorizeStatus,
+    context: common_enums::AttemptStatus,
+    mapping_status: |status, previous_attempt_status| { status.attempt_status(previous_attempt_status) },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: TrustpayPaymentsResponse,
-        source: |_resource_common_data, _request, response| Ok(trustpay::authorize_flow_status(response)),
-        context: |resource_common_data, _request, _response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(trustpay::authorize_flow_status(response)) },
+        context: |resource_common_data, _request, _response, _http_status_code| { Ok({
             domain_types::flow_status::FlowStatusReader::current_mapped_flow_status(
                 resource_common_data,
             )
-        },
+        }) },
     },
-    {
-        status.attempt_status(previous_attempt_status)
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Trustpay<T>
 {
 }
 domain_types::impl_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Trustpay<T>,
-    flow:           PSync,
-    source:         transformers::TrustpayAuthorizeStatus,
-    context:        common_enums::AttemptStatus,
-    params:         [status, previous_attempt_status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpay<T>,
+    flow: PSync,
+    source: transformers::TrustpayAuthorizeStatus,
+    context: common_enums::AttemptStatus,
+    mapping_status: |status, previous_attempt_status| { status.attempt_status(previous_attempt_status) },
+    runtime: {
         request: PaymentsSyncData,
         response: TrustpayPaymentsSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(trustpay::authorize_flow_status(response)),
-        context: |resource_common_data, _request, _response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(trustpay::authorize_flow_status(response)) },
+        context: |resource_common_data, _request, _response, _http_status_code| { Ok({
             domain_types::flow_status::FlowStatusReader::current_mapped_flow_status(
                 resource_common_data,
             )
-        },
+        }) },
     },
-    {
-        status.attempt_status(previous_attempt_status)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -142,23 +132,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Trustpay<T>,
-    flow:           RSync,
-    source:         common_enums::RefundStatus,
-    params:         [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpay<T>,
+    flow: RSync,
+    source: common_enums::RefundStatus,
+    mapping_status: |status| { status },
+    runtime: {
         request: RefundSyncData,
         response: RefundSyncResponse,
-        source: |_resource_common_data, _request, response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             trustpay::refund_flow_status(response)
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -167,23 +152,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Trustpay<T>,
-    flow:           Refund,
-    source:         common_enums::RefundStatus,
-    params:         [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpay<T>,
+    flow: Refund,
+    source: common_enums::RefundStatus,
+    mapping_status: |status| { status },
+    runtime: {
         request: RefundsData,
         response: RefundResponse,
-        source: |_resource_common_data, _request, response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             trustpay::refund_flow_status(response)
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -210,25 +190,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Trustpay<T>,
-    flow:      SetupMandate,
-    source:    transformers::TrustpayCardPaymentStatus,
-    success:   Charged              => Charged,
-    failure:   Failed               => Failure,
-    extractors: {
+    flow: SetupMandate,
+    source: transformers::TrustpayCardPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::TrustpayCardPaymentStatus::Charged => common_enums::AttemptStatus::Charged,
+            transformers::TrustpayCardPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::TrustpayCardPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::TrustpayCardPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
         request: SetupMandateRequestData<T>,
         response: TrustpaySetupMandateResponse,
-        source: |_resource_common_data, _request, response| Ok({
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             trustpay::card_payment_flow_status(
                 response.payment_status.clone(),
                 response.redirect_url.clone(),
             )
-        }),
-        context: |_resource_common_data, _request, _response | (),
+        }) },
     },
-    {
-        AuthenticationPending => AuthenticationPending,
-        Pending               => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Trustpay<T>
@@ -237,25 +218,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Trustpay<T>,
-    flow:      RepeatPayment,
-    source:    transformers::TrustpayCardPaymentStatus,
-    success:   Charged              => Charged,
-    failure:   Failed               => Failure,
-    extractors: {
+    flow: RepeatPayment,
+    source: transformers::TrustpayCardPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::TrustpayCardPaymentStatus::Charged => common_enums::AttemptStatus::Charged,
+            transformers::TrustpayCardPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::TrustpayCardPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::TrustpayCardPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
         request: RepeatPaymentData<T>,
         response: TrustpayRepeatPaymentResponse,
-        source: |_resource_common_data, _request, response| Ok({
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             trustpay::card_payment_flow_status(
                 response.payment_status.clone(),
                 response.redirect_url.clone(),
             )
-        }),
-        context: |_resource_common_data, _request, _response | (),
+        }) },
     },
-    {
-        AuthenticationPending => AuthenticationPending,
-        Pending               => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Trustpay<T>

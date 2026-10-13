@@ -726,20 +726,10 @@ macros::macro_connector_implementation!(
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Imerchantsolutions<T>,
-    flow:      Authorize,
-    source:    imerchantsolutions::ImerchantsolutionsPaymentStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   Captured => [Charged],
-    failure:   Failed   => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
-        response: ImerchantsolutionsPaymentsResponseData,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response| (),
-    },
-    {
-        match status {
+    flow: Authorize,
+    source: imerchantsolutions::ImerchantsolutionsPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Authorised
@@ -752,8 +742,13 @@ domain_types::impl_flow_status_mapping! {
             | imerchantsolutions::ImerchantsolutionsPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Refused => common_enums::AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: ImerchantsolutionsPaymentsResponseData,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 // RepeatPayment — mirrors the RepeatPayment TryFrom (transformers.rs:978), same
@@ -765,20 +760,10 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Imerchantsolutions<T>,
-    flow:      RepeatPayment,
-    source:    imerchantsolutions::ImerchantsolutionsPaymentStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   Captured => [Charged],
-    failure:   Failed   => Failure,
-    extractors: {
-        request:  RepeatPaymentData<T>,
-        response: ImerchantsolutionsRepeatPaymentResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response| (),
-    },
-    {
-        match status {
+    flow: RepeatPayment,
+    source: imerchantsolutions::ImerchantsolutionsPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Authorised
@@ -791,8 +776,13 @@ domain_types::impl_flow_status_mapping! {
             | imerchantsolutions::ImerchantsolutionsPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
             imerchantsolutions::ImerchantsolutionsPaymentStatus::Cancelled
             | imerchantsolutions::ImerchantsolutionsPaymentStatus::Refused => common_enums::AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: ImerchantsolutionsRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 // PSync — mirrors the PSync TryFrom (transformers.rs:1160): source is the untagged
@@ -805,25 +795,9 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Imerchantsolutions<T>,
-    flow:      PSync,
-    source:    imerchantsolutions::ImerchantsolutionsStatusSource,
-    params:    [status],
-    success: _ => [Authorized, Charged, Voided, PartialCharged],
-    failure: none,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: ImerchantsolutionsPaymentSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(match response {
-            ImerchantsolutionsPaymentSyncResponse::ImerchantsolutionsPSyncResponse(r) => {
-                imerchantsolutions::ImerchantsolutionsStatusSource::Payment(r.status.clone())
-            }
-            ImerchantsolutionsPaymentSyncResponse::ImerchantsolutionsWebhookResponse(r) => {
-                imerchantsolutions::ImerchantsolutionsStatusSource::Webhook(r.status.clone())
-            }
-        }),
-    },
-    {
-        use common_enums::AttemptStatus;
+    flow: PSync,
+    source: imerchantsolutions::ImerchantsolutionsStatusSource,
+    mapping_status: |status| { use common_enums::AttemptStatus;
         use imerchantsolutions::{
             ImerchantsolutionsPaymentStatus as PS, ImerchantsolutionsStatusSource as Src,
             ImerchantsolutionsWebhookStatus as WS,
@@ -848,8 +822,19 @@ domain_types::impl_flow_status_mapping! {
             Src::Payment(PS::Pending3ds) => AttemptStatus::AuthenticationPending,
             Src::Payment(PS::Refused) | Src::Payment(PS::Failed)
             | Src::Webhook(WS::Failed) | Src::Webhook(WS::Refused) => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: ImerchantsolutionsPaymentSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            ImerchantsolutionsPaymentSyncResponse::ImerchantsolutionsPSyncResponse(r) => {
+                imerchantsolutions::ImerchantsolutionsStatusSource::Payment(r.status.clone())
+            }
+            ImerchantsolutionsPaymentSyncResponse::ImerchantsolutionsWebhookResponse(r) => {
+                imerchantsolutions::ImerchantsolutionsStatusSource::Webhook(r.status.clone())
+            }
+        }) },
+    },
 }
 
 // Void — mirrors the Void TryFrom (transformers.rs:1398): the cancel endpoint answers
@@ -860,24 +845,19 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Imerchantsolutions<T>,
-    flow:      Void,
-    source:    imerchantsolutions::ImerchantsolutionsVoidStatus,
-    params:    [status],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request:  PaymentVoidData,
-        response: ImerchantsolutionsVoidResponseData,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    flow: Void,
+    source: imerchantsolutions::ImerchantsolutionsVoidStatus,
+    mapping_status: |status| { use common_enums::AttemptStatus;
         use imerchantsolutions::ImerchantsolutionsVoidStatus as VS;
         match status {
             VS::Received => AttemptStatus::VoidInitiated,
             VS::Cancelled => AttemptStatus::Voided,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: ImerchantsolutionsVoidResponseData,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 
 // Capture — mirrors the Capture TryFrom (transformers.rs:1526), which reads
@@ -887,25 +867,20 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Imerchantsolutions<T>,
-    flow:      Capture,
-    source:    imerchantsolutions::ImerchantsolutionsCaptureStatus,
-    params:    [status],
-    success: _ => [Charged, PartialCharged],
-    failure: none,
-    extractors: {
-        request:  PaymentsCaptureData,
-        response: ImerchantsolutionsCaptureResponseData,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-    },
-    {
-        use common_enums::AttemptStatus;
+    flow: Capture,
+    source: imerchantsolutions::ImerchantsolutionsCaptureStatus,
+    mapping_status: |status| { use common_enums::AttemptStatus;
         use imerchantsolutions::ImerchantsolutionsCaptureStatus as CS;
         match status {
             CS::Received => AttemptStatus::CaptureInitiated,
             CS::PartiallyCaptured => AttemptStatus::PartialCharged,
             CS::Captured => AttemptStatus::Charged,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: ImerchantsolutionsCaptureResponseData,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 
 // Refund — mirrors the Refund TryFrom (transformers.rs:1618), which reads
@@ -917,24 +892,19 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Imerchantsolutions<T>,
-    flow:      Refund,
-    source:    imerchantsolutions::ImerchantsolutionsRefundStatus,
-    params:    [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request:  RefundsData,
-        response: ImerchantsolutionsRefundResponseData,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-    },
-    {
-        use common_enums::RefundStatus;
+    flow: Refund,
+    source: imerchantsolutions::ImerchantsolutionsRefundStatus,
+    mapping_status: |status| { use common_enums::RefundStatus;
         use imerchantsolutions::ImerchantsolutionsRefundStatus as RS;
         match status {
             RS::Received => RefundStatus::Pending,
             RS::PartiallyRefunded | RS::Refunded => RefundStatus::Success,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: ImerchantsolutionsRefundResponseData,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 
 // RSync — mirrors the RSync TryFrom (transformers.rs:1665): source is the untagged
@@ -947,25 +917,9 @@ domain_types::impl_refund_flow_status_mapping! {
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Imerchantsolutions<T>,
-    flow:      RSync,
-    source:    imerchantsolutions::ImerchantsolutionsRefundStatusSource,
-    params:    [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request:  RefundSyncData,
-        response: ImerchantsolutionsRefundSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(match response {
-            ImerchantsolutionsRefundSyncResponse::ImerchantsolutionsRsyncResponse(r) => {
-                imerchantsolutions::ImerchantsolutionsRefundStatusSource::Status(r.status.clone())
-            }
-            ImerchantsolutionsRefundSyncResponse::ImerchantsolutionsWebhookResponse(r) => {
-                imerchantsolutions::ImerchantsolutionsRefundStatusSource::Webhook(r.status.clone())
-            }
-        }),
-    },
-    {
-        use common_enums::RefundStatus;
+    flow: RSync,
+    source: imerchantsolutions::ImerchantsolutionsRefundStatusSource,
+    mapping_status: |status| { use common_enums::RefundStatus;
         use imerchantsolutions::{
             ImerchantsolutionsRefundStatus as RS, ImerchantsolutionsRefundStatusSource as RSrc,
             ImerchantsolutionsWebhookStatus as WS,
@@ -980,8 +934,19 @@ domain_types::impl_refund_flow_status_mapping! {
             // Non-refund webhook statuses are rejected by
             // `TryFrom<ImerchantsolutionsWebhookStatus> for RefundStatus` before mapping.
             RSrc::Webhook(_) => RefundStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: ImerchantsolutionsRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            ImerchantsolutionsRefundSyncResponse::ImerchantsolutionsRsyncResponse(r) => {
+                imerchantsolutions::ImerchantsolutionsRefundStatusSource::Status(r.status.clone())
+            }
+            ImerchantsolutionsRefundSyncResponse::ImerchantsolutionsWebhookResponse(r) => {
+                imerchantsolutions::ImerchantsolutionsRefundStatusSource::Webhook(r.status.clone())
+            }
+        }) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

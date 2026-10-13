@@ -242,35 +242,30 @@ macros::macro_connector_payout_implementation!(
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Payhere<T>,
-    flow:      PSync,
-    source:    payhere::PayherePaymentStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Charged],
-    failure:   none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: PayhereSyncResponse,
-        source: |response| {
-            response
-                .data
-                .as_ref()
-                .and_then(|payments| payments.first())
-                .map(|payment| payment.status)
-                .unwrap_or(payhere::PayherePaymentStatus::Unknown)
-        },
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    flow: PSync,
+    source: payhere::PayherePaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             payhere::PayherePaymentStatus::Received
             | payhere::PayherePaymentStatus::RefundRequested
             | payhere::PayherePaymentStatus::RefundProcessing
             | payhere::PayherePaymentStatus::Refunded
             | payhere::PayherePaymentStatus::Chargebacked => common_enums::AttemptStatus::Charged,
             payhere::PayherePaymentStatus::Unknown => common_enums::AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PayhereSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .data
+                .as_ref()
+                .and_then(|payments| payments.first())
+                .map(|payment| payment.status)
+                .unwrap_or(payhere::PayherePaymentStatus::Unknown)
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_implementation!(

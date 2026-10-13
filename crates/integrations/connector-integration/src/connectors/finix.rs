@@ -305,24 +305,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // unknown-prefix fallback) makes `success_connector_status()` resolve to the
 // manual-capture `Authorized` terminal.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Finix<T>,
-    flow:            Authorize,
-    source:          finix::FinixPaymentStatus,
-    context:         finix::FinixIdKind,
-    params:          [status, id_kind],
-    success: Succeeded => [Authorized, Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
-        response: FinixAuthorizeResponse,
-        source:   |response| response.state.clone(),
-        context:  |_request, response| {
-            finix::FinixIdKind::from(&finix::FinixId::from(response.id.clone()))
-        },
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Finix<T>,
+    flow: Authorize,
+    source: finix::FinixPaymentStatus,
+    context: finix::FinixIdKind,
+    mapping_status: |status, id_kind| { use common_enums::AttemptStatus;
         use finix::{FinixIdKind, FinixPaymentStatus};
         match (id_kind, status) {
             (FinixIdKind::Transfer, FinixPaymentStatus::Succeeded) => AttemptStatus::Charged,
@@ -341,8 +329,15 @@ domain_types::impl_flow_status_mapping! {
             (FinixIdKind::Transfer, FinixPaymentStatus::Failed)
             | (FinixIdKind::Transfer, FinixPaymentStatus::Canceled)
             | (FinixIdKind::Transfer, FinixPaymentStatus::Unknown) => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: FinixAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            finix::FinixIdKind::from(&finix::FinixId::from(response.id.clone()))
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Finix<T>
@@ -374,24 +369,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Voided, Unknown → Pending (rather than Authorize's `_ ⇒
 // AuthorizationFailed`/`Failure` per-branch failure leg).
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Finix<T>,
-    flow:            PSync,
-    source:          finix::FinixPaymentStatus,
-    context:         finix::FinixIdKind,
-    params:          [status, id_kind],
-    success: Succeeded => [Authorized, Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: FinixPSyncResponse,
-        source:   |response| response.state.clone(),
-        context:  |_request, response| {
-            finix::FinixIdKind::from(&finix::FinixId::from(response.id.clone()))
-        },
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Finix<T>,
+    flow: PSync,
+    source: finix::FinixPaymentStatus,
+    context: finix::FinixIdKind,
+    mapping_status: |status, id_kind| { use common_enums::AttemptStatus;
         use finix::{FinixIdKind, FinixPaymentStatus};
         match (id_kind, status) {
             (FinixIdKind::Authorization, FinixPaymentStatus::Succeeded) => {
@@ -405,8 +388,15 @@ domain_types::impl_flow_status_mapping! {
             (_, FinixPaymentStatus::Failed) => AttemptStatus::Failure,
             (_, FinixPaymentStatus::Canceled) => AttemptStatus::Voided,
             (_, FinixPaymentStatus::Unknown) => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: FinixPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            finix::FinixIdKind::from(&finix::FinixId::from(response.id.clone()))
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Finix<T>
@@ -421,21 +411,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Finix<T>,
-    flow:      Void,
-    source:    finix::FinixPaymentStatus,
-    success:   Succeeded => Voided,
-    failure:   Failed    => VoidFailed,
-    extractors: {
-        request:  PaymentVoidData,
-        response: FinixVoidResponse,
-        source:   |response| response.state.clone(),
-        context:  |_request, _response| (),
+    flow: Void,
+    source: finix::FinixPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            finix::FinixPaymentStatus::Succeeded => common_enums::AttemptStatus::Voided,
+            finix::FinixPaymentStatus::Failed => common_enums::AttemptStatus::VoidFailed,
+            finix::FinixPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            finix::FinixPaymentStatus::Canceled => common_enums::AttemptStatus::Voided,
+            finix::FinixPaymentStatus::Unknown => common_enums::AttemptStatus::Pending,
+        }
     },
-    {
-        Pending => Pending,
-        Canceled => Voided,
-        Unknown => Pending,
-    }
+    runtime: {
+        request: PaymentVoidData,
+        response: FinixVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Finix<T>
@@ -449,21 +440,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Finix<T>,
-    flow:      Refund,
-    source:    finix::FinixPaymentStatus,
-    success:   Succeeded => Success,
-    failure:   Failed    => Failure,
-    extractors: {
-        request:  RefundsData,
-        response: FinixRefundResponse,
-        source:   |response| response.state.clone(),
-        context:  |_request, _response| (),
+    flow: Refund,
+    source: finix::FinixPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            finix::FinixPaymentStatus::Succeeded => common_enums::RefundStatus::Success,
+            finix::FinixPaymentStatus::Failed => common_enums::RefundStatus::Failure,
+            finix::FinixPaymentStatus::Pending => common_enums::RefundStatus::Pending,
+            finix::FinixPaymentStatus::Canceled => common_enums::RefundStatus::Failure,
+            finix::FinixPaymentStatus::Unknown => common_enums::RefundStatus::Pending,
+        }
     },
-    {
-        Pending => Pending,
-        Canceled => Failure,
-        Unknown => Pending,
-    }
+    runtime: {
+        request: RefundsData,
+        response: FinixRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Finix<T>
@@ -476,21 +468,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Finix<T>,
-    flow:      RSync,
-    source:    finix::FinixPaymentStatus,
-    success:   Succeeded => Success,
-    failure:   Failed    => Failure,
-    extractors: {
-        request:  RefundSyncData,
-        response: FinixRSyncResponse,
-        source:   |response| response.state.clone(),
-        context:  |_request, _response| (),
+    flow: RSync,
+    source: finix::FinixPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            finix::FinixPaymentStatus::Succeeded => common_enums::RefundStatus::Success,
+            finix::FinixPaymentStatus::Failed => common_enums::RefundStatus::Failure,
+            finix::FinixPaymentStatus::Pending => common_enums::RefundStatus::Pending,
+            finix::FinixPaymentStatus::Canceled => common_enums::RefundStatus::Failure,
+            finix::FinixPaymentStatus::Unknown => common_enums::RefundStatus::Pending,
+        }
     },
-    {
-        Pending => Pending,
-        Canceled => Failure,
-        Unknown => Pending,
-    }
+    runtime: {
+        request: RefundSyncData,
+        response: FinixRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Finix<T>
@@ -508,24 +501,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // protocol anomaly rather than a RepeatPayment terminal, and
 // RepeatPayment::TERMINAL_SUCCESS_SET does not admit `Authorized`.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Finix<T>,
-    flow:            RepeatPayment,
-    source:          finix::FinixPaymentStatus,
-    context:         finix::FinixIdKind,
-    params:          [status, id_kind],
-    success: Succeeded => [Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request:  RepeatPaymentData<T>,
-        response: FinixRepeatPaymentResponse,
-        source:   |response| response.state.clone(),
-        context:  |_request, response| {
-            finix::FinixIdKind::from(&finix::FinixId::from(response.id.clone()))
-        },
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Finix<T>,
+    flow: RepeatPayment,
+    source: finix::FinixPaymentStatus,
+    context: finix::FinixIdKind,
+    mapping_status: |status, id_kind| { use common_enums::AttemptStatus;
         use finix::{FinixIdKind, FinixPaymentStatus};
         match (id_kind, status) {
             (FinixIdKind::Transfer, FinixPaymentStatus::Succeeded) => AttemptStatus::Charged,
@@ -539,8 +520,15 @@ domain_types::impl_flow_status_mapping! {
             (_, FinixPaymentStatus::Failed)
             | (_, FinixPaymentStatus::Canceled)
             | (_, FinixPaymentStatus::Unknown) => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: FinixRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            finix::FinixIdKind::from(&finix::FinixId::from(response.id.clone()))
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Finix<T>

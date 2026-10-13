@@ -590,26 +590,12 @@ domain_types::impl_connector_flow_allowed_status_mapping! {
 }
 
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Ilixium<T>,
-    flow:            Authorize,
-    source:          transformers::IlixiumStatusCode,
-    context:         transformers::IlixiumAuthorizeCtx,
-    params:          [status, ctx],
-    success: Success => [Charged, Authorized],
-    failure: Declined => Failure,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: IlixiumPaymentResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.code),
-        context: |_resource_common_data, request, response | transformers::IlixiumAuthorizeCtx {
-            operation_type: response.operation_type,
-            has_three_ds_url: response.three_ds_acs_url().is_some(),
-            is_auto_capture: request.is_auto_capture(),
-        },
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ilixium<T>,
+    flow: Authorize,
+    source: transformers::IlixiumStatusCode,
+    context: transformers::IlixiumAuthorizeCtx,
+    mapping_status: |status, ctx| { use common_enums::AttemptStatus;
         use transformers::{IlixiumStatusCode, IlixiumOperationType};
         match status {
             IlixiumStatusCode::Success => match ctx.operation_type {
@@ -630,8 +616,17 @@ domain_types::impl_flow_status_mapping! {
             | IlixiumStatusCode::Rejected
             | IlixiumStatusCode::Error => AttemptStatus::Failure,
             IlixiumStatusCode::Resubmission | IlixiumStatusCode::Unknown => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: IlixiumPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.code) },
+        context: |_resource_common_data, request, response, _http_status_code| { Ok(transformers::IlixiumAuthorizeCtx {
+            operation_type: response.operation_type,
+            has_three_ds_url: response.three_ds_acs_url().is_some(),
+            is_auto_capture: request.is_auto_capture(),
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Ilixium<T>
@@ -646,24 +641,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Ilixium<T>,
-    flow:      Capture,
-    source:    transformers::IlixiumStatusCode,
-    success:   Success      => Charged,
-    failure:   Declined     => CaptureFailed,
-    extractors: {
+    flow: Capture,
+    source: transformers::IlixiumStatusCode,
+    mapping_status: |status| {
+        match status {
+            transformers::IlixiumStatusCode::Success => common_enums::AttemptStatus::Charged,
+            transformers::IlixiumStatusCode::Declined => common_enums::AttemptStatus::CaptureFailed,
+            transformers::IlixiumStatusCode::Pending => common_enums::AttemptStatus::CaptureInitiated,
+            transformers::IlixiumStatusCode::Cancelled => common_enums::AttemptStatus::CaptureFailed,
+            transformers::IlixiumStatusCode::Rejected => common_enums::AttemptStatus::CaptureFailed,
+            transformers::IlixiumStatusCode::Error => common_enums::AttemptStatus::CaptureFailed,
+            transformers::IlixiumStatusCode::Resubmission => common_enums::AttemptStatus::CaptureInitiated,
+            transformers::IlixiumStatusCode::Unknown => common_enums::AttemptStatus::CaptureInitiated,
+        }
+    },
+    runtime: {
         request: PaymentsCaptureData,
         response: IlixiumCaptureResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.code),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.code) },
     },
-    {
-        Pending             => CaptureInitiated,
-        Cancelled           => CaptureFailed,
-        Rejected            => CaptureFailed,
-        Error               => CaptureFailed,
-        Resubmission        => CaptureInitiated,
-        Unknown             => CaptureInitiated,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Ilixium<T>
@@ -673,24 +669,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Ilixium<T>,
-    flow:      Void,
-    source:    transformers::IlixiumStatusCode,
-    success:   Success      => Voided,
-    failure:   Declined     => VoidFailed,
-    extractors: {
+    flow: Void,
+    source: transformers::IlixiumStatusCode,
+    mapping_status: |status| {
+        match status {
+            transformers::IlixiumStatusCode::Success => common_enums::AttemptStatus::Voided,
+            transformers::IlixiumStatusCode::Declined => common_enums::AttemptStatus::VoidFailed,
+            transformers::IlixiumStatusCode::Cancelled => common_enums::AttemptStatus::Voided,
+            transformers::IlixiumStatusCode::Pending => common_enums::AttemptStatus::VoidInitiated,
+            transformers::IlixiumStatusCode::Rejected => common_enums::AttemptStatus::VoidFailed,
+            transformers::IlixiumStatusCode::Error => common_enums::AttemptStatus::VoidFailed,
+            transformers::IlixiumStatusCode::Resubmission => common_enums::AttemptStatus::VoidInitiated,
+            transformers::IlixiumStatusCode::Unknown => common_enums::AttemptStatus::VoidInitiated,
+        }
+    },
+    runtime: {
         request: PaymentVoidData,
         response: IlixiumVoidResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.code),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.code) },
     },
-    {
-        Cancelled           => Voided,
-        Pending             => VoidInitiated,
-        Rejected            => VoidFailed,
-        Error               => VoidFailed,
-        Resubmission        => VoidInitiated,
-        Unknown             => VoidInitiated,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Ilixium<T>
@@ -705,15 +702,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Ilixium<T>,
-    flow:      PSync,
-    source:    common_enums::AttemptStatus,
-    params:    [status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    flow: PSync,
+    source: common_enums::AttemptStatus,
+    mapping_status: |status| { status },
+    runtime: {
         request: PaymentsSyncData,
         response: IlixiumHistoryResponse,
-        source: |resource_common_data, request, response| {
+        source: |resource_common_data, request, response, _http_status_code| { {
             let current_status =
                 domain_types::flow_status::FlowStatusReader::current_mapped_flow_status(
                     resource_common_data,
@@ -748,34 +743,32 @@ domain_types::impl_flow_status_mapping! {
                 current_status,
                 request.is_auto_capture(),
             ))
-        },
+        } },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Ilixium<T>,
-    flow:      Refund,
-    source:    transformers::IlixiumStatusCode,
-    success:   Success      => Success,
-    failure:   Declined     => Failure,
-    extractors: {
+    flow: Refund,
+    source: transformers::IlixiumStatusCode,
+    mapping_status: |status| {
+        match status {
+            transformers::IlixiumStatusCode::Success => common_enums::RefundStatus::Success,
+            transformers::IlixiumStatusCode::Declined => common_enums::RefundStatus::Failure,
+            transformers::IlixiumStatusCode::Pending => common_enums::RefundStatus::Pending,
+            transformers::IlixiumStatusCode::Cancelled => common_enums::RefundStatus::Failure,
+            transformers::IlixiumStatusCode::Rejected => common_enums::RefundStatus::Failure,
+            transformers::IlixiumStatusCode::Error => common_enums::RefundStatus::Failure,
+            transformers::IlixiumStatusCode::Resubmission => common_enums::RefundStatus::Pending,
+            transformers::IlixiumStatusCode::Unknown => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundsData,
         response: IlixiumRefundResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.code),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.code) },
     },
-    {
-        Pending             => Pending,
-        Cancelled           => Failure,
-        Rejected            => Failure,
-        Error               => Failure,
-        Resubmission        => Pending,
-        Unknown             => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Ilixium<T>
@@ -785,25 +778,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Ilixium<T>,
-    flow:      RSync,
-    source:    transformers::IlixiumHistoryStatusCode,
-    success:   Success      => Success,
-    failure:   Declined     => Failure,
-    extractors: {
+    flow: RSync,
+    source: transformers::IlixiumHistoryStatusCode,
+    mapping_status: |status| {
+        match status {
+            transformers::IlixiumHistoryStatusCode::Success => common_enums::RefundStatus::Success,
+            transformers::IlixiumHistoryStatusCode::Declined => common_enums::RefundStatus::Failure,
+            transformers::IlixiumHistoryStatusCode::Pending => common_enums::RefundStatus::Pending,
+            transformers::IlixiumHistoryStatusCode::Cancelled => common_enums::RefundStatus::Failure,
+            transformers::IlixiumHistoryStatusCode::Rejected => common_enums::RefundStatus::Failure,
+            transformers::IlixiumHistoryStatusCode::Error => common_enums::RefundStatus::Failure,
+            transformers::IlixiumHistoryStatusCode::Exception => common_enums::RefundStatus::Failure,
+            transformers::IlixiumHistoryStatusCode::ValidationErrors => common_enums::RefundStatus::Failure,
+            transformers::IlixiumHistoryStatusCode::Unknown => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundSyncData,
         response: IlixiumRefundHistoryResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.code),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.code) },
     },
-    {
-        Pending             => Pending,
-        Cancelled           => Failure,
-        Rejected            => Failure,
-        Error               => Failure,
-        Exception           => Failure,
-        ValidationErrors    => Failure,
-        Unknown             => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Ilixium<T>

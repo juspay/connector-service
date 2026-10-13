@@ -805,25 +805,20 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: PaysafeAuthorizeResponse,
     context: Option<common_enums::CaptureMethod>,
-    params: [response, capture_method],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: PaysafeAuthorizeResponse,
-        source: |response| response.clone(),
-        context: |request, _response| request.capture_method,
-    },
-    {
-        match response {
+    mapping_status: |response, capture_method| { match response {
             PaysafeAuthorizeResponse::Payment(payment) => {
                 paysafe::get_paysafe_payment_status(payment.status, capture_method)
             }
             PaysafeAuthorizeResponse::PaymentHandle(payment_handle) => {
                 AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PaysafeAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -832,25 +827,20 @@ domain_types::impl_flow_status_mapping! {
     flow: PreAuthenticate,
     source: PaysafePreAuthenticateResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [AuthenticationSuccessful],
-    failure: none,
-    extractors: {
-        request: PaymentsPreAuthenticateData<T>,
-        response: PaysafePreAuthenticateResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response {
+    mapping_status: |response, _ctx| { match response {
             PaysafeAuthorizeResponse::Payment(payment) => {
                 paysafe::get_paysafe_payment_status(payment.status, Some(common_enums::CaptureMethod::Manual))
             }
             PaysafeAuthorizeResponse::PaymentHandle(payment_handle) => {
                 AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsPreAuthenticateData<T>,
+        response: PaysafePreAuthenticateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -859,17 +849,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authenticate,
     source: PaysafeAuthenticateResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [AuthenticationSuccessful, Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthenticateData<T>,
-        response: PaysafeAuthenticateResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response {
+    mapping_status: |response, _ctx| { match response {
             PaysafeSyncResponse::SinglePayment(payment) => {
                 paysafe::get_paysafe_payment_status(payment.status, Some(common_enums::CaptureMethod::Manual))
             }
@@ -888,8 +868,13 @@ domain_types::impl_flow_status_mapping! {
                     AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
                 })
                 .unwrap_or(AttemptStatus::Pending),
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthenticateData<T>,
+        response: PaysafeAuthenticateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -898,17 +883,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: PaysafeSyncResponse,
     context: Option<common_enums::CaptureMethod>,
-    params: [response, capture_method],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: PaysafeSyncResponse,
-        source: |response| response.clone(),
-        context: |request, _response| request.capture_method,
-    },
-    {
-        match response {
+    mapping_status: |response, capture_method| { match response {
             PaysafeSyncResponse::SinglePayment(payment) => {
                 paysafe::get_paysafe_payment_status(payment.status, capture_method)
             }
@@ -927,8 +902,13 @@ domain_types::impl_flow_status_mapping! {
                     AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
                 })
                 .unwrap_or(AttemptStatus::Pending),
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PaysafeSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -937,18 +917,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: paysafe::PaysafeSettlementStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsCaptureData,
         response: PaysafeCaptureResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -957,18 +932,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: paysafe::PaysafeVoidStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentVoidData,
         response: PaysafeVoidResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -977,18 +947,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: paysafe::PaysafeRefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
         request: RefundsData,
         response: PaysafeRefundResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -997,18 +962,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: paysafe::PaysafeRefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
         request: RefundSyncData,
         response: PaysafeRSyncResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1017,18 +977,13 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: paysafe::PaysafePaymentStatus,
     context: Option<common_enums::CaptureMethod>,
-    params: [status, capture_method],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, capture_method| { paysafe::get_paysafe_payment_status(status, capture_method) },
+    runtime: {
         request: RepeatPaymentData<T>,
         response: PaysafeRepeatPaymentResponse,
-        source: |response| response.status,
-        context: |request, _response| request.capture_method,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
     },
-    {
-        paysafe::get_paysafe_payment_status(status, capture_method)
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

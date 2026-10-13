@@ -394,19 +394,20 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: JpmorganOrbital<T>,
-    flow:      PSync,
-    source:    jpmorganorbital::JpmorganOrbitalInquiryOutcome,
-    success:   Success  => Charged,
-    failure:   Failure  => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: jpmorganorbital::JpmorganOrbitalInquiryResponse,
-        source: |response| response.0.inquiry_outcome(),
-        context: |_request, _response| (),
+    flow: PSync,
+    source: jpmorganorbital::JpmorganOrbitalInquiryOutcome,
+    mapping_status: |status| {
+        match status {
+            jpmorganorbital::JpmorganOrbitalInquiryOutcome::Success => common_enums::AttemptStatus::Charged,
+            jpmorganorbital::JpmorganOrbitalInquiryOutcome::Failure => common_enums::AttemptStatus::Failure,
+            jpmorganorbital::JpmorganOrbitalInquiryOutcome::NotFound => common_enums::AttemptStatus::Unresolved,
+        }
     },
-    {
-        NotFound => Unresolved,
-    }
+    runtime: {
+        request: PaymentsSyncData,
+        response: jpmorganorbital::JpmorganOrbitalInquiryResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.0.inquiry_outcome()) },
+    },
 }
 
 // NOTE — Authorize: no runtime extractors. The TryFrom's success branch derives the

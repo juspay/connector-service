@@ -900,14 +900,12 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: (),
     context: enums::AttemptStatus,
-    params: [_source, status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: PhonepePaymentsResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the status into the context: `PhonepePaymentsResponse` is not Clone.
             if response.success {
                 // A successful pay call only creates the collect/intent — the handler
@@ -922,11 +920,8 @@ domain_types::impl_flow_status_mapping! {
                     _ => enums::AttemptStatus::Pending,
                 }
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -935,14 +930,12 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (),
     context: enums::AttemptStatus,
-    params: [_source, status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentsSyncData,
         response: PhonepeSyncResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the status into the context: `PhonepeSyncResponse` is not Clone.
             if response.success && response.data.is_some() {
                 match response.code.as_str() {
@@ -961,11 +954,8 @@ domain_types::impl_flow_status_mapping! {
                 phonepe::get_phonepe_error_status(&response.code)
                     .unwrap_or(enums::AttemptStatus::Failure)
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -974,14 +964,12 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: (),
     context: enums::AttemptStatus,
-    params: [_source, status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentsCaptureData,
         response: PhonepeCaptureResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the status into the context: `PhonepeCaptureResponse` is not Clone.
             if response.success {
                 response
@@ -999,11 +987,8 @@ domain_types::impl_flow_status_mapping! {
             } else {
                 enums::AttemptStatus::Failure
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1012,14 +997,12 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: (),
     context: enums::AttemptStatus,
-    params: [_source, status],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: PaymentVoidData,
         response: PhonepeVoidResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the status into the context: `PhonepeVoidResponse` is not Clone.
             if response.success {
                 enums::AttemptStatus::Voided
@@ -1029,11 +1012,8 @@ domain_types::impl_flow_status_mapping! {
                     _ => enums::AttemptStatus::VoidFailed,
                 }
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1042,14 +1022,12 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: (),
     context: enums::RefundStatus,
-    params: [_source, status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: RefundsData,
         response: PhonepeRefundResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the status into the context: `PhonepeRefundResponse` is not Clone.
             if response.success {
                 response
@@ -1065,11 +1043,8 @@ domain_types::impl_refund_flow_status_mapping! {
             } else {
                 enums::RefundStatus::Failure
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1078,14 +1053,12 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: (),
     context: enums::RefundStatus,
-    params: [_source, status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, status| { status },
+    runtime: {
         request: RefundSyncData,
         response: PhonepeRefundSyncResponse,
-        source: |_response| (),
-        context: |_request, response| {
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
             // Shed the status into the context: `PhonepeRefundSyncResponse` is not Clone.
             if response.success {
                 response
@@ -1106,11 +1079,8 @@ domain_types::impl_refund_flow_status_mapping! {
             } else {
                 enums::RefundStatus::Failure
             }
-        },
+        }) },
     },
-    {
-        status
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

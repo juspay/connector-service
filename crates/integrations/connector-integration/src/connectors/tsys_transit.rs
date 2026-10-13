@@ -739,18 +739,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: TsysTransitAuthorizeResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged, Authorized, PartialCharged, PartiallyAuthorized],
-    failure: none,
-    extractors: {
+    mapping_status: |response, _ctx| { tsys_transit::map_authorize_status(&response) },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: TsysTransitAuthorizeResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        tsys_transit::map_authorize_status(&response)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -759,17 +754,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (),
     context: Option<tsys_transit::TsysTransitTransactionDetails>,
-    params: [_status, ctx],
-    success: _ => [Authorized, Charged, Voided],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: TsysTransitTransactionInquiryResponse,
-        source: |_response| (),
-        context: |_request, response| response.transaction_details.clone(),
-    },
-    {
-        match ctx.as_ref() {
+    mapping_status: |_status, ctx| { match ctx.as_ref() {
             Some(transaction_details) => {
                 common_enums::AttemptStatus::from(transaction_details)
             }
@@ -777,8 +762,13 @@ domain_types::impl_flow_status_mapping! {
             // map_runtime_status with a terminal response, so a safe
             // non-terminal placeholder is returned here.
             None => common_enums::AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: TsysTransitTransactionInquiryResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_details.clone()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -787,18 +777,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: TsysTransitCaptureResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged, PartialCharged],
-    failure: none,
-    extractors: {
+    mapping_status: |response, _ctx| { tsys_transit::map_capture_status(&response) },
+    runtime: {
         request: PaymentsCaptureData,
         response: TsysTransitCaptureResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        tsys_transit::map_capture_status(&response)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -807,18 +792,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: TsysTransitVoidResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |response, _ctx| { tsys_transit::map_void_status(&response) },
+    runtime: {
         request: PaymentVoidData,
         response: TsysTransitVoidResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        tsys_transit::map_void_status(&response)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -827,24 +807,19 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: TsysTransitCardAuthenticationResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: TsysTransitCardAuthenticationResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let is_success = matches!(response.status, Some(tsys_transit::TsysTransitStatus::Pass))
+    mapping_status: |response, _ctx| { let is_success = matches!(response.status, Some(tsys_transit::TsysTransitStatus::Pass))
             && response.response_code.as_deref() == Some("A0000");
         if is_success {
             common_enums::AttemptStatus::Charged
         } else {
             common_enums::AttemptStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: TsysTransitCardAuthenticationResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -853,17 +828,7 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: TsysTransitRepeatPaymentResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged, PartialCharged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: TsysTransitRepeatPaymentResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let body = response.body();
+    mapping_status: |response, _ctx| { let body = response.body();
         let authorize_view = response.as_authorize();
         match (
             body.status.as_ref(),
@@ -894,8 +859,13 @@ domain_types::impl_flow_status_mapping! {
                 common_enums::AttemptStatus::Failure
             }
             _ => common_enums::AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: TsysTransitRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -904,18 +874,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: TsysTransitReturnResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |response, _ctx| { tsys_transit::map_refund_status(&response) },
+    runtime: {
         request: RefundsData,
         response: TsysTransitReturnResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        tsys_transit::map_refund_status(&response)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -924,23 +889,18 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: Option<tsys_transit::TsysTransitTransactionDetails>,
     context: (),
-    params: [details, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: TsysTransitRSyncResponse,
-        source: |response| response.transaction_details.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match details.as_ref().and_then(tsys_transit::get_refund_status) {
+    mapping_status: |details, _ctx| { match details.as_ref().and_then(tsys_transit::get_refund_status) {
             Some(refund_status) => refund_status,
             // On RSync ambiguity the handle_response keeps the refund in its
             // previous state instead of failing it.
             None => common_enums::RefundStatus::Unknown,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: TsysTransitRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_details.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

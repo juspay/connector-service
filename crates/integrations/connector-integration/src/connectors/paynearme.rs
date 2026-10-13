@@ -538,17 +538,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: PaynearmeAuthorizeResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: PaynearmeAuthorizeResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let envelope = &response.0;
+    mapping_status: |response, _ctx| { let envelope = &response.0;
         let status_ok = envelope.status.as_deref().map(|value| value == "ok").unwrap_or(true);
         let code_ok = envelope
             .response_code
@@ -588,8 +578,13 @@ domain_types::impl_flow_status_mapping! {
                 | Some(paynearme::PaynearmePaymentStatus::Unknown)
                 | None => AttemptStatus::Pending,
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PaynearmeAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -598,17 +593,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: PaynearmeSyncResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: PaynearmeSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let envelope = &response.0;
+    mapping_status: |response, _ctx| { let envelope = &response.0;
         let status_ok = envelope.status.as_deref().map(|value| value == "ok").unwrap_or(true);
         let code_ok = envelope
             .response_code
@@ -628,8 +613,13 @@ domain_types::impl_flow_status_mapping! {
                 | None => AttemptStatus::Pending,
             },
             _ => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PaynearmeSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -638,17 +628,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: PaynearmeVoidResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request: PaymentVoidData,
-        response: PaynearmeVoidResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let envelope = &response.0;
+    mapping_status: |response, _ctx| { let envelope = &response.0;
         let status_ok = envelope.status.as_deref().map(|value| value == "ok").unwrap_or(true);
         let code_ok = envelope
             .response_code
@@ -667,8 +647,13 @@ domain_types::impl_flow_status_mapping! {
             AttemptStatus::Voided
         } else {
             AttemptStatus::VoidFailed
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: PaynearmeVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -677,17 +662,7 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: PaynearmeRefundResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: PaynearmeRefundResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let envelope = &response.0;
+    mapping_status: |response, _ctx| { let envelope = &response.0;
         let status_ok = envelope.status.as_deref().map(|value| value == "ok").unwrap_or(true);
         let code_ok = envelope
             .response_code
@@ -708,8 +683,13 @@ domain_types::impl_refund_flow_status_mapping! {
                 | None => RefundStatus::Pending,
             },
             (true, None) => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: PaynearmeRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -718,17 +698,7 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: PaynearmeRefundSyncResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: PaynearmeRefundSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let envelope = &response.0;
+    mapping_status: |response, _ctx| { let envelope = &response.0;
         let status_ok = envelope.status.as_deref().map(|value| value == "ok").unwrap_or(true);
         let code_ok = envelope
             .response_code
@@ -748,8 +718,13 @@ domain_types::impl_refund_flow_status_mapping! {
                 | None => RefundStatus::Pending,
             },
             _ => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: PaynearmeRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 // ===== CONNECTOR SERVICE TRAITS =====

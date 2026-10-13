@@ -279,20 +279,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Paybox<T>,
-    flow:      Authorize,
-    source:    PayboxPaymentVerdict,
-    context:   bool,
-    params:    [status, is_auto_capture],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
-        response: PayboxAuthorizeResponse,
-        source:   |_resource_common_data, _request, response| Ok(response.payment_verdict()),
-        context: |_resource_common_data, request, _response | request.is_auto_capture(),
-    },
-    {
-        use common_enums::AttemptStatus;
+    flow: Authorize,
+    source: PayboxPaymentVerdict,
+    context: bool,
+    mapping_status: |status, is_auto_capture| { use common_enums::AttemptStatus;
         match status {
             PayboxPaymentVerdict::Approved => {
                 if is_auto_capture {
@@ -302,8 +292,13 @@ domain_types::impl_flow_status_mapping! {
                 }
             }
             PayboxPaymentVerdict::Rejected => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PayboxAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_verdict()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Paybox<T>
@@ -313,21 +308,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Paybox<T>,
-    flow:      PSync,
-    source:    PayboxStatus,
-    success:   Captured   => Charged,
-    failure:   Rejected   => Failure,
-    extractors: {
+    flow: PSync,
+    source: PayboxStatus,
+    mapping_status: |status| {
+        match status {
+            PayboxStatus::Captured => common_enums::AttemptStatus::Charged,
+            PayboxStatus::Rejected => common_enums::AttemptStatus::Failure,
+            PayboxStatus::Authorised => common_enums::AttemptStatus::Authorized,
+            PayboxStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            PayboxStatus::Refunded => common_enums::AttemptStatus::AutoRefunded,
+        }
+    },
+    runtime: {
         request: PaymentsSyncData,
         response: PayboxPSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-        Authorised => Authorized,
-        Cancelled  => Voided,
-        Refunded   => AutoRefunded,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Paybox<T>
@@ -339,17 +335,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Paybox<T>,
-    flow:      Capture,
-    source:    PayboxPaymentVerdict,
-    success:   Approved => Charged,
-    failure:   Rejected => CaptureFailed,
-    extractors: {
-        request:  PaymentsCaptureData,
-        response: PayboxCaptureResponse,
-        source:   |_resource_common_data, _request, response| Ok(response.payment_verdict()),
-        context: |_resource_common_data, _request, _response | (),
+    flow: Capture,
+    source: PayboxPaymentVerdict,
+    mapping_status: |status| {
+        match status {
+            PayboxPaymentVerdict::Approved => common_enums::AttemptStatus::Charged,
+            PayboxPaymentVerdict::Rejected => common_enums::AttemptStatus::CaptureFailed,
+        }
     },
-    {}
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PayboxCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_verdict()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Paybox<T>
@@ -361,17 +359,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Paybox<T>,
-    flow:      Void,
-    source:    PayboxPaymentVerdict,
-    success:   Approved => Voided,
-    failure:   Rejected => Failure,
-    extractors: {
-        request:  PaymentVoidData,
-        response: PayboxVoidResponse,
-        source:   |_resource_common_data, _request, response| Ok(response.payment_verdict()),
-        context: |_resource_common_data, _request, _response | (),
+    flow: Void,
+    source: PayboxPaymentVerdict,
+    mapping_status: |status| {
+        match status {
+            PayboxPaymentVerdict::Approved => common_enums::AttemptStatus::Voided,
+            PayboxPaymentVerdict::Rejected => common_enums::AttemptStatus::Failure,
+        }
     },
-    {}
+    runtime: {
+        request: PaymentVoidData,
+        response: PayboxVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_verdict()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Paybox<T>
@@ -383,17 +383,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Paybox<T>,
-    flow:      Refund,
-    source:    PayboxPaymentVerdict,
-    success:   Approved => Success,
-    failure:   Rejected => Failure,
-    extractors: {
-        request:  RefundsData,
-        response: PayboxRefundResponse,
-        source:   |_resource_common_data, _request, response| Ok(response.payment_verdict()),
-        context: |_resource_common_data, _request, _response | (),
+    flow: Refund,
+    source: PayboxPaymentVerdict,
+    mapping_status: |status| {
+        match status {
+            PayboxPaymentVerdict::Approved => common_enums::RefundStatus::Success,
+            PayboxPaymentVerdict::Rejected => common_enums::RefundStatus::Failure,
+        }
     },
-    {}
+    runtime: {
+        request: RefundsData,
+        response: PayboxRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_verdict()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Paybox<T>
@@ -405,23 +407,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Paybox<T>,
-    flow:      RSync,
-    source:    PayboxStatus,
-    success:   Refunded   => Success,
-    failure:   Rejected   => Failure,
-    extractors: {
+    flow: RSync,
+    source: PayboxStatus,
+    mapping_status: |status| {
+        match status {
+            PayboxStatus::Refunded => common_enums::RefundStatus::Success,
+            PayboxStatus::Rejected => common_enums::RefundStatus::Failure,
+            PayboxStatus::Cancelled => common_enums::RefundStatus::Failure,
+            PayboxStatus::Authorised => common_enums::RefundStatus::Failure,
+            PayboxStatus::Captured => common_enums::RefundStatus::Failure,
+        }
+    },
+    runtime: {
         request: RefundSyncData,
         response: PayboxRSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone().unwrap_or_else(|| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone().unwrap_or_else(|| {
             if response.response_code == SUCCESS_CODE { PayboxStatus::Refunded } else { PayboxStatus::Rejected }
-        })),
-        context: |_resource_common_data, _request, _response | (),
+        })) },
     },
-    {
-        Cancelled  => Failure,
-        Authorised => Failure,
-        Captured   => Failure,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Paybox<T>
@@ -433,27 +436,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Paybox<T>,
-    flow:      RepeatPayment,
-    source:    PayboxPaymentVerdict,
-    context:   bool,
-    params:    [status, is_auto_capture],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request:  RepeatPaymentData<T>,
-        response: PayboxRepeatPaymentResponse,
-        source:   |_resource_common_data, _request, response| Ok(response.payment_verdict()),
-        context: |_resource_common_data, request, _response | request.is_auto_capture(),
-    },
-    {
-        use common_enums::AttemptStatus;
+    flow: RepeatPayment,
+    source: PayboxPaymentVerdict,
+    context: bool,
+    mapping_status: |status, is_auto_capture| { use common_enums::AttemptStatus;
         match status {
             PayboxPaymentVerdict::Approved => {
                 if is_auto_capture { AttemptStatus::Charged } else { AttemptStatus::Authorized }
             }
             PayboxPaymentVerdict::Rejected => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: PayboxRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_verdict()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Paybox<T>
@@ -465,17 +463,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Paybox<T>,
-    flow:      SetupMandate,
-    source:    PayboxPaymentVerdict,
-    success:   Approved => Charged,
-    failure:   Rejected => Failure,
-    extractors: {
-        request:  SetupMandateRequestData<T>,
-        response: PayboxSetupMandateResponse,
-        source:   |_resource_common_data, _request, response| Ok(response.payment_verdict()),
-        context: |_resource_common_data, _request, _response | (),
+    flow: SetupMandate,
+    source: PayboxPaymentVerdict,
+    mapping_status: |status| {
+        match status {
+            PayboxPaymentVerdict::Approved => common_enums::AttemptStatus::Charged,
+            PayboxPaymentVerdict::Rejected => common_enums::AttemptStatus::Failure,
+        }
     },
-    {}
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: PayboxSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_verdict()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Paybox<T>

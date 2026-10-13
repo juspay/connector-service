@@ -952,17 +952,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Fiservcommercehub<T>,
     flow: domain_types::connector_flow::Authorize,
     source: fiservcommercehub::FiservcommercehubTransactionState,
-    params: [status],
-    success: Approved => [Authorized, Charged],
-    failure: Declined => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
+    mapping_status: |status| { common_enums::AttemptStatus::from(&status) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
         response: FiservcommercehubAuthorizeResponse,
-        source:   |response| response.gateway_response.transaction_state.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.gateway_response.transaction_state.clone()) },
     },
-    {
-        common_enums::AttemptStatus::from(&status)
-    }
 }
 
 // NOTE: skipped extractors — the PSync response (`FiservcommercehubPSyncResponse`)
@@ -987,17 +982,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Fiservcommercehub<T>,
     flow: domain_types::connector_flow::Capture,
     source: fiservcommercehub::FiservcommercehubTransactionState,
-    params: [status],
-    success: Approved => [Charged],
-    failure: Declined => Failure,
-    extractors: {
-        request:  PaymentsCaptureData,
+    mapping_status: |status| { common_enums::AttemptStatus::from(&status) },
+    runtime: {
+        request: PaymentsCaptureData,
         response: FiservcommercehubCaptureResponse,
-        source:   |response| response.0.gateway_response.transaction_state.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.0.gateway_response.transaction_state.clone()) },
     },
-    {
-        common_enums::AttemptStatus::from(&status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1005,17 +995,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Fiservcommercehub<T>,
     flow: domain_types::connector_flow::Void,
     source: fiservcommercehub::FiservcommercehubTransactionState,
-    params: [status],
-    success: Cancelled => [Voided],
-    failure: Declined => Failure,
-    extractors: {
-        request:  PaymentVoidData,
+    mapping_status: |status| { common_enums::AttemptStatus::from(&status) },
+    runtime: {
+        request: PaymentVoidData,
         response: FiservcommercehubVoidResponse,
-        source:   |response| response.gateway_response.transaction_state.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.gateway_response.transaction_state.clone()) },
     },
-    {
-        common_enums::AttemptStatus::from(&status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1023,17 +1008,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Fiservcommercehub<T>,
     flow: domain_types::connector_flow::RepeatPayment,
     source: fiservcommercehub::FiservcommercehubTransactionState,
-    params: [status],
-    success: Approved => [Charged],
-    failure: Declined => Failure,
-    extractors: {
-        request:  RepeatPaymentData<T>,
+    mapping_status: |status| { common_enums::AttemptStatus::from(&status) },
+    runtime: {
+        request: RepeatPaymentData<T>,
         response: FiservcommercehubRepeatResponse,
-        source:   |response| response.0.gateway_response.transaction_state.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.0.gateway_response.transaction_state.clone()) },
     },
-    {
-        common_enums::AttemptStatus::from(&status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1041,22 +1021,17 @@ domain_types::impl_flow_status_mapping! {
     connector: Fiservcommercehub<T>,
     flow: domain_types::connector_flow::SetupMandate,
     source: fiservcommercehub::FiservcommercehubTransactionState,
-    params: [status],
-    success: Approved => [Charged],
-    failure: Declined => Failure,
-    extractors: {
-        request:  SetupMandateRequestData<T>,
-        response: FiservcommercehubSetupMandateResponse,
-        source:   |response| response.gateway_response.transaction_state.clone(),
-    },
-    {
-        match status {
+    mapping_status: |status| { match status {
             fiservcommercehub::FiservcommercehubTransactionState::Authorized => {
                 common_enums::AttemptStatus::Charged
             }
             _ => common_enums::AttemptStatus::from(&status),
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: FiservcommercehubSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.gateway_response.transaction_state.clone()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1064,17 +1039,12 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Fiservcommercehub<T>,
     flow: domain_types::connector_flow::Refund,
     source: fiservcommercehub::FiservcommercehubRefundState,
-    params: [status],
-    success: Approved => Success,
-    failure: Declined => Failure,
-    extractors: {
-        request:  RefundsData,
+    mapping_status: |status| { common_enums::RefundStatus::from(&status) },
+    runtime: {
+        request: RefundsData,
         response: FiservcommercehubRefundResponse,
-        source:   |response| response.gateway_response.transaction_state.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.gateway_response.transaction_state.clone()) },
     },
-    {
-        common_enums::RefundStatus::from(&status)
-    }
 }
 
 // NOTE: skipped extractors — the RSync response (`FiservcommercehubRSyncResponse`)

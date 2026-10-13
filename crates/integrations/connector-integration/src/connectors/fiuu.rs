@@ -116,19 +116,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Fiuu<T>,
-    flow:      Void,
-    source:    fiuu::FiuuVoidStatus,
-    success:   Voided => Voided,
-    failure:   Failed => VoidFailed,
-    extractors: {
+    flow: Void,
+    source: fiuu::FiuuVoidStatus,
+    mapping_status: |status| {
+        match status {
+            fiuu::FiuuVoidStatus::Voided => common_enums::AttemptStatus::Voided,
+            fiuu::FiuuVoidStatus::Failed => common_enums::AttemptStatus::VoidFailed,
+            fiuu::FiuuVoidStatus::Other => common_enums::AttemptStatus::VoidFailed,
+        }
+    },
+    runtime: {
         request: PaymentVoidData,
         response: FiuuPaymentCancelResponse,
-        source: |_resource_common_data, _request, response| fiuu::FiuuVoidStatus::from_stat_code(&response.stat_code),
-        context: |_resource_common_data, _request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(fiuu::FiuuVoidStatus::from_stat_code(&response.stat_code)) },
     },
-    {
-        Other => VoidFailed
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Fiuu<T>

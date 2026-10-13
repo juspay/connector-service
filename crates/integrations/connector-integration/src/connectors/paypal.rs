@@ -1786,17 +1786,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: PaypalAuthResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: PaypalAuthResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response {
+    mapping_status: |response, _ctx| { match response {
             PaypalAuthResponse::PaypalOrdersResponse(orders_response) => {
                 let status = orders_response
                     .purchase_units
@@ -1828,8 +1818,13 @@ domain_types::impl_flow_status_mapping! {
             PaypalAuthResponse::PaypalThreeDsResponse(threeds_response) => {
                 paypal::get_order_status(threeds_response.status, paypal::PaypalPaymentIntent::Authenticate)
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PaypalAuthResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1838,17 +1833,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: PaypalSyncResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged, Voided],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: PaypalSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response {
+    mapping_status: |response, _ctx| { match response {
             PaypalSyncResponse::PaypalOrdersSyncResponse(orders_response) => {
                 let status = orders_response
                     .purchase_units
@@ -1883,8 +1868,13 @@ domain_types::impl_flow_status_mapping! {
             // Hardcoded in the 3DS sync handler: this variant is only reached mid
             // card-3DS, before completion of the complete-authorize flow.
             PaypalSyncResponse::PaypalThreeDsSyncResponse(_) => AttemptStatus::AuthenticationPending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PaypalSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1893,18 +1883,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: paypal::PaypalPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged, PartialCharged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsCaptureData,
         response: PaypalCaptureResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1913,20 +1898,15 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: paypal::PaypalCancelStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { match status {
+            paypal::PaypalCancelStatus::Voided => AttemptStatus::Voided,
+        } },
+    runtime: {
         request: PaymentVoidData,
         response: PaypalPaymentsCancelResponse,
-        source: |response| response.status,
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match status {
-            paypal::PaypalCancelStatus::Voided => AttemptStatus::Voided,
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1935,17 +1915,7 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: PaypalRepeatPaymentResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: PaypalRepeatPaymentResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response {
+    mapping_status: |response, _ctx| { match response {
             PaypalAuthResponse::PaypalOrdersResponse(orders_response) => {
                 let status = orders_response
                     .purchase_units
@@ -1977,8 +1947,13 @@ domain_types::impl_flow_status_mapping! {
             PaypalAuthResponse::PaypalThreeDsResponse(threeds_response) => {
                 paypal::get_order_status(threeds_response.status, paypal::PaypalPaymentIntent::Authenticate)
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: PaypalRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1987,21 +1962,16 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: (),
     context: (),
-    params: [_response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: PaypalSetupMandatesResponse,
-        source: |_response| (),
-        context: |_request, _response| (),
-    },
-    {
-        // The try_from derives the status from the HTTP code (201 -> Charged, else
+    mapping_status: |_response, _ctx| { // The try_from derives the status from the HTTP code (201 -> Charged, else
         // Failure), which map_runtime_status cannot observe. The success path of this
         // flow always terminates in Charged.
-        AttemptStatus::Charged
-    }
+        AttemptStatus::Charged },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: PaypalSetupMandatesResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -2010,18 +1980,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: paypal::RefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
         request: RefundsData,
         response: RefundResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -2030,18 +1995,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: paypal::RefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
         request: RefundSyncData,
         response: RefundSyncResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(status)
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

@@ -548,17 +548,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: Revolv3PaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: Revolv3PaymentsResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response {
+    mapping_status: |response, _ctx| { match response {
             Revolv3PaymentsResponse::Authorize(auth_response) => {
                 if auth_response.payment_method_authorization_id.is_some() {
                     AttemptStatus::Authorized
@@ -569,8 +559,13 @@ domain_types::impl_flow_status_mapping! {
             Revolv3PaymentsResponse::Sale(sale_response) => {
                 AttemptStatus::from(&sale_response.invoice_status)
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: Revolv3PaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -579,18 +574,13 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: revolv3::InvoiceStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(&status) },
+    runtime: {
         request: PaymentsSyncData,
         response: Revolv3PaymentSyncResponse,
-        source: |response| response.invoice_status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.invoice_status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(&status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -599,18 +589,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: revolv3::InvoiceStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(&status) },
+    runtime: {
         request: PaymentsCaptureData,
         response: Revolv3SaleResponse,
-        source: |response| response.invoice_status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.invoice_status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(&status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -619,18 +604,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: (),
     context: (),
-    params: [_ack, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |_ack, _ctx| { AttemptStatus::Voided },
+    runtime: {
         request: PaymentVoidData,
         response: Revolv3AuthReversalResponse,
-        source: |_response| (),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::Voided
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -639,22 +619,17 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: (),
     context: Option<i64>,
-    params: [_ack, payment_method_authorization_id],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: Revolv3AuthorizeResponse,
-        source: |_response| (),
-        context: |_request, response| response.payment_method_authorization_id,
-    },
-    {
-        if payment_method_authorization_id.is_some() {
+    mapping_status: |_ack, payment_method_authorization_id| { if payment_method_authorization_id.is_some() {
             AttemptStatus::Charged
         } else {
             AttemptStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: Revolv3AuthorizeResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_method_authorization_id) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -663,17 +638,7 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: Revolv3RepeatPaymentResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: Revolv3RepeatPaymentResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response {
+    mapping_status: |response, _ctx| { match response {
             Revolv3RepeatPaymentResponse::Authorize(auth_response) => {
                 if auth_response.payment_method_authorization_id.is_some() {
                     AttemptStatus::Authorized
@@ -684,8 +649,13 @@ domain_types::impl_flow_status_mapping! {
             Revolv3RepeatPaymentResponse::Sale(sale_response) => {
                 AttemptStatus::from(&sale_response.invoice_status)
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: Revolv3RepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -694,18 +664,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: revolv3::RefundInvoiceStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(&status) },
+    runtime: {
         request: RefundsData,
         response: Revolv3RefundResponse,
-        source: |response| response.invoice.invoice_status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.invoice.invoice_status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(&status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -714,18 +679,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: revolv3::RefundInvoiceStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(&status) },
+    runtime: {
         request: RefundSyncData,
         response: Revolv3RefundSyncResponse,
-        source: |response| response.invoice_status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.invoice_status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(&status)
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

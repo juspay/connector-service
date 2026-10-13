@@ -804,18 +804,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: responses::JpmorganTransactionState,
     context: Option<requests::CapMethod>,
-    params: [status, ctx],
-    success: Closed => [Charged, Authorized],
-    failure: Declined => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
         response: responses::JpmorganPaymentsResponse,
-        source: |response| response.transaction_state.clone(),
-        context: |_request, response| response.capture_method.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
     },
-    {
-        jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -824,18 +819,13 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: responses::JpmorganTransactionState,
     context: Option<requests::CapMethod>,
-    params: [status, ctx],
-    success: Closed => [Charged, Authorized, Voided],
-    failure: Declined => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: PaymentsSyncData,
         response: responses::JpmorganPaymentsResponse,
-        source: |response| response.transaction_state.clone(),
-        context: |_request, response| response.capture_method.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
     },
-    {
-        jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -844,18 +834,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: responses::JpmorganTransactionState,
     context: Option<requests::CapMethod>,
-    params: [status, ctx],
-    success: Closed => [Charged],
-    failure: Declined => Failure,
-    extractors: {
-        request:  PaymentsCaptureData,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: PaymentsCaptureData,
         response: responses::JpmorganPaymentsResponse,
-        source: |response| response.transaction_state.clone(),
-        context: |_request, response| response.capture_method.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
     },
-    {
-        jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -864,18 +849,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: responses::JpmorganTransactionState,
     context: Option<requests::CapMethod>,
-    params: [status, ctx],
-    success: Voided => [Voided],
-    failure: Declined => Failure,
-    extractors: {
-        request:  PaymentVoidData,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: PaymentVoidData,
         response: responses::JpmorganPaymentsResponse,
-        source: |response| response.transaction_state.clone(),
-        context: |_request, response| response.capture_method.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
     },
-    {
-        jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -884,18 +864,13 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: responses::JpmorganTransactionState,
     context: Option<requests::CapMethod>,
-    params: [status, ctx],
-    success: Closed => [Charged],
-    failure: Declined => Failure,
-    extractors: {
-        request:  SetupMandateRequestData<T>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: SetupMandateRequestData<T>,
         response: responses::JpmorganPaymentsResponse,
-        source: |response| response.transaction_state.clone(),
-        context: |_request, response| response.capture_method.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
     },
-    {
-        jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -904,18 +879,13 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: responses::JpmorganTransactionState,
     context: Option<requests::CapMethod>,
-    params: [status, ctx],
-    success: Closed => [Charged],
-    failure: Declined => Failure,
-    extractors: {
-        request:  RepeatPaymentData<T>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: RepeatPaymentData<T>,
         response: responses::JpmorganPaymentsResponse,
-        source: |response| response.transaction_state.clone(),
-        context: |_request, response| response.capture_method.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
     },
-    {
-        jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -924,18 +894,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: responses::JpmorganResponseStatus,
     context: responses::JpmorganTransactionState,
-    params: [status, state],
-    success: Success => Success,
-    failure: Denied => Failure,
-    extractors: {
-        request:  RefundsData,
+    mapping_status: |status, state| { responses::RefundStatus::from((status, state)).into() },
+    runtime: {
+        request: RefundsData,
         response: responses::JpmorganRefundResponse,
-        source: |response| response.response_status.clone(),
-        context: |_request, response| response.transaction_state.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
     },
-    {
-        responses::RefundStatus::from((status, state)).into()
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -944,18 +909,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: responses::JpmorganResponseStatus,
     context: responses::JpmorganTransactionState,
-    params: [status, state],
-    success: Success => Success,
-    failure: Denied => Failure,
-    extractors: {
-        request:  RefundSyncData,
+    mapping_status: |status, state| { responses::RefundStatus::from((status, state)).into() },
+    runtime: {
+        request: RefundSyncData,
         response: responses::JpmorganRefundResponse,
-        source: |response| response.response_status.clone(),
-        context: |_request, response| response.transaction_state.clone(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
     },
-    {
-        responses::RefundStatus::from((status, state)).into()
-    }
 }
 
 // VoidPC returns PostCaptureVoidStatus in PostCaptureVoidResponse and preserves

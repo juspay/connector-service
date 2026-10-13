@@ -69,22 +69,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // `is_auto_capture()` (Default false = manual capture, matching a `None`
 // capture_method).
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Etisalat<T>,
-    flow:            Authorize,
-    source:          etisalat::EtisalatResponseVerdict,
-    context:         bool,
-    params:          [verdict, is_auto_capture],
-    success: Success => [Charged, Authorized],
-    failure: Failure => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
-        response: EtisalatResponse,
-        source:   |response| etisalat::EtisalatResponseVerdict::from(&response.transaction),
-        context:  |request, _response| request.is_auto_capture(),
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Etisalat<T>,
+    flow: Authorize,
+    source: etisalat::EtisalatResponseVerdict,
+    context: bool,
+    mapping_status: |verdict, is_auto_capture| { use common_enums::AttemptStatus;
         use etisalat::EtisalatResponseVerdict;
         match verdict {
             EtisalatResponseVerdict::Success => {
@@ -96,8 +86,13 @@ domain_types::impl_flow_status_mapping! {
             }
             EtisalatResponseVerdict::Pending => AttemptStatus::Pending,
             EtisalatResponseVerdict::Failure => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: EtisalatResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(etisalat::EtisalatResponseVerdict::from(&response.transaction)) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Etisalat<T>
@@ -128,19 +123,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Etisalat<T>,
-    flow:      Refund,
-    source:    etisalat::EtisalatResponseVerdict,
-    success:   Success => Success,
-    failure:   Failure => Failure,
-    extractors: {
-        request:  RefundsData,
-        response: EtisalatResponse,
-        source:   |response| etisalat::EtisalatResponseVerdict::from(&response.transaction),
-        context:  |_request, _response| (),
+    flow: Refund,
+    source: etisalat::EtisalatResponseVerdict,
+    mapping_status: |status| {
+        match status {
+            etisalat::EtisalatResponseVerdict::Success => common_enums::RefundStatus::Success,
+            etisalat::EtisalatResponseVerdict::Failure => common_enums::RefundStatus::Failure,
+            etisalat::EtisalatResponseVerdict::Pending => common_enums::RefundStatus::Pending,
+        }
     },
-    {
-        Pending => Pending,
-    }
+    runtime: {
+        request: RefundsData,
+        response: EtisalatResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(etisalat::EtisalatResponseVerdict::from(&response.transaction)) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Etisalat<T>
@@ -152,19 +148,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Etisalat<T>,
-    flow:      Void,
-    source:    etisalat::EtisalatResponseVerdict,
-    success:   Success => Voided,
-    failure:   Failure => VoidFailed,
-    extractors: {
-        request:  PaymentVoidData,
-        response: EtisalatResponse,
-        source:   |response| etisalat::EtisalatResponseVerdict::from(&response.transaction),
-        context:  |_request, _response| (),
+    flow: Void,
+    source: etisalat::EtisalatResponseVerdict,
+    mapping_status: |status| {
+        match status {
+            etisalat::EtisalatResponseVerdict::Success => common_enums::AttemptStatus::Voided,
+            etisalat::EtisalatResponseVerdict::Failure => common_enums::AttemptStatus::VoidFailed,
+            etisalat::EtisalatResponseVerdict::Pending => common_enums::AttemptStatus::Pending,
+        }
     },
-    {
-        Pending => Pending,
-    }
+    runtime: {
+        request: PaymentVoidData,
+        response: EtisalatResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(etisalat::EtisalatResponseVerdict::from(&response.transaction)) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Etisalat<T>
@@ -177,19 +174,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Etisalat<T>,
-    flow:      RepeatPayment,
-    source:    etisalat::EtisalatResponseVerdict,
-    success:   Success => Charged,
-    failure:   Failure => Failure,
-    extractors: {
-        request:  RepeatPaymentData<T>,
-        response: EtisalatResponse,
-        source:   |response| etisalat::EtisalatResponseVerdict::from(&response.transaction),
-        context:  |_request, _response| (),
+    flow: RepeatPayment,
+    source: etisalat::EtisalatResponseVerdict,
+    mapping_status: |status| {
+        match status {
+            etisalat::EtisalatResponseVerdict::Success => common_enums::AttemptStatus::Charged,
+            etisalat::EtisalatResponseVerdict::Failure => common_enums::AttemptStatus::Failure,
+            etisalat::EtisalatResponseVerdict::Pending => common_enums::AttemptStatus::Pending,
+        }
     },
-    {
-        Pending => Pending,
-    }
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: EtisalatResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(etisalat::EtisalatResponseVerdict::from(&response.transaction)) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Etisalat<T>

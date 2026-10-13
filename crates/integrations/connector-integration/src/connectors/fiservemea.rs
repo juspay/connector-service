@@ -172,25 +172,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Sale → Charged (auto-capture path).  `Waiting` from the result leg maps to
 // Pending; a `None` status + `None` result also lands on Pending.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Fiservemea<T>,
-    flow:            Authorize,
-    source:          Option<fiservemea::FiservemeaPaymentStatus>,
-    context:         fiservemea::FiservemeaStatusCtx,
-    params:          [status, ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: FiservemeaAuthorizeResponse,
-        source: |_resource_common_data, _request, response| response.transaction_status.clone(),
-        context: |_resource_common_data, _request, response| fiservemea::FiservemeaStatusCtx {
-            transaction_result: response.transaction_result.clone(),
-            transaction_type: response.transaction_type.clone(),
-        },
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiservemea<T>,
+    flow: Authorize,
+    source: Option<fiservemea::FiservemeaPaymentStatus>,
+    context: fiservemea::FiservemeaStatusCtx,
+    mapping_status: |status, ctx| { use common_enums::AttemptStatus;
         use fiservemea::{FiservemeaPaymentStatus, FiservemeaTransactionType};
         match status {
             Some(FiservemeaPaymentStatus::Approved) => match ctx.transaction_type {
@@ -224,8 +211,16 @@ domain_types::impl_flow_status_mapping! {
                 Some(fiservemea::FiservemeaPaymentResult::Partial) => AttemptStatus::PartialCharged,
                 Some(fiservemea::FiservemeaPaymentResult::Declined | fiservemea::FiservemeaPaymentResult::Failed | fiservemea::FiservemeaPaymentResult::Fraud) => AttemptStatus::Failure,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: FiservemeaAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(fiservemea::FiservemeaStatusCtx {
+            transaction_result: response.transaction_result.clone(),
+            transaction_type: response.transaction_type.clone(),
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Fiservemea<T>
@@ -237,25 +232,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // state, so its ALLOWED set is broad.  `Approved`+`Void` surfaces `Voided`
 // (an authorization that was voided between calls).
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Fiservemea<T>,
-    flow:            PSync,
-    source:          Option<fiservemea::FiservemeaPaymentStatus>,
-    context:         fiservemea::FiservemeaStatusCtx,
-    params:          [status, ctx],
-    success: _ => [Charged, Authorized, Voided],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: FiservemeaSyncResponse,
-        source: |_resource_common_data, _request, response| response.transaction_status.clone(),
-        context: |_resource_common_data, _request, response| fiservemea::FiservemeaStatusCtx {
-            transaction_result: response.transaction_result.clone(),
-            transaction_type: response.transaction_type.clone(),
-        },
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiservemea<T>,
+    flow: PSync,
+    source: Option<fiservemea::FiservemeaPaymentStatus>,
+    context: fiservemea::FiservemeaStatusCtx,
+    mapping_status: |status, ctx| { use common_enums::AttemptStatus;
         use fiservemea::{FiservemeaPaymentStatus, FiservemeaTransactionType};
         match status {
             Some(FiservemeaPaymentStatus::Approved) => match ctx.transaction_type {
@@ -285,8 +267,16 @@ domain_types::impl_flow_status_mapping! {
                 Some(fiservemea::FiservemeaPaymentResult::Partial) => AttemptStatus::PartialCharged,
                 Some(fiservemea::FiservemeaPaymentResult::Declined | fiservemea::FiservemeaPaymentResult::Failed | fiservemea::FiservemeaPaymentResult::Fraud) => AttemptStatus::Failure,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: FiservemeaSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(fiservemea::FiservemeaStatusCtx {
+            transaction_result: response.transaction_result.clone(),
+            transaction_type: response.transaction_type.clone(),
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Fiservemea<T>
@@ -445,25 +435,12 @@ macros::macro_connector_payout_implementation!(
 // declarations. A `None` status leg falls through to the result leg; both
 // `None` lands on Pending.
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Fiservemea<T>,
-    flow:           Refund,
-    source:         Option<fiservemea::FiservemeaPaymentStatus>,
-    context:        fiservemea::FiservemeaRefundCtx,
-    params:         [_status, ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: FiservemeaRefundResponse,
-        source: |_resource_common_data, _request, response| response.transaction_status.clone(),
-        context: |_resource_common_data, _request, response| fiservemea::FiservemeaRefundCtx {
-            transaction_status: response.transaction_status.clone(),
-            transaction_result: response.transaction_result.clone(),
-        },
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiservemea<T>,
+    flow: Refund,
+    source: Option<fiservemea::FiservemeaPaymentStatus>,
+    context: fiservemea::FiservemeaRefundCtx,
+    mapping_status: |_status, ctx| { use common_enums::RefundStatus;
         use fiservemea::{FiservemeaPaymentResult, FiservemeaPaymentStatus};
         match ctx.transaction_status {
             Some(FiservemeaPaymentStatus::Approved) => RefundStatus::Success,
@@ -487,8 +464,16 @@ domain_types::impl_refund_flow_status_mapping! {
                 ) => RefundStatus::Failure,
                 None => RefundStatus::Pending,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: FiservemeaRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(fiservemea::FiservemeaRefundCtx {
+            transaction_status: response.transaction_status.clone(),
+            transaction_result: response.transaction_result.clone(),
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Fiservemea<T>
@@ -498,25 +483,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Mirrors `map_refund_status` — same two-leg decision tree as the Refund
 // mapping above.
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Fiservemea<T>,
-    flow:           RSync,
-    source:         Option<fiservemea::FiservemeaPaymentStatus>,
-    context:        fiservemea::FiservemeaRefundCtx,
-    params:         [_status, ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: FiservemeaRefundSyncResponse,
-        source: |_resource_common_data, _request, response| response.transaction_status.clone(),
-        context: |_resource_common_data, _request, response| fiservemea::FiservemeaRefundCtx {
-            transaction_status: response.transaction_status.clone(),
-            transaction_result: response.transaction_result.clone(),
-        },
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiservemea<T>,
+    flow: RSync,
+    source: Option<fiservemea::FiservemeaPaymentStatus>,
+    context: fiservemea::FiservemeaRefundCtx,
+    mapping_status: |_status, ctx| { use common_enums::RefundStatus;
         use fiservemea::{FiservemeaPaymentResult, FiservemeaPaymentStatus};
         match ctx.transaction_status {
             Some(FiservemeaPaymentStatus::Approved) => RefundStatus::Success,
@@ -540,8 +512,16 @@ domain_types::impl_refund_flow_status_mapping! {
                 ) => RefundStatus::Failure,
                 None => RefundStatus::Pending,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: FiservemeaRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(fiservemea::FiservemeaRefundCtx {
+            transaction_status: response.transaction_status.clone(),
+            transaction_result: response.transaction_result.clone(),
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Fiservemea<T>

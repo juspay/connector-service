@@ -126,30 +126,31 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Loonio<T>,
-    flow:      PSync,
-    source:    transformers::LoonioTransactionStatus,
-    success:   Settled      => Charged,
-    failure:   Failed       => Failure,
-    extractors: {
+    flow: PSync,
+    source: transformers::LoonioTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::LoonioTransactionStatus::Settled => common_enums::AttemptStatus::Charged,
+            transformers::LoonioTransactionStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::LoonioTransactionStatus::Created => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::LoonioTransactionStatus::Prepared => common_enums::AttemptStatus::Pending,
+            transformers::LoonioTransactionStatus::Pending => common_enums::AttemptStatus::Pending,
+            transformers::LoonioTransactionStatus::Available => common_enums::AttemptStatus::Charged,
+            transformers::LoonioTransactionStatus::Abandoned => common_enums::AttemptStatus::Failure,
+            transformers::LoonioTransactionStatus::Rejected => common_enums::AttemptStatus::Failure,
+            transformers::LoonioTransactionStatus::Rollback => common_enums::AttemptStatus::Voided,
+            transformers::LoonioTransactionStatus::Returned => common_enums::AttemptStatus::Failure,
+            transformers::LoonioTransactionStatus::Nsf => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
         request: PaymentsSyncData,
         response: LoonioPaymentResponseData,
-        source: |_resource_common_data, _request, response| Ok(match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             LoonioPaymentResponseData::Sync(sync) => sync.state,
             LoonioPaymentResponseData::Webhook(_) => transformers::LoonioTransactionStatus::Pending,
-        }),
-        context: |_resource_common_data, _request, _response | (),
+        }) },
     },
-    {
-        Created             => AuthenticationPending,
-        Prepared            => Pending,
-        Pending             => Pending,
-        Available           => Charged,
-        Abandoned           => Failure,
-        Rejected            => Failure,
-        Rollback            => Voided,
-        Returned            => Failure,
-        Nsf                 => Failure,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Loonio<T>

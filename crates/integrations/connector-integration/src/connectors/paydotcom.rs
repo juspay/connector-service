@@ -89,17 +89,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Paydotcom<T>,
     flow: Authorize,
     source: transformers::PaydotcomPaymentsResponse,
-    params: [status],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
+    mapping_status: |status| { status.attempt_status() },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
         response: PaydotcomAuthorizeResponse,
-        source: |_resource_common_data, _request, response| Ok(response.clone()),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
     },
-    {
-        status.attempt_status()
-    }
 }
 
 domain_types::impl_connector_flow_allowed_status_mapping! {
@@ -131,17 +126,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Paydotcom<T>,
     flow: PSync,
     source: transformers::PaydotcomPaymentsResponse,
-    params: [status],
-    success: _ => [Authorized, Charged, Voided, PartialCharged],
-    failure: none,
-    extractors: {
-        request:  PaymentsSyncData,
+    mapping_status: |status| { status.attempt_status() },
+    runtime: {
+        request: PaymentsSyncData,
         response: PaydotcomPSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.clone()),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
     },
-    {
-        status.attempt_status()
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -149,17 +139,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Paydotcom<T>,
     flow: Void,
     source: transformers::PaydotcomPaymentsResponse,
-    params: [status],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request:  PaymentVoidData,
+    mapping_status: |status| { status.attempt_status() },
+    runtime: {
+        request: PaymentVoidData,
         response: PaydotcomVoidResponse,
-        source: |_resource_common_data, _request, response| Ok(response.clone()),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
     },
-    {
-        status.attempt_status()
-    }
 }
 
 // Missing underlying_network_id changes ErrorResponse, but leaves resource_common_data.status intact.
@@ -168,17 +153,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Paydotcom<T>,
     flow: SetupMandate,
     source: transformers::PaydotcomPaymentsResponse,
-    params: [status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request:  SetupMandateRequestData<T>,
+    mapping_status: |status| { status.attempt_status() },
+    runtime: {
+        request: SetupMandateRequestData<T>,
         response: PaydotcomSetupMandateResponse,
-        source: |_resource_common_data, _request, response| Ok(response.clone()),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
     },
-    {
-        status.attempt_status()
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -186,17 +166,12 @@ domain_types::impl_flow_status_mapping! {
     connector: Paydotcom<T>,
     flow: RepeatPayment,
     source: transformers::PaydotcomPaymentsResponse,
-    params: [status],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request:  RepeatPaymentData<T>,
+    mapping_status: |status| { status.attempt_status() },
+    runtime: {
+        request: RepeatPaymentData<T>,
         response: PaydotcomRepeatPaymentResponse,
-        source: |_resource_common_data, _request, response| Ok(response.clone()),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
     },
-    {
-        status.attempt_status()
-    }
 }
 
 // Context is the original authorized amount; missing amounts retain Charged.
@@ -206,17 +181,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: transformers::PaydotcomPaymentsResponse,
     context: Option<common_utils::types::MinorUnit>,
-    params: [status, ctx],
-    success: _ => [Charged, PartialCharged],
-    failure: none,
-    extractors: {
-        request:  PaymentsCaptureData,
-        response: PaydotcomCaptureResponse,
-        source: |_resource_common_data, _request, response| Ok(response.clone()),
-        context: |_resource_common_data, _request, _response| None,
-    },
-    {
-        use common_enums::AttemptStatus;
+    mapping_status: |status, ctx| { use common_enums::AttemptStatus;
         match status.attempt_status() {
             AttemptStatus::Charged => match (status.amount(), ctx) {
                 (Some(captured), Some(authorized)) if captured < authorized => AttemptStatus::PartialCharged,
@@ -225,8 +190,13 @@ domain_types::impl_flow_status_mapping! {
             AttemptStatus::Pending => AttemptStatus::CaptureInitiated,
             AttemptStatus::Failure => AttemptStatus::CaptureFailed,
             other => other,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PaydotcomCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(None) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -234,23 +204,18 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Paydotcom<T>,
     flow: Refund,
     source: transformers::PaydotcomRefundStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success: Succeeded => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request:  RefundsData,
-        response: PaydotcomRefundResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status),
-        context: |_resource_common_data, _request, _response| (),
-    },
-    {
-        match status {
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             transformers::PaydotcomRefundStatus::Succeeded => common_enums::RefundStatus::Success,
             transformers::PaydotcomRefundStatus::Failed => common_enums::RefundStatus::Failure,
             transformers::PaydotcomRefundStatus::Pending => common_enums::RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: PaydotcomRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -258,23 +223,18 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Paydotcom<T>,
     flow: RSync,
     source: transformers::PaydotcomRefundStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success: Succeeded => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request:  RefundSyncData,
-        response: PaydotcomRefundSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status),
-        context: |_resource_common_data, _request, _response| (),
-    },
-    {
-        match status {
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             transformers::PaydotcomRefundStatus::Succeeded => common_enums::RefundStatus::Success,
             transformers::PaydotcomRefundStatus::Failed => common_enums::RefundStatus::Failure,
             transformers::PaydotcomRefundStatus::Pending => common_enums::RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: PaydotcomRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 use std::fmt::Debug;

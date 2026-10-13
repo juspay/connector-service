@@ -513,20 +513,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: (silverflow::SilverflowAuthorizationStatus, silverflow::SilverflowClearingStatus),
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: SilverflowPaymentsResponse,
-        source: |response| (
-            response.status.authorization.clone(),
-            response.status.clearing.clone(),
-        ),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             // Approved authorization - check clearing status for final determination
             (silverflow::SilverflowAuthorizationStatus::Approved, silverflow::SilverflowClearingStatus::Cleared)
             | (silverflow::SilverflowAuthorizationStatus::Approved, silverflow::SilverflowClearingStatus::Settled) => {
@@ -541,8 +528,16 @@ domain_types::impl_flow_status_mapping! {
             | (silverflow::SilverflowAuthorizationStatus::Failed, _) => AttemptStatus::Failure,
             (silverflow::SilverflowAuthorizationStatus::Pending, _)
             | (silverflow::SilverflowAuthorizationStatus::Unknown, _) => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: SilverflowPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((
+            response.status.authorization.clone(),
+            response.status.clearing.clone(),
+        )) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -551,20 +546,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (silverflow::SilverflowAuthorizationStatus, silverflow::SilverflowClearingStatus),
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: SilverflowSyncResponse,
-        source: |response| (
-            response.status.authorization.clone(),
-            response.status.clearing.clone(),
-        ),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             // Approved authorization - check clearing status for final determination
             (silverflow::SilverflowAuthorizationStatus::Approved, silverflow::SilverflowClearingStatus::Cleared)
             | (silverflow::SilverflowAuthorizationStatus::Approved, silverflow::SilverflowClearingStatus::Settled) => {
@@ -579,8 +561,16 @@ domain_types::impl_flow_status_mapping! {
             | (silverflow::SilverflowAuthorizationStatus::Failed, _) => AttemptStatus::Failure,
             (silverflow::SilverflowAuthorizationStatus::Pending, _)
             | (silverflow::SilverflowAuthorizationStatus::Unknown, _) => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: SilverflowSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((
+            response.status.authorization.clone(),
+            response.status.clearing.clone(),
+        )) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -589,24 +579,19 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: silverflow::SilverflowActionStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: SilverflowCaptureResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             silverflow::SilverflowActionStatus::Completed
             | silverflow::SilverflowActionStatus::Success => AttemptStatus::Charged,
             silverflow::SilverflowActionStatus::Failed => AttemptStatus::Failure,
             silverflow::SilverflowActionStatus::Pending
             | silverflow::SilverflowActionStatus::Unknown => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: SilverflowCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -615,24 +600,19 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: silverflow::SilverflowAuthorizationStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request: PaymentVoidData,
-        response: SilverflowVoidResponse,
-        source: |response| response.status.authorization.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             silverflow::SilverflowAuthorizationStatus::Approved => AttemptStatus::Voided,
             silverflow::SilverflowAuthorizationStatus::Declined
             | silverflow::SilverflowAuthorizationStatus::Failed => AttemptStatus::VoidFailed,
             silverflow::SilverflowAuthorizationStatus::Pending
             | silverflow::SilverflowAuthorizationStatus::Unknown => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: SilverflowVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.authorization.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -641,24 +621,19 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: silverflow::SilverflowActionStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: SilverflowRefundResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             silverflow::SilverflowActionStatus::Success
             | silverflow::SilverflowActionStatus::Completed => RefundStatus::Success,
             silverflow::SilverflowActionStatus::Failed => RefundStatus::Failure,
             silverflow::SilverflowActionStatus::Pending
             | silverflow::SilverflowActionStatus::Unknown => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: SilverflowRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -667,24 +642,19 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: silverflow::SilverflowActionStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: SilverflowRefundSyncResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             silverflow::SilverflowActionStatus::Success
             | silverflow::SilverflowActionStatus::Completed => RefundStatus::Success,
             silverflow::SilverflowActionStatus::Failed => RefundStatus::Failure,
             silverflow::SilverflowActionStatus::Pending
             | silverflow::SilverflowActionStatus::Unknown => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: SilverflowRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

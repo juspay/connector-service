@@ -441,18 +441,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: volt::VoltPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { volt::get_attempt_status(status) },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: VoltPaymentsResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        volt::get_attempt_status(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -461,13 +456,11 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: volt::VoltPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { volt::get_attempt_status(status) },
+    runtime: {
         request: PaymentsSyncData,
         response: VoltPaymentsResponseData,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             VoltPaymentsResponseData::PsyncResponse(payment) => payment.status.clone(),
             VoltPaymentsResponseData::WebhookResponse(webhook) => match webhook.status {
                 volt::VoltWebhookPaymentStatus::Completed => volt::VoltPaymentStatus::Received,
@@ -476,12 +469,9 @@ domain_types::impl_flow_status_mapping! {
                 volt::VoltWebhookPaymentStatus::Failed => volt::VoltPaymentStatus::Failed,
                 volt::VoltWebhookPaymentStatus::Pending => volt::VoltPaymentStatus::Completed,
             },
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        volt::get_attempt_status(status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -490,18 +480,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: (),
     context: (),
-    params: [_source, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |_source, _ctx| { RefundStatus::Pending },
+    runtime: {
         request: RefundsData,
         response: RefundResponse,
-        source: |_response| (),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::Pending
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

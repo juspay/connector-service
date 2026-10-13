@@ -955,40 +955,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
     connector: RazorpayV2<T>,
-    flow:      Authorize,
-    source:    (),
-    context:   (),
-    params:    [_source, _ctx],
-    success:   _ => [Authorized],
-    failure:   none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: razorpayv2::RazorpayV2PaymentsResponse,
-        source: |_response| (),
-        context: |_request, _response| (),
-    },
-    {
-        // Both UPI and non-UPI authorize handlers set
+    flow: Authorize,
+    source: (),
+    context: (),
+    mapping_status: |_source, _ctx| { // Both UPI and non-UPI authorize handlers set
         // `AttemptStatus::AuthenticationPending` unconditionally.
         // `Authorized` is the closest target in Authorize::TERMINAL_SUCCESS_SET;
         // AuthenticationPending (intermediate) is not compile-time asserted.
-        AttemptStatus::AuthenticationPending
-    }
+        AttemptStatus::AuthenticationPending },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: razorpayv2::RazorpayV2PaymentsResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
     connector: RazorpayV2<T>,
-    flow:      PSync,
-    source:    razorpayv2::RazorpayStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Charged],
-    failure:   none,
-    extractors: {
+    flow: PSync,
+    source: razorpayv2::RazorpayStatus,
+    context: (),
+    mapping_status: |status, _ctx| { razorpayv2::get_psync_razorpay_payment_status(status) },
+    runtime: {
         request: PaymentsSyncData,
-        response: razorpayv2::RazorpayV2SyncResponse,
-        source: |response: &razorpayv2::RazorpayV2SyncResponse| match response {
+        response: &razorpayv2::RazorpayV2SyncResponse| match response {
             razorpayv2::RazorpayV2SyncResponse::PaymentResponse(payment) => payment.status.clone(),
             razorpayv2::RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => collection
                 .items
@@ -996,59 +988,49 @@ domain_types::impl_flow_status_mapping! {
                 .map(|payment| payment.status.clone())
                 .unwrap_or(razorpayv2::RazorpayStatus::Created),
         },
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    { razorpayv2::get_psync_razorpay_payment_status(status) }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
     connector: RazorpayV2<T>,
-    flow:      Refund,
-    source:    String,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Success],
-    failure:   none,
-    extractors: {
+    flow: Refund,
+    source: String,
+    context: (),
+    mapping_status: |status, _ctx| { match status.as_str() {
+            "processed" => RefundStatus::Success,
+            "pending" | "created" => RefundStatus::Pending,
+            "failed" => RefundStatus::Failure,
+            _ => RefundStatus::Pending,
+        } },
+    runtime: {
         request: RefundsData,
-        response: razorpayv2::RazorpayV2RefundResponse,
-        source: |response: &razorpayv2::RazorpayV2RefundResponse| response.status.clone(),
-        context: |_request, _response| (),
+        response: &razorpayv2::RazorpayV2RefundResponse| response.status.clone(),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match status.as_str() {
-            "processed" => RefundStatus::Success,
-            "pending" | "created" => RefundStatus::Pending,
-            "failed" => RefundStatus::Failure,
-            _ => RefundStatus::Pending,
-        }
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
     connector: RazorpayV2<T>,
-    flow:      RSync,
-    source:    String,
-    context:   (),
-    params:    [status, _ctx],
-    success:   _ => [Success],
-    failure:   none,
-    extractors: {
-        request: RefundSyncData,
-        response: razorpayv2::RazorpayV2RefundResponse,
-        source: |response: &razorpayv2::RazorpayV2RefundResponse| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status.as_str() {
+    flow: RSync,
+    source: String,
+    context: (),
+    mapping_status: |status, _ctx| { match status.as_str() {
             "processed" => RefundStatus::Success,
             "pending" | "created" => RefundStatus::Pending,
             "failed" => RefundStatus::Failure,
             _ => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: &razorpayv2::RazorpayV2RefundResponse| response.status.clone(),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

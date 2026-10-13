@@ -601,35 +601,36 @@ macros::macro_connector_implementation!(
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Maya<T>,
-    flow:      PSync,
-    source:    transformers::MayaPaymentStatus,
-    success:   PaymentSuccess           => Charged,
-    failure:   PaymentFailed            => Failure,
-    extractors: {
+    flow: PSync,
+    source: transformers::MayaPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::MayaPaymentStatus::PaymentSuccess => common_enums::AttemptStatus::Charged,
+            transformers::MayaPaymentStatus::PaymentFailed => common_enums::AttemptStatus::Failure,
+            transformers::MayaPaymentStatus::PendingToken => common_enums::AttemptStatus::PaymentMethodAwaited,
+            transformers::MayaPaymentStatus::PendingPayment => common_enums::AttemptStatus::PaymentMethodAwaited,
+            transformers::MayaPaymentStatus::ForAuthentication => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::MayaPaymentStatus::Authenticating => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::MayaPaymentStatus::AuthSuccess => common_enums::AttemptStatus::AuthenticationSuccessful,
+            transformers::MayaPaymentStatus::AuthFailed => common_enums::AttemptStatus::AuthenticationFailed,
+            transformers::MayaPaymentStatus::PaymentProcessing => common_enums::AttemptStatus::Authorizing,
+            transformers::MayaPaymentStatus::PaymentExpired => common_enums::AttemptStatus::Expired,
+            transformers::MayaPaymentStatus::PaymentCancelled => common_enums::AttemptStatus::Voided,
+            transformers::MayaPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::MayaPaymentStatus::Refunded => common_enums::AttemptStatus::AutoRefunded,
+            transformers::MayaPaymentStatus::CheckOutDropout => common_enums::AttemptStatus::AuthenticationFailed,
+            transformers::MayaPaymentStatus::ThreeDsPaymentFailure => common_enums::AttemptStatus::AuthenticationFailed,
+            transformers::MayaPaymentStatus::ThreeDsPaymentDropout => common_enums::AttemptStatus::AuthenticationFailed,
+            transformers::MayaPaymentStatus::CheckOutSuccess => common_enums::AttemptStatus::Authorizing,
+            transformers::MayaPaymentStatus::CheckOutFailure => common_enums::AttemptStatus::AuthorizationFailed,
+            transformers::MayaPaymentStatus::ThreeDsPaymentSuccess => common_enums::AttemptStatus::AuthenticationSuccessful,
+        }
+    },
+    runtime: {
         request: PaymentsSyncData,
         response: MayaWebhookBody,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-        PendingToken                    => PaymentMethodAwaited,
-        PendingPayment                  => PaymentMethodAwaited,
-        ForAuthentication               => AuthenticationPending,
-        Authenticating                  => AuthenticationPending,
-        AuthSuccess                     => AuthenticationSuccessful,
-        AuthFailed                      => AuthenticationFailed,
-        PaymentProcessing               => Authorizing,
-        PaymentExpired                  => Expired,
-        PaymentCancelled                => Voided,
-        Voided                          => Voided,
-        Refunded                        => AutoRefunded,
-        CheckOutDropout                 => AuthenticationFailed,
-        ThreeDsPaymentFailure           => AuthenticationFailed,
-        ThreeDsPaymentDropout           => AuthenticationFailed,
-        CheckOutSuccess                 => Authorizing,
-        CheckOutFailure                 => AuthorizationFailed,
-        ThreeDsPaymentSuccess           => AuthenticationSuccessful,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Maya<T>
@@ -639,19 +640,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Maya<T>,
-    flow:      Void,
-    source:    transformers::MayaVoidStatus,
-    success:   Success  => Voided,
-    failure:   Failed   => VoidFailed,
-    extractors: {
+    flow: Void,
+    source: transformers::MayaVoidStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::MayaVoidStatus::Success => common_enums::AttemptStatus::Voided,
+            transformers::MayaVoidStatus::Failed => common_enums::AttemptStatus::VoidFailed,
+            transformers::MayaVoidStatus::Pending => common_enums::AttemptStatus::VoidInitiated,
+        }
+    },
+    runtime: {
         request: PaymentVoidData,
         response: MayaVoidResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-        Pending => VoidInitiated,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Maya<T>
@@ -661,19 +663,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Maya<T>,
-    flow:      RSync,
-    source:    transformers::MayaRefundStatus,
-    success:   Success  => Success,
-    failure:   Failed   => Failure,
-    extractors: {
+    flow: RSync,
+    source: transformers::MayaRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::MayaRefundStatus::Success => common_enums::RefundStatus::Success,
+            transformers::MayaRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::MayaRefundStatus::Pending => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundSyncData,
         response: MayaRefundSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-        Pending => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Maya<T>
@@ -683,19 +686,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Maya<T>,
-    flow:      Refund,
-    source:    transformers::MayaRefundStatus,
-    success:   Success  => Success,
-    failure:   Failed   => Failure,
-    extractors: {
+    flow: Refund,
+    source: transformers::MayaRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::MayaRefundStatus::Success => common_enums::RefundStatus::Success,
+            transformers::MayaRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::MayaRefundStatus::Pending => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
         request: RefundsData,
         response: MayaRefundResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-        Pending => Pending,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Maya<T>

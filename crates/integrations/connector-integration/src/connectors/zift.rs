@@ -583,24 +583,19 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: String,
     context: bool,
-    params: [response_code, is_auto_capture],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: ZiftAuthPaymentsResponse,
-        source: |response| response.response_code.clone(),
-        context: |request, _response| request.is_auto_capture(),
-    },
-    {
-        use zift::ResponseCodeExt;
+    mapping_status: |response_code, is_auto_capture| { use zift::ResponseCodeExt;
         match (response_code.is_approved(), is_auto_capture) {
             (true, true) => AttemptStatus::Charged,
             (true, false) => AttemptStatus::Authorized,
             _ if response_code.is_pending() => AttemptStatus::Pending,
             _ => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: ZiftAuthPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -609,17 +604,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (zift::PaymentRequestType, zift::TransactionStatus),
     context: (),
-    params: [transaction, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: ZiftSyncResponse,
-        source: |response| (response.transaction_type.clone(), response.transaction_status),
-        context: |_request, _response| (),
-    },
-    {
-        match transaction {
+    mapping_status: |transaction, _ctx| { match transaction {
             (zift::PaymentRequestType::Sale, zift::TransactionStatus::Processed) => {
                 AttemptStatus::Charged
             }
@@ -650,8 +635,13 @@ domain_types::impl_flow_status_mapping! {
             (zift::PaymentRequestType::Capture, zift::TransactionStatus::Cancelled) => {
                 AttemptStatus::CaptureFailed
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: ZiftSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.transaction_type.clone(), response.transaction_status)) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -660,23 +650,18 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: String,
     context: (),
-    params: [response_code, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: ZiftCaptureResponse,
-        source: |response| response.response_code.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use zift::ResponseCodeExt;
+    mapping_status: |response_code, _ctx| { use zift::ResponseCodeExt;
         if response_code.is_approved() {
             AttemptStatus::Charged
         } else {
             AttemptStatus::CaptureFailed
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: ZiftCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -685,25 +670,20 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: String,
     context: (),
-    params: [response_code, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: ZiftSetupMandateResponse,
-        source: |response| response.response_code.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use zift::ResponseCodeExt;
+    mapping_status: |response_code, _ctx| { use zift::ResponseCodeExt;
         if response_code.is_approved() {
             AttemptStatus::Charged
         } else if response_code.is_pending() {
             AttemptStatus::Pending
         } else {
             AttemptStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: ZiftSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -712,23 +692,18 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: String,
     context: (),
-    params: [response_code, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request: PaymentVoidData,
-        response: ZiftVoidResponse,
-        source: |response| response.response_code.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use zift::ResponseCodeExt;
+    mapping_status: |response_code, _ctx| { use zift::ResponseCodeExt;
         if response_code.is_approved() {
             AttemptStatus::Voided
         } else {
             AttemptStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: ZiftVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -737,25 +712,20 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: String,
     context: (),
-    params: [response_code, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: ZiftRefundResponse,
-        source: |response| response.response_code.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        use zift::ResponseCodeExt;
+    mapping_status: |response_code, _ctx| { use zift::ResponseCodeExt;
         if response_code.is_approved() {
             RefundStatus::Success
         } else if response_code.is_pending() {
             RefundStatus::Pending
         } else {
             RefundStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: ZiftRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -764,24 +734,19 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: String,
     context: bool,
-    params: [response_code, is_auto_capture],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: ZiftRepeatPaymentResponse,
-        source: |response| response.response_code.clone(),
-        context: |request, _response| request.is_auto_capture(),
-    },
-    {
-        use zift::ResponseCodeExt;
+    mapping_status: |response_code, is_auto_capture| { use zift::ResponseCodeExt;
         match (response_code.is_approved(), is_auto_capture) {
             (true, true) => AttemptStatus::Charged,
             (true, false) => AttemptStatus::Authorized,
             _ if response_code.is_pending() => AttemptStatus::Pending,
             _ => AttemptStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: ZiftRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_code.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

@@ -446,27 +446,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Multisafepay<T>,
-    flow:      Authorize,
-    source:    multisafepay::MultisafepayPaymentStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   Completed  => [Charged],
-    failure:   Declined   => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
-        response: MultisafepayPaymentsResponse,
-        source: |_resource_common_data, _request, response| Ok(response.data.status.clone()),
-        context: |_resource_common_data, _request, _response| (),
-    },
-    {
-        match status {
+    flow: Authorize,
+    source: multisafepay::MultisafepayPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             multisafepay::MultisafepayPaymentStatus::Completed => common_enums::AttemptStatus::Charged,
             multisafepay::MultisafepayPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
             multisafepay::MultisafepayPaymentStatus::Initialized => common_enums::AttemptStatus::AuthenticationPending,
             multisafepay::MultisafepayPaymentStatus::Uncleared => common_enums::AttemptStatus::Pending,
             multisafepay::MultisafepayPaymentStatus::Void => common_enums::AttemptStatus::Voided,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: MultisafepayPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.data.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 // PSync — mirrors the PSync TryFrom (transformers.rs:971), same
@@ -475,27 +470,22 @@ domain_types::impl_flow_status_mapping! {
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Multisafepay<T>,
-    flow:      PSync,
-    source:    multisafepay::MultisafepayPaymentStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   Completed  => [Charged],
-    failure:   Declined   => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: MultisafepayPaymentsSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.data.status.clone()),
-        context: |_resource_common_data, _request, _response| (),
-    },
-    {
-        match status {
+    flow: PSync,
+    source: multisafepay::MultisafepayPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
             multisafepay::MultisafepayPaymentStatus::Completed => common_enums::AttemptStatus::Charged,
             multisafepay::MultisafepayPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
             multisafepay::MultisafepayPaymentStatus::Initialized => common_enums::AttemptStatus::AuthenticationPending,
             multisafepay::MultisafepayPaymentStatus::Uncleared => common_enums::AttemptStatus::Pending,
             multisafepay::MultisafepayPaymentStatus::Void => common_enums::AttemptStatus::Voided,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: MultisafepayPaymentsSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.data.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 // Refund — mirrors the Refund TryFrom (transformers.rs:1090): the response carries only a
@@ -503,65 +493,55 @@ domain_types::impl_flow_status_mapping! {
 // mapped by `From<MultisafepayRefundStatus> for RefundStatus` (transformers.rs:533).
 // `Processing` is unreachable here (that variant exists for the webhook path).
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Multisafepay<T>,
-    flow:           Refund,
-    source:         multisafepay::MultisafepayRefundVerdict,
-    params:         [verdict],
-    success: Succeeded => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request:  RefundsData,
-        response: MultisafepayRefundResponse,
-        source: |_resource_common_data, _request, response| Ok({
-            if response.success {
-                multisafepay::MultisafepayRefundVerdict::Succeeded
-            } else {
-                multisafepay::MultisafepayRefundVerdict::Failed
-            }
-        }),
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Multisafepay<T>,
+    flow: Refund,
+    source: multisafepay::MultisafepayRefundVerdict,
+    mapping_status: |verdict| { use common_enums::RefundStatus;
         use multisafepay::MultisafepayRefundVerdict;
         match verdict {
             MultisafepayRefundVerdict::Succeeded => RefundStatus::Success,
             MultisafepayRefundVerdict::Failed => RefundStatus::Failure,
             MultisafepayRefundVerdict::Other => RefundStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: MultisafepayRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            if response.success {
+                multisafepay::MultisafepayRefundVerdict::Succeeded
+            } else {
+                multisafepay::MultisafepayRefundVerdict::Failed
+            }
+        }) },
+    },
 }
 
 // RSync — mirrors the RSync TryFrom (transformers.rs:1117): identical bool-flag folding
 // as the Refund flow (the sync response is the same `MultisafepayRefundResponse` shape).
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Multisafepay<T>,
-    flow:           RSync,
-    source:         multisafepay::MultisafepayRefundVerdict,
-    params:         [verdict],
-    success: Succeeded => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request:  RefundSyncData,
-        response: MultisafepayRefundSyncResponse,
-        source: |_resource_common_data, _request, response| Ok({
-            if response.success {
-                multisafepay::MultisafepayRefundVerdict::Succeeded
-            } else {
-                multisafepay::MultisafepayRefundVerdict::Failed
-            }
-        }),
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Multisafepay<T>,
+    flow: RSync,
+    source: multisafepay::MultisafepayRefundVerdict,
+    mapping_status: |verdict| { use common_enums::RefundStatus;
         use multisafepay::MultisafepayRefundVerdict;
         match verdict {
             MultisafepayRefundVerdict::Succeeded => RefundStatus::Success,
             MultisafepayRefundVerdict::Failed => RefundStatus::Failure,
             MultisafepayRefundVerdict::Other => RefundStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: MultisafepayRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            if response.success {
+                multisafepay::MultisafepayRefundVerdict::Succeeded
+            } else {
+                multisafepay::MultisafepayRefundVerdict::Failed
+            }
+        }) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

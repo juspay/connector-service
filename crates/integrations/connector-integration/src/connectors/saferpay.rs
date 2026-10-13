@@ -580,31 +580,26 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: saferpay::SaferpayTransactionStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { match status {
+            saferpay::SaferpayTransactionStatus::Authorized => AttemptStatus::Authorized,
+            saferpay::SaferpayTransactionStatus::Captured => AttemptStatus::Charged,
+            saferpay::SaferpayTransactionStatus::Canceled => AttemptStatus::Voided,
+            saferpay::SaferpayTransactionStatus::Pending
+            | saferpay::SaferpayTransactionStatus::Unknown => AttemptStatus::Pending,
+        } },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: SaferpayAuthorizeResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .0
                 .transaction
                 .as_ref()
                 .and_then(|transaction| transaction.status)
                 .unwrap_or(saferpay::SaferpayTransactionStatus::Unknown)
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match status {
-            saferpay::SaferpayTransactionStatus::Authorized => AttemptStatus::Authorized,
-            saferpay::SaferpayTransactionStatus::Captured => AttemptStatus::Charged,
-            saferpay::SaferpayTransactionStatus::Canceled => AttemptStatus::Voided,
-            saferpay::SaferpayTransactionStatus::Pending
-            | saferpay::SaferpayTransactionStatus::Unknown => AttemptStatus::Pending,
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -613,32 +608,27 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: saferpay::SaferpayTransactionStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: SaferpayPSyncResponse,
-        source: |response| {
-            response
-                .0
-                .transaction
-                .as_ref()
-                .and_then(|transaction| transaction.status)
-                .unwrap_or(saferpay::SaferpayTransactionStatus::Unknown)
-        },
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             saferpay::SaferpayTransactionStatus::Authorized => AttemptStatus::Authorized,
             saferpay::SaferpayTransactionStatus::Captured => AttemptStatus::Charged,
             saferpay::SaferpayTransactionStatus::Canceled => AttemptStatus::Voided,
             saferpay::SaferpayTransactionStatus::Pending | saferpay::SaferpayTransactionStatus::Unknown => {
                 AttemptStatus::Pending
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: SaferpayPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .transaction
+                .as_ref()
+                .and_then(|transaction| transaction.status)
+                .unwrap_or(saferpay::SaferpayTransactionStatus::Unknown)
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -647,18 +637,23 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: saferpay::SaferpayTransactionStatus,
     context: bool,
-    params: [status, is_partial],
-    success: _ => [Charged, PartialCharged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, is_partial| { match status {
+            saferpay::SaferpayTransactionStatus::Captured if is_partial => AttemptStatus::PartialCharged,
+            saferpay::SaferpayTransactionStatus::Captured => AttemptStatus::Charged,
+            saferpay::SaferpayTransactionStatus::Canceled => AttemptStatus::Failure,
+            saferpay::SaferpayTransactionStatus::Authorized
+            | saferpay::SaferpayTransactionStatus::Pending
+            | saferpay::SaferpayTransactionStatus::Unknown => AttemptStatus::Pending,
+        } },
+    runtime: {
         request: PaymentsCaptureData,
         response: SaferpayCaptureResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .status
                 .unwrap_or(saferpay::SaferpayTransactionStatus::Unknown)
-        },
-        context: |request, _response| {
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok({
             // Capture carries only the amount being captured: full capture when the
             // caller supplies the authorization total and it matches, partial
             // otherwise (mirrors the conservative default in the TryFrom impl).
@@ -678,18 +673,8 @@ domain_types::impl_flow_status_mapping! {
             authorized_amount
                 .map(|amount| amount > request.minor_amount_to_capture.get_amount_as_i64())
                 .unwrap_or(true)
-        },
+        }) },
     },
-    {
-        match status {
-            saferpay::SaferpayTransactionStatus::Captured if is_partial => AttemptStatus::PartialCharged,
-            saferpay::SaferpayTransactionStatus::Captured => AttemptStatus::Charged,
-            saferpay::SaferpayTransactionStatus::Canceled => AttemptStatus::Failure,
-            saferpay::SaferpayTransactionStatus::Authorized
-            | saferpay::SaferpayTransactionStatus::Pending
-            | saferpay::SaferpayTransactionStatus::Unknown => AttemptStatus::Pending,
-        }
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -698,18 +683,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: (),
     context: (),
-    params: [_ack, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |_ack, _ctx| { AttemptStatus::Voided },
+    runtime: {
         request: PaymentVoidData,
         response: SaferpayVoidResponse,
-        source: |_response| (),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::Voided
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -718,18 +698,13 @@ domain_types::impl_flow_status_mapping! {
     flow: PreAuthenticate,
     source: (),
     context: (),
-    params: [_ack, _ctx],
-    success: _ => [AuthenticationSuccessful],
-    failure: none,
-    extractors: {
+    mapping_status: |_ack, _ctx| { AttemptStatus::AuthenticationPending },
+    runtime: {
         request: PaymentsPreAuthenticateData<T>,
         response: SaferpayPreAuthenticateResponse,
-        source: |_response| (),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::AuthenticationPending
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -738,31 +713,26 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: saferpay::SaferpayTransactionStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { match status {
+            saferpay::SaferpayTransactionStatus::Captured => RefundStatus::Success,
+            saferpay::SaferpayTransactionStatus::Authorized
+            | saferpay::SaferpayTransactionStatus::Pending
+            | saferpay::SaferpayTransactionStatus::Unknown => RefundStatus::Pending,
+            saferpay::SaferpayTransactionStatus::Canceled => RefundStatus::Failure,
+        } },
+    runtime: {
         request: RefundsData,
         response: SaferpayRefundResponse,
-        source: |response| {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
             response
                 .0
                 .transaction
                 .as_ref()
                 .and_then(|transaction| transaction.status)
                 .unwrap_or(saferpay::SaferpayTransactionStatus::Unknown)
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match status {
-            saferpay::SaferpayTransactionStatus::Captured => RefundStatus::Success,
-            saferpay::SaferpayTransactionStatus::Authorized
-            | saferpay::SaferpayTransactionStatus::Pending
-            | saferpay::SaferpayTransactionStatus::Unknown => RefundStatus::Pending,
-            saferpay::SaferpayTransactionStatus::Canceled => RefundStatus::Failure,
-        }
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -771,17 +741,7 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: SaferpayRefundSyncResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: SaferpayRefundSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response {
+    mapping_status: |response, _ctx| { match response {
             SaferpayRefundSyncResponse::Settled(capture) => {
                 match capture.status.unwrap_or(saferpay::SaferpayTransactionStatus::Unknown) {
                     saferpay::SaferpayTransactionStatus::Captured => RefundStatus::Success,
@@ -805,8 +765,13 @@ domain_types::impl_refund_flow_status_mapping! {
                     saferpay::SaferpayTransactionStatus::Canceled => RefundStatus::Failure,
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: SaferpayRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 // ===== FLOW STATUS IMPLEMENTATIONS =====

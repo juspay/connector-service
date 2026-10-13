@@ -859,17 +859,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: Shift4AuthorizeResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: Shift4AuthorizeResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response.status {
+    mapping_status: |response, _ctx| { match response.status {
             shift4::Shift4PaymentStatus::Successful => {
                 if response.captured {
                     AttemptStatus::Charged
@@ -886,8 +876,13 @@ domain_types::impl_flow_status_mapping! {
                     }
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: Shift4AuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -896,17 +891,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: Shift4PSyncResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: Shift4PSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response.status {
+    mapping_status: |response, _ctx| { match response.status {
             shift4::Shift4PaymentStatus::Successful => {
                 if response.captured {
                     AttemptStatus::Charged
@@ -923,8 +908,13 @@ domain_types::impl_flow_status_mapping! {
                     }
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: Shift4PSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -933,17 +923,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: Shift4CaptureResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: Shift4CaptureResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response.status {
+    mapping_status: |response, _ctx| { match response.status {
             shift4::Shift4PaymentStatus::Successful => {
                 if response.captured {
                     AttemptStatus::Charged
@@ -960,8 +940,13 @@ domain_types::impl_flow_status_mapping! {
                     }
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: Shift4CaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -970,17 +955,7 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: Shift4SetupMandateResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: Shift4SetupMandateResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let mut status = match response.status {
+    mapping_status: |response, _ctx| { let mut status = match response.status {
             shift4::Shift4PaymentStatus::Successful => {
                 if response.captured {
                     AttemptStatus::Charged
@@ -1003,8 +978,13 @@ domain_types::impl_flow_status_mapping! {
         if status == AttemptStatus::Authorized {
             status = AttemptStatus::Charged;
         }
-        status
-    }
+        status },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: Shift4SetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1013,17 +993,7 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: Shift4RepeatPaymentResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: Shift4RepeatPaymentResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match response.status {
+    mapping_status: |response, _ctx| { match response.status {
             shift4::Shift4PaymentStatus::Successful => {
                 if response.captured {
                     AttemptStatus::Charged
@@ -1040,8 +1010,13 @@ domain_types::impl_flow_status_mapping! {
                     }
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: Shift4RepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1050,23 +1025,18 @@ domain_types::impl_flow_status_mapping! {
     flow: IncrementalAuthorization,
     source: shift4::Shift4PaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized],
-    failure: none,
-    extractors: {
-        request: PaymentsIncrementalAuthorizationData,
-        response: Shift4IncrementalAuthResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             shift4::Shift4PaymentStatus::Failed => AttemptStatus::AuthorizationFailed,
             shift4::Shift4PaymentStatus::Successful | shift4::Shift4PaymentStatus::Pending => {
                 AttemptStatus::Authorized
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsIncrementalAuthorizationData,
+        response: Shift4IncrementalAuthResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1075,22 +1045,17 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: shift4::Shift4RefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: Shift4RefundResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             shift4::Shift4RefundStatus::Successful => RefundStatus::Success,
             shift4::Shift4RefundStatus::Failed => RefundStatus::Failure,
             shift4::Shift4RefundStatus::Processing => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: Shift4RefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1099,22 +1064,17 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: shift4::Shift4RefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: Shift4RSyncResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        match status {
+    mapping_status: |status, _ctx| { match status {
             shift4::Shift4RefundStatus::Successful => RefundStatus::Success,
             shift4::Shift4RefundStatus::Failed => RefundStatus::Failure,
             shift4::Shift4RefundStatus::Processing => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: Shift4RSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

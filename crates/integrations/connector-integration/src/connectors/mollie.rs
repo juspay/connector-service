@@ -135,23 +135,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Mollie<T>,
-    flow:      Authorize,
-    source:    transformers::MolliePaymentStatus,
-    success:   Authorized => Authorized,
-    failure:   Failed => Failure,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
-        response: MolliePaymentsResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+    flow: Authorize,
+    source: transformers::MolliePaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::MolliePaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            transformers::MolliePaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::MolliePaymentStatus::Open => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::MolliePaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            transformers::MolliePaymentStatus::Paid => common_enums::AttemptStatus::Charged,
+            transformers::MolliePaymentStatus::Canceled => common_enums::AttemptStatus::Voided,
+            transformers::MolliePaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+        }
     },
-    {
-        Open => AuthenticationPending,
-        Pending => Pending,
-        Paid => Charged,
-        Canceled => Voided,
-        Expired => Failure
-    }
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: MolliePaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Mollie<T>
@@ -163,23 +164,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Mollie<T>,
-    flow:      PSync,
-    source:    transformers::MolliePaymentStatus,
-    success:   Paid => Charged,
-    failure:   Failed => Failure,
-    extractors: {
-        request:  PaymentsSyncData,
-        response: MolliePaymentsResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+    flow: PSync,
+    source: transformers::MolliePaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::MolliePaymentStatus::Paid => common_enums::AttemptStatus::Charged,
+            transformers::MolliePaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::MolliePaymentStatus::Open => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::MolliePaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            transformers::MolliePaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            transformers::MolliePaymentStatus::Canceled => common_enums::AttemptStatus::Voided,
+            transformers::MolliePaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+        }
     },
-    {
-        Open => AuthenticationPending,
-        Pending => Pending,
-        Authorized => Authorized,
-        Canceled => Voided,
-        Expired => Failure
-    }
+    runtime: {
+        request: PaymentsSyncData,
+        response: MolliePaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Mollie<T>
@@ -228,22 +230,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Mollie<T>,
-    flow:      Refund,
-    source:    transformers::MollieRefundStatus,
-    success:   Refunded => Success,
-    failure:   Failed => Failure,
-    extractors: {
-        request:  RefundsData,
-        response: MollieRefundResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+    flow: Refund,
+    source: transformers::MollieRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::MollieRefundStatus::Refunded => common_enums::RefundStatus::Success,
+            transformers::MollieRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::MollieRefundStatus::Queued => common_enums::RefundStatus::Pending,
+            transformers::MollieRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            transformers::MollieRefundStatus::Processing => common_enums::RefundStatus::Pending,
+            transformers::MollieRefundStatus::Canceled => common_enums::RefundStatus::Failure,
+        }
     },
-    {
-        Queued => Pending,
-        Pending => Pending,
-        Processing => Pending,
-        Canceled => Failure
-    }
+    runtime: {
+        request: RefundsData,
+        response: MollieRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Mollie<T>
@@ -255,22 +258,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Mollie<T>,
-    flow:      RSync,
-    source:    transformers::MollieRefundStatus,
-    success:   Refunded => Success,
-    failure:   Failed => Failure,
-    extractors: {
-        request:  RefundSyncData,
-        response: MollieRefundResponse,
-        source: |response| response.status.clone(),
-        context: |_request, _response| (),
+    flow: RSync,
+    source: transformers::MollieRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::MollieRefundStatus::Refunded => common_enums::RefundStatus::Success,
+            transformers::MollieRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::MollieRefundStatus::Queued => common_enums::RefundStatus::Pending,
+            transformers::MollieRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            transformers::MollieRefundStatus::Processing => common_enums::RefundStatus::Pending,
+            transformers::MollieRefundStatus::Canceled => common_enums::RefundStatus::Failure,
+        }
     },
-    {
-        Queued => Pending,
-        Pending => Pending,
-        Processing => Pending,
-        Canceled => Failure
-    }
+    runtime: {
+        request: RefundSyncData,
+        response: MollieRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Mollie<T>

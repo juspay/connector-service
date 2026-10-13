@@ -8,18 +8,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: bool,
     context: bool,
-    params: [status, ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request:  PaymentsAuthorizeData<T>,
+    mapping_status: |status, ctx| { transformers::map_payment_status(true, status, ctx) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
         response: PayconexPaymentsResponse,
-        source:   |response| response.transaction_approved,
-        context:  |request, _response| request.is_auto_capture(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_approved) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
     },
-    {
-        transformers::map_payment_status(true, status, ctx)
-    }
 }
 
 // Source is (found, transaction_approved); context is request.is_auto_capture().
@@ -29,18 +24,13 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: (bool, bool),
     context: bool,
-    params: [status, ctx],
-    success: _ => [Authorized, Charged, Voided, PartialCharged],
-    failure: none,
-    extractors: {
-        request:  PaymentsSyncData,
+    mapping_status: |status, ctx| { transformers::map_payment_status(status.0, status.1, ctx) },
+    runtime: {
+        request: PaymentsSyncData,
         response: PayconexSyncResponse,
-        source:   |response| (response.found, response.transaction_approved),
-        context:  |request, _response| request.is_auto_capture(),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.found, response.transaction_approved)) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
     },
-    {
-        transformers::map_payment_status(status.0, status.1, ctx)
-    }
 }
 
 // Source is transaction_approved; required transaction IDs remain TryFrom validation.
@@ -49,21 +39,16 @@ domain_types::impl_flow_status_mapping! {
     connector: Payconex<T>,
     flow: Capture,
     source: bool,
-    params: [status],
-    success: _ => [Charged, PartialCharged],
-    failure: none,
-    extractors: {
-        request:  PaymentsCaptureData,
-        response: PayconexCaptureResponse,
-        source:   |response| response.transaction_approved,
-    },
-    {
-        if status {
+    mapping_status: |status| { if status {
             common_enums::AttemptStatus::Charged
         } else {
             common_enums::AttemptStatus::CaptureFailed
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PayconexCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_approved) },
+    },
 }
 
 // Source is transaction_approved; required transaction IDs remain TryFrom validation.
@@ -72,21 +57,16 @@ domain_types::impl_flow_status_mapping! {
     connector: Payconex<T>,
     flow: Void,
     source: bool,
-    params: [status],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request:  PaymentVoidData,
-        response: PayconexVoidResponse,
-        source:   |response| response.transaction_approved,
-    },
-    {
-        if status {
+    mapping_status: |status| { if status {
             common_enums::AttemptStatus::Voided
         } else {
             common_enums::AttemptStatus::VoidFailed
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: PayconexVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_approved) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -94,17 +74,12 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Payconex<T>,
     flow: Refund,
     source: bool,
-    params: [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request:  RefundsData,
+    mapping_status: |status| { transformers::map_refund_status(true, status) },
+    runtime: {
+        request: RefundsData,
         response: PayconexRefundResponse,
-        source:   |response| response.transaction_approved,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_approved) },
     },
-    {
-        transformers::map_refund_status(true, status)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -112,17 +87,12 @@ domain_types::impl_refund_flow_status_mapping! {
     connector: Payconex<T>,
     flow: RSync,
     source: (bool, bool),
-    params: [status],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request:  RefundSyncData,
+    mapping_status: |status| { transformers::map_refund_status(status.0, status.1) },
+    runtime: {
+        request: RefundSyncData,
         response: PayconexRefundSyncResponse,
-        source:   |response| (response.found, response.transaction_approved),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.found, response.transaction_approved)) },
     },
-    {
-        transformers::map_refund_status(status.0, status.1)
-    }
 }
 
 use std::fmt::Debug;

@@ -662,17 +662,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: StaxAuthorizeResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: StaxAuthorizeResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        if !response.success {
+    mapping_status: |response, _ctx| { if !response.success {
             AttemptStatus::Failure
         } else {
             match response.transaction_type {
@@ -688,8 +678,13 @@ domain_types::impl_flow_status_mapping! {
                 // be reported through the mapping, so fall back to Pending.
                 _ => AttemptStatus::Pending,
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: StaxAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -698,17 +693,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: StaxPSyncResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged, Voided],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: StaxPSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        if !response.success {
+    mapping_status: |response, _ctx| { if !response.success {
             AttemptStatus::Failure
         } else if response.is_voided {
             AttemptStatus::Voided
@@ -724,8 +709,13 @@ domain_types::impl_flow_status_mapping! {
                 stax::StaxTransactionType::Charge => AttemptStatus::Charged,
                 _ => AttemptStatus::Pending,
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: StaxPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -734,17 +724,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: StaxCaptureResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: StaxCaptureResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        if !response.success {
+    mapping_status: |response, _ctx| { if !response.success {
             AttemptStatus::Failure
         } else {
             match response.transaction_type {
@@ -758,8 +738,13 @@ domain_types::impl_flow_status_mapping! {
                 stax::StaxTransactionType::Charge => AttemptStatus::Charged,
                 _ => AttemptStatus::Pending,
             }
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: StaxCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -768,22 +753,17 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: bool,
     context: (),
-    params: [is_voided, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request: PaymentVoidData,
-        response: StaxVoidResponse,
-        source: |response| response.is_voided,
-        context: |_request, _response| (),
-    },
-    {
-        if is_voided {
+    mapping_status: |is_voided, _ctx| { if is_voided {
             AttemptStatus::Voided
         } else {
             AttemptStatus::VoidFailed
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: StaxVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.is_voided) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -792,17 +772,7 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: StaxSetupMandateResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: StaxSetupMandateResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        if !response.success {
+    mapping_status: |response, _ctx| { if !response.success {
             AttemptStatus::Failure
         } else {
             match response.transaction_type {
@@ -816,8 +786,13 @@ domain_types::impl_flow_status_mapping! {
                 stax::StaxTransactionType::Charge => AttemptStatus::Charged,
                 _ => AttemptStatus::Pending,
             }
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: StaxSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -826,17 +801,7 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: StaxRepeatPaymentResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: StaxRepeatPaymentResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        if !response.success {
+    mapping_status: |response, _ctx| { if !response.success {
             AttemptStatus::Failure
         } else {
             match response.transaction_type {
@@ -850,8 +815,13 @@ domain_types::impl_flow_status_mapping! {
                 stax::StaxTransactionType::Charge => AttemptStatus::Charged,
                 _ => AttemptStatus::Pending,
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: StaxRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -860,25 +830,20 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: bool,
     context: (),
-    params: [refund_child_success, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |refund_child_success, _ctx| { if refund_child_success {
+            RefundStatus::Pending
+        } else {
+            RefundStatus::Failure
+        } },
+    runtime: {
         request: RefundsData,
         response: StaxRefundResponse,
         // The handler errors out when no refund child matches, and compares
         // `total` at FloatMajorUnit precision; unrepresentable here. `true`
-        // only says HTTP-200 carried the refund shape — Pending is honest.
-        source: |_response| true,
-        context: |_request, _response| (),
+        // only says HTTP-200 carried the refund shape — Pending is honest.,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(true) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if refund_child_success {
-            RefundStatus::Pending
-        } else {
-            RefundStatus::Failure
-        }
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -887,22 +852,17 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: bool,
     context: (),
-    params: [success, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: StaxRSyncResponse,
-        source: |response| response.success,
-        context: |_request, _response| (),
-    },
-    {
-        if success {
+    mapping_status: |success, _ctx| { if success {
             RefundStatus::Success
         } else {
             RefundStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: StaxRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.success) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

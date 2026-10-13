@@ -530,25 +530,20 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     // Trustly's authorize response only initializes a hosted-page redirect: `true` is the
     // success envelope (a redirect URL), `false` the error envelope. Final payment status
-    // arrives via webhooks.
+    // arrives via webhooks.,
     source: bool,
     context: (),
-    params: [acknowledged, _ctx],
-    success: _ => [Authorized],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: TrustlyPaymentsResponse,
-        source: |response| matches!(response, TrustlyPaymentsResponse::Success(_)),
-        context: |_request, _response| (),
-    },
-    {
-        if acknowledged {
+    mapping_status: |acknowledged, _ctx| { if acknowledged {
             AttemptStatus::AuthenticationPending
         } else {
             AttemptStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: TrustlyPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(matches!(response, TrustlyPaymentsResponse::Success(_))) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -557,26 +552,21 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: Option<trustly::TrustlyRefundResult>,
     context: (),
-    params: [result, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |result, _ctx| { match result {
+            Some(trustly::TrustlyRefundResult::Pending) => RefundStatus::Pending,
+            Some(trustly::TrustlyRefundResult::Failed) | None => RefundStatus::Failure,
+        } },
+    runtime: {
         request: RefundsData,
         response: TrustlyRefundResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             TrustlyRefundResponse::Success(success) => {
                 Some(success.result.data.result.clone())
             }
             TrustlyRefundResponse::Failure(_) => None,
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match result {
-            Some(trustly::TrustlyRefundResult::Pending) => RefundStatus::Pending,
-            Some(trustly::TrustlyRefundResult::Failed) | None => RefundStatus::Failure,
-        }
-    }
 }
 
 macros::macro_connector_flow_status_impls!(

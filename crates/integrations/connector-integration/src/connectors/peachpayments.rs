@@ -416,25 +416,20 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: responses::PeachpaymentsPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: PeachpaymentsPaymentsResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             PeachpaymentsPaymentsResponse::Response(data) => data.transaction_result.clone(),
             PeachpaymentsPaymentsResponse::WebhookResponse(webhook) => webhook
                 .transaction
                 .as_ref()
                 .map(|transaction| transaction.transaction_result.clone())
                 .unwrap_or(responses::PeachpaymentsPaymentStatus::Failed),
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -448,18 +443,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: responses::PeachpaymentsPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentVoidData,
         response: PeachpaymentsVoidResponse,
-        source: |response| response.transaction_result.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -473,18 +463,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: responses::PeachpaymentsPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsCaptureData,
         response: PeachpaymentsCaptureResponse,
-        source: |response| response.transaction_result.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -498,18 +483,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: responses::PeachpaymentsRefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
         request: RefundsData,
         response: PeachpaymentsRefundResponse,
-        source: |response| response.transaction_result.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(status)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -523,18 +503,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: responses::PeachpaymentsRefundStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
         request: RefundSyncData,
         response: PeachpaymentsRefundSyncResponse,
-        source: |response| response.transaction_result.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        RefundStatus::from(status)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -548,18 +523,13 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: responses::PeachpaymentsPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: PaymentsSyncData,
         response: PeachpaymentsSyncResponse,
-        source: |response| response.transaction_result.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -589,25 +559,20 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: responses::PeachpaymentsPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: SetupMandateRequestData<T>,
         response: PeachpaymentsSetupMandateResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             PeachpaymentsPaymentsResponse::Response(data) => data.transaction_result.clone(),
             PeachpaymentsPaymentsResponse::WebhookResponse(webhook) => webhook
                 .transaction
                 .as_ref()
                 .map(|transaction| transaction.transaction_result.clone())
                 .unwrap_or(responses::PeachpaymentsPaymentStatus::Failed),
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -616,25 +581,20 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: responses::PeachpaymentsPaymentStatus,
     context: (),
-    params: [status, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
         request: RepeatPaymentData<T>,
         response: PeachpaymentsRepeatPaymentResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             PeachpaymentsPaymentsResponse::Response(data) => data.transaction_result.clone(),
             PeachpaymentsPaymentsResponse::WebhookResponse(webhook) => webhook
                 .transaction
                 .as_ref()
                 .map(|transaction| transaction.transaction_result.clone())
                 .unwrap_or(responses::PeachpaymentsPaymentStatus::Failed),
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        AttemptStatus::from(status)
-    }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

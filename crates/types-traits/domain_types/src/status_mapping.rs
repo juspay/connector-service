@@ -171,6 +171,142 @@ macro_rules! impl_flow_status_mapping {
     (
         $(generics: [$($generic:tt)*],)?
         connector: $connector:ty,
+        flow: $flow:path,
+        source: $source:ty,
+        success: $($success:tt)*
+        failure: $($failure:tt)*
+        { $($mapping:tt)* }
+    ) => {};
+
+    (
+        $(generics: [$($generic:tt)*],)?
+        connector: $connector:ty,
+        flow: $flow:path,
+        source: $source:ty,
+        params: [$($params:ident),* $(,)?],
+        success: $($success:tt)*
+        failure: $($failure:tt)*
+        { $($mapping:tt)* }
+    ) => {};
+
+    (
+        $(generics: [$($generic:tt)*],)?
+        connector: $connector:ty,
+        flow: $flow:path,
+        source: $source:ty,
+        context: $context:ty,
+        params: [$($params:ident),* $(,)?],
+        success: $($success:tt)*
+        failure: $($failure:tt)*
+        { $($mapping:tt)* }
+    ) => {};
+
+    (
+        $(generics: [$($generic:tt)*],)?
+        connector: $connector:ty,
+        flow: $flow:path,
+        source: $source:ty,
+        context: $context:ty,
+        mapping_status: |$source_value:ident, $context_value:ident| { $($mapping:tt)* },
+        runtime: {
+            request: $request:ty,
+            response: $response:ty,
+            source: $source_from:expr,
+            context: $context_from:expr $(,)?
+        } $(,)?
+    ) => {
+        $crate::paste::paste! {
+            impl $(<$($generic)*>)?
+                $crate::flow_status::ConnectorRuntimeStatusMapping<$flow, $request, $response>
+                for $connector
+            {
+                fn map_runtime_status<CommonData>(
+                    common_data: &CommonData,
+                    request: &$request,
+                    response: &$response,
+                    http_status_code: u16,
+                ) -> Result<
+                    $crate::flow_status::ConnectorFlowStatus<$flow>,
+                    $crate::ConnectorError,
+                >
+                where
+                    CommonData: $crate::flow_status::FlowStatusReader<
+                        <$flow as $crate::flow_status::FlowSpec>::Status,
+                    >,
+                {
+                    let source_from: fn(
+                        &CommonData,
+                        &$request,
+                        &$response,
+                        u16,
+                    ) -> Result<$source, $crate::ConnectorError> = $source_from;
+                    let context_from: fn(
+                        &CommonData,
+                        &$request,
+                        &$response,
+                        u16,
+                    ) -> Result<$context, $crate::ConnectorError> = $context_from;
+                    let mapping: fn($source, $context) -> <$flow as $crate::flow_status::FlowSpec>::Status =
+                        |$source_value, $context_value| { $($mapping)* };
+
+                    let source = source_from(common_data, request, response, http_status_code)?;
+                    let context = context_from(common_data, request, response, http_status_code)?;
+                    Ok($crate::flow_status::ConnectorFlowStatus::Raw(mapping(source, context)))
+                }
+            }
+        }
+    };
+
+    (
+        $(generics: [$($generic:tt)*],)?
+        connector: $connector:ty,
+        flow: $flow:path,
+        source: $source:ty,
+        mapping_status: |$source_value:ident| { $($mapping:tt)* },
+        runtime: {
+            request: $request:ty,
+            response: $response:ty,
+            source: $source_from:expr $(,)?
+        } $(,)?
+    ) => {
+        $crate::paste::paste! {
+            impl $(<$($generic)*>)?
+                $crate::flow_status::ConnectorRuntimeStatusMapping<$flow, $request, $response>
+                for $connector
+            {
+                fn map_runtime_status<CommonData>(
+                    common_data: &CommonData,
+                    request: &$request,
+                    response: &$response,
+                    http_status_code: u16,
+                ) -> Result<
+                    $crate::flow_status::ConnectorFlowStatus<$flow>,
+                    $crate::ConnectorError,
+                >
+                where
+                    CommonData: $crate::flow_status::FlowStatusReader<
+                        <$flow as $crate::flow_status::FlowSpec>::Status,
+                    >,
+                {
+                    let source_from: fn(
+                        &CommonData,
+                        &$request,
+                        &$response,
+                        u16,
+                    ) -> Result<$source, $crate::ConnectorError> = $source_from;
+                    let mapping: fn($source) -> <$flow as $crate::flow_status::FlowSpec>::Status =
+                        |$source_value| { $($mapping)* };
+
+                    let source = source_from(common_data, request, response, http_status_code)?;
+                    Ok($crate::flow_status::ConnectorFlowStatus::Raw(mapping(source)))
+                }
+            }
+        }
+    };
+
+    (
+        $(generics: [$($generic:tt)*],)?
+        connector: $connector:ty,
         flow: $flow:ident,
         source: $source:ty,
         context: $context:ty,

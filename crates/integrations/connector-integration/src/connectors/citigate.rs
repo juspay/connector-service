@@ -486,28 +486,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Citigate<T>,
-    flow:      Capture,
-    source:    citigate::CitigatePostAuthStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   Approved    => [Charged],
-    failure:   NotReceived => CaptureFailed,
-    extractors: {
+    flow: Capture,
+    source: citigate::CitigatePostAuthStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
+            citigate::CitigatePostAuthStatus::Approved => common_enums::AttemptStatus::Charged,
+            citigate::CitigatePostAuthStatus::NotReceived => common_enums::AttemptStatus::CaptureFailed,
+        } },
+    runtime: {
         request: PaymentsCaptureData,
         response: CitigateCaptureResponse,
-        source: |_resource_common_data, _request, response| Ok(if response.0.response_code.as_deref() == Some("0") {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(if response.0.response_code.as_deref() == Some("0") {
             citigate::CitigatePostAuthStatus::Approved
         } else {
             citigate::CitigatePostAuthStatus::NotReceived
-        }),
-        context: |_resource_common_data, _request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match status {
-            citigate::CitigatePostAuthStatus::Approved => common_enums::AttemptStatus::Charged,
-            citigate::CitigatePostAuthStatus::NotReceived => common_enums::AttemptStatus::CaptureFailed,
-        }
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Citigate<T>
@@ -520,28 +515,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Citigate<T>,
-    flow:      Void,
-    source:    citigate::CitigatePostAuthStatus,
-    context:   (),
-    params:    [status, _ctx],
-    success:   Approved    => [Voided],
-    failure:   NotReceived => VoidFailed,
-    extractors: {
+    flow: Void,
+    source: citigate::CitigatePostAuthStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
+            citigate::CitigatePostAuthStatus::Approved => common_enums::AttemptStatus::Voided,
+            citigate::CitigatePostAuthStatus::NotReceived => common_enums::AttemptStatus::VoidFailed,
+        } },
+    runtime: {
         request: PaymentVoidData,
         response: CitigateVoidResponse,
-        source: |_resource_common_data, _request, response| Ok(if response.0.response_code.as_deref() == Some("0") {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(if response.0.response_code.as_deref() == Some("0") {
             citigate::CitigatePostAuthStatus::Approved
         } else {
             citigate::CitigatePostAuthStatus::NotReceived
-        }),
-        context: |_resource_common_data, _request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        match status {
-            citigate::CitigatePostAuthStatus::Approved => common_enums::AttemptStatus::Voided,
-            citigate::CitigatePostAuthStatus::NotReceived => common_enums::AttemptStatus::VoidFailed,
-        }
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Citigate<T>

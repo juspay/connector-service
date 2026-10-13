@@ -62,27 +62,12 @@ pub(crate) mod headers {
 
 // Mirrors `map_boa_attempt_status((status, is_auto_capture))` in the Authorize TryFrom.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Bankofamerica<T>,
-    flow:            Authorize,
-    source:          transformers::BankofamericaPaymentStatus,
-    context:         bool,
-    params:          [status, auto_capture],
-    success: Succeeded => [Authorized, Charged],
-    failure: Failed => Failure,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: BankofamericaPaymentsResponse,
-        source: |_resource_common_data, _request, response| match response {
-            BankofamericaPaymentsResponse::ClientReferenceInformation(info) => info.status.clone(),
-            BankofamericaPaymentsResponse::ErrorInformation(_) => {
-                transformers::BankofamericaPaymentStatus::Failed
-            }
-        },
-        context: |_resource_common_data, request, _response| request.is_auto_capture(),
-    },
-    {
-        use transformers::BankofamericaPaymentStatus as S;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bankofamerica<T>,
+    flow: Authorize,
+    source: transformers::BankofamericaPaymentStatus,
+    context: bool,
+    mapping_status: |status, auto_capture| { use transformers::BankofamericaPaymentStatus as S;
         match status {
             S::Authorized | S::AuthorizedPendingReview => {
                 if auto_capture {
@@ -108,8 +93,18 @@ domain_types::impl_flow_status_mapping! {
             | S::ServerError => common_enums::AttemptStatus::Failure,
             S::PendingAuthentication => common_enums::AttemptStatus::AuthenticationPending,
             S::PendingReview | S::Challenge | S::Accepted => common_enums::AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: BankofamericaPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            BankofamericaPaymentsResponse::ClientReferenceInformation(info) => info.status.clone(),
+            BankofamericaPaymentsResponse::ErrorInformation(_) => {
+                transformers::BankofamericaPaymentStatus::Failed
+            }
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Bankofamerica<T>
@@ -210,25 +205,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // application status is absent. Exact runtime mapping needs FlowStatusReader.
 #[cfg(any())]
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Bankofamerica<T>,
-    flow:           RSync,
-    source:         transformers::BankofamericaRefundStatus,
-    context:        Option<String>,
-    params:         [status, ctx],
-    success: Succeeded => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request: RefundsData,
-        response: BankOfAmericaRefundResponseForRefund,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response
-            .error_information
-            .as_ref()
-            .and_then(|error| error.reason.clone()),
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bankofamerica<T>,
+    flow: RSync,
+    source: transformers::BankofamericaRefundStatus,
+    context: Option<String>,
+    mapping_status: |status, ctx| { use common_enums::RefundStatus;
         use transformers::BankofamericaRefundStatus as S;
         match status {
             S::Succeeded | S::Transmitted => RefundStatus::Success,
@@ -241,33 +223,28 @@ domain_types::impl_refund_flow_status_mapping! {
                     RefundStatus::Pending
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: BankOfAmericaRefundResponseForRefund,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .error_information
+            .as_ref()
+            .and_then(|error| error.reason.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Bankofamerica<T>
 {
 }
 domain_types::impl_refund_flow_status_mapping! {
-    generics:       [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:      Bankofamerica<T>,
-    flow:           Refund,
-    source:         transformers::BankofamericaRefundStatus,
-    context:        Option<String>,
-    params:         [status, ctx],
-    success: Succeeded => Success,
-    failure: Failed => Failure,
-    extractors: {
-        request: RefundsData,
-        response: BankOfAmericaRefundResponseForRefund,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, _request, response| response
-            .error_information
-            .as_ref()
-            .and_then(|error| error.reason.clone()),
-    },
-    {
-        use common_enums::RefundStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bankofamerica<T>,
+    flow: Refund,
+    source: transformers::BankofamericaRefundStatus,
+    context: Option<String>,
+    mapping_status: |status, ctx| { use common_enums::RefundStatus;
         use transformers::BankofamericaRefundStatus as S;
         match status {
             S::Succeeded | S::Transmitted => RefundStatus::Success,
@@ -280,8 +257,16 @@ domain_types::impl_refund_flow_status_mapping! {
                     RefundStatus::Pending
                 }
             }
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: BankOfAmericaRefundResponseForRefund,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .error_information
+            .as_ref()
+            .and_then(|error| error.reason.clone())) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Bankofamerica<T>

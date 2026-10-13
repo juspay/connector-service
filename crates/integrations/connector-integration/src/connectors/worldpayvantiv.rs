@@ -909,32 +909,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: Option<WorldpayvantivResponseCode>,
     context: transformers::WorldpayvantivPaymentFlow,
-    params: [code, flow],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: CnpOnlineResponse,
-        source: |response| response
-            .sale_response
-            .as_ref()
-            .map(|payment| payment.response)
-            .or_else(|| {
-                response
-                    .authorization_response
-                    .as_ref()
-                    .map(|payment| payment.response)
-            }),
-        context: |_request, response| {
-            if response.sale_response.is_some() {
-                transformers::WorldpayvantivPaymentFlow::Sale
-            } else {
-                transformers::WorldpayvantivPaymentFlow::Auth
-            }
-        },
-    },
-    {
-        match code {
+    mapping_status: |code, flow| { match code {
             None => AttemptStatus::Failure,
             Some(WorldpayvantivResponseCode::Approved)
             | Some(WorldpayvantivResponseCode::PartiallyApproved)
@@ -947,8 +922,28 @@ domain_types::impl_flow_status_mapping! {
                 transformers::WorldpayvantivPaymentFlow::Sale => AttemptStatus::Failure,
                 _ => AttemptStatus::AuthorizationFailed,
             },
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: CnpOnlineResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .sale_response
+            .as_ref()
+            .map(|payment| payment.response)
+            .or_else(|| {
+                response
+                    .authorization_response
+                    .as_ref()
+                    .map(|payment| payment.response)
+            })) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            if response.sale_response.is_some() {
+                transformers::WorldpayvantivPaymentFlow::Sale
+            } else {
+                transformers::WorldpayvantivPaymentFlow::Auth
+            }
+        }) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -957,20 +952,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: Option<WorldpayvantivResponseCode>,
     context: (),
-    params: [code, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: CnpOnlineResponse,
-        source: |response| response
-            .capture_response
-            .as_ref()
-            .map(|capture| capture.response),
-        context: |_request, _response| (),
-    },
-    {
-        match code {
+    mapping_status: |code, _ctx| { match code {
             None => AttemptStatus::CaptureFailed,
             Some(WorldpayvantivResponseCode::Approved)
             | Some(WorldpayvantivResponseCode::PartiallyApproved)
@@ -979,8 +961,16 @@ domain_types::impl_flow_status_mapping! {
                 AttemptStatus::CaptureInitiated
             }
             Some(_) => AttemptStatus::CaptureFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: CnpOnlineResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .capture_response
+            .as_ref()
+            .map(|capture| capture.response)) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -989,21 +979,7 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: Option<WorldpayvantivResponseCode>,
     context: (),
-    params: [code, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request: PaymentVoidData,
-        response: CnpOnlineResponse,
-        source: |response| response
-            .auth_reversal_response
-            .as_ref()
-            .map(|reversal| reversal.response)
-            .or_else(|| response.void_response.as_ref().map(|void| void.response)),
-        context: |_request, _response| (),
-    },
-    {
-        match code {
+    mapping_status: |code, _ctx| { match code {
             None => AttemptStatus::VoidFailed,
             Some(WorldpayvantivResponseCode::Approved)
             | Some(WorldpayvantivResponseCode::PartiallyApproved)
@@ -1012,8 +988,17 @@ domain_types::impl_flow_status_mapping! {
                 AttemptStatus::VoidInitiated
             }
             Some(_) => AttemptStatus::VoidFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: CnpOnlineResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .auth_reversal_response
+            .as_ref()
+            .map(|reversal| reversal.response)
+            .or_else(|| response.void_response.as_ref().map(|void| void.response))) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1022,20 +1007,7 @@ domain_types::impl_flow_status_mapping! {
     flow: VoidPC,
     source: Option<WorldpayvantivResponseCode>,
     context: (),
-    params: [code, _ctx],
-    success: _ => [VoidedPostCapture],
-    failure: none,
-    extractors: {
-        request: PaymentsCancelPostCaptureData,
-        response: CnpOnlineResponse,
-        source: |response| response
-            .void_response
-            .as_ref()
-            .map(|void| void.response),
-        context: |_request, _response| (),
-    },
-    {
-        match code {
+    mapping_status: |code, _ctx| { match code {
             None => AttemptStatus::VoidFailed,
             Some(WorldpayvantivResponseCode::Approved)
             | Some(WorldpayvantivResponseCode::PartiallyApproved)
@@ -1044,8 +1016,16 @@ domain_types::impl_flow_status_mapping! {
                 AttemptStatus::VoidPostCaptureInitiated
             }
             Some(_) => AttemptStatus::VoidFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsCancelPostCaptureData,
+        response: CnpOnlineResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .void_response
+            .as_ref()
+            .map(|void| void.response)) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1054,20 +1034,7 @@ domain_types::impl_flow_status_mapping! {
     flow: IncrementalAuthorization,
     source: Option<WorldpayvantivResponseCode>,
     context: (),
-    params: [code, _ctx],
-    success: _ => [Authorized],
-    failure: none,
-    extractors: {
-        request: PaymentsIncrementalAuthorizationData,
-        response: CnpOnlineResponse,
-        source: |response| response
-            .authorization_response
-            .as_ref()
-            .map(|auth| auth.response),
-        context: |_request, _response| (),
-    },
-    {
-        match code {
+    mapping_status: |code, _ctx| { match code {
             None => AttemptStatus::AuthorizationFailed,
             Some(WorldpayvantivResponseCode::Approved)
             | Some(WorldpayvantivResponseCode::PartiallyApproved)
@@ -1076,8 +1043,16 @@ domain_types::impl_flow_status_mapping! {
                 AttemptStatus::Authorizing
             }
             Some(_) => AttemptStatus::AuthorizationFailed,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsIncrementalAuthorizationData,
+        response: CnpOnlineResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .authorization_response
+            .as_ref()
+            .map(|auth| auth.response)) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -1086,26 +1061,21 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: Option<WorldpayvantivResponseCode>,
     context: (),
-    params: [code, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: CnpOnlineResponse,
-        source: |response| response
-            .credit_response
-            .as_ref()
-            .map(|credit| credit.response),
-        context: |_request, _response| (),
-    },
-    {
-        match code {
+    mapping_status: |code, _ctx| { match code {
             None => RefundStatus::Failure,
             Some(WorldpayvantivResponseCode::Approved)
             | Some(WorldpayvantivResponseCode::TransactionReceived) => RefundStatus::Pending,
             Some(_) => RefundStatus::Failure,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: CnpOnlineResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response
+            .credit_response
+            .as_ref()
+            .map(|credit| credit.response)) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -1114,38 +1084,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: transformers::PaymentStatus,
     context: Option<String>,
-    params: [payment_status, merchant_txn_id],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: VantivSyncResponse,
-        source: |response| match &response.payment_status {
-            transformers::PaymentStatus::NotYetProcessed => {
-                transformers::PaymentStatus::NotYetProcessed
-            }
-            transformers::PaymentStatus::ProcessedSuccessfully => {
-                transformers::PaymentStatus::ProcessedSuccessfully
-            }
-            transformers::PaymentStatus::TransactionDeclined => {
-                transformers::PaymentStatus::TransactionDeclined
-            }
-            transformers::PaymentStatus::StatusUnavailable => {
-                transformers::PaymentStatus::StatusUnavailable
-            }
-            transformers::PaymentStatus::PaymentStatusNotFound => {
-                transformers::PaymentStatus::PaymentStatusNotFound
-            }
-        },
-        context: |_request, response| {
-            response
-                .payment_detail
-                .as_ref()
-                .and_then(|detail| detail.merchant_txn_id.clone())
-        },
-    },
-    {
-        // Mirrors determine_attempt_status_for_psync: the flow leg is read off the
+    mapping_status: |payment_status, merchant_txn_id| { // Mirrors determine_attempt_status_for_psync: the flow leg is read off the
         // merchant transaction id; without it, the TryFrom's simple fallback applies.
         let flow_type = merchant_txn_id.map(|id| {
             let lower = id.to_lowercase();
@@ -1181,23 +1120,11 @@ domain_types::impl_flow_status_mapping! {
             // NotYetProcessed / StatusUnavailable / PaymentStatusNotFound retain the
             // current status in the TryFrom, which the mapping cannot observe.
             _ => AttemptStatus::Pending,
-        }
-    }
-}
-
-domain_types::impl_refund_flow_status_mapping! {
-    generics: [T: std::fmt::Debug + Sync + Send + 'static + Serialize + PaymentMethodDataTypes],
-    connector: Worldpayvantiv<T>,
-    flow: RSync,
-    source: transformers::PaymentStatus,
-    context: (),
-    params: [payment_status, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
+        } },
+    runtime: {
+        request: PaymentsSyncData,
         response: VantivSyncResponse,
-        source: |response| match &response.payment_status {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match &response.payment_status {
             transformers::PaymentStatus::NotYetProcessed => {
                 transformers::PaymentStatus::NotYetProcessed
             }
@@ -1213,17 +1140,50 @@ domain_types::impl_refund_flow_status_mapping! {
             transformers::PaymentStatus::PaymentStatusNotFound => {
                 transformers::PaymentStatus::PaymentStatusNotFound
             }
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .payment_detail
+                .as_ref()
+                .and_then(|detail| detail.merchant_txn_id.clone())
+        }) },
     },
-    {
-        match payment_status {
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: std::fmt::Debug + Sync + Send + 'static + Serialize + PaymentMethodDataTypes],
+    connector: Worldpayvantiv<T>,
+    flow: RSync,
+    source: transformers::PaymentStatus,
+    context: (),
+    mapping_status: |payment_status, _ctx| { match payment_status {
             transformers::PaymentStatus::ProcessedSuccessfully => RefundStatus::Success,
             transformers::PaymentStatus::TransactionDeclined => RefundStatus::Failure,
             // The TryFrom retains the current refund status for other statuses.
             _ => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: VantivSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match &response.payment_status {
+            transformers::PaymentStatus::NotYetProcessed => {
+                transformers::PaymentStatus::NotYetProcessed
+            }
+            transformers::PaymentStatus::ProcessedSuccessfully => {
+                transformers::PaymentStatus::ProcessedSuccessfully
+            }
+            transformers::PaymentStatus::TransactionDeclined => {
+                transformers::PaymentStatus::TransactionDeclined
+            }
+            transformers::PaymentStatus::StatusUnavailable => {
+                transformers::PaymentStatus::StatusUnavailable
+            }
+            transformers::PaymentStatus::PaymentStatusNotFound => {
+                transformers::PaymentStatus::PaymentStatusNotFound
+            }
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

@@ -145,21 +145,22 @@ macros::macro_connector_payout_implementation!(
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Cryptopay<T>,
-    flow:      Authorize,
-    source:    transformers::CryptopayPaymentStatus,
-    success:   Completed  => Charged,
-    failure:   Cancelled  => Failure,
-    extractors: {
+    flow: Authorize,
+    source: transformers::CryptopayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::CryptopayPaymentStatus::Completed => common_enums::AttemptStatus::Charged,
+            transformers::CryptopayPaymentStatus::Cancelled => common_enums::AttemptStatus::Failure,
+            transformers::CryptopayPaymentStatus::New => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::CryptopayPaymentStatus::Unresolved => common_enums::AttemptStatus::Unresolved,
+            transformers::CryptopayPaymentStatus::Refunded => common_enums::AttemptStatus::Unresolved,
+        }
+    },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: CryptopayPaymentsResponse,
-        source: |_resource_common_data, _request, response| Ok(response.data.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.data.status.clone()) },
     },
-    {
-        New        => AuthenticationPending,
-        Unresolved => Unresolved,
-        Refunded   => Unresolved,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Cryptopay<T>
@@ -168,21 +169,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Cryptopay<T>,
-    flow:      PSync,
-    source:    transformers::CryptopayPaymentStatus,
-    success:   Completed  => Charged,
-    failure:   Cancelled  => Failure,
-    extractors: {
+    flow: PSync,
+    source: transformers::CryptopayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::CryptopayPaymentStatus::Completed => common_enums::AttemptStatus::Charged,
+            transformers::CryptopayPaymentStatus::Cancelled => common_enums::AttemptStatus::Failure,
+            transformers::CryptopayPaymentStatus::New => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::CryptopayPaymentStatus::Unresolved => common_enums::AttemptStatus::Unresolved,
+            transformers::CryptopayPaymentStatus::Refunded => common_enums::AttemptStatus::Unresolved,
+        }
+    },
+    runtime: {
         request: PaymentsSyncData,
         response: CryptopayPaymentsSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.data.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.data.status.clone()) },
     },
-    {
-        New        => AuthenticationPending,
-        Unresolved => Unresolved,
-        Refunded   => Unresolved,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Cryptopay<T>

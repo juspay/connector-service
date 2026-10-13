@@ -618,22 +618,17 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: powertranz::PowertranzPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: PowertranzPaymentsResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        powertranz::get_payment_status(
+    mapping_status: |response, _ctx| { powertranz::get_payment_status(
             response.transaction_type,
             response.approved,
             &response.iso_response_code,
-        )
-    }
+        ) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PowertranzPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -642,22 +637,17 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: powertranz::PowertranzPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged, Voided, AutoRefunded],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: PowertranzPaymentsSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        powertranz::get_payment_status(
+    mapping_status: |response, _ctx| { powertranz::get_payment_status(
             response.transaction_type,
             response.approved,
             &response.iso_response_code,
-        )
-    }
+        ) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PowertranzPaymentsSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -666,22 +656,17 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: powertranz::PowertranzPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsCaptureData,
-        response: PowertranzCaptureResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        powertranz::get_payment_status(
+    mapping_status: |response, _ctx| { powertranz::get_payment_status(
             response.transaction_type,
             response.approved,
             &response.iso_response_code,
-        )
-    }
+        ) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PowertranzCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -690,22 +675,17 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: powertranz::PowertranzPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
-        request: PaymentVoidData,
-        response: PowertranzVoidResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        powertranz::get_payment_status(
+    mapping_status: |response, _ctx| { powertranz::get_payment_status(
             response.transaction_type,
             response.approved,
             &response.iso_response_code,
-        )
-    }
+        ) },
+    runtime: {
+        request: PaymentVoidData,
+        response: PowertranzVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -714,17 +694,7 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: powertranz::PowertranzPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: PowertranzSetupMandateResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let status = powertranz::get_payment_status(
+    mapping_status: |response, _ctx| { let status = powertranz::get_payment_status(
             response.transaction_type,
             response.approved,
             &response.iso_response_code,
@@ -735,8 +705,13 @@ domain_types::impl_flow_status_mapping! {
             AttemptStatus::Charged
         } else {
             status
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: PowertranzSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -745,22 +720,17 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: powertranz::PowertranzPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: PowertranzRepeatPaymentResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        powertranz::get_payment_status(
+    mapping_status: |response, _ctx| { powertranz::get_payment_status(
             response.transaction_type,
             response.approved,
             &response.iso_response_code,
-        )
-    }
+        ) },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: PowertranzRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -769,25 +739,20 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: powertranz::PowertranzRefundResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundsData,
-        response: PowertranzRefundResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let is_approved = response.approved.unwrap_or_else(|| {
+    mapping_status: |response, _ctx| { let is_approved = response.approved.unwrap_or_else(|| {
             powertranz::ISO_SUCCESS_CODES.contains(&response.iso_response_code.as_str())
         });
         if is_approved {
             RefundStatus::Success
         } else {
             RefundStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: RefundsData,
+        response: PowertranzRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -796,25 +761,20 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: powertranz::PowertranzRefundResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: PowertranzRSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let is_approved = response.approved.unwrap_or_else(|| {
+    mapping_status: |response, _ctx| { let is_approved = response.approved.unwrap_or_else(|| {
             powertranz::ISO_SUCCESS_CODES.contains(&response.iso_response_code.as_str())
         });
         if is_approved {
             RefundStatus::Success
         } else {
             RefundStatus::Failure
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: PowertranzRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

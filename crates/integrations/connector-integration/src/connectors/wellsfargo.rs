@@ -741,18 +741,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     source: WellsfargoPaymentsResponse,
     context: bool,
-    params: [response, capture],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |response, capture| { wellsfargo::map_attempt_status(&response.status, capture, &response.error_information) },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: WellsfargoPaymentsResponse,
-        source: |response| response.clone(),
-        context: |request, _response| matches!(request.capture_method, Some(common_enums::CaptureMethod::Automatic) | None),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(matches!(request.capture_method, Some(common_enums::CaptureMethod::Automatic) | None)) },
     },
-    {
-        wellsfargo::map_attempt_status(&response.status, capture, &response.error_information)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -761,17 +756,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: WellsfargoPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: WellsfargoPSyncResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        if response.status.is_none()
+    mapping_status: |response, _ctx| { if response.status.is_none()
             && response
                 .status_information
                 .as_ref()
@@ -781,8 +766,13 @@ domain_types::impl_flow_status_mapping! {
             AttemptStatus::Charged
         } else {
             wellsfargo::map_attempt_status(&response.status, false, &response.error_information)
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: WellsfargoPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -791,18 +781,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Capture,
     source: WellsfargoPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |response, _ctx| { wellsfargo::map_attempt_status(&response.status, true, &response.error_information) },
+    runtime: {
         request: PaymentsCaptureData,
         response: WellsfargoCaptureResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        wellsfargo::map_attempt_status(&response.status, true, &response.error_information)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -811,18 +796,13 @@ domain_types::impl_flow_status_mapping! {
     flow: Void,
     source: WellsfargoPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Voided],
-    failure: none,
-    extractors: {
+    mapping_status: |response, _ctx| { wellsfargo::map_attempt_status(&response.status, false, &response.error_information) },
+    runtime: {
         request: PaymentVoidData,
         response: WellsfargoVoidResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        wellsfargo::map_attempt_status(&response.status, false, &response.error_information)
-    }
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -831,23 +811,18 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: WellsfargoPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: SetupMandateRequestData<T>,
-        response: WellsfargoSetupMandateResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
-    },
-    {
-        let status = wellsfargo::map_attempt_status(&response.status, false, &response.error_information);
+    mapping_status: |response, _ctx| { let status = wellsfargo::map_attempt_status(&response.status, false, &response.error_information);
         if status == AttemptStatus::Authorized {
             AttemptStatus::Charged
         } else {
             status
-        }
-    }
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: WellsfargoSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -856,18 +831,13 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: Refund,
     source: WellsfargoPaymentsResponse,
     context: (),
-    params: [response, _ctx],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
+    mapping_status: |response, _ctx| { wellsfargo::get_refund_status(&response.status, &response.error_information) },
+    runtime: {
         request: RefundsData,
         response: WellsfargoRefundResponse,
-        source: |response| response.clone(),
-        context: |_request, _response| (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        wellsfargo::get_refund_status(&response.status, &response.error_information)
-    }
 }
 
 domain_types::impl_refund_flow_status_mapping! {
@@ -876,22 +846,17 @@ domain_types::impl_refund_flow_status_mapping! {
     flow: RSync,
     source: Option<wellsfargo::WellsfargoRefundStatus>,
     context: Option<wellsfargo::WellsfargoErrorInformation>,
-    params: [status, error_information],
-    success: _ => [Success],
-    failure: none,
-    extractors: {
-        request: RefundSyncData,
-        response: WellsfargoRefundSyncResponse,
-        source: |response| response.application_information.as_ref().and_then(|app_info| app_info.status.clone()),
-        context: |_request, response| response.error_information.clone(),
-    },
-    {
-        match status {
+    mapping_status: |status, error_information| { match status {
             Some(refund_status) => RefundStatus::from(refund_status),
             None if error_information.is_some() => RefundStatus::Failure,
             None => RefundStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: WellsfargoRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.application_information.as_ref().and_then(|app_info| app_info.status.clone())) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.error_information.clone()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

@@ -77,22 +77,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Mirrors `get_attempt_status_cap`: `Authorized` maps to `Charged` when the
 // capture method is Automatic/absent (auto-capture), else `Authorized`.
 domain_types::impl_flow_status_mapping! {
-    generics:        [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    connector:       Checkout<T>,
-    flow:            Authorize,
-    source:          transformers::CheckoutPaymentStatus,
-    context:         Option<common_enums::CaptureMethod>,
-    params:          [status, capture_method],
-    success: Captured => [Charged, Authorized],
-    failure: Declined => Failure,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: PaymentsResponse,
-        source: |_resource_common_data, _request, response| response.status.clone(),
-        context: |_resource_common_data, request, _response| request.capture_method,
-    },
-    {
-        use common_enums::AttemptStatus;
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Checkout<T>,
+    flow: Authorize,
+    source: transformers::CheckoutPaymentStatus,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |status, capture_method| { use common_enums::AttemptStatus;
         use transformers::CheckoutPaymentStatus;
         match status {
             CheckoutPaymentStatus::Authorized => {
@@ -115,8 +105,13 @@ domain_types::impl_flow_status_mapping! {
             CheckoutPaymentStatus::Pending => AttemptStatus::AuthenticationPending,
             CheckoutPaymentStatus::RetryScheduled => AttemptStatus::Pending,
             CheckoutPaymentStatus::Voided => AttemptStatus::Voided,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Checkout<T>

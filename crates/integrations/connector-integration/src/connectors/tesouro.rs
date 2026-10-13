@@ -409,30 +409,10 @@ domain_types::impl_flow_status_mapping! {
     flow: Authorize,
     // Outer Option: `None` when Tesouro returned a top-level GraphQL error envelope
     // (a decline). Inner Option: `None` when the authorization response carries no
-    // `__typename` yet (pending).
+    // `__typename` yet (pending).,
     source: Option<Option<tesouro::AuthorizeTransactionResponseType>>,
     context: Option<common_enums::CaptureMethod>,
-    params: [authorization_outcome, capture_method],
-    success: _ => [Authorized, Charged],
-    failure: none,
-    extractors: {
-        request: PaymentsAuthorizeData<T>,
-        response: TesouroAuthorizeResponse,
-        source: |response| match response {
-            tesouro::TesouroApiResponse::Success(success) => Some(
-                success
-                    .data
-                    .authorize_customer_initiated_transaction
-                    .authorization_response
-                    .as_ref()
-                    .and_then(|auth_response| auth_response.type_name.clone()),
-            ),
-            tesouro::TesouroApiResponse::Error(_) => None,
-        },
-        context: |request, _response| request.capture_method,
-    },
-    {
-        let auto_capture = !crate::utils::is_manual_capture(capture_method);
+    mapping_status: |authorization_outcome, capture_method| { let auto_capture = !crate::utils::is_manual_capture(capture_method);
         match authorization_outcome {
             Some(Some(tesouro::AuthorizeTransactionResponseType::AuthorizationApproval)) => {
                 if auto_capture {
@@ -450,8 +430,23 @@ domain_types::impl_flow_status_mapping! {
                 }
             }
             Some(None) => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: TesouroAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            tesouro::TesouroApiResponse::Success(success) => Some(
+                success
+                    .data
+                    .authorize_customer_initiated_transaction
+                    .authorization_response
+                    .as_ref()
+                    .and_then(|auth_response| auth_response.type_name.clone()),
+            ),
+            tesouro::TesouroApiResponse::Error(_) => None,
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -460,27 +455,7 @@ domain_types::impl_flow_status_mapping! {
     flow: RepeatPayment,
     source: Option<Option<tesouro::AuthorizeTransactionResponseType>>,
     context: Option<common_enums::CaptureMethod>,
-    params: [authorization_outcome, capture_method],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
-        request: RepeatPaymentData<T>,
-        response: TesouroRepeatPaymentResponse,
-        source: |response| match response {
-            tesouro::TesouroApiResponse::Success(success) => Some(
-                success
-                    .data
-                    .authorize_customer_initiated_transaction
-                    .authorization_response
-                    .as_ref()
-                    .and_then(|auth_response| auth_response.type_name.clone()),
-            ),
-            tesouro::TesouroApiResponse::Error(_) => None,
-        },
-        context: |request, _response| request.capture_method,
-    },
-    {
-        let auto_capture = !crate::utils::is_manual_capture(capture_method);
+    mapping_status: |authorization_outcome, capture_method| { let auto_capture = !crate::utils::is_manual_capture(capture_method);
         match authorization_outcome {
             Some(Some(tesouro::AuthorizeTransactionResponseType::AuthorizationApproval)) => {
                 if auto_capture {
@@ -498,8 +473,23 @@ domain_types::impl_flow_status_mapping! {
                 }
             }
             Some(None) => AttemptStatus::Pending,
-        }
-    }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: TesouroRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            tesouro::TesouroApiResponse::Success(success) => Some(
+                success
+                    .data
+                    .authorize_customer_initiated_transaction
+                    .authorization_response
+                    .as_ref()
+                    .and_then(|auth_response| auth_response.type_name.clone()),
+            ),
+            tesouro::TesouroApiResponse::Error(_) => None,
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -508,22 +498,7 @@ domain_types::impl_flow_status_mapping! {
     flow: PSync,
     source: Option<tesouro::TesouroSyncStatus>,
     context: Option<common_enums::CaptureMethod>,
-    params: [status, capture_method],
-    success: _ => [Authorized, Charged, Voided],
-    failure: none,
-    extractors: {
-        request: PaymentsSyncData,
-        response: TesouroSyncResponse,
-        source: |response| match response {
-            tesouro::TesouroApiResponse::Success(success) => {
-                Some(success.data.payment_transaction.typename.clone())
-            }
-            tesouro::TesouroApiResponse::Error(_) => None,
-        },
-        context: |request, _response| request.capture_method,
-    },
-    {
-        let auto_capture = !crate::utils::is_manual_capture(capture_method);
+    mapping_status: |status, capture_method| { let auto_capture = !crate::utils::is_manual_capture(capture_method);
         match status {
             Some(tesouro::TesouroSyncStatus::AcceptedSale)
             | Some(tesouro::TesouroSyncStatus::ApprovedCapture)
@@ -554,8 +529,18 @@ domain_types::impl_flow_status_mapping! {
             Some(tesouro::TesouroSyncStatus::Authorization) => AttemptStatus::Authorizing,
             Some(tesouro::TesouroSyncStatus::Capture) => AttemptStatus::CaptureInitiated,
             Some(tesouro::TesouroSyncStatus::Reversal) => AttemptStatus::VoidInitiated,
-        }
-    }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: TesouroSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            tesouro::TesouroApiResponse::Success(success) => {
+                Some(success.data.payment_transaction.typename.clone())
+            }
+            tesouro::TesouroApiResponse::Error(_) => None,
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
 }
 
 domain_types::impl_flow_status_mapping! {
@@ -564,29 +549,24 @@ domain_types::impl_flow_status_mapping! {
     flow: SetupMandate,
     source: bool,
     context: (),
-    params: [succeeded, _ctx],
-    success: _ => [Charged],
-    failure: none,
-    extractors: {
+    mapping_status: |succeeded, _ctx| { if succeeded {
+            AttemptStatus::Charged
+        } else {
+            AttemptStatus::Failure
+        } },
+    runtime: {
         request: SetupMandateRequestData<T>,
         response: TesouroSetupMandateResponse,
-        source: |response| match response {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
             tesouro::TesouroApiResponse::Success(success) => success
                 .data
                 .verify_account
                 .verify_account_response
                 .is_some(),
             tesouro::TesouroApiResponse::Error(_) => false,
-        },
-        context: |_request, _response| (),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
     },
-    {
-        if succeeded {
-            AttemptStatus::Charged
-        } else {
-            AttemptStatus::Failure
-        }
-    }
 }
 
 // ===== Remaining flows: not implemented =====

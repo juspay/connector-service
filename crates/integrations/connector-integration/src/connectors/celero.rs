@@ -55,14 +55,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Celero<T>,
-    flow:      Authorize,
-    source:    celero::CeleroTransactionStatus,
-    success:   Settled           => Charged,
-    failure:   Declined          => Failure,
-    extractors: {
+    flow: Authorize,
+    source: celero::CeleroTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            celero::CeleroTransactionStatus::Settled => common_enums::AttemptStatus::Charged,
+            celero::CeleroTransactionStatus::Declined => common_enums::AttemptStatus::Failure,
+            celero::CeleroTransactionStatus::Approved => common_enums::AttemptStatus::Authorized,
+            celero::CeleroTransactionStatus::Error => common_enums::AttemptStatus::Failure,
+            celero::CeleroTransactionStatus::Pending => common_enums::AttemptStatus::Pending,
+            celero::CeleroTransactionStatus::PendingSettlement => common_enums::AttemptStatus::Pending,
+            celero::CeleroTransactionStatus::Voided => common_enums::AttemptStatus::Voided,
+            celero::CeleroTransactionStatus::Reversed => common_enums::AttemptStatus::Voided,
+        }
+    },
+    runtime: {
         request: PaymentsAuthorizeData<T>,
         response: CeleroPaymentsResponse,
-        source: |_resource_common_data, _request, response| Ok(match response.status {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response.status {
             celero::CeleroResponseStatus::Success => response.data.as_ref().map_or(
                 celero::CeleroTransactionStatus::Error,
                 |data| match data.response {
@@ -70,17 +80,8 @@ domain_types::impl_flow_status_mapping! {
                 },
             ),
             celero::CeleroResponseStatus::Error => celero::CeleroTransactionStatus::Error,
-        }),
-        context: |_resource_common_data, _request, _response | (),
+        }) },
     },
-    {
-        Approved          => Authorized,
-        Error             => Failure,
-        Pending           => Pending,
-        PendingSettlement => Pending,
-        Voided            => Voided,
-        Reversed          => Voided,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Celero<T>
@@ -90,14 +91,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Celero<T>,
-    flow:      PSync,
-    source:    celero::CeleroTransactionStatus,
-    success:   Settled           => Charged,
-    failure:   Declined          => Failure,
-    extractors: {
+    flow: PSync,
+    source: celero::CeleroTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            celero::CeleroTransactionStatus::Settled => common_enums::AttemptStatus::Charged,
+            celero::CeleroTransactionStatus::Declined => common_enums::AttemptStatus::Failure,
+            celero::CeleroTransactionStatus::Approved => common_enums::AttemptStatus::Authorized,
+            celero::CeleroTransactionStatus::Error => common_enums::AttemptStatus::Failure,
+            celero::CeleroTransactionStatus::Pending => common_enums::AttemptStatus::Pending,
+            celero::CeleroTransactionStatus::PendingSettlement => common_enums::AttemptStatus::Pending,
+            celero::CeleroTransactionStatus::Voided => common_enums::AttemptStatus::Voided,
+            celero::CeleroTransactionStatus::Reversed => common_enums::AttemptStatus::Voided,
+        }
+    },
+    runtime: {
         request: PaymentsSyncData,
         response: CeleroSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(match response.status {
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response.status {
             celero::CeleroResponseStatus::Success => response
                 .data
                 .first()
@@ -105,17 +116,8 @@ domain_types::impl_flow_status_mapping! {
                     transaction.status
                 }),
             celero::CeleroResponseStatus::Error => celero::CeleroTransactionStatus::Error,
-        }),
-        context: |_resource_common_data, _request, _response | (),
+        }) },
     },
-    {
-        Approved          => Authorized,
-        Error             => Failure,
-        Pending           => Pending,
-        PendingSettlement => Pending,
-        Voided            => Voided,
-        Reversed          => Voided,
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Celero<T>
@@ -125,18 +127,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Celero<T>,
-    flow:      Void,
-    source:    celero::CeleroResponseStatus,
-    success:   Success           => Voided,
-    failure:   Error             => VoidFailed,
-    extractors: {
+    flow: Void,
+    source: celero::CeleroResponseStatus,
+    mapping_status: |status| {
+        match status {
+            celero::CeleroResponseStatus::Success => common_enums::AttemptStatus::Voided,
+            celero::CeleroResponseStatus::Error => common_enums::AttemptStatus::VoidFailed,
+        }
+    },
+    runtime: {
         request: PaymentVoidData,
         response: CeleroVoidResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Celero<T>
@@ -146,18 +149,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Celero<T>,
-    flow:      Capture,
-    source:    celero::CeleroResponseStatus,
-    success:   Success           => Charged,
-    failure:   Error             => Failure,
-    extractors: {
+    flow: Capture,
+    source: celero::CeleroResponseStatus,
+    mapping_status: |status| {
+        match status {
+            celero::CeleroResponseStatus::Success => common_enums::AttemptStatus::Charged,
+            celero::CeleroResponseStatus::Error => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
         request: PaymentsCaptureData,
         response: CeleroCaptureResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {
-    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Celero<T>
@@ -174,17 +178,19 @@ macros::macro_connector_payout_implementation!(
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Celero<T>,
-    flow:      Refund,
-    source:    celero::CeleroResponseStatus,
-    success:   Success => Success,
-    failure:   Error   => Failure,
-    extractors: {
+    flow: Refund,
+    source: celero::CeleroResponseStatus,
+    mapping_status: |status| {
+        match status {
+            celero::CeleroResponseStatus::Success => common_enums::RefundStatus::Success,
+            celero::CeleroResponseStatus::Error => common_enums::RefundStatus::Failure,
+        }
+    },
+    runtime: {
         request: RefundsData,
         response: CeleroRefundResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {}
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Celero<T>
@@ -194,17 +200,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 domain_types::impl_refund_flow_status_mapping! {
     generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     connector: Celero<T>,
-    flow:      RSync,
-    source:    celero::CeleroResponseStatus,
-    success:   Success => Success,
-    failure:   Error   => Failure,
-    extractors: {
+    flow: RSync,
+    source: celero::CeleroResponseStatus,
+    mapping_status: |status| {
+        match status {
+            celero::CeleroResponseStatus::Success => common_enums::RefundStatus::Success,
+            celero::CeleroResponseStatus::Error => common_enums::RefundStatus::Failure,
+        }
+    },
+    runtime: {
         request: RefundSyncData,
         response: CeleroRefundSyncResponse,
-        source: |_resource_common_data, _request, response| Ok(response.status.clone()),
-        context: |_resource_common_data, _request, _response | (),
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
     },
-    {}
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Celero<T>
