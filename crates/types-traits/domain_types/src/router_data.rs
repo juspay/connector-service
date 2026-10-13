@@ -1005,6 +1005,22 @@ pub enum ConnectorSpecificConfig {
         api_version: Option<String>,
         base_url: Option<String>,
     },
+    ClearSaleBR {
+        /// ClearSale account username, sent as `name` on `POST /v1/authenticate`.
+        /// Carried under this name in the RiskManagementAccount `accountDetailsJson`.
+        username: Secret<String>,
+        /// ClearSale account password, sent as `password` on `POST /v1/authenticate`.
+        password: Secret<String>,
+        /// Customer type for the order `b2bB2c` field ("b2b"/"b2c");
+        /// merchant-specific, stored on the RiskManagementAccount.
+        b2b_b2c: Option<String>,
+        /// ClearSale product id for the order `product` field, when the
+        /// merchant runs a product other than the connector's default
+        /// (Total Garantido). A per-request `connector_feature_data.product`
+        /// overrides this.
+        product: Option<i32>,
+        base_url: Option<String>,
+    },
     Grabpay {
         partner_id: Secret<String>,
         partner_secret: Secret<String>,
@@ -1517,6 +1533,7 @@ impl ConnectorSpecificConfig {
             Tamara { api_key },
             Kount { api_key },
             Nsure { api_key },
+            ClearSaleBR { username, password },
             Hyperswitch { api_key },
             Grabpay {
                 partner_id,
@@ -2054,6 +2071,7 @@ impl ConnectorSpecificConfig {
                 Tamara { api_key },
                 Kount { api_key },
                 Nsure { api_key },
+                ClearSaleBR { username, password },
                 Hyperswitch { api_key },
                 Grabpay {
                     partner_id,
@@ -2753,6 +2771,13 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 app_id: nsure.app_id,
                 api_version: nsure.api_version,
                 base_url: nsure.base_url,
+            }),
+            AuthType::Clearsalebr(clearsalebr) => Ok(Self::ClearSaleBR {
+                username: clearsalebr.username.ok_or_else(err)?,
+                password: clearsalebr.password.ok_or_else(err)?,
+                b2b_b2c: clearsalebr.b2b_b2c,
+                product: clearsalebr.product,
+                base_url: clearsalebr.base_url,
             }),
             AuthType::Hyperswitch(hyperswitch) => Ok(Self::Hyperswitch {
                 api_key: hyperswitch.api_key.ok_or_else(err)?,
@@ -4382,6 +4407,19 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                         api_key: api_key.clone(),
                         app_id: None,
                         api_version: None,
+                        base_url: None,
+                    }),
+                    _ => Err(err().into()),
+                },
+                connector_types::FrmConnectorEnum::ClearsaleBR => match auth {
+                    // ClearSale logs in with a name + password pair. The legacy
+                    // BodyKey creds.json shape carries it as api_key/key1; map
+                    // those onto the connector's own username/password fields.
+                    ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::ClearSaleBR {
+                        username: api_key.clone(),
+                        password: key1.clone(),
+                        b2b_b2c: None,
+                        product: None,
                         base_url: None,
                     }),
                     _ => Err(err().into()),

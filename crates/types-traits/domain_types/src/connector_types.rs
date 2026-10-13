@@ -217,6 +217,11 @@ pub enum SurchargeConnectorEnum {
 pub enum FrmConnectorEnum {
     Kount,
     Nsure,
+    // Pinned explicitly: the header `x-frm-connector: clearsalebr` is parsed
+    // via this enum's `from_str`, and heck's snake_case would otherwise split
+    // the trailing acronym ("clearsale_frmbr").
+    #[strum(serialize = "clearsalebr")]
+    ClearsaleBR,
 }
 
 /// Enum representing connectors that support authenticator flows (account linking, identity verification)
@@ -344,6 +349,7 @@ impl ForeignTryFrom<AuthType> for FrmConnectorEnum {
         match config {
             AuthType::Kount(_) => Ok(Self::Kount),
             AuthType::Nsure(_) => Ok(Self::Nsure),
+            AuthType::Clearsalebr(_) => Ok(Self::ClearsaleBR),
             _ => Err(error_stack::Report::new(
                 IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -6040,6 +6046,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Affirm(_) => Ok(Self::Payment(ConnectorEnum::Affirm)),
             AuthType::Plaid(_) => Ok(Self::Authenticator(AuthenticatorConnectorEnum::Plaid)),
             AuthType::Nsure(_) => Ok(Self::Frm(FrmConnectorEnum::Nsure)),
+            AuthType::Clearsalebr(_) => Ok(Self::Frm(FrmConnectorEnum::ClearsaleBR)),
             AuthType::Givepayments(_) => Ok(Self::Payment(ConnectorEnum::Givepayments)),
             AuthType::Santander(_) => Ok(Self::Payout(PayoutConnectorEnum::Santander)),
         }

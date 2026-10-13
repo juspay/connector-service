@@ -1346,6 +1346,8 @@ impl
             }),
             merchant_details: item.merchant_details.clone(),
             mandate_details: item.mandate_details.clone(),
+            identity_credentials: item.identity_credentials.clone(),
+            merchant_transient_info: item.merchant_transient_info.clone(),
         }
     }
 }

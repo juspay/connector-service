@@ -5,13 +5,14 @@ use crate::{
     },
     mandates::MandateAmountData,
     payment_address::{OrderDetailsWithAmount, PaymentAddress},
-    payment_method_data::{DefaultPCIHolder, PaymentMethodData},
+    payment_method_data::{DefaultPCIHolder, IdentityCredentials, PaymentMethodData},
     router_request_types::BrowserInformation,
     types::Connectors,
 };
 use common_enums::{AttemptStatus, FrmDecision, PaymentMethodType};
 use common_utils::types::Money;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
+use serde::Deserialize;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -97,6 +98,14 @@ pub struct PreRiskCheckRequest {
     pub merchant_details: Option<MerchantDetails>,
     /// Payment method sub-type (e.g. `Card`, `GooglePay`, `UpiCollect`) for risk scoring.
     pub payment_method_type: Option<PaymentMethodType>,
+    /// Payer/recipient identity documents (CPF/CNPJ/…) forwarded from euler /
+    /// Hyperswitch for connectors that key risk on them.
+    pub identity_credentials: Option<IdentityCredentials>,
+    /// Merchant-supplied transient data for the order (JSON), forwarded
+    /// verbatim from euler's Redis-cached `merchant_transient_info` (keyed by
+    /// merchant_id + order_id). Connectors parse the blocks they know — e.g.
+    /// ClearSaleBR reads the travel/hospitality `travel_data` block.
+    pub merchant_transient_info: Option<Secret<String>>,
 }
 
 /// Response data for pre-risk check
@@ -195,4 +204,159 @@ pub struct FrmRefundProcessedResponse {
 #[derive(Debug, Clone)]
 pub struct FrmChargebackReceivedResponse {
     pub status_code: u16,
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Generic FRM request metadata
+//
+// Connectors across FRM providers (ClearSale, Kount, nSure, …) all receive a
+// JSON blob on `PreRiskCheckRequest::metadata` / `PostRiskCheckRequest::
+// metadata`. The merchant-caller (euler-api-txns / Hyperswitch) fills it with
+// a provider-agnostic shape — session id, free-form custom fields, and the
+// travel/hospitality blocks (passengers, travel segments, accommodations) used
+// by transport and travel merchants. Decoding it once here keeps each
+// connector's transformers free of a duplicated, near-identical JSON parse.
+// ────────────────────────────────────────────────────────────────────────────
+
+/// The shared FRM request-metadata carrier (euler `UcsFrmMetadata`). All
+/// fields are optional; a connector reads only the blocks it maps onto its own
+/// wire contract and ignores the rest.
+///
+/// Serialized camelCase on the wire to match euler's JSON encoding of
+/// `UTCTime`/`Day` as ISO-8601 strings and the Haskell field names. euler's
+/// `UcsFrmMetadata` actually encodes its keys in snake_case (`camelTo2 '_'`
+/// on the Haskell record fields), so every key also carries its snake_case
+/// spelling as an `alias` — callers sending either casing decode the same.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrmMetadata {
+    /// Merchant's own order identifier (free-form, not the UCS reference).
+    #[serde(default, alias = "merchant_order_id")]
+    pub merchant_order_id: Option<String>,
+    /// End-user IP as supplied by the merchant.
+    #[serde(default, alias = "user_ip")]
+    pub user_ip: Option<String>,
+    /// Device/session id from the provider's device-fingerprint SDK.
+    #[serde(default, rename = "sessionId", alias = "session_id")]
+    pub session_id: Option<String>,
+    /// Free-form merchant key/value pairs; providers map a subset onto their
+    /// own custom-field contract.
+    #[serde(default, alias = "custom_fields")]
+    pub custom_fields: Option<std::collections::HashMap<String, serde_json::Value>>,
+    /// Travel/identity passengers (per-seat travelers for transport merchants).
+    #[serde(default)]
+    pub passengers: Option<Vec<FrmPassenger>>,
+    /// Travel legs (euler `travelSegments`).
+    #[serde(default, alias = "travel_segments")]
+    pub travel_segments: Option<Vec<FrmTravelSegment>>,
+    /// Lodging blocks (euler `accommodations`).
+    #[serde(default)]
+    pub accommodations: Option<Vec<FrmAccommodation>>,
+}
+
+impl FrmMetadata {
+    /// Decode the metadata blob carried on an FRM risk-check request. A
+    /// missing or malformed blob yields the default (all-empty) metadata so
+    /// the connector never has to special-case "no metadata".
+    pub fn parse(raw: Option<&Secret<String>>) -> Self {
+        raw.and_then(|data| serde_json::from_str(data.peek()).ok())
+            .unwrap_or_default()
+    }
+
+    /// A string-valued custom field by key; nested/non-string values are
+    /// ignored. Convenience over digging into `custom_fields` by hand.
+    pub fn custom_field_str(&self, key: &str) -> Option<String> {
+        self.custom_fields.as_ref().and_then(|fields| {
+            fields
+                .get(key)
+                .and_then(|value| value.as_str())
+                .map(str::to_owned)
+        })
+    }
+
+    /// The raw custom-fields map, when present — for providers (e.g. Kount)
+    /// that forward the whole map with their own key/value validation.
+    pub fn custom_fields_map(&self) -> Option<&std::collections::HashMap<String, serde_json::Value>> {
+        self.custom_fields.as_ref()
+    }
+}
+
+/// FRM passenger (euler `UcsFrmPassenger`). Generic identity/loyalty shape;
+/// each FRM provider projects it onto its own passenger contract (ClearSale
+/// `passengers[]`, …).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrmPassenger {
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub last_name: Option<String>,
+    #[serde(default)]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub phone: Option<String>,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub nationality: Option<String>,
+    #[serde(default)]
+    pub loyalty_program_name: Option<String>,
+    #[serde(default)]
+    pub loyalty_program_number: Option<String>,
+    #[serde(default)]
+    pub identification_type: Option<String>,
+    #[serde(default)]
+    pub identification_number: Option<String>,
+    #[serde(default)]
+    pub gender: Option<String>,
+    /// RFC 3339 datetime string (euler `UTCTime`).
+    #[serde(default)]
+    pub birthdate: Option<String>,
+}
+
+/// FRM travel leg (euler `UcsFrmTravelSegment`).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrmTravelSegment {
+    #[serde(default)]
+    pub carrier_code: Option<String>,
+    #[serde(default)]
+    pub flight_number: Option<String>,
+    #[serde(default)]
+    pub departure_date: Option<String>,
+    #[serde(default)]
+    pub cabin_class: Option<String>,
+    #[serde(default)]
+    pub origin_code: Option<String>,
+    #[serde(default)]
+    pub destination_code: Option<String>,
+    #[serde(default)]
+    pub boarding_date_time: Option<String>,
+    #[serde(default)]
+    pub arrival_date_time: Option<String>,
+    #[serde(default)]
+    pub fare_class: Option<String>,
+}
+
+/// FRM lodging block (euler `UcsFrmAccommodation`).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrmAccommodation {
+    #[serde(default)]
+    pub property_name: Option<String>,
+    #[serde(default)]
+    pub city: Option<String>,
+    #[serde(default)]
+    pub state: Option<String>,
+    #[serde(default)]
+    pub country: Option<String>,
+    #[serde(default)]
+    pub reservation_date_time: Option<String>,
+    #[serde(default)]
+    pub reservation_expiry_date_time: Option<String>,
+    /// `Day` (`YYYY-MM-DD`) on the wire.
+    #[serde(default)]
+    pub check_in_date: Option<String>,
+    #[serde(default)]
+    pub check_out_date: Option<String>,
 }

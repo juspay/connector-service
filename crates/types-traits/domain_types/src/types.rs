@@ -425,6 +425,7 @@ pub struct Connectors {
     pub affirm: ConnectorParams,
     pub kount: ConnectorParams,
     pub nsure: ConnectorParams,
+    pub clearsalebr: ConnectorParams,
     pub plaid: ConnectorParams,
     pub givepayments: ConnectorParams,
     pub grabpay: ConnectorParams,
@@ -919,6 +920,7 @@ impl Connectors {
         match connector {
             FrmConnectorEnum::Kount => patched.kount.apply(params_patch),
             FrmConnectorEnum::Nsure => patched.nsure.apply(params_patch),
+            FrmConnectorEnum::ClearsaleBR => patched.clearsalebr.apply(params_patch),
         }
         Ok(patched)
     }
@@ -4372,12 +4374,25 @@ impl TryFrom<grpc_payment_types::DocumentKind> for crate::payment_method_data::D
     }
 }
 
+/// Domain -> proto mapping for the document kind (response-side). `Other` maps
+/// to the proto's `OTHER` catch-all; the proto's `UNSPECIFIED` is never produced.
+impl From<crate::payment_method_data::DocumentKind> for grpc_payment_types::DocumentKind {
+    fn from(value: crate::payment_method_data::DocumentKind) -> Self {
+        match value {
+            crate::payment_method_data::DocumentKind::Cpf => Self::Cpf,
+            crate::payment_method_data::DocumentKind::Cnpj => Self::Cnpj,
+            crate::payment_method_data::DocumentKind::Psn => Self::Psn,
+            crate::payment_method_data::DocumentKind::Other => Self::Other,
+        }
+    }
+}
+
 /// Builds the optional domain `CustomerDocumentDetails` from the gRPC message:
 /// convert the document kind first, then make the whole thing optional. Returns
 /// `None` when the document type is `UNSPECIFIED` or the document number is missing
 /// — i.e. there is no usable customer document. Shared by the Authorize,
 /// SetupMandate (CIT) and RepeatPayment (MIT) request conversions.
-fn map_customer_document_details(
+pub(crate) fn map_customer_document_details(
     doc: &grpc_payment_types::CustomerDocumentDetails,
 ) -> Option<CustomerDocumentDetails> {
     crate::payment_method_data::DocumentKind::try_from(doc.document_type())
@@ -4387,6 +4402,26 @@ fn map_customer_document_details(
             document_type,
             document_number,
         })
+}
+
+// ---- proto IdentityCredentials -> domain type (all fields optional) ----
+
+impl ForeignFrom<grpc_payment_types::IdentityCredentials>
+    for crate::payment_method_data::IdentityCredentials
+{
+    fn foreign_from(value: grpc_payment_types::IdentityCredentials) -> Self {
+        Self {
+            cpf: value.cpf,
+            cnpj: value.cnpj,
+            pix_key: value.pix_key,
+            document_type: value.document_type,
+            identity: value.identity,
+            account_id: value.account_id,
+            password: value.password,
+            customer_cpf: value.customer_cpf,
+            nik: value.nik,
+        }
+    }
 }
 
 // ---- proto DomainData / AirlineData -> domain types (all fields optional) ----

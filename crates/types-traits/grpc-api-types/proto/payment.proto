@@ -922,6 +922,7 @@ enum Connector {
   MERCHANTE = 150;
   ELAVON_PG = 151;
   GLOBALPAYMENTS_REALEX = 152;
+  CLEARSALEBR = 153;
 }
 
 // Payment method types
@@ -1171,6 +1172,32 @@ message OrderDetailsWithAmount {
   optional string discount_type = 22;
   // The URL of the product
   optional string product_link = 23;
+}
+
+// Document-bearing identity payload the caller (Euler / Hyperswitch) sends with a
+// transaction — a superset covering Brazilian CPF/CNPJ/pix and analogous types
+// elsewhere (Indonesian NIK, generic identity string, etc.). SecretString where
+// the value is credentialled (document numbers, passwords).
+message IdentityCredentials {
+  // Brazilian individual taxpayer ID
+  optional SecretString cpf = 1;
+  // Brazilian company taxpayer ID
+  optional SecretString cnpj = 2;
+  // PIX instant-payment identifier
+  optional SecretString pix_key = 3;
+  // Free-form document type hint (e.g. "CPF", "CNPJ", "PASSPORT")
+  optional string document_type = 4;
+  // Generic identity string for non-BR/ID schemes
+  optional SecretString identity = 5;
+  // Platform-drawn account/customer reference used by some fraud engines
+  optional string account_id = 6;
+  // Optional password/PIN some risk/locker APIs take inline
+  optional SecretString password = 7;
+  // Payer/recipient counterpart CPF used by Brazilian connectors
+  // (e.g. ClearSale billing.primaryDocument vs shipping.primaryDocument)
+  optional SecretString customer_cpf = 8;
+  // Indonesian national identity card number
+  optional SecretString nik = 9;
 }
 
 // Access token details
@@ -5841,6 +5868,23 @@ message NsureConfig {
   optional string base_url = 50;
 }
 
+message ClearsaleBRConfig {
+  // ClearSale account username, sent as `name` on POST /v1/authenticate.
+  // This is the RiskManagementAccount accountDetailsJson field name.
+  SecretString username = 1;
+  // ClearSale account password, sent as `password` on POST /v1/authenticate.
+  SecretString password = 2;
+  // Customer type sent as the order `b2bB2c` field: "b2b" or "b2c".
+  // Gateway/merchant-specific, so it lives in the RiskManagementAccount
+  // account details rather than per-transaction data.
+  optional string b2b_b2c = 3;
+  // ClearSale product id for the order `product` field, when the merchant runs
+  // a product other than the connector's default (Total Garantido). A
+  // per-request `connector_feature_data.product` overrides this.
+  optional int32 product = 4;
+  optional string base_url = 50;
+}
+
 message HyperswitchConfig {
   SecretString api_key = 1;
   optional string base_url = 50;
@@ -6377,6 +6421,8 @@ message ConnectorSpecificConfig {
     ElavonPgConfig elavon_pg = 162;
     // GLOBALPAYMENTS_REALEX = 152
     GlobalpaymentsRealexConfig globalpayments_realex = 163;
+    // CLEARSALEBR = 153
+    ClearsaleBRConfig clearsalebr = 164;
   }
 }
 

@@ -64,6 +64,17 @@ message FrmServicePreRiskCheckRequest {
 
   // Merchant details (id + MCC) for risk scoring.
   optional MerchantDetails merchant_details = 13;
+
+  // Payer/recipient identity documents (e.g. CPF/CNPJ for Brazilian FRM),
+  // forwarded from euler / Hyperswitch. Mirrors PaymentServiceAuthorizeRequest.
+  optional IdentityCredentials identity_credentials = 14;
+
+  // Merchant-supplied transient data for this order (JSON), forwarded verbatim
+  // from euler's Redis-cached `merchant_transient_info` (keyed by
+  // merchant_id + order_id). Connectors parse the blocks they know — e.g.
+  // ClearSaleBR reads the travel/hospitality `travel_data` block
+  // (passengers / travel_segments / accommodations).
+  optional SecretString merchant_transient_info = 15;
 }
 
 // Response for FrmService.PreRiskCheck
