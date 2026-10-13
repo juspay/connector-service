@@ -5798,6 +5798,17 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             Some(CountryAlpha2::foreign_try_from(country_code)?)
         };
 
+        // Keep the display state unchanged and derive the connector-facing
+        // subdivision code inside UCS from the raw state and country.
+        let state_code_iso = value.state.as_ref().map(|state| {
+            country
+                .and_then(|country| {
+                    crate::state_codes::convert_state_to_code(country, state.peek())
+                        .map(|code| Secret::new(code.to_string()))
+                })
+                .unwrap_or_else(|| state.clone())
+        });
+
         Ok(Self {
             country,
             city: value.city,
@@ -5806,7 +5817,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             line3: value.line3,
             zip: value.zip_code,
             state: value.state,
-            state_code_iso: value.state_code_iso,
+            state_code_iso,
             first_name: value.first_name,
             last_name: value.last_name,
             origin_zip: None,
