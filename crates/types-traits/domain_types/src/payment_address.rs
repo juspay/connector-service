@@ -208,7 +208,6 @@ pub struct AddressDetails {
     pub state: Option<Secret<String>>,
     /// ISO subdivision/state code, kept separate from the display state name.
     pub state_code_iso: Option<Secret<String>>,
-
     /// The first name for the address
     pub first_name: Option<Secret<String>>,
 
@@ -399,6 +398,7 @@ impl AddressDetails {
             })
             .transpose()
     }
+
     pub fn get_optional_zip(&self) -> Option<Secret<String>> {
         self.zip.clone()
     }
