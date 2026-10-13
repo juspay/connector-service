@@ -280,6 +280,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | transformers::AuthorizedotnetWebhookEvent::AuthCapCreated
             | transformers::AuthorizedotnetWebhookEvent::CaptureCreated
             | transformers::AuthorizedotnetWebhookEvent::VoidCreated => {
+                // `priorAuthCapture` and `voidTransaction` act on the existing
+                // transaction rather than minting a new one: a single transId carries
+                // the whole lifecycle (`authorizedPendingCapture` ->
+                // `capturedPendingSettlement` -> `settledSuccessfully`, or `voided` -
+                // which is what `transformers::SyncStatus` models). So `payload.id` here
+                // is the same transId the Authorize response stored, and a lookup by
+                // `connector_transaction_id` resolves. `refund.created`, handled above,
+                // is the one event that mints a new transId, and the payload carries no
+                // link from it back to the payment.
                 let connector_transaction_id = webhook_body
                     .payload
                     .id

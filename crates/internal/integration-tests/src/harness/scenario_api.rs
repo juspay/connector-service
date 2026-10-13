@@ -35,11 +35,11 @@ use crate::harness::{
     scenario_loader::{
         configured_all_connectors, get_the_assertion as get_the_assertion_impl,
         get_the_grpc_req as get_the_grpc_req_impl, is_suite_supported_for_connector,
-        load_connector_browser_automation_spec, load_connector_spec, load_default_scenario_name,
-        load_scenario, load_suite_scenarios, load_suite_spec,
-        load_supported_payment_methods_for_connector, load_supported_suites_for_connector,
-        merge_connector_specific_scenarios, scenario_matches_supported_payment_methods,
-        scenario_unsupported_reason,
+        load_connector_browser_automation_spec, load_connector_spec,
+        load_connector_specific_scenarios, load_default_scenario_name, load_scenario,
+        load_suite_scenarios, load_suite_spec, load_supported_payment_methods_for_connector,
+        load_supported_suites_for_connector, merge_connector_specific_scenarios,
+        scenario_matches_supported_payment_methods, scenario_unsupported_reason,
     },
     scenario_types::{
         BrowserAutomationHook, BrowserAutomationPhase, CliPreRequestHookConfig, ContextMap,
@@ -67,8 +67,10 @@ pub fn get_the_assertion(
 /// The suite runner already lists connector-private scenarios (it merges them
 /// into the scenario set), so every reader that resolves a scenario *by name*
 /// has to look in the same two places or a listed scenario fails with
-/// `ScenarioNotFound`. A name present in both files stays the hard error
-/// `merge_connector_specific_scenarios` raises.
+/// `ScenarioNotFound`. The private file is only consulted once the global suite
+/// has been shown not to hold the name, so a name defined in both cannot be
+/// reached here - the suite runner's `merge_connector_specific_scenarios` is
+/// what rejects that collision.
 fn load_scenario_for_connector(
     suite: &str,
     scenario: &str,
@@ -76,9 +78,7 @@ fn load_scenario_for_connector(
 ) -> Result<ScenarioDef, ScenarioError> {
     match load_scenario(suite, scenario) {
         Err(ScenarioError::ScenarioNotFound { .. }) => {
-            let mut scenarios = load_suite_scenarios(suite)?;
-            merge_connector_specific_scenarios(connector, suite, &mut scenarios)?;
-            scenarios
+            load_connector_specific_scenarios(connector, suite)?
                 .remove(scenario)
                 .ok_or_else(|| ScenarioError::ScenarioNotFound {
                     suite: suite.to_string(),

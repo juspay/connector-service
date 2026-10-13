@@ -57,6 +57,22 @@ const TRANSIENT_ERROR_SERVER_BUSY: &str = "E00053"; // "server too busy"
 const TRANSIENT_ERROR_MAINTENANCE: &str = "E00104"; // "server in maintenance"
 
 // Helper function for concatenating address lines with length constraints
+/// Authorize.Net fails the whole request on an over-long field, so a value past the
+/// documented limit is omitted rather than sent. Logged, because a field dropped on
+/// the way out is otherwise invisible.
+fn within_limit<T>(field: &'static str, max: usize, len: usize, value: T) -> Option<T> {
+    if len <= max {
+        return Some(value);
+    }
+    tracing::warn!(
+        field,
+        len,
+        max,
+        "Field exceeds the Authorize.Net length limit and is omitted from the request"
+    );
+    None
+}
+
 fn get_address_line(
     address_line1: &Option<Secret<String>>,
     address_line2: &Option<Secret<String>>,
@@ -706,9 +722,14 @@ impl From<&Address> for BillTo {
             // Country code + number. `phoneNumber` is limited to 25 characters and an
             // over-long value fails the whole request on schema validation, so it is
             // omitted instead - the same rule `refId` and `customer.id` follow.
-            phone_number: billing
-                .get_e123_phone_number()
-                .filter(|phone| phone.peek().len() <= PHONE_MAX_LENGTH),
+            phone_number: billing.get_e123_phone_number().and_then(|phone| {
+                within_limit(
+                    "billTo.phoneNumber",
+                    PHONE_MAX_LENGTH,
+                    phone.peek().len(),
+                    phone,
+                )
+            }),
             email: billing.email.clone(),
         }
     }
@@ -727,8 +748,8 @@ pub struct ShipTo {
     country: Option<enums::CountryAlpha2>,
 }
 
-/// `shipTo` from the shipping address. Pair with `has_content` so an empty `shipTo`
-/// object never reaches the wire.
+/// `shipTo` from the shipping address. Prefer `ShipTo::from_address`, which keeps an
+/// all-`None` `shipTo` off the wire.
 impl From<&Address> for ShipTo {
     fn from(shipping: &Address) -> Self {
         let details = shipping.address.as_ref();
@@ -746,6 +767,14 @@ impl From<&Address> for ShipTo {
 }
 
 impl ShipTo {
+    /// `shipTo` for an address that carries something to send, `None` otherwise - an
+    /// empty `shipTo {}` must never reach the wire. Call sites use this rather than
+    /// `ShipTo::from` for exactly that reason.
+    fn from_address(shipping: &Address) -> Option<Self> {
+        let ship_to = Self::from(shipping);
+        ship_to.has_content().then_some(ship_to)
+    }
+
     /// Whether the address carried anything to send.
     fn has_content(&self) -> bool {
         self.first_name.is_some()
@@ -1244,8 +1273,7 @@ fn create_regular_transaction_request<
         .resource_common_data
         .address
         .get_shipping()
-        .map(ShipTo::from)
-        .filter(ShipTo::has_content);
+        .and_then(ShipTo::from_address);
 
     // Level 2 / Level 3 data. Every amount goes through the connector's
     // FloatMajorUnit converter; nothing is computed here.
@@ -1355,7 +1383,15 @@ fn create_regular_transaction_request<
     // order.invoiceNumber). Limited to 25 characters; omitted when longer.
     let po_number = order_info
         .and_then(|info| info.merchant_order_reference_id.clone())
-        .filter(|po_number| !po_number.is_empty() && po_number.len() <= PO_NUMBER_MAX_LENGTH);
+        .filter(|po_number| !po_number.is_empty())
+        .and_then(|po_number| {
+            within_limit(
+                "order.poNumber",
+                PO_NUMBER_MAX_LENGTH,
+                po_number.len(),
+                po_number,
+            )
+        });
 
     // merchantDescriptor (dynamic descriptor): the statement descriptor, passed
     // unchanged - Authorize.Net documents no length or format for it.
@@ -3532,7 +3568,11 @@ fn get_hs_status(
     if response.transaction_response.is_none() {
         return match operation {
             // A void response always carries `transactionResponse` unless the API call
-            // itself failed, so a body without one is never a completed void.
+            // itself failed, so a body without one is never a completed void. The
+            // pre-GRACE code returned `Voided` here, reporting a void the gateway never
+            // confirmed; hyperswitch reports this shape as a failure carrying the
+            // gateway messages (its void arm returns `Failure`), and prism keeps the
+            // more specific `VoidFailed` because the authorization is still open.
             Operation::Void => AttemptStatus::VoidFailed,
             Operation::VoidPostCapture => AttemptStatus::VoidedPostCapture,
             // No transaction was created: a failed attempt, as in hyperswitch.
