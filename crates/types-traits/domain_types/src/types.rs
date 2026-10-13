@@ -1,6 +1,10 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
+pub use crate::payment_method_data::{
+    AdditionalCardInfo, AdditionalPaymentData, GooglePayAdditionalData,
+};
+
 use crate::{
     connector_flow::{
         CreatePaymentMethod, GetPaymentMethod, MandateRevoke, PaymentMethodEligibility, Recharge,
@@ -57,7 +61,7 @@ use tracing::info;
 use utoipa::ToSchema;
 
 /// Extract vault-related headers from gRPC metadata
-fn extract_headers_from_metadata(
+pub(crate) fn extract_headers_from_metadata(
     metadata: &MaskedMetadata,
 ) -> Option<HashMap<String, Secret<String>>> {
     let mut vault_headers = HashMap::new();
@@ -878,9 +882,11 @@ impl Connectors {
             third_base_url: Some(urls.third_base_url.clone()),
         };
         match connector {
+            PayoutConnectorEnum::Nuvei => patched.nuvei.apply(params_patch),
             PayoutConnectorEnum::Loonio => patched.loonio.apply(params_patch),
             PayoutConnectorEnum::Paypal => patched.paypal.apply(params_patch),
             PayoutConnectorEnum::Itaubank => patched.itaubank.apply(params_patch),
+            PayoutConnectorEnum::Stripe => patched.stripe.apply(params_patch),
             PayoutConnectorEnum::Worldpayxml => patched.worldpayxml.apply(params_patch),
             PayoutConnectorEnum::Cybersource => patched.cybersource.apply(params_patch),
             PayoutConnectorEnum::Gigadat => patched.gigadat.apply(params_patch),
@@ -901,6 +907,7 @@ impl Connectors {
                     })
             }
             PayoutConnectorEnum::Truelayer => patched.truelayer.apply(params_patch),
+            PayoutConnectorEnum::Mifinity => patched.mifinity.apply(params_patch),
         }
         Ok(patched)
     }
@@ -1081,6 +1088,9 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for CaptureMethod {
             grpc_api_types::payments::CaptureMethod::Manual => Ok(Self::Manual),
             grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
             grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
+            grpc_api_types::payments::CaptureMethod::SequentialAutomatic => {
+                Ok(Self::SequentialAutomatic)
+            }
             _ => Ok(Self::Automatic),
         }
     }
@@ -1437,6 +1447,80 @@ impl ForeignFrom<common_enums::CardType> for grpc_api_types::payments::CardType 
             common_enums::CardType::Prepaid => Self::Prepaid,
             common_enums::CardType::Store => Self::Store,
             common_enums::CardType::ChargeCard => Self::ChargeCard,
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::CardType> for common_enums::CardType {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::CardType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::CardType::Credit => Ok(Self::Credit),
+            grpc_api_types::payments::CardType::Debit => Ok(Self::Debit),
+            grpc_api_types::payments::CardType::Prepaid => Ok(Self::Prepaid),
+            grpc_api_types::payments::CardType::Store => Ok(Self::Store),
+            grpc_api_types::payments::CardType::ChargeCard => Ok(Self::ChargeCard),
+            grpc_api_types::payments::CardType::Unspecified => {
+                Err(error_stack::report!(IntegrationError::InvalidDataFormat {
+                    field_name: "card_type",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Unspecified card type".to_string()),
+                        ..Default::default()
+                    },
+                }))
+            }
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::CardSegmentType> for common_enums::CardSegmentType {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::CardSegmentType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::CardSegmentType::Business => Ok(Self::Business),
+            grpc_api_types::payments::CardSegmentType::Commercial => Ok(Self::Commercial),
+            grpc_api_types::payments::CardSegmentType::Consumer => Ok(Self::Consumer),
+            grpc_api_types::payments::CardSegmentType::Government => Ok(Self::Government),
+            grpc_api_types::payments::CardSegmentType::Unspecified => {
+                Err(error_stack::report!(IntegrationError::InvalidDataFormat {
+                    field_name: "card_segment_type",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Unspecified card segment type".to_string()),
+                        ..Default::default()
+                    },
+                }))
+            }
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::FundingSource> for common_enums::FundingSource {
+    type Error = IntegrationError;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::FundingSource,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::FundingSource::Credit => Ok(Self::Credit),
+            grpc_api_types::payments::FundingSource::Debit => Ok(Self::Debit),
+            grpc_api_types::payments::FundingSource::Prepaid => Ok(Self::Prepaid),
+            grpc_api_types::payments::FundingSource::ChargeCard => Ok(Self::ChargeCard),
+            grpc_api_types::payments::FundingSource::DeferredDebit => Ok(Self::DeferredDebit),
+            grpc_api_types::payments::FundingSource::Unspecified => {
+                Err(error_stack::report!(IntegrationError::InvalidDataFormat {
+                    field_name: "funding_source",
+                    context: IntegrationErrorContext {
+                        additional_context: Some("Unspecified funding source".to_string()),
+                        ..Default::default()
+                    },
+                }))
+            }
         }
     }
 }
@@ -1929,7 +2013,7 @@ impl<
                         transaction_identifier: apple_wallet.transaction_identifier,
                     };
                     Ok(Self::Wallet(payment_method_data::WalletData::ApplePay(
-                        wallet_data,
+                        Box::new(wallet_data),
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::GooglePaySdk(
@@ -1989,7 +2073,7 @@ impl<
                         tokenization_data: gpay_tokenization_data,
                     };
                     Ok(Self::Wallet(payment_method_data::WalletData::GooglePay(
-                        wallet_data,
+                        Box::new(wallet_data),
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::GooglePayThirdPartySdk(
@@ -2464,7 +2548,9 @@ impl<
 
                     Ok(Self::CardDetailsForNetworkTransactionId(
                         payment_method_data::CardDetailsForNetworkTransactionId {
-                            card_number,
+                            card_number: payment_method_data::RawCardNumber(
+                                T::inner_from_card_number(card_number),
+                            ),
                             card_exp_month: card_details_for_nti.card_exp_month.ok_or_else(|| IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Missing card expiration month".to_string()), ..Default::default() } })?,
                             card_exp_year: card_details_for_nti.card_exp_year.ok_or_else(|| IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Missing card expiration year".to_string()), ..Default::default() } })?,
                             card_issuer: card_details_for_nti.card_issuer,
@@ -2518,6 +2604,7 @@ impl<
                             token_exp_month: decrypted_wallet_token_details_for_nti.token_exp_month.ok_or_else(|| IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Missing decrypted token expiration month".to_string()), ..Default::default() } })?,
                             token_exp_year: decrypted_wallet_token_details_for_nti.token_exp_year.ok_or_else(|| IntegrationError::InvalidDataFormat { field_name: "unknown", context: IntegrationErrorContext { additional_context: Some("Missing decrypted token expiration year".to_string()), ..Default::default() } })?,
                             card_holder_name: decrypted_wallet_token_details_for_nti.card_holder_name,
+                            device_manufacturer_identifier: decrypted_wallet_token_details_for_nti.device_manufacturer_identifier,
                             eci: decrypted_wallet_token_details_for_nti.eci,
                             token_source: decrypted_wallet_token_details_for_nti.token_source
                                 .and_then(|source_i32| grpc_api_types::payments::TokenSource::try_from(source_i32).ok())
@@ -3219,6 +3306,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(_) => {
                     Ok(Some(PaymentMethodType::Card))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::ProxyCardDetailsForNetworkTransactionId(_) => {
+                    Ok(Some(PaymentMethodType::Card))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardWithNoCvc(_) => {
                     Ok(Some(PaymentMethodType::Card))
                 }
@@ -3479,6 +3569,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
 pub enum PaymentMethodDataAction {
     Card(grpc_api_types::payments::CardDetails),
     CardProxy(grpc_api_types::payments::ProxyCardDetails),
+    /// A vault-aliased card for an MIT: alias + expiry, no CVC. Must run under
+    /// `VaultTokenHolder` with injector token data, like `CardProxy`.
+    CardProxyForNti(grpc_api_types::payments::ProxyCardDetailsForNetworkTransactionId),
     CardWithNoCvc(grpc_api_types::payments::CardDetailsWithNoCvc),
     Default,
 }
@@ -3490,6 +3583,9 @@ impl From<grpc_api_types::payments::payment_method::PaymentMethod> for PaymentMe
             grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(proxy_card) => {
                 Self::CardProxy(proxy_card)
             }
+            grpc_api_types::payments::payment_method::PaymentMethod::ProxyCardDetailsForNetworkTransactionId(
+                proxy_card,
+            ) => Self::CardProxyForNti(proxy_card),
             grpc_api_types::payments::payment_method::PaymentMethod::CardWithNoCvc(card) => {
                 Self::CardWithNoCvc(card)
             }
@@ -3547,6 +3643,19 @@ impl PaymentMethodDataAction {
                 Err(report!(IntegrationError::NotImplemented(
                     ("CardProxy not supported in this flow; use the proxy endpoint").into(),
                     Default::default()
+                )))
+            }
+            // There is no FFI proxy charge (only `proxy_authorize` / `proxy_setup_recurring`), so
+            // alias + NTI is served by the gRPC repeat-payment flow alone.
+            PaymentMethodDataAction::CardProxyForNti(_) => {
+                Err(report!(IntegrationError::NotImplemented(
+                    ("CardProxyForNti not supported in this flow").into(),
+                    IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Send a vault-aliased card with a network transaction id through the gRPC RecurringPaymentService.Charge RPC".to_string(),
+                        ),
+                        ..Default::default()
+                    }
                 )))
             }
         }
@@ -3637,9 +3746,9 @@ pub struct AuthorizationRequest {
     pub merchant_transaction_id: Option<String>,
     // Amount Information
     pub amount: Option<grpc_payment_types::Money>,
-    pub order_tax_amount: Option<i64>,
+    pub order_tax_amount: Option<grpc_payment_types::Money>,
     pub surcharge_amount: Option<grpc_payment_types::Money>,
-    pub shipping_cost: Option<i64>,
+    pub shipping_cost: Option<grpc_payment_types::Money>,
     // Payment Method and Capture Settings
     pub payment_method: Option<grpc_payment_types::PaymentMethod>,
     pub capture_method: grpc_payment_types::CaptureMethod,
@@ -3711,6 +3820,8 @@ pub struct AuthorizationRequest {
     pub additional_connector_details: Option<grpc_payment_types::AdditionalConnectorDetails>,
     /// Merchant business country (ISO 3166-1 alpha-2) for country-specific connector rules.
     pub business_country: Option<String>,
+    /// Authorize-only opt-in for address verification using supplied billing details.
+    pub enable_avs_check: Option<bool>,
 }
 
 /// Intermediate setup recurring request that accepts both CardDetails and ProxyCardDetails.
@@ -3742,8 +3853,8 @@ pub struct SetupRecurringRequest {
     pub off_session: Option<bool>,
     pub order_category: Option<String>,
     pub order_id: Option<String>,
-    pub order_tax_amount: Option<i64>,
-    pub shipping_cost: Option<i64>,
+    pub order_tax_amount: Option<grpc_payment_types::Money>,
+    pub shipping_cost: Option<grpc_payment_types::Money>,
     pub merchant_order_id: Option<String>,
     pub connector_testing_data: Option<Secret<String>>,
     pub l2_l3_data: Option<grpc_payment_types::L2l3Data>,
@@ -3762,6 +3873,7 @@ pub struct SetupRecurringRequest {
     /// authorization type on manual capture (e.g. Adyen's
     /// `additionalData.authorisationType`/`manualCapture`) need the real value.
     pub capture_method: Option<grpc_payment_types::CaptureMethod>,
+    pub split_payments: Option<grpc_payment_types::SplitPaymentsDetails>,
 }
 
 /// ============================================================================
@@ -3769,6 +3881,7 @@ pub struct SetupRecurringRequest {
 /// ============================================================================
 impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationRequest {
     fn from(req: grpc_payment_types::PaymentServiceAuthorizeRequest) -> Self {
+        let currency = req.amount.as_ref().map(|amount| amount.currency);
         let tokenization_strategy = req
             .tokenization_strategy
             .map(|_| req.tokenization_strategy());
@@ -3779,9 +3892,21 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
         Self {
             merchant_transaction_id: req.merchant_transaction_id.clone(),
             amount: req.amount,
-            order_tax_amount: req.order_tax_amount,
+            order_tax_amount: req
+                .order_tax_amount
+                .zip(currency)
+                .map(|(minor_amount, currency)| grpc_payment_types::Money {
+                    minor_amount,
+                    currency,
+                }),
             surcharge_amount: req.surcharge_amount,
-            shipping_cost: req.shipping_cost,
+            shipping_cost: req
+                .shipping_cost
+                .zip(currency)
+                .map(|(minor_amount, currency)| grpc_payment_types::Money {
+                    minor_amount,
+                    currency,
+                }),
             payment_method: req.payment_method.clone(),
             capture_method: req.capture_method(),
             customer: req.customer.clone(),
@@ -3833,12 +3958,14 @@ impl From<grpc_payment_types::PaymentServiceAuthorizeRequest> for AuthorizationR
             recipient_details: req.recipient_details,
             additional_connector_details: req.additional_connector_details,
             business_country: req.business_country,
+            enable_avs_check: req.enable_avs_check,
         }
     }
 }
 
 impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for AuthorizationRequest {
     fn from(req: grpc_payment_types::PaymentServiceProxyAuthorizeRequest) -> Self {
+        let currency = req.amount.as_ref().map(|amount| amount.currency);
         // Convert ProxyCardDetails to PaymentMethod with CardProxy variant
         let payment_method =
             req.card_proxy
@@ -3856,7 +3983,13 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
             amount: req.amount,
             order_tax_amount: None,
             surcharge_amount: None,
-            shipping_cost: req.shipping_cost,
+            shipping_cost: req
+                .shipping_cost
+                .zip(currency)
+                .map(|(minor_amount, currency)| grpc_payment_types::Money {
+                    minor_amount,
+                    currency,
+                }),
             payment_method,
             capture_method: req.capture_method(),
             customer: req.customer.clone(),
@@ -3908,12 +4041,14 @@ impl From<grpc_payment_types::PaymentServiceProxyAuthorizeRequest> for Authoriza
             recipient_details: None,
             additional_connector_details: None,
             business_country: None,
+            enable_avs_check: req.enable_avs_check,
         }
     }
 }
 
 impl From<grpc_payment_types::PaymentServiceSetupRecurringRequest> for SetupRecurringRequest {
     fn from(req: grpc_payment_types::PaymentServiceSetupRecurringRequest) -> Self {
+        let currency = req.amount.as_ref().map(|amount| amount.currency);
         let mit_category = match req.mit_category() {
             grpc_payment_types::MitCategory::Unspecified => None,
             other => Some(common_enums::MitCategory::foreign_from(other)),
@@ -3947,8 +4082,20 @@ impl From<grpc_payment_types::PaymentServiceSetupRecurringRequest> for SetupRecu
             enable_partial_authorization: req.enable_partial_authorization,
             order_category: req.order_category,
             order_id: req.order_id,
-            order_tax_amount: req.order_tax_amount,
-            shipping_cost: req.shipping_cost,
+            order_tax_amount: req
+                .order_tax_amount
+                .zip(currency)
+                .map(|(minor_amount, currency)| grpc_payment_types::Money {
+                    minor_amount,
+                    currency,
+                }),
+            shipping_cost: req
+                .shipping_cost
+                .zip(currency)
+                .map(|(minor_amount, currency)| grpc_payment_types::Money {
+                    minor_amount,
+                    currency,
+                }),
             merchant_order_id: req.merchant_order_id,
             connector_testing_data: req.connector_testing_data,
             l2_l3_data: req.l2_l3_data,
@@ -3961,6 +4108,7 @@ impl From<grpc_payment_types::PaymentServiceSetupRecurringRequest> for SetupRecu
             capture_method: req
                 .capture_method
                 .and_then(|v| grpc_payment_types::CaptureMethod::try_from(v).ok()),
+            split_payments: req.split_payments,
         }
     }
 }
@@ -4016,6 +4164,7 @@ impl From<grpc_payment_types::PaymentServiceProxySetupRecurringRequest> for Setu
             additional_connector_details: None,
             test_mode: req.test_mode,
             capture_method: None,
+            split_payments: None,
         }
     }
 }
@@ -4129,6 +4278,49 @@ impl ForeignTryFrom<grpc_api_types::payments::CardDetailsWithNoCvc>
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::ProxyCardDetailsForNetworkTransactionId>
+    for payment_method_data::CardDetailsForNetworkTransactionId<VaultTokenHolder>
+{
+    type Error = IntegrationError;
+    fn foreign_try_from(
+        card: grpc_api_types::payments::ProxyCardDetailsForNetworkTransactionId,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // The alias itself travels in the injector token data; what goes on the request is the
+        // substitution placeholder. Mirrors `Card<VaultTokenHolder>`.
+        //
+        // `card_number` is a vault alias, not a BIN, so the network cannot be derived from it —
+        // the caller must populate the proto field.
+        let card_network = card.card_network.and_then(|network| {
+            grpc_api_types::payments::CardNetwork::try_from(network)
+                .ok()
+                .and_then(|network| CardNetwork::foreign_try_from(network).ok())
+        });
+
+        Ok(payment_method_data::CardDetailsForNetworkTransactionId {
+            card_number: payment_method_data::RawCardNumber(
+                "{{$card_number}}".to_string().into(),
+            ),
+            // Expiry cannot stay a placeholder: connectors derive combined/truncated formats
+            // from it before the injector ever runs. It is plaintext on the wire anyway.
+            card_exp_month: card.card_exp_month.ok_or(IntegrationError::MissingRequiredField {
+                field_name: "payment_method.proxy_card_details_for_network_transaction_id.card_exp_month",
+                context: IntegrationErrorContext::default(),
+            })?,
+            card_exp_year: card.card_exp_year.ok_or(IntegrationError::MissingRequiredField {
+                field_name: "payment_method.proxy_card_details_for_network_transaction_id.card_exp_year",
+                context: IntegrationErrorContext::default(),
+            })?,
+            card_issuer: card.card_issuer,
+            card_network,
+            card_type: card.card_type,
+            card_issuing_country: card.card_issuing_country_alpha2,
+            bank_code: card.bank_code,
+            nick_name: card.nick_name,
+            card_holder_name: card.card_holder_name,
+        })
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::ProxyCardDetails>
     for payment_method_data::Card<VaultTokenHolder>
 {
@@ -4188,6 +4380,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
         value: grpc_api_types::payments::Currency,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
+            grpc_api_types::payments::Currency::Unspecified => Ok(Self::Unspecified),
             grpc_api_types::payments::Currency::Aed => Ok(Self::AED),
             grpc_api_types::payments::Currency::All => Ok(Self::ALL),
             grpc_api_types::payments::Currency::Amd => Ok(Self::AMD),
@@ -4818,7 +5011,11 @@ impl<
                 ))
             })
             .transpose()?;
-        let merchant_config_currency = common_enums::Currency::foreign_try_from(amount.currency())?;
+        let amount = common_utils::types::Money {
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+        };
+        let merchant_config_currency = amount.currency;
 
         let connector_feature_data = value
             .clone()
@@ -4850,7 +5047,10 @@ impl<
             .map(ServerAuthenticationTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let shipping_cost = value.shipping_cost.map(common_utils::types::MinorUnit::new);
+        let shipping_cost = value
+            .shipping_cost
+            .map(common_utils::types::Money::foreign_try_from)
+            .transpose()?;
         // Connector testing data should be sent as a separate field (for adyen) (to be implemented)
         // For now, set to None as Hyperswitch needs to be updated to send this data properly
         let connector_testing_data: Option<Secret<serde_json::Value>> = None;
@@ -4906,8 +5106,8 @@ impl<
             authentication_data,
             capture_method: Some(CaptureMethod::foreign_try_from(value.capture_method)?),
             payment_method_data,
-            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
-            currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+            amount: amount.clone(),
+            currency: amount.currency,
             confirm: true,
             webhook_url: value.webhook_url.clone(),
             browser_info: value
@@ -4927,7 +5127,6 @@ impl<
                     }
                 })?,
             )?,
-            minor_amount: common_utils::types::MinorUnit::new(amount.minor_amount),
             email,
             customer_document_details,
             customer_date_of_birth,
@@ -4963,7 +5162,8 @@ impl<
             merchant_order_id: value.merchant_order_id,
             order_tax_amount: value
                 .order_tax_amount
-                .map(common_utils::types::MinorUnit::new),
+                .map(common_utils::types::Money::foreign_try_from)
+                .transpose()?,
             surcharge_amount: value
                 .surcharge_amount
                 .map(common_utils::types::Money::foreign_try_from)
@@ -5015,6 +5215,7 @@ impl<
                 .business_country
                 .as_ref()
                 .and_then(|c| common_enums::CountryAlpha2::from_str(c).ok()),
+            enable_avs_check: value.enable_avs_check,
             tokenization,
             mit_category: value.mit_category,
             domain_data: value
@@ -5118,9 +5319,6 @@ impl<
         Ok(Self {
             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             payment_method_data,
-            amount: Some(
-                common_utils::types::MinorUnit::new(amount.minor_amount).get_amount_as_i64(),
-            ),
             confirm: true,
             billing_descriptor,
             customer_acceptance: customer_acceptance
@@ -5167,10 +5365,14 @@ impl<
                 .map(CaptureMethod::foreign_try_from)
                 .transpose()?,
             merchant_order_id: value.merchant_order_id,
-            minor_amount: Some(common_utils::types::MinorUnit::new(amount.minor_amount)),
+            amount: Some(common_utils::types::Money {
+                amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+                currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+            }),
             shipping_cost: value
-                .order_tax_amount
-                .map(common_utils::types::MinorUnit::new),
+                .shipping_cost
+                .map(common_utils::types::Money::foreign_try_from)
+                .transpose()?,
             customer_id: value
                 .customer
                 .as_ref()
@@ -5190,7 +5392,11 @@ impl<
             locale: value.locale.clone(),
             mit_category: value.mit_category,
             connector_testing_data,
-            split_payments: None,
+            split_payments: value
+                .split_payments
+                .clone()
+                .map(connector_types::SplitPaymentsDetails::foreign_try_from)
+                .transpose()?,
             authentication_data: value
                 .authentication_data
                 .clone()
@@ -5280,6 +5486,10 @@ impl ForeignTryFrom<common_enums::Currency> for grpc_api_types::payments::Curren
     fn foreign_try_from(
         currency: common_enums::Currency,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        if matches!(currency, common_enums::Currency::Unspecified) {
+            return Ok(Self::Unspecified);
+        }
+
         let grpc_currency = Self::from_str_name(&currency.to_string()).ok_or_else(|| {
             ConnectorError::UnexpectedResponseError {
                 context: ResponseTransformationErrorContext {
@@ -5737,10 +5947,24 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             }
         };
 
+        let l2_l3_currency = value
+            .amount
+            .as_ref()
+            .map(|amount| common_enums::Currency::foreign_try_from(amount.currency()))
+            .transpose()?;
+
         let l2_l3_data = value
             .l2_l3_data
             .as_ref()
-            .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
+            .map(|l2_l3| {
+                let currency = l2_l3_currency.ok_or_else(|| {
+                    report!(IntegrationError::MissingRequiredField {
+                        field_name: "amount",
+                        context: IntegrationErrorContext::default(),
+                    })
+                })?;
+                L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref(), currency))
+            })
             .transpose()?;
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
@@ -5809,8 +6033,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             return_url: value.return_url.clone(),
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: value.session_token,
@@ -5832,7 +6055,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             recurring_mandate_payment_data: None,
             order_details,
             l2_l3_data: l2_l3_data.map(Box::new),
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: value.merchant_request_id.clone(),
             sender_payment_instrument_id: None,
             connector_returned_payment_method_details: None,
@@ -5862,10 +6085,24 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             }
         };
 
+        let l2_l3_currency = value
+            .amount
+            .as_ref()
+            .map(|amount| common_enums::Currency::foreign_try_from(amount.currency()))
+            .transpose()?;
+
         let l2_l3_data = value
             .l2_l3_data
             .as_ref()
-            .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
+            .map(|l2_l3| {
+                let currency = l2_l3_currency.ok_or_else(|| {
+                    report!(IntegrationError::MissingRequiredField {
+                        field_name: "amount",
+                        context: IntegrationErrorContext::default(),
+                    })
+                })?;
+                L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref(), currency))
+            })
             .transpose()?;
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
@@ -5918,8 +6155,7 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             return_url: value.return_url.clone(),
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: value
                 .amount
                 .as_ref()
@@ -5949,7 +6185,7 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             vault_headers,
             recurring_mandate_payment_data: None,
             order_details,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: l2_l3_data.map(Box::new),
             sender_payment_instrument_id: None,
@@ -5975,10 +6211,24 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             }
         };
 
+        let l2_l3_currency = value
+            .amount
+            .as_ref()
+            .map(|amount| common_enums::Currency::foreign_try_from(amount.currency()))
+            .transpose()?;
+
         let l2_l3_data = value
             .l2_l3_data
             .as_ref()
-            .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
+            .map(|l2_l3| {
+                let currency = l2_l3_currency.ok_or_else(|| {
+                    report!(IntegrationError::MissingRequiredField {
+                        field_name: "amount",
+                        context: IntegrationErrorContext::default(),
+                    })
+                })?;
+                L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref(), currency))
+            })
             .transpose()?;
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
@@ -6023,8 +6273,7 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             return_url: value.return_url.clone(),
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: value.session_token,
@@ -6045,7 +6294,7 @@ impl ForeignTryFrom<(SetupRecurringRequest, Connectors, &MaskedMetadata)> for Pa
             vault_headers,
             recurring_mandate_payment_data: None,
             order_details,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             sender_payment_instrument_id: None,
             connector_returned_payment_method_details: None,
@@ -6090,10 +6339,24 @@ impl
             }
         };
 
+        let l2_l3_currency = value
+            .amount
+            .as_ref()
+            .map(|amount| common_enums::Currency::foreign_try_from(amount.currency()))
+            .transpose()?;
+
         let l2_l3_data = value
             .l2_l3_data
             .as_ref()
-            .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
+            .map(|l2_l3| {
+                let currency = l2_l3_currency.ok_or_else(|| {
+                    report!(IntegrationError::MissingRequiredField {
+                        field_name: "amount",
+                        context: IntegrationErrorContext::default(),
+                    })
+                })?;
+                L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref(), currency))
+            })
             .transpose()?;
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
@@ -6120,6 +6383,26 @@ impl
                 },
             })?;
 
+        // Connectors that require the original MIT amount/currency up front (e.g.
+        // Cybersource's Discover-network check) read this off `resource_common_data`,
+        // not off `RepeatPaymentData.request` — populate both from the same proto field.
+        let recurring_mandate_payment_data = value
+            .original_payment_authorized_amount
+            .as_ref()
+            .map(|money| {
+                Ok::<_, error_stack::Report<IntegrationError>>(
+                    connector_types::RecurringMandatePaymentData {
+                        payment_method_type: None,
+                        original_payment_authorized_amount: Some(common_utils::types::Money {
+                            amount: common_utils::types::MinorUnit::new(money.minor_amount),
+                            currency: common_enums::Currency::foreign_try_from(money.currency())?,
+                        }),
+                        mandate_metadata: None,
+                    },
+                )
+            })
+            .transpose()?;
+
         Ok(Self {
             raw_connector_status: None,
             merchant_id: merchant_id_from_header,
@@ -6144,8 +6427,7 @@ impl
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: value
                 .amount
                 .as_ref()
@@ -6172,10 +6454,14 @@ impl
             typed_connector_response: None,
             connector_response_headers: None,
             connector_response: None,
-            vault_headers: None,
-            recurring_mandate_payment_data: None,
+            // A vault-aliased card on the repeat-payment flow needs the external vault
+            // metadata forwarded, exactly as the authorize conversion does: the injector
+            // resolves the outgoing proxy from this header, and without it the alias is
+            // sent to the connector unsubstituted.
+            vault_headers: extract_headers_from_metadata(metadata),
+            recurring_mandate_payment_data,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: l2_l3_data.map(Box::new),
             sender_payment_instrument_id: None,
@@ -6238,8 +6524,7 @@ impl
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: value
                 .amount
                 .as_ref()
@@ -6273,7 +6558,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -6330,8 +6615,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             return_url: None,
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: None,
@@ -6352,7 +6636,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -6428,8 +6712,7 @@ impl
                 .map(|d| ForeignTryFrom::foreign_try_from((d, "connector_feature_data")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: None,
@@ -6450,7 +6733,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             sender_payment_instrument_id: None,
             connector_returned_payment_method_details: None,
@@ -6534,6 +6817,9 @@ impl ForeignFrom<common_enums::TransactionStatus> for grpc_api_types::payments::
                 Self::ChallengeRequiredDecoupledAuthentication
             }
             common_enums::TransactionStatus::InformationOnly => Self::InformationOnly,
+            common_enums::TransactionStatus::SecurePaymentConfirmationRequired => {
+                Self::SecurePaymentConfirmationRequired
+            }
         }
     }
 }
@@ -6549,6 +6835,7 @@ impl ForeignFrom<grpc_api_types::payments::TransactionStatus> for common_enums::
             grpc_api_types::payments::TransactionStatus::ChallengeRequired => Self::ChallengeRequired,
             grpc_api_types::payments::TransactionStatus::ChallengeRequiredDecoupledAuthentication => Self::ChallengeRequiredDecoupledAuthentication,
             grpc_api_types::payments::TransactionStatus::InformationOnly => Self::InformationOnly,
+            grpc_api_types::payments::TransactionStatus::SecurePaymentConfirmationRequired => Self::SecurePaymentConfirmationRequired,
         }
     }
 }
@@ -7348,15 +7635,21 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     status_code: status_code as u32,
                     response_headers,
                     state,
-                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    captured_amount: router_data_v2
+                        .resource_common_data
+                        .amount_captured
+                        .as_ref()
+                        .map(|amount_captured| amount_captured.amount.get_amount_as_i64()),
                     capturable_amount: router_data_v2
                         .resource_common_data
-                        .minor_amount_capturable
-                        .map(|amount_capturable| amount_capturable.get_amount_as_i64()),
+                        .amount_capturable
+                        .as_ref()
+                        .map(|amount_capturable| amount_capturable.amount.get_amount_as_i64()),
                     authorized_amount: router_data_v2
                         .resource_common_data
-                        .minor_amount_authorized
-                        .map(|amount_authorized| amount_authorized.get_amount_as_i64()),
+                        .amount_authorized
+                        .as_ref()
+                        .map(|amount_authorized| amount_authorized.amount.get_amount_as_i64()),
                     authorized_money,
                     connector_response,
                     network_txn_link_id,
@@ -8005,7 +8298,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             field_name: "amount",
             context: IntegrationErrorContext::default(),
         })?;
-        let currency = common_enums::Currency::foreign_try_from(amount.currency())?;
+        let amount = common_utils::types::Money {
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+        };
         // An empty id from the caller means "no connector transaction id yet". Keep that as
         // `NoResponseId` so connector-level checks (`validate_psync_reference_id`,
         // `get_connector_transaction_id`) reject the sync instead of building a request URL
@@ -8051,9 +8347,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             sync_type,
             mandate_id: None,
             payment_method_type,
-            currency,
+            currency: amount.currency,
             payment_experience,
-            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            amount,
             integrity_object: None,
             all_keys_required: None, // Field not available in new proto structure
             split_payments: value
@@ -8939,7 +9235,11 @@ pub fn generate_payment_sync_response(
                     network_transaction_id: network_txn_id,
                     network_txn_link_id,
                     amount,
-                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    captured_amount: router_data_v2
+                        .resource_common_data
+                        .amount_captured
+                        .as_ref()
+                        .map(|amount_captured| amount_captured.amount.get_amount_as_i64()),
                     payment_method_type: None,
                     capture_method: None,
                     auth_type: None,
@@ -9066,7 +9366,11 @@ pub fn generate_payment_sync_response(
                     network_transaction_id: None,
                     network_txn_link_id: None,
                     amount,
-                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    captured_amount: router_data_v2
+                        .resource_common_data
+                        .amount_captured
+                        .as_ref()
+                        .map(|amount_captured| amount_captured.amount.get_amount_as_i64()),
                     payment_method_type: None,
                     capture_method: None,
                     auth_type: None,
@@ -9477,6 +9781,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::AfterpayClearpay => Ok(Self::PayLater),
             grpc_api_types::payments::PaymentMethodType::Alma => Ok(Self::PayLater),
             grpc_api_types::payments::PaymentMethodType::Atome => Ok(Self::PayLater),
+            grpc_api_types::payments::PaymentMethodType::Klarna => Ok(Self::PayLater),
             grpc_api_types::payments::PaymentMethodType::TamaraRedirect => Ok(Self::PayLater),
 
             grpc_api_types::payments::PaymentMethodType::BancontactCard => Ok(Self::BankRedirect),
@@ -10192,8 +10497,9 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             network_txn_link_id: None,
             amount: None,
             captured_amount: value
-                .minor_amount_captured
-                .map(|amount_captured| amount_captured.get_amount_as_i64()),
+                .amount_captured
+                .as_ref()
+                .map(|amount_captured| amount_captured.amount.get_amount_as_i64()),
             payment_method_type: None,
             capture_method: None,
             auth_type: None,
@@ -10303,19 +10609,23 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     fn foreign_try_from(
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // If currency is unspecified, send None, otherwise try to convert it
-        let currency = if let Some(a) = value.amount {
-            if a.currency() == grpc_api_types::payments::Currency::Unspecified {
-                None
-            } else {
-                Some(common_enums::Currency::foreign_try_from(a.currency())?)
-            }
-        } else {
-            None
-        };
         let amount = value
             .amount
-            .map(|a| common_utils::MinorUnit::new(a.minor_amount));
+            .map(|a| {
+                if a.currency() == grpc_api_types::payments::Currency::Unspecified {
+                    Ok::<Option<common_utils::types::Money>, error_stack::Report<IntegrationError>>(
+                        None,
+                    )
+                } else {
+                    Ok(Some(common_utils::types::Money {
+                        amount: common_utils::types::MinorUnit::new(a.minor_amount),
+                        currency: common_enums::Currency::foreign_try_from(a.currency())?,
+                    }))
+                }
+            })
+            .transpose()?
+            .flatten();
+        let currency = amount.as_ref().map(|amount| amount.currency);
         Ok(Self {
             browser_info: value
                 .browser_info
@@ -10636,7 +10946,6 @@ impl
             return_url: None,
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -10653,12 +10962,12 @@ impl
             typed_connector_response: None,
             connector_response_headers: None,
             vault_headers: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -10697,7 +11006,10 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
         })?;
 
         Ok(Self {
-            minor_amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            amount: common_utils::types::Money {
+                amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+                currency: common_enums::Currency::foreign_try_from(amount.currency())?,
+            },
             connector_transaction_id,
             connector_feature_data,
             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
@@ -10752,7 +11064,6 @@ impl
             return_url: None,
             connector_feature_data: None,
             amount_captured: None,
-            minor_amount_captured: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -10769,12 +11080,12 @@ impl
             typed_connector_response: None,
             connector_response_headers: None,
             vault_headers: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -10936,6 +11247,29 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputeResponse {
             response_headers,
             raw_connector_request: None,
             typed_connector_request: None,
+            additional_details: value.additional_details.map(|details| {
+                grpc_api_types::payments::DisputeAdditionalDetails {
+                    network_details: details.network_details.map(|network| match network {
+                        connector_types::DisputeNetworkDetails::Visa {
+                            rapid_dispute_resolution,
+                        } => grpc_api_types::payments::DisputeNetworkDetails {
+                            network: Some(
+                                grpc_api_types::payments::dispute_network_details::Network::Visa(
+                                    grpc_api_types::payments::VisaDisputeDetails {
+                                        rapid_dispute_resolution: rapid_dispute_resolution.map(
+                                            |rdr| {
+                                                grpc_api_types::payments::RapidDisputeResolution {
+                                                    applied: rdr.applied,
+                                                }
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ),
+                        },
+                    }),
+                }
+            }),
         })
     }
 }
@@ -11071,7 +11405,10 @@ impl ForeignTryFrom<grpc_api_types::payments::StripeSplitRefundData>
         value: grpc_api_types::payments::StripeSplitRefundData,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            charge_id: value.charge_id,
+            // `charge_id` stays a plain proto3 string, so an unresolved charge id arrives as the
+            // empty default - prost elides it on the wire - rather than as an absent field. An
+            // empty charge id is never a real Stripe id, so treat it as "not known".
+            charge_id: Some(value.charge_id).filter(|charge_id| !charge_id.is_empty()),
             transfer_account_id: value.transfer_account_id,
             charge_type: common_enums::PaymentChargeType::foreign_try_from(
                 grpc_api_types::payments::PaymentChargeType::try_from(value.charge_type)
@@ -11531,9 +11868,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 context: IntegrationErrorContext::default(),
             })?;
 
-        let minor_refund_amount = common_utils::types::MinorUnit::new(refund_amount.minor_amount);
-
-        let minor_payment_amount = common_utils::types::MinorUnit::new(value.payment_amount);
+        let currency = common_enums::Currency::foreign_try_from(refund_amount.currency())?;
+        let refund_amount = common_utils::types::Money {
+            amount: common_utils::types::MinorUnit::new(refund_amount.minor_amount),
+            currency,
+        };
+        let payment_amount = common_utils::types::Money {
+            amount: common_utils::types::MinorUnit::new(value.payment_amount),
+            currency,
+        };
 
         // Extract transaction_id as connector_transaction_id
         let connector_transaction_id = value.connector_transaction_id;
@@ -11549,11 +11892,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             connector_transaction_id,
             connector_refund_id: None, // refund_id field is used as refund_id, not connector_refund_id
             customer_id: value.customer_id.clone(),
-            currency: common_enums::Currency::foreign_try_from(refund_amount.currency())?,
-            payment_amount: value.payment_amount,
+            currency,
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
-            refund_amount: refund_amount.minor_amount,
             connector_feature_data: value
                 .connector_feature_data
                 .clone()
@@ -11563,8 +11904,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .refund_metadata
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "refund metadata")))
                 .transpose()?,
-            minor_payment_amount,
-            minor_refund_amount,
+            payment_amount,
+            refund_amount,
             refund_status: common_enums::RefundStatus::Pending,
             merchant_account_id: value.merchant_account_id,
             capture_method: value
@@ -11916,7 +12257,10 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateClientAuthenticationToken
                     .transpose()?;
 
                 Ok(Self {
-                    amount: common_utils::types::MinorUnit::new(0),
+                    amount: common_utils::types::Money {
+                        amount: common_utils::types::MinorUnit::new(0),
+                        currency: common_enums::Currency::USD,
+                    },
                     currency: common_enums::Currency::USD,
                     country: None,
                     order_details: None,
@@ -11966,17 +12310,23 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateClientAuthenticationToken
                     .transpose()?;
 
                 Ok(Self {
-                    amount: money.amount,
+                    amount: money.clone(),
                     currency: money.currency,
                     country,
                     order_details: None,
                     customer,
-                    order_tax_amount: payment_ctx
-                        .order_tax_amount
-                        .map(common_utils::types::MinorUnit::new),
-                    shipping_cost: payment_ctx
-                        .shipping_cost
-                        .map(common_utils::types::MinorUnit::new),
+                    order_tax_amount: payment_ctx.order_tax_amount.map(|amount| {
+                        common_utils::types::Money {
+                            amount: common_utils::types::MinorUnit::new(amount),
+                            currency: money.currency,
+                        }
+                    }),
+                    shipping_cost: payment_ctx.shipping_cost.map(|amount| {
+                        common_utils::types::Money {
+                            amount: common_utils::types::MinorUnit::new(amount),
+                            currency: money.currency,
+                        }
+                    }),
                     payment_method_type,
                     permissions,
                     webhook_url: None,
@@ -12038,8 +12388,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .map(connector_types::SplitSettlement::foreign_try_from)
                 .transpose()?
                 .map(Box::new),
-            amount_to_capture: amount.amount.get_amount_as_i64(),
-            minor_amount_to_capture: amount.amount,
+            amount_to_capture: amount.clone(),
             currency: amount.currency,
             connector_transaction_id,
             multiple_capture_data,
@@ -12060,7 +12409,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             merchant_order_id: value.merchant_order_id,
             order_tax_amount: value
                 .order_tax_amount
-                .map(|amount| common_utils::types::MinorUnit::new(amount.minor_amount)),
+                .map(common_utils::types::Money::foreign_try_from)
+                .transpose()?,
             split_payments: value
                 .split_payments
                 .map(connector_types::SplitPaymentsDetails::foreign_try_from)
@@ -12113,8 +12463,7 @@ impl
             return_url: None,
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: None,
@@ -12135,7 +12484,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: value.merchant_request_id.clone(),
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -12438,7 +12787,11 @@ pub fn generate_payment_capture_response(
                     incremental_authorization_allowed,
                     mandate_reference: mandate_reference_grpc,
                     mandate_reference_details,
-                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    captured_amount: router_data_v2
+                        .resource_common_data
+                        .amount_captured
+                        .as_ref()
+                        .map(|amount_captured| amount_captured.amount.get_amount_as_i64()),
                     connector_feature_data: convert_connector_metadata_to_secret_string(
                         connector_metadata,
                     ),
@@ -12547,10 +12900,24 @@ impl
             }
         };
 
+        let l2_l3_currency = value
+            .amount
+            .as_ref()
+            .map(|amount| common_enums::Currency::foreign_try_from(amount.currency()))
+            .transpose()?;
+
         let l2_l3_data = value
             .l2_l3_data
             .as_ref()
-            .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
+            .map(|l2_l3| {
+                let currency = l2_l3_currency.ok_or_else(|| {
+                    report!(IntegrationError::MissingRequiredField {
+                        field_name: "amount",
+                        context: IntegrationErrorContext::default(),
+                    })
+                })?;
+                L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref(), currency))
+            })
             .transpose()?;
 
         let test_mode = match environment {
@@ -12603,8 +12970,7 @@ impl
             return_url: None,
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: value.session_token,
@@ -12625,7 +12991,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: l2_l3_data.map(Box::new),
             sender_payment_instrument_id: None,
@@ -12705,8 +13071,7 @@ impl
             return_url: None,
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: value.session_token,
@@ -12727,7 +13092,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -12840,7 +13205,6 @@ impl<
         Ok(Self {
             currency: amount.currency,
             payment_method_data,
-            amount: Some(amount.amount.get_amount_as_i64()),
             confirm: true,
             customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
                 customer_acceptance.clone(),
@@ -12885,8 +13249,13 @@ impl<
                 })
                 .transpose()?,
             integrity_object: None,
-            minor_amount: Some(amount.amount),
-            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
+            amount: Some(amount.clone()),
+            shipping_cost: value
+                .shipping_cost
+                .map(|shipping_cost| common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(shipping_cost),
+                    currency: amount.currency,
+                }),
             customer_id: value
                 .customer
                 .as_ref()
@@ -12912,7 +13281,11 @@ impl<
                     .map(common_utils::pii::SecretSerdeValue::new)
             }),
             mit_category,
-            split_payments: None,
+            split_payments: value
+                .split_payments
+                .clone()
+                .map(connector_types::SplitPaymentsDetails::foreign_try_from)
+                .transpose()?,
             authentication_data: value
                 .authentication_data
                 .clone()
@@ -13024,26 +13397,28 @@ impl
         &grpc_api_types::payments::L2l3Data,
         &PaymentAddress,
         Option<&grpc_api_types::payments::Customer>,
+        common_enums::Currency,
     )> for L2L3Data
 {
     type Error = IntegrationError;
     fn foreign_try_from(
-        (l2l3_data, payment_address, customer): (
+        (l2l3_data, payment_address, customer, currency): (
             &grpc_api_types::payments::L2l3Data,
             &PaymentAddress,
             Option<&grpc_api_types::payments::Customer>,
+            common_enums::Currency,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let order_info = l2l3_data
             .order_info
             .as_ref()
-            .map(OrderInfo::foreign_try_from)
+            .map(|order_info| OrderInfo::foreign_try_from((order_info, currency)))
             .transpose()?;
 
         let tax_info = l2l3_data
             .tax_info
             .as_ref()
-            .map(TaxInfo::foreign_try_from)
+            .map(|tax_info| TaxInfo::foreign_try_from((tax_info, currency)))
             .transpose()?;
 
         let customer_info = customer.map(CustomerInfo::foreign_try_from).transpose()?;
@@ -13065,10 +13440,10 @@ impl
     }
 }
 
-impl ForeignTryFrom<&grpc_api_types::payments::OrderInfo> for OrderInfo {
+impl ForeignTryFrom<(&grpc_api_types::payments::OrderInfo, common_enums::Currency)> for OrderInfo {
     type Error = IntegrationError;
     fn foreign_try_from(
-        value: &grpc_api_types::payments::OrderInfo,
+        (value, currency): (&grpc_api_types::payments::OrderInfo, common_enums::Currency),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let order_details = (!value.order_details.is_empty())
             .then(|| {
@@ -13093,17 +13468,28 @@ impl ForeignTryFrom<&grpc_api_types::payments::OrderInfo> for OrderInfo {
             merchant_order_reference_id: value.merchant_order_reference_id.clone(),
             discount_amount: value
                 .discount_amount
-                .map(common_utils::types::MinorUnit::new),
-            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
-            duty_amount: value.duty_amount.map(common_utils::types::MinorUnit::new),
+                .map(|amount| common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(amount),
+                    currency,
+                }),
+            shipping_cost: value
+                .shipping_cost
+                .map(|amount| common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(amount),
+                    currency,
+                }),
+            duty_amount: value.duty_amount.map(|amount| common_utils::types::Money {
+                amount: common_utils::types::MinorUnit::new(amount),
+                currency,
+            }),
         })
     }
 }
 
-impl ForeignTryFrom<&grpc_api_types::payments::TaxInfo> for TaxInfo {
+impl ForeignTryFrom<(&grpc_api_types::payments::TaxInfo, common_enums::Currency)> for TaxInfo {
     type Error = IntegrationError;
     fn foreign_try_from(
-        value: &grpc_api_types::payments::TaxInfo,
+        (value, currency): (&grpc_api_types::payments::TaxInfo, common_enums::Currency),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let tax_status = match value.tax_status() {
             grpc_api_types::payments::TaxStatus::Unspecified => None,
@@ -13116,12 +13502,18 @@ impl ForeignTryFrom<&grpc_api_types::payments::TaxInfo> for TaxInfo {
             tax_status,
             customer_tax_registration_id: value.customer_tax_registration_id.clone(),
             merchant_tax_registration_id: value.merchant_tax_registration_id.clone(),
-            shipping_amount_tax: value
-                .shipping_amount_tax
-                .map(common_utils::types::MinorUnit::new),
+            shipping_amount_tax: value.shipping_amount_tax.map(|amount| {
+                common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(amount),
+                    currency,
+                }
+            }),
             order_tax_amount: value
                 .order_tax_amount
-                .map(common_utils::types::MinorUnit::new),
+                .map(|amount| common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(amount),
+                    currency,
+                }),
         })
     }
 }
@@ -13319,23 +13711,42 @@ impl ForeignTryFrom<grpc_api_types::payments::MandateAmountData> for mandates::M
                 .ok()
                 .map(|offset_dt| time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time()))
         };
+        let amount =
+            match amount_data.amount_money {
+                Some(amount_money) => common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(amount_money.minor_amount),
+                    currency: common_enums::Currency::foreign_try_from(amount_money.currency())?,
+                },
+                None => {
+                    let amount = amount_data.amount.ok_or_else(|| {
+                        IntegrationError::MissingRequiredField {
+                            field_name: "mandate_data.amount_money",
+                            context: IntegrationErrorContext::default(),
+                        }
+                    })?;
+                    let currency = amount_data.currency.ok_or_else(|| {
+                        IntegrationError::MissingRequiredField {
+                            field_name: "mandate_data.currency",
+                            context: IntegrationErrorContext::default(),
+                        }
+                    })?;
+
+                    common_utils::types::Money {
+                        amount: common_utils::types::MinorUnit::new(amount),
+                        currency: common_enums::Currency::foreign_try_from(
+                            grpc_api_types::payments::Currency::try_from(currency).map_err(
+                                |_| IntegrationError::InvalidDataFormat {
+                                    field_name: "mandate_data.currency",
+                                    context: IntegrationErrorContext::default(),
+                                },
+                            )?,
+                        )?,
+                    }
+                }
+            };
+
         Ok(Self {
-            amount: common_utils::types::Money {
-                amount: common_utils::types::MinorUnit::new(
-                    amount_data
-                        .amount_money
-                        .map(|amount_money| amount_money.minor_amount)
-                        .or(amount_data.amount)
-                        .unwrap_or_default(),
-                ),
-                currency: common_enums::Currency::foreign_try_from(
-                    amount_data
-                        .amount_money
-                        .as_ref()
-                        .map(|amount_money| amount_money.currency())
-                        .unwrap_or(amount_data.currency()),
-                )?,
-            },
+            amount,
             start_date: amount_data.start_date.and_then(to_primitive_date_time),
             end_date: amount_data.end_date.and_then(to_primitive_date_time),
             metadata: None,
@@ -13432,6 +13843,9 @@ impl ForeignFrom<grpc_api_types::payments::MitCategory> for common_enums::MitCat
             grpc_api_types::payments::MitCategory::RecurringMit => {
                 common_enums::MitCategory::Recurring
             }
+            grpc_api_types::payments::MitCategory::SubscriptionMit => {
+                common_enums::MitCategory::Subscription
+            }
             grpc_api_types::payments::MitCategory::InstallmentMit => {
                 common_enums::MitCategory::Installment
             }
@@ -13514,7 +13928,11 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         })
         .transpose()?;
 
-    let captured_amount = router_data_v2.resource_common_data.amount_captured;
+    let captured_amount = router_data_v2
+        .resource_common_data
+        .amount_captured
+        .as_ref()
+        .map(|amount_captured| amount_captured.amount.get_amount_as_i64());
     let minor_captured_amount = captured_amount;
 
     let response = match transaction_response {
@@ -13937,9 +14355,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
             })
             .transpose()?;
 
+        let currency = amount.currency;
+
         Ok(Self {
-            amount: amount.amount,
-            currency: amount.currency,
+            amount,
+            currency,
             integrity_object: None,
             metadata: value
                 .metadata
@@ -14017,8 +14437,7 @@ impl
             return_url: None,
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: None,
@@ -14039,7 +14458,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -14110,50 +14529,78 @@ pub struct ConnectorInfo {
     pub connector_type: PaymentConnectorCategory,
 }
 
-/// Required for passing additional details for Recurring payments from initial payments
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum AdditionalPaymentData {
-    /// Card-specific additional payment data
-    Card(AdditionalCardInfo),
-}
-
-/// Additional card information for payment processing
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdditionalCardInfo {
-    /// The name of issuer of the card
-    pub card_issuer: Option<String>,
-    /// Last 4 digits of the card number
-    pub last4: Option<String>,
-    /// The ISIN of the card
-    pub card_isin: Option<String>,
-    /// Extended bin of card, contains the first 8 digits of card number
-    pub card_extended_bin: Option<String>,
-    /// Card expiry month (sensitive)
-    pub card_exp_month: Option<Secret<String>>,
-    /// Card expiry year (sensitive)
-    pub card_exp_year: Option<Secret<String>>,
-    /// Card holder name (sensitive)
-    pub card_holder_name: Option<Secret<String>>,
-}
-
 impl ForeignFrom<grpc_payment_types::AdditionalPaymentData> for Option<AdditionalPaymentData> {
     fn foreign_from(data: grpc_payment_types::AdditionalPaymentData) -> Self {
         match data.payment_method_data {
             Some(grpc_payment_types::additional_payment_data::PaymentMethodData::Card(card)) => {
-                Some(AdditionalPaymentData::Card(AdditionalCardInfo {
-                    card_issuer: card.card_issuer,
-                    last4: card.last4,
-                    card_isin: card.card_isin,
-                    card_extended_bin: card.card_extended_bin,
-                    card_exp_month: card.card_exp_month,
-                    card_exp_year: card.card_exp_year,
-                    card_holder_name: card.card_holder_name,
-                }))
+                Some(AdditionalPaymentData::Card(Box::new(grpc_card_info_to_domain(card))))
             }
+
+            Some(grpc_payment_types::additional_payment_data::PaymentMethodData::Wallet(
+                wallet_data,
+            )) => match wallet_data.wallet_data {
+                Some(grpc_payment_types::additional_wallet_info::WalletData::ApplePay(
+                    apple_pay_data,
+                )) => Some(AdditionalPaymentData::Wallet(
+                    payment_method_data::WalletAdditionalData::ApplePay(Box::new(
+                        payment_method_data::ApplePayAdditionalData {
+                            display_name: apple_pay_data.display_name,
+                            card_info: apple_pay_data.card_info.map(grpc_card_info_to_domain),
+                            device_pan_bin: apple_pay_data.device_pan_bin,
+                        },
+                    )),
+                )),
+                Some(grpc_payment_types::additional_wallet_info::WalletData::GooglePay(
+                    google_pay_data,
+                )) => Some(AdditionalPaymentData::Wallet(
+                    payment_method_data::WalletAdditionalData::GooglePay(Box::new(
+                        GooglePayAdditionalData {
+                            payment_method_data_type: google_pay_data.payment_method_data_type,
+                            card_info: google_pay_data.card_info.map(grpc_card_info_to_domain),
+                            device_pan_bin: google_pay_data.device_pan_bin,
+                            email: google_pay_data.email.and_then(|e| {
+                                let raw = e.expose();
+                                Email::try_from(raw)
+                                    .inspect_err(|_| {
+                                        tracing::warn!(
+                                            "invalid Google Pay email in additional_payment_data, dropping"
+                                        )
+                                    })
+                                    .ok()
+                            }),
+                        },
+                    )),
+                )),
+                None => None,
+            },
 
             None => None,
         }
+    }
+}
+
+fn grpc_card_info_to_domain(card: grpc_payment_types::AdditionalCardInfo) -> AdditionalCardInfo {
+    let issuer_country = CountryAlpha2::foreign_try_from(card.issuer_country()).ok();
+    let card_type = common_enums::CardType::foreign_try_from(card.card_type()).ok();
+    let card_segment_type =
+        common_enums::CardSegmentType::foreign_try_from(card.card_segment_type()).ok();
+    let funding_source = common_enums::FundingSource::foreign_try_from(card.funding_source()).ok();
+    AdditionalCardInfo {
+        card_issuer: card.card_issuer,
+        last4: card.last4,
+        card_isin: card.card_isin,
+        card_extended_bin: card.card_extended_bin,
+        card_exp_month: card.card_exp_month,
+        card_exp_year: card.card_exp_year,
+        card_holder_name: card.card_holder_name,
+        card_bin: card.card_bin,
+        card_type,
+        auth_code: card.auth_code,
+        card_subtype: card.card_subtype,
+        card_segment_type,
+        funding_source,
+        issuer_country,
+        card_network: card.card_network,
     }
 }
 
@@ -14613,6 +15060,11 @@ impl ForeignFrom<grpc_api_types::payments::AdditionalConnectorDetails>
                     payment_purpose: w.payment_purpose,
                 }
             }),
+            stripe: value
+                .stripe
+                .map(|s| connector_types::StripeAdditionalInformation {
+                    error_on_requires_action: s.error_on_requires_action,
+                }),
         }
     }
 }
@@ -14681,7 +15133,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest>
             .transpose()?;
 
         Ok(Self {
-            amount: amount.amount,
+            amount: amount.clone(),
             currency: amount.currency,
             browser_info: value
                 .browser_info
@@ -14795,7 +15247,7 @@ impl<T: PaymentMethodDataTypes> From<&PaymentsAuthorizeData<T>>
             payment_method_data: data.payment_method_data.clone(),
             browser_info: data.browser_info.clone(),
             currency: data.currency,
-            amount: data.amount,
+            amount: data.amount.clone(),
             capture_method: data.capture_method,
             split_payments: data.split_payments.clone(),
             customer_acceptance: data.customer_acceptance.clone(),
@@ -14855,7 +15307,7 @@ impl
             .transpose()?;
 
         Ok(Self {
-            amount: amount.amount,
+            amount: amount.clone(),
             currency: amount.currency,
             browser_info: payment_ctx
                 .browser_info
@@ -14993,7 +15445,7 @@ impl<
             .map(MandateData::foreign_try_from)
             .transpose()?;
         Ok(Self {
-            amount: money.amount,
+            amount: money.clone(),
             currency,
             payment_method_data,
             browser_info: value
@@ -15089,8 +15541,7 @@ impl
             return_url: value.return_url,
             connector_feature_data: None,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: None,
@@ -15111,7 +15562,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -15211,7 +15662,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodServiceRechargeReques
             merchant_request_id: value.merchant_request_id,
             merchant_recharge_id: value.merchant_recharge_id,
             product_id: value.product_id,
-            amount: money.amount,
+            amount: money.clone(),
             currency: money.currency,
             description: value.description,
             payment_method_type,
@@ -15266,8 +15717,7 @@ impl
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: value.amount.map(|amt| common_utils::types::Money {
                 amount: common_utils::types::MinorUnit::new(amt.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amt.currency())
@@ -15293,7 +15743,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: value.merchant_request_id,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -15387,8 +15837,7 @@ impl
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: None,
@@ -15409,7 +15858,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -15499,8 +15948,7 @@ impl
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: None,
@@ -15521,7 +15969,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -15798,8 +16246,7 @@ impl
             return_url: None,
             connector_feature_data,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token: None,
             session_token: None,
@@ -15820,7 +16267,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -15889,8 +16336,7 @@ impl
             return_url: None,
             connector_feature_data: None,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token: None,
             session_token: None,
@@ -15911,7 +16357,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -16136,8 +16582,7 @@ impl<
                 .transpose()?
                 .map(Box::new),
             mandate_reference: mandate_ref,
-            amount: amount.amount.get_amount_as_i64(),
-            minor_amount: amount.amount,
+            amount: amount.clone(),
             currency: amount.currency,
             merchant_order_id,
             metadata: value
@@ -16176,7 +16621,12 @@ impl<
                 }),
                 None => None,
             },
-            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
+            shipping_cost: value
+                .shipping_cost
+                .map(|shipping_cost| common_utils::types::Money {
+                    amount: common_utils::types::MinorUnit::new(shipping_cost),
+                    currency: amount.currency,
+                }),
             payment_channel,
             mit_category,
             billing_descriptor,
@@ -16353,7 +16803,11 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                         raw_connector_request,
                         typed_connector_request,
                         connector_response,
-                        captured_amount: router_data_v2.resource_common_data.amount_captured,
+                        captured_amount: router_data_v2
+                            .resource_common_data
+                            .amount_captured
+                            .as_ref()
+                            .map(|amount_captured| amount_captured.amount.get_amount_as_i64()),
                         incremental_authorization_allowed,
                         splits: splits.map(|split_response| {
                             grpc_api_types::payments::ConnectorSplitResponseData::foreign_from(
@@ -19244,7 +19698,7 @@ impl<
 
         Ok(Self {
             payment_method_data,
-            amount: amount.amount,
+            amount: amount.clone(),
             currency: Some(amount.currency),
             email,
             // Post-redirect auth legs (Paysafe's handle re-fetch) carry no card: an absent or
@@ -19370,7 +19824,7 @@ impl<
 
         Ok(Self {
             payment_method_data,
-            amount: amount.amount,
+            amount: amount.clone(),
             email,
             currency: Some(amount.currency),
             // Post-redirect auth legs (Paysafe's handle re-fetch) carry no card: an absent or
@@ -19513,7 +19967,7 @@ impl<
                 });
         Ok(Self {
             payment_method_data,
-            amount: amount.amount,
+            amount: amount.clone(),
             currency: Some(amount.currency),
             email,
             // The PostAuthenticate (RReq / results) flow carries no payment method, so
@@ -19640,8 +20094,7 @@ impl
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             access_token,
             session_token: None,
@@ -19665,7 +20118,7 @@ impl
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -19757,7 +20210,6 @@ impl
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -19774,12 +20226,12 @@ impl
             raw_connector_request: None,
             typed_connector_request: None,
             typed_connector_response: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -19865,7 +20317,6 @@ impl
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
             amount_captured: None,
-            minor_amount_captured: None,
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
@@ -19882,12 +20333,12 @@ impl
             raw_connector_request: None,
             typed_connector_request: None,
             typed_connector_response: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -19949,7 +20400,6 @@ impl
             return_url: None,
             connector_feature_data: None,
             amount_captured: None,
-            minor_amount_captured: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -19966,12 +20416,12 @@ impl
             typed_connector_response: None,
             connector_response_headers: None,
             vault_headers: None,
-            minor_amount_capturable: None,
+            amount_capturable: None,
             amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
-            minor_amount_authorized: None,
+            amount_authorized: None,
             merchant_request_id: None,
             l2_l3_data: None,
             sender_payment_instrument_id: None,
@@ -20746,6 +21196,7 @@ pub fn tokenized_authorize_to_base(
         recipient_details: None,
         additional_connector_details: None,
         business_country: None,
+        enable_avs_check: v.enable_avs_check,
     }
 }
 
@@ -20783,6 +21234,9 @@ pub fn tokenized_setup_recurring_to_base(
     PaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: v.merchant_recurring_payment_id,
         amount: v.amount,
+        // Neither the token nor the proxy SetupRecurring contract carries split
+        // payments; only the full request does.
+        split_payments: None,
         payment_method: Some(grpc_payment_types::PaymentMethod {
             payment_method: Some(grpc_payment_types::payment_method::PaymentMethod::Token(
                 grpc_payment_types::TokenPaymentMethodType {
@@ -20937,6 +21391,7 @@ pub fn proxied_authorize_to_base(
         recipient_details: None,
         additional_connector_details: None,
         business_country: None,
+        enable_avs_check: v.enable_avs_check,
     })
 }
 
@@ -21013,6 +21468,9 @@ pub fn proxied_setup_recurring_to_base(
     Ok(PaymentServiceSetupRecurringRequest {
         merchant_recurring_payment_id: v.merchant_recurring_payment_id,
         amount: v.amount,
+        // Neither the token nor the proxy SetupRecurring contract carries split
+        // payments; only the full request does.
+        split_payments: None,
         payment_method: Some(grpc_payment_types::PaymentMethod {
             payment_method: Some(
                 grpc_payment_types::payment_method::PaymentMethod::CardProxy(card),
