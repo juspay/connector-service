@@ -2164,14 +2164,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let redirect_response = request
                         .redirect_response
                         .as_ref()
-                        .filter(|response| get_nuvei_redirection_response(response).is_some())
                         .ok_or_else(|| {
                             nuvei_missing_field(
                                 "redirection_response",
                                 "Call Authorize again only after a 3DS Authorize returned a challenge, passing the ACS return (cres or error) unchanged in redirection_response; a CHARGED or AUTHORIZED 3DS Authorize response is already final",
                             )
                         })?;
-                    validate_nuvei_challenge_result(Some(redirect_response))?;
+                    validate_nuvei_challenge_result(redirect_response)?;
                 } else if is_nuvei_three_ds_authorize_leg(request, resource, nuvei_meta.as_ref()) {
                     // 3DS leg after PreAuthenticate (hyperswitch Authorize):
                     // /payment.do with threeD and the initPayment
@@ -2969,10 +2968,21 @@ fn decode_nuvei_challenge_field<R: serde::de::DeserializeOwned>(
 /// final payment is refused, with no HTTP call, when the decoded `cres` has a
 /// transStatus other than Y or the challenge returned an `error`.
 fn validate_nuvei_challenge_result(
-    redirect_response: Option<&ContinueRedirectionResponse>,
+    redirect_response: &ContinueRedirectionResponse,
 ) -> Result<(), Report<IntegrationError>> {
-    match redirect_response.and_then(get_nuvei_redirection_response) {
-        None => Ok(()),
+    match get_nuvei_redirection_response(redirect_response) {
+        // The caller did send a redirection_response, but it carries neither
+        // the `cres` of a completed challenge nor an `error`, so there is no
+        // challenge result to act on. Distinct from an absent
+        // redirection_response, which the caller reports as a missing field.
+        None => Err(IntegrationError::InvalidDataFormat {
+            field_name: "redirection_response",
+            context: nuvei_error_context(
+                "Pass the ACS challenge return (cres / error) unchanged in redirection_response",
+                "Nuvei challenge return carries neither a cres nor an error",
+            ),
+        }
+        .into()),
         Some(NuveiRedirectionResponse::Redirection { cres }) => {
             let acs_response: NuveiAcsResponse =
                 decode_nuvei_challenge_field(&cres, "redirect_response.cres")?;
@@ -6341,7 +6351,11 @@ pub fn build_refund_webhook_details(
 #[allow(clippy::expect_used)]
 #[allow(clippy::panic)]
 mod tests {
-    use super::{payment_dmn_checksum_message, PaymentDmnNotification};
+    use domain_types::connector_types::ContinueRedirectionResponse;
+
+    use super::{
+        payment_dmn_checksum_message, validate_nuvei_challenge_result, PaymentDmnNotification,
+    };
 
     fn dmn(status: Option<&str>) -> PaymentDmnNotification {
         let status = status
@@ -6379,6 +6393,43 @@ mod tests {
         assert_eq!(
             payment_dmn_checksum_message(&dmn(Some("SOMETHING_NEW")), "secret"),
             None
+        );
+    }
+
+    fn challenge_return(payload: serde_json::Value) -> ContinueRedirectionResponse {
+        ContinueRedirectionResponse {
+            params: None,
+            payload: Some(hyperswitch_masking::Secret::new(payload)),
+        }
+    }
+
+    /// A completed challenge with transStatus Y lets the final payment through.
+    #[test]
+    fn successful_challenge_is_accepted() {
+        // {"threeDSServerTransID":"t","acsTransID":"a","messageType":"CRes",
+        //  "messageVersion":"2.2.0","transStatus":"Y"}
+        let cres = "eyJ0aHJlZURTU2VydmVyVHJhbnNJRCI6InQiLCJhY3NUcmFuc0lEIjoiYSIsIm1lc3NhZ2VUeXBlIjoiQ1JlcyIsIm1lc3NhZ2VWZXJzaW9uIjoiMi4yLjAiLCJ0cmFuc1N0YXR1cyI6IlkifQ==";
+        assert!(validate_nuvei_challenge_result(&challenge_return(
+            serde_json::json!({ "cres": cres })
+        ))
+        .is_ok());
+    }
+
+    /// A redirection_response that is present but carries neither a cres nor an
+    /// error is reported as malformed, not as a missing field.
+    #[test]
+    fn unparseable_challenge_return_is_invalid_not_missing() {
+        let error = validate_nuvei_challenge_result(&challenge_return(
+            serde_json::json!({ "something_else": "x" }),
+        ))
+        .expect_err("a challenge return with no cres or error must be refused");
+        assert!(
+            matches!(
+                error.current_context(),
+                super::IntegrationError::InvalidDataFormat { field_name, .. }
+                    if *field_name == "redirection_response"
+            ),
+            "expected InvalidDataFormat, got {error:?}"
         );
     }
 }
