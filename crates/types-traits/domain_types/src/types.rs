@@ -13171,7 +13171,16 @@ impl<
 
         // Keep caller-supplied mandate details; without this the SetupRecurring terms are dropped.
         let setup_mandate_details = match value.setup_mandate_details.clone() {
-            Some(details) => MandateData::foreign_try_from(details)?,
+            Some(details) => {
+                let mut details = MandateData::foreign_try_from(details)?;
+                if details.customer_acceptance.is_none() {
+                    details.customer_acceptance =
+                        Some(mandates::CustomerAcceptance::foreign_try_from(
+                            customer_acceptance.clone(),
+                        )?);
+                }
+                details
+            }
             None => MandateData {
                 update_mandate_id: None,
                 customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(

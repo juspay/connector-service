@@ -421,10 +421,12 @@ pub(super) struct JpmorganStoredFeatureData {
 }
 
 /// JPMorgan context in request metadata.
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub(super) struct JpmorganRequestMetadata {
     #[serde(default)]
     pub(super) jpmorgan: JpmorganPreservedContext,
+    #[serde(flatten)]
+    pub(super) other: serde_json::Map<String, serde_json::Value>,
 }
 
 /// The connector-owned keys of the request metadata.
@@ -432,12 +434,31 @@ pub(super) struct JpmorganRequestMetadata {
 pub(super) struct JpmorganPreservedContext {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) stored_credential: Option<JpmorganStoredCredential>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) recurring: Option<JpmorganRecurring>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) wallet: Option<JpmorganStoredWallet>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) wallet_account_number_type: Option<JpmorganAccountNumberType>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) resource: Option<JpmorganResourceContext>,
+    #[serde(flatten)]
+    pub(super) other: serde_json::Map<String, serde_json::Value>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub(super) struct JpmorganResourceContext {
+    #[serde(rename = "type")]
+    pub(super) resource_type: JpmorganResourceType,
+    // Read IDs from legacy context; new responses return the transaction ID directly.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) id: Option<String>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum JpmorganResourceType {
+    Verification,
 }
 
 pub(super) enum JpmorganSyncResource {

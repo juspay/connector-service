@@ -197,7 +197,56 @@ pub struct JpmorganVerificationResponse {
     pub response_message: String,
     pub host_message: String,
     pub payment_method_type: PaymentMethodType,
-    pub verification_authentication_result: Option<Secret<serde_json::Value>>,
+    pub verification_authentication_result:
+        Option<Secret<JpmorganVerificationAuthenticationResult>>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganVerificationAuthenticationResult {
+    pub authentication_id: Option<Secret<String>>,
+    pub authentication_return_url: Option<Secret<String>>,
+    pub authentication_orchestration_url: Option<Secret<String>>,
+    pub three_domain_secure_challenge: Option<Secret<serde_json::Value>>,
+    pub three_domain_secure_completion: Option<Secret<JpmorganThreeDsCompletion>>,
+    pub three_domain_secure_server_error_message_text: Option<Secret<String>>,
+    pub three_domain_secure_exemption: Option<Secret<serde_json::Value>>,
+    #[serde(flatten)]
+    pub other: std::collections::HashMap<String, Secret<serde_json::Value>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganThreeDsCompletion {
+    #[serde(rename = "threeDSTransactionStatus")]
+    pub transaction_status: Option<JpmorganThreeDsTransactionStatus>,
+    #[serde(flatten)]
+    pub other: std::collections::HashMap<String, Secret<serde_json::Value>>,
+}
+
+impl hyperswitch_masking::SerializableSecret for JpmorganVerificationAuthenticationResult {}
+impl hyperswitch_masking::SerializableSecret for JpmorganThreeDsCompletion {}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum JpmorganThreeDsTransactionStatus {
+    #[serde(rename = "Y")]
+    AuthenticationSuccessful,
+    #[serde(rename = "N")]
+    AuthenticationDenied,
+    #[serde(rename = "U")]
+    AuthenticationUnavailable,
+    #[serde(rename = "C")]
+    ChallengeRequired,
+    #[serde(rename = "R")]
+    AuthenticationRejected,
+    #[serde(rename = "A")]
+    AuthenticationAttempted,
+    #[serde(rename = "D")]
+    DecoupledChallengeRequired,
+    #[serde(rename = "I")]
+    InformationalAcknowledged,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -213,9 +262,6 @@ pub enum JpmorganVerificationStatus {
 pub type JpmorganSetupMandateResponse = JpmorganVerificationResponse;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(untagged)]
-pub enum JpmorganTransactionResponse {
-    Payment(JpmorganPaymentsResponse),
-    Verification(JpmorganVerificationResponse),
-}
+#[serde(transparent)]
+pub struct JpmorganTransactionResponse(pub Secret<serde_json::Value>);
 pub type JpmorganRepeatPaymentResponse = JpmorganPaymentsResponse;
