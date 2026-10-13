@@ -919,15 +919,13 @@ where
         .address
         .get_payment_method_billing()
         .and_then(|billing| billing.address.as_ref())
-        .map(|billing_details| {
-            if let Some(state_code_iso) = billing_details.state_code_iso.clone() {
-                Ok(Some(state_code_iso).filter(|state| state.peek().chars().count() <= 3))
-            } else {
-                billing_details.to_state_code_as_optional()
-            }
+        .and_then(|billing_details| {
+            billing_details
+                .state_code_iso
+                .clone()
+                .or_else(|| billing_details.to_state_code_as_optional().ok().flatten())
         })
-        .transpose()?
-        .flatten();
+        .filter(|state| state.peek().chars().count() <= 3);
     let paco_billing_address = common
         .get_optional_billing()
         .and_then(|billing| billing.address.as_ref())
