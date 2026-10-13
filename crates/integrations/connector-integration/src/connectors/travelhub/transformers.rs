@@ -498,7 +498,7 @@ fn build_travelhub_apple_pay(
                         .payment_data
                         .eci_indicator
                         .clone()
-                        .unwrap_or_else(|| "07".to_string()), //testing purpose harcoded
+                        .unwrap_or_else(|| "07".to_string()), //testing purpose hardcoded
                 ),
             }),
         }),
@@ -521,7 +521,7 @@ fn build_travelhub_billing_address<T: PaymentMethodDataTypes>(
         country: item
             .resource_common_data
             .get_optional_billing_country()
-            .or(Some(common_enums::CountryAlpha2::US)), //testing purpose harcoded
+            .or(Some(common_enums::CountryAlpha2::US)), //testing purpose hardcoded
     })
 }
 
