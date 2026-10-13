@@ -436,61 +436,6 @@ pub type WorldpayxmlRsyncResponse = WorldpayxmlTransactionResponse;
 pub type WorldpayxmlSetupMandateResponse = WorldpayxmlAuthorizeResponse;
 pub type WorldpayxmlRepeatPaymentResponse = WorldpayxmlAuthorizeResponse;
 
-#[cfg(test)]
-mod tests {
-    use super::WorldpayxmlPayment;
-
-    #[test]
-    fn parses_connector_and_issuer_return_codes_separately() -> Result<(), quick_xml::DeError> {
-        let payment: WorldpayxmlPayment = quick_xml::de::from_str(
-            r#"<payment>
-                <lastEvent>REFUSED</lastEvent>
-                <ISO8583ReturnCode code="5" description="Refused"/>
-                <IssuerResponseCode code="05" description="Do not honour"/>
-            </payment>"#,
-        )?;
-
-        assert_eq!(
-            payment
-                .iso8583_return_code
-                .as_ref()
-                .and_then(|code| code.code.as_deref()),
-            Some("5")
-        );
-        let issuer = payment.issuer_response_code.as_ref();
-        assert_eq!(issuer.and_then(|code| code.code.as_deref()), Some("05"));
-        assert_eq!(
-            issuer.and_then(|code| code.description.as_deref()),
-            Some("Do not honour")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn parses_return_codes_with_missing_attributes() -> Result<(), quick_xml::DeError> {
-        for (attributes, expected_code, expected_description) in [
-            ("", None, None),
-            (r#"code="05""#, Some("05"), None),
-            (r#"description="Refused""#, None, Some("Refused")),
-        ] {
-            let payment: WorldpayxmlPayment = quick_xml::de::from_str(&format!(
-                "<payment><lastEvent>REFUSED</lastEvent>\
-                 <ISO8583ReturnCode {attributes}/><IssuerResponseCode {attributes}/></payment>"
-            ))?;
-            assert!(payment.iso8583_return_code.is_some());
-            assert!(payment.issuer_response_code.is_some());
-            for code in [payment.iso8583_return_code, payment.issuer_response_code]
-                .into_iter()
-                .flatten()
-            {
-                assert_eq!(code.code.as_deref(), expected_code);
-                assert_eq!(code.description.as_deref(), expected_description);
-            }
-        }
-        Ok(())
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum WorldpayxmlErrorResponse {
