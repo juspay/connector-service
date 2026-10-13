@@ -6418,7 +6418,7 @@ mod tests {
     /// A redirection_response that is present but carries neither a cres nor an
     /// error is reported as malformed, not as a missing field.
     #[test]
-    fn unparseable_challenge_return_is_invalid_not_missing() {
+    fn unparsable_challenge_return_is_invalid_not_missing() {
         let error = validate_nuvei_challenge_result(&challenge_return(
             serde_json::json!({ "something_else": "x" }),
         ))
