@@ -4,7 +4,8 @@ environment = "development"
 # WARNING: Enabling this can produce large gRPC error trailers. Client applications
 # and intermediate proxies must support a sufficiently large HTTP/2 maximum
 # header-list size.
-return_raw_and_typed_connector_data = true
+return_raw_connector_data = true
+return_typed_connector_data = true
 
 [log.console]
 enabled = true
@@ -266,7 +267,7 @@ enqueue_timeout_ms = 5000
 # sasl_password = ""
 
 [unmasked_headers]
-keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id","x-shadow-mode","x-proxy-name"]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id","x-shadow-mode","x-proxy-name","x-payment-method","x-payment-method-type"]
 
 [connector_response_masking]
 enabled = false
