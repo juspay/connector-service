@@ -181,14 +181,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(WebhookError::WebhookVerificationSecretInvalid)?;
 
         let message_and_signature = match transformers::parse_nuvei_webhook(&request.body)? {
-            transformers::NuveiWebhook::PaymentDmn(notification) => notification
-                .advance_response_checksum
-                .clone()
-                .map(|signature| {
-                    transformers::payment_dmn_checksum_message(&notification, secret)
-                        .map(|message| (message, signature))
-                })
-                .transpose()?,
+            transformers::NuveiWebhook::PaymentDmn(notification) => {
+                transformers::payment_dmn_checksum_message(&notification, secret)
+                    .zip(notification.advance_response_checksum.clone())
+            }
             transformers::NuveiWebhook::Chargeback(_) => request
                 .headers
                 .iter()

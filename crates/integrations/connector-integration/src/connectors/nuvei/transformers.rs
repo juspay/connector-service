@@ -5898,26 +5898,33 @@ pub fn is_payout_dmn(notification: &PaymentDmnNotification) -> bool {
 
 /// advanceResponseChecksum message: secret + totalAmount + currency +
 /// responseTimeStamp + PPP_TransactionID + UPPERCASE(Status) + (productId or "NA").
+///
+/// An absent `Status` is signed as an empty string, matching the direct
+/// integration (hyperswitch `nuvei.rs`, `get_webhook_source_verification_message`,
+/// which uses `unwrap_or_default()` on the status). A `Status` value we do not
+/// recognise has no wire spelling to sign, so no message exists and `None` is
+/// returned — the caller treats that as an unverified webhook rather than a
+/// hard error, leaving the decision to the event-type handler.
 pub fn payment_dmn_checksum_message(
     notification: &PaymentDmnNotification,
     secret: &str,
-) -> Result<String, Report<WebhookError>> {
-    let status = notification
-        .status
-        .as_ref()
-        .and_then(DmnStatus::as_checksum_str)
-        .ok_or(WebhookError::WebhookSourceVerificationFailed)
-        .attach_printable("Nuvei DMN Status missing or unrecognised")?;
-    Ok([
-        secret,
-        notification.total_amount.as_str(),
-        notification.currency.as_str(),
-        notification.response_time_stamp.as_str(),
-        notification.ppp_transaction_id.as_str(),
-        status,
-        notification.product_id.as_deref().unwrap_or("NA"),
-    ]
-    .concat())
+) -> Option<String> {
+    let status = match notification.status.as_ref() {
+        Some(status) => status.as_checksum_str()?,
+        None => "",
+    };
+    Some(
+        [
+            secret,
+            notification.total_amount.as_str(),
+            notification.currency.as_str(),
+            notification.response_time_stamp.as_str(),
+            notification.ppp_transaction_id.as_str(),
+            status,
+            notification.product_id.as_deref().unwrap_or("NA"),
+        ]
+        .concat(),
+    )
 }
 
 /// Chargeback (Control Panel *event*) DMN checksum message.
@@ -6327,4 +6334,51 @@ pub fn build_refund_webhook_details(
         status_code: 200,
         response_headers: None,
     })
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
+#[allow(clippy::panic)]
+mod tests {
+    use super::{payment_dmn_checksum_message, PaymentDmnNotification};
+
+    fn dmn(status: Option<&str>) -> PaymentDmnNotification {
+        let status = status
+            .map(|status| format!(r#","Status":"{status}""#))
+            .unwrap_or_default();
+        serde_json::from_str(&format!(
+            r#"{{"ppp_status":"OK","PPP_TransactionID":"7110000001","totalAmount":"10.00","currency":"USD","responseTimeStamp":"2026-10-13.09:03:00"{status}}}"#
+        ))
+        .unwrap()
+    }
+
+    /// A recognised `Status` contributes its upper-case wire spelling.
+    #[test]
+    fn known_status_uses_wire_spelling() {
+        assert_eq!(
+            payment_dmn_checksum_message(&dmn(Some("APPROVED")), "secret"),
+            Some("secret10.00USD2026-10-13.09:03:007110000001APPROVEDNA".to_string())
+        );
+    }
+
+    /// An absent `Status` is signed as an empty string, as the direct
+    /// integration does — the DMN is still verifiable.
+    #[test]
+    fn missing_status_signs_empty() {
+        assert_eq!(
+            payment_dmn_checksum_message(&dmn(None), "secret"),
+            Some("secret10.00USD2026-10-13.09:03:007110000001NA".to_string())
+        );
+    }
+
+    /// An unrecognised `Status` has no spelling to sign, so there is no message
+    /// and the caller reports the DMN unverified instead of erroring.
+    #[test]
+    fn unknown_status_has_no_message() {
+        assert_eq!(
+            payment_dmn_checksum_message(&dmn(Some("SOMETHING_NEW")), "secret"),
+            None
+        );
+    }
 }
