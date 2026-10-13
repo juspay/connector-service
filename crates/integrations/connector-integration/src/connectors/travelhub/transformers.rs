@@ -561,13 +561,33 @@ impl<T: PaymentMethodDataTypes>
 
                 let expiry_date = card_data.get_expiry_date_as_mmyy()?;
 
-                let is_already_authenticated = item.request.authentication_data.is_some();
-                let authentication = if is_already_authenticated {
-                    Some(false)
-                } else {
-                    match item.resource_common_data.auth_type {
-                        common_enums::AuthenticationType::ThreeDs => Some(true),
-                        common_enums::AuthenticationType::NoThreeDs => Some(false),
+                let authentication = match (
+                    item.resource_common_data.auth_type,
+                    item.request.authentication_data.is_some(),
+                ) {
+                    (_, true) => Some(false),
+                    (common_enums::AuthenticationType::NoThreeDs, false) => Some(false),
+                    (common_enums::AuthenticationType::ThreeDs, false) => {
+                        return Err(IntegrationError::MissingRequiredField {
+                            field_name: "authentication_data",
+                            context: IntegrationErrorContext {
+                                suggested_action: Some(
+                                    "Pass external 3DS authentication data for TravelHub THREE_DS \
+                                     authorizations, or send NO_THREE_DS for an authz-only payment."
+                                        .to_string(),
+                                ),
+                                doc_url: None,
+                                additional_context: Some(
+                                    "TravelHub is integrated as an external-authentication \
+                                     authorization connector here. Without authentication_data, \
+                                     the request would ask TravelHub to initiate connector-side \
+                                     3DS, so it is rejected before making the outgoing connector \
+                                     call."
+                                        .to_string(),
+                                ),
+                            },
+                        }
+                        .into());
                     }
                 };
 
@@ -676,8 +696,9 @@ pub struct TravelhubRedirect {
     pub parameters: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum TravelhubResult {
     Approved,
     Captured,
@@ -765,24 +786,8 @@ fn map_travelhub_refund_status(result: &TravelhubResult) -> RefundStatus {
     }
 }
 
-fn travelhub_result_literal(result: &TravelhubResult) -> &'static str {
-    match result {
-        TravelhubResult::Approved => "APPROVED",
-        TravelhubResult::Captured => "CAPTURED",
-        TravelhubResult::Settled => "SETTLED",
-        TravelhubResult::Declined => "DECLINED",
-        TravelhubResult::Error => "ERROR",
-        TravelhubResult::Invalid => "INVALID",
-        TravelhubResult::Redirected => "REDIRECTED",
-        TravelhubResult::Cancelled => "CANCELLED",
-        TravelhubResult::Refunded => "REFUNDED",
-        TravelhubResult::Pending => "PENDING",
-        TravelhubResult::Unknown => "UNKNOWN",
-    }
-}
-
 fn travelhub_raw_connector_status(result: &TravelhubResult) -> RawConnectorStatus {
-    let code = travelhub_result_literal(result).to_string();
+    let code = result.to_string();
     RawConnectorStatus {
         code: Some(code.clone()),
         message: Some(code),
@@ -795,12 +800,12 @@ fn travelhub_raw_connector_status(result: &TravelhubResult) -> RawConnectorStatu
 /// to deserialize — so the result literal itself is carried as the error code rather than
 /// inventing phantom response fields. (Real HTTP-error failures already surface with full
 /// detail via the Spring Boot envelope parsed in `build_error_response`.)
-fn travelhub_result_code(result: &TravelhubResult) -> &'static str {
+fn travelhub_result_code(result: &TravelhubResult) -> String {
     match result {
         TravelhubResult::Declined | TravelhubResult::Error | TravelhubResult::Invalid => {
-            travelhub_result_literal(result)
+            result.to_string()
         }
-        _ => "UNKNOWN",
+        _ => "UNKNOWN".to_string(),
     }
 }
 
@@ -826,7 +831,7 @@ fn travelhub_error_response(
     let code = travelhub_result_code(result);
     ErrorResponse {
         status_code: http_code,
-        code: code.to_string(),
+        code: code.clone(),
         message: format!("TravelHub reported the transaction as {code}"),
         reason: None,
         attempt_status,
