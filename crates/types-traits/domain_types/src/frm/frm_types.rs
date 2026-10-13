@@ -276,7 +276,9 @@ impl FrmMetadata {
 
     /// The raw custom-fields map, when present — for providers (e.g. Kount)
     /// that forward the whole map with their own key/value validation.
-    pub fn custom_fields_map(&self) -> Option<&std::collections::HashMap<String, serde_json::Value>> {
+    pub fn custom_fields_map(
+        &self,
+    ) -> Option<&std::collections::HashMap<String, serde_json::Value>> {
         self.custom_fields.as_ref()
     }
 }

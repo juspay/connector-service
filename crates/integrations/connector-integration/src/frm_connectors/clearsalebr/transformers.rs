@@ -7,9 +7,9 @@ use domain_types::{
     },
     errors,
     frm::frm_types::{
-        FrmAccommodation, FrmFlowData, FrmMetadata, FrmPassenger,
-        FrmPaymentOutcomeRequest, FrmPaymentOutcomeResponse, FrmTravelSegment,
-        PostRiskCheckRequest, PostRiskCheckResponse, PreRiskCheckRequest, PreRiskCheckResponse,
+        FrmAccommodation, FrmFlowData, FrmMetadata, FrmPassenger, FrmPaymentOutcomeRequest,
+        FrmPaymentOutcomeResponse, FrmTravelSegment, PostRiskCheckRequest, PostRiskCheckResponse,
+        PreRiskCheckRequest, PreRiskCheckResponse,
     },
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_address::OrderDetailsWithAmount,
@@ -1332,14 +1332,19 @@ fn build_order_request(
                     authentication_token: social.authentication_token.clone().map(Secret::new),
                 }
             }),
-            passengers: travel_data.passengers.as_ref().map(|list| {
-                list.iter().filter_map(passenger_to_clear_sale).collect()
-            }),
+            passengers: travel_data
+                .passengers
+                .as_ref()
+                .map(|list| list.iter().filter_map(passenger_to_clear_sale).collect()),
             connections: travel_data.travel_segments.as_ref().map(|list| {
-                list.iter().filter_map(travel_segment_to_clear_sale).collect()
+                list.iter()
+                    .filter_map(travel_segment_to_clear_sale)
+                    .collect()
             }),
             hotels: travel_data.accommodations.as_ref().map(|list| {
-                list.iter().filter_map(accommodation_to_clear_sale).collect()
+                list.iter()
+                    .filter_map(accommodation_to_clear_sale)
+                    .collect()
             }),
         },
     }
@@ -1480,16 +1485,15 @@ fn passenger_to_clear_sale(p: &FrmPassenger) -> Option<ClearSalePassenger> {
         company_mile_card: p.loyalty_program_name.clone(),
         mile_card: p.loyalty_program_number.clone(),
         // ClearSale encodes document type as an enum int: 1=CPF, 2=RG, 3=CNH…
-        identification_type: p
-            .identification_type
-            .as_deref()
-            .and_then(|t| match t.trim().to_ascii_uppercase().as_str() {
+        identification_type: p.identification_type.as_deref().and_then(|t| {
+            match t.trim().to_ascii_uppercase().as_str() {
                 "CPF" => Some(1),
                 "RG" => Some(2),
                 "CNH" => Some(3),
                 "PASSPORT" | "PASSAPORTE" => Some(4),
                 _ => None,
-            }),
+            }
+        }),
         identification_number: p
             .identification_number
             .as_deref()
@@ -2536,10 +2540,8 @@ mod tests {
 
         // Metadata carrying a different blob is ignored — typed wins.
         let metadata = r#"{"identityCredentials": {"cpf": "99900011122"}}"#;
-        let merged = ClearSaleFeatureData::default().merged_with_euler_data(
-            Some(&Secret::new(metadata.to_owned())),
-            Some(&typed),
-        );
+        let merged = ClearSaleFeatureData::default()
+            .merged_with_euler_data(Some(&Secret::new(metadata.to_owned())), Some(&typed));
         assert_eq!(merged.billing_document.as_deref(), Some("11122233344"));
         assert_eq!(merged.shipping_document.as_deref(), Some("55566677788"));
     }
@@ -2550,11 +2552,9 @@ mod tests {
     #[test]
     fn line1_falls_back_to_number_when_unparseable() {
         // Trailing token.
-        let (street, number) = split_street_and_number(
-            Some(&Secret::new("Rua Augusta, 1234".to_owned())),
-            None,
-        )
-        .unwrap();
+        let (street, number) =
+            split_street_and_number(Some(&Secret::new("Rua Augusta, 1234".to_owned())), None)
+                .unwrap();
         assert_eq!(street.peek(), "Rua Augusta");
         assert_eq!(number, "1234");
 

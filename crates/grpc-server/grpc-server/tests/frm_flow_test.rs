@@ -44,9 +44,7 @@ fn add_frm_metadata<T>(request: &mut Request<T>) {
     // creds file has no entry the call fails at the connector step instead —
     // the tests below only assert the *request-validation* behaviour around
     // `sessionID`, which runs before any credential use.
-    if let Ok(connector_config) =
-        utils::credential_utils::connector_config_header(CONNECTOR_NAME)
-    {
+    if let Ok(connector_config) = utils::credential_utils::connector_config_header(CONNECTOR_NAME) {
         request.metadata_mut().append(
             "x-connector-config",
             connector_config
@@ -59,14 +57,17 @@ fn add_frm_metadata<T>(request: &mut Request<T>) {
     // variant ("Matching variant not found").
     request.metadata_mut().append(
         "x-frm-connector",
-        CONNECTOR_NAME.parse().expect("Failed to parse x-frm-connector"),
+        CONNECTOR_NAME
+            .parse()
+            .expect("Failed to parse x-frm-connector"),
     );
     // Legacy BodyKey auth headers: ClearSale's api_key = account username,
     // key1 = account password. Dummy values suffice — validation order is
     // header parse → request validation, so a sessionID error still surfaces.
-    request
-        .metadata_mut()
-        .append("x-auth", "body-key".parse().expect("Failed to parse x-auth"));
+    request.metadata_mut().append(
+        "x-auth",
+        "body-key".parse().expect("Failed to parse x-auth"),
+    );
     request.metadata_mut().append(
         "x-api-key",
         "dummy-user".parse().expect("Failed to parse x-api-key"),
@@ -144,33 +145,29 @@ fn pre_risk_check_request() -> FrmServicePreRiskCheckRequest {
 /// billing/shipping, upstream auth) must be a *different* field.
 #[tokio::test]
 async fn clearsalebr_session_id_from_metadata_is_accepted() {
-    grpc_test!(
-        client,
-        FraudAndRiskManagementServiceClient<Channel>,
-        {
-            let mut grpc_request = Request::new(pre_risk_check_request());
-            add_frm_metadata(&mut grpc_request);
+    grpc_test!(client, FraudAndRiskManagementServiceClient<Channel>, {
+        let mut grpc_request = Request::new(pre_risk_check_request());
+        add_frm_metadata(&mut grpc_request);
 
-            let result = client.pre_risk_check(grpc_request).await;
+        let result = client.pre_risk_check(grpc_request).await;
 
-            let error_text = match result {
-                Ok(response) => {
-                    // Call went through (valid creds + a reachable/homologation
-                    // endpoint). The order decision itself is out of scope here.
-                    format!("{:?}", response.into_inner())
-                }
-                Err(status) => format!("{status:?}"),
-            };
+        let error_text = match result {
+            Ok(response) => {
+                // Call went through (valid creds + a reachable/homologation
+                // endpoint). The order decision itself is out of scope here.
+                format!("{:?}", response.into_inner())
+            }
+            Err(status) => format!("{status:?}"),
+        };
 
-            // `sessionID` must not be among the *missing fields*. (The
-            // aggregate error's boilerplate names sessionID generically, so
-            // match the quoted field-list marker, not the bare word.)
-            assert!(
-                !error_text.contains("\\\"sessionID\\\""),
-                "sessionID must come from the request metadata, not feature data. Got: {error_text}"
-            );
-        }
-    );
+        // `sessionID` must not be among the *missing fields*. (The
+        // aggregate error's boilerplate names sessionID generically, so
+        // match the quoted field-list marker, not the bare word.)
+        assert!(
+            !error_text.contains("\\\"sessionID\\\""),
+            "sessionID must come from the request metadata, not feature data. Got: {error_text}"
+        );
+    });
 }
 
 /// Counterpart: when the metadata carries no session id AT ALL (even with a
@@ -179,111 +176,103 @@ async fn clearsalebr_session_id_from_metadata_is_accepted() {
 /// feature-data key is ignored rather than used as a fallback.
 #[tokio::test]
 async fn clearsalebr_feature_data_session_id_is_ignored() {
-    grpc_test!(
-        client,
-        FraudAndRiskManagementServiceClient<Channel>,
-        {
-            // No top-level session_id in the metadata blob.
-            let metadata = serde_json::json!({
-                "merchant_order_id": "order-test-001",
-                "custom_fields": { "origin": "WebCheckout" }
-            })
-            .to_string();
+    grpc_test!(client, FraudAndRiskManagementServiceClient<Channel>, {
+        // No top-level session_id in the metadata blob.
+        let metadata = serde_json::json!({
+            "merchant_order_id": "order-test-001",
+            "custom_fields": { "origin": "WebCheckout" }
+        })
+        .to_string();
 
-            let request = FrmServicePreRiskCheckRequest {
-                amount: Some(Money {
-                    minor_amount: TEST_AMOUNT,
-                    currency: i32::from(Currency::Brl),
-                }),
-                customer_info: Some(Customer {
-                    email: Some(Secret::new(TEST_EMAIL.to_string())),
-                    ..Default::default()
-                }),
-                merchant_transaction_id: Some(format!("test-order-metadata-{}", Uuid::new_v4())),
-                metadata: Some(Secret::new(metadata)),
-                // Decoy — must not be picked up as the session id.
-                connector_feature_data: Some(Secret::new(
-                    r#"{"sessionID": "feature-data-session-SHOULD-BE-IGNORED"}"#.to_string(),
-                )),
-                order_details: vec![OrderDetailsWithAmount {
-                    product_name: "Bus ticket".to_string(),
-                    quantity: 1,
-                    amount: TEST_AMOUNT,
-                    ..Default::default()
-                }],
-                test_mode: Some(true),
+        let request = FrmServicePreRiskCheckRequest {
+            amount: Some(Money {
+                minor_amount: TEST_AMOUNT,
+                currency: i32::from(Currency::Brl),
+            }),
+            customer_info: Some(Customer {
+                email: Some(Secret::new(TEST_EMAIL.to_string())),
                 ..Default::default()
-            };
+            }),
+            merchant_transaction_id: Some(format!("test-order-metadata-{}", Uuid::new_v4())),
+            metadata: Some(Secret::new(metadata)),
+            // Decoy — must not be picked up as the session id.
+            connector_feature_data: Some(Secret::new(
+                r#"{"sessionID": "feature-data-session-SHOULD-BE-IGNORED"}"#.to_string(),
+            )),
+            order_details: vec![OrderDetailsWithAmount {
+                product_name: "Bus ticket".to_string(),
+                quantity: 1,
+                amount: TEST_AMOUNT,
+                ..Default::default()
+            }],
+            test_mode: Some(true),
+            ..Default::default()
+        };
 
-            let mut grpc_request = Request::new(request);
-            add_frm_metadata(&mut grpc_request);
+        let mut grpc_request = Request::new(request);
+        add_frm_metadata(&mut grpc_request);
 
-            let result = client.pre_risk_check(grpc_request).await;
+        let result = client.pre_risk_check(grpc_request).await;
 
-            let Err(status) = result else {
-                panic!(
-                    "expected the call to fail validation without a metadata session id, \
+        let Err(status) = result else {
+            panic!(
+                "expected the call to fail validation without a metadata session id, \
                      but it succeeded — connector_feature_data.sessionID leaked through"
-                );
-            };
-            let error_text = format!("{status:?}");
-            assert!(
-                error_text.contains("\\\"sessionID\\\""),
-                "missing-session error must list sessionID among missing fields. Got: {error_text}"
             );
-        }
-    );
+        };
+        let error_text = format!("{status:?}");
+        assert!(
+            error_text.contains("\\\"sessionID\\\""),
+            "missing-session error must list sessionID among missing fields. Got: {error_text}"
+        );
+    });
 }
 
 /// The camelCase `sessionId` at the metadata top level is also a valid source
 /// (both casings decode through `FrmMetadata`'s serde aliases).
 #[tokio::test]
 async fn clearsalebr_session_id_camel_case_metadata_is_accepted() {
-    grpc_test!(
-        client,
-        FraudAndRiskManagementServiceClient<Channel>,
-        {
-            let metadata = serde_json::json!({
-                "sessionId": "camelcase-session-99",
-                "custom_fields": { "origin": "WebCheckout" }
-            })
-            .to_string();
+    grpc_test!(client, FraudAndRiskManagementServiceClient<Channel>, {
+        let metadata = serde_json::json!({
+            "sessionId": "camelcase-session-99",
+            "custom_fields": { "origin": "WebCheckout" }
+        })
+        .to_string();
 
-            let request = FrmServicePreRiskCheckRequest {
-                amount: Some(Money {
-                    minor_amount: TEST_AMOUNT,
-                    currency: i32::from(Currency::Brl),
-                }),
-                customer_info: Some(Customer {
-                    email: Some(Secret::new(TEST_EMAIL.to_string())),
-                    ..Default::default()
-                }),
-                merchant_transaction_id: Some(format!("test-order-metadata-{}", Uuid::new_v4())),
-                metadata: Some(Secret::new(metadata)),
-                order_details: vec![OrderDetailsWithAmount {
-                    product_name: "Bus ticket".to_string(),
-                    quantity: 1,
-                    amount: TEST_AMOUNT,
-                    ..Default::default()
-                }],
-                test_mode: Some(true),
+        let request = FrmServicePreRiskCheckRequest {
+            amount: Some(Money {
+                minor_amount: TEST_AMOUNT,
+                currency: i32::from(Currency::Brl),
+            }),
+            customer_info: Some(Customer {
+                email: Some(Secret::new(TEST_EMAIL.to_string())),
                 ..Default::default()
-            };
+            }),
+            merchant_transaction_id: Some(format!("test-order-metadata-{}", Uuid::new_v4())),
+            metadata: Some(Secret::new(metadata)),
+            order_details: vec![OrderDetailsWithAmount {
+                product_name: "Bus ticket".to_string(),
+                quantity: 1,
+                amount: TEST_AMOUNT,
+                ..Default::default()
+            }],
+            test_mode: Some(true),
+            ..Default::default()
+        };
 
-            let mut grpc_request = Request::new(request);
-            add_frm_metadata(&mut grpc_request);
+        let mut grpc_request = Request::new(request);
+        add_frm_metadata(&mut grpc_request);
 
-            let result = client.pre_risk_check(grpc_request).await;
+        let result = client.pre_risk_check(grpc_request).await;
 
-            let error_text = match result {
-                Ok(response) => format!("{:?}", response.into_inner()),
-                Err(status) => format!("{status:?}"),
-            };
+        let error_text = match result {
+            Ok(response) => format!("{:?}", response.into_inner()),
+            Err(status) => format!("{status:?}"),
+        };
 
-            assert!(
-                !error_text.contains("\\\"sessionID\\\""),
-                "camelCase metadata sessionId must be picked up. Got: {error_text}"
-            );
-        }
-    );
+        assert!(
+            !error_text.contains("\\\"sessionID\\\""),
+            "camelCase metadata sessionId must be picked up. Got: {error_text}"
+        );
+    });
 }
