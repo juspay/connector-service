@@ -4,7 +4,7 @@ use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
 use crate::{
     state_codes::convert_state_to_code,
-    utils::{missing_field_err, Error},
+    utils::{convert_canada_state_to_code, convert_us_state_to_code, missing_field_err, Error},
 };
 
 #[derive(Clone, Default, Debug)]
@@ -374,16 +374,24 @@ impl AddressDetails {
     pub fn to_state_code(&self) -> Result<Secret<String>, Error> {
         let country = self.get_country()?;
         let state = self.get_state()?;
-        Ok(convert_state_to_code(*country, state.peek())
-            .map(|code| Secret::new(code.to_string()))
-            .unwrap_or_else(|| state.clone()))
+        match country {
+            common_enums::CountryAlpha2::US => Ok(Secret::new(
+                convert_us_state_to_code(&state.peek().to_string()).to_string(),
+            )),
+            common_enums::CountryAlpha2::CA => Ok(Secret::new(
+                convert_canada_state_to_code(&state.peek().to_string()).to_string(),
+            )),
+            country => Ok(convert_state_to_code(*country, state.peek())
+                .map(|code| Secret::new(code.to_string()))
+                .unwrap_or_else(|| state.clone())),
+        }
     }
 
     pub fn to_state_code_as_optional(&self) -> Result<Option<Secret<String>>, Error> {
         self.state
             .as_ref()
             .map(|state| {
-                if state.peek().chars().count() <= 3 {
+                if state.peek().len() == 2 {
                     Ok(state.to_owned())
                 } else {
                     self.to_state_code()

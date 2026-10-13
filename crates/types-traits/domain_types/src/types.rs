@@ -5803,7 +5803,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
         let state_code_iso = value.state.as_ref().map(|state| {
             country
                 .and_then(|country| {
-                    crate::state_codes::convert_state_to_code(country, state.peek())
+                    crate::state_codes::convert_state_to_code_extended(country, state.peek())
                         .map(|code| Secret::new(code.to_string()))
                 })
                 .unwrap_or_else(|| state.clone())
