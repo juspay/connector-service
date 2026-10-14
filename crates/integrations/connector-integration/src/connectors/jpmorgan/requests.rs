@@ -229,7 +229,8 @@ pub enum JpmorganAmountType {
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRecurring {
     pub recurring_sequence: JpmorganRecurringSequence,
-    pub agreement_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agreement_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_variable_amount: Option<bool>,
 }
@@ -405,8 +406,12 @@ pub(super) struct JpmorganStoredFeatureData {
 
 #[derive(Default, Serialize, Deserialize)]
 pub(super) struct JpmorganRequestMetadata {
-    #[serde(default)]
-    pub(super) jpmorgan: JpmorganPreservedContext,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_jpmorgan_context",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub(super) jpmorgan: Option<JpmorganPreservedContext>,
     #[serde(flatten)]
     pub(super) other: serde_json::Map<String, serde_json::Value>,
 }
@@ -423,4 +428,13 @@ pub(super) struct JpmorganPreservedContext {
     pub(super) wallet_account_number_type: Option<JpmorganAccountNumberType>,
     #[serde(flatten)]
     pub(super) other: serde_json::Map<String, serde_json::Value>,
+}
+
+fn deserialize_jpmorgan_context<'de, D>(
+    deserializer: D,
+) -> Result<Option<JpmorganPreservedContext>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    JpmorganPreservedContext::deserialize(deserializer).map(Some)
 }
