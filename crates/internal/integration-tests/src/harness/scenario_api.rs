@@ -43,7 +43,7 @@ use crate::harness::{
     },
     scenario_types::{
         BrowserAutomationHook, BrowserAutomationPhase, CliPreRequestHookConfig, ContextMap,
-        DependencyScope, FieldAssert, ScenarioDef, ScenarioError, SuiteDependency, SuiteSpec,
+        DependencyScope, FieldAssert, ScenarioError, SuiteDependency, SuiteSpec,
     },
     sdk_executor::execute_sdk_request_from_payload,
 };
@@ -59,34 +59,6 @@ pub fn get_the_assertion(
     scenario: &str,
 ) -> Result<BTreeMap<String, FieldAssert>, ScenarioError> {
     get_the_assertion_impl(suite, scenario)
-}
-
-/// Loads one scenario as `connector` sees it: the global suite file first, then
-/// the connector's own `connector_specific_scenarios.json`.
-///
-/// The suite runner already lists connector-private scenarios (it merges them
-/// into the scenario set), so every reader that resolves a scenario *by name*
-/// has to look in the same two places or a listed scenario fails with
-/// `ScenarioNotFound`. The private file is only consulted once the global suite
-/// has been shown not to hold the name, so a name defined in both cannot be
-/// reached here - the suite runner's `merge_connector_specific_scenarios` is
-/// what rejects that collision.
-fn load_scenario_for_connector(
-    suite: &str,
-    scenario: &str,
-    connector: &str,
-) -> Result<ScenarioDef, ScenarioError> {
-    match load_scenario(suite, scenario) {
-        Err(ScenarioError::ScenarioNotFound { .. }) => {
-            load_connector_specific_scenarios(connector, suite)?
-                .remove(scenario)
-                .ok_or_else(|| ScenarioError::ScenarioNotFound {
-                    suite: suite.to_string(),
-                    scenario: scenario.to_string(),
-                })
-        }
-        resolved => resolved,
-    }
 }
 
 /// Loads scenario and applies connector-specific request/assertion patches.
