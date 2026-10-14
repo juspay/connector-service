@@ -2,7 +2,7 @@ use common_enums::AttemptStatus;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     request::Method,
-    types::{FloatMajorUnit, MinorUnit},
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
@@ -11,6 +11,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
+    payment_address::Address,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse, FlowStatus},
     router_data_v2::RouterDataV2,
@@ -23,22 +24,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::betterpayment::BetterpaymentRouterData, types::ResponseRouterData};
 
-/// Betterpayment order_id only allows SEPA characters (a-zA-Z0-9/-?():.,'+ and space)
-/// and is capped at 35 characters. Underscores are replaced with hyphens; any remaining
-/// non-SEPA characters are dropped rather than forwarded.
-fn sanitize_order_id(reference: &str) -> String {
-    reference
-        .chars()
-        .map(|c| if c == '_' { '-' } else { c })
-        .filter(|c| {
-            c.is_ascii_alphanumeric()
-                || matches!(
-                    c,
-                    '/' | '-' | '?' | '(' | ')' | ':' | '.' | ',' | '\'' | '+' | ' '
-                )
-        })
-        .take(35)
-        .collect()
+pub const PAYMENT_DOC_URL: &str =
+    "https://docs.betterpayment.de/docs/api-reference/api-reference-payment-api";
+pub const REFUND_DOC_URL: &str =
+    "https://docs.betterpayment.de/docs/api-reference/api-reference-refund-api";
+
+pub fn integration_error_context(
+    doc_url: &str,
+    suggested_action: &str,
+    additional_context: &str,
+) -> errors::IntegrationErrorContext {
+    errors::IntegrationErrorContext {
+        suggested_action: Some(suggested_action.to_owned()),
+        doc_url: Some(doc_url.to_owned()),
+        additional_context: Some(additional_context.to_owned()),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -68,7 +68,11 @@ impl TryFrom<&ConnectorSpecificConfig> for BetterpaymentAuthType {
             }),
             _ => Err(error_stack::report!(
                 errors::IntegrationError::FailedToObtainAuthType {
-                    context: errors::IntegrationErrorContext::default()
+                    context: integration_error_context(
+                        PAYMENT_DOC_URL,
+                        "Configure Betterpayment api_key, key1 (API password), and api_secret (webhook key).",
+                        "Betterpayment requires its connector-specific credentials and uses HTTP Basic authentication.",
+                    )
                 }
             )),
         }
@@ -91,9 +95,7 @@ pub enum BetterpaymentPaymentType {
 }
 
 #[derive(Debug, Serialize)]
-pub struct BetterpaymentAuthorizeRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct BetterpaymentAuthorizeRequest {
     pub payment_type: BetterpaymentPaymentType,
     pub order_id: String,
     pub amount: FloatMajorUnit,
@@ -108,22 +110,81 @@ pub struct BetterpaymentAuthorizeRequest<
     pub error_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wero_checkout_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<common_utils::pii::Email>,
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub billing: Option<BetterpaymentBillingAddress>,
-    #[serde(skip)]
-    pub _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct BetterpaymentBillingAddress {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<common_utils::pii::Email>,
     pub address: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address2: Option<Secret<String>>,
     pub city: Secret<String>,
     pub postal_code: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<Secret<String>>,
     pub country: common_enums::CountryAlpha2,
     pub first_name: Secret<String>,
     pub last_name: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Secret<String>>,
+}
+
+fn missing_billing_field(field_name: &'static str) -> errors::IntegrationError {
+    errors::IntegrationError::MissingRequiredField {
+        field_name,
+        context: integration_error_context(
+            PAYMENT_DOC_URL,
+            "Provide all required billing fields when supplying a billing address, or omit billing for Wero.",
+            "Betterpayment requires address, city, postal_code, country, first_name, and last_name when billing is supplied.",
+        ),
+    }
+}
+
+impl TryFrom<&Address> for BetterpaymentBillingAddress {
+    type Error = error_stack::Report<errors::IntegrationError>;
+
+    fn try_from(billing: &Address) -> Result<Self, Self::Error> {
+        let address = billing
+            .address
+            .as_ref()
+            .ok_or_else(|| missing_billing_field("billing.address"))?;
+
+        Ok(Self {
+            email: billing.email.clone(),
+            address: address
+                .get_line1()
+                .change_context(missing_billing_field("billing.address.line1"))?
+                .clone(),
+            address2: address.line2.clone(),
+            city: address
+                .get_city()
+                .change_context(missing_billing_field("billing.address.city"))?
+                .clone(),
+            postal_code: address
+                .get_zip()
+                .change_context(missing_billing_field("billing.address.zip"))?
+                .clone(),
+            state: address.state.clone(),
+            country: *address
+                .get_country()
+                .change_context(missing_billing_field("billing.address.country"))?,
+            first_name: address
+                .get_first_name()
+                .change_context(missing_billing_field("billing.address.first_name"))?
+                .clone(),
+            last_name: address
+                .get_last_name()
+                .change_context(missing_billing_field("billing.address.last_name"))?
+                .clone(),
+            phone: billing
+                .phone
+                .as_ref()
+                .and_then(|phone| phone.get_e123_phone_number()),
+        })
+    }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -137,7 +198,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for BetterpaymentAuthorizeRequest<T>
+    > for BetterpaymentAuthorizeRequest
 {
     type Error = error_stack::Report<errors::IntegrationError>;
 
@@ -157,18 +218,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let amount = utils::convert_amount(
             item.connector.amount_converter,
-            request.amount,
-            request.currency,
+            request.amount.amount,
+            request.amount.currency,
         )
         .change_context(errors::IntegrationError::AmountConversionFailed {
-            context: errors::IntegrationErrorContext::default(),
+            context: integration_error_context(
+                PAYMENT_DOC_URL,
+                "Provide a valid payment amount in minor units and its currency.",
+                "Betterpayment expects the payment amount in major units.",
+            ),
         })?;
 
-        let order_id = sanitize_order_id(
-            &router_data
-                .resource_common_data
-                .connector_request_reference_id,
-        );
+        // A compact UUIDv7 fits Betterpayment's 35-character order_id limit.
+        let order_id = uuid::Uuid::now_v7().simple().to_string();
 
         match &request.payment_method_data {
             PaymentMethodData::Wallet(WalletData::Wero(_)) => {
@@ -177,55 +239,62 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     None | Some(common_enums::CaptureMethod::Automatic)
                 ) {
                     return Err(errors::IntegrationError::CaptureMethodNotSupported {
-                        context: Default::default(),
+                        context: integration_error_context(
+                            PAYMENT_DOC_URL,
+                            "Use automatic capture for Betterpayment Wero payments.",
+                            "The Payment API authorizes and captures in a single step.",
+                        ),
                     }
                     .into());
                 }
-                let billing = router_data
-                    .resource_common_data
-                    .get_optional_billing()
-                    .and_then(|billing| billing.address.as_ref())
-                    .map(
-                        |billing| -> Result<BetterpaymentBillingAddress, Self::Error> {
-                            Ok(BetterpaymentBillingAddress {
-                                address: billing.get_line1()?.clone(),
-                                city: billing.get_city()?.clone(),
-                                postal_code: billing.get_zip()?.clone(),
-                                country: *billing.get_country()?,
-                                first_name: billing.get_first_name()?.clone(),
-                                last_name: billing.get_last_name()?.clone(),
-                            })
-                        },
-                    )
+                let billing_details = router_data.resource_common_data.get_optional_billing();
+                let billing = billing_details
+                    .filter(|billing| billing.address.is_some())
+                    .map(BetterpaymentBillingAddress::try_from)
                     .transpose()?;
-                let postback_url = request
-                    .webhook_url
-                    .clone()
-                    .ok_or_else(utils::missing_field_err("webhook_url"))?;
+                let postback_url = request.webhook_url.clone().ok_or_else(|| {
+                    errors::IntegrationError::MissingRequiredField {
+                        field_name: "webhook_url",
+                        context: integration_error_context(
+                            PAYMENT_DOC_URL,
+                            "Provide an HTTPS webhook URL for Betterpayment postbacks.",
+                            "Required when creating a Betterpayment Wero payment.",
+                        ),
+                    }
+                })?;
                 let return_url = request
                     .router_return_url
                     .clone()
-                    .ok_or_else(utils::missing_field_err("router_return_url"))?;
+                    .ok_or_else(|| errors::IntegrationError::MissingRequiredField {
+                        field_name: "router_return_url",
+                        context: integration_error_context(
+                            PAYMENT_DOC_URL,
+                            "Provide a return URL for the Wero success, error, and checkout redirects.",
+                            "Required when creating a Betterpayment Wero payment.",
+                        ),
+                    })?;
 
                 Ok(Self {
                     payment_type: BetterpaymentPaymentType::Wero,
                     order_id,
                     amount,
-                    currency: request.currency.to_string(),
+                    currency: request.amount.currency.to_string(),
                     merchant_reference: request.merchant_order_id.clone(),
                     postback_url: Some(postback_url),
                     success_url: Some(return_url.clone()),
                     error_url: Some(return_url.clone()),
                     wero_checkout_url: Some(return_url),
-                    email: request.email.clone(),
                     billing,
-                    _phantom: std::marker::PhantomData,
                 })
             }
             _ => Err(error_stack::report!(
                 errors::IntegrationError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Betterpayment"),
-                    errors::IntegrationErrorContext::default(),
+                    integration_error_context(
+                        PAYMENT_DOC_URL,
+                        "Use the Wero wallet payment method with this connector.",
+                        "This Betterpayment integration currently supports Wero only.",
+                    ),
                 )
             )),
         }
@@ -364,7 +433,12 @@ impl<T: PaymentMethodDataTypes>
                         .transaction_id
                         .ok_or_else(utils::missing_field_err("transaction_id"))
                         .change_context(errors::ConnectorError::ResponseDeserializationFailed {
-                            context: Default::default(),
+                            context: errors::ResponseTransformationErrorContext {
+                                http_status_code: Some(http_code),
+                                additional_context: Some(format!(
+                                    "Betterpayment payment response is missing transaction_id. See {PAYMENT_DOC_URL}#payment-api-response"
+                                )),
+                            },
                         })?,
                 ),
                 redirection_data,
@@ -447,7 +521,12 @@ impl
                         .transaction_id
                         .ok_or_else(utils::missing_field_err("transaction_id"))
                         .change_context(errors::ConnectorError::ResponseDeserializationFailed {
-                            context: Default::default(),
+                            context: errors::ResponseTransformationErrorContext {
+                                http_status_code: Some(http_code),
+                                additional_context: Some(format!(
+                                    "Betterpayment payment response is missing transaction_id. See {PAYMENT_DOC_URL}#payment-api-response"
+                                )),
+                            },
                         })?,
                 ),
                 redirection_data: None,
@@ -519,11 +598,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let amount = utils::convert_amount(
             item.connector.amount_converter,
-            MinorUnit::new(item.router_data.request.refund_amount),
-            item.router_data.request.currency,
+            item.router_data.request.refund_amount.amount,
+            item.router_data.request.refund_amount.currency,
         )
         .change_context(errors::IntegrationError::AmountConversionFailed {
-            context: errors::IntegrationErrorContext::default(),
+            context: integration_error_context(
+                REFUND_DOC_URL,
+                "Provide a valid refund amount in minor units and its currency.",
+                "Betterpayment expects the refund amount in major units.",
+            ),
         })?;
 
         Ok(Self {
@@ -551,13 +634,19 @@ impl BetterpaymentRSyncResponse {
     fn into_refund(
         self,
         refund_id: &str,
+        http_code: u16,
     ) -> Result<BetterpaymentRefundResponse, error_stack::Report<errors::ConnectorError>> {
         self.0
             .into_iter()
             .find(|refund| refund.refund_id.as_deref() == Some(refund_id) && !refund_id.is_empty())
             .ok_or_else(|| {
                 error_stack::report!(errors::ConnectorError::UnexpectedResponseError {
-                    context: Default::default(),
+                    context: errors::ResponseTransformationErrorContext {
+                        http_status_code: Some(http_code),
+                        additional_context: Some(format!(
+                            "Requested refund was absent from Betterpayment's refund list. Verify the connector refund ID. See {REFUND_DOC_URL}"
+                        )),
+                    },
                 })
                 .attach_printable("Requested refund was absent from Betterpayment's refund list")
             })
@@ -582,7 +671,7 @@ impl
             router_data,
             http_code,
         } = item;
-        let refund = response.into_refund(&router_data.request.connector_refund_id)?;
+        let refund = response.into_refund(&router_data.request.connector_refund_id, http_code)?;
         Self::try_from(ResponseRouterData {
             response: refund,
             router_data,
@@ -637,7 +726,12 @@ impl<F, Req>
                     .filter(|id| !id.is_empty())
                     .ok_or_else(|| {
                         error_stack::report!(errors::ConnectorError::UnexpectedResponseError {
-                            context: Default::default(),
+                            context: errors::ResponseTransformationErrorContext {
+                                http_status_code: Some(http_code),
+                                additional_context: Some(format!(
+                                    "Betterpayment refund response is missing a non-empty refund_id. See {REFUND_DOC_URL}#refund-api-response"
+                                )),
+                            },
                         })
                         .attach_printable("Missing Betterpayment refund_id")
                     })?;
@@ -679,7 +773,8 @@ pub struct BetterpaymentWebhookBody {
     pub payer_location: Option<String>,
     // Refund-only fields; absent on payment postbacks.
     pub refund_id: Option<String>,
-    pub refund_status_code: Option<i64>,
+    #[serde(default, deserialize_with = "deserialize_refund_webhook_status")]
+    pub refund_status_code: Option<BetterpaymentRefundWebhookStatus>,
     pub refund_reason_code: Option<String>,
     pub refund_wallet_activity_reference: Option<String>,
     pub refund_remittance_info: Option<String>,
@@ -740,23 +835,72 @@ pub fn get_webhook_event_type(body: &BetterpaymentWebhookBody) -> EventType {
     EventType::from(body.status.clone())
 }
 
-/// Maps Betterpayment's `refund_status_code` to a UCS EventType.
-/// 0 = Started, 1 = Success, 2 = Error, 3 = Local, 4 = Reversed, 5 = Declined.
-/// Started, Local, missing, and unknown codes remain processing.
-pub fn get_refund_webhook_event_type(refund_status_code: Option<i64>) -> EventType {
-    match refund_status_code {
-        Some(1) => EventType::RefundSuccess,
-        Some(2 | 4 | 5) => EventType::RefundFailure,
-        _ => EventType::RefundProcessing,
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BetterpaymentRefundWebhookStatus {
+    #[serde(alias = "0")]
+    Started,
+    #[serde(alias = "1")]
+    Success,
+    #[serde(alias = "2")]
+    Error,
+    #[serde(alias = "3")]
+    Local,
+    #[serde(alias = "4")]
+    Reversed,
+    #[serde(alias = "5")]
+    Declined,
+    #[serde(other)]
+    Unknown,
+}
+
+fn deserialize_refund_webhook_status<'de, D>(
+    deserializer: D,
+) -> Result<Option<BetterpaymentRefundWebhookStatus>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let code = Option::<i64>::deserialize(deserializer)?;
+    code.map(|code| {
+        // Serde enum aliases are strings; the API sends an integer code.
+        serde_json::from_value(serde_json::Value::String(code.to_string()))
+            .map_err(serde::de::Error::custom)
+    })
+    .transpose()
+}
+
+pub fn get_refund_webhook_event_type(
+    status: Option<BetterpaymentRefundWebhookStatus>,
+) -> EventType {
+    match status {
+        Some(BetterpaymentRefundWebhookStatus::Started) => EventType::RefundProcessing,
+        Some(BetterpaymentRefundWebhookStatus::Success) => EventType::RefundSuccess,
+        Some(
+            BetterpaymentRefundWebhookStatus::Error
+            | BetterpaymentRefundWebhookStatus::Reversed
+            | BetterpaymentRefundWebhookStatus::Declined,
+        ) => EventType::RefundFailure,
+        Some(
+            BetterpaymentRefundWebhookStatus::Local | BetterpaymentRefundWebhookStatus::Unknown,
+        )
+        | None => EventType::RefundProcessing,
     }
 }
 
-/// Maps Betterpayment's `refund_status_code` to a UCS RefundStatus.
-/// Missing or unknown codes remain pending until a recognized status arrives.
-pub fn get_refund_webhook_status(refund_status_code: Option<i64>) -> common_enums::RefundStatus {
-    match refund_status_code {
-        Some(1) => common_enums::RefundStatus::Success,
-        Some(2 | 4 | 5) => common_enums::RefundStatus::Failure,
-        _ => common_enums::RefundStatus::Pending,
+pub fn get_refund_webhook_status(
+    status: Option<BetterpaymentRefundWebhookStatus>,
+) -> Result<common_enums::RefundStatus, error_stack::Report<errors::WebhookError>> {
+    match status {
+        Some(BetterpaymentRefundWebhookStatus::Started) => Ok(common_enums::RefundStatus::Pending),
+        Some(BetterpaymentRefundWebhookStatus::Success) => Ok(common_enums::RefundStatus::Success),
+        Some(
+            BetterpaymentRefundWebhookStatus::Error
+            | BetterpaymentRefundWebhookStatus::Reversed
+            | BetterpaymentRefundWebhookStatus::Declined,
+        ) => Ok(common_enums::RefundStatus::Failure),
+        Some(
+            BetterpaymentRefundWebhookStatus::Local | BetterpaymentRefundWebhookStatus::Unknown,
+        )
+        | None => Ok(common_enums::RefundStatus::Pending),
     }
 }

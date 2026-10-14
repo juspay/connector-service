@@ -80,7 +80,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: BetterpaymentAuthorizeRequest<T>,
+            request_body: BetterpaymentAuthorizeRequest,
             response_body: BetterpaymentAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -171,7 +171,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::IntegrationError> {
         let auth = betterpayment::BetterpaymentAuthType::try_from(auth_type).change_context(
             errors::IntegrationError::FailedToObtainAuthType {
-                context: Default::default(),
+                context: betterpayment::integration_error_context(
+                    betterpayment::PAYMENT_DOC_URL,
+                    "Configure Betterpayment api_key, key1 (API password), and api_secret (webhook key).",
+                    "Betterpayment uses HTTP Basic authentication with api_key and key1.",
+                ),
             },
         )?;
         // Betterpayment uses HTTP Basic Auth: `Authorization: Basic base64(api_key:key1)`.
@@ -382,7 +386,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
-            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,
@@ -401,7 +404,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .parse_struct("BetterpaymentWebhookBody")
             .change_context(errors::WebhookError::WebhookBodyDecodingFailed)?;
 
-        let status = betterpayment::get_refund_webhook_status(body.refund_status_code);
+        let status = betterpayment::get_refund_webhook_status(body.refund_status_code)?;
 
         let (error_code, error_message) = if status == common_enums::RefundStatus::Failure {
             (body.refund_reason_code.clone(), body.message.clone())
@@ -420,10 +423,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
         })
-    }
-
-    fn sample_webhook_body(&self) -> &'static [u8] {
-        br#"{"transaction_id":"bp_test123","payment_type":"wero","status_code":0,"status":"completed","order_id":"order_abc","amount":10.00,"currency":"EUR","checksum":"dummy_checksum"}"#
     }
 }
 
