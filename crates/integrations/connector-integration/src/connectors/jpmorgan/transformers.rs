@@ -66,18 +66,19 @@ impl requests::JpmorganSyncResource {
             .transpose()
             .change_context(invalid())?
             .unwrap_or_default();
-        if metadata.jpmorgan.wallet_account_number_type.is_some() {
+        let context = metadata.jpmorgan.as_ref();
+        if context.is_some_and(|context| context.wallet_account_number_type.is_some()) {
             return Err(invalid().into());
         }
-        if let Some(credential) = &metadata.jpmorgan.stored_credential {
+        if let Some(credential) = context.and_then(|context| context.stored_credential.as_ref()) {
             requests::JpmorganStoredContext {
                 stored_credential: credential.clone(),
-                recurring: metadata.jpmorgan.recurring.clone(),
-                wallet: metadata.jpmorgan.wallet.clone(),
+                recurring: context.and_then(|context| context.recurring.clone()),
+                wallet: context.and_then(|context| context.wallet.clone()),
             }
             .validate()?;
         }
-        if let Some(resource) = &metadata.jpmorgan.resource {
+        if let Some(resource) = context.and_then(|context| context.resource.as_ref()) {
             let id = match &request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => {
                     if resource.id.as_ref().is_some_and(|legacy| legacy != id) {
@@ -215,12 +216,13 @@ impl responses::JpmorganVerificationResponse {
                 ..Default::default()
             }));
         }
+        let jpmorgan = metadata.jpmorgan.get_or_insert_with(Default::default);
         if let Some(context) = stored_context {
-            metadata.jpmorgan.stored_credential = Some(context.stored_credential);
-            metadata.jpmorgan.recurring = context.recurring;
-            metadata.jpmorgan.wallet = context.wallet;
+            jpmorgan.stored_credential = Some(context.stored_credential);
+            jpmorgan.recurring = context.recurring;
+            jpmorgan.wallet = context.wallet;
         }
-        metadata.jpmorgan.resource = Some(requests::JpmorganResourceContext {
+        jpmorgan.resource = Some(requests::JpmorganResourceContext {
             resource_type: requests::JpmorganResourceType::Verification,
             id: None,
         });
@@ -308,11 +310,14 @@ impl requests::JpmorganRecurring {
         if metadata.is_some_and(|metadata| !metadata.is_object()) {
             return Err(requests::JpmorganStoredContext::invalid());
         }
-        let Some(value) = metadata.and_then(|metadata| metadata.get("jpmorgan")) else {
+        let Some(metadata) = metadata else {
             return Self::from_optional_mandate_terms(category, mandate);
         };
-        let context: requests::JpmorganPreservedContext = serde_json::from_value(value.clone())
+        let metadata: requests::JpmorganRequestMetadata = serde_json::from_value(metadata.clone())
             .map_err(|_| requests::JpmorganStoredContext::invalid())?;
+        let Some(context) = metadata.jpmorgan else {
+            return Self::from_optional_mandate_terms(category, mandate);
+        };
         let recurring = context
             .recurring
             .ok_or_else(requests::JpmorganStoredContext::invalid)?;
@@ -327,8 +332,9 @@ impl requests::JpmorganRecurring {
                 )
             )
             || recurring.recurring_sequence != requests::JpmorganRecurringSequence::First
-            || recurring.agreement_id.trim().is_empty()
-            || recurring.agreement_id.chars().count() > JPMORGAN_AGREEMENT_ID_MAX_LENGTH
+            || recurring.agreement_id.as_deref().is_some_and(|id| {
+                id.trim().is_empty() || id.chars().count() > JPMORGAN_AGREEMENT_ID_MAX_LENGTH
+            })
             || recurring.is_variable_amount.is_none()
         {
             return Err(requests::JpmorganStoredContext::invalid());
@@ -342,7 +348,7 @@ impl requests::JpmorganRecurring {
 
     fn input_context() -> IntegrationErrorContext {
         IntegrationErrorContext {
-            suggested_action: Some("Supply the original agreement identifier and an explicit exact or variable amount classification.".to_owned()),
+            suggested_action: Some("Supply an explicit exact or variable amount classification. Preserve the original agreement identifier when supplied.".to_owned()),
             ..Default::default()
         }
     }
@@ -368,17 +374,13 @@ impl requests::JpmorganRecurring {
             }
         }
         let (agreement_id, amount_type) = Self::supplied_recurring_fields(mandate)?;
-        let agreement_id = agreement_id.ok_or_else(|| IntegrationError::MissingRequiredField {
-            field_name: "metadata.jpmorgan.recurring.agreementId",
-            context: Self::input_context(),
-        })?;
         let amount_type = amount_type.ok_or_else(|| IntegrationError::MissingRequiredField {
             field_name: "metadata.jpmorgan.recurring.isVariableAmount",
             context: Self::input_context(),
         })?;
         Ok(Some(Self {
             recurring_sequence: requests::JpmorganRecurringSequence::First,
-            agreement_id: agreement_id.to_owned(),
+            agreement_id: agreement_id.map(str::to_owned),
             is_variable_amount: Some(amount_type == requests::JpmorganAmountType::Variable),
         }))
     }
@@ -426,15 +428,14 @@ impl requests::JpmorganRecurring {
         mandate: Option<&MandateData>,
     ) -> Result<(), Error> {
         let (agreement_id, amount_type) = Self::supplied_recurring_fields(mandate)?;
-        if agreement_id
-            .is_some_and(|id| recurring.is_none_or(|recurring| recurring.agreement_id != id))
-            || amount_type.is_some_and(|amount_type| {
-                recurring.is_none_or(|recurring| {
-                    recurring.is_variable_amount
-                        != Some(amount_type == requests::JpmorganAmountType::Variable)
-                })
+        if agreement_id.is_some_and(|id| {
+            recurring.is_none_or(|recurring| recurring.agreement_id.as_deref() != Some(id))
+        }) || amount_type.is_some_and(|amount_type| {
+            recurring.is_none_or(|recurring| {
+                recurring.is_variable_amount
+                    != Some(amount_type == requests::JpmorganAmountType::Variable)
             })
-        {
+        }) {
             return Err(requests::JpmorganStoredContext::invalid());
         }
         Ok(())
@@ -488,9 +489,9 @@ impl requests::JpmorganStoredContext {
             return Err(Self::invalid());
         }
         if let Some(recurring) = &self.recurring {
-            if recurring.agreement_id.trim().is_empty()
-                || recurring.agreement_id.chars().count() > JPMORGAN_AGREEMENT_ID_MAX_LENGTH
-                || recurring.is_variable_amount.is_none()
+            if recurring.agreement_id.as_deref().is_some_and(|id| {
+                id.trim().is_empty() || id.chars().count() > JPMORGAN_AGREEMENT_ID_MAX_LENGTH
+            }) || recurring.is_variable_amount.is_none()
                 || recurring.recurring_sequence != requests::JpmorganRecurringSequence::First
             {
                 return Err(Self::invalid());
@@ -2033,7 +2034,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
                 let mut response =
                     build_payments_response_result(&payment, item.http_code, status)?;
                 if item.router_data.request.connector_feature_data.is_some() {
-                    metadata.jpmorgan.resource = None;
+                    if let Some(context) = metadata.jpmorgan.as_mut() {
+                        context.resource = None;
+                    }
                     if let Ok(PaymentsResponseData::TransactionResponse {
                         connector_metadata,
                         ..
@@ -2614,7 +2617,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let recurring = requests::JpmorganRecurring {
             recurring_sequence: requests::JpmorganRecurringSequence::Subsequent,
-            agreement_id,
+            agreement_id: Some(agreement_id),
             is_variable_amount: None,
         };
 
