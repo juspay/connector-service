@@ -682,14 +682,13 @@
           }
         },
         "sample": {
-          "url": "https://id.payments.jpmorgan.com/am/oauth2/alpha/access_token",
+          "url": "https://idag2.jpmorganchase.com/adfs/oauth2/token",
           "method": "Post",
           "headers": {
-            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfc2VjcmV0",
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "grant_type=client_credentials&scope=jpm%3Apayments%3Asandbox"
+          "body": "grant_type=client_credentials&client_id=probe_id&client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&client_assertion=YOUR_SIGNED_JWT&resource=probe_id"
         }
       }
     },
@@ -704,14 +703,13 @@
         "status": "supported",
         "proto_request": {},
         "sample": {
-          "url": "https://id.payments.jpmorgan.com/am/oauth2/alpha/access_token",
+          "url": "https://idag2.jpmorganchase.com/adfs/oauth2/token",
           "method": "Post",
           "headers": {
-            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfc2VjcmV0",
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "grant_type=client_credentials&scope=jpm%3Apayments%3Asandbox"
+          "body": "grant_type=client_credentials&client_id=probe_id&client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&client_assertion=YOUR_SIGNED_JWT&resource=probe_id"
         }
       }
     },

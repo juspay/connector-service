@@ -25,7 +25,9 @@ config = sdk_config_pb2.ConnectorConfig(
     connector_config=payment_pb2.ConnectorSpecificConfig(
         jpmorgan=payment_pb2.JpmorganConfig(
             client_id=payment_methods_pb2.SecretString(value="YOUR_CLIENT_ID"),
-            client_secret=payment_methods_pb2.SecretString(value="YOUR_CLIENT_SECRET"),
+            thumbprint=payment_methods_pb2.SecretString(value="YOUR_THUMBPRINT"),
+            private_key=payment_methods_pb2.SecretString(value="YOUR_PRIVATE_KEY"),
+            resource_id=payment_methods_pb2.SecretString(value="YOUR_RESOURCE_ID"),
             base_url="YOUR_BASE_URL",
             company_name=payment_methods_pb2.SecretString(value="YOUR_COMPANY_NAME"),
             product_name=payment_methods_pb2.SecretString(value="YOUR_PRODUCT_NAME"),
@@ -55,7 +57,9 @@ const config = ConnectorConfig.create({
     auth: {
         jpmorgan: {
             clientId: { value: 'YOUR_CLIENT_ID' },
-            clientSecret: { value: 'YOUR_CLIENT_SECRET' },
+            thumbprint: { value: 'YOUR_THUMBPRINT' },
+            privateKey: { value: 'YOUR_PRIVATE_KEY' },
+            resourceId: { value: 'YOUR_RESOURCE_ID' },
             baseUrl: 'YOUR_BASE_URL',
             companyName: { value: 'YOUR_COMPANY_NAME' },
             productName: { value: 'YOUR_PRODUCT_NAME' },
@@ -81,7 +85,9 @@ val config = ConnectorConfig.newBuilder()
         ConnectorSpecificConfig.newBuilder()
             .setJpmorgan(JpmorganConfig.newBuilder()
                 .setClientId(SecretString.newBuilder().setValue("YOUR_CLIENT_ID").build())
-                .setClientSecret(SecretString.newBuilder().setValue("YOUR_CLIENT_SECRET").build())
+                .setThumbprint(SecretString.newBuilder().setValue("YOUR_THUMBPRINT").build())
+                .setPrivateKey(SecretString.newBuilder().setValue("YOUR_PRIVATE_KEY").build())
+                .setResourceId(SecretString.newBuilder().setValue("YOUR_RESOURCE_ID").build())
                 .setBaseUrl("YOUR_BASE_URL")
                 .setCompanyName(SecretString.newBuilder().setValue("YOUR_COMPANY_NAME").build())
                 .setProductName(SecretString.newBuilder().setValue("YOUR_PRODUCT_NAME").build())
@@ -109,7 +115,9 @@ let config = ConnectorConfig {
     connector_config: Some(ConnectorSpecificConfig {
             config: Some(connector_specific_config::Config::Jpmorgan(JpmorganConfig {
                 client_id: Some(hyperswitch_masking::Secret::new("YOUR_CLIENT_ID".to_string())),  // Authentication credential
-                client_secret: Some(hyperswitch_masking::Secret::new("YOUR_CLIENT_SECRET".to_string())),  // Authentication credential
+                thumbprint: Some(hyperswitch_masking::Secret::new("YOUR_THUMBPRINT".to_string())),  // Authentication credential
+                private_key: Some(hyperswitch_masking::Secret::new("YOUR_PRIVATE_KEY".to_string())),  // Authentication credential
+                resource_id: Some(hyperswitch_masking::Secret::new("YOUR_RESOURCE_ID".to_string())),  // Authentication credential
                 base_url: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
                 company_name: Some(hyperswitch_masking::Secret::new("YOUR_COMPANY_NAME".to_string())),  // Authentication credential
                 product_name: Some(hyperswitch_masking::Secret::new("YOUR_PRODUCT_NAME".to_string())),  // Authentication credential

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use base64::Engine;
 use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
 use domain_types::{
     connector_types::ConnectorEnum,
@@ -182,7 +183,13 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
         },
         ConnectorEnum::Jpmorgan => ConnectorSpecificConfig::Jpmorgan {
             client_id: id(),
-            client_secret: s(),
+            thumbprint: Secret::new("556061FA4124C0F67000112233445566778899AA".to_string()),
+            // Dummy RSA key for offline field probing; never a merchant credential.
+            private_key: Secret::new(
+                base64::engine::general_purpose::STANDARD
+                    .encode(include_str!("../fixtures/jpmorgan_probe_key.pem")),
+            ),
+            resource_id: id(),
             base_url: None,
             secondary_base_url: None,
             company_name: Some(Secret::new("ProbeCompany".to_string())),
