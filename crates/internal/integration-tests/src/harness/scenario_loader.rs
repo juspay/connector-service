@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use serde_json::Value;
@@ -241,90 +241,6 @@ pub fn load_supported_payment_methods_for_connector(
     Ok(spec.supported_payment_methods)
 }
 
-/// Scenarios that exist only for one connector, keyed by suite.
-///
-/// Held apart from `global_suites/` on purpose: the global file stays the single
-/// baseline every connector is measured against, and this covers the cases that
-/// cannot exist elsewhere — a sandbox-specific trigger, or a production bug
-/// pinned as a permanent test. Additive only; shadowing a global scenario is an
-/// error, since changing a shared scenario is what `override.json` is for.
-pub fn load_connector_specific_scenarios(
-    connector: &str,
-    suite: &str,
-) -> Result<ScenarioFile, ScenarioError> {
-    load_connector_specific_scenarios_in(&connector_specs_root(), connector, suite)
-}
-
-/// Same, against an explicit specs root. Tests use this rather than rewriting
-/// `UCS_CONNECTOR_SPECS_ROOT`, which is process-wide and races every other test
-/// that discovers connectors from that directory.
-pub fn load_connector_specific_scenarios_in(
-    root: &Path,
-    connector: &str,
-    suite: &str,
-) -> Result<ScenarioFile, ScenarioError> {
-    let path = root.join(connector).join(CONNECTOR_SCENARIOS_FILE);
-    if !path.exists() {
-        return Ok(ScenarioFile::new());
-    }
-    let content = fs::read_to_string(&path).map_err(|source| ScenarioError::ScenarioFileRead {
-        path: path.clone(),
-        source,
-    })?;
-    let mut by_suite =
-        serde_json::from_str::<BTreeMap<String, Value>>(&content).map_err(|source| {
-            ScenarioError::ScenarioFileParse {
-                path: path.clone(),
-                source,
-            }
-        })?;
-    let Some(scenarios) = by_suite.remove(suite) else {
-        return Ok(ScenarioFile::new());
-    };
-    serde_json::from_value::<ScenarioFile>(scenarios)
-        .map_err(|source| ScenarioError::ScenarioFileParse { path, source })
-}
-
-/// The suite set a connector actually runs: the global baseline plus whatever it
-/// declares privately.
-///
-/// A private name that already exists globally is rejected rather than merged —
-/// silently winning over the baseline is exactly how connector-private coverage
-/// would start hiding shared regressions.
-pub fn merge_connector_specific_scenarios(
-    connector: &str,
-    suite: &str,
-    baseline: &mut ScenarioFile,
-) -> Result<usize, ScenarioError> {
-    merge_connector_specific_scenarios_in(&connector_specs_root(), connector, suite, baseline)
-}
-
-/// Same, against an explicit specs root.
-pub fn merge_connector_specific_scenarios_in(
-    root: &Path,
-    connector: &str,
-    suite: &str,
-    baseline: &mut ScenarioFile,
-) -> Result<usize, ScenarioError> {
-    let private = load_connector_specific_scenarios_in(root, connector, suite)?;
-    let count = private.len();
-    let path = root.join(connector).join(CONNECTOR_SCENARIOS_FILE);
-    for (name, def) in private {
-        if baseline.contains_key(&name) {
-            return Err(ScenarioError::InvalidConnectorSpec {
-                path,
-                message: format!(
-                    "{connector} defines {suite}/{name}, which already exists in the global \
-                     suite. This file can only add scenarios; use override.json to change a \
-                     shared one."
-                ),
-            });
-        }
-        baseline.insert(name, def);
-    }
-    Ok(count)
-}
-
 /// Why this connector declares the scenario unsupported, if it does.
 ///
 /// Declared in `specs.json` next to the rest of the connector's capabilities, so
@@ -485,9 +401,6 @@ pub const ALPHA_CONNECTORS_FILE: &str = "alpha_connectors.json";
 /// See `.github/scripts/certify-connectors.sh`.
 pub const LIVE_CONNECTORS_FILE: &str = "live_connectors.json";
 
-/// Scenarios that exist only for one connector, beside its `specs.json`.
-pub const CONNECTOR_SCENARIOS_FILE: &str = "connector_specific_scenarios.json";
-
 pub fn discover_all_connectors() -> Result<Vec<String>, ScenarioError> {
     let specs_dir = connector_specs_root();
 
@@ -590,22 +503,9 @@ pub fn get_the_assertion(
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs,
-        path::PathBuf,
-        time::{SystemTime, UNIX_EPOCH},
-    };
+    use std::fs;
 
-    use super::{merge_connector_specific_scenarios_in, CONNECTOR_SCENARIOS_FILE};
-    use crate::harness::scenario_types::{DependencyScope, ScenarioFile};
-
-    fn unique_specs_dir() -> PathBuf {
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
-        std::env::temp_dir().join(format!("ucs_connector_specs_test_{nanos}"))
-    }
+    use crate::harness::scenario_types::DependencyScope;
 
     use serde_json::json;
 
@@ -882,69 +782,6 @@ mod tests {
             .any(|connector| connector == "authorizedotnet"));
         assert!(connectors.iter().any(|connector| connector == "paypal"));
         assert!(!connectors.is_empty());
-    }
-
-    #[test]
-    fn connector_specific_scenarios_are_added_but_may_not_shadow() {
-        let temp_root = unique_specs_dir();
-        let connector_dir = temp_root.join("tsys");
-        fs::create_dir_all(&connector_dir).expect("connector dir should be created");
-        fs::write(
-            connector_dir.join(CONNECTOR_SCENARIOS_FILE),
-            serde_json::json!({
-                "PaymentService/Authorize": {
-                    "tsys_soft_decline": {
-                        "grpc_req": { "amount": { "minor_amount": 5205 } },
-                        "assert": { "status": { "one_of": ["FAILURE"] } }
-                    }
-                }
-            })
-            .to_string(),
-        )
-        .expect("scenario file should be written");
-
-        // Additive: a name the baseline does not have is merged in.
-        let mut baseline = ScenarioFile::new();
-        let added = merge_connector_specific_scenarios_in(
-            &temp_root,
-            "tsys",
-            "PaymentService/Authorize",
-            &mut baseline,
-        )
-        .expect("a private scenario should merge into an empty baseline");
-        assert_eq!(added, 1);
-        assert!(baseline.contains_key("tsys_soft_decline"));
-
-        // A suite the connector declares nothing for is left alone.
-        let mut other = ScenarioFile::new();
-        let none = merge_connector_specific_scenarios_in(
-            &temp_root,
-            "tsys",
-            "PaymentService/Refund",
-            &mut other,
-        )
-        .expect("a suite with no private scenarios should be a no-op");
-        assert_eq!(none, 0);
-        assert!(other.is_empty());
-
-        // Shadowing is the failure mode this file must never enable: a private
-        // scenario silently winning over the baseline would hide a shared
-        // regression behind connector-private coverage.
-        let mut collides = baseline.clone();
-        let err = merge_connector_specific_scenarios_in(
-            &temp_root,
-            "tsys",
-            "PaymentService/Authorize",
-            &mut collides,
-        )
-        .expect_err("a name already in the baseline must be rejected");
-        assert!(
-            err.to_string()
-                .contains("already exists in the global suite"),
-            "the error should explain the collision, got: {err}"
-        );
-
-        let _ = fs::remove_dir_all(temp_root);
     }
 
     #[test]

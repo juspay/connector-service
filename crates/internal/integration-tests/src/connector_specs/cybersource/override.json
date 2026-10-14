@@ -83,6 +83,71 @@
         "metadata": {
           "value": "{}"
         }
+      },
+      "variants": {
+        "cybersource_google_pay_psp_decryption_request_shape": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "google_pay_sdk": {
+                "info": {},
+                "tokenization_data": {
+                  "encrypted_data": {}
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {}
+          },
+          "assert": {
+            "status": null,
+            "error": null,
+            "raw_connector_request.value": {
+              "contains": "\"paymentSolution\":\"012\""
+            },
+            "connector_transaction_id": {
+              "must_exist": null,
+              "must_not_exist": true
+            }
+          },
+          "display_name": "Google Pay, Cybersource decryption: the Google token goes out Base64-encoded as paymentInformation.fluidData with paymentSolution 012 (placeholder token, wire shape only)"
+        }
       }
     },
     "no3ds_auto_capture_credit_card": {
@@ -92,6 +157,246 @@
         },
         "metadata": {
           "value": "{}"
+        }
+      },
+      "variants": {
+        "cybersource_l2_l3_data_sale": {
+          "grpc_req": {
+            "amount": {
+              "minor_amount": 1377
+            },
+            "order_tax_amount": 77,
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {},
+                "card_exp_year": {},
+                "card_cvc": {},
+                "card_holder_name": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {},
+            "l2_l3_data": {
+              "order_info": {
+                "merchant_order_reference_id": "PO-GRACE-L2L3",
+                "shipping_cost": 200,
+                "duty_amount": 50,
+                "discount_amount": 0,
+                "order_details": [
+                  {
+                    "product_name": "vase",
+                    "quantity": 1,
+                    "amount": 1050,
+                    "product_id": "1",
+                    "description": "grace matrix item",
+                    "unit_of_measure": "EA",
+                    "commodity_code": "4421",
+                    "total_tax_amount": 77,
+                    "tax_rate": 0.07
+                  }
+                ]
+              },
+              "tax_info": {
+                "tax_status": "TAX_STATUS_TAXABLE",
+                "order_tax_amount": 77
+              }
+            }
+          },
+          "assert": {
+            "status": {
+              "one_of": [
+                "CHARGED"
+              ]
+            },
+            "connector_transaction_id": {},
+            "error": {},
+            "raw_connector_request.value": {
+              "contains": "\"purchaseLevel\":\"3\""
+            }
+          },
+          "display_name": "Level II/III data on a sale"
+        },
+        "cybersource_decline_invalid_amount": {
+          "grpc_req": {
+            "amount": {
+              "minor_amount": 10000000000000
+            },
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {},
+                "card_exp_year": {},
+                "card_cvc": {},
+                "card_holder_name": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {}
+          },
+          "assert": {
+            "connector_transaction_id": null,
+            "status": null,
+            "error": {
+              "must_not_exist": null,
+              "must_exist": true
+            },
+            "error.connector_details.code": {
+              "one_of": [
+                "INVALID_DATA",
+                "INVALID_AMOUNT",
+                "INVALID_REQUEST"
+              ]
+            }
+          },
+          "display_name": "documented sandbox trigger: amount 100000000000 is rejected"
+        },
+        "cybersource_decline_luhn_invalid_card": {
+          "grpc_req": {
+            "amount": {
+              "minor_amount": 1500
+            },
+            "payment_method": {
+              "card": {
+                "card_number": {
+                  "value": "4111111111111112"
+                },
+                "card_exp_month": {},
+                "card_exp_year": {},
+                "card_cvc": {},
+                "card_holder_name": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {}
+          },
+          "assert": {
+            "connector_transaction_id": null,
+            "status": {
+              "one_of": [
+                "FAILURE"
+              ]
+            },
+            "error": {
+              "must_not_exist": null,
+              "must_exist": true
+            },
+            "error.connector_details.code": {
+              "one_of": [
+                "INVALID_ACCOUNT",
+                "INVALID_DATA"
+              ]
+            }
+          },
+          "display_name": "Luhn-invalid card is declined: status FAILURE, error code is errorInformation.reason (INVALID_ACCOUNT or INVALID_DATA)"
         }
       }
     },
@@ -112,6 +417,695 @@
         },
         "metadata": {
           "value": "{}"
+        }
+      },
+      "variants": {
+        "cybersource_shipping_details_shipto": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {},
+                "card_exp_year": {},
+                "card_cvc": {},
+                "card_holder_name": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "line3": null,
+                "phone_number": null,
+                "phone_country_code": null,
+                "line2": null,
+                "email": null,
+                "first_name": {
+                  "value": "Ship"
+                },
+                "last_name": {
+                  "value": "Tomatrix"
+                },
+                "line1": {
+                  "value": "12 Main Street"
+                },
+                "city": {
+                  "value": "Oakland"
+                },
+                "state": {},
+                "zip_code": {
+                  "value": "94607"
+                }
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {}
+          },
+          "assert": {
+            "status": {},
+            "connector_transaction_id": {},
+            "error": {},
+            "raw_connector_request.value": {
+              "contains": "\"shipTo\":{"
+            }
+          },
+          "display_name": "shipping details reach orderInformation.shipTo"
+        },
+        "cybersource_l2_l3_data_manual_capture": {
+          "grpc_req": {
+            "amount": {
+              "minor_amount": 1377
+            },
+            "order_tax_amount": 77,
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {},
+                "card_exp_year": {},
+                "card_cvc": {},
+                "card_holder_name": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {},
+            "l2_l3_data": {
+              "order_info": {
+                "merchant_order_reference_id": "PO-GRACE-L2L3",
+                "shipping_cost": 200,
+                "duty_amount": 50,
+                "discount_amount": 0,
+                "order_details": [
+                  {
+                    "product_name": "vase",
+                    "quantity": 1,
+                    "amount": 1050,
+                    "product_id": "1",
+                    "description": "grace matrix item",
+                    "unit_of_measure": "EA",
+                    "commodity_code": "4421",
+                    "total_tax_amount": 77,
+                    "tax_rate": 0.07
+                  }
+                ]
+              },
+              "tax_info": {
+                "tax_status": "TAX_STATUS_TAXABLE",
+                "order_tax_amount": 77
+              }
+            }
+          },
+          "assert": {
+            "status": {},
+            "connector_transaction_id": {},
+            "error": {},
+            "raw_connector_request.value": {
+              "contains": "\"purchaseLevel\":\"3\""
+            }
+          },
+          "display_name": "Level II/III data on an authorization-only request"
+        },
+        "cybersource_dynamic_descriptor": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {},
+                "card_exp_year": {},
+                "card_cvc": {},
+                "card_holder_name": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {},
+            "billing_descriptor": {
+              "name": {
+                "value": "GRACE MATRIX"
+              },
+              "statement_descriptor": "GRACE MATRIX"
+            },
+            "statement_descriptor_name": "GRACE MATRIX"
+          },
+          "assert": {
+            "status": {},
+            "connector_transaction_id": {},
+            "error": {},
+            "raw_connector_request.value": {
+              "contains": "\"merchantDescriptor\":{"
+            }
+          },
+          "display_name": "dynamic descriptor reaches merchantInformation.merchantDescriptor.name"
+        },
+        "cybersource_external_3ds_visa_eci05": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {},
+            "authentication_data": {
+              "eci": "05",
+              "cavv": "AAABBEg0VhI0VniQEjRWAAAAAAA=",
+              "ds_transaction_id": "f38e6948-5388-41a6-bca4-b49723c19437",
+              "message_version": "2.2.0",
+              "trans_status": "TRANSACTION_STATUS_SUCCESS"
+            }
+          },
+          "assert": {
+            "status": {},
+            "connector_transaction_id": {},
+            "error": {},
+            "redirection_data": {
+              "must_not_exist": true
+            },
+            "raw_connector_request.value": {
+              "contains": "\"commerceIndicator\":\"vbv\""
+            }
+          },
+          "display_name": "externally authenticated Visa (ECI 05) authorizes without redirect"
+        },
+        "cybersource_external_3ds_mastercard_ucaf": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {
+                  "value": "5555555555554444"
+                },
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {},
+            "authentication_data": {
+              "eci": "02",
+              "cavv": "EHuWW9PiBkWvqE5juRwDzAUFBAk",
+              "ds_transaction_id": "f38e6948-5388-41a6-bca4-b49723c19437",
+              "message_version": "2.2.0",
+              "trans_status": "TRANSACTION_STATUS_SUCCESS"
+            }
+          },
+          "assert": {
+            "status": {},
+            "connector_transaction_id": {},
+            "error": {},
+            "redirection_data": {
+              "must_not_exist": true
+            },
+            "raw_connector_request.value": {
+              "contains": "\"ucafCollectionIndicator\":\"2\""
+            }
+          },
+          "display_name": "externally authenticated Mastercard uses UCAF fields and authorizes"
+        },
+        "cybersource_avs_result_returned": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {},
+                "card_exp_year": {},
+                "card_cvc": {},
+                "card_holder_name": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "browser_info": {}
+          },
+          "assert": {
+            "status": {},
+            "connector_transaction_id": {},
+            "error": {},
+            "connector_response.additional_payment_method_data.card.payment_checks": {
+              "must_exist": true
+            }
+          },
+          "display_name": "AVS result is returned as payment_checks"
+        },
+        "cybersource_external_3ds_attempted_pares_status": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "External 3DS, attempted authentication (ECI 06)",
+            "browser_info": {},
+            "authentication_data": {
+              "eci": "06",
+              "cavv": "AAABBEg0VhI0VniQEjRWAAAAAAA=",
+              "ds_transaction_id": "f38e6948-5388-41a6-bca4-b49723c19437",
+              "message_version": "2.2.0",
+              "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED"
+            }
+          },
+          "assert": {
+            "status": {},
+            "connector_transaction_id": {},
+            "error": {},
+            "redirection_data": {
+              "must_not_exist": true
+            },
+            "raw_connector_request.value": {
+              "contains": "\"paresStatus\":\"A\""
+            }
+          },
+          "display_name": "externally authenticated Visa with trans_status NOT_VERIFIED (ECI 06) authorizes; the wire paresStatus is A"
+        },
+        "cybersource_external_3ds_failed_authentication_refused": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "External 3DS, failed authentication",
+            "browser_info": {},
+            "authentication_data": {
+              "eci": "07",
+              "ds_transaction_id": "f38e6948-5388-41a6-bca4-b49723c19437",
+              "message_version": "2.2.0",
+              "trans_status": "TRANSACTION_STATUS_FAILURE"
+            }
+          },
+          "assert": {
+            "status": null,
+            "error": null,
+            "error.error_code": {
+              "equals": "INVALID_DATA_FORMAT"
+            },
+            "connector_transaction_id": {
+              "must_exist": null,
+              "must_not_exist": true
+            }
+          },
+          "display_name": "external authentication with trans_status FAILURE is refused before the connector call"
+        },
+        "cybersource_external_3ds_unfinished_challenge_refused": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "External 3DS, challenge never validated",
+            "browser_info": {},
+            "authentication_data": {
+              "eci": "07",
+              "ds_transaction_id": "f38e6948-5388-41a6-bca4-b49723c19437",
+              "message_version": "2.2.0",
+              "trans_status": "TRANSACTION_STATUS_CHALLENGE_REQUIRED"
+            }
+          },
+          "assert": {
+            "status": null,
+            "error": null,
+            "error.error_code": {
+              "equals": "INVALID_DATA_FORMAT"
+            },
+            "connector_transaction_id": {
+              "must_exist": null,
+              "must_not_exist": true
+            }
+          },
+          "display_name": "external authentication with trans_status CHALLENGE_REQUIRED (paresStatus C) is refused before the connector call, as the internal three_ds_data path already is"
         }
       }
     },
@@ -139,6 +1133,476 @@
           "user_agent": "Mozilla/5.0 (integration-tests)",
           "accept_language": "en-US"
         }
+      },
+      "variants": {
+        "cybersource_three_ds_data_without_outcome_refused": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "Authorization after a Cybersource-run payer authentication",
+            "browser_info": {},
+            "connector_feature_data": {
+              "value": "{\"three_ds_data\":{}}"
+            }
+          },
+          "assert": {
+            "status": null,
+            "error": null,
+            "error.error_code": {
+              "equals": "INVALID_DATA_FORMAT"
+            },
+            "connector_transaction_id": {
+              "must_exist": null,
+              "must_not_exist": true
+            }
+          },
+          "display_name": "three_ds_data with no paresStatus, no authentication value and no enrollment answer is refused before the connector call"
+        },
+        "cybersource_three_ds_data_failed_authentication_refused": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "Authorization after a Cybersource-run payer authentication",
+            "browser_info": {},
+            "connector_feature_data": {
+              "value": "{\"three_ds_data\":{\"paresStatus\":\"N\",\"specificationVersion\":\"2.2.0\",\"ecommerceIndicator\":\"internet\"}}"
+            }
+          },
+          "assert": {
+            "status": null,
+            "error": null,
+            "error.error_code": {
+              "equals": "INVALID_DATA_FORMAT"
+            },
+            "connector_transaction_id": {
+              "must_exist": null,
+              "must_not_exist": true
+            }
+          },
+          "display_name": "three_ds_data.paresStatus N (authentication failed) is refused before the connector call"
+        },
+        "cybersource_three_ds_data_unfinished_challenge_refused": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "Authorization after a Cybersource-run payer authentication",
+            "browser_info": {},
+            "connector_feature_data": {
+              "value": "{\"three_ds_data\":{\"paresStatus\":\"C\",\"specificationVersion\":\"2.2.0\"}}"
+            }
+          },
+          "assert": {
+            "status": null,
+            "error": null,
+            "error.error_code": {
+              "equals": "INVALID_DATA_FORMAT"
+            },
+            "connector_transaction_id": {
+              "must_exist": null,
+              "must_not_exist": true
+            }
+          },
+          "display_name": "three_ds_data.paresStatus C (challenge issued, never validated) is refused before the connector call"
+        },
+        "cybersource_three_ds_data_unavailable_pares_status_authorized": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "Authorization after a Cybersource-run payer authentication",
+            "browser_info": {},
+            "connector_feature_data": {
+              "value": "{\"three_ds_data\":{\"paresStatus\":\"U\",\"specificationVersion\":\"2.2.0\",\"ecommerceIndicator\":\"internet\"}}"
+            }
+          },
+          "assert": {
+            "status": {
+              "one_of": [
+                "AUTHORIZED"
+              ]
+            },
+            "connector_transaction_id": {},
+            "error": {},
+            "redirection_data": {
+              "must_not_exist": true
+            },
+            "raw_connector_request.value": {
+              "contains": "\"paresStatus\":\"U\""
+            }
+          },
+          "display_name": "three_ds_data.paresStatus U without a CAVV is not refused: it authorizes, and the wire paresStatus is U"
+        },
+        "cybersource_three_ds_data_lookup_unavailable_enrollment_authorized": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "Authorization after a Cybersource-run payer authentication",
+            "browser_info": {},
+            "connector_feature_data": {
+              "value": "{\"three_ds_data\":{\"veresEnrolled\":\"U\",\"specificationVersion\":\"2.2.0\",\"ecommerceIndicator\":\"internet\"}}"
+            }
+          },
+          "assert": {
+            "status": {
+              "one_of": [
+                "AUTHORIZED"
+              ]
+            },
+            "connector_transaction_id": {},
+            "error": {},
+            "redirection_data": {
+              "must_not_exist": true
+            },
+            "raw_connector_request.value": {
+              "contains": "\"veresEnrolled\":\"U\""
+            }
+          },
+          "display_name": "three_ds_data of an enrollment check that could not authenticate (veresEnrolled U, no paresStatus, no CAVV) is not refused: it authorizes as internet and states veresEnrolled U"
+        },
+        "cybersource_three_ds_data_bypassed_enrollment_authorized": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "card": {
+                "card_number": {},
+                "card_exp_month": {
+                  "value": "12"
+                },
+                "card_exp_year": {
+                  "value": "2031"
+                },
+                "card_holder_name": {
+                  "value": "John Doe"
+                },
+                "card_cvc": {
+                  "value": "123"
+                }
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {},
+                "phone_country_code": "+1"
+              }
+            },
+            "description": "Authorization after a Cybersource-run payer authentication",
+            "browser_info": {},
+            "connector_feature_data": {
+              "value": "{\"three_ds_data\":{\"veresEnrolled\":\"B\",\"specificationVersion\":\"2.2.0\",\"ecommerceIndicator\":\"internet\"}}"
+            }
+          },
+          "assert": {
+            "status": {
+              "one_of": [
+                "AUTHORIZED"
+              ]
+            },
+            "connector_transaction_id": {},
+            "error": {},
+            "redirection_data": {
+              "must_not_exist": true
+            },
+            "raw_connector_request.value": {
+              "contains": "\"veresEnrolled\":\"B\""
+            }
+          },
+          "display_name": "three_ds_data of a bypassed authentication (veresEnrolled B, no paresStatus, no CAVV) is not refused: it authorizes as internet and states veresEnrolled B"
+        }
       }
     },
     "no3ds_fail_payment": {
@@ -161,7 +1625,135 @@
         }
       },
       "assert": {
-        "error.connector_details.message": { "must_exist": true }
+        "error.connector_details.message": {
+          "must_exist": true
+        }
+      }
+    },
+    "no3ds_auto_capture_apple_pay_decrypted": {
+      "variants": {
+        "cybersource_apple_pay_psp_decryption_request_shape": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "apple_pay_sdk": {
+                "payment_data": {
+                  "decrypted_data": null,
+                  "encrypted_data": "Y3liZXJzb3VyY2Utc2NlbmFyaW8tbm90LWEtZGV2aWNlLW1pbnRlZC1hcHBsZS1wYXktdG9rZW4="
+                },
+                "payment_method": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {}
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {}
+              }
+            },
+            "browser_info": {}
+          },
+          "assert": {
+            "status": null,
+            "error": null,
+            "raw_connector_request.value": {
+              "contains": "\"paymentSolution\":\"001\""
+            },
+            "connector_transaction_id": {
+              "must_exist": null,
+              "must_not_exist": true
+            }
+          },
+          "display_name": "Apple Pay, Cybersource decryption: the encrypted payment data goes out as paymentInformation.fluidData with paymentSolution 001 (placeholder payload, wire shape only)"
+        },
+        "cybersource_apple_pay_psp_decryption_charged": {
+          "grpc_req": {
+            "amount": {},
+            "payment_method": {
+              "apple_pay_sdk": {
+                "payment_data": {
+                  "decrypted_data": null,
+                  "encrypted_data": "Y3liZXJzb3VyY2Utc2NlbmFyaW8tbm90LWEtZGV2aWNlLW1pbnRlZC1hcHBsZS1wYXktdG9rZW4="
+                },
+                "payment_method": {}
+              }
+            },
+            "customer": {
+              "email": {},
+              "phone_number": {}
+            },
+            "state": {
+              "access_token": {
+                "token": {}
+              }
+            },
+            "address": {
+              "shipping_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {}
+              },
+              "billing_address": {
+                "first_name": {},
+                "last_name": {},
+                "line1": {},
+                "line2": {},
+                "line3": {},
+                "city": {},
+                "state": {},
+                "zip_code": {},
+                "email": {},
+                "phone_number": {}
+              }
+            },
+            "browser_info": {}
+          },
+          "assert": {
+            "status": {
+              "one_of": [
+                "CHARGED"
+              ]
+            },
+            "connector_transaction_id": {},
+            "error": {}
+          },
+          "display_name": "Apple Pay, Cybersource decryption: a device-minted token is charged (cannot run: no device-minted token, see specs.json)"
+        }
       }
     }
   },
@@ -240,6 +1832,197 @@
     "create_sdk_session_with_taxes": {
       "grpc_req": {
         "return_url": "https://google.com"
+      }
+    }
+  },
+  "EventService/HandleEvent": {
+    "payment_succeeded": {
+      "variants": {
+        "cybersource_payment_accepted_auto_capture_charged": {
+          "grpc_req": {
+            "request_details": {
+              "headers": {}
+            },
+            "event_context": {
+              "payment": {
+                "capture_method": "AUTOMATIC"
+              }
+            }
+          },
+          "assert": {
+            "event_status": null,
+            "source_verified": {},
+            "event_type": {
+              "one_of": [
+                "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
+              ]
+            },
+            "event_content.payments_response.status": {
+              "equals": "CHARGED"
+            },
+            "event_content.payments_response.connector_transaction_id": {
+              "must_exist": true
+            }
+          },
+          "display_name": "signed payments.authorization.status.accepted with capture_method AUTOMATIC reports the payment CHARGED"
+        },
+        "cybersource_payment_accepted_manual_capture_authorized": {
+          "grpc_req": {
+            "request_details": {
+              "headers": {}
+            },
+            "event_context": {
+              "payment": {
+                "capture_method": "MANUAL"
+              }
+            }
+          },
+          "assert": {
+            "event_status": null,
+            "source_verified": {},
+            "event_type": {
+              "one_of": [
+                "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
+              ]
+            },
+            "event_content.payments_response.status": {
+              "equals": "AUTHORIZED"
+            },
+            "event_content.payments_response.connector_transaction_id": {
+              "must_exist": true
+            }
+          },
+          "display_name": "the same signed body with capture_method MANUAL reports AUTHORIZED"
+        },
+        "cybersource_payment_accepted_sequential_auto_capture_authorized": {
+          "grpc_req": {
+            "request_details": {
+              "headers": {}
+            },
+            "event_context": {
+              "payment": {
+                "capture_method": "SEQUENTIAL_AUTOMATIC"
+              }
+            }
+          },
+          "assert": {
+            "event_status": null,
+            "source_verified": {},
+            "event_type": {
+              "one_of": [
+                "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
+              ]
+            },
+            "event_content.payments_response.status": {
+              "equals": "AUTHORIZED"
+            },
+            "event_content.payments_response.connector_transaction_id": {
+              "must_exist": true
+            }
+          },
+          "display_name": "signed payments.authorization.status.accepted with capture_method SEQUENTIAL_AUTOMATIC reports AUTHORIZED because Cybersource Authorize sends capture false for that method"
+        },
+        "cybersource_payment_accepted_absent_capture_method_charged": {
+          "grpc_req": {
+            "request_details": {
+              "headers": {}
+            },
+            "event_context": {
+              "payment": {}
+            }
+          },
+          "assert": {
+            "event_status": null,
+            "source_verified": {},
+            "event_type": {
+              "one_of": [
+                "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
+              ]
+            },
+            "event_content.payments_response.status": {
+              "equals": "CHARGED"
+            },
+            "event_content.payments_response.connector_transaction_id": {
+              "must_exist": true
+            }
+          },
+          "display_name": "signed payments.authorization.status.accepted with a payment context that carries no capture_method is not refused: it is read as the Authorize request reads an omitted capture method (a sale) and reports CHARGED"
+        },
+        "cybersource_capture_accepted_auto_capture_pending": {
+          "grpc_req": {
+            "request_details": {
+              "headers": {}
+            },
+            "event_context": {
+              "payment": {
+                "capture_method": "AUTOMATIC"
+              }
+            }
+          },
+          "assert": {
+            "event_status": null,
+            "source_verified": {},
+            "event_type": {
+              "one_of": [
+                "PAYMENT_INTENT_PROCESSING"
+              ]
+            },
+            "event_content.payments_response.status": {
+              "equals": "PENDING"
+            },
+            "event_content.payments_response.connector_transaction_id": {
+              "must_exist": true
+            }
+          },
+          "display_name": "signed payments.capture.status.accepted with capture_method AUTOMATIC reports PENDING: Cybersource documents the accepted capture as PENDING for every capture method, CHARGED comes with payments.capture.status.updated"
+        },
+        "cybersource_capture_accepted_manual_capture_pending": {
+          "grpc_req": {
+            "request_details": {
+              "headers": {}
+            },
+            "event_context": {
+              "payment": {
+                "capture_method": "MANUAL"
+              }
+            }
+          },
+          "assert": {
+            "event_status": null,
+            "source_verified": {},
+            "event_type": {
+              "one_of": [
+                "PAYMENT_INTENT_PROCESSING"
+              ]
+            },
+            "event_content.payments_response.status": {
+              "equals": "PENDING"
+            },
+            "event_content.payments_response.connector_transaction_id": {
+              "must_exist": true
+            }
+          },
+          "display_name": "the same signed payments.capture.status.accepted with capture_method MANUAL reports PENDING"
+        },
+        "cybersource_payment_accepted_without_context_refused": {
+          "grpc_req": {
+            "request_details": {
+              "headers": {}
+            }
+          },
+          "assert": {
+            "event_type": null,
+            "source_verified": null,
+            "event_status": null,
+            "error.error_code": {
+              "equals": "WEBHOOK_MISSING_REQUIRED_CONTEXT"
+            },
+            "event_content": {
+              "must_not_exist": true
+            }
+          },
+          "display_name": "signed payments.authorization.status.accepted without event_context is refused with the missing-context error instead of a defaulted status"
+        }
       }
     }
   }

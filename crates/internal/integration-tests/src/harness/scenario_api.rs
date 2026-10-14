@@ -25,7 +25,8 @@ use uuid::Uuid;
 use crate::harness::{
     auto_gen::resolve_auto_generate,
     connector_override::{
-        apply_connector_overrides, connector_pre_request_http_hook,
+        apply_connector_overrides, apply_connector_scenario_variant,
+        connector_pre_request_http_hook, connector_scenario_variants,
         normalize_tonic_request_for_connector, transform_response_for_connector,
         PreRequestHttpHook,
     },
@@ -35,10 +36,9 @@ use crate::harness::{
     scenario_loader::{
         configured_all_connectors, get_the_assertion as get_the_assertion_impl,
         get_the_grpc_req as get_the_grpc_req_impl, is_suite_supported_for_connector,
-        load_connector_browser_automation_spec, load_connector_spec,
-        load_connector_specific_scenarios, load_default_scenario_name, load_scenario,
-        load_suite_scenarios, load_suite_spec, load_supported_payment_methods_for_connector,
-        load_supported_suites_for_connector, merge_connector_specific_scenarios,
+        load_connector_browser_automation_spec, load_connector_spec, load_default_scenario_name,
+        load_scenario, load_suite_scenarios, load_suite_spec,
+        load_supported_payment_methods_for_connector, load_supported_suites_for_connector,
         scenario_matches_supported_payment_methods, scenario_unsupported_reason,
     },
     scenario_types::{
@@ -61,16 +61,7 @@ pub fn get_the_assertion(
     get_the_assertion_impl(suite, scenario)
 }
 
-/// Loads one scenario as `connector` sees it: the global suite file first, then
-/// the connector's own `connector_specific_scenarios.json`.
-///
-/// The suite runner already lists connector-private scenarios (it merges them
-/// into the scenario set), so every reader that resolves a scenario *by name*
-/// has to look in the same two places or a listed scenario fails with
-/// `ScenarioNotFound`. The private file is only consulted once the global suite
-/// has been shown not to hold the name, so a name defined in both cannot be
-/// reached here - the suite runner's `merge_connector_specific_scenarios` is
-/// what rejects that collision.
+/// Loads one common scenario or a connector variant derived from one.
 fn load_scenario_for_connector(
     suite: &str,
     scenario: &str,
@@ -78,15 +69,60 @@ fn load_scenario_for_connector(
 ) -> Result<ScenarioDef, ScenarioError> {
     match load_scenario(suite, scenario) {
         Err(ScenarioError::ScenarioNotFound { .. }) => {
-            load_connector_specific_scenarios(connector, suite)?
-                .remove(scenario)
+            let variant = connector_scenario_variants(connector, suite)?
+                .into_iter()
+                .find(|variant| variant.name == scenario)
                 .ok_or_else(|| ScenarioError::ScenarioNotFound {
                     suite: suite.to_string(),
                     scenario: scenario.to_string(),
-                })
+                })?;
+            let mut base = load_scenario(suite, &variant.base_scenario)?;
+            apply_connector_scenario_variant(&variant, &mut base.grpc_req, &mut base.assert_rules)?;
+            base.display_name = variant.patch.display_name;
+            base.is_default = false;
+            Ok(base)
         }
         resolved => resolved,
     }
+}
+
+/// Adds named connector variants to the runnable suite. Every variant remains
+/// an independent scenario, so scenario-scoped prerequisites execute once for
+/// each variant.
+fn merge_connector_scenario_variants(
+    connector: &str,
+    suite: &str,
+    scenarios: &mut BTreeMap<String, ScenarioDef>,
+    supported_methods: &[String],
+) -> Result<usize, ScenarioError> {
+    let variants = connector_scenario_variants(connector, suite)?;
+    for variant in &variants {
+        if scenarios.contains_key(&variant.name) {
+            return Err(ScenarioError::InvalidConnectorSpec {
+                path: crate::harness::scenario_loader::connector_spec_dir(connector)
+                    .join("override.json"),
+                message: format!(
+                    "{connector} defines variant {suite}/{}, which collides with another runnable scenario",
+                    variant.name
+                ),
+            });
+        }
+
+        let mut scenario = load_scenario(suite, &variant.base_scenario)?;
+        apply_connector_scenario_variant(
+            variant,
+            &mut scenario.grpc_req,
+            &mut scenario.assert_rules,
+        )?;
+        scenario
+            .display_name
+            .clone_from(&variant.patch.display_name);
+        scenario.is_default = false;
+        if scenario_matches_supported_payment_methods(&scenario, supported_methods) {
+            scenarios.insert(variant.name.clone(), scenario);
+        }
+    }
+    Ok(variants.len())
 }
 
 /// Loads scenario and applies connector-specific request/assertion patches.
@@ -3650,9 +3686,8 @@ pub struct SuiteRunSummary {
     /// scenarios unsupported reads exactly like having five fewer scenarios,
     /// and `passed` looks like more coverage than it is.
     pub unsupported: usize,
-    /// Scenarios that exist only for this connector. Counted apart from the
-    /// baseline so private coverage never reads as shared coverage.
-    pub connector_specific: usize,
+    /// Named connector variants derived from common scenarios.
+    pub connector_variants: usize,
     pub results: Vec<SuiteScenarioResult>,
 }
 
@@ -3752,7 +3787,7 @@ pub fn run_scenario_test_with_options(
             failed,
             skipped: 0,
             unsupported: 0,
-            connector_specific: 0,
+            connector_variants: 0,
             results,
         });
     };
@@ -3857,7 +3892,7 @@ pub fn run_scenario_test_with_options(
         // This path runs a named scenario the caller asked for, so nothing was
         // filtered out as unsupported before reaching it.
         unsupported: 0,
-        connector_specific: 0,
+        connector_variants: 0,
         results,
     })
 }
@@ -3965,10 +4000,11 @@ pub fn run_suite_test_with_options(
         .filter(|(_, def)| scenario_matches_supported_payment_methods(def, &supported_methods))
         .collect();
 
-    // Scenarios only this connector has. Merged after the payment-method filter
-    // so a private scenario is never dropped for naming a method the connector
-    // did not bother to declare — it declared the scenario itself.
-    let connector_specific = merge_connector_specific_scenarios(connector, suite, &mut scenarios)?;
+    // Connector variants fan a common scenario out into additional executions.
+    // They are materialized before execution so each one receives its own
+    // scenario-scoped dependency chain.
+    let connector_variants =
+        merge_connector_scenario_variants(connector, suite, &mut scenarios, &supported_methods)?;
 
     // A scenario the connector declares it cannot support at all. Skipped with
     // its stated reason rather than run and failed.
@@ -4016,7 +4052,7 @@ pub fn run_suite_test_with_options(
                     failed,
                     skipped,
                     unsupported: unsupported_count,
-                    connector_specific,
+                    connector_variants,
                     results,
                 });
             };
@@ -4151,7 +4187,7 @@ pub fn run_suite_test_with_options(
                         failed,
                         skipped,
                         unsupported: unsupported_count,
-                        connector_specific,
+                        connector_variants,
                         results,
                     });
                 };
@@ -4268,7 +4304,7 @@ pub fn run_suite_test_with_options(
         failed,
         skipped,
         unsupported: unsupported_count,
-        connector_specific,
+        connector_variants,
         results,
     })
 }
@@ -5267,7 +5303,7 @@ mod tests {
     use crate::harness::auto_gen::resolve_auto_generate;
     use crate::harness::scenario_loader::{
         connector_spec_dir, discover_all_connectors, load_suite_scenarios, load_suite_spec,
-        load_supported_suites_for_connector, merge_connector_specific_scenarios,
+        load_supported_suites_for_connector,
     };
     use crate::harness::scenario_types::{ContextMap, FieldAssert, ScenarioError};
 
@@ -5431,6 +5467,38 @@ mod tests {
         assert_eq!(DEFAULT_SUITE, "PaymentService/Authorize");
         assert_eq!(DEFAULT_SCENARIO, "no3ds_auto_capture_credit_card");
         run_test(None, None, None).expect("run_test should succeed with defaults");
+    }
+
+    #[test]
+    fn cybersource_variants_materialize_from_common_scenarios() {
+        let authorize_variants = crate::harness::connector_override::connector_scenario_variants(
+            "cybersource",
+            "PaymentService/Authorize",
+        )
+        .expect("authorize variants should load");
+        let webhook_variants = crate::harness::connector_override::connector_scenario_variants(
+            "cybersource",
+            "EventService/HandleEvent",
+        )
+        .expect("webhook variants should load");
+        assert_eq!(authorize_variants.len(), 21);
+        assert_eq!(webhook_variants.len(), 7);
+
+        let request = get_the_grpc_req_for_connector(
+            "PaymentService/Authorize",
+            "cybersource_shipping_details_shipto",
+            "cybersource",
+        )
+        .expect("variant should materialize from its common scenario");
+        assert_eq!(
+            request.pointer("/address/shipping_address/city/value"),
+            Some(&json!("Oakland"))
+        );
+        // The regular base override still applies after the variant template.
+        assert_eq!(
+            request.pointer("/connector_feature_data/value"),
+            Some(&json!(r#"{"disable_avs":false,"disable_cvn":false}"#))
+        );
     }
 
     #[test]
@@ -6538,14 +6606,16 @@ grpc-status: 0
                     }
                 };
 
-                // Connector-private scenarios are held to the same proto schema
-                // as the baseline; a private file is not a way around it. This
-                // also surfaces a name that collides with a global scenario.
-                if let Err(error) =
-                    merge_connector_specific_scenarios(connector, &suite, &mut suite_scenarios)
-                {
+                // Connector variants are held to the same proto schema as the
+                // common corpus and may not collide with another execution.
+                if let Err(error) = super::merge_connector_scenario_variants(
+                    connector,
+                    &suite,
+                    &mut suite_scenarios,
+                    &[],
+                ) {
                     failures.push(format!(
-                        "{connector}/{suite}: connector-specific scenarios rejected: {error}"
+                        "{connector}/{suite}: connector scenario variants rejected: {error}"
                     ));
                     continue;
                 }
