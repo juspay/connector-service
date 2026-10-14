@@ -18,7 +18,6 @@ use domain_types::{
         ResponseId, ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
         SetupMandateRequestData,
     },
-    mandates::{MandateData, MandateDataType},
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_method_data::{
         ApplePayDecryptedData, ApplePayPaymentData, BankDebitData, GooglePayDecryptedData,
@@ -320,15 +319,14 @@ fn merchant_order_number(merchant_order_id: Option<&str>, reference: &str) -> St
 impl requests::JpmorganRecurring {
     fn from_initial_context(
         category: Option<&common_enums::MitCategory>,
-        mandate: Option<&MandateData>,
         metadata: Option<&serde_json::Value>,
     ) -> Result<Option<Self>, Error> {
         let Some(metadata) = metadata else {
-            return Self::from_optional_mandate_terms(category, mandate);
+            return Self::default_initial(category);
         };
         let metadata = requests::JpmorganRequestMetadata::from_value(metadata)?;
         let Some(context) = metadata.jpmorgan else {
-            return Self::from_optional_mandate_terms(category, mandate);
+            return Self::default_initial(category);
         };
         let recurring = context
             .recurring
@@ -351,10 +349,6 @@ impl requests::JpmorganRecurring {
         {
             return Err(requests::JpmorganStoredContext::invalid());
         }
-        Self::validate_supplied_terms(Some(&recurring), mandate)?;
-        if mandate.is_some_and(|mandate| mandate.update_mandate_id.is_some()) {
-            return Err(requests::JpmorganStoredContext::invalid());
-        }
         Ok(Some(recurring))
     }
 
@@ -365,9 +359,8 @@ impl requests::JpmorganRecurring {
         }
     }
 
-    fn from_optional_mandate_terms(
+    fn default_initial(
         category: Option<&common_enums::MitCategory>,
-        mandate: Option<&MandateData>,
     ) -> Result<Option<Self>, Error> {
         match category {
             None | Some(common_enums::MitCategory::Unscheduled) => return Ok(None),
@@ -385,83 +378,11 @@ impl requests::JpmorganRecurring {
                 .into());
             }
         }
-        let (agreement_id, amount_type) = Self::supplied_recurring_fields(mandate)?;
-        let amount_type = amount_type.ok_or_else(|| IntegrationError::MissingRequiredField {
-            field_name: "metadata.jpmorgan.recurring.isVariableAmount",
-            context: Self::input_context(),
-        })?;
         Ok(Some(Self {
             recurring_sequence: requests::JpmorganRecurringSequence::First,
-            agreement_id: agreement_id.map(str::to_owned),
-            is_variable_amount: Some(amount_type == requests::JpmorganAmountType::Variable),
+            agreement_id: None,
+            is_variable_amount: Some(true),
         }))
-    }
-
-    fn supplied_recurring_fields(
-        mandate: Option<&MandateData>,
-    ) -> Result<(Option<&str>, Option<requests::JpmorganAmountType>), Error> {
-        let terms = match mandate.and_then(|data| data.mandate_type.as_ref()) {
-            Some(MandateDataType::MultiUse(Some(terms))) => Some(terms),
-            Some(MandateDataType::SingleUse(_)) => {
-                return Err(IntegrationError::InvalidDataFormat {
-                    field_name: "setup_mandate_details.mandate_type",
-                    context: Self::input_context(),
-                }
-                .into());
-            }
-            Some(MandateDataType::MultiUse(None)) | None => None,
-        };
-        let amount_type = terms
-            .and_then(|terms| terms.amount_type.as_deref())
-            .map(|amount_type| {
-                amount_type
-                    .parse::<requests::JpmorganAmountType>()
-                    .map_err(|_| IntegrationError::InvalidDataFormat {
-                        field_name: "setup_mandate_details.mandate_type.multi_use.amount_type",
-                        context: Self::input_context(),
-                    })
-            })
-            .transpose()?;
-        let agreement_id = terms.and_then(|terms| terms.external_subscription_id.as_deref());
-        if agreement_id.is_some_and(|id| {
-            id.trim().is_empty() || id.chars().count() > JPMORGAN_AGREEMENT_ID_MAX_LENGTH
-        }) {
-            return Err(IntegrationError::InvalidDataFormat {
-                field_name: "setup_mandate_details.mandate_type.multi_use.external_subscription_id",
-                context: Self::input_context(),
-            }
-            .into());
-        }
-        Ok((agreement_id, amount_type))
-    }
-
-    fn validate_supplied_terms(
-        recurring: Option<&Self>,
-        mandate: Option<&MandateData>,
-    ) -> Result<(), Error> {
-        let (agreement_id, amount_type) = Self::supplied_recurring_fields(mandate)?;
-        if agreement_id.is_some_and(|id| {
-            recurring.is_none_or(|recurring| recurring.agreement_id.as_deref() != Some(id))
-        }) || amount_type.is_some_and(|amount_type| {
-            recurring.is_none_or(|recurring| {
-                recurring.is_variable_amount
-                    != Some(amount_type == requests::JpmorganAmountType::Variable)
-            })
-        }) {
-            return Err(requests::JpmorganStoredContext::invalid());
-        }
-        Ok(())
-    }
-}
-
-impl FromStr for requests::JpmorganAmountType {
-    type Err = ();
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            "exact" => Ok(Self::Exact),
-            "variable" => Ok(Self::Variable),
-            _ => Err(()),
-        }
     }
 }
 
@@ -571,7 +492,6 @@ impl requests::JpmorganStoredContext {
         if supplied.stored_credential.is_none() {
             requests::JpmorganRecurring::from_initial_context(
                 request.mit_category.as_ref(),
-                request.setup_mandate_details.as_ref(),
                 request.metadata.as_ref().map(|data| data.peek()),
             )?;
             return Ok(None);
@@ -599,10 +519,6 @@ impl requests::JpmorganStoredContext {
             if terms.update_mandate_id.is_some() {
                 return Err(Self::invalid());
             }
-            requests::JpmorganRecurring::validate_supplied_terms(
-                context.recurring.as_ref(),
-                Some(terms),
-            )?;
         }
         Ok(Some(context))
     }
@@ -1013,12 +929,16 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganCard<T> {
 }
 
 impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
-    fn has_storage_intent(request: &PaymentsAuthorizeData<T>) -> bool {
+    fn has_saving_intent(request: &PaymentsAuthorizeData<T>) -> bool {
         matches!(
             request.setup_future_usage,
             Some(common_enums::FutureUsage::OffSession)
         ) || request.setup_mandate_details.is_some()
             || request.tokenization == Some(common_enums::Tokenization::TokenizeAtPsp)
+    }
+
+    fn requires_storage_context(request: &PaymentsAuthorizeData<T>) -> bool {
+        Self::has_saving_intent(request)
             || request.mit_category.is_some()
             || request
                 .metadata
@@ -1040,14 +960,30 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
         }
     }
 
-    fn with_initial_storage(
+    fn finalize_cit(
         mut self,
         request: &PaymentsAuthorizeData<T>,
         reference: &str,
     ) -> Result<Self, Error> {
-        if let Some(context) = requests::JpmorganStoredContext::from_request(request, reference)? {
-            requests::JpmorganCard::validate_apple_pay_storage(&request.payment_method_data)?;
+        let context = requests::JpmorganStoredContext::from_request(request, reference)?;
+        if Self::requires_storage_context(request)
+            || !matches!(request.payment_method_data, PaymentMethodData::Card(_))
+        {
             Self::validate_cit_context(request)?;
+        }
+        self.initiator_type = Some(requests::JpmorganInitiatorType::Cardholder);
+        self.account_on_file = Some(requests::JpmorganAccountOnFile::NotStored);
+        self.is_amount_final = Some(true);
+        self.merchant_order_number = Some(merchant_order_number(
+            request.merchant_order_id.as_deref(),
+            reference,
+        ));
+        if let Some(card) = self.payment_method_type.card.as_mut() {
+            card.account_number_type
+                .get_or_insert(requests::JpmorganAccountNumberType::Pan);
+        }
+        if let Some(context) = context {
+            requests::JpmorganCard::validate_apple_pay_storage(&request.payment_method_data)?;
             let card = self
                 .payment_method_type
                 .card
@@ -1063,25 +999,11 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
                     return Err(requests::JpmorganStoredContext::invalid());
                 }
             }
-            self.initiator_type = Some(requests::JpmorganInitiatorType::Cardholder);
             self.account_on_file = Some(requests::JpmorganAccountOnFile::Stored);
-            self.is_amount_final = Some(true);
-            self.merchant_order_number = Some(merchant_order_number(
-                request.merchant_order_id.as_deref(),
-                reference,
-            ));
             self.recurring = None;
-            if let Some(card) = self.payment_method_type.card.as_mut() {
-                card.account_number_type
-                    .get_or_insert(requests::JpmorganAccountNumberType::Pan);
-            }
             return Ok(self);
         }
-        let storage_requested = matches!(
-            request.setup_future_usage,
-            Some(common_enums::FutureUsage::OffSession)
-        ) || request.setup_mandate_details.is_some()
-            || request.tokenization == Some(common_enums::Tokenization::TokenizeAtPsp);
+        let storage_requested = Self::has_saving_intent(request);
         if !storage_requested && request.mit_category.is_none() {
             return Ok(self);
         }
@@ -1093,7 +1015,6 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
             .into());
         }
         requests::JpmorganCard::validate_apple_pay_storage(&request.payment_method_data)?;
-        Self::validate_cit_context(request)?;
         if let Some(mandate) = request.setup_mandate_details.as_ref() {
             let has_acceptance =
                 mandate.customer_acceptance.is_some() || request.customer_acceptance.is_some();
@@ -1109,20 +1030,9 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
         }
         self.recurring = requests::JpmorganRecurring::from_initial_context(
             request.mit_category.as_ref(),
-            request.setup_mandate_details.as_ref(),
             request.metadata.as_ref().map(|data| data.peek()),
         )?;
-        self.initiator_type = Some(requests::JpmorganInitiatorType::Cardholder);
         self.account_on_file = Some(requests::JpmorganAccountOnFile::ToBeStored);
-        self.is_amount_final = Some(true);
-        self.merchant_order_number = Some(merchant_order_number(
-            request.merchant_order_id.as_deref(),
-            reference,
-        ));
-        if let Some(card) = self.payment_method_type.card.as_mut() {
-            card.account_number_type
-                .get_or_insert(requests::JpmorganAccountNumberType::Pan);
-        }
         Ok(self)
     }
 
@@ -1198,12 +1108,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
             is_amount_final: Some(true),
             recurring: None,
         };
-        request.with_initial_storage(
-            &router_data.request,
-            &router_data
-                .resource_common_data
-                .connector_request_reference_id,
-        )
+        Ok(request)
     }
 }
 
@@ -1234,7 +1139,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        if Self::has_storage_intent(&router_data.request)
+        if Self::requires_storage_context(&router_data.request)
             && !Self::supports_initial_storage(&router_data.request.payment_method_data)
         {
             return Err(IntegrationError::NotSupported {
@@ -1245,7 +1150,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 },
             }.into());
         }
-        match &router_data.request.payment_method_data {
+        let request = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // JPMorgan doesn't support 3DS for card payments
                 if router_data.resource_common_data.auth_type
@@ -1326,15 +1231,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     is_amount_final: None,
                     recurring: None,
                 };
-                request.with_initial_storage(
-                    &router_data.request,
-                    &router_data
-                        .resource_common_data
-                        .connector_request_reference_id,
-                )
+                Ok(request)
             }
             PaymentMethodData::NetworkToken(token_data) => {
-                Self::validate_cit_context(&router_data.request)?;
                 if router_data.resource_common_data.auth_type
                     == common_enums::AuthenticationType::ThreeDs
                 {
@@ -1430,12 +1329,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     is_amount_final: None,
                     recurring: None,
                 };
-                request.with_initial_storage(
-                    &router_data.request,
-                    &router_data
-                        .resource_common_data
-                        .connector_request_reference_id,
-                )
+                Ok(request)
             }
             PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
                 account_number,
@@ -1700,6 +1594,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 connector: "Jpmorgan",
                 context: Default::default(),
             })),
+        }?;
+        if Self::supports_initial_storage(&router_data.request.payment_method_data) {
+            request.finalize_cit(
+                &router_data.request,
+                &router_data
+                    .resource_common_data
+                    .connector_request_reference_id,
+            )
+        } else {
+            Ok(request)
         }
     }
 }
@@ -1937,6 +1841,7 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for PaymentsResponseData {
         Ok(Self::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(item.transaction_id.clone()),
             redirection_data: None,
+            // A payment transaction ID is not a reusable Safetech credential.
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id,
@@ -2028,11 +1933,11 @@ impl<T: PaymentMethodDataTypes, F>
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
         let mut response = build_payments_response_result(&item.response, item.http_code, status)?;
-        if requests::JpmorganPaymentsRequest::<T>::has_storage_intent(&item.router_data.request)
-            && requests::JpmorganPaymentsRequest::<T>::supports_initial_storage(
-                &item.router_data.request.payment_method_data,
-            )
-        {
+        if requests::JpmorganPaymentsRequest::<T>::requires_storage_context(
+            &item.router_data.request,
+        ) && requests::JpmorganPaymentsRequest::<T>::supports_initial_storage(
+            &item.router_data.request.payment_method_data,
+        ) {
             if let Ok(PaymentsResponseData::TransactionResponse {
                 connector_metadata, ..
             }) = &mut response
@@ -2067,7 +1972,6 @@ impl<T: PaymentMethodDataTypes, F>
                 ) {
                     let recurring = requests::JpmorganRecurring::from_initial_context(
                         item.router_data.request.mit_category.as_ref(),
-                        item.router_data.request.setup_mandate_details.as_ref(),
                         item.router_data
                             .request
                             .metadata
@@ -2108,6 +2012,7 @@ impl<T: PaymentMethodDataTypes, F>
                     .map(requests::JpmorganStoredContext::validate)
                     .transpose()
                     .change_context(response_context())?;
+                // Later CIT and payment sync use this context to preserve the original relationship.
                 *connector_metadata = stored
                     .map(|jpmorgan| {
                         serde_json::to_value(requests::JpmorganStoredFeatureData { jpmorgan })
@@ -2151,6 +2056,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
                     build_payments_response_result(&payment, item.http_code, status)?;
                 if item.router_data.request.connector_feature_data.is_some() {
                     if let Some(context) = metadata.jpmorgan.as_mut() {
+                        // Only the matching initialization can establish a pending stored relationship.
                         requests::JpmorganStoredContext::complete_payment_sync(
                             context,
                             &item.router_data.request.connector_transaction_id,
@@ -2478,7 +2384,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         requests::JpmorganCard::validate_apple_pay_storage(&request.payment_method_data)?;
         let recurring = requests::JpmorganRecurring::from_initial_context(
             request.mit_category.as_ref(),
-            request.setup_mandate_details.as_ref(),
             request.metadata.as_ref().map(|data| data.peek()),
         )?;
         let card = match &request.payment_method_data {
@@ -2579,7 +2484,6 @@ impl<T: PaymentMethodDataTypes>
         let stored = if status == AttemptStatus::Charged {
             let recurring = requests::JpmorganRecurring::from_initial_context(
                 item.router_data.request.mit_category.as_ref(),
-                item.router_data.request.setup_mandate_details.as_ref(),
                 item.router_data
                     .request
                     .metadata
