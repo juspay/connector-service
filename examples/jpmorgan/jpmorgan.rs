@@ -264,7 +264,7 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
     RecurringPaymentServiceChargeRequest {
         connector_recurring_payment_id: Some(MandateReference {
             // Reference to existing mandate.
-            // mandate_id_type: {"connector_mandate_id": {"connector_mandate_id": "probe-mandate-123"}}
+            // mandate_id_type: {"network_mandate_id": {"network_transaction_id": "probe_network_txn_001"}}
             ..Default::default()
         }),
         amount: Some(Money {
@@ -274,17 +274,22 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
         }),
         payment_method: Some(PaymentMethod {
             // Optional payment Method Information (for network transaction flows).
-            payment_method: Some(payment_method::PaymentMethod::Token(
-                TokenPaymentMethodType {
-                    token: Some(Secret::new("probe_pm_token".to_string())), // The token string representing a payment method.
-                    ..Default::default()
-                },
-            )),
+            payment_method: Some(
+                payment_method::PaymentMethod::CardDetailsForNetworkTransactionId(
+                    CardDetailsForNetworkTransactionId {
+                        card_number: Some(CardNumber::from_str("4111111111111111").unwrap()),
+                        card_exp_month: Some(Secret::new("03".to_string())),
+                        card_exp_year: Some(Secret::new("2030".to_string())),
+                        card_holder_name: Some(Secret::new("John Doe".to_string())),
+                        ..Default::default()
+                    },
+                ),
+            ),
             ..Default::default()
         }),
         return_url: Some("https://example.com/recurring-return".to_string()),
         connector_customer_id: Some("cust_probe_123".to_string()),
-        payment_method_type: Some(PaymentMethodType::PayPal.into()),
+        payment_method_type: Some(PaymentMethodType::Credit.into()),
         off_session: Some(true), // Behavioral Flags and Preferences.
         state: Some(ConnectorState {
             // State Information.
@@ -296,6 +301,7 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
             }),
             ..Default::default()
         }),
+        mit_category: Some(MitCategory::UnscheduledMit.into()), // MIT Category.
         ..Default::default()
     }
 }

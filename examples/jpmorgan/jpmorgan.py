@@ -180,8 +180,8 @@ def _build_proxy_setup_recurring_request():
 def _build_recurring_charge_request():
     return payment_pb2.RecurringPaymentServiceChargeRequest(
         connector_recurring_payment_id=payment_pb2.MandateReference(  # Reference to existing mandate.
-            connector_mandate_id=payment_pb2.ConnectorMandateReferenceId(  # mandate_id sent by the connector.
-                connector_mandate_id="probe-mandate-123",
+            network_mandate_id=payment_pb2.NetworkMandateId(  # network_mandate_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data.
+                network_transaction_id="probe_network_txn_001",
             ),
         ),
         amount=payment_pb2.Money(  # Amount Information.
@@ -189,13 +189,16 @@ def _build_recurring_charge_request():
             currency=payment_pb2.Currency.Value("USD"),  # ISO 4217 currency code (e.g., "USD", "EUR").
         ),
         payment_method=payment_methods_pb2.PaymentMethod(  # Optional payment Method Information (for network transaction flows).
-            token=payment_methods_pb2.TokenPaymentMethodType(
-                token=payment_methods_pb2.SecretString(value="probe_pm_token"),  # The token string representing a payment method.
+            card_details_for_network_transaction_id=payment_methods_pb2.CardDetailsForNetworkTransactionId(
+                card_number=payment_methods_pb2.CardNumberType(value="4111111111111111"),
+                card_exp_month=payment_methods_pb2.SecretString(value="03"),
+                card_exp_year=payment_methods_pb2.SecretString(value="2030"),
+                card_holder_name=payment_methods_pb2.SecretString(value="John Doe"),
             ),
         ),
         return_url="https://example.com/recurring-return",
         connector_customer_id="cust_probe_123",
-        payment_method_type=payment_pb2.PaymentMethodType.Value("PAY_PAL"),
+        payment_method_type=payment_pb2.PaymentMethodType.Value("CREDIT"),
         off_session=True,  # Behavioral Flags and Preferences.
         state=payment_pb2.ConnectorState(  # State Information.
             access_token=payment_pb2.AccessToken(  # Access token obtained from connector.
@@ -204,6 +207,7 @@ def _build_recurring_charge_request():
                 token_type="Bearer",  # Token type (e.g., "Bearer", "Basic").
             ),
         ),
+        mit_category=payment_pb2.MitCategory.Value("UNSCHEDULED_MIT"),  # MIT Category.
     )
 
 def _build_refund_request(connector_transaction_id: str):

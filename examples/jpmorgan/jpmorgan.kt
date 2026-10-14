@@ -20,6 +20,7 @@ import payments.CaptureMethod
 import payments.CardNetwork
 import payments.Currency
 import payments.FutureUsage
+import payments.MitCategory
 import payments.PaymentMethodType
 import payments.ConnectorConfig
 import payments.SdkOptions
@@ -387,10 +388,8 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = RecurringPaymentClient(config)
     val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
         connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate.
-            connectorMandateIdBuilder.apply {  // mandate_id sent by the connector.
-                connectorMandateIdBuilder.apply {
-                    connectorMandateId = "probe-mandate-123"
-                }
+            networkMandateIdBuilder.apply {  // network_mandate_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data.
+                networkTransactionId = "probe_network_txn_001"
             }
         }
         amountBuilder.apply {  // Amount Information.
@@ -398,13 +397,16 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
         paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows).
-            tokenBuilder.apply {  // Payment tokens.
-                tokenBuilder.value = "probe_pm_token"  // The token string representing a payment method.
+            cardDetailsForNetworkTransactionIdBuilder.apply {  // Card details with network transaction ID.
+                cardNumberBuilder.value = "4111111111111111"
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardHolderNameBuilder.value = "John Doe"
             }
         }
         returnUrl = "https://example.com/recurring-return"
         connectorCustomerId = "cust_probe_123"
-        paymentMethodType = PaymentMethodType.PAY_PAL
+        paymentMethodType = PaymentMethodType.CREDIT
         offSession = true  // Behavioral Flags and Preferences.
         stateBuilder.apply {  // State Information.
             accessTokenBuilder.apply {  // Access token obtained from connector.
@@ -413,6 +415,7 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
         }
+        mitCategory = MitCategory.UNSCHEDULED_MIT  // MIT Category.
     }.build()
     val response = client.charge(request)
     if (response.status.name == "FAILED")

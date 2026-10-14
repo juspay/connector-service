@@ -229,7 +229,8 @@ pub enum JpmorganAmountType {
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRecurring {
     pub recurring_sequence: JpmorganRecurringSequence,
-    pub agreement_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agreement_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_variable_amount: Option<bool>,
 }
@@ -361,82 +362,94 @@ pub struct GooglePaySignedMessage {
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(super) struct JpmorganStoredCredential {
-    pub(super) initialization_reference: String,
-    pub(super) source: JpmorganStorageSource,
+pub struct JpmorganStoredCredential {
+    pub initialization_reference: String,
+    pub source: JpmorganStorageSource,
+    #[serde(default)]
+    pub state: JpmorganStorageState,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) original_network_transaction_id: Option<String>,
+    pub initialization_transaction_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) original_transaction_link_id: Option<String>,
+    pub original_network_transaction_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_transaction_link_id: Option<String>,
+}
+
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum JpmorganStorageState {
+    Pending,
+    #[default]
+    Established,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum JpmorganStorageSource {
+pub enum JpmorganStorageSource {
     Payment,
     Verification,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub(super) struct JpmorganStoredContext {
-    pub(super) stored_credential: JpmorganStoredCredential,
+pub struct JpmorganStoredContext {
+    pub stored_credential: JpmorganStoredCredential,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) recurring: Option<JpmorganRecurring>,
+    pub recurring: Option<JpmorganRecurring>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) wallet: Option<JpmorganStoredWallet>,
+    pub wallet: Option<JpmorganStoredWallet>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(super) struct JpmorganStoredWallet {
-    pub(super) provider: JpmorganWalletProvider,
-    pub(super) account_number_type: JpmorganAccountNumberType,
-    pub(super) network: Option<common_enums::CardNetwork>,
+pub struct JpmorganStoredWallet {
+    pub provider: JpmorganWalletProvider,
+    pub account_number_type: JpmorganAccountNumberType,
+    pub network: Option<common_enums::CardNetwork>,
 }
 
 #[derive(Serialize)]
-pub(super) struct JpmorganStoredFeatureData {
-    pub(super) jpmorgan: JpmorganStoredContext,
+pub struct JpmorganStoredFeatureData {
+    pub jpmorgan: JpmorganStoredContext,
 }
 
 #[derive(Default, Serialize, Deserialize)]
-pub(super) struct JpmorganRequestMetadata {
-    #[serde(default)]
-    pub(super) jpmorgan: JpmorganPreservedContext,
+pub struct JpmorganRequestMetadata {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jpmorgan: Option<JpmorganPreservedContext>,
     #[serde(flatten)]
-    pub(super) other: serde_json::Map<String, serde_json::Value>,
+    pub other: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Default, Serialize, Deserialize)]
-pub(super) struct JpmorganPreservedContext {
+pub struct JpmorganPreservedContext {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) stored_credential: Option<JpmorganStoredCredential>,
+    pub stored_credential: Option<JpmorganStoredCredential>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) recurring: Option<JpmorganRecurring>,
+    pub recurring: Option<JpmorganRecurring>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) wallet: Option<JpmorganStoredWallet>,
+    pub wallet: Option<JpmorganStoredWallet>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) wallet_account_number_type: Option<JpmorganAccountNumberType>,
+    pub wallet_account_number_type: Option<JpmorganAccountNumberType>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) resource: Option<JpmorganResourceContext>,
+    pub resource: Option<JpmorganResourceContext>,
     #[serde(flatten)]
-    pub(super) other: serde_json::Map<String, serde_json::Value>,
+    pub other: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub(super) struct JpmorganResourceContext {
+pub struct JpmorganResourceContext {
     #[serde(rename = "type")]
-    pub(super) resource_type: JpmorganResourceType,
+    pub resource_type: JpmorganResourceType,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(super) id: Option<String>,
+    pub id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum JpmorganResourceType {
+pub enum JpmorganResourceType {
     Verification,
 }
 
-pub(super) enum JpmorganSyncResource {
+pub enum JpmorganSyncResource {
     Payment(String),
     Verification(String),
 }

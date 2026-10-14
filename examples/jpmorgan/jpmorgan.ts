@@ -6,7 +6,7 @@
 // Run a scenario:  npx tsx jpmorgan.ts checkout_autocapture
 
 import { PaymentClient, MerchantAuthenticationClient, RecurringPaymentClient, RefundClient, types } from 'hyperswitch-prism';
-const { Environment, AcceptanceType, AuthenticationType, CaptureMethod, CardNetwork, Currency, FutureUsage, PaymentMethodType } = types;
+const { Environment, AcceptanceType, AuthenticationType, CaptureMethod, CardNetwork, Currency, FutureUsage, MitCategory, PaymentMethodType } = types;
 export const SUPPORTED_FLOWS = ["authorize", "capture", "create_client_authentication_token", "create_server_authentication_token", "get", "proxy_authorize", "proxy_setup_recurring", "recurring_charge", "refund", "refund_get", "setup_recurring", "token_authorize", "void"];
 
 const _defaultConfig: types.IConnectorConfig = {
@@ -190,13 +190,16 @@ function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeReq
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
         "paymentMethod": {  // Optional payment Method Information (for network transaction flows).
-            "token": {  // Payment tokens.
-                "token": {"value": "probe_pm_token"}  // The token string representing a payment method.
+            "cardDetailsForNetworkTransactionId": {  // Card details with network transaction ID.
+                "cardNumber": {"value": "4111111111111111"},
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardHolderName": {"value": "John Doe"}
             }
         },
         "returnUrl": "https://example.com/recurring-return",
         "connectorCustomerId": "cust_probe_123",
-        "paymentMethodType": PaymentMethodType.PAY_PAL,
+        "paymentMethodType": PaymentMethodType.CREDIT,
         "offSession": true,  // Behavioral Flags and Preferences.
         "state": {  // State Information.
             "accessToken": {  // Access token obtained from connector.
@@ -204,7 +207,8 @@ function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeReq
                 "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch).
                 "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
-        }
+        },
+        "mitCategory": MitCategory.UNSCHEDULED_MIT  // MIT Category.
     };
 }
 
