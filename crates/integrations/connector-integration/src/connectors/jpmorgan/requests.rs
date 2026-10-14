@@ -371,10 +371,22 @@ pub struct GooglePaySignedMessage {
 pub(super) struct JpmorganStoredCredential {
     pub(super) initialization_reference: String,
     pub(super) source: JpmorganStorageSource,
+    #[serde(default)]
+    pub(super) state: JpmorganStorageState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) initialization_transaction_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) original_network_transaction_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) original_transaction_link_id: Option<String>,
+}
+
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum JpmorganStorageState {
+    Pending,
+    #[default]
+    Established,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
