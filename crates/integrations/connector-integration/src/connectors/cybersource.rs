@@ -242,26 +242,30 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         EventType::try_from(body.event_type)
     }
 
-    /// Payment events reference the payment request id and refund events the refund request
-    /// id, both read from `payload.data.id`; the two are never copied into one another.
+    /// Payment and refund events carry the PSP request id in `payload.data.id`. When the event
+    /// data also echoes `clientReferenceInformation.code`, prefer that caller-assigned id during
+    /// lookup; it is especially important for capture events, whose PSP id differs from the
+    /// authorization id. The merchant reference remains optional because the payments payload
+    /// schema is not published and live events are message-level encrypted.
     fn get_webhook_event_reference(
         &self,
         request: RequestDetails,
     ) -> Result<Option<WebhookResourceReference>, Report<WebhookError>> {
         let body = parse_cybersource_webhook_body(&request)?;
+        let merchant_reference_id = body.merchant_reference_id();
 
         if body.event_type.is_payment_event() {
             Ok(Some(WebhookResourceReference::Payment(
                 PaymentWebhookReference {
                     connector_transaction_id: Some(body.object_reference_id()?),
-                    merchant_transaction_id: None,
+                    merchant_transaction_id: merchant_reference_id,
                 },
             )))
         } else if body.event_type.refund_status().is_some() {
             Ok(Some(WebhookResourceReference::Refund(
                 RefundWebhookReference {
                     connector_refund_id: Some(body.object_reference_id()?),
-                    merchant_refund_id: None,
+                    merchant_refund_id: merchant_reference_id,
                     connector_transaction_id: None,
                     merchant_transaction_id: None,
                 },
@@ -306,7 +310,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_code: None,
             error_message: None,
             error_reason: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
+            raw_connector_response: Some(String::from_utf8_lossy(&request.body).into_owned()),
             status_code: 200,
             response_headers: None,
             amount_captured: None,
@@ -339,7 +343,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             connector_response_reference_id: None,
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
+            raw_connector_response: Some(String::from_utf8_lossy(&request.body).into_owned()),
             status_code: 200,
             response_headers: None,
         })

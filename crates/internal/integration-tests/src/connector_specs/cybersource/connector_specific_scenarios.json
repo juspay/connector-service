@@ -3521,6 +3521,38 @@
       },
       "display_name": "the same signed body with capture_method MANUAL reports AUTHORIZED"
     },
+    "cybersource_payment_accepted_sequential_auto_capture_authorized": {
+      "grpc_req": {
+        "request_details": {
+          "method": "HTTP_METHOD_POST",
+          "headers": {},
+          "body": ""
+        },
+        "merchant_event_id": "",
+        "event_context": {
+          "payment": {
+            "capture_method": "SEQUENTIAL_AUTOMATIC"
+          }
+        }
+      },
+      "assert": {
+        "source_verified": {
+          "equals": true
+        },
+        "event_type": {
+          "one_of": [
+            "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
+          ]
+        },
+        "event_content.payments_response.status": {
+          "equals": "AUTHORIZED"
+        },
+        "event_content.payments_response.connector_transaction_id": {
+          "must_exist": true
+        }
+      },
+      "display_name": "signed payments.authorization.status.accepted with capture_method SEQUENTIAL_AUTOMATIC reports AUTHORIZED because Cybersource Authorize sends capture false for that method"
+    },
     "cybersource_payment_accepted_absent_capture_method_charged": {
       "grpc_req": {
         "request_details": {

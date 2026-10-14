@@ -678,6 +678,8 @@ fn get_three_ds_data_for_authorize(
     }
     connector_feature_data
         .map(|feature_data| {
+            // The carrier may contain unrelated merchant settings alongside `three_ds_data`;
+            // `CybersourceThreeDSMetadata` intentionally allows those unknown top-level keys.
             serde_json::from_value::<CybersourceThreeDSMetadata>(feature_data.peek().clone())
                 .map(|metadata| metadata.three_ds_data)
                 .change_context(IntegrationError::InvalidDataFormat {
@@ -733,6 +735,9 @@ fn build_consumer_auth_information_from_three_ds_data(
             | Some(CybersourceVeresEnrolled::Bypassed)
             | Some(CybersourceVeresEnrolled::NotEnrolled)
     );
+    // An unrecognized enrollment value is not evidence that Cybersource told us to proceed.
+    // Keep it fail-closed until its semantics are known instead of treating every future value
+    // like U / B / N and silently authorizing without authentication or liability shift.
     let refused = match three_ds_data.pares_status {
         // failed, rejected, or a challenge that was never validated
         Some(CybersourceParesStatus::AuthenticationFailed)
@@ -1735,10 +1740,13 @@ fn build_ship_to(shipping: Option<&Address>) -> Option<ShipTo> {
         administrative_area,
         postal_code: address.and_then(|addr| addr.zip.remove_new_line()),
         country: address.and_then(|addr| addr.country),
+        // Cybersource exposes one `phoneNumber` field, so include the country calling code when
+        // the caller supplies it. The helper falls back to the local number when it is absent.
         phone_number: shipping
             .phone
             .as_ref()
-            .and_then(|phone| phone.number.remove_new_line()),
+            .and_then(|phone| phone.get_e123_phone_number())
+            .remove_new_line(),
     };
     let has_value = ship_to.country.is_some()
         || [
@@ -4943,7 +4951,8 @@ pub struct CybersourceConsumerAuthValidateResponse {
     /// Also needed for Credit Mutuel-CIC in France and Mastercard Identity Check transactions
     /// This field is only applicable for Mastercard and Visa Transactions
     pares_status: Option<CybersourceParesStatus>,
-    /// Answer of the enrollment check; absent on a validation response.
+    /// Answer of the enrollment check. It is meaningful only when this shared response shape was
+    /// populated by the Authenticate (enrollment) leg and is absent on PostAuthenticate.
     veres_enrolled: Option<CybersourceVeresEnrolled>,
     ucaf_collection_indicator: Option<String>,
     cavv: Option<Secret<String>>,
@@ -7041,8 +7050,9 @@ pub enum CybersourceWebhookEventType {
 }
 
 impl CybersourceWebhookEventType {
-    /// Whether the event describes a payment (authorization, capture, void, reversal). Needs no
-    /// payment context, so the stateless `ParseEvent` path classifies an event with it.
+    /// Whether the event describes an authorization, capture, void, or reversal. Refunds and
+    /// unknown product events are not payment events. Needs no payment context, so the stateless
+    /// `ParseEvent` path classifies an event with it.
     /// https://developer.cybersource.com/docs/cybs/en-us/webhooks/implementation/all/rest/webhooks/wh-fg-intro/wh-fg-product-event-types.html
     pub fn is_payment_event(self) -> bool {
         match self {
@@ -7083,17 +7093,12 @@ impl CybersourceWebhookEventType {
     > {
         // `true` = the payment is a sale (capture bundled with the authorization).
         let is_sale = || match event_context.map(|context| context.capture_method) {
-            Some(
-                Some(
-                    common_enums::CaptureMethod::Automatic
-                    | common_enums::CaptureMethod::SequentialAutomatic,
-                )
-                | None,
-            ) => Ok(true),
+            Some(Some(common_enums::CaptureMethod::Automatic) | None) => Ok(true),
             Some(Some(
                 common_enums::CaptureMethod::Manual
                 | common_enums::CaptureMethod::ManualMultiple
-                | common_enums::CaptureMethod::Scheduled,
+                | common_enums::CaptureMethod::Scheduled
+                | common_enums::CaptureMethod::SequentialAutomatic,
             )) => Ok(false),
             None => Err(error_stack::report!(
                 domain_types::errors::WebhookError::WebhookMissingRequiredContext {
@@ -7202,12 +7207,15 @@ pub struct CybersourceWebhookPayload {
 #[serde(rename_all = "camelCase")]
 pub struct CybersourceWebhookPayloadData {
     pub id: Option<String>,
+    pub client_reference_information: Option<ClientReferenceInformation>,
 }
 
 impl CybersourceWebhookBody {
     /// The object the notification is about: `payload.data.id`, the only payload shape the
     /// documentation publishes (the `payments.*` payload schema itself is undocumented).
-    /// An absent or empty id is an error, never a default.
+    /// The plaintext fixtures assume every mapped authorization, capture, void, reversal, and
+    /// refund event carries this field; live encrypted notifications have not verified that
+    /// assumption. An absent or empty id is an error, never a default.
     pub fn object_reference_id(
         &self,
     ) -> Result<String, error_stack::Report<domain_types::errors::WebhookError>> {
@@ -7222,12 +7230,27 @@ impl CybersourceWebhookBody {
             })
             .attach_printable("Cybersource webhook: payload.data.id is absent or empty")
     }
+
+    /// Caller-assigned payment-attempt or refund id, when Cybersource echoes the request's
+    /// `clientReferenceInformation.code` in the event data. A blank value is treated as absent.
+    pub fn merchant_reference_id(&self) -> Option<String> {
+        self.payload
+            .as_ref()
+            .and_then(|payload| payload.data.as_ref())
+            .and_then(|data| data.client_reference_information.as_ref())
+            .and_then(|reference| reference.code.as_deref())
+            .map(str::trim)
+            .filter(|id| !id.is_empty())
+            .map(str::to_owned)
+    }
 }
 
 /// Parsed `v-c-signature` header: `t=<timestamp>;keyId=<key id>;sig=<Base64 HMAC-SHA256>`.
 #[derive(Debug)]
 pub struct CybersourceWebhookSignature {
     pub timestamp: String,
+    /// Parsed for completeness. UCS accepts one configured webhook key and has no key registry,
+    /// so verification uses that key rather than selecting a secret by this untrusted header.
     pub key_id: Option<String>,
     pub signature: String,
 }
@@ -7272,8 +7295,11 @@ pub fn parse_cybersource_webhook_signature(
 }
 
 #[cfg(test)]
-mod commerce_indicator_tests {
-    use super::get_commerce_indicator_for_external_authentication;
+mod tests {
+    use super::{
+        get_commerce_indicator_for_external_authentication, CybersourceWebhookBody,
+        CybersourceWebhookEventType,
+    };
 
     /// Callers pass the Cybersource numeric card type on the Authorize and
     /// RepeatPayment paths, and the card-network name on SetupMandate. Both must
@@ -7327,6 +7353,41 @@ mod commerce_indicator_tests {
                 "99".to_string()
             ),
             "internet"
+        );
+    }
+
+    #[test]
+    fn webhook_merchant_reference_is_trimmed_when_present() {
+        let body: CybersourceWebhookBody = serde_json::from_value(serde_json::json!({
+            "eventType": "payments.capture.status.accepted",
+            "payload": {
+                "data": {
+                    "id": "capture_123",
+                    "clientReferenceInformation": { "code": " attempt_123 " }
+                }
+            }
+        }))
+        .expect("valid Cybersource webhook fixture");
+
+        assert_eq!(body.merchant_reference_id().as_deref(), Some("attempt_123"));
+        assert_eq!(
+            body.object_reference_id()
+                .expect("fixture carries a reference id"),
+            "capture_123"
+        );
+    }
+
+    #[test]
+    fn sequential_automatic_authorization_is_not_a_sale() {
+        let context = domain_types::connector_types::EventContext {
+            capture_method: Some(common_enums::CaptureMethod::SequentialAutomatic),
+        };
+
+        assert_eq!(
+            CybersourceWebhookEventType::AuthorizationAccepted
+                .payment_status(Some(&context))
+                .expect("capture method is supported"),
+            Some(common_enums::AttemptStatus::Authorized)
         );
     }
 }

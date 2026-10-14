@@ -19,7 +19,10 @@
           "retryNumber": 0,
           "payload": {
             "data": {
-              "id": "7000000000000000001"
+              "id": "7000000000000000001",
+              "clientReferenceInformation": {
+                "code": "cybersource_payment_attempt_0001"
+              }
             },
             "organizationId": "sampleSubscriptionHolder"
           },
@@ -72,7 +75,10 @@
           "retryNumber": 0,
           "payload": {
             "data": {
-              "id": "7000000000000000003"
+              "id": "7000000000000000003",
+              "clientReferenceInformation": {
+                "code": "cybersource_refund_0001"
+              }
             },
             "organizationId": "sampleSubscriptionHolder"
           },
@@ -159,6 +165,30 @@
         }
       },
       "merchant_event_id": "cybersource_webhook_payment_accepted_manual_capture_authorized"
+    }
+  },
+  "cybersource_payment_accepted_sequential_auto_capture_authorized": {
+    "grpc_req": {
+      "request_details": {
+        "headers": {},
+        "body": {
+          "eventType": "payments.authorization.status.accepted",
+          "webhookId": "e339e8b1-d540-4efd-e053-8d588e0a2de5",
+          "productId": "payments",
+          "organizationId": "sampleSubscriptionHolder",
+          "eventDate": "2022-07-20T11:38:49",
+          "transactionTraceId": "7ac2ad9f-6a89-d3e9-e053-34b8d30aaf45",
+          "retryNumber": 0,
+          "payload": {
+            "data": {
+              "id": "7000000000000000005"
+            },
+            "organizationId": "sampleSubscriptionHolder"
+          },
+          "requestType": "NEW"
+        }
+      },
+      "merchant_event_id": "cybersource_webhook_payment_accepted_sequential_auto_capture_authorized"
     }
   },
   "cybersource_payment_accepted_absent_capture_method_charged": {
