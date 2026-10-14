@@ -2489,6 +2489,31 @@ message PaymentServiceAuthorizeRequest {
   // Opt in to address verification using billing details when supported by the
   // connector. Only true requests AVS; omitted or false leaves it disabled.
   optional bool enable_avs_check = 57;
+
+  // Merchant-supplied customer risk-assessment signals (account age, order
+  // history, premium status, etc.) for connectors that factor customer risk
+  // into authorization / onboarding decisions.
+  optional RiskAssessmentData risk_assessment_data = 58;
+}
+
+// Customer risk-assessment signals supplied by the merchant, used by
+// connectors that factor account history into risk decisions.
+message RiskAssessmentData {
+  optional PremiumCustomerStatus is_premium_customer = 1;
+  optional string customer_account_creation_date = 2;
+  optional uint32 number_of_orders = 3;
+  optional uint32 risk_score = 4;
+  optional string date_first_paid = 5;
+  optional string date_last_paid = 6;
+  optional uint32 number_of_order_in_past_24h = 7;
+  optional string customer_reference = 8;
+}
+
+// Whether the customer is a premium / non-premium customer of the merchant.
+enum PremiumCustomerStatus {
+  PREMIUM_CUSTOMER_STATUS_UNSPECIFIED = 0;
+  PREMIUM_CUSTOMER = 1;
+  NON_PREMIUM_CUSTOMER = 2;
 }
 
 // Partner / external-platform application details.
