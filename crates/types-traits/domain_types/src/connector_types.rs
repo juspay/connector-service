@@ -4110,6 +4110,7 @@ impl ConnectorResponseHeaders for DisputeFlowData {
 
 #[derive(Debug, Clone)]
 pub struct VerifyWebhookSourceFlowData {
+    pub access_token: Option<ServerAuthenticationTokenResponseData>,
     pub connectors: Arc<Connectors>,
     pub connector_request_reference_id: String,
     pub raw_connector_response: Option<Secret<String>>,

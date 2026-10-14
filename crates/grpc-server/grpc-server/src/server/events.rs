@@ -11,10 +11,13 @@ use connector_integration::types::{
 };
 use domain_types::{
     connector_flow::{
-        FrmChargebackReceived, FrmPaymentOutcome, FrmRefundProcessed, SurchargePaymentSucceeded,
-        SurchargeRefundSucceeded, VerifyWebhookSource,
+        FrmChargebackReceived, FrmPaymentOutcome, FrmRefundProcessed, ServerAuthenticationToken,
+        SurchargePaymentSucceeded, SurchargeRefundSucceeded, VerifyWebhookSource,
     },
-    connector_types::{VerifyWebhookSourceFlowData, WebhookIntegrityCheck},
+    connector_types::{
+        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        VerifyWebhookSourceFlowData, WebhookIntegrityCheck,
+    },
     errors::WebhookError,
     frm::frm_types::{
         FrmChargebackReceivedRequest, FrmChargebackReceivedResponse, FrmFlowData,
@@ -25,6 +28,7 @@ use domain_types::{
         generate_frm_chargeback_received_response, generate_frm_payment_outcome_response,
         generate_frm_refund_processed_response,
     },
+    merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_method_data::DefaultPCIHolder,
     router_data::ConnectorSpecificConfig,
     router_data::ErrorResponse,
@@ -1047,8 +1051,92 @@ async fn verify_webhook_source_external(
     .await
     .to_grpc_error()?;
 
+    let connectors = std::sync::Arc::new(connectors);
+    let access_token = if connector_data.connector.id() == "paypal" {
+        let auth_data = MerchantAuthenticationFlowData {
+            merchant_id: match metadata_payload
+                .merchant_id
+                .parse::<common_utils::id_type::MerchantId>()
+            {
+                Ok(id) => id,
+                Err(never) => match never {},
+            },
+            connectors: connectors.clone(),
+            connector_request_reference_id: format!("webhook_auth_{}", metadata_payload.request_id),
+            test_mode: None,
+            return_url: None,
+            connector_feature_data: None,
+            order_details: None,
+            merchant_request_id: None,
+            raw_connector_response: None,
+            typed_connector_response: None,
+            raw_connector_request: None,
+            typed_connector_request: None,
+            connector_response_headers: None,
+        };
+        let integration: BoxedConnectorIntegrationV2<
+            '_,
+            ServerAuthenticationToken,
+            MerchantAuthenticationFlowData,
+            ServerAuthenticationTokenRequestData,
+            ServerAuthenticationTokenResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+        let router_data = RouterDataV2 {
+            flow: std::marker::PhantomData,
+            resource_common_data: auth_data,
+            connector_config: connector_config.clone(),
+            request: ServerAuthenticationTokenRequestData::foreign_try_from(connector_config)
+                .to_grpc_error()?,
+            response: Err(ErrorResponse::default()),
+        };
+        let event_params = EventProcessingParams {
+            connector_name: connector_data.connector.id(),
+            service_name,
+            service_type: utils::service_type_str(&config.server.type_),
+            flow_name: FlowName::ServerAuthenticationToken,
+            event_config: &config.events,
+            runtime_metadata: &config.runtime_metadata,
+            request_id: &metadata_payload.request_id,
+            lineage_ids: &metadata_payload.lineage_ids,
+            reference_id: &metadata_payload.reference_id,
+            resource_id: &metadata_payload.resource_id,
+            shadow_mode: metadata_payload.shadow_mode,
+            proxy_name: metadata_payload.proxy_name.as_deref(),
+            tenant_id: &metadata_payload.tenant_id,
+            merchant_id: metadata_payload.merchant_id.as_str(),
+            org_id: metadata_payload.org_id.as_str(),
+            return_raw_connector_data: false,
+            return_typed_connector_data: false,
+            masking_keys: &config.masking_keys,
+            connector_latency: metadata_payload.connector_latency.clone(),
+            log_fields_enabled: config.log_fields.enabled,
+            log_fields: &config.log_fields.outgoing,
+        };
+        let response = Box::pin(
+            external_services::service::execute_connector_processing_step(
+                &config.proxy,
+                integration,
+                router_data,
+                None,
+                event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+                None,
+                None,
+            ),
+        )
+        .await
+        .to_grpc_error()?;
+        match response.response {
+            Ok(token) => Some(token),
+            Err(_) => return Ok(false),
+        }
+    } else {
+        None
+    };
     let verify_webhook_flow_data = VerifyWebhookSourceFlowData {
-        connectors: connectors.into(),
+        access_token,
+        connectors,
         connector_request_reference_id: format!("webhook_verify_{}", metadata_payload.request_id),
         raw_connector_response: None,
         raw_connector_request: None,

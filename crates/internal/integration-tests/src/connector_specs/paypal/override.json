@@ -160,7 +160,7 @@
     "payment_succeeded": {
       "assert": {
         "source_verified": {
-          "must_not_exist": true
+          "equals": true
         },
         "event_status": null
       }
@@ -168,7 +168,7 @@
     "payment_failed": {
       "assert": {
         "source_verified": {
-          "must_not_exist": true
+          "equals": true
         },
         "event_status": null
       }
@@ -176,7 +176,7 @@
     "refund_succeeded": {
       "assert": {
         "source_verified": {
-          "must_not_exist": true
+          "equals": true
         },
         "event_status": null
       }
