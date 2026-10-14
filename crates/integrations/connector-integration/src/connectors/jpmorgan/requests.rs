@@ -38,6 +38,8 @@ pub struct JpmorganPaymentsRequest<T: PaymentMethodDataTypes> {
     pub account_on_file: Option<JpmorganAccountOnFile>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_amount_final: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurring: Option<JpmorganRecurring>,
 }
 
 #[derive(Debug, Serialize)]
@@ -67,7 +69,7 @@ pub struct JpmorganCard<T: PaymentMethodDataTypes> {
     pub authentication: Option<JpmorganWalletAuthentication>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum JpmorganAccountNumberType {
     Pan,
@@ -75,7 +77,7 @@ pub enum JpmorganAccountNumberType {
     NetworkToken,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum JpmorganWalletProvider {
     ApplePay,
@@ -209,15 +211,21 @@ pub enum JpmorganAccountOnFile {
 }
 
 /// JPMorgan recurring sequence
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum JpmorganRecurringSequence {
     First,
     Subsequent,
 }
 
-/// JPMorgan recurring object for MIT transactions
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JpmorganAmountType {
+    Exact,
+    Variable,
+}
+
+/// JPMorgan recurring agreement details.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRecurring {
     pub recurring_sequence: JpmorganRecurringSequence,
@@ -355,4 +363,64 @@ pub struct GooglePayIntermediateSigningKey {
 #[serde(rename_all = "camelCase")]
 pub struct GooglePaySignedMessage {
     pub ephemeral_public_key: Secret<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct JpmorganStoredCredential {
+    pub(super) initialization_reference: String,
+    pub(super) source: JpmorganStorageSource,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) original_network_transaction_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) original_transaction_link_id: Option<String>,
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum JpmorganStorageSource {
+    Payment,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub(super) struct JpmorganStoredContext {
+    pub(super) stored_credential: JpmorganStoredCredential,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) recurring: Option<JpmorganRecurring>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) wallet: Option<JpmorganStoredWallet>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct JpmorganStoredWallet {
+    pub(super) provider: JpmorganWalletProvider,
+    pub(super) account_number_type: JpmorganAccountNumberType,
+    pub(super) network: Option<common_enums::CardNetwork>,
+}
+
+#[derive(Serialize)]
+pub(super) struct JpmorganStoredFeatureData {
+    pub(super) jpmorgan: JpmorganStoredContext,
+}
+
+#[derive(Default, Serialize, Deserialize)]
+pub(super) struct JpmorganRequestMetadata {
+    #[serde(default)]
+    pub(super) jpmorgan: JpmorganPreservedContext,
+    #[serde(flatten)]
+    pub(super) other: serde_json::Map<String, serde_json::Value>,
+}
+
+#[derive(Default, Serialize, Deserialize)]
+pub(super) struct JpmorganPreservedContext {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) stored_credential: Option<JpmorganStoredCredential>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) recurring: Option<JpmorganRecurring>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) wallet: Option<JpmorganStoredWallet>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) wallet_account_number_type: Option<JpmorganAccountNumberType>,
+    #[serde(flatten)]
+    pub(super) other: serde_json::Map<String, serde_json::Value>,
 }

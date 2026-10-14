@@ -93,6 +93,7 @@ pub struct NetworkResponse {
     pub address_verification_result_code: Option<Secret<String>>,
     pub card_verification_result_code: Option<Secret<String>>,
     pub network_transaction_id: Option<String>,
+    pub transaction_link_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
