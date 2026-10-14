@@ -29,7 +29,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use super::{requests, responses, JpmorganAmountConvertor};
+use crate::connectors::jpmorgan::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
 use domain_types::errors::{ConnectorError, IntegrationError, IntegrationErrorContext};
 use domain_types::utils::is_payment_failure;
@@ -93,20 +93,30 @@ fn merchant_order_number(merchant_order_id: Option<&str>, reference: &str) -> St
         .to_owned()
 }
 
+impl requests::JpmorganRequestMetadata {
+    fn from_value(value: &serde_json::Value) -> Result<Self, Error> {
+        if !value.is_object()
+            || value
+                .get("jpmorgan")
+                .is_some_and(serde_json::Value::is_null)
+        {
+            return Err(requests::JpmorganStoredContext::invalid());
+        }
+        serde_json::from_value(value.clone())
+            .map_err(|_| requests::JpmorganStoredContext::invalid())
+    }
+}
+
 impl requests::JpmorganRecurring {
     fn from_initial_context(
         category: Option<&common_enums::MitCategory>,
         mandate: Option<&MandateData>,
         metadata: Option<&serde_json::Value>,
     ) -> Result<Option<Self>, Error> {
-        if metadata.is_some_and(|metadata| !metadata.is_object()) {
-            return Err(requests::JpmorganStoredContext::invalid());
-        }
         let Some(metadata) = metadata else {
             return Self::from_optional_mandate_terms(category, mandate);
         };
-        let metadata: requests::JpmorganRequestMetadata = serde_json::from_value(metadata.clone())
-            .map_err(|_| requests::JpmorganStoredContext::invalid())?;
+        let metadata = requests::JpmorganRequestMetadata::from_value(metadata)?;
         let Some(context) = metadata.jpmorgan else {
             return Self::from_optional_mandate_terms(category, mandate);
         };
@@ -1915,8 +1925,8 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
                     ),
                 },
             };
-            let mut metadata: requests::JpmorganRequestMetadata =
-                serde_json::from_value(feature_data.peek().clone()).change_context(invalid())?;
+            let mut metadata = requests::JpmorganRequestMetadata::from_value(feature_data.peek())
+                .change_context(invalid())?;
             if let Some(context) = metadata.jpmorgan.as_mut() {
                 if context.other.contains_key("resource")
                     || context.wallet_account_number_type.is_some()
