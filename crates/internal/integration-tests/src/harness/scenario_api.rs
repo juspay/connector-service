@@ -61,11 +61,16 @@ pub fn get_the_assertion(
     get_the_assertion_impl(suite, scenario)
 }
 
-/// Loads one scenario the way a connector sees its suite: the global baseline
-/// first, then the connector's own `connector_specific_scenarios.json`.
+/// Loads one scenario as `connector` sees it: the global suite file first, then
+/// the connector's own `connector_specific_scenarios.json`.
 ///
-/// The baseline wins by construction; a private name that shadows a global one
-/// is already rejected by `merge_connector_specific_scenarios`.
+/// The suite runner already lists connector-private scenarios (it merges them
+/// into the scenario set), so every reader that resolves a scenario *by name*
+/// has to look in the same two places or a listed scenario fails with
+/// `ScenarioNotFound`. The private file is only consulted once the global suite
+/// has been shown not to hold the name, so a name defined in both cannot be
+/// reached here - the suite runner's `merge_connector_specific_scenarios` is
+/// what rejects that collision.
 fn load_scenario_for_connector(
     suite: &str,
     scenario: &str,
@@ -80,7 +85,7 @@ fn load_scenario_for_connector(
                     scenario: scenario.to_string(),
                 })
         }
-        result => result,
+        resolved => resolved,
     }
 }
 
@@ -3714,14 +3719,9 @@ pub fn run_scenario_test_with_options(
 ) -> Result<SuiteRunSummary, ScenarioError> {
     let connector = connector.unwrap_or(DEFAULT_CONNECTOR);
     let target_suite_spec = load_suite_spec(suite)?;
-    let scenarios = load_suite_scenarios(suite)?;
-
-    if !scenarios.contains_key(scenario) {
-        return Err(ScenarioError::ScenarioNotFound {
-            suite: suite.to_string(),
-            scenario: scenario.to_string(),
-        });
-    }
+    // Fails with `ScenarioNotFound` unless the global suite or the connector's
+    // own scenario file defines it.
+    load_scenario_for_connector(suite, scenario, connector)?;
 
     let mut results = Vec::new();
     let mut passed = 0usize;
