@@ -54,10 +54,10 @@ pub fn build_handle_event_request() -> EventServiceHandleRequest {
     EventServiceHandleRequest {
         merchant_event_id: Some("probe_event_001".to_string()),
         request_details: Some(RequestDetails {
-            method: HttpMethod::Post.into(),  // HTTP method of the request (e.g., GET, POST).
-            uri: Some("https://example.com/webhook".to_string()),  // URI of the request.
-            headers: [].into_iter().collect::<HashMap<_, _>>(),  // Headers of the HTTP request.
-            body: "{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}".as_bytes().to_vec(),  // Body of the HTTP request.
+            method: HttpMethod::Post.into(), // HTTP method of the request (e.g., GET, POST).
+            uri: Some("https://example.com/webhook".to_string()), // URI of the request.
+            headers: [].into_iter().collect::<HashMap<_, _>>(), // Headers of the HTTP request.
+            body: "{}".as_bytes().to_vec(),  // Body of the HTTP request.
             ..Default::default()
         }),
         ..Default::default()
@@ -67,10 +67,10 @@ pub fn build_handle_event_request() -> EventServiceHandleRequest {
 pub fn build_parse_event_request() -> EventServiceParseRequest {
     EventServiceParseRequest {
         request_details: Some(RequestDetails {
-            method: HttpMethod::Post.into(),  // HTTP method of the request (e.g., GET, POST).
-            uri: Some("https://example.com/webhook".to_string()),  // URI of the request.
-            headers: [].into_iter().collect::<HashMap<_, _>>(),  // Headers of the HTTP request.
-            body: "{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}".as_bytes().to_vec(),  // Body of the HTTP request.
+            method: HttpMethod::Post.into(), // HTTP method of the request (e.g., GET, POST).
+            uri: Some("https://example.com/webhook".to_string()), // URI of the request.
+            headers: [].into_iter().collect::<HashMap<_, _>>(), // Headers of the HTTP request.
+            body: "{}".as_bytes().to_vec(),  // Body of the HTTP request.
             ..Default::default()
         }),
     }

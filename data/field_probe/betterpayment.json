@@ -10,111 +10,111 @@
     "authorize": {
       "Ach": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "AchBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Affirm": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Afterpay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Alfamart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "AliPayRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "AmazonPayRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "ApplePay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "ApplePayDecrypted": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "ApplePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Bacs": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "BacsBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "BancontactCard": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "BcaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Becs": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "BillDeskRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Bizum": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Blik": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Bluecode": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "BniVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Boleto": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "BriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Card": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "CashappQr": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "CashfreeRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "CimbVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "ClassicReward": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Crypto": {
         "status": "not_implemented",
@@ -122,11 +122,11 @@
       },
       "Dana": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "DanamonVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "DuitNow": {
         "status": "not_implemented",
@@ -134,35 +134,35 @@
       },
       "EVoucher": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "EaseBuzzRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Efecty": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Eft": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Eps": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "FamilyMart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "GCash": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Giropay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Givex": {
         "status": "not_implemented",
@@ -170,87 +170,87 @@
       },
       "GoPay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "GooglePay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "GooglePayDecrypted": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "GooglePayThirdPartySdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Ideal": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Indomaret": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "IndonesianBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "InstantBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "InstantBankTransferFinland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "InstantBankTransferPoland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Interac": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "KakaoPay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Klarna": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Lawson": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "LazyPayRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "LocalBankRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "LocalBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "MandiriVaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "MbWay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Mifinity": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "MiniStop": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "MobilePayRedirect": {
         "status": "not_implemented",
@@ -258,43 +258,43 @@
       },
       "Momo": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "MultibancoBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Netbanking": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "OnlineBankingCzechRepublic": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "OnlineBankingFinland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "OnlineBankingFpx": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "OnlineBankingPoland": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "OnlineBankingSlovakia": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "OnlineBankingThailand": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "OpenBanking": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "OpenBankingPis": {
         "status": "not_implemented",
@@ -302,35 +302,35 @@
       },
       "OpenBankingUk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Oxxo": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "PagoEfectivo": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "PayEasy": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "PaySafeCard": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "PayURedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "PaypalRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "PaypalSdk": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Paysera": {
         "status": "not_implemented",
@@ -342,148 +342,115 @@
       },
       "PermataBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "PhonePeRedirect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Pix": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Przelewy24": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Pse": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "RedCompra": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "RedPagos": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "RevolutPay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "SamsungPay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Satispay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Seicomart": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Sepa": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "SepaBankTransfer": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "SepaGuaranteedDebit": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "SevenEleven": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Skrill": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Sofort": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Swish": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "TouchNGo": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Trustly": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Twint": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "UpiCollect": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "UpiIntent": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "UpiQr": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Vipps": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "WeChatPayQr": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Webpay": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       },
       "Wero": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_transaction_id": "probe_txn_001",
-          "amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "payment_method": {
-            "wero": {}
-          },
-          "capture_method": "AUTOMATIC",
-          "address": {
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "zip_code": "98101",
-              "country_alpha2_code": "US"
-            }
-          },
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook"
-        },
-        "sample": {
-          "url": "https://testapi.betterpayment.de/rest/payment",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"payment_type\":\"wero\",\"order_id\":\"probe-txn-001\",\"amount\":10.0,\"currency\":\"USD\",\"merchant_reference\":\"probe-txn-001\",\"postback_url\":\"https://example.com/webhook\",\"success_url\":\"https://example.com/return\",\"error_url\":\"https://example.com/return\",\"wero_checkout_url\":\"https://example.com/return\",\"address\":\"123 Main St\",\"city\":\"Seattle\",\"postal_code\":\"98101\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"}"
-        }
+        "status": "error",
+        "error": "Stuck on field: billing.address.line1. Betterpayment requires address, city, postal_code, country, first_name, and last_name when billing is supplied. — Missing required field: billing.address.line1. Betterpayment requires address, city, postal_code, country, first_name, and last_name when billing is supplied."
       }
     },
     "capture": {
@@ -588,14 +555,14 @@
             "method": "HTTP_METHOD_POST",
             "uri": "https://example.com/webhook",
             "headers": {},
-            "body": "{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}"
+            "body": "{}"
           }
         },
         "sample": {
           "url": "",
           "method": "Post",
           "headers": {},
-          "body": "{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}"
+          "body": "{}"
         }
       }
     },
@@ -613,14 +580,14 @@
             "method": "HTTP_METHOD_POST",
             "uri": "https://example.com/webhook",
             "headers": {},
-            "body": "{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}"
+            "body": "{}"
           }
         },
         "sample": {
           "url": "",
           "method": "Post",
           "headers": {},
-          "body": "{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}"
+          "body": "{}"
         }
       }
     },
@@ -644,7 +611,7 @@
     "proxy_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       }
     },
     "proxy_setup_recurring": {
@@ -729,7 +696,7 @@
     "token_authorize": {
       "default": {
         "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Betterpayment"
+        "error": "This feature is not implemented: Selected payment method through Betterpayment. This Betterpayment integration currently supports Wero only."
       }
     },
     "token_setup_recurring": {

@@ -81,7 +81,7 @@ fun handleEvent(txnId: String, config: ConnectorConfig = _defaultConfig) {
             method = HttpMethod.HTTP_METHOD_POST  // HTTP method of the request (e.g., GET, POST).
             uri = "https://example.com/webhook"  // URI of the request.
             putAllHeaders(mapOf())  // Headers of the HTTP request.
-            body = com.google.protobuf.ByteString.copyFromUtf8("{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}")  // Body of the HTTP request.
+            body = com.google.protobuf.ByteString.copyFromUtf8("{}")  // Body of the HTTP request.
         }
     }.build()
     val response = client.handle_event(request)
@@ -96,7 +96,7 @@ fun parseEvent(txnId: String, config: ConnectorConfig = _defaultConfig) {
             method = HttpMethod.HTTP_METHOD_POST  // HTTP method of the request (e.g., GET, POST).
             uri = "https://example.com/webhook"  // URI of the request.
             putAllHeaders(mapOf())  // Headers of the HTTP request.
-            body = com.google.protobuf.ByteString.copyFromUtf8("{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}")  // Body of the HTTP request.
+            body = com.google.protobuf.ByteString.copyFromUtf8("{}")  // Body of the HTTP request.
         }
     }.build()
     val response = client.parse_event(request)

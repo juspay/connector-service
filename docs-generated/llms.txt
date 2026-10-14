@@ -130,8 +130,8 @@ examples_python: examples/barclaycard/barclaycard.py
 connector_id: betterpayment
 doc: docs/connectors/betterpayment.md
 scenarios: none
-payment_methods: Wero
-flows: authorize, get, handle_event, parse_event, refund, refund_get
+payment_methods: none
+flows: get, handle_event, parse_event, refund, refund_get
 examples_python: none
 
 ## Billwerk

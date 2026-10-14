@@ -43,7 +43,7 @@ function _buildHandleEventRequest(): types.IEventServiceHandleRequest {
             "uri": "https://example.com/webhook",  // URI of the request.
             "headers": {  // Headers of the HTTP request.
             },
-            "body": new Uint8Array(Buffer.from("{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}", "utf-8"))  // Body of the HTTP request.
+            "body": new Uint8Array(Buffer.from("{}", "utf-8"))  // Body of the HTTP request.
         }
     };
 }
@@ -55,7 +55,7 @@ function _buildParseEventRequest(): types.IEventServiceParseRequest {
             "uri": "https://example.com/webhook",  // URI of the request.
             "headers": {  // Headers of the HTTP request.
             },
-            "body": new Uint8Array(Buffer.from("{\"transaction_id\":\"bp_test123\",\"payment_type\":\"wero\",\"status_code\":0,\"status\":\"completed\",\"order_id\":\"order_abc\",\"amount\":10.00,\"currency\":\"EUR\",\"checksum\":\"dummy_checksum\"}", "utf-8"))  // Body of the HTTP request.
+            "body": new Uint8Array(Buffer.from("{}", "utf-8"))  // Body of the HTTP request.
         }
     };
 }
