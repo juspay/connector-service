@@ -579,8 +579,21 @@ impl TryFrom<ResponseRouterData<PayhereSyncResponse, Self>>
             // Surface PayHere's order_id as the reference id so callers that
             // match the sync response against their tracker (euler's
             // mandatory-PSync integrity check compares this field) see the id
-            // that was committed at authorize time.
-            connector_response_reference_id: payment_data.as_ref().map(|d| d.order_id.clone()),
+            // that was committed at authorize time. When PayHere has no record
+            // yet (Pending, data:null) there is nothing to echo from the
+            // response — fall back to the reference committed in the sync
+            // request so the callers still receive that same saved id.
+            connector_response_reference_id: payment_data
+                .as_ref()
+                .map(|d| d.order_id.clone())
+                .or_else(|| {
+                    Some(
+                        router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                    )
+                }),
             network_txn_link_id: None,
             payment_account_reference: None,
             splits: None,
