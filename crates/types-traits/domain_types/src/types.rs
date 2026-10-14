@@ -11030,22 +11030,11 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
             .additional_amount
             .map(common_utils::types::Money::foreign_try_from)
             .transpose()?;
-        let card_details = value.card_details
-            .map(payment_method_data::CardWithNoCvc::foreign_try_from)
-            .transpose()
-            .change_context(IntegrationError::InvalidDataFormat {
-                field_name: "card_details",
-                context: IntegrationErrorContext {
-                    additional_context: Some("Incremental authorization card_details must include the original card number and expiry".to_string()),
-                    ..Default::default()
-                },
-            })?;
 
         Ok(Self {
             currency: amount.currency,
             amount,
             additional_amount,
-            card_details,
             network_transaction_id: value.network_transaction_id,
             connector_transaction_id,
             connector_feature_data,

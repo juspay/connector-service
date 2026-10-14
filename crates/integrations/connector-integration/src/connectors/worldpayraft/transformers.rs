@@ -2758,8 +2758,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             cumulative_amount: convert_amount(&request.amount, "CumulativeAmount")?,
         };
 
-        let card = request
-            .card_details
+        // Populated once the shared follow-up payment method contract is available.
+        let card_details: Option<CardWithNoCvc> = None;
+        let card = card_details
             .as_ref()
             .ok_or_else(|| missing_incremental_authorization_field("card_details"))?;
         let connector_transaction_id = request

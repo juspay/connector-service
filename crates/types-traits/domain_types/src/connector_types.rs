@@ -2526,7 +2526,6 @@ pub struct PaymentsIncrementalAuthorizationData {
     pub amount: Money,
     /// Increase over the current authorized total, in the same currency as amount.
     pub additional_amount: Option<Money>,
-    pub card_details: Option<payment_method_data::CardWithNoCvc>,
     pub network_transaction_id: Option<String>,
     pub currency: Currency,
     pub reason: Option<String>,

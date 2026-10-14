@@ -4422,11 +4422,8 @@ message PaymentServiceIncrementalAuthorizationRequest {
   // Increase over the current authorized total. Must use the same currency as amount.
   optional Money additional_amount = 8;
 
-  // Original card, for connectors that require it again when increasing an authorization.
-  optional CardDetailsWithNoCvc card_details = 9;
-
   // Network transaction ID returned by the original authorization.
-  optional string network_transaction_id = 10;
+  optional string network_transaction_id = 9;
 }
 
 // Response message for incremental authorization
