@@ -218,12 +218,6 @@ pub enum JpmorganRecurringSequence {
     Subsequent,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum JpmorganAmountType {
-    Exact,
-    Variable,
-}
-
 /// JPMorgan recurring agreement details.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
