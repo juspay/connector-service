@@ -234,13 +234,14 @@ pub struct JpmorganRecurring {
     pub is_variable_amount: Option<bool>,
 }
 
-/// JPMorgan card body used by SetupMandate (initial CIT) — carries the PAN and
-/// expiry the cardholder just entered.
+/// Card or decrypted wallet data for verification without a funds hold.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganSetupMandateCard<T: PaymentMethodDataTypes> {
-    pub account_number: RawCardNumber<T>,
-    pub expiry: Expiry,
+    #[serde(flatten)]
+    pub card: JpmorganCard<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cvv: Option<Secret<String>>,
 }
 
 /// JPMorgan card body used by RepeatPayment when the upstream mandate is an
@@ -283,19 +284,19 @@ pub struct JpmorganRepeatPaymentMethodType<T: PaymentMethodDataTypes> {
     pub transaction_reference: Option<JpmorganTransactionReference>,
 }
 
-/// SetupMandate request (initial CIT with credential storage)
+/// Verification request for initial credential storage without a funds hold.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganSetupMandateRequest<T: PaymentMethodDataTypes> {
-    pub capture_method: CapMethod,
-    pub amount: MinorUnit,
     pub currency: common_enums::Currency,
     pub merchant: JpmorganMerchant,
     pub payment_method_type: JpmorganSetupMandatePaymentMethodType<T>,
-    pub recurring: JpmorganRecurring,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurring_sequence: Option<JpmorganRecurringSequence>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_order_number: Option<String>,
     pub initiator_type: JpmorganInitiatorType,
     pub account_on_file: JpmorganAccountOnFile,
-    pub is_amount_final: bool,
 }
 
 /// RepeatPayment request (subsequent MIT).
@@ -380,6 +381,7 @@ pub(super) struct JpmorganStoredCredential {
 #[serde(rename_all = "snake_case")]
 pub(super) enum JpmorganStorageSource {
     Payment,
+    Verification,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -421,6 +423,27 @@ pub(super) struct JpmorganPreservedContext {
     pub(super) wallet: Option<JpmorganStoredWallet>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) wallet_account_number_type: Option<JpmorganAccountNumberType>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) resource: Option<JpmorganResourceContext>,
     #[serde(flatten)]
     pub(super) other: serde_json::Map<String, serde_json::Value>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub(super) struct JpmorganResourceContext {
+    #[serde(rename = "type")]
+    pub(super) resource_type: JpmorganResourceType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum JpmorganResourceType {
+    Verification,
+}
+
+pub(super) enum JpmorganSyncResource {
+    Payment(String),
+    Verification(String),
 }
