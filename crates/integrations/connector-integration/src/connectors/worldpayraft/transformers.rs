@@ -331,9 +331,6 @@ impl WorldpayraftPaymentKind {
         request: &PaymentsAuthorizeData<T>,
         was_stored: bool,
     ) -> Self {
-        // Saving a card for future on-session use establishes COF through a CIT.
-        let is_on_session_card_setup = request.setup_future_usage == Some(FutureUsage::OnSession)
-            && request.customer_acceptance.is_some();
         let has_mandate = request
             .mandate_id
             .as_ref()
@@ -344,8 +341,8 @@ impl WorldpayraftPaymentKind {
         } else if was_stored || has_mandate {
             Self::StoredCredentialCit
         } else if request.mit_category.is_some()
-            || request.setup_future_usage == Some(FutureUsage::OffSession)
-            || is_on_session_card_setup
+            || (request.setup_future_usage == Some(FutureUsage::OffSession)
+                && request.customer_acceptance.is_some())
         {
             Self::InitialStoredCredential
         } else {
