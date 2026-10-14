@@ -586,7 +586,7 @@
     "incremental_authorization": {
       "default": {
         "status": "error",
-        "error": "Stuck on field: additional_amount. Worldpay RAFT incremental authorization requires the increase amount and the original card and authorization references — Missing required field: additional_amount. Worldpay RAFT incremental authorization requires the increase amount and the original card and authorization references"
+        "error": "Stuck on field: additional_amount — Missing required field: additional_amount"
       }
     },
     "parse_event": {
