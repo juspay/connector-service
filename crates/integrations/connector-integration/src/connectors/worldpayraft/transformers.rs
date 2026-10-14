@@ -1,4 +1,4 @@
-use crate::types::ResponseRouterData;
+use crate::{types::ResponseRouterData, utils::missing_field_err};
 use common_enums::{
     AttemptStatus, AuthorizationStatus, CardNetwork, FutureUsage, MitCategory, RefundStatus,
 };
@@ -278,7 +278,7 @@ pub(super) fn parse_connector_transaction_id(id: &str) -> (bool, &str, &str, &st
 }
 
 fn map_payment_status(return_code: &str, response_code: &str) -> bool {
-    return_code == "0000" && response_code == "000"
+    return_code == RETURN_CODE_SUCCESS && response_code == RESPONSE_CODE_SUCCESS
 }
 
 fn payment_status(return_code: &str, response_code: &str, auto_capture: bool) -> AttemptStatus {
@@ -305,6 +305,32 @@ pub struct WorldpayraftCompletionAmounts {
     pub transaction_amount: StringMajorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preauthorized_amount: Option<StringMajorUnit>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct WorldpayraftCreditAccountData {
+    from_account_selected: WorldpayraftAccountType,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum WorldpayraftAccountType {
+    #[serde(rename = "CC")]
+    CreditCard,
+    #[serde(rename = "CK")]
+    Checking,
+    #[serde(rename = "CS")]
+    CashBenefits,
+    #[serde(rename = "DE")]
+    DefaultAccount,
+    #[serde(rename = "FS")]
+    FoodStamps,
+    #[serde(rename = "GC")]
+    GiftCard,
+    #[serde(rename = "SV")]
+    Savings,
+    #[serde(rename = "WI")]
+    Wic,
 }
 
 /// Non-EMD values. Subscription is explicitly signalled by MitCategory::Subscription.
@@ -1282,7 +1308,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             misc_amounts_balances: WorldpayraftAmounts { transaction_amount },
             account_codes_and_data: (request.request_incremental_authorization == Some(true))
                 .then_some(WorldpayraftCreditAccountData {
-                    from_account_selected: "CC",
+                    from_account_selected: WorldpayraftAccountType::CreditCard,
                 }),
             card_info: WorldpayraftCardInfo {
                 pan: Some(card.pan),
@@ -2668,28 +2694,10 @@ struct WorldpayraftIncrementalAuthorizationAmounts {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
-struct WorldpayraftCreditAccountData {
-    from_account_selected: &'static str,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "PascalCase")]
 struct WorldpayraftIncrementalAuthorizationTraceNumbers {
     authorization_number: String,
     #[serde(rename = "RetrievalREFNumber")]
     retrieval_ref_number: String,
-}
-
-fn missing_incremental_authorization_field(field_name: &'static str) -> errors::IntegrationError {
-    errors::IntegrationError::MissingRequiredField {
-        field_name,
-        context: errors::IntegrationErrorContext {
-            additional_context: Some(
-                "Worldpay RAFT incremental authorization requires the increase amount and the original card and authorization references".to_string(),
-            ),
-            ..Default::default()
-        },
-    }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -2718,12 +2726,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let request = &item.router_data.request;
-        let auth = WorldpayraftAuthType::try_from(&item.router_data.connector_config)?;
+        let router_data = &item.router_data;
+        let request = &router_data.request;
+        let auth = WorldpayraftAuthType::try_from(&router_data.connector_config)?;
         let additional_amount = request
             .additional_amount
             .as_ref()
-            .ok_or_else(|| missing_incremental_authorization_field("additional_amount"))?;
+            .ok_or_else(missing_field_err("additional_amount"))?;
         if additional_amount.currency != request.amount.currency
             || additional_amount.amount <= MinorUnit::zero()
             || additional_amount.amount > request.amount.amount
@@ -2762,20 +2771,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card_details: Option<CardWithNoCvc> = None;
         let card = card_details
             .as_ref()
-            .ok_or_else(|| missing_incremental_authorization_field("card_details"))?;
+            .ok_or_else(missing_field_err("card_details"))?;
         let connector_transaction_id = request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(missing_incremental_authorization_field(
-                "connector_transaction_id",
-            ))?;
-        let references: Vec<&str> = connector_transaction_id.split('|').collect();
-        let (authorization_number, retrieval_ref_number) = match references.as_slice() {
-            [TXN_TYPE_CREDIT, authorization_number, retrieval_ref_number, _]
-            | [authorization_number, retrieval_ref_number, _]
-                if !authorization_number.trim().is_empty()
-                    && !retrieval_ref_number.trim().is_empty() => (*authorization_number, *retrieval_ref_number),
-            _ => return Err(errors::IntegrationError::InvalidDataFormat {
+            .change_context(errors::IntegrationError::MissingConnectorTransactionID {
+                context: errors::IntegrationErrorContext {
+                    additional_context: Some(
+                        "Worldpay RAFT incremental authorization requires the connector transaction ID returned by the original credit authorization".to_string(),
+                    ),
+                    suggested_action: Some(
+                        "Pass the original authorization's connector_transaction_id in the incremental authorization request".to_string(),
+                    ),
+                    ..Default::default()
+                },
+            })?;
+        let (_, authorization_number, retrieval_ref_number, _) =
+            parse_connector_transaction_id(&connector_transaction_id);
+        // The shared parser is permissive; increases require an original credit authorization.
+        let is_credit_reference = match connector_transaction_id.matches('|').count() {
+            2 => true, // Legacy format without a credit/debit prefix.
+            3 => connector_transaction_id.split('|').next() == Some(TXN_TYPE_CREDIT),
+            _ => false,
+        };
+        if !is_credit_reference
+            || authorization_number.trim().is_empty()
+            || retrieval_ref_number.trim().is_empty()
+        {
+            return Err(errors::IntegrationError::InvalidDataFormat {
                 field_name: "connector_transaction_id",
                 context: errors::IntegrationErrorContext {
                     additional_context: Some(
@@ -2783,9 +2806,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ),
                     ..Default::default()
                 },
-            }.into()),
-        };
-        if is_debit_card_type(card.card_type.as_deref()) {
+            }.into());
+        }
+        let card = CardFields::<T>::try_from(card)?;
+        if card.is_debit {
             return Err(errors::IntegrationError::NotSupported {
                 message: "Incremental authorization for debit cards".to_string(),
                 connector: "worldpayraft",
@@ -2793,7 +2817,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             .into());
         }
-        let network = resolve_card_network(card.card_network.clone(), card.card_number.peek());
+        let network = card.network;
         if !matches!(
             network,
             Some(
@@ -2813,27 +2837,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .network_transaction_id
             .as_ref()
             .filter(|id| !id.trim().is_empty())
-            .ok_or_else(|| missing_incremental_authorization_field("network_transaction_id"))?;
+            .ok_or_else(missing_field_err("network_transaction_id"))?;
         let metadata =
             WorldpayraftConnectorMetadata::try_from(request.connector_feature_data.as_ref())?;
         let api_transaction_id = metadata
             .api_transaction_id
             .filter(|id| !id.trim().is_empty())
-            .ok_or_else(|| {
-                missing_incremental_authorization_field("connector_feature_data.api_transaction_id")
-            })?;
+            .ok_or_else(missing_field_err(
+                "connector_feature_data.api_transaction_id",
+            ))?;
 
         Ok(Self {
             creditauth: WorldpayraftIncrementalAuthorizationInner {
                 misc_amounts_balances,
                 account_codes_and_data: WorldpayraftCreditAccountData {
-                    from_account_selected: "CC",
+                    from_account_selected: WorldpayraftAccountType::CreditCard,
                 },
                 card_info: WorldpayraftCardInfo {
-                    pan: Some(WorldpayraftAuthorizePan::CardWithNoCvc(
-                        card.card_number.clone(),
-                    )),
-                    expiration_date: Some(card.get_expiry_date_as_yymm()?),
+                    pan: Some(card.pan),
+                    expiration_date: Some(card.expiration_date),
                 },
                 terminal_data: WorldpayraftTerminalData {
                     entry_mode: WorldpayraftEntryMode::Keyed,
@@ -2891,7 +2913,7 @@ impl TryFrom<ResponseRouterData<WorldpayraftIncrementalAuthorizationResponse, Se
         item: ResponseRouterData<WorldpayraftIncrementalAuthorizationResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = item.response.creditauthresponse;
-        let result = if response.return_code == "0000" && response.response_code == "000" {
+        let result = if map_payment_status(&response.return_code, &response.response_code) {
             Ok(PaymentsResponseData::IncrementalAuthorizationResponse {
                 status: AuthorizationStatus::Success,
                 connector_authorization_id: response
@@ -2902,7 +2924,7 @@ impl TryFrom<ResponseRouterData<WorldpayraftIncrementalAuthorizationResponse, Se
         } else {
             Err(ErrorResponse {
                 status_code: item.http_code,
-                code: if response.return_code == "0000" {
+                code: if response.return_code == RETURN_CODE_SUCCESS {
                     response.response_code
                 } else {
                     response.return_code
