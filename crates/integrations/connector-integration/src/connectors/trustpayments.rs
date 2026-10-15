@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
 use common_utils::{
     errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMinorUnit,
 };
@@ -646,6 +646,370 @@ macros::macro_connector_implementation!(
 // ===== AUTHENTICATION FLOW SOURCE VERIFICATION =====
 
 // ===== CONNECTOR CUSTOMER SOURCE VERIFICATION =====
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpayments<T>,
+    flow: Authorize,
+    // `(errorcode, settlestatus, authcode)` distilled from the first response entry;
+    // `None` when the response array is empty.,
+    source: Option<(String, Option<trustpayments::TrustpaymentsSettleStatus>, Option<String>)>,
+    context: (),
+    mapping_status: |source, _ctx| { let Some((errorcode, settlestatus, authcode)) = source else {
+            return AttemptStatus::Failure;
+        };
+        if errorcode != "0" {
+            return AttemptStatus::Failure;
+        }
+        match settlestatus {
+            Some(trustpayments::TrustpaymentsSettleStatus::AutomaticCapture) => {
+                if authcode.is_some() {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Pending
+                }
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::SettledPending)
+            | Some(trustpayments::TrustpaymentsSettleStatus::SettledComplete) => {
+                AttemptStatus::Charged
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::ManualCapture) => {
+                if authcode.is_some() {
+                    AttemptStatus::Authorized
+                } else {
+                    AttemptStatus::Pending
+                }
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::Cancelled) => AttemptStatus::Voided,
+            None => AttemptStatus::Pending,
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: TrustpaymentsAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response.responses.first().map(|auth_response| {
+                (
+                    auth_response.errorcode.clone(),
+                    auth_response.settlestatus.clone(),
+                    auth_response.authcode.clone(),
+                )
+            })
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpayments<T>,
+    flow: PSync,
+    // `(response-level errorcode, first record)` where the record is
+    // `(record errorcode, settlestatus, authcode)`; `None` on an empty response array.,
+    source: Option<(
+        String,
+        Option<(
+            String,
+            Option<trustpayments::TrustpaymentsSettleStatus>,
+            Option<String>,
+        )>,
+    )>,
+    context: (),
+    mapping_status: |source, _ctx| { let Some((response_errorcode, record)) = source else {
+            return AttemptStatus::Failure;
+        };
+        if response_errorcode != "0" {
+            return AttemptStatus::Failure;
+        }
+        let Some((record_errorcode, settlestatus, authcode)) = record else {
+            // No transaction records found for the query.
+            return AttemptStatus::Pending;
+        };
+        if record_errorcode != "0" {
+            return AttemptStatus::Failure;
+        }
+        match settlestatus {
+            Some(trustpayments::TrustpaymentsSettleStatus::AutomaticCapture) => {
+                if authcode.is_some() {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Pending
+                }
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::SettledPending)
+            | Some(trustpayments::TrustpaymentsSettleStatus::SettledComplete) => {
+                AttemptStatus::Charged
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::ManualCapture) => {
+                if authcode.is_some() {
+                    AttemptStatus::Authorized
+                } else {
+                    AttemptStatus::Pending
+                }
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::Cancelled) => AttemptStatus::Voided,
+            None => AttemptStatus::Pending,
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: TrustpaymentsPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response.response.first().map(|response_item| {
+                let record = response_item.records.as_ref().and_then(|records| {
+                    records.first().map(|record| {
+                        (
+                            record.errorcode.clone(),
+                            record.settlestatus.clone(),
+                            record.authcode.clone(),
+                        )
+                    })
+                });
+                (response_item.errorcode.clone(), record)
+            })
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpayments<T>,
+    flow: Capture,
+    source: Option<String>,
+    context: (),
+    mapping_status: |errorcode, _ctx| { match errorcode.as_deref() {
+            // A successful TRANSACTIONUPDATE means the capture was accepted.
+            Some("0") => AttemptStatus::Charged,
+            _ => AttemptStatus::Failure,
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: TrustpaymentsCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .response
+                .first()
+                .map(|response_item| response_item.errorcode.clone())
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpayments<T>,
+    flow: Void,
+    source: Option<String>,
+    context: (),
+    mapping_status: |errorcode, _ctx| { match errorcode.as_deref() {
+            // A successful TRANSACTIONUPDATE means the void was accepted.
+            Some("0") => AttemptStatus::Voided,
+            _ => AttemptStatus::VoidFailed,
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: TrustpaymentsVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .response
+                .first()
+                .map(|response_item| response_item.errorcode.clone())
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpayments<T>,
+    flow: SetupMandate,
+    source: Option<(String, Option<trustpayments::TrustpaymentsSettleStatus>, Option<String>)>,
+    context: (),
+    mapping_status: |source, _ctx| { let Some((errorcode, settlestatus, authcode)) = source else {
+            return AttemptStatus::Failure;
+        };
+        if errorcode != "0" {
+            return AttemptStatus::Failure;
+        }
+        match settlestatus {
+            Some(trustpayments::TrustpaymentsSettleStatus::AutomaticCapture) => {
+                if authcode.is_some() {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Pending
+                }
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::SettledPending)
+            | Some(trustpayments::TrustpaymentsSettleStatus::SettledComplete) => {
+                AttemptStatus::Charged
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::ManualCapture) => {
+                if authcode.is_some() {
+                    AttemptStatus::Authorized
+                } else {
+                    AttemptStatus::Pending
+                }
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::Cancelled) => AttemptStatus::Voided,
+            None => AttemptStatus::Pending,
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: TrustpaymentsSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response.responses.first().map(|auth_response| {
+                (
+                    auth_response.errorcode.clone(),
+                    auth_response.settlestatus.clone(),
+                    auth_response.authcode.clone(),
+                )
+            })
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpayments<T>,
+    flow: RepeatPayment,
+    source: Option<(String, Option<trustpayments::TrustpaymentsSettleStatus>, Option<String>)>,
+    context: (),
+    mapping_status: |source, _ctx| { let Some((errorcode, settlestatus, authcode)) = source else {
+            return AttemptStatus::Failure;
+        };
+        if errorcode != "0" {
+            return AttemptStatus::Failure;
+        }
+        match settlestatus {
+            Some(trustpayments::TrustpaymentsSettleStatus::AutomaticCapture) => {
+                if authcode.is_some() {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Pending
+                }
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::SettledPending)
+            | Some(trustpayments::TrustpaymentsSettleStatus::SettledComplete) => {
+                AttemptStatus::Charged
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::ManualCapture) => {
+                if authcode.is_some() {
+                    AttemptStatus::Authorized
+                } else {
+                    AttemptStatus::Pending
+                }
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::Cancelled) => AttemptStatus::Voided,
+            None => AttemptStatus::Pending,
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: TrustpaymentsRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response.responses.first().map(|auth_response| {
+                (
+                    auth_response.errorcode.clone(),
+                    auth_response.settlestatus.clone(),
+                    auth_response.authcode.clone(),
+                )
+            })
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpayments<T>,
+    flow: Refund,
+    source: Option<(String, Option<trustpayments::TrustpaymentsSettleStatus>)>,
+    context: (),
+    mapping_status: |source, _ctx| { let Some((errorcode, settlestatus)) = source else {
+            return RefundStatus::Pending;
+        };
+        if errorcode != "0" {
+            return RefundStatus::Failure;
+        }
+        match settlestatus {
+            Some(trustpayments::TrustpaymentsSettleStatus::SettledComplete)
+            | Some(trustpayments::TrustpaymentsSettleStatus::SettledPending) => {
+                RefundStatus::Success
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::AutomaticCapture) | None => {
+                RefundStatus::Pending
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::ManualCapture) => {
+                RefundStatus::ManualReview
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::Cancelled) => RefundStatus::Failure,
+        } },
+    runtime: {
+        request: RefundsData,
+        response: TrustpaymentsRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response.responses.first().map(|refund_response| {
+                (
+                    refund_response.errorcode.clone(),
+                    refund_response.settlestatus.clone(),
+                )
+            })
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Trustpayments<T>,
+    flow: RSync,
+    // `(response-level errorcode, first record)`; `None` on an empty response array.,
+    source: Option<(
+        String,
+        Option<(String, Option<trustpayments::TrustpaymentsSettleStatus>)>,
+    )>,
+    context: (),
+    mapping_status: |source, _ctx| { let Some((response_errorcode, record)) = source else {
+            return RefundStatus::Pending;
+        };
+        if response_errorcode != "0" {
+            return RefundStatus::Failure;
+        }
+        let Some((record_errorcode, settlestatus)) = record else {
+            // No transaction records found for the refund query yet.
+            return RefundStatus::Pending;
+        };
+        if record_errorcode != "0" {
+            return RefundStatus::Failure;
+        }
+        match settlestatus {
+            Some(trustpayments::TrustpaymentsSettleStatus::SettledComplete)
+            | Some(trustpayments::TrustpaymentsSettleStatus::SettledPending) => {
+                RefundStatus::Success
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::AutomaticCapture) | None => {
+                RefundStatus::Pending
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::ManualCapture) => {
+                RefundStatus::ManualReview
+            }
+            Some(trustpayments::TrustpaymentsSettleStatus::Cancelled) => RefundStatus::Failure,
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: TrustpaymentsRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response.response.first().map(|response_item| {
+                let record = response_item.records.as_ref().and_then(|records| {
+                    records
+                        .first()
+                        .map(|record| (record.errorcode.clone(), record.settlestatus.clone()))
+                });
+                (response_item.errorcode.clone(), record)
+            })
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
 
 macros::macro_connector_flow_status_impls!(
     connector: Trustpayments,

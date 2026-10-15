@@ -508,6 +508,42 @@ pub enum TransactionType {
     Sale,
 }
 
+// ── Status-mapping context types (flow-status macros) ───────────────────────
+
+/// The `transaction_type` field on a `getTransactionDetails` response
+/// (`NuveiTransactionDetails::transaction_type`, a `String` on the wire), folded to a
+/// typed form. `Auth` = authorized only; `Sale`/`Settle` = captured; anything else
+/// (including a missing field) follows the PSync fallback of treating the payment as
+/// captured.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NuveiSyncTransactionType {
+    Auth,
+    Sale,
+    Settle,
+    Other,
+}
+
+impl NuveiSyncTransactionType {
+    pub fn from_wire(s: Option<&str>) -> Self {
+        match s {
+            Some("Auth") => Self::Auth,
+            Some("Sale") => Self::Sale,
+            Some("Settle") => Self::Settle,
+            _ => Self::Other,
+        }
+    }
+}
+
+/// PSync mapping context: `(transaction_details is present, response-level status,
+/// folded transaction_type)`. A `false` first slot encodes the TryFrom's `?`-error on a
+/// missing `transaction_details` object — the sync errored before status mapping.
+pub type NuveiPSyncMappingCtx = (bool, NuveiPaymentStatus, NuveiSyncTransactionType);
+
+/// Capture / Refund / RSync mapping context: `(transaction_status is present,
+/// response-level status is Success)`. `Approved`-status outcomes are only reachable
+/// with `true` in the first slot.
+pub type NuveiResponseMappingCtx = (bool, NuveiPaymentStatus);
+
 impl TransactionType {
     fn get_from_capture_method(
         capture_method: Option<common_enums::CaptureMethod>,
@@ -974,7 +1010,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             connector: "nuvei",
                             context: Default::default(),
                         }
-                        .into())
+                        .into());
                     }
                 }
             }
@@ -1038,7 +1074,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             connector: "nuvei",
                             context: Default::default(),
                         }
-                        .into())
+                        .into());
                     }
                 }
             }
@@ -1062,7 +1098,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             connector: "nuvei",
                             context: Default::default(),
                         }
-                        .into())
+                        .into());
                     }
                 };
 
@@ -1093,7 +1129,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "Payment method not supported by Nuvei in this transformer".to_string(),
                     Default::default(),
                 )
-                .into())
+                .into());
             }
         };
 
@@ -1178,7 +1214,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter_webhooks
             .convert(
-                router_data.request.amount.amount,
+                router_data.request.minor_amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1410,7 +1446,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter_webhooks
             .convert(
-                router_data.request.amount_to_capture.amount,
+                router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1687,7 +1723,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter_webhooks
             .convert(
-                router_data.request.refund_amount.amount,
+                common_utils::types::MinorUnit::new(router_data.request.refund_amount),
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1993,7 +2029,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             router_data
                 .request
                 .amount
-                .as_ref()
                 .ok_or(IntegrationError::MissingRequiredField {
                     field_name: "amount",
                     context: Default::default(),
@@ -2011,7 +2046,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter_webhooks
-            .convert(minor_amount.amount, currency)
+            .convert(minor_amount, currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -2399,10 +2434,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter_webhooks
-            .convert(
-                router_data.request.amount.amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.amount, router_data.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -2655,7 +2687,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     connector: "nuvei",
                     context: Default::default(),
                 }
-                .into())
+                .into());
             }
         };
 
@@ -2697,9 +2729,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Nuvei treats this as a zero-value auth verification for the mandate.
         let minor_amount = router_data
             .request
-            .amount
-            .as_ref()
-            .map(|money| money.amount)
+            .minor_amount
             .unwrap_or(common_utils::types::MinorUnit::new(0));
         let currency = router_data.request.currency;
         let amount = item
@@ -3156,7 +3186,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_request_reference_id
             .clone();
 
-        let minor_amount = router_data.request.amount.amount;
+        let minor_amount = router_data.request.minor_amount;
         let currency = router_data.request.currency;
         let amount = item
             .connector

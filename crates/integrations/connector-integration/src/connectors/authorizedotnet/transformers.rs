@@ -17,13 +17,13 @@ use domain_types::{
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_method_data::{
         BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        VaultTokenHolder, WalletData,
+        VaultTokenHolder,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse, FlowStatus},
     router_data_v2::RouterDataV2,
 };
 
-use crate::{types::ResponseRouterData, utils::get_unimplemented_payment_method_error_message};
+use crate::types::ResponseRouterData;
 // Alias to make the transition easier
 type HsInterfacesConnectorRequestError = IntegrationError;
 use std::str::FromStr;
@@ -370,103 +370,6 @@ pub struct BankAccountDetails {
 pub enum PaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
     BankAccount(BankAccountDetails),
-    OpaqueData(WalletDetails),
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct WalletDetails {
-    pub data_descriptor: WalletMethod,
-    pub data_value: Secret<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum WalletMethod {
-    #[serde(rename = "COMMON.GOOGLE.INAPP.PAYMENT")]
-    Googlepay,
-    #[serde(rename = "COMMON.APPLE.INAPP.PAYMENT")]
-    Applepay,
-}
-
-/// The only wallets Authorize.Net accepts are Google Pay and Apple Pay, both as
-/// PSP-decryption `opaqueData` passthrough: Authorize.Net decrypts the token
-/// itself, so the encrypted blob is forwarded untouched. PayPal is a redirect
-/// wallet and stays unimplemented -- the response side cannot surface the
-/// approval URL yet (`SecureAcceptance` is an empty stub and `redirection_data`
-/// is always `None`), so accepting the request would strand the payment.
-impl<T: PaymentMethodDataTypes> TryFrom<&WalletData> for PaymentDetails<T> {
-    type Error = error_stack::Report<IntegrationError>;
-
-    fn try_from(wallet_data: &WalletData) -> Result<Self, Self::Error> {
-        match wallet_data {
-            WalletData::GooglePay(_) => Ok(Self::OpaqueData(WalletDetails {
-                data_descriptor: WalletMethod::Googlepay,
-                data_value: Secret::new(wallet_data.get_encoded_wallet_token()?),
-            })),
-            WalletData::ApplePay(applepay_token) => {
-                let apple_pay_encrypted_data = applepay_token
-                    .payment_data
-                    .get_encrypted_apple_pay_payment_data_mandatory()
-                    .change_context(IntegrationError::MissingRequiredField {
-                        field_name: "Apple pay encrypted data",
-                        context: Default::default(),
-                    })?;
-                Ok(Self::OpaqueData(WalletDetails {
-                    data_descriptor: WalletMethod::Applepay,
-                    data_value: Secret::new(apple_pay_encrypted_data.clone()),
-                }))
-            }
-            WalletData::PaypalRedirect(_)
-            | WalletData::AliPayQr(_)
-            | WalletData::AliPayRedirect(_)
-            | WalletData::AliPayHkRedirect(_)
-            | WalletData::BluecodeRedirect {}
-            | WalletData::AmazonPayRedirect(_)
-            | WalletData::MomoRedirect(_)
-            | WalletData::KakaoPayRedirect(_)
-            | WalletData::GoPayRedirect(_)
-            | WalletData::GcashRedirect(_)
-            | WalletData::ApplePayRedirect(_)
-            | WalletData::ApplePayThirdPartySdk(_)
-            | WalletData::DanaRedirect {}
-            | WalletData::GrabpayRedirect {}
-            | WalletData::GooglePayRedirect(_)
-            | WalletData::GooglePayThirdPartySdk(_)
-            | WalletData::MbWayRedirect(_)
-            | WalletData::MobilePayRedirect(_)
-            | WalletData::PaypalSdk(_)
-            | WalletData::Paze(_)
-            | WalletData::SamsungPay(_)
-            | WalletData::TwintRedirect {}
-            | WalletData::VippsRedirect {}
-            | WalletData::TouchNGoRedirect(_)
-            | WalletData::WeChatPayRedirect(_)
-            | WalletData::WeChatPayQr(_)
-            | WalletData::CashappQr(_)
-            | WalletData::SwishQr(_)
-            | WalletData::Mifinity(_)
-            | WalletData::RevolutPay(_)
-            | WalletData::MbWay(_)
-            | WalletData::Satispay(_)
-            | WalletData::Wero(_)
-            | WalletData::LazyPayRedirect(_)
-            | WalletData::PhonePeRedirect(_)
-            | WalletData::BillDeskRedirect(_)
-            | WalletData::CashfreeRedirect(_)
-            | WalletData::PayURedirect(_)
-            | WalletData::EaseBuzzRedirect(_)
-            | WalletData::PaymayaRedirect(_)
-            | WalletData::PayhereRedirect {}
-            | WalletData::QwikcilverWalletDirect(_)
-            | WalletData::Skrill(_)
-            | WalletData::Neteller(_) => {
-                Err(error_stack::report!(IntegrationError::NotImplemented(
-                    get_unimplemented_payment_method_error_message("authorizedotnet"),
-                    Default::default(),
-                )))
-            }
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -822,7 +725,6 @@ fn create_regular_transaction_request<
                 }
             }
         }
-        PaymentMethodData::Wallet(wallet_data) => PaymentDetails::try_from(wallet_data),
         pm => Err(error_stack::report!(IntegrationError::NotSupported {
             message: format!("Payment method {:?}", pm),
             connector: "authorizedotnet",
@@ -942,7 +844,7 @@ fn create_regular_transaction_request<
             item.connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.amount.amount,
+                    item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -1166,7 +1068,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.amount.amount,
+                    item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -1266,7 +1168,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.amount_to_capture.amount,
+                    item.router_data.request.minor_amount_to_capture,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -1828,7 +1730,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.refund_amount.amount,
+                    item.router_data.request.minor_refund_amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -2432,36 +2334,16 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
 /// Build an `ErrorResponse` from Authorize.Net's `ResponseMessages`, mirroring
 /// hyperswitch's `get_err_response`: use the first message's code/text and leave
 /// `attempt_status: None` so the caller preserves the prior attempt status.
-/// Parity with hyperswitch's direct Authorize.net flow: `resultCode` is the error *message*
-/// (`"Error"`), and the reason carries every `messages.message[].text`, joined. Reading
-/// `message[0].text` into both fields diverges on `message` and silently drops every message
-/// after the first.
-fn error_code_message_and_reason(messages: &ResponseMessages) -> (String, String, String) {
-    let code = messages
-        .message
-        .first()
-        .map(|m| m.code.clone())
-        .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
-    let joined_reason = messages
-        .message
-        .iter()
-        .map(|m| m.text.clone())
-        .collect::<Vec<String>>()
-        .join(" ");
-    let reason = if joined_reason.is_empty() {
-        consts::NO_ERROR_MESSAGE.to_string()
-    } else {
-        joined_reason
-    };
-    (code, messages.result_code.to_string(), reason)
-}
-
 fn get_err_response(status_code: u16, messages: ResponseMessages) -> ErrorResponse {
-    let (code, message, reason) = error_code_message_and_reason(&messages);
+    let first = messages.message.first();
     ErrorResponse {
-        code,
-        message,
-        reason: Some(reason),
+        code: first
+            .map(|m| m.code.clone())
+            .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
+        message: first
+            .map(|m| m.text.clone())
+            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+        reason: first.map(|m| m.text.clone()),
         status_code,
         attempt_status: None,
         connector_transaction_id: None,
@@ -2701,7 +2583,7 @@ pub struct ResponseMessage {
     pub text: String,
 }
 
-#[derive(Debug, Default, Clone, Deserialize, PartialEq, Serialize, strum::Display)]
+#[derive(Debug, Default, Clone, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub enum ResultCode {
     #[default]
@@ -2712,7 +2594,7 @@ pub enum ResultCode {
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseMessages {
-    result_code: ResultCode,
+    pub result_code: ResultCode,
     pub message: Vec<ResponseMessage>,
 }
 
@@ -2742,7 +2624,34 @@ pub enum Operation {
     Refund,
 }
 
-fn get_hs_status(
+/// Context bundle for the `impl_flow_status_mapping_ctx!` declarations on the
+/// Authorize/Capture/RepeatPayment flows. Mirrors the non-status inputs that
+/// `get_hs_status` consults: the result code on the top-level messages and the
+/// requested capture method (which picks Authorized vs Charged for Authorize).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AuthorizedotnetPaymentCtx {
+    pub is_result_code_ok: bool,
+    pub is_manual_capture: bool,
+}
+
+/// Outcome categories for a Void (`voidTransaction`) call. authorize.net returns
+/// an **empty** `transactionResponse` on a successful void — `get_hs_status`
+/// therefore maps `ResultCode::Ok` + no transaction response to `Voided`, and any
+/// real transaction response means the void was declined/errored/held.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AuthorizedotnetVoidOutcome {
+    /// ResultCode::Ok with no transaction_response — the canonical void success.
+    #[default]
+    ApprovedEmpty,
+    /// Transaction evaluated and declined or errored.
+    Declined,
+    /// ResultCode::Error at the top level.
+    Error,
+    /// Held for review or otherwise not yet decided.
+    HeldForReview,
+}
+
+pub(crate) fn get_hs_status(
     response: &AuthorizedotnetPaymentsResponse,
     _http_status_code: u16,
     operation: Operation,
@@ -3151,12 +3060,28 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
             }
             None => {
                 // Handle error response
-                let (code, message, reason) = error_code_message_and_reason(&response.messages);
                 let error_response = ErrorResponse {
                     status_code: http_code,
-                    code,
-                    message,
-                    reason: Some(reason),
+                    code: response
+                        .messages
+                        .message
+                        .first()
+                        .map(|m| m.code.clone())
+                        .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
+                    message: response
+                        .messages
+                        .message
+                        .first()
+                        .map(|m| m.text.clone())
+                        .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                    reason: Some(
+                        response
+                            .messages
+                            .message
+                            .first()
+                            .map(|m| m.text.clone())
+                            .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                    ),
                     attempt_status: Some(FlowStatus::Payment(AttemptStatus::Failure)),
                     connector_transaction_id: None,
                     network_decline_code: None,
@@ -3207,6 +3132,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, error_stack::Report<IntegrationError>> {
+        let ccard = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Card(card) => card,
+            pm => {
+                return Err(error_stack::report!(IntegrationError::NotImplemented(
+                    format!("Payment method {:?}", pm),
+                    Default::default()
+                )))
+            }
+        };
+
         let merchant_authentication =
             AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
@@ -3241,30 +3176,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 country: address.country,
             });
 
-        let payment = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Card(ccard) => {
-                // Create expiry date manually since we can't use the trait method generically
-                let expiry_month = ccard.card_exp_month.peek().clone();
-                let expiry_year =
-                    domain_types::utils::expand_expiry_year_to_four_digits(&ccard.card_exp_year);
-                let expiration_date = format!("{}-{expiry_month}", expiry_year.peek());
+        // Create expiry date manually since we can't use the trait method generically
+        let expiry_month = ccard.card_exp_month.peek().clone();
+        let expiry_year =
+            domain_types::utils::expand_expiry_year_to_four_digits(&ccard.card_exp_year);
+        let expiration_date = format!("{}-{expiry_month}", expiry_year.peek());
 
-                PaymentDetails::CreditCard(CreditCardDetails {
-                    card_number: ccard.card_number.clone(),
-                    expiration_date: Secret::new(expiration_date),
-                    card_code: Some(ccard.card_cvc.clone()),
-                })
-            }
-            PaymentMethodData::Wallet(wallet_data) => PaymentDetails::try_from(wallet_data)?,
-            pm => {
-                return Err(error_stack::report!(IntegrationError::NotImplemented(
-                    format!("Payment method {:?}", pm),
-                    Default::default()
-                )))
-            }
+        let payment_profile = PaymentProfile {
+            bill_to,
+            payment: PaymentDetails::CreditCard(CreditCardDetails {
+                card_number: ccard.card_number.clone(),
+                expiration_date: Secret::new(expiration_date),
+                card_code: Some(ccard.card_cvc.clone()),
+            }),
         };
-
-        let payment_profile = PaymentProfile { bill_to, payment };
 
         Ok(Self {
             create_customer_payment_profile_request: AuthorizedotnetPaymentProfileRequest {
@@ -3376,12 +3301,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 payment_account_reference: None,
             });
         } else {
-            let (code, message, reason) = error_code_message_and_reason(&response.messages);
             let error_response = ErrorResponse {
                 status_code: http_code,
-                code,
-                message,
-                reason: Some(reason),
+                code: response
+                    .messages
+                    .message
+                    .first()
+                    .map(|m| m.code.clone())
+                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
+                message: response
+                    .messages
+                    .message
+                    .first()
+                    .map(|m| m.text.clone())
+                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                reason: Some(
+                    response
+                        .messages
+                        .message
+                        .first()
+                        .map(|m| m.text.clone())
+                        .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                ),
                 attempt_status: Some(FlowStatus::Payment(AttemptStatus::Failure)),
                 connector_transaction_id: None,
                 network_decline_code: None,
@@ -3673,10 +3614,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     vec![ShipToList {
                         first_name: address.first_name.clone(),
                         last_name: address.last_name.clone(),
-                        // hyperswitch direct sends line1 only for shipTo (unlike billTo, which
-                        // does join the lines) -- joining here emitted a trailing space whenever
-                        // line2 was present-but-empty.
-                        address: address.line1.clone(),
+                        address: get_address_line(&address.line1, &address.line2, &address.line3),
                         city: address.city.clone(),
                         state: address.state.clone(),
                         zip: address.zip.clone(),
@@ -3752,10 +3690,6 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
             let first_error = response.messages.message.first();
             let error_code = first_error.map(|m| m.code.as_str()).unwrap_or("");
             let error_text = first_error.map(|m| m.text.as_str()).unwrap_or("");
-            // Same hyperswitch-parity mapping as every other error path in this file:
-            // message is the resultCode, reason joins every message text.
-            let (parity_code, parity_message, parity_reason) =
-                error_code_message_and_reason(&response.messages);
 
             if error_code == "E00039" {
                 // Extract customer profile ID from error message
@@ -3773,9 +3707,9 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
                     // Couldn't extract ID, return error
                     new_router_data.response = Err(ErrorResponse {
                         status_code: http_code,
-                        code: parity_code,
-                        message: parity_message,
-                        reason: Some(parity_reason),
+                        code: error_code.to_string(),
+                        message: error_text.to_string(),
+                        reason: Some(error_text.to_string()),
                         attempt_status: Some(FlowStatus::Payment(AttemptStatus::Failure)), // Marking attempt as failure since we couldn't confirm existing profile ID
                         connector_transaction_id: None,
                         network_decline_code: None,
@@ -3791,9 +3725,9 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
                 // Other error - return error response
                 new_router_data.response = Err(ErrorResponse {
                     status_code: http_code,
-                    code: parity_code,
-                    message: parity_message,
-                    reason: Some(parity_reason),
+                    code: error_code.to_string(),
+                    message: error_text.to_string(),
+                    reason: Some(error_text.to_string()),
                     attempt_status: Some(FlowStatus::Payment(AttemptStatus::Failure)), // Marking attempt as failure for non-duplicate errors
                     connector_transaction_id: None,
                     network_decline_code: None,

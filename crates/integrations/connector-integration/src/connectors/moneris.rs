@@ -729,6 +729,162 @@ macros::macro_connector_implementation!(
     }
 );
 
+// These declarations reuse the production conversions, including cross-flow states.
+// In particular, do not rewrite Authorized/Voided on Capture or Charged on Void
+// merely to fit a narrower flow ALLOWED set.
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: Authorize,
+    source: moneris::MonerisPaymentStatus,
+    mapping_status: |status| { common_enums::AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: MonerisAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_status.clone()) },
+    },
+}
+
+domain_types::impl_connector_flow_allowed_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: PreAuthenticate,
+    statuses: [AuthenticationPending, AuthenticationSuccessful, AuthenticationFailed],
+    runtime: {
+        request: PaymentsPreAuthenticateData<T>,
+        response: transformers::MonerisPreAuthenticateResponse,
+        status: |_request, response| {
+            use common_enums::AttemptStatus;
+            use transformers::MonerisThreeDSecureTransactionStatus;
+            match response.three_d_secure_transaction_status {
+                MonerisThreeDSecureTransactionStatus::Authenticated
+                | MonerisThreeDSecureTransactionStatus::AuthenticatedAttempted
+                | MonerisThreeDSecureTransactionStatus::InformationOnly => {
+                    AttemptStatus::AuthenticationSuccessful
+                }
+                MonerisThreeDSecureTransactionStatus::ChallengeAuthenticationRequired
+                | MonerisThreeDSecureTransactionStatus::Decoupled => {
+                    AttemptStatus::AuthenticationPending
+                }
+                MonerisThreeDSecureTransactionStatus::NotAuthenticated
+                | MonerisThreeDSecureTransactionStatus::Rejected => {
+                    AttemptStatus::AuthenticationFailed
+                }
+            }
+        },
+    },
+}
+
+domain_types::impl_connector_flow_allowed_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: PostAuthenticate,
+    statuses: [AuthenticationPending, AuthenticationSuccessful, AuthenticationFailed],
+    runtime: {
+        request: PaymentsPostAuthenticateData<T>,
+        response: transformers::MonerisPostAuthenticateResponse,
+        status: |_request, response| {
+            use common_enums::AttemptStatus;
+            use transformers::MonerisThreeDSecureTransactionStatus;
+            match response.three_d_secure_transaction_status {
+                Some(MonerisThreeDSecureTransactionStatus::Authenticated)
+                | Some(MonerisThreeDSecureTransactionStatus::AuthenticatedAttempted)
+                | Some(MonerisThreeDSecureTransactionStatus::InformationOnly) => {
+                    AttemptStatus::AuthenticationSuccessful
+                }
+                Some(MonerisThreeDSecureTransactionStatus::Decoupled)
+                | Some(MonerisThreeDSecureTransactionStatus::ChallengeAuthenticationRequired) => {
+                    AttemptStatus::AuthenticationPending
+                }
+                Some(MonerisThreeDSecureTransactionStatus::NotAuthenticated)
+                | Some(MonerisThreeDSecureTransactionStatus::Rejected)
+                | None => AttemptStatus::AuthenticationFailed,
+            }
+        },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: PSync,
+    source: moneris::MonerisPaymentStatus,
+    mapping_status: |status| { common_enums::AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: MonerisPaymentSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_status.clone()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: RepeatPayment,
+    source: moneris::MonerisPaymentStatus,
+    mapping_status: |status| { common_enums::AttemptStatus::from(status) },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: MonerisRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_status.clone()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: Void,
+    source: moneris::MonerisPaymentStatus,
+    mapping_status: |status| { common_enums::AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentVoidData,
+        response: MonerisPaymentVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_status.clone()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: Capture,
+    source: moneris::MonerisPaymentStatus,
+    context: (MinorUnit, Option<MinorUnit>),
+    mapping_status: |status, ctx| { moneris::capture_attempt_status(status, ctx.0, ctx.1) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: MonerisCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.payment_status.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok((request.minor_amount_to_capture, None)) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: Refund,
+    source: moneris::MonerisRefundStatus,
+    mapping_status: |status| { common_enums::RefundStatus::from(status) },
+    runtime: {
+        request: RefundsData,
+        response: MonerisRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.refund_status.clone()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Moneris<T>,
+    flow: RSync,
+    source: moneris::MonerisRefundStatus,
+    mapping_status: |status| { common_enums::RefundStatus::from(status) },
+    runtime: {
+        request: RefundSyncData,
+        response: MonerisRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.refund_status.clone()) },
+    },
+}
+
 macros::macro_connector_flow_status_impls!(
     connector: Moneris,
     generic_type: T,

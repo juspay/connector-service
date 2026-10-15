@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::{self, fmt::Debug};
 
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -132,6 +132,182 @@ macros::macro_connector_payout_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: TwocTwopPaco<T>,
+    flow: Authorize,
+    source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
+    context: (),
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
+            None => AttemptStatus::Pending,
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: TwocTwopPacoAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .parsed_response
+                .merged_result()
+                .and_then(|block| block.payment_status_info.clone())
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: TwocTwopPaco<T>,
+    flow: PSync,
+    source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
+    context: (),
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
+            None => AttemptStatus::Pending,
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: TwocTwopPacoPSyncInquiryResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .parsed_response
+                .data
+                .as_ref()
+                .and_then(|data| data.payment_status_info.clone())
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: TwocTwopPaco<T>,
+    flow: Capture,
+    source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
+    context: (),
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
+            None => AttemptStatus::CaptureInitiated,
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: TwocTwopPacoCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .parsed_response
+                .flat_data_block()
+                .and_then(|block| block.payment_status_info)
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: TwocTwopPaco<T>,
+    flow: Void,
+    source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
+    context: (),
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step),
+            None => AttemptStatus::VoidInitiated,
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: TwocTwopPacoVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .parsed_response
+                .flat_data_block()
+                .and_then(|block| block.payment_status_info)
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: TwocTwopPaco<T>,
+    flow: VoidPC,
+    source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
+    context: (),
+    mapping_status: |info, _ctx| { match info {
+            // The VoidPC TryFrom reuses `map_attempt_status`, under which a confirmed
+            // (V, VD) pair lands on `Voided`; on the post-capture leg that is the
+            // terminal `VoidedPostCapture`.
+            Some(info) => match twoc_twop_paco::map_attempt_status(&info.payment_status, &info.payment_step) {
+                AttemptStatus::Voided => AttemptStatus::VoidedPostCapture,
+                status => status,
+            },
+            None => AttemptStatus::VoidPostCaptureInitiated,
+        } },
+    runtime: {
+        request: PaymentsCancelPostCaptureData,
+        response: TwocTwopPacoVoidPcResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .parsed_response
+                .flat_data_block()
+                .and_then(|block| block.payment_status_info)
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: TwocTwopPaco<T>,
+    flow: Refund,
+    source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
+    context: (),
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_refund_status(&info.payment_status, &info.payment_step),
+            None => RefundStatus::Pending,
+        } },
+    runtime: {
+        request: RefundsData,
+        response: TwocTwopPacoRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .parsed_response
+                .flat_data_block()
+                .and_then(|block| block.payment_status_info)
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: TwocTwopPaco<T>,
+    flow: RSync,
+    source: Option<twoc_twop_paco::PacoPaymentStatusInfo>,
+    context: (),
+    mapping_status: |info, _ctx| { match info {
+            Some(info) => twoc_twop_paco::map_refund_status(&info.payment_status, &info.payment_step),
+            None => RefundStatus::Pending,
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: TwocTwopPacoRSyncInquiryResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            response
+                .0
+                .parsed_response
+                .data
+                .as_ref()
+                .and_then(|data| data.payment_status_info.clone())
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
 
 macros::macro_connector_flow_status_impls!(
     connector: TwocTwopPaco,

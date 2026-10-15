@@ -130,6 +130,29 @@ macros::create_all_prerequisites!(
     }
 );
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Placetopay<T>,
+    flow: Authorize,
+    source: placetopay::PlacetopayTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            placetopay::PlacetopayTransactionStatus::Ok => common_enums::AttemptStatus::Charged,
+            placetopay::PlacetopayTransactionStatus::Failed => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Approved => common_enums::AttemptStatus::Charged,
+            placetopay::PlacetopayTransactionStatus::Rejected => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Error => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Pending => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingValidation => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingProcess => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PlacetopayPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Placetopay<T>
 {
@@ -141,11 +164,57 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Placetopay<T>,
+    flow: PSync,
+    source: placetopay::PlacetopayTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            placetopay::PlacetopayTransactionStatus::Ok => common_enums::AttemptStatus::Charged,
+            placetopay::PlacetopayTransactionStatus::Failed => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Approved => common_enums::AttemptStatus::Charged,
+            placetopay::PlacetopayTransactionStatus::Rejected => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Error => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Pending => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingValidation => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingProcess => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PlacetopayPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Placetopay<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Placetopay<T>,
+    flow: Void,
+    source: placetopay::PlacetopayTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            placetopay::PlacetopayTransactionStatus::Ok => common_enums::AttemptStatus::Voided,
+            placetopay::PlacetopayTransactionStatus::Failed => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Approved => common_enums::AttemptStatus::Voided,
+            placetopay::PlacetopayTransactionStatus::Rejected => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Error => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Pending => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingValidation => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingProcess => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: PlacetopayVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Placetopay<T>
 {
@@ -171,21 +240,115 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Placetopay<T>,
+    flow: Refund,
+    source: placetopay::PlacetopayRefundStatus,
+    mapping_status: |status| {
+        match status {
+            placetopay::PlacetopayRefundStatus::Ok => common_enums::RefundStatus::Success,
+            placetopay::PlacetopayRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            placetopay::PlacetopayRefundStatus::Approved => common_enums::RefundStatus::Success,
+            placetopay::PlacetopayRefundStatus::Refunded => common_enums::RefundStatus::Success,
+            placetopay::PlacetopayRefundStatus::Rejected => common_enums::RefundStatus::Failure,
+            placetopay::PlacetopayRefundStatus::Error => common_enums::RefundStatus::Failure,
+            placetopay::PlacetopayRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            placetopay::PlacetopayRefundStatus::PendingValidation => common_enums::RefundStatus::Pending,
+            placetopay::PlacetopayRefundStatus::PendingProcess => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: PlacetopayRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Placetopay<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Placetopay<T>,
+    flow: Capture,
+    source: placetopay::PlacetopayTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            placetopay::PlacetopayTransactionStatus::Ok => common_enums::AttemptStatus::Charged,
+            placetopay::PlacetopayTransactionStatus::Failed => common_enums::AttemptStatus::CaptureFailed,
+            placetopay::PlacetopayTransactionStatus::Approved => common_enums::AttemptStatus::Charged,
+            placetopay::PlacetopayTransactionStatus::Rejected => common_enums::AttemptStatus::CaptureFailed,
+            placetopay::PlacetopayTransactionStatus::Error => common_enums::AttemptStatus::CaptureFailed,
+            placetopay::PlacetopayTransactionStatus::Pending => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingValidation => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingProcess => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PlacetopayCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Placetopay<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Placetopay<T>,
+    flow: RSync,
+    source: placetopay::PlacetopayRefundStatus,
+    mapping_status: |status| {
+        match status {
+            placetopay::PlacetopayRefundStatus::Ok => common_enums::RefundStatus::Success,
+            placetopay::PlacetopayRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            placetopay::PlacetopayRefundStatus::Approved => common_enums::RefundStatus::Success,
+            placetopay::PlacetopayRefundStatus::Refunded => common_enums::RefundStatus::Success,
+            placetopay::PlacetopayRefundStatus::Rejected => common_enums::RefundStatus::Failure,
+            placetopay::PlacetopayRefundStatus::Error => common_enums::RefundStatus::Failure,
+            placetopay::PlacetopayRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            placetopay::PlacetopayRefundStatus::PendingValidation => common_enums::RefundStatus::Pending,
+            placetopay::PlacetopayRefundStatus::PendingProcess => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: PlacetopayRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Placetopay<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Placetopay<T>,
+    flow: VoidPC,
+    source: placetopay::PlacetopayTransactionStatus,
+    mapping_status: |status| {
+        match status {
+            placetopay::PlacetopayTransactionStatus::Ok => common_enums::AttemptStatus::VoidedPostCapture,
+            placetopay::PlacetopayTransactionStatus::Failed => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Approved => common_enums::AttemptStatus::VoidedPostCapture,
+            placetopay::PlacetopayTransactionStatus::Rejected => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Error => common_enums::AttemptStatus::Failure,
+            placetopay::PlacetopayTransactionStatus::Pending => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingValidation => common_enums::AttemptStatus::Pending,
+            placetopay::PlacetopayTransactionStatus::PendingProcess => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsCancelPostCaptureData,
+        response: PlacetopayVoidPcResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidPostCaptureV2 for Placetopay<T>
 {

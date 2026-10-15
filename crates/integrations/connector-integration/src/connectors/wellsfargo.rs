@@ -1,7 +1,7 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -734,6 +734,130 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Wellsfargo<T>,
+    flow: Authorize,
+    source: WellsfargoPaymentsResponse,
+    context: bool,
+    mapping_status: |response, capture| { wellsfargo::map_attempt_status(&response.status, capture, &response.error_information) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: WellsfargoPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(matches!(request.capture_method, Some(common_enums::CaptureMethod::Automatic) | None)) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Wellsfargo<T>,
+    flow: PSync,
+    source: WellsfargoPaymentsResponse,
+    context: (),
+    mapping_status: |response, _ctx| { if response.status.is_none()
+            && response
+                .status_information
+                .as_ref()
+                .and_then(|status| status.reason.as_deref())
+                == Some("Success")
+        {
+            AttemptStatus::Charged
+        } else {
+            wellsfargo::map_attempt_status(&response.status, false, &response.error_information)
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: WellsfargoPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Wellsfargo<T>,
+    flow: Capture,
+    source: WellsfargoPaymentsResponse,
+    context: (),
+    mapping_status: |response, _ctx| { wellsfargo::map_attempt_status(&response.status, true, &response.error_information) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: WellsfargoCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Wellsfargo<T>,
+    flow: Void,
+    source: WellsfargoPaymentsResponse,
+    context: (),
+    mapping_status: |response, _ctx| { wellsfargo::map_attempt_status(&response.status, false, &response.error_information) },
+    runtime: {
+        request: PaymentVoidData,
+        response: WellsfargoVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Wellsfargo<T>,
+    flow: SetupMandate,
+    source: WellsfargoPaymentsResponse,
+    context: (),
+    mapping_status: |response, _ctx| { let status = wellsfargo::map_attempt_status(&response.status, false, &response.error_information);
+        if status == AttemptStatus::Authorized {
+            AttemptStatus::Charged
+        } else {
+            status
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: WellsfargoSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Wellsfargo<T>,
+    flow: Refund,
+    source: WellsfargoPaymentsResponse,
+    context: (),
+    mapping_status: |response, _ctx| { wellsfargo::get_refund_status(&response.status, &response.error_information) },
+    runtime: {
+        request: RefundsData,
+        response: WellsfargoRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Wellsfargo<T>,
+    flow: RSync,
+    source: Option<wellsfargo::WellsfargoRefundStatus>,
+    context: Option<wellsfargo::WellsfargoErrorInformation>,
+    mapping_status: |status, error_information| { match status {
+            Some(refund_status) => RefundStatus::from(refund_status),
+            None if error_information.is_some() => RefundStatus::Failure,
+            None => RefundStatus::Pending,
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: WellsfargoRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.application_information.as_ref().and_then(|app_info| app_info.status.clone())) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.error_information.clone()) },
+    },
+}
 
 macros::macro_connector_flow_status_impls!(
     connector: Wellsfargo,

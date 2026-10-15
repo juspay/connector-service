@@ -60,21 +60,126 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Xendit<T>,
+    flow: Authorize,
+    source: transformers::PaymentStatus,
+    context: bool,
+    mapping_status: |status, is_auto_capture| { use common_enums::AttemptStatus;
+        match status {
+            transformers::PaymentStatus::Succeeded | transformers::PaymentStatus::Verified => {
+                if is_auto_capture { AttemptStatus::Charged } else { AttemptStatus::Authorized }
+            }
+            transformers::PaymentStatus::Pending => AttemptStatus::Pending,
+            transformers::PaymentStatus::RequiresAction => AttemptStatus::AuthenticationPending,
+            transformers::PaymentStatus::AwaitingCapture => AttemptStatus::Authorized,
+            transformers::PaymentStatus::Failed => AttemptStatus::Failure,
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: XenditPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Xendit<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Xendit<T>,
+    flow: PSync,
+    source: transformers::PaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::PaymentStatus::Succeeded => common_enums::AttemptStatus::Charged,
+            transformers::PaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::PaymentStatus::AwaitingCapture => common_enums::AttemptStatus::Authorized,
+            transformers::PaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+            transformers::PaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            transformers::PaymentStatus::RequiresAction => common_enums::AttemptStatus::AuthenticationPending,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: XenditResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response { XenditResponse::Payment(payment) => payment.status.clone(), _ => transformers::PaymentStatus::Failed }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Xendit<T>
 {
 }
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Xendit<T>,
+    flow: RSync,
+    source: transformers::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::RefundStatus::Succeeded => common_enums::RefundStatus::Success,
+            transformers::RefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::RefundStatus::Cancelled => common_enums::RefundStatus::Failure,
+            transformers::RefundStatus::Pending => common_enums::RefundStatus::Pending,
+            transformers::RefundStatus::RequiresAction => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: RefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Xendit<T>
 {
 }
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Xendit<T>,
+    flow: Refund,
+    source: transformers::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::RefundStatus::Succeeded => common_enums::RefundStatus::Success,
+            transformers::RefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::RefundStatus::Cancelled => common_enums::RefundStatus::Failure,
+            transformers::RefundStatus::Pending => common_enums::RefundStatus::Pending,
+            transformers::RefundStatus::RequiresAction => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: RefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Xendit<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Xendit<T>,
+    flow: Capture,
+    source: transformers::PaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::PaymentStatus::Succeeded => common_enums::AttemptStatus::Charged,
+            transformers::PaymentStatus::Failed => common_enums::AttemptStatus::CaptureFailed,
+            transformers::PaymentStatus::AwaitingCapture => common_enums::AttemptStatus::Pending,
+            transformers::PaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+            transformers::PaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            transformers::PaymentStatus::RequiresAction => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: XenditCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Xendit<T>

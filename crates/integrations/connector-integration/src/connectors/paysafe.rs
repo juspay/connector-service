@@ -3,7 +3,7 @@ pub mod responses;
 pub mod transformers;
 
 use base64::Engine;
-use common_enums::{CurrencyUnit, PaymentMethod, PaymentMethodType};
+use common_enums::{AttemptStatus, CurrencyUnit, PaymentMethod, PaymentMethodType, RefundStatus};
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
@@ -798,6 +798,193 @@ macros::macro_connector_implementation!(
 // SourceVerification implementations for PaymentMethodToken and PreAuthenticate
 
 // SourceVerification implementations for unsupported flows
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: Authorize,
+    source: PaysafeAuthorizeResponse,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |response, capture_method| { match response {
+            PaysafeAuthorizeResponse::Payment(payment) => {
+                paysafe::get_paysafe_payment_status(payment.status, capture_method)
+            }
+            PaysafeAuthorizeResponse::PaymentHandle(payment_handle) => {
+                AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
+            }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PaysafeAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: PreAuthenticate,
+    source: PaysafePreAuthenticateResponse,
+    context: (),
+    mapping_status: |response, _ctx| { match response {
+            PaysafeAuthorizeResponse::Payment(payment) => {
+                paysafe::get_paysafe_payment_status(payment.status, Some(common_enums::CaptureMethod::Manual))
+            }
+            PaysafeAuthorizeResponse::PaymentHandle(payment_handle) => {
+                AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
+            }
+        } },
+    runtime: {
+        request: PaymentsPreAuthenticateData<T>,
+        response: PaysafePreAuthenticateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: Authenticate,
+    source: PaysafeAuthenticateResponse,
+    context: (),
+    mapping_status: |response, _ctx| { match response {
+            PaysafeSyncResponse::SinglePayment(payment) => {
+                paysafe::get_paysafe_payment_status(payment.status, Some(common_enums::CaptureMethod::Manual))
+            }
+            PaysafeSyncResponse::Payments(payments) => payments
+                .payments
+                .first()
+                .map(|payment| paysafe::get_paysafe_payment_status(payment.status, Some(common_enums::CaptureMethod::Manual)))
+                .unwrap_or(AttemptStatus::Pending),
+            PaysafeSyncResponse::SinglePaymentHandle(payment_handle) => {
+                AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
+            }
+            PaysafeSyncResponse::PaymentHandle(payment_handles) => payment_handles
+                .payment_handles
+                .first()
+                .map(|payment_handle| {
+                    AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
+                })
+                .unwrap_or(AttemptStatus::Pending),
+        } },
+    runtime: {
+        request: PaymentsAuthenticateData<T>,
+        response: PaysafeAuthenticateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: PSync,
+    source: PaysafeSyncResponse,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |response, capture_method| { match response {
+            PaysafeSyncResponse::SinglePayment(payment) => {
+                paysafe::get_paysafe_payment_status(payment.status, capture_method)
+            }
+            PaysafeSyncResponse::Payments(payments) => payments
+                .payments
+                .first()
+                .map(|payment| paysafe::get_paysafe_payment_status(payment.status, capture_method))
+                .unwrap_or(AttemptStatus::Pending),
+            PaysafeSyncResponse::SinglePaymentHandle(payment_handle) => {
+                AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
+            }
+            PaysafeSyncResponse::PaymentHandle(payment_handles) => payment_handles
+                .payment_handles
+                .first()
+                .map(|payment_handle| {
+                    AttemptStatus::try_from(payment_handle.status).unwrap_or(AttemptStatus::Failure)
+                })
+                .unwrap_or(AttemptStatus::Pending),
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PaysafeSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: Capture,
+    source: paysafe::PaysafeSettlementStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PaysafeCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: Void,
+    source: paysafe::PaysafeVoidStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentVoidData,
+        response: PaysafeVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: Refund,
+    source: paysafe::PaysafeRefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
+        request: RefundsData,
+        response: PaysafeRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: RSync,
+    source: paysafe::PaysafeRefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
+        request: RefundSyncData,
+        response: PaysafeRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paysafe<T>,
+    flow: RepeatPayment,
+    source: paysafe::PaysafePaymentStatus,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |status, capture_method| { paysafe::get_paysafe_payment_status(status, capture_method) },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: PaysafeRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
+}
 
 macros::macro_connector_flow_status_impls!(
     connector: Paysafe,

@@ -177,6 +177,30 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tamara<T>,
+    flow: Authorize,
+    source: transformers::TamaraPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::TamaraPaymentStatus::Authorised => common_enums::AttemptStatus::Authorized,
+            transformers::TamaraPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            transformers::TamaraPaymentStatus::FullyCaptured => common_enums::AttemptStatus::Charged,
+            transformers::TamaraPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::PartialCharged,
+            transformers::TamaraPaymentStatus::Canceled => common_enums::AttemptStatus::Voided,
+            transformers::TamaraPaymentStatus::Updated => common_enums::AttemptStatus::Voided,
+            transformers::TamaraPaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+            transformers::TamaraPaymentStatus::New => common_enums::AttemptStatus::Pending,
+            transformers::TamaraPaymentStatus::Approved => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: TamaraPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Tamara<T>
 {
@@ -319,6 +343,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
+            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,
@@ -395,26 +420,150 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Marker traits for flows with real macro_connector_implementation! impls.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tamara<T>,
+    flow: Capture,
+    source: transformers::TamaraPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::TamaraPaymentStatus::FullyCaptured => common_enums::AttemptStatus::Charged,
+            transformers::TamaraPaymentStatus::Declined => common_enums::AttemptStatus::CaptureFailed,
+            transformers::TamaraPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::PartialCharged,
+            transformers::TamaraPaymentStatus::Canceled => common_enums::AttemptStatus::CaptureFailed,
+            transformers::TamaraPaymentStatus::Updated => common_enums::AttemptStatus::CaptureFailed,
+            transformers::TamaraPaymentStatus::Expired => common_enums::AttemptStatus::CaptureFailed,
+            transformers::TamaraPaymentStatus::Authorised => common_enums::AttemptStatus::Pending,
+            transformers::TamaraPaymentStatus::New => common_enums::AttemptStatus::Pending,
+            transformers::TamaraPaymentStatus::Approved => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: TamaraCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Tamara<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tamara<T>,
+    flow: PSync,
+    source: transformers::TamaraPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::TamaraPaymentStatus::FullyCaptured => common_enums::AttemptStatus::Charged,
+            transformers::TamaraPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            transformers::TamaraPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::PartialCharged,
+            transformers::TamaraPaymentStatus::Authorised => common_enums::AttemptStatus::Authorized,
+            transformers::TamaraPaymentStatus::Canceled => common_enums::AttemptStatus::Voided,
+            transformers::TamaraPaymentStatus::Updated => common_enums::AttemptStatus::Voided,
+            transformers::TamaraPaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+            transformers::TamaraPaymentStatus::New => common_enums::AttemptStatus::Pending,
+            transformers::TamaraPaymentStatus::Approved => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: TamaraPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Tamara<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tamara<T>,
+    flow: Void,
+    source: transformers::TamaraPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::TamaraPaymentStatus::Canceled => common_enums::AttemptStatus::Voided,
+            transformers::TamaraPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            transformers::TamaraPaymentStatus::Updated => common_enums::AttemptStatus::Voided,
+            transformers::TamaraPaymentStatus::Authorised => common_enums::AttemptStatus::VoidInitiated,
+            transformers::TamaraPaymentStatus::FullyCaptured => common_enums::AttemptStatus::VoidFailed,
+            transformers::TamaraPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::VoidFailed,
+            transformers::TamaraPaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+            transformers::TamaraPaymentStatus::New => common_enums::AttemptStatus::Pending,
+            transformers::TamaraPaymentStatus::Approved => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: TamaraVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Tamara<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tamara<T>,
+    flow: Refund,
+    source: transformers::TamaraRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::TamaraRefundStatus::FullyRefunded => common_enums::RefundStatus::Success,
+            transformers::TamaraRefundStatus::Declined => common_enums::RefundStatus::Failure,
+            transformers::TamaraRefundStatus::PartiallyRefunded => common_enums::RefundStatus::Success,
+            transformers::TamaraRefundStatus::Expired => common_enums::RefundStatus::Failure,
+            transformers::TamaraRefundStatus::Canceled => common_enums::RefundStatus::Failure,
+            transformers::TamaraRefundStatus::Updated => common_enums::RefundStatus::Failure,
+            transformers::TamaraRefundStatus::Approved => common_enums::RefundStatus::Pending,
+            transformers::TamaraRefundStatus::Authorised => common_enums::RefundStatus::Pending,
+            transformers::TamaraRefundStatus::PartiallyCaptured => common_enums::RefundStatus::Pending,
+            transformers::TamaraRefundStatus::FullyCaptured => common_enums::RefundStatus::Pending,
+            transformers::TamaraRefundStatus::New => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: TamaraRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Tamara<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tamara<T>,
+    flow: RSync,
+    source: transformers::TamaraRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::TamaraRefundStatus::FullyRefunded => common_enums::RefundStatus::Success,
+            transformers::TamaraRefundStatus::Declined => common_enums::RefundStatus::Failure,
+            transformers::TamaraRefundStatus::PartiallyRefunded => common_enums::RefundStatus::Success,
+            transformers::TamaraRefundStatus::Expired => common_enums::RefundStatus::Failure,
+            transformers::TamaraRefundStatus::Canceled => common_enums::RefundStatus::Failure,
+            transformers::TamaraRefundStatus::Updated => common_enums::RefundStatus::Failure,
+            transformers::TamaraRefundStatus::Approved => common_enums::RefundStatus::Pending,
+            transformers::TamaraRefundStatus::Authorised => common_enums::RefundStatus::Pending,
+            transformers::TamaraRefundStatus::PartiallyCaptured => common_enums::RefundStatus::Pending,
+            transformers::TamaraRefundStatus::FullyCaptured => common_enums::RefundStatus::Pending,
+            transformers::TamaraRefundStatus::New => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: TamaraRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Tamara<T>
 {

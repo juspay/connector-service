@@ -243,9 +243,53 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paytm<T>,
+    flow: Authorize,
+    source: String,
+    context: (),
+    mapping_status: |result_code, _ctx| { paytm::map_paytm_authorize_status_to_attempt_status(&result_code) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PaytmProcessTxnResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match &response.body {
+            response::PaytmProcessRespBodyTypes::SuccessBody(body) => {
+                body.result_info.result_code.clone()
+            }
+            response::PaytmProcessRespBodyTypes::FailureBody(body) => {
+                body.result_info.result_code.clone()
+            }
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Paytm<T>
 {
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paytm<T>,
+    flow: PSync,
+    source: String,
+    context: (),
+    mapping_status: |result_code, _ctx| { paytm::map_paytm_sync_status_to_attempt_status(&result_code) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PaytmTransactionStatusResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match &response.body {
+            response::PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => {
+                body.result_info.result_code.clone()
+            }
+            response::PaytmTransactionStatusRespBodyTypes::FailureBody(body) => {
+                body.result_info.result_code.clone()
+            }
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

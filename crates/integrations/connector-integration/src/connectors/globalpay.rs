@@ -219,11 +219,73 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====
+domain_types::impl_connector_flow_allowed_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow:      PostAuthenticate,
+    statuses:  [AuthenticationPending, Authorized, Charged, Voided, Pending, Failure],
+    runtime: {
+        request:  PaymentsPostAuthenticateData<T>,
+        response: GlobalpayConfirmResponse,
+        status:   |_request, response| AttemptStatus::from(response.status.clone()),
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow: Authorize,
+    source: globalpay::GlobalpayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            globalpay::GlobalpayPaymentStatus::Preauthorized => common_enums::AttemptStatus::Authorized,
+            globalpay::GlobalpayPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Initiated => common_enums::AttemptStatus::AuthenticationPending,
+            globalpay::GlobalpayPaymentStatus::ForReview => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Funded => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Reversed => common_enums::AttemptStatus::Voided,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: GlobalpayAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Globalpay<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow: PSync,
+    source: globalpay::GlobalpayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            globalpay::GlobalpayPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Preauthorized => common_enums::AttemptStatus::Authorized,
+            globalpay::GlobalpayPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Initiated => common_enums::AttemptStatus::AuthenticationPending,
+            globalpay::GlobalpayPaymentStatus::ForReview => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Funded => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Reversed => common_enums::AttemptStatus::Voided,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: GlobalpayPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Globalpay<T>
 {
@@ -234,33 +296,184 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow: Void,
+    source: globalpay::GlobalpayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            globalpay::GlobalpayPaymentStatus::Reversed => common_enums::AttemptStatus::Voided,
+            globalpay::GlobalpayPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Preauthorized => common_enums::AttemptStatus::VoidInitiated,
+            globalpay::GlobalpayPaymentStatus::Captured => common_enums::AttemptStatus::VoidFailed,
+            globalpay::GlobalpayPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Initiated => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::ForReview => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Funded => common_enums::AttemptStatus::VoidFailed,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: GlobalpayVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Globalpay<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow: Capture,
+    source: globalpay::GlobalpayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            globalpay::GlobalpayPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Declined => common_enums::AttemptStatus::CaptureFailed,
+            globalpay::GlobalpayPaymentStatus::Preauthorized => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Failed => common_enums::AttemptStatus::CaptureFailed,
+            globalpay::GlobalpayPaymentStatus::Rejected => common_enums::AttemptStatus::CaptureFailed,
+            globalpay::GlobalpayPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Initiated => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::ForReview => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Funded => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Reversed => common_enums::AttemptStatus::CaptureFailed,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: GlobalpayCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Globalpay<T>
 {
 }
 
 // ===== REFUND FLOW TRAIT IMPLEMENTATIONS =====
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow: Refund,
+    source: globalpay::GlobalpayRefundStatus,
+    mapping_status: |status| {
+        match status {
+            globalpay::GlobalpayRefundStatus::Captured => common_enums::RefundStatus::Success,
+            globalpay::GlobalpayRefundStatus::Declined => common_enums::RefundStatus::Failure,
+            globalpay::GlobalpayRefundStatus::Funded => common_enums::RefundStatus::Success,
+            globalpay::GlobalpayRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            globalpay::GlobalpayRefundStatus::Initiated => common_enums::RefundStatus::Pending,
+            globalpay::GlobalpayRefundStatus::ForReview => common_enums::RefundStatus::Pending,
+            globalpay::GlobalpayRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            globalpay::GlobalpayRefundStatus::Rejected => common_enums::RefundStatus::Failure,
+            globalpay::GlobalpayRefundStatus::Reversed => common_enums::RefundStatus::Failure,
+            globalpay::GlobalpayRefundStatus::Preauthorized => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: GlobalpayRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Globalpay<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow: RSync,
+    source: globalpay::GlobalpayRefundStatus,
+    mapping_status: |status| {
+        match status {
+            globalpay::GlobalpayRefundStatus::Funded => common_enums::RefundStatus::Success,
+            globalpay::GlobalpayRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            globalpay::GlobalpayRefundStatus::Captured => common_enums::RefundStatus::Success,
+            globalpay::GlobalpayRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            globalpay::GlobalpayRefundStatus::Initiated => common_enums::RefundStatus::Pending,
+            globalpay::GlobalpayRefundStatus::ForReview => common_enums::RefundStatus::Pending,
+            globalpay::GlobalpayRefundStatus::Declined => common_enums::RefundStatus::Failure,
+            globalpay::GlobalpayRefundStatus::Rejected => common_enums::RefundStatus::Failure,
+            globalpay::GlobalpayRefundStatus::Reversed => common_enums::RefundStatus::Failure,
+            globalpay::GlobalpayRefundStatus::Preauthorized => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: GlobalpayRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Globalpay<T>
 {
 }
 
 // ===== ADVANCED FLOW TRAIT IMPLEMENTATIONS =====
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow: SetupMandate,
+    source: globalpay::GlobalpayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            globalpay::GlobalpayPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Preauthorized => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Initiated => common_enums::AttemptStatus::AuthenticationPending,
+            globalpay::GlobalpayPaymentStatus::ForReview => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Funded => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Reversed => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: GlobalpaySetupMandateResponse,
+        // Successful tokenization has no response status and maps to Charged.,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(globalpay::GlobalpayPaymentStatus::Captured) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Globalpay<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Globalpay<T>,
+    flow: RepeatPayment,
+    source: globalpay::GlobalpayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            globalpay::GlobalpayPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Preauthorized => common_enums::AttemptStatus::Authorized,
+            globalpay::GlobalpayPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            globalpay::GlobalpayPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Initiated => common_enums::AttemptStatus::AuthenticationPending,
+            globalpay::GlobalpayPaymentStatus::ForReview => common_enums::AttemptStatus::Pending,
+            globalpay::GlobalpayPaymentStatus::Funded => common_enums::AttemptStatus::Charged,
+            globalpay::GlobalpayPaymentStatus::Reversed => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: GlobalpayRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Globalpay<T>
 {
@@ -457,6 +670,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
+            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,

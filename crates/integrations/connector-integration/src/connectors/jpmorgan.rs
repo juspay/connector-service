@@ -795,6 +795,133 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 {
 }
 
+// Keep the response capture method as context: Closed without Now is Authorized,
+// including Capture and SetupMandate. Instrumentation must preserve that behavior.
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Jpmorgan<T>,
+    flow: Authorize,
+    source: responses::JpmorganTransactionState,
+    context: Option<requests::CapMethod>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: responses::JpmorganPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Jpmorgan<T>,
+    flow: PSync,
+    source: responses::JpmorganTransactionState,
+    context: Option<requests::CapMethod>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: responses::JpmorganPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Jpmorgan<T>,
+    flow: Capture,
+    source: responses::JpmorganTransactionState,
+    context: Option<requests::CapMethod>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: responses::JpmorganPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Jpmorgan<T>,
+    flow: Void,
+    source: responses::JpmorganTransactionState,
+    context: Option<requests::CapMethod>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: PaymentVoidData,
+        response: responses::JpmorganPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Jpmorgan<T>,
+    flow: SetupMandate,
+    source: responses::JpmorganTransactionState,
+    context: Option<requests::CapMethod>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: responses::JpmorganPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Jpmorgan<T>,
+    flow: RepeatPayment,
+    source: responses::JpmorganTransactionState,
+    context: Option<requests::CapMethod>,
+    mapping_status: |status, ctx| { jpmorgan::map_transaction_state_to_attempt_status(&status, &ctx) },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: responses::JpmorganPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.capture_method.clone()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Jpmorgan<T>,
+    flow: Refund,
+    source: responses::JpmorganResponseStatus,
+    context: responses::JpmorganTransactionState,
+    mapping_status: |status, state| { responses::RefundStatus::from((status, state)).into() },
+    runtime: {
+        request: RefundsData,
+        response: responses::JpmorganRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Jpmorgan<T>,
+    flow: RSync,
+    source: responses::JpmorganResponseStatus,
+    context: responses::JpmorganTransactionState,
+    mapping_status: |status, state| { responses::RefundStatus::from((status, state)).into() },
+    runtime: {
+        request: RefundSyncData,
+        response: responses::JpmorganRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.response_status.clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_state.clone()) },
+    },
+}
+
+// VoidPC returns PostCaptureVoidStatus in PostCaptureVoidResponse and preserves
+// PaymentFlowData.status. It needs a mapping trait for that result type; mapping
+// it to AttemptStatus::VoidedPostCapture would change the production contract.
+
 macros::macro_connector_flow_status_impls!(
     connector: Jpmorgan,
     generic_type: T,

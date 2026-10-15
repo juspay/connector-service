@@ -44,32 +44,215 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====
+domain_types::impl_connector_flow_allowed_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payme<T>,
+    flow:      CreateOrder,
+    statuses:  [Pending, Failure],
+    runtime: {
+        request:  PaymentCreateOrderData,
+        response: PaymeGenerateSaleResponse,
+        status:   |_request, response| {
+            if response.status_code == 0 {
+                common_enums::AttemptStatus::Pending
+            } else {
+                common_enums::AttemptStatus::Failure
+            }
+        },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payme<T>,
+    flow: Authorize,
+    source: payme::SaleStatus,
+    mapping_status: |status| {
+        match status {
+            payme::SaleStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            payme::SaleStatus::Failed => common_enums::AttemptStatus::Failure,
+            payme::SaleStatus::Initial => common_enums::AttemptStatus::Pending,
+            payme::SaleStatus::Completed => common_enums::AttemptStatus::Charged,
+            payme::SaleStatus::Refunded => common_enums::AttemptStatus::AutoRefunded,
+            payme::SaleStatus::PartialRefund => common_enums::AttemptStatus::AutoRefunded,
+            payme::SaleStatus::Voided => common_enums::AttemptStatus::Voided,
+            payme::SaleStatus::PartialVoid => common_enums::AttemptStatus::Voided,
+            payme::SaleStatus::Chargeback => common_enums::AttemptStatus::AutoRefunded,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PaymePaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            if response.status_code != 0
+                && (response.payme_status != "success" || response.status_error_code.is_some())
+            {
+                payme::SaleStatus::Failed
+            } else {
+                response.sale_status.clone().unwrap_or(payme::SaleStatus::Initial)
+            }
+        }) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Payme<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payme<T>,
+    flow: PSync,
+    source: payme::SaleStatus,
+    mapping_status: |status| {
+        match status {
+            payme::SaleStatus::Completed => common_enums::AttemptStatus::Charged,
+            payme::SaleStatus::Failed => common_enums::AttemptStatus::Failure,
+            payme::SaleStatus::Initial => common_enums::AttemptStatus::Pending,
+            payme::SaleStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            payme::SaleStatus::Refunded => common_enums::AttemptStatus::AutoRefunded,
+            payme::SaleStatus::PartialRefund => common_enums::AttemptStatus::AutoRefunded,
+            payme::SaleStatus::Voided => common_enums::AttemptStatus::Voided,
+            payme::SaleStatus::PartialVoid => common_enums::AttemptStatus::Voided,
+            payme::SaleStatus::Chargeback => common_enums::AttemptStatus::AutoRefunded,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PaymeSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            if response.status_code != 0 {
+                payme::SaleStatus::Failed
+            } else {
+                response
+                    .items
+                    .first()
+                    .and_then(|item| item.sale_status.clone())
+                    .unwrap_or(payme::SaleStatus::Initial)
+            }
+        }) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Payme<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payme<T>,
+    flow: Void,
+    source: payme::PaymeVoidFlowStatus,
+    mapping_status: |status| {
+        match status {
+            payme::PaymeVoidFlowStatus::Voided => common_enums::AttemptStatus::Voided,
+            payme::PaymeVoidFlowStatus::Failed => common_enums::AttemptStatus::VoidFailed,
+            payme::PaymeVoidFlowStatus::Pending => common_enums::AttemptStatus::Pending,
+            payme::PaymeVoidFlowStatus::DefaultVoided => common_enums::AttemptStatus::Voided,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: PaymePaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.void_flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Payme<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payme<T>,
+    flow: Capture,
+    source: payme::SaleStatus,
+    mapping_status: |status| {
+        match status {
+            payme::SaleStatus::Completed => common_enums::AttemptStatus::Charged,
+            payme::SaleStatus::Failed => common_enums::AttemptStatus::CaptureFailed,
+            payme::SaleStatus::Initial => common_enums::AttemptStatus::Pending,
+            payme::SaleStatus::Authorized => common_enums::AttemptStatus::Pending,
+            payme::SaleStatus::Refunded => common_enums::AttemptStatus::CaptureFailed,
+            payme::SaleStatus::PartialRefund => common_enums::AttemptStatus::CaptureFailed,
+            payme::SaleStatus::Voided => common_enums::AttemptStatus::CaptureFailed,
+            payme::SaleStatus::PartialVoid => common_enums::AttemptStatus::CaptureFailed,
+            payme::SaleStatus::Chargeback => common_enums::AttemptStatus::CaptureFailed,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PaymePaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            if response.status_code != 0
+                && (response.payme_status != "success" || response.status_error_code.is_some())
+            {
+                payme::SaleStatus::Failed
+            } else {
+                response.sale_status.clone().unwrap_or(payme::SaleStatus::Initial)
+            }
+        }) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Payme<T>
 {
 }
 
 // ===== REFUND FLOW TRAIT IMPLEMENTATIONS =====
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payme<T>,
+    flow: Refund,
+    source: payme::SaleStatus,
+    mapping_status: |status| {
+        match status {
+            payme::SaleStatus::Refunded => common_enums::RefundStatus::Success,
+            payme::SaleStatus::Failed => common_enums::RefundStatus::Failure,
+            payme::SaleStatus::PartialRefund => common_enums::RefundStatus::Success,
+            payme::SaleStatus::Completed => common_enums::RefundStatus::Success,
+            payme::SaleStatus::Initial => common_enums::RefundStatus::Pending,
+            payme::SaleStatus::Authorized => common_enums::RefundStatus::Pending,
+            payme::SaleStatus::Voided => common_enums::RefundStatus::Pending,
+            payme::SaleStatus::PartialVoid => common_enums::RefundStatus::Pending,
+            payme::SaleStatus::Chargeback => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: PaymeRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.refund_status.clone().unwrap_or(payme::SaleStatus::Initial)) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Payme<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payme<T>,
+    flow: RSync,
+    source: payme::SaleStatus,
+    mapping_status: |status| {
+        match status {
+            payme::SaleStatus::Refunded => common_enums::RefundStatus::Success,
+            payme::SaleStatus::Failed => common_enums::RefundStatus::Failure,
+            payme::SaleStatus::PartialRefund => common_enums::RefundStatus::Success,
+            payme::SaleStatus::Completed => common_enums::RefundStatus::Success,
+            payme::SaleStatus::Initial => common_enums::RefundStatus::Pending,
+            payme::SaleStatus::Authorized => common_enums::RefundStatus::Pending,
+            payme::SaleStatus::Voided => common_enums::RefundStatus::Pending,
+            payme::SaleStatus::PartialVoid => common_enums::RefundStatus::Pending,
+            payme::SaleStatus::Chargeback => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: PaymeRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.items.first().and_then(|item| item.sale_status.clone()).unwrap_or(payme::SaleStatus::Initial)) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Payme<T>
 {

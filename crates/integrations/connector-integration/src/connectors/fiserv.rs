@@ -66,26 +66,164 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Fiserv<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiserv<T>,
+    flow: Authorize,
+    source: transformers::FiservPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FiservPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            transformers::FiservPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::FiservPaymentStatus::Succeeded => common_enums::AttemptStatus::Charged,
+            transformers::FiservPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            transformers::FiservPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            transformers::FiservPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::FiservPaymentStatus::Processing => common_enums::AttemptStatus::Authorizing,
+            transformers::FiservPaymentStatus::Created => common_enums::AttemptStatus::AuthenticationPending,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: FiservPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.gateway_response.transaction_state.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Fiserv<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiserv<T>,
+    flow: PSync,
+    source: transformers::FiservPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FiservPaymentStatus::Succeeded => common_enums::AttemptStatus::Charged,
+            transformers::FiservPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::FiservPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            transformers::FiservPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            transformers::FiservPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            transformers::FiservPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::FiservPaymentStatus::Processing => common_enums::AttemptStatus::Authorizing,
+            transformers::FiservPaymentStatus::Created => common_enums::AttemptStatus::AuthenticationPending,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: FiservSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.sync_responses.first().map(|item| item.gateway_response.transaction_state.clone()).unwrap_or_default()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Fiserv<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiserv<T>,
+    flow: Void,
+    source: transformers::FiservPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FiservPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::FiservPaymentStatus::Failed => common_enums::AttemptStatus::VoidFailed,
+            transformers::FiservPaymentStatus::Authorized => common_enums::AttemptStatus::VoidInitiated,
+            transformers::FiservPaymentStatus::Succeeded => common_enums::AttemptStatus::VoidFailed,
+            transformers::FiservPaymentStatus::Captured => common_enums::AttemptStatus::VoidFailed,
+            transformers::FiservPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+            transformers::FiservPaymentStatus::Processing => common_enums::AttemptStatus::Pending,
+            transformers::FiservPaymentStatus::Created => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: FiservVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.gateway_response.transaction_state.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Fiserv<T>
 {
 }
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiserv<T>,
+    flow: RSync,
+    source: transformers::FiservPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FiservPaymentStatus::Succeeded => common_enums::RefundStatus::Success,
+            transformers::FiservPaymentStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::FiservPaymentStatus::Captured => common_enums::RefundStatus::Success,
+            transformers::FiservPaymentStatus::Authorized => common_enums::RefundStatus::Success,
+            transformers::FiservPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+            transformers::FiservPaymentStatus::Voided => common_enums::RefundStatus::Pending,
+            transformers::FiservPaymentStatus::Processing => common_enums::RefundStatus::Pending,
+            transformers::FiservPaymentStatus::Created => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: FiservRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.sync_responses.first().map(|item| item.gateway_response.transaction_state.clone()).unwrap_or_default()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Fiserv<T>
 {
 }
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiserv<T>,
+    flow: Refund,
+    source: transformers::FiservPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FiservPaymentStatus::Succeeded => common_enums::RefundStatus::Success,
+            transformers::FiservPaymentStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::FiservPaymentStatus::Captured => common_enums::RefundStatus::Success,
+            transformers::FiservPaymentStatus::Authorized => common_enums::RefundStatus::Success,
+            transformers::FiservPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+            transformers::FiservPaymentStatus::Voided => common_enums::RefundStatus::Pending,
+            transformers::FiservPaymentStatus::Processing => common_enums::RefundStatus::Pending,
+            transformers::FiservPaymentStatus::Created => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: FiservRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.gateway_response.transaction_state.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Fiserv<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Fiserv<T>,
+    flow: Capture,
+    source: transformers::FiservPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FiservPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            transformers::FiservPaymentStatus::Failed => common_enums::AttemptStatus::CaptureFailed,
+            transformers::FiservPaymentStatus::Authorized => common_enums::AttemptStatus::Pending,
+            transformers::FiservPaymentStatus::Succeeded => common_enums::AttemptStatus::Charged,
+            transformers::FiservPaymentStatus::Declined => common_enums::AttemptStatus::CaptureFailed,
+            transformers::FiservPaymentStatus::Voided => common_enums::AttemptStatus::CaptureFailed,
+            transformers::FiservPaymentStatus::Processing => common_enums::AttemptStatus::Pending,
+            transformers::FiservPaymentStatus::Created => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: FiservCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.gateway_response.transaction_state.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Fiserv<T>

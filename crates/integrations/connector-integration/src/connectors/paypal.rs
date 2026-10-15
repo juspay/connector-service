@@ -1,7 +1,7 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_enums::{AttemptStatus, CurrencyUnit};
+use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -214,6 +214,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
+            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,
@@ -1777,6 +1778,230 @@ fn construct_auth_assertion_header(
     );
     let encoded_credentials = BASE64_ENGINE.encode(merchant_credentials).to_string();
     format!("{algorithm}.{encoded_credentials}.")
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paypal<T>,
+    flow: Authorize,
+    source: PaypalAuthResponse,
+    context: (),
+    mapping_status: |response, _ctx| { match response {
+            PaypalAuthResponse::PaypalOrdersResponse(orders_response) => {
+                let status = orders_response
+                    .purchase_units
+                    .first()
+                    .and_then(|purchase_unit| {
+                        let payment_collection = &purchase_unit.payments;
+                        let payment_collection_item = match (
+                            &payment_collection.authorizations,
+                            &payment_collection.captures,
+                        ) {
+                            (Some(authorizations), None) => authorizations.first(),
+                            (None, Some(captures)) => captures.first(),
+                            (Some(_), Some(captures)) => captures.first(),
+                            _ => None,
+                        };
+                        payment_collection_item.map(|item| item.status.clone())
+                    })
+                    .map(AttemptStatus::from)
+                    .unwrap_or(AttemptStatus::Pending);
+                if domain_types::utils::is_payment_failure(status) {
+                    AttemptStatus::Failure
+                } else {
+                    status
+                }
+            }
+            PaypalAuthResponse::PaypalRedirectResponse(redirect_response) => {
+                paypal::get_order_status(redirect_response.status, redirect_response.intent)
+            }
+            PaypalAuthResponse::PaypalThreeDsResponse(threeds_response) => {
+                paypal::get_order_status(threeds_response.status, paypal::PaypalPaymentIntent::Authenticate)
+            }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PaypalAuthResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paypal<T>,
+    flow: PSync,
+    source: PaypalSyncResponse,
+    context: (),
+    mapping_status: |response, _ctx| { match response {
+            PaypalSyncResponse::PaypalOrdersSyncResponse(orders_response) => {
+                let status = orders_response
+                    .purchase_units
+                    .first()
+                    .and_then(|purchase_unit| {
+                        let payment_collection = &purchase_unit.payments;
+                        let payment_collection_item = match (
+                            &payment_collection.authorizations,
+                            &payment_collection.captures,
+                        ) {
+                            (Some(authorizations), None) => authorizations.first(),
+                            (None, Some(captures)) => captures.first(),
+                            (Some(_), Some(captures)) => captures.first(),
+                            _ => None,
+                        };
+                        payment_collection_item.map(|item| item.status.clone())
+                    })
+                    .map(AttemptStatus::from)
+                    .unwrap_or(AttemptStatus::Pending);
+                if domain_types::utils::is_payment_failure(status) {
+                    AttemptStatus::Failure
+                } else {
+                    status
+                }
+            }
+            PaypalSyncResponse::PaypalRedirectSyncResponse(redirect_response) => {
+                paypal::get_order_status(redirect_response.status, redirect_response.intent)
+            }
+            PaypalSyncResponse::PaypalPaymentsSyncResponse(payments_sync_response) => {
+                AttemptStatus::from(payments_sync_response.status)
+            }
+            // Hardcoded in the 3DS sync handler: this variant is only reached mid
+            // card-3DS, before completion of the complete-authorize flow.
+            PaypalSyncResponse::PaypalThreeDsSyncResponse(_) => AttemptStatus::AuthenticationPending,
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PaypalSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paypal<T>,
+    flow: Capture,
+    source: paypal::PaypalPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PaypalCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paypal<T>,
+    flow: Void,
+    source: paypal::PaypalCancelStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
+            paypal::PaypalCancelStatus::Voided => AttemptStatus::Voided,
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: PaypalPaymentsCancelResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paypal<T>,
+    flow: RepeatPayment,
+    source: PaypalRepeatPaymentResponse,
+    context: (),
+    mapping_status: |response, _ctx| { match response {
+            PaypalAuthResponse::PaypalOrdersResponse(orders_response) => {
+                let status = orders_response
+                    .purchase_units
+                    .first()
+                    .and_then(|purchase_unit| {
+                        let payment_collection = &purchase_unit.payments;
+                        let payment_collection_item = match (
+                            &payment_collection.authorizations,
+                            &payment_collection.captures,
+                        ) {
+                            (Some(authorizations), None) => authorizations.first(),
+                            (None, Some(captures)) => captures.first(),
+                            (Some(_), Some(captures)) => captures.first(),
+                            _ => None,
+                        };
+                        payment_collection_item.map(|item| item.status.clone())
+                    })
+                    .map(AttemptStatus::from)
+                    .unwrap_or(AttemptStatus::Pending);
+                if domain_types::utils::is_payment_failure(status) {
+                    AttemptStatus::Failure
+                } else {
+                    status
+                }
+            }
+            PaypalAuthResponse::PaypalRedirectResponse(redirect_response) => {
+                paypal::get_order_status(redirect_response.status, redirect_response.intent)
+            }
+            PaypalAuthResponse::PaypalThreeDsResponse(threeds_response) => {
+                paypal::get_order_status(threeds_response.status, paypal::PaypalPaymentIntent::Authenticate)
+            }
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: PaypalRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paypal<T>,
+    flow: SetupMandate,
+    source: (),
+    context: (),
+    mapping_status: |_response, _ctx| { // The try_from derives the status from the HTTP code (201 -> Charged, else
+        // Failure), which map_runtime_status cannot observe. The success path of this
+        // flow always terminates in Charged.
+        AttemptStatus::Charged },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: PaypalSetupMandatesResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paypal<T>,
+    flow: Refund,
+    source: paypal::RefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
+        request: RefundsData,
+        response: RefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Paypal<T>,
+    flow: RSync,
+    source: paypal::RefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
+        request: RefundSyncData,
+        response: RefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

@@ -416,7 +416,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             let converter = FloatMajorUnitForConnector;
             let amount = converter
                 .convert(
-                    router_data.request.amount.amount,
+                    router_data.request.minor_amount,
                     router_data.request.currency,
                 )
                 .change_context(IntegrationError::RequestEncodingFailed {
@@ -519,7 +519,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             let converter = FloatMajorUnitForConnector;
             let amount = converter
                 .convert(
-                    router_data.request.amount.amount,
+                    router_data.request.minor_amount,
                     router_data.request.currency,
                 )
                 .change_context(IntegrationError::RequestEncodingFailed {
@@ -973,7 +973,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(
-                router_data.request.amount_to_capture.amount,
+                router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1089,7 +1089,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let converter = FloatMajorUnitForConnector;
         let amount = converter
             .convert(
-                router_data.request.refund_amount.amount,
+                router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -1505,7 +1505,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NmiVaultResponse, Sel
                     .change_context(ConnectorError::ResponseHandlingFailed {
                         context: Default::default(),
                     })?;
-                let amount_data = item.router_data.request.amount.amount;
+                let amount_data = item.router_data.request.amount;
                 let currency_data = item.router_data.request.currency.ok_or(
                     ConnectorError::ResponseHandlingFailed {
                         context: Default::default(),
@@ -1704,13 +1704,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Hyperswitch parity: NMI SetupMandate (Validate) only supports zero amount.
-        if router_data
-            .request
-            .amount
-            .as_ref()
-            .map(|money| money.amount)
-            .is_some_and(|amount| amount > common_utils::types::MinorUnit::zero())
-        {
+        if router_data.request.amount.unwrap_or(0) > 0 {
             return Err(IntegrationError::NotSupported {
                 message: "Setup Mandate with non zero amount".to_string(),
                 connector: "NMI",
@@ -1969,7 +1963,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let amount = FloatMajorUnitForConnector
             .convert(
-                router_data.request.amount.amount,
+                router_data.request.minor_amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -2254,4 +2248,23 @@ pub(crate) fn parse_nmi_webhook_signature_header(header: &str) -> Option<(&str, 
     let after_t = header.get(t_idx + 2..)?;
     let s_idx = after_t.rfind(",s=")?;
     Some((after_t.get(..s_idx)?, after_t.get(s_idx + 3..)?))
+}
+
+// ===== FLOW STATUS MAPPING SOURCE TYPES =====
+
+/// Authorize/PSync decision lattice mirrored from `map_payment_status`
+/// (transformers.rs:571): `found` distinguishes a sync miss from a gateway decline, and
+/// `is_auto_capture` splits the approved terminal (`Charged` vs `Authorized`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum NmiPaymentVerdict {
+    /// Sync query returned no transaction record.
+    NotFound,
+    /// `response = 1` (approved) with auto-capture capture method.
+    ApprovedSale,
+    /// `response = 1` (approved) with manual capture.
+    ApprovedAuth,
+    /// `response = 2`/`0` — declined or gateway error.
+    DeclinedOrError,
+    #[default]
+    Other,
 }

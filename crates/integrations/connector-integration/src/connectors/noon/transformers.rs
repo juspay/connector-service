@@ -275,7 +275,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                data.router_data.request.amount.amount,
+                data.router_data.request.minor_amount,
                 data.router_data.request.currency,
             )
             .change_context(IntegrationError::RequestEncodingFailed {
@@ -295,7 +295,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Ok(NoonPaymentData::GooglePay(NoonGooglePay {
                         api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
                         api_version: GOOGLEPAY_API_VERSION,
-                        payment_method_data: *google_pay_data,
+                        payment_method_data: google_pay_data,
                     }))
                 }
                 WalletData::ApplePay(apple_pay_data) => {
@@ -537,7 +537,7 @@ impl TryFrom<&ConnectorSpecificConfig> for NoonAuthType {
         }
     }
 }
-#[derive(Default, Debug, Deserialize, Serialize, strum::Display)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum NoonPaymentStatus {
@@ -599,7 +599,7 @@ pub struct NoonSubscriptionObject {
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoonPaymentsOrderResponse {
-    status: NoonPaymentStatus,
+    pub status: NoonPaymentStatus,
     id: u64,
     error_code: u64,
     error_message: Option<String>,
@@ -615,14 +615,14 @@ pub struct NoonCheckoutData {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoonPaymentsResponseResult {
-    order: NoonPaymentsOrderResponse,
+    pub order: NoonPaymentsOrderResponse,
     checkout_data: Option<NoonCheckoutData>,
     subscription: Option<NoonSubscriptionObject>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NoonPaymentsResponse {
-    result: NoonPaymentsResponseResult,
+    pub result: NoonPaymentsResponseResult,
 }
 
 impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
@@ -730,7 +730,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
         let amount = data.connector.amount_converter.convert(
-            data.router_data.request.amount_to_capture.amount,
+            data.router_data.request.minor_amount_to_capture,
             data.router_data.request.currency,
         );
         let order = NoonActionOrder {
@@ -845,7 +845,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
         let refund_amount = data.connector.amount_converter.convert(
-            data.router_data.request.refund_amount.amount,
+            data.router_data.request.minor_refund_amount,
             data.router_data.request.currency,
         );
         let order = NoonActionOrder {
@@ -933,19 +933,19 @@ impl From<RefundStatus> for enums::RefundStatus {
 #[serde(rename_all = "camelCase")]
 pub struct NoonPaymentsTransactionResponse {
     id: String,
-    status: RefundStatus,
+    pub status: RefundStatus,
 }
 
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoonRefundResponseResult {
-    transaction: NoonPaymentsTransactionResponse,
+    pub transaction: NoonPaymentsTransactionResponse,
 }
 
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RefundResponse {
-    result: NoonRefundResponseResult,
+    pub result: NoonRefundResponseResult,
     result_code: u32,
     class_description: String,
     message: String,
@@ -1217,7 +1217,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Ok(NoonPaymentData::GooglePay(NoonGooglePay {
                                 api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
                                 api_version: GOOGLEPAY_API_VERSION,
-                                payment_method_data: *google_pay_data,
+                                payment_method_data: google_pay_data,
                             }))
                         }
                         WalletData::ApplePay(apple_pay_data) => {
@@ -1565,7 +1565,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.amount.amount,
+                router_data.request.minor_amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1591,7 +1591,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     "Only connector mandate ID is supported for Noon repeat payments".to_string(),
                     Default::default(),
                 )
-                .into())
+                .into());
             }
         };
 

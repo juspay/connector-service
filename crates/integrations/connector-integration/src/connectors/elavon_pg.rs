@@ -678,6 +678,155 @@ macros::macro_connector_implementation!(
 // not_implemented: EPG exposes the capability but it is out of scope for this
 //                  integration (cards, one-time payments only).
 // not_supported:   EPG's v1 API has no such resource at all.
+// Flow declarations mirror the production transformer mappings, including
+// context-dependent and nonterminal outcomes.
+domain_types::impl_connector_flow_allowed_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: ElavonPg<T>,
+    flow: CreateOrder,
+    status: Pending,
+    runtime: {
+        request: PaymentCreateOrderData,
+        response: ElavonPgCreateOrderResponse,
+    },
+}
+
+domain_types::impl_connector_flow_allowed_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: ElavonPg<T>,
+    flow: PreAuthenticate,
+    status: AuthenticationPending,
+    runtime: {
+        request: PaymentsPreAuthenticateData<T>,
+        response: ElavonPgPreAuthenticateResponse,
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: ElavonPg<T>,
+    flow: domain_types::connector_flow::Authorize,
+    source: elavon_pg::ElavonPgTransactionState,
+    context: (Option<bool>, bool, bool),
+    mapping_status: |status, ctx| { common_enums::AttemptStatus::from(elavon_pg::ElavonPgSaleStatus {
+            state: &status,
+            is_authorized: ctx.0,
+            is_held_for_review: ctx.1,
+            is_auto_capture: ctx.2,
+        }) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: ElavonPgTransactionResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state) },
+        context: |_resource_common_data, request, response, _http_status_code| { Ok((
+            response.is_authorized,
+            response.is_held_for_review.unwrap_or(false),
+            elavon_pg::resolve_auto_capture(response.do_capture, request.is_auto_capture(), &response.id),
+        )) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: ElavonPg<T>,
+    flow: domain_types::connector_flow::PSync,
+    source: elavon_pg::ElavonPgTransactionState,
+    context: (Option<bool>, bool, bool),
+    mapping_status: |status, ctx| { common_enums::AttemptStatus::from(elavon_pg::ElavonPgSaleStatus {
+            state: &status,
+            is_authorized: ctx.0,
+            is_held_for_review: ctx.1,
+            is_auto_capture: ctx.2,
+        }) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: ElavonPgPsyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state) },
+        context: |_resource_common_data, request, response, _http_status_code| { Ok((
+            response.is_authorized,
+            response.is_held_for_review.unwrap_or(false),
+            elavon_pg::resolve_auto_capture(response.do_capture, request.is_auto_capture(), &response.id),
+        )) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: ElavonPg<T>,
+    flow: domain_types::connector_flow::Capture,
+    source: elavon_pg::ElavonPgTransactionState,
+    context: (Option<bool>, bool),
+    mapping_status: |status, ctx| { common_enums::AttemptStatus::from(elavon_pg::ElavonPgSaleStatus {
+            state: &status,
+            is_authorized: ctx.0,
+            is_held_for_review: ctx.1,
+            is_auto_capture: true,
+        }) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: ElavonPgCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok((
+            response.is_authorized,
+            response.is_held_for_review.unwrap_or(false),
+        )) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: ElavonPg<T>,
+    flow: domain_types::connector_flow::Void,
+    source: elavon_pg::ElavonPgTransactionState,
+    context: Option<bool>,
+    mapping_status: |status, ctx| { common_enums::AttemptStatus::from(elavon_pg::ElavonPgChildStatus {
+            state: &status,
+            is_authorized: ctx,
+        }) },
+    runtime: {
+        request: PaymentVoidData,
+        response: ElavonPgVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.is_authorized) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: ElavonPg<T>,
+    flow: domain_types::connector_flow::Refund,
+    source: elavon_pg::ElavonPgTransactionState,
+    context: Option<bool>,
+    mapping_status: |status, ctx| { common_enums::RefundStatus::from(elavon_pg::ElavonPgChildStatus {
+            state: &status,
+            is_authorized: ctx,
+        }) },
+    runtime: {
+        request: RefundsData,
+        response: ElavonPgRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.is_authorized) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: ElavonPg<T>,
+    flow: domain_types::connector_flow::RSync,
+    source: elavon_pg::ElavonPgTransactionState,
+    context: Option<bool>,
+    mapping_status: |status, ctx| { common_enums::RefundStatus::from(elavon_pg::ElavonPgChildStatus {
+            state: &status,
+            is_authorized: ctx,
+        }) },
+    runtime: {
+        request: RefundSyncData,
+        response: ElavonPgRsyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.state) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.is_authorized) },
+    },
+}
+
 macros::macro_connector_flow_status_impls!(
     connector: ElavonPg,
     generic_type: T,

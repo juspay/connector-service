@@ -673,21 +673,118 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_connector_flow_allowed_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Glomopay<T>,
+    flow:      CreateOrder,
+    statuses:  [Pending, Failure],
+    runtime: {
+        request:  PaymentCreateOrderData,
+        response: GlomopayCreateOrderResponse,
+        status:   |_request, response| match response.status.as_deref() {
+            Some("action_required" | "failed" | "expired") => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::Pending,
+        },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Glomopay<T>,
+    flow: Authorize,
+    source: transformers::GlomopayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::GlomopayPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            transformers::GlomopayPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::GlomopayPaymentStatus::InProgress => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::GlomopayPaymentStatus::ActionRequired => common_enums::AttemptStatus::Failure,
+            transformers::GlomopayPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: GlomopayAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Glomopay<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Glomopay<T>,
+    flow: PSync,
+    source: transformers::GlomopayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::GlomopayPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            transformers::GlomopayPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::GlomopayPaymentStatus::InProgress => common_enums::AttemptStatus::AuthenticationPending,
+            transformers::GlomopayPaymentStatus::ActionRequired => common_enums::AttemptStatus::Pending,
+            transformers::GlomopayPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: GlomopayPaymentSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.data.first().map(|payment| payment.status).unwrap_or(transformers::GlomopayPaymentStatus::Pending)) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Glomopay<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Glomopay<T>,
+    flow: Refund,
+    source: transformers::GlomopayRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::GlomopayRefundStatus::Success => common_enums::RefundStatus::Success,
+            transformers::GlomopayRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::GlomopayRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            transformers::GlomopayRefundStatus::ActionRequired => common_enums::RefundStatus::Pending,
+            transformers::GlomopayRefundStatus::UnderReview => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: GlomopayRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Glomopay<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Glomopay<T>,
+    flow: RSync,
+    source: transformers::GlomopayRefundStatus,
+    context: Option<transformers::GlomopayRefundStatus>,
+    mapping_status: |status, matched_status| { match matched_status.unwrap_or(status) {
+            transformers::GlomopayRefundStatus::Success => common_enums::RefundStatus::Success,
+            transformers::GlomopayRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::GlomopayRefundStatus::Pending
+            | transformers::GlomopayRefundStatus::ActionRequired
+            | transformers::GlomopayRefundStatus::UnderReview => common_enums::RefundStatus::Pending,
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: GlomopayRefundSyncResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(transformers::GlomopayRefundStatus::Pending) },
+        context: |_resource_common_data, request, response, _http_status_code| { Ok(response.data.iter()
+            .find(|refund| refund.id == request.connector_refund_id)
+            .map(|refund| refund.status)) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Glomopay<T>
 {

@@ -57,21 +57,101 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hyperpg<T>,
+    flow: Authorize,
+    source: transformers::HyperpgPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::HyperpgPaymentStatus::Charged => common_enums::AttemptStatus::Charged,
+            transformers::HyperpgPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::HyperpgPaymentStatus::New => common_enums::AttemptStatus::Pending,
+            transformers::HyperpgPaymentStatus::Authorizing => common_enums::AttemptStatus::Pending,
+            transformers::HyperpgPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            transformers::HyperpgPaymentStatus::PendingVbv => common_enums::AttemptStatus::Pending,
+            transformers::HyperpgPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            transformers::HyperpgPaymentStatus::AuthorizationFailed => common_enums::AttemptStatus::AuthorizationFailed,
+            transformers::HyperpgPaymentStatus::AuthenticationFailed => common_enums::AttemptStatus::AuthenticationFailed,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: HyperpgAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Hyperpg<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hyperpg<T>,
+    flow: PSync,
+    source: transformers::HyperpgPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::HyperpgPaymentStatus::Charged => common_enums::AttemptStatus::Charged,
+            transformers::HyperpgPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::HyperpgPaymentStatus::New => common_enums::AttemptStatus::Pending,
+            transformers::HyperpgPaymentStatus::Authorizing => common_enums::AttemptStatus::Pending,
+            transformers::HyperpgPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            transformers::HyperpgPaymentStatus::PendingVbv => common_enums::AttemptStatus::Pending,
+            transformers::HyperpgPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            transformers::HyperpgPaymentStatus::AuthorizationFailed => common_enums::AttemptStatus::AuthorizationFailed,
+            transformers::HyperpgPaymentStatus::AuthenticationFailed => common_enums::AttemptStatus::AuthenticationFailed,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: HyperpgSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Hyperpg<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hyperpg<T>,
+    flow: Refund,
+    source: transformers::HyperpgRefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::HyperpgRefundStatus::Success => common_enums::RefundStatus::Success,
+            transformers::HyperpgRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::HyperpgRefundStatus::Pending => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: HyperpgRefundResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(transformers::HyperpgRefundStatus::Pending) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Hyperpg<T>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hyperpg<T>,
+    flow: RSync,
+    source: Option<transformers::HyperpgRefundStatus>,
+    context: common_enums::RefundStatus,
+    mapping_status: |status, previous_status| { status.as_ref().map(common_enums::RefundStatus::from).unwrap_or(previous_status) },
+    runtime: {
+        request: RefundSyncData,
+        response: HyperpgRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.refunds.as_ref().and_then(|refunds| refunds.first()).map(|refund| refund.status.clone())) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.refund_status) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Hyperpg<T>
 {

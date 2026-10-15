@@ -133,6 +133,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
             response_headers: None,
+            minor_amount_captured: None,
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
@@ -191,6 +192,17 @@ macros::create_all_prerequisites!(
     }
 );
 
+// NOTE: no impl_flow_status_mapping! for Authorize. The success body
+// (`CashtocodePaymentsResponseData`) carries only `payUrl` — no transaction
+// status — so the TryFrom (transformers.rs:298-349) hardcodes
+// `AttemptStatus::AuthenticationPending` (the customer still has to pay the
+// eVoucher/reward flow out on the redirect) and `AttemptStatus::Failure` only
+// on the untagged `CashtoCodeError` variant. `AuthenticationPending` is a
+// non-terminal in Authorize::ALLOWED, not in TERMINAL_SUCCESS_SET, so there is
+// no honest `success_connector_status` to declare; the `From<CashtocodePaymentStatus>`
+// impl in transformers.rs:218 is dead weight on this path — CashtocodeBoth
+// statuses ("succeeded"/"processing") only appear on CashToCode's webhook/sync
+// surface, which this connector does not run as a flow.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Cashtocode,

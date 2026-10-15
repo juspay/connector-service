@@ -61,25 +61,231 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Helcim<T>
 {
 }
+// All four payment TryFrom impls (Authorize, PSync, Capture, Void — transformers.rs:302,
+// 336, 441, 518) route through the *same* shared
+// `From<HelcimPaymentsResponse> for AttemptStatus` (transformers.rs:234), whose
+// verdict is the `(transaction_type, status)` pair. The ctx is
+// `HelcimTransactionType`, the enum the TryFrom impls match on; the default
+// (`Purchase`) makes `success_connector_status()` map to the purchase path's
+// `Charged` — the flow each TryFrom legitimately terminates in.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Helcim<T>,
+    flow: Authorize,
+    source: helcim::HelcimPaymentStatus,
+    context: helcim::HelcimTransactionType,
+    mapping_status: |status, transaction_type| { use common_enums::AttemptStatus;
+        use helcim::{HelcimPaymentStatus, HelcimTransactionType};
+        match (transaction_type, status) {
+            (HelcimTransactionType::Purchase | HelcimTransactionType::Verify, HelcimPaymentStatus::Approved) => {
+                AttemptStatus::Charged
+            }
+            (HelcimTransactionType::Purchase | HelcimTransactionType::Verify, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::Failure
+            }
+            (HelcimTransactionType::PreAuth, HelcimPaymentStatus::Approved) => {
+                AttemptStatus::Authorized
+            }
+            (HelcimTransactionType::PreAuth, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::AuthorizationFailed
+            }
+            (HelcimTransactionType::Capture, HelcimPaymentStatus::Approved) => AttemptStatus::Charged,
+            (HelcimTransactionType::Capture, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::CaptureFailed
+            }
+            (HelcimTransactionType::Reverse, HelcimPaymentStatus::Approved) => AttemptStatus::Voided,
+            (HelcimTransactionType::Reverse, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::VoidFailed
+            }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: HelcimPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status().clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_type().clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Helcim<T>
 {
+}
+
+// PSync's TryFrom uses the very same `From<HelcimPaymentsResponse>` mapping;
+// every produced status is in PSync's intentionally broad ALLOWED set.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Helcim<T>,
+    flow: PSync,
+    source: helcim::HelcimPaymentStatus,
+    context: helcim::HelcimTransactionType,
+    mapping_status: |status, transaction_type| { use common_enums::AttemptStatus;
+        use helcim::{HelcimPaymentStatus, HelcimTransactionType};
+        match (transaction_type, status) {
+            (HelcimTransactionType::Purchase | HelcimTransactionType::Verify, HelcimPaymentStatus::Approved) => {
+                AttemptStatus::Charged
+            }
+            (HelcimTransactionType::Purchase | HelcimTransactionType::Verify, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::Failure
+            }
+            (HelcimTransactionType::PreAuth, HelcimPaymentStatus::Approved) => {
+                AttemptStatus::Authorized
+            }
+            (HelcimTransactionType::PreAuth, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::AuthorizationFailed
+            }
+            (HelcimTransactionType::Capture, HelcimPaymentStatus::Approved) => AttemptStatus::Charged,
+            (HelcimTransactionType::Capture, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::CaptureFailed
+            }
+            (HelcimTransactionType::Reverse, HelcimPaymentStatus::Approved) => AttemptStatus::Voided,
+            (HelcimTransactionType::Reverse, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::VoidFailed
+            }
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: HelcimPaymentsSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status().clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_type().clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Helcim<T>
 {
 }
+
+// Same shared mapping; the `Reverse` pair is what produces Void's
+// `Voided`/`VoidFailed` terminals.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Helcim<T>,
+    flow: Void,
+    source: helcim::HelcimPaymentStatus,
+    context: helcim::HelcimTransactionType,
+    mapping_status: |status, transaction_type| { use common_enums::AttemptStatus;
+        use helcim::{HelcimPaymentStatus, HelcimTransactionType};
+        match (transaction_type, status) {
+            (HelcimTransactionType::Purchase | HelcimTransactionType::Verify, HelcimPaymentStatus::Approved) => {
+                AttemptStatus::Charged
+            }
+            (HelcimTransactionType::Purchase | HelcimTransactionType::Verify, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::Failure
+            }
+            (HelcimTransactionType::PreAuth, HelcimPaymentStatus::Approved) => {
+                AttemptStatus::Authorized
+            }
+            (HelcimTransactionType::PreAuth, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::AuthorizationFailed
+            }
+            (HelcimTransactionType::Capture, HelcimPaymentStatus::Approved) => AttemptStatus::Charged,
+            (HelcimTransactionType::Capture, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::CaptureFailed
+            }
+            (HelcimTransactionType::Reverse, HelcimPaymentStatus::Approved) => AttemptStatus::Voided,
+            (HelcimTransactionType::Reverse, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::VoidFailed
+            }
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: HelcimPaymentsVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status().clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_type().clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Helcim<T>
 {
+}
+
+// Mirrors `From<RefundResponse> for RefundStatus` (transformers.rs:785): the
+// refund wire type only ever carries `HelcimRefundTransactionType::Refund`,
+// so the transaction-type leg is structurally fixed and the verdict is
+// `status` alone.
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Helcim<T>,
+    flow: Refund,
+    source: helcim::HelcimPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            helcim::HelcimPaymentStatus::Approved => common_enums::RefundStatus::Success,
+            helcim::HelcimPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: RefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status().clone()) },
+    },
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Helcim<T>
+{
+}
+
+// RSync reads the same refund resource and goes through the identical
+// `From<RefundResponse> for RefundStatus` mapping.
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Helcim<T>,
+    flow: RSync,
+    source: helcim::HelcimPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            helcim::HelcimPaymentStatus::Approved => common_enums::RefundStatus::Success,
+            helcim::HelcimPaymentStatus::Declined => common_enums::RefundStatus::Failure,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: RefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status().clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Helcim<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Helcim<T>
-{
+
+// Same shared mapping; the `Capture` pair is what produces Capture's
+// `Charged`/`CaptureFailed` terminals.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Helcim<T>,
+    flow: Capture,
+    source: helcim::HelcimPaymentStatus,
+    context: helcim::HelcimTransactionType,
+    mapping_status: |status, transaction_type| { use common_enums::AttemptStatus;
+        use helcim::{HelcimPaymentStatus, HelcimTransactionType};
+        match (transaction_type, status) {
+            (HelcimTransactionType::Purchase | HelcimTransactionType::Verify, HelcimPaymentStatus::Approved) => {
+                AttemptStatus::Charged
+            }
+            (HelcimTransactionType::Purchase | HelcimTransactionType::Verify, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::Failure
+            }
+            (HelcimTransactionType::PreAuth, HelcimPaymentStatus::Approved) => {
+                AttemptStatus::Authorized
+            }
+            (HelcimTransactionType::PreAuth, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::AuthorizationFailed
+            }
+            (HelcimTransactionType::Capture, HelcimPaymentStatus::Approved) => AttemptStatus::Charged,
+            (HelcimTransactionType::Capture, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::CaptureFailed
+            }
+            (HelcimTransactionType::Reverse, HelcimPaymentStatus::Approved) => AttemptStatus::Voided,
+            (HelcimTransactionType::Reverse, HelcimPaymentStatus::Declined) => {
+                AttemptStatus::VoidFailed
+            }
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: HelcimPaymentsCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status().clone()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_type().clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Helcim<T>

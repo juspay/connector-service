@@ -61,25 +61,151 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Dlocal<T>,
+    flow: Authorize,
+    source: DlocalPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            DlocalPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            DlocalPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            DlocalPaymentStatus::Paid => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Active => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: DlocalPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Dlocal<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Dlocal<T>,
+    flow: PSync,
+    source: DlocalPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            DlocalPaymentStatus::Paid => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            DlocalPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            DlocalPaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Active => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: DlocalPaymentsSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Dlocal<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Dlocal<T>,
+    flow: Void,
+    source: DlocalPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            DlocalPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            DlocalPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            DlocalPaymentStatus::Authorized => common_enums::AttemptStatus::VoidInitiated,
+            DlocalPaymentStatus::Paid => common_enums::AttemptStatus::VoidFailed,
+            DlocalPaymentStatus::Verified => common_enums::AttemptStatus::VoidFailed,
+            DlocalPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Active => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: DlocalPaymentsVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Dlocal<T>
 {
+}
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Dlocal<T>,
+    flow: RSync,
+    source: transformers::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::RefundStatus::Success => common_enums::RefundStatus::Success,
+            transformers::RefundStatus::Rejected => common_enums::RefundStatus::Failure,
+            transformers::RefundStatus::Pending => common_enums::RefundStatus::Pending,
+            transformers::RefundStatus::Cancelled => common_enums::RefundStatus::Failure,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: RefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Dlocal<T>
 {
 }
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Dlocal<T>,
+    flow: Refund,
+    source: transformers::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::RefundStatus::Success => common_enums::RefundStatus::Success,
+            transformers::RefundStatus::Rejected => common_enums::RefundStatus::Failure,
+            transformers::RefundStatus::Pending => common_enums::RefundStatus::Pending,
+            transformers::RefundStatus::Cancelled => common_enums::RefundStatus::Failure,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: RefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Dlocal<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Dlocal<T>,
+    flow: Capture,
+    source: DlocalPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            DlocalPaymentStatus::Paid => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Rejected => common_enums::AttemptStatus::CaptureFailed,
+            DlocalPaymentStatus::Authorized => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Active => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Cancelled => common_enums::AttemptStatus::CaptureFailed,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: DlocalPaymentsCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Dlocal<T>
@@ -89,9 +215,53 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Dlocal<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Dlocal<T>,
+    flow: SetupMandate,
+    source: DlocalPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            DlocalPaymentStatus::Paid => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            DlocalPaymentStatus::Authorized => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Active => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Cancelled => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: DlocalRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Dlocal<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Dlocal<T>,
+    flow: RepeatPayment,
+    source: DlocalPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            DlocalPaymentStatus::Paid => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            DlocalPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            DlocalPaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+            DlocalPaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Active => common_enums::AttemptStatus::Pending,
+            DlocalPaymentStatus::Cancelled => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: DlocalRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Dlocal<T>
@@ -271,6 +441,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
+            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,
@@ -550,7 +721,7 @@ macros::macro_connector_implementation!(
                     context: Default::default(),
                 })?;
 
-            if req.request.amount.amount == MinorUnit::new(0) {
+            if req.request.amount == MinorUnit::new(0) {
                 Ok(format!(
                     "{}enrollments/{connector_transaction_id}",
                     self.connector_base_url_payments(req),

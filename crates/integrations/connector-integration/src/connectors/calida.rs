@@ -128,6 +128,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
             mandate_reference: None,
+            minor_amount_captured: None,
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
@@ -157,9 +158,49 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Calida<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Calida<T>,
+    flow: Authorize,
+    source: CalidaPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            CalidaPaymentStatus::Completed => common_enums::AttemptStatus::Charged,
+            CalidaPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            CalidaPaymentStatus::Pending => common_enums::AttemptStatus::AuthenticationPending,
+            CalidaPaymentStatus::PaymentInitiated => common_enums::AttemptStatus::AuthenticationPending,
+            CalidaPaymentStatus::ManualProcessing => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: CalidaPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Calida<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Calida<T>,
+    flow: PSync,
+    source: CalidaPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            CalidaPaymentStatus::Completed => common_enums::AttemptStatus::Charged,
+            CalidaPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            CalidaPaymentStatus::Pending => common_enums::AttemptStatus::AuthenticationPending,
+            CalidaPaymentStatus::PaymentInitiated => common_enums::AttemptStatus::AuthenticationPending,
+            CalidaPaymentStatus::ManualProcessing => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: CalidaSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Calida<T>

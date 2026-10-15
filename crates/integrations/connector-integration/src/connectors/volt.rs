@@ -3,7 +3,7 @@ pub mod transformers;
 use domain_types::router_data::ConnectorSpecificConfig;
 use std::fmt::Debug;
 
-use common_enums::{AttemptStatus, CurrencyUnit};
+use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
 use common_utils::{consts::NO_ERROR_CODE, errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{Authorize, PSync, Refund, ServerAuthenticationToken},
@@ -434,6 +434,60 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Volt<T>,
+    flow: Authorize,
+    source: volt::VoltPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { volt::get_attempt_status(status) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: VoltPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Volt<T>,
+    flow: PSync,
+    source: volt::VoltPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { volt::get_attempt_status(status) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: VoltPaymentsResponseData,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            VoltPaymentsResponseData::PsyncResponse(payment) => payment.status.clone(),
+            VoltPaymentsResponseData::WebhookResponse(webhook) => match webhook.status {
+                volt::VoltWebhookPaymentStatus::Completed => volt::VoltPaymentStatus::Received,
+                volt::VoltWebhookPaymentStatus::Received => volt::VoltPaymentStatus::Received,
+                volt::VoltWebhookPaymentStatus::NotReceived => volt::VoltPaymentStatus::NotReceived,
+                volt::VoltWebhookPaymentStatus::Failed => volt::VoltPaymentStatus::Failed,
+                volt::VoltWebhookPaymentStatus::Pending => volt::VoltPaymentStatus::Completed,
+            },
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Volt<T>,
+    flow: Refund,
+    source: (),
+    context: (),
+    mapping_status: |_source, _ctx| { RefundStatus::Pending },
+    runtime: {
+        request: RefundsData,
+        response: RefundResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
 
 macros::macro_connector_flow_status_impls!(
     connector: Volt,

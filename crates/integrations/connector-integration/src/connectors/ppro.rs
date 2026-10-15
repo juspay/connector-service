@@ -132,6 +132,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ppro<T>,
+    flow: Authorize,
+    source: PproPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::AuthorizationProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CaptureProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
+            PproPaymentStatus::AuthorizationAsync => common_enums::AttemptStatus::Authorized,
+            PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Authorized,
+            PproPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Discarded => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            PproPaymentStatus::RefundSettled => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PproAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Ppro<T>
 {
@@ -140,29 +169,218 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Ppro<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ppro<T>,
+    flow: PSync,
+    source: PproPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::AuthorizationProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CaptureProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
+            PproPaymentStatus::AuthorizationAsync => common_enums::AttemptStatus::Authorized,
+            PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Authorized,
+            PproPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Discarded => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            PproPaymentStatus::RefundSettled => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PproPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Ppro<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ppro<T>,
+    flow: Void,
+    source: PproPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            PproPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::AuthorizationProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CaptureProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthorizationAsync => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::Captured => common_enums::AttemptStatus::VoidFailed,
+            PproPaymentStatus::Success => common_enums::AttemptStatus::VoidFailed,
+            PproPaymentStatus::Discarded => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::RefundSettled => common_enums::AttemptStatus::VoidFailed,
+            PproPaymentStatus::Refunded => common_enums::AttemptStatus::VoidFailed,
+            PproPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: PproVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Ppro<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ppro<T>,
+    flow: Capture,
+    source: PproPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            PproPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Failed => common_enums::AttemptStatus::CaptureFailed,
+            PproPaymentStatus::AuthorizationProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CaptureProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthorizationAsync => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Discarded => common_enums::AttemptStatus::CaptureFailed,
+            PproPaymentStatus::Voided => common_enums::AttemptStatus::CaptureFailed,
+            PproPaymentStatus::RefundSettled => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Rejected => common_enums::AttemptStatus::CaptureFailed,
+            PproPaymentStatus::Declined => common_enums::AttemptStatus::CaptureFailed,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PproCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Ppro<T>
 {
+}
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ppro<T>,
+    flow: Refund,
+    source: PproRefundStatus,
+    mapping_status: |status| {
+        match status {
+            PproRefundStatus::RefundSettled => common_enums::RefundStatus::Success,
+            PproRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            PproRefundStatus::Refunded => common_enums::RefundStatus::Success,
+            PproRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            PproRefundStatus::Rejected => common_enums::RefundStatus::Failure,
+            PproRefundStatus::Declined => common_enums::RefundStatus::Failure,
+            PproRefundStatus::Unknown => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: PproRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Ppro<T>
 {
 }
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ppro<T>,
+    flow: RSync,
+    source: PproRefundStatus,
+    mapping_status: |status| {
+        match status {
+            PproRefundStatus::RefundSettled => common_enums::RefundStatus::Success,
+            PproRefundStatus::Failed => common_enums::RefundStatus::Failure,
+            PproRefundStatus::Refunded => common_enums::RefundStatus::Success,
+            PproRefundStatus::Pending => common_enums::RefundStatus::Pending,
+            PproRefundStatus::Rejected => common_enums::RefundStatus::Failure,
+            PproRefundStatus::Declined => common_enums::RefundStatus::Failure,
+            PproRefundStatus::Unknown => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: PproRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response.status { PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => PproRefundStatus::RefundSettled, PproPaymentStatus::Failed => PproRefundStatus::Failed, _ => PproRefundStatus::Pending }) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Ppro<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ppro<T>,
+    flow: SetupMandate,
+    source: PproPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::AuthorizationProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CaptureProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
+            PproPaymentStatus::AuthorizationAsync => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Discarded => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Voided => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::RefundSettled => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: PproAgreementResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response.status { PproAgreementStatus::Active => PproPaymentStatus::Success, PproAgreementStatus::AuthenticationPending => PproPaymentStatus::AuthenticationPending, PproAgreementStatus::Initializing => PproPaymentStatus::AuthorizationProcessing, PproAgreementStatus::Failed => PproPaymentStatus::Failed, PproAgreementStatus::Revoked => PproPaymentStatus::Voided }) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Ppro<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Ppro<T>,
+    flow: RepeatPayment,
+    source: PproPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            PproPaymentStatus::Success => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::AuthorizationProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::CaptureProcessing => common_enums::AttemptStatus::Pending,
+            PproPaymentStatus::AuthenticationPending => common_enums::AttemptStatus::AuthenticationPending,
+            PproPaymentStatus::AuthorizationAsync => common_enums::AttemptStatus::Authorized,
+            PproPaymentStatus::CapturePending => common_enums::AttemptStatus::Authorized,
+            PproPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Discarded => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Voided => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::RefundSettled => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Refunded => common_enums::AttemptStatus::Charged,
+            PproPaymentStatus::Rejected => common_enums::AttemptStatus::Failure,
+            PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: PproPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RepeatPaymentV2<T> for Ppro<T>
@@ -199,7 +417,7 @@ macros::macro_connector_implementation!(
             let agr_id = req.request.connector_mandate_id().ok_or(
                 IntegrationError::MissingRequiredField {
                     field_name: "mandate_reference.connector_mandate_id",
-                context: Default::default()
+                    context: Default::default(),
                 },
             )?;
             Ok(format!(
@@ -282,6 +500,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             mandate_reference: None,
             response_headers: None,
             amount_captured: None,
+            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,

@@ -1,5 +1,100 @@
 pub mod transformers;
 
+// Status instrumentation mirrors the existing response transformers.
+// Source is transaction_approved; context is request.is_auto_capture().
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payconex<T>,
+    flow: Authorize,
+    source: bool,
+    context: bool,
+    mapping_status: |status, ctx| { transformers::map_payment_status(true, status, ctx) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PayconexPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_approved) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
+}
+
+// Source is (found, transaction_approved); context is request.is_auto_capture().
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payconex<T>,
+    flow: PSync,
+    source: (bool, bool),
+    context: bool,
+    mapping_status: |status, ctx| { transformers::map_payment_status(status.0, status.1, ctx) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PayconexSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.found, response.transaction_approved)) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
+}
+
+// Source is transaction_approved; required transaction IDs remain TryFrom validation.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payconex<T>,
+    flow: Capture,
+    source: bool,
+    mapping_status: |status| { if status {
+            common_enums::AttemptStatus::Charged
+        } else {
+            common_enums::AttemptStatus::CaptureFailed
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PayconexCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_approved) },
+    },
+}
+
+// Source is transaction_approved; required transaction IDs remain TryFrom validation.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payconex<T>,
+    flow: Void,
+    source: bool,
+    mapping_status: |status| { if status {
+            common_enums::AttemptStatus::Voided
+        } else {
+            common_enums::AttemptStatus::VoidFailed
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: PayconexVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_approved) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payconex<T>,
+    flow: Refund,
+    source: bool,
+    mapping_status: |status| { transformers::map_refund_status(true, status) },
+    runtime: {
+        request: RefundsData,
+        response: PayconexRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_approved) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payconex<T>,
+    flow: RSync,
+    source: (bool, bool),
+    mapping_status: |status| { transformers::map_refund_status(status.0, status.1) },
+    runtime: {
+        request: RefundSyncData,
+        response: PayconexRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.found, response.transaction_approved)) },
+    },
+}
+
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;

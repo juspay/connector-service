@@ -118,33 +118,141 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====
 
+// Authorize: mirrors the TryFrom exactly. Approved → PA: Authorized, P/PAC: Charged,
+// R/VP/VR: Pending (connector misuse, not in macro arms — see note in the mapping body).
+// Declined → Failure (auto-capture) / AuthorizationFailed (manual), hence the ctx.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bambora<T>,
+    flow: Authorize,
+    source: Option<transformers::BamboraPaymentType>,
+    context: bool,
+    mapping_status: |status, manual_capture| { use transformers::BamboraPaymentType as Type;
+        use common_enums::AttemptStatus;
+        match status {
+            Some(Type::PreAuth) => AttemptStatus::Authorized,
+            Some(Type::Payment | Type::PreAuthCompletion) => AttemptStatus::Charged,
+            Some(Type::VoidPayment | Type::VoidRefund) => AttemptStatus::Pending,
+            Some(Type::Return) => AttemptStatus::Pending,
+            None if manual_capture => AttemptStatus::AuthorizationFailed,
+            None => AttemptStatus::Failure,
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: BamboraAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.approved == "1").then(|| response.payment_type.clone())) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method.is_some_and(|method| method != common_enums::CaptureMethod::Automatic)) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Bambora<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Bambora<T>
-{
+// Capture: mirrors the TryFrom exactly — it looks only at `approved` (any approved
+// completion → Charged, else Failure); `payment_type` is not consulted.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bambora<T>,
+    flow: Capture,
+    source: bool,
+    mapping_status: |status| { if status { common_enums::AttemptStatus::Charged } else { common_enums::AttemptStatus::Failure } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: BamboraCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.approved == "1") },
+    },
 }
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Bambora<T>
-{
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Bambora<T>
 {
 }
 
+// Void: mirrors the TryFrom exactly — it looks only at `approved` (approved → Voided,
+// else VoidFailed); `payment_type` is not consulted.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bambora<T>,
+    flow: Void,
+    source: bool,
+    mapping_status: |status| { if status { common_enums::AttemptStatus::Voided } else { common_enums::AttemptStatus::VoidFailed } },
+    runtime: {
+        request: PaymentVoidData,
+        response: BamboraVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.approved == "1") },
+    },
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Bambora<T>
+{
+}
+
+// PSync: mirrors the TryFrom exactly. Approved → PA: Authorized, P/PAC: Charged,
+// VP/VR: Voided, R: Pending. Declined → Failure (auto) / AuthorizationFailed (manual),
+// hence the ctx.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bambora<T>,
+    flow: PSync,
+    source: Option<transformers::BamboraPaymentType>,
+    context: bool,
+    mapping_status: |status, manual_capture| { use transformers::BamboraPaymentType as Type;
+        use common_enums::AttemptStatus;
+        match status {
+            Some(Type::PreAuth) => AttemptStatus::Authorized,
+            Some(Type::Payment | Type::PreAuthCompletion) => AttemptStatus::Charged,
+            Some(Type::VoidPayment | Type::VoidRefund) => AttemptStatus::Voided,
+            Some(Type::Return) => AttemptStatus::Pending,
+            None if manual_capture => AttemptStatus::AuthorizationFailed,
+            None => AttemptStatus::Failure,
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: BamboraPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok((response.approved == "1").then(|| response.payment_type.clone())) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method.is_some_and(|method| method != common_enums::CaptureMethod::Automatic)) },
+    },
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Bambora<T>
+{
+}
+
 // ===== REFUND FLOW TRAIT IMPLEMENTATIONS =====
 
+// Refund: mirrors the TryFrom exactly — it looks only at `approved` (approved → Success,
+// else Failure).
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bambora<T>,
+    flow: Refund,
+    source: bool,
+    mapping_status: |status| { if status { common_enums::RefundStatus::Success } else { common_enums::RefundStatus::Failure } },
+    runtime: {
+        request: RefundsData,
+        response: BamboraRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.approved == "1") },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Bambora<T>
 {
 }
 
+// RSync: mirrors the TryFrom exactly — it looks only at `approved` (approved → Success,
+// else Failure).
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Bambora<T>,
+    flow: RSync,
+    source: bool,
+    mapping_status: |status| { if status { common_enums::RefundStatus::Success } else { common_enums::RefundStatus::Failure } },
+    runtime: {
+        request: RefundSyncData,
+        response: BamboraRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.approved == "1") },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Bambora<T>
 {

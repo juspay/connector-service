@@ -322,7 +322,7 @@ pub struct TruelayerPaymentsResponseData {
     id: String,
     user: UserIdResponse,
     resource_token: Option<Secret<String>>,
-    status: TruelayerPaymentStatus,
+    pub status: TruelayerPaymentStatus,
     hosted_page: Option<HostedPageResponse>,
     failure_reason: Option<String>,
     failure_stage: Option<String>,
@@ -335,7 +335,7 @@ struct UserIdResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
-enum TruelayerPaymentStatus {
+pub enum TruelayerPaymentStatus {
     AuthorizationRequired,
     Settled,
     Failed,
@@ -392,7 +392,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 ..
             }) => {
                 let currency = item.router_data.request.currency;
-                let amount_in_minor = item.router_data.request.amount.amount;
+                let amount_in_minor = item.router_data.request.amount;
 
                 let hosted_page = HostedPage {
                     return_uri: item.router_data.request.router_return_url.clone().ok_or(
@@ -639,8 +639,8 @@ pub struct TruelayerPSyncResponse {
     amount_in_minor: MinorUnit,
     currency: Currency,
     user: Option<UserIdResponse>,
-    status: TruelayerPaymentStatus,
-    failure_reason: Option<String>,
+    pub status: TruelayerPaymentStatus,
+    pub failure_reason: Option<String>,
     failure_stage: Option<String>,
     payment_source: Option<TruelayerPaymentSource>,
     payment_method: Option<TruelayerPaymentMethod>,
@@ -1553,7 +1553,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .collect::<String>();
 
         Ok(Self {
-            amount_in_minor: item.router_data.request.refund_amount.amount,
+            amount_in_minor: item.router_data.request.minor_refund_amount,
             reference,
         })
     }
@@ -1601,7 +1601,7 @@ pub struct TruelayerRsyncResponseData {
     amount_in_minor: MinorUnit,
     currency: Currency,
     reference: String,
-    status: TruelayerRefundStatus,
+    pub status: TruelayerRefundStatus,
     created_at: Option<String>,
     failed_at: Option<String>,
     failure_reason: Option<String>,
@@ -1764,7 +1764,7 @@ fn get_address(billing: &domain_types::payment_address::Address) -> Option<Addre
     })
 }
 
-fn get_attempt_status(item: TruelayerPaymentStatus) -> AttemptStatus {
+pub(crate) fn get_attempt_status(item: TruelayerPaymentStatus) -> AttemptStatus {
     match item {
         TruelayerPaymentStatus::Authorized | TruelayerPaymentStatus::Executed => {
             AttemptStatus::Authorized
@@ -1778,7 +1778,7 @@ fn get_attempt_status(item: TruelayerPaymentStatus) -> AttemptStatus {
     }
 }
 
-fn get_refund_status(item: TruelayerRefundStatus) -> common_enums::RefundStatus {
+pub(crate) fn get_refund_status(item: TruelayerRefundStatus) -> common_enums::RefundStatus {
     match item {
         TruelayerRefundStatus::Pending | TruelayerRefundStatus::Authorized => {
             common_enums::RefundStatus::Pending

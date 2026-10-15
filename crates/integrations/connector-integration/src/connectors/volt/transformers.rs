@@ -48,7 +48,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-fn get_attempt_status(item: VoltPaymentStatus) -> AttemptStatus {
+pub(super) fn get_attempt_status(item: VoltPaymentStatus) -> AttemptStatus {
     match item {
         VoltPaymentStatus::Received | VoltPaymentStatus::Settled => AttemptStatus::Charged,
         VoltPaymentStatus::Completed
@@ -232,7 +232,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     }
                 }?;
 
-                let amount = item.router_data.request.amount.amount;
+                let amount = item.router_data.request.amount;
                 let internal_reference = item
                     .router_data
                     .resource_common_data
@@ -425,7 +425,7 @@ pub struct VoltPaymentsResponse {
     id: String,
     amount: MinorUnit,
     currency: common_enums::Currency,
-    status: VoltPaymentStatus,
+    pub status: VoltPaymentStatus,
     payment_initiation_flow: VoltPaymentInitiationFlow,
 }
 
@@ -536,7 +536,7 @@ pub enum VoltPaymentsResponseData {
 #[derive(Debug, Serialize, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VoltPsyncResponse {
-    status: VoltPaymentStatus,
+    pub status: VoltPaymentStatus,
     id: String,
     merchant_internal_reference: Option<String>,
     amount: MinorUnit,
@@ -685,7 +685,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         item: VoltRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.router_data.request.refund_amount.amount,
+            amount: item.router_data.request.minor_refund_amount,
             external_reference: item.router_data.request.refund_id.clone(),
         })
     }

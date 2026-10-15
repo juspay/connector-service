@@ -326,7 +326,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.amount.amount,
+                router_data.request.minor_amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -988,9 +988,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response_amount = if let Some(_amount_str) = response.amount {
             // For now, we'll use the request amount since convert_back has complex requirements
             // This will be improved in the full implementation
-            item.router_data.request.amount.amount
+            item.router_data.request.minor_amount
         } else {
-            item.router_data.request.amount.amount // Use request amount if response doesn't have it
+            item.router_data.request.minor_amount // Use request amount if response doesn't have it
         };
 
         // Create integrity object for response validation
@@ -1184,7 +1184,10 @@ impl TryFrom<ResponseRouterData<PayuSyncResponse, Self>>
 
 // Map PayU transaction status to internal AttemptStatus
 // Based on Haskell implementation analysis
-fn map_payu_sync_status(payu_status: &str, txn_detail: &PayuTransactionDetail) -> AttemptStatus {
+pub fn map_payu_sync_status(
+    payu_status: &str,
+    txn_detail: &PayuTransactionDetail,
+) -> AttemptStatus {
     match payu_status.to_lowercase().as_str() {
         "success" => {
             // For success, check if it's captured or just authorized
@@ -1306,7 +1309,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.amount_to_capture.amount,
+                router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1702,7 +1705,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector
             .amount_converter
             .convert(
-                router_data.request.refund_amount.amount,
+                router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1730,7 +1733,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 /// Techspec section 7.11: Refund Status Mapping
-fn map_payu_refund_status(status: &PayuStatusValue) -> RefundStatus {
+pub fn map_payu_refund_status(status: &PayuStatusValue) -> RefundStatus {
     match status {
         PayuStatusValue::IntStatus(0) => RefundStatus::Failure,
         PayuStatusValue::IntStatus(_) => RefundStatus::Pending,

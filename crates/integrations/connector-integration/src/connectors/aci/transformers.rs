@@ -1065,7 +1065,7 @@ fn get_transaction_details<
         .connector
         .amount_converter
         .convert(
-            item.router_data.request.amount.amount,
+            item.router_data.request.minor_amount,
             item.router_data.request.currency,
         )
         .change_context(IntegrationError::AmountConversionFailed {
@@ -1278,6 +1278,16 @@ impl FromStr for AciPaymentStatus {
     }
 }
 
+impl AciPaymentsResponse {
+    pub fn flow_status(&self) -> Result<AciPaymentStatus, error_stack::Report<ConnectorError>> {
+        if self.redirect.is_some() {
+            Ok(AciPaymentStatus::RedirectShopper)
+        } else {
+            AciPaymentStatus::from_str(&self.result.code)
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AciPaymentsResponse {
@@ -1465,7 +1475,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount_to_capture.amount,
+                item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1543,6 +1553,12 @@ impl FromStr for AciStatus {
             )
             .attach_printable(s.to_owned()))
         }
+    }
+}
+
+impl AciCaptureResponse {
+    pub fn flow_status(&self) -> Result<AciStatus, error_stack::Report<ConnectorError>> {
+        AciStatus::from_str(&self.result.code)
     }
 }
 
@@ -1668,6 +1684,12 @@ impl<F, T> TryFrom<ResponseRouterData<AciVoidResponse, Self>>
     }
 }
 
+impl AciVoidResponse {
+    pub fn flow_status(&self) -> Result<AciStatus, error_stack::Report<ConnectorError>> {
+        AciStatus::from_str(&self.result.code)
+    }
+}
+
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AciRefundRequest {
@@ -1693,7 +1715,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.refund_amount.amount,
+                item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1734,6 +1756,32 @@ impl FromStr for AciRefundStatus {
                 ConnectorError::unexpected_response_error_http_status_unknown(),
             )
             .attach_printable(s.to_owned()))
+        }
+    }
+}
+
+impl AciRefundResponse {
+    pub fn flow_status(&self) -> Result<AciRefundStatus, error_stack::Report<ConnectorError>> {
+        AciRefundStatus::from_str(&self.result.code)
+    }
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+pub enum AciMandateStatus {
+    Succeeded,
+    Failed,
+    #[default]
+    Pending,
+}
+
+impl AciMandateResponse {
+    pub fn flow_status(&self) -> AciMandateStatus {
+        if SUCCESSFUL_CODES.contains(&self.result.code.as_str()) {
+            AciMandateStatus::Succeeded
+        } else if FAILURE_CODES.contains(&self.result.code.as_str()) {
+            AciMandateStatus::Failed
+        } else {
+            AciMandateStatus::Pending
         }
     }
 }
@@ -1996,7 +2044,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.amount.amount,
+                item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
             .change_context(IntegrationError::AmountConversionFailed {

@@ -381,6 +381,43 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 {
 }
 
+// Flow declarations mirror the production transformer mappings, including
+// context-dependent and nonterminal outcomes.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hyperswitch<T>,
+    flow: domain_types::connector_flow::PSync,
+    source: hyperswitch::HyperswitchIntentStatus,
+    context: bool,
+    mapping_status: |status, ctx| { hyperswitch::map_intent_status(&status, ctx) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: HyperswitchPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok({
+            !matches!(
+                request.capture_method,
+                Some(common_enums::CaptureMethod::Manual)
+            )
+        }) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hyperswitch<T>,
+    flow: domain_types::connector_flow::RepeatPayment,
+    source: hyperswitch::HyperswitchIntentStatus,
+    context: bool,
+    mapping_status: |status, ctx| { hyperswitch::map_intent_status(&status, ctx) },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: HyperswitchRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.is_auto_capture()) },
+    },
+}
+
 macros::macro_connector_flow_status_impls!(
     connector: Hyperswitch,
     generic_type: T,

@@ -4,7 +4,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
 use common_utils::{
     errors::CustomResult,
     events,
@@ -410,9 +410,46 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Peachpayments<T>,
+    flow: Authorize,
+    source: responses::PeachpaymentsPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PeachpaymentsPaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            PeachpaymentsPaymentsResponse::Response(data) => data.transaction_result.clone(),
+            PeachpaymentsPaymentsResponse::WebhookResponse(webhook) => webhook
+                .transaction
+                .as_ref()
+                .map(|transaction| transaction.transaction_result.clone())
+                .unwrap_or(responses::PeachpaymentsPaymentStatus::Failed),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Peachpayments<T>
 {
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Peachpayments<T>,
+    flow: Void,
+    source: responses::PeachpaymentsPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentVoidData,
+        response: PeachpaymentsVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -420,9 +457,39 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Peachpayments<T>,
+    flow: Capture,
+    source: responses::PeachpaymentsPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PeachpaymentsCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Peachpayments<T>
 {
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Peachpayments<T>,
+    flow: Refund,
+    source: responses::PeachpaymentsRefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
+        request: RefundsData,
+        response: PeachpaymentsRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -430,9 +497,39 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Peachpayments<T>,
+    flow: RSync,
+    source: responses::PeachpaymentsRefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
+        request: RefundSyncData,
+        response: PeachpaymentsRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Peachpayments<T>
 {
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Peachpayments<T>,
+    flow: PSync,
+    source: responses::PeachpaymentsPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PeachpaymentsSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.transaction_result.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -454,6 +551,50 @@ macros::macro_connector_payout_implementation!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::SetupMandateV2<T> for Peachpayments<T>
 {
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Peachpayments<T>,
+    flow: SetupMandate,
+    source: responses::PeachpaymentsPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: PeachpaymentsSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            PeachpaymentsPaymentsResponse::Response(data) => data.transaction_result.clone(),
+            PeachpaymentsPaymentsResponse::WebhookResponse(webhook) => webhook
+                .transaction
+                .as_ref()
+                .map(|transaction| transaction.transaction_result.clone())
+                .unwrap_or(responses::PeachpaymentsPaymentStatus::Failed),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Peachpayments<T>,
+    flow: RepeatPayment,
+    source: responses::PeachpaymentsPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: PeachpaymentsRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            PeachpaymentsPaymentsResponse::Response(data) => data.transaction_result.clone(),
+            PeachpaymentsPaymentsResponse::WebhookResponse(webhook) => webhook
+                .transaction
+                .as_ref()
+                .map(|transaction| transaction.transaction_result.clone())
+                .unwrap_or(responses::PeachpaymentsPaymentStatus::Failed),
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -596,6 +737,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
+            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,

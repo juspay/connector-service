@@ -5,6 +5,7 @@ use std::sync::LazyLock;
 use super::macros;
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
+    RefundStatus,
 };
 use common_utils::{
     errors::CustomResult,
@@ -315,7 +316,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.amount.amount, req.request.currency)
+            .convert(req.request.minor_amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -656,7 +657,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.amount.amount, req.request.currency)
+            .convert(req.request.amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -785,7 +786,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.amount.amount, req.request.currency)
+            .convert(req.request.amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -981,6 +982,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
+            minor_amount_captured: None,
             amount_captured: None,
             error_reason: None,
             network_txn_id: None,
@@ -1060,7 +1062,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.refund_amount.amount, req.request.currency)
+            .convert(req.request.minor_refund_amount, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1170,7 +1172,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<Option<common_utils::request::ConnectorRequestData>, IntegrationError> {
         let converted_amount = self
             .amount_converter
-            .convert(req.request.amount_to_capture.amount, req.request.currency)
+            .convert(req.request.minor_amount_to_capture, req.request.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -1358,6 +1360,127 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
         Some(&RAZORPAY_SUPPORTED_PAYMENT_METHODS)
     }
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    connector: Razorpay<T>,
+    flow: Authorize,
+    source: bool,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |has_next_action, capture_method| { // Mirrors `get_authorization_razorpay_payment_status_from_action`.
+        if has_next_action {
+            AttemptStatus::AuthenticationPending
+        } else if capture_method == Some(common_enums::CaptureMethod::Manual) {
+            AttemptStatus::Authorized
+        } else {
+            AttemptStatus::Charged
+        } },
+    runtime: {
+        request: &PaymentsAuthorizeData<T>, _response| request.capture_method,
+        response: &razorpay::RazorpayResponse| match response {
+            razorpay::RazorpayResponse::PaymentResponse(payment_response) => {
+                payment_response.next.is_some()
+            }
+            razorpay::RazorpayResponse::PsyncResponse(_) => false,
+        },
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    connector: Razorpay<T>,
+    flow: PSync,
+    source: razorpay::RazorpayStatus,
+    context: (),
+    mapping_status: |status, _ctx| { // Mirrors `get_psync_razorpay_payment_status(false, status)`.
+        match status {
+            razorpay::RazorpayStatus::Created => AttemptStatus::Pending,
+            razorpay::RazorpayStatus::Authorized => AttemptStatus::Charged,
+            razorpay::RazorpayStatus::Captured => AttemptStatus::Charged,
+            razorpay::RazorpayStatus::Refunded => AttemptStatus::AutoRefunded,
+            razorpay::RazorpayStatus::Failed => AttemptStatus::Failure,
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: &RazorpayV2SyncResponse| match response {
+            RazorpayV2SyncResponse::PaymentResponse(payment) => {
+                razorpay::RazorpayStatus::from(payment.status.clone())
+            }
+            RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => collection
+                .items
+                .first()
+                .map(|payment| razorpay::RazorpayStatus::from(payment.status.clone()))
+                .unwrap_or(razorpay::RazorpayStatus::Created),
+        },
+        // The PSync `ForeignTryFrom` ignores the request's capture_method and hardcodes
+        // `is_manual_capture = false`, so no mapping context is threaded through here.,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+        context: |_resource_common_data, _request: &PaymentsSyncData, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    connector: Razorpay<T>,
+    flow: Capture,
+    source: razorpay::RazorpayPaymentStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
+            razorpay::RazorpayPaymentStatus::Captured => AttemptStatus::Charged,
+            razorpay::RazorpayPaymentStatus::Authorized => AttemptStatus::Authorized,
+            razorpay::RazorpayPaymentStatus::Failed => AttemptStatus::Failure,
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: &razorpay::RazorpayCaptureResponse| response.status.clone(),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+        context: |_resource_common_data, _request: &PaymentsCaptureData, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    connector: Razorpay<T>,
+    flow: Refund,
+    source: razorpay::RazorpayRefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
+            razorpay::RazorpayRefundStatus::Failed => RefundStatus::Failure,
+            razorpay::RazorpayRefundStatus::Pending | razorpay::RazorpayRefundStatus::Created => {
+                RefundStatus::Pending
+            }
+            razorpay::RazorpayRefundStatus::Processed => RefundStatus::Success,
+        } },
+    runtime: {
+        request: RefundsData,
+        response: &razorpay::RazorpayRefundResponse| response.status.clone(),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+        context: |_resource_common_data, _request: &RefundsData, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize],
+    connector: Razorpay<T>,
+    flow: RSync,
+    source: razorpay::RazorpayRefundStatus,
+    context: (),
+    mapping_status: |status, _ctx| { match status {
+            razorpay::RazorpayRefundStatus::Failed => RefundStatus::Failure,
+            razorpay::RazorpayRefundStatus::Pending | razorpay::RazorpayRefundStatus::Created => {
+                RefundStatus::Pending
+            }
+            razorpay::RazorpayRefundStatus::Processed => RefundStatus::Success,
+        } },
+    runtime: {
+        request: RefundSyncData,
+        response: &razorpay::RazorpayRefundResponse| response.status.clone(),
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(|) },
+        context: |_resource_common_data, _request: &RefundSyncData, _response, _http_status_code| { Ok(()) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

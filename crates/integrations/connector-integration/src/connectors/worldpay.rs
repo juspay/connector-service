@@ -8,11 +8,12 @@ use self::requests::{
     WorldpayRepeatPaymentRequest,
 };
 use self::response::{
-    WorldpayAuthorizeResponse, WorldpayCaptureResponse, WorldpayErrorResponse,
-    WorldpayIncrementalAuthResponse, WorldpayPostAuthenticateResponse,
+    EventType, PaymentOutcome, WorldpayAuthorizeResponse, WorldpayCaptureResponse,
+    WorldpayErrorResponse, WorldpayIncrementalAuthResponse, WorldpayPostAuthenticateResponse,
     WorldpayPreAuthenticateResponse, WorldpayRefundResponse, WorldpayRefundSyncResponse,
     WorldpayRepeatPaymentResponse, WorldpaySyncResponse, WorldpayVoidResponse,
 };
+use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{errors::CustomResult, events, ext_traits::BytesExt};
 use domain_types::{
     connector_flow::{
@@ -679,6 +680,168 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: Authorize,
+    source: PaymentOutcome,
+    context: common_utils::types::MinorUnit,
+    mapping_status: |status, amount| { if amount == common_utils::types::MinorUnit::zero()
+            && status == PaymentOutcome::Authorized
+        {
+            AttemptStatus::Charged
+        } else {
+            AttemptStatus::from(status)
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: WorldpayAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.minor_amount) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: PSync,
+    source: EventType,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(&status) },
+    runtime: {
+        request: PaymentsSyncData,
+        response: WorldpaySyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.last_event.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: Capture,
+    source: PaymentOutcome,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: WorldpayCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: Void,
+    source: PaymentOutcome,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentVoidData,
+        response: WorldpayVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: Refund,
+    source: PaymentOutcome,
+    context: (),
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
+        request: RefundsData,
+        response: WorldpayRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: RSync,
+    source: EventType,
+    context: (),
+    mapping_status: |status, _ctx| { RefundStatus::from(status) },
+    runtime: {
+        request: RefundSyncData,
+        response: WorldpayRefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.last_event.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: PreAuthenticate,
+    source: PaymentOutcome,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsPreAuthenticateData<T>,
+        response: WorldpayPreAuthenticateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: PostAuthenticate,
+    source: PaymentOutcome,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsPostAuthenticateData<T>,
+        response: WorldpayPostAuthenticateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: RepeatPayment,
+    source: PaymentOutcome,
+    context: common_utils::types::MinorUnit,
+    mapping_status: |status, amount| { if amount == common_utils::types::MinorUnit::zero()
+            && status == PaymentOutcome::Authorized
+        {
+            AttemptStatus::Charged
+        } else {
+            AttemptStatus::from(status)
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: WorldpayRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.minor_amount) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Worldpay<T>,
+    flow: IncrementalAuthorization,
+    source: PaymentOutcome,
+    context: (),
+    mapping_status: |status, _ctx| { AttemptStatus::from(status) },
+    runtime: {
+        request: PaymentsIncrementalAuthorizationData,
+        response: WorldpayIncrementalAuthResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.outcome.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
 
 macros::macro_connector_flow_status_impls!(
     connector: Worldpay,

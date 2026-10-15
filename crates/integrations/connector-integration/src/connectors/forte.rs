@@ -54,25 +54,145 @@ macros::macro_connector_payout_implementation!(
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Forte<T>,
+    flow: Authorize,
+    source: transformers::FortePaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FortePaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            transformers::FortePaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::FortePaymentStatus::Complete => common_enums::AttemptStatus::Charged,
+            transformers::FortePaymentStatus::Ready => common_enums::AttemptStatus::Pending,
+            transformers::FortePaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::FortePaymentStatus::Settled => common_enums::AttemptStatus::Charged,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: FortePaymentsResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Forte<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Forte<T>,
+    flow: PSync,
+    source: transformers::FortePaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FortePaymentStatus::Settled => common_enums::AttemptStatus::Charged,
+            transformers::FortePaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+            transformers::FortePaymentStatus::Complete => common_enums::AttemptStatus::Charged,
+            transformers::FortePaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            transformers::FortePaymentStatus::Ready => common_enums::AttemptStatus::Pending,
+            transformers::FortePaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: FortePaymentsSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Forte<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Forte<T>,
+    flow: Void,
+    source: transformers::FortePaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FortePaymentStatus::Voided => common_enums::AttemptStatus::Voided,
+            transformers::FortePaymentStatus::Failed => common_enums::AttemptStatus::VoidFailed,
+            transformers::FortePaymentStatus::Complete => common_enums::AttemptStatus::VoidFailed,
+            transformers::FortePaymentStatus::Authorized => common_enums::AttemptStatus::VoidInitiated,
+            transformers::FortePaymentStatus::Ready => common_enums::AttemptStatus::Pending,
+            transformers::FortePaymentStatus::Settled => common_enums::AttemptStatus::VoidFailed,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: ForteCancelResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Forte<T>
 {
+}
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Forte<T>,
+    flow: RSync,
+    source: transformers::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::RefundStatus::Complete => common_enums::RefundStatus::Success,
+            transformers::RefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::RefundStatus::Ready => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: RefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Forte<T>
 {
 }
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Forte<T>,
+    flow: Refund,
+    source: transformers::RefundStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::RefundStatus::Complete => common_enums::RefundStatus::Success,
+            transformers::RefundStatus::Failed => common_enums::RefundStatus::Failure,
+            transformers::RefundStatus::Ready => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: RefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Forte<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Forte<T>,
+    flow: Capture,
+    source: transformers::FortePaymentStatus,
+    mapping_status: |status| {
+        match status {
+            transformers::FortePaymentStatus::Complete => common_enums::AttemptStatus::Charged,
+            transformers::FortePaymentStatus::Failed => common_enums::AttemptStatus::CaptureFailed,
+            transformers::FortePaymentStatus::Authorized => common_enums::AttemptStatus::Pending,
+            transformers::FortePaymentStatus::Ready => common_enums::AttemptStatus::Pending,
+            transformers::FortePaymentStatus::Voided => common_enums::AttemptStatus::CaptureFailed,
+            transformers::FortePaymentStatus::Settled => common_enums::AttemptStatus::Charged,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: ForteCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Forte<T>

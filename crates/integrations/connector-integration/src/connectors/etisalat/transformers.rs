@@ -245,11 +245,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount.amount, request.currency)
+            .convert(request.minor_amount, request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: utils::amount_conversion_ctx(
                     "authorize",
-                    &request.amount.amount,
+                    &request.minor_amount,
                     &request.currency,
                 ),
             })?;
@@ -346,16 +346,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount_to_capture.amount, request.currency)
+            .convert(request.minor_amount_to_capture, request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: utils::amount_conversion_ctx(
                     "capture",
-                    &request.amount_to_capture.amount,
+                    &request.minor_amount_to_capture,
                     &request.currency,
                 ),
             })?;
 
-        // `amount_capturable` is None on this path (domain_types hardcodes it);
+        // `minor_amount_capturable` is None on this path (domain_types hardcodes it);
         // derive partial vs full from the authorized amount in resource_common_data.amount.
         // Partial captures keep the residual balance (RVS:N). Full captures release it (RVS:Y).
         let authorized = item
@@ -365,7 +365,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_ref()
             .map(|m| m.amount);
         let is_partial = match authorized {
-            Some(auth_amount) => request.amount_to_capture.amount < auth_amount,
+            Some(auth_amount) => request.minor_amount_to_capture < auth_amount,
             None => false,
         };
         let transaction_hint = if is_partial {
@@ -490,11 +490,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.refund_amount.amount, request.currency)
+            .convert(request.minor_refund_amount, request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: utils::amount_conversion_ctx(
                     "refund",
-                    &request.refund_amount.amount,
+                    &request.minor_refund_amount,
                     &request.currency,
                 ),
             })?;
@@ -619,11 +619,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request.amount.amount, request.currency)
+            .convert(request.minor_amount, request.currency)
             .change_context(IntegrationError::AmountConversionFailed {
                 context: utils::amount_conversion_ctx(
                     "repeat_payment",
-                    &request.amount.amount,
+                    &request.minor_amount,
                     &request.currency,
                 ),
             })?;
@@ -700,6 +700,33 @@ pub struct EtisalatTransactionBody {
 pub struct EtisalatResponse {
     #[serde(rename = "Transaction")]
     pub transaction: EtisalatTransactionBody,
+}
+
+/// Typed verdict of an Etisalat `Transaction.ResponseCode`, used as the
+/// `source` of the `impl_flow_status_mapping!`/`impl_refund_flow_status_mapping!`
+/// declarations. `response_code` stays a `String` on the wire struct (unknown
+/// codes must still deserialize), so the raw code is parsed into this enum at
+/// the trust boundary instead of being string-matched inside the macro bodies:
+/// `"0"` (SUCCESS_RESPONSE_CODE) is a success verdict, the codes in
+/// PENDING_RESPONSE_CODES are still in flight, and anything else is a
+/// flow-specific failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EtisalatResponseVerdict {
+    Success,
+    Pending,
+    Failure,
+}
+
+impl From<&EtisalatTransactionBody> for EtisalatResponseVerdict {
+    fn from(body: &EtisalatTransactionBody) -> Self {
+        if body.is_success() {
+            Self::Success
+        } else if body.is_pending() {
+            Self::Pending
+        } else {
+            Self::Failure
+        }
+    }
 }
 
 impl EtisalatTransactionBody {
@@ -847,7 +874,7 @@ impl TryFrom<ResponseRouterData<EtisalatResponse, Self>>
     fn try_from(item: ResponseRouterData<EtisalatResponse, Self>) -> Result<Self, Self::Error> {
         let body = item.response.transaction;
 
-        // `amount_capturable` is None on the Capture path; derive partial/full
+        // `minor_amount_capturable` is None on the Capture path; derive partial/full
         // from the authorized amount in resource_common_data.amount instead.
         let authorized = item
             .router_data
@@ -856,7 +883,7 @@ impl TryFrom<ResponseRouterData<EtisalatResponse, Self>>
             .as_ref()
             .map(|m| m.amount);
         let is_partial = match authorized {
-            Some(auth_amount) => item.router_data.request.amount_to_capture.amount < auth_amount,
+            Some(auth_amount) => item.router_data.request.minor_amount_to_capture < auth_amount,
             None => false,
         };
         let success_status = if is_partial {

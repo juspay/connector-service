@@ -3,7 +3,10 @@ pub mod transformers;
 use std::{fmt::Debug, sync::LazyLock};
 
 use base64::Engine;
-use common_enums::{enums, CaptureMethod, CurrencyUnit, PaymentMethod, PaymentMethodType};
+use common_enums::{
+    enums, AttemptStatus, CaptureMethod, CurrencyUnit, PaymentMethod, PaymentMethodType,
+    RefundStatus,
+};
 use common_utils::{
     errors::CustomResult, events, ext_traits::ByteSliceExt, types::StringMajorUnit,
 };
@@ -40,11 +43,11 @@ use serde::Serialize;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use transformers::{
-    is_netbanking_redirect_flow, is_upi_collect_flow, is_wallet_redirect_flow, PayuAuthType,
-    PayuCaptureRequest, PayuCaptureResponse, PayuPaymentRequest, PayuPaymentResponse,
+    self as payu, is_netbanking_redirect_flow, is_upi_collect_flow, is_wallet_redirect_flow,
+    PayuAuthType, PayuCaptureRequest, PayuCaptureResponse, PayuPaymentRequest, PayuPaymentResponse,
     PayuRefundRequest, PayuRefundResponse, PayuRefundSyncRequest, PayuRefundSyncResponse,
-    PayuSessionTokenRequest, PayuSessionTokenResponse, PayuSyncRequest, PayuSyncResponse,
-    PayuVoidRequest, PayuVoidResponse,
+    PayuSessionTokenRequest, PayuSessionTokenResponse, PayuStatusValue, PayuSyncRequest,
+    PayuSyncResponse, PayuVoidRequest, PayuVoidResponse,
 };
 
 use super::macros;
@@ -908,6 +911,173 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
         Some(&PAYU_SUPPORTED_PAYMENT_METHODS)
     }
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payu<T>,
+    flow: Authorize,
+    source: (bool, Option<PayuStatusValue>, Option<String>),
+    context: (),
+    mapping_status: |response, _ctx| { // Mirrors the Authorize TryFrom: an `error` field forces Failure; `IntStatus(1)`
+        // is a UPI-intent redirect (AuthenticationPending); `"success"` unwraps the result
+        // status; anything else is Failure.
+        if response.0 {
+            AttemptStatus::Failure
+        } else {
+            match response.1 {
+                Some(PayuStatusValue::IntStatus(1)) => AttemptStatus::AuthenticationPending,
+                Some(PayuStatusValue::StringStatus(ref s)) if s == "success" => response
+                    .2
+                    .as_deref()
+                    .map(|result_status| match result_status {
+                        "pending" => AttemptStatus::AuthenticationPending,
+                        "success" => AttemptStatus::Charged,
+                        _ => AttemptStatus::Failure,
+                    })
+                    .unwrap_or(AttemptStatus::AuthenticationPending),
+                _ => AttemptStatus::Failure,
+            }
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: PayuPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            // Shed the status inputs into a clone-able tuple: `PayuPaymentResponse` is
+            // intentionally not Clone, so it cannot be used as the source value.
+            (
+                response.error.is_some(),
+                response.status.clone(),
+                response.result.as_ref().map(|result| result.status.clone()),
+            )
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payu<T>,
+    flow: PSync,
+    source: (),
+    context: AttemptStatus,
+    mapping_status: |_source, status| { status },
+    runtime: {
+        request: PaymentsSyncData,
+        response: PayuSyncResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            // Shed the mapped status into the context: `PayuSyncResponse` is not Clone.
+            match (response.status, response.transaction_details.as_ref()) {
+                (Some(1), Some(transaction_details)) => transaction_details
+                    .values()
+                    .next()
+                    .map(|txn_detail| {
+                        payu::map_payu_sync_status(&txn_detail.status, txn_detail)
+                    })
+                    .unwrap_or(AttemptStatus::Failure),
+                _ => AttemptStatus::Failure,
+            }
+        }) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payu<T>,
+    flow: Capture,
+    source: Option<payu::PayuStatusValue>,
+    context: (),
+    mapping_status: |status, _ctx| { // Per the capture TryFrom: success → Charged, everything else → CaptureFailed.
+        match status {
+            Some(PayuStatusValue::StringStatus(ref s)) if s == "success" => AttemptStatus::Charged,
+            _ => AttemptStatus::CaptureFailed,
+        } },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: PayuCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payu<T>,
+    flow: Void,
+    source: Option<payu::PayuStatusValue>,
+    context: (),
+    mapping_status: |status, _ctx| { // Mirrors the void TryFrom; the 2xx fallback for a missing/unknown status is
+        // reproduced here (the runtime mapper cannot observe the HTTP code, and the
+        // error branch (int 0 / error_code present) is covered by VoidFailed below).
+        match status {
+            Some(PayuStatusValue::StringStatus(ref s)) if s == "success" => AttemptStatus::Voided,
+            Some(PayuStatusValue::StringStatus(ref s))
+                if matches!(s.as_str(), "failure" | "failed" | "error") =>
+            {
+                AttemptStatus::VoidFailed
+            }
+            Some(PayuStatusValue::IntStatus(_)) => AttemptStatus::VoidFailed,
+            Some(PayuStatusValue::StringStatus(_)) => AttemptStatus::Voided,
+            None => AttemptStatus::Voided,
+        } },
+    runtime: {
+        request: PaymentVoidData,
+        response: PayuVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payu<T>,
+    flow: Refund,
+    source: Option<payu::PayuStatusValue>,
+    context: (),
+    mapping_status: |status, _ctx| { status
+            .as_ref()
+            .map(payu::map_payu_refund_status)
+            .unwrap_or(RefundStatus::Pending) },
+    runtime: {
+        request: RefundsData,
+        response: PayuRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
+
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Payu<T>,
+    flow: RSync,
+    source: (),
+    context: RefundStatus,
+    mapping_status: |_source, status| { status },
+    runtime: {
+        request: RefundSyncData,
+        response: PayuRefundSyncResponse,
+        source: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+        context: |_resource_common_data, _request, response, _http_status_code| { Ok({
+            // Shed the mapped status into the context: `PayuRefundSyncResponse` is not Clone.
+            let is_success = matches!(
+                &response.status,
+                Some(PayuStatusValue::IntStatus(n)) if *n != 0
+            );
+            match (is_success, response.transaction_details.as_ref()) {
+                (true, Some(transaction_details)) => transaction_details
+                    .values()
+                    .next()
+                    .map(|txn_detail| match txn_detail.status.to_lowercase().as_str() {
+                        "success" => RefundStatus::Success,
+                        "failure" | "failed" => RefundStatus::Failure,
+                        _ => RefundStatus::Pending,
+                    })
+                    .unwrap_or(RefundStatus::Pending),
+                _ => RefundStatus::Failure,
+            }
+        }) },
+    },
 }
 
 macros::macro_connector_flow_status_impls!(

@@ -174,7 +174,7 @@ pub struct PowertranzError {
 
 /// PowerTranz ISO response codes that indicate success
 /// Reference: Hyperswitch powertranz implementation
-const ISO_SUCCESS_CODES: [&str; 7] = [
+pub const ISO_SUCCESS_CODES: [&str; 7] = [
     "00",  // Approved or completed successfully
     "3D0", // 3D Secure authentication successful
     "3D1", // 3D Secure authentication attempted
@@ -195,7 +195,7 @@ pub struct PowertranzErrorResponse {
 /// Maps PowerTranz transaction type and approval status to payment status
 /// Transaction types:
 /// 1 = Auth, 2 = Sale, 3 = Capture, 4 = Void, 5 = Refund
-fn get_payment_status(
+pub fn get_payment_status(
     transaction_type: u8,
     approved: Option<bool>,
     iso_response_code: &str,
@@ -357,7 +357,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request_data.amount.amount, request_data.currency)
+            .convert(request_data.amount, request_data.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -436,7 +436,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request_data.amount_to_capture.amount, request_data.currency)
+            .convert(
+                common_utils::types::MinorUnit::new(request_data.amount_to_capture),
+                request_data.currency,
+            )
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -522,7 +525,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request_data.refund_amount.amount, request_data.currency)
+            .convert(
+                common_utils::types::MinorUnit::new(request_data.refund_amount),
+                request_data.currency,
+            )
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;
@@ -839,9 +845,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .amount_converter
             .convert(
                 request_data
-                    .amount
-                    .as_ref()
-                    .map(|money| money.amount)
+                    .minor_amount
                     .unwrap_or(common_utils::types::MinorUnit::new(0)),
                 request_data.currency,
             )
@@ -1038,7 +1042,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(request_data.amount.amount, request_data.currency)
+            .convert(request_data.minor_amount, request_data.currency)
             .change_context(IntegrationError::RequestEncodingFailed {
                 context: Default::default(),
             })?;

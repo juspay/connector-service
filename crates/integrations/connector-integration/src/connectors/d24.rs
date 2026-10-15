@@ -283,6 +283,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Body
 // AUTHORIZE — POST /v3/deposits (non-PCI deposit; WebPay "WP" and local bank
 // transfers "SE"/"COD"/"BM"/"STS"/"AF"/"BQL" (MX) and "IX"/"I"/"NU"/"ME" (BR))
 // =============================================================================
+domain_types::impl_connector_flow_allowed_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: D24<T>,
+    flow: Authorize,
+    statuses: [AuthenticationPending, Pending],
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: D24PaymentsResponse,
+        status: |_request, response| {
+            if response.redirect_url.is_some() {
+                common_enums::AttemptStatus::AuthenticationPending
+            } else {
+                common_enums::AttemptStatus::Pending
+            }
+        },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for D24<T>
 {
@@ -320,6 +337,36 @@ macros::macro_connector_implementation!(
 // =============================================================================
 // PSYNC — GET /v3/deposits/{deposit_id}
 // =============================================================================
+// Mirrors `impl From<D24DepositStatus> for AttemptStatus`: `Completed` is the
+// terminal charged state; `Declined` the terminal decline. `EarlyReleased`
+// deliberately stays `Pending` (it credits the merchant's balance ahead of
+// settlement while the customer has not yet paid), and an unrecognized status
+// degrades to `Pending` rather than failing the whole poll, so the deposit can
+// still settle on the next cycle.
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: D24<T>,
+    flow: PSync,
+    source: d24::D24DepositStatus,
+    mapping_status: |status| {
+        match status {
+            d24::D24DepositStatus::Completed => common_enums::AttemptStatus::Charged,
+            d24::D24DepositStatus::Declined => common_enums::AttemptStatus::Failure,
+            d24::D24DepositStatus::Pending => common_enums::AttemptStatus::Pending,
+            d24::D24DepositStatus::Created => common_enums::AttemptStatus::AuthenticationPending,
+            d24::D24DepositStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            d24::D24DepositStatus::Expired => common_enums::AttemptStatus::Expired,
+            d24::D24DepositStatus::EarlyReleased => common_enums::AttemptStatus::Pending,
+            d24::D24DepositStatus::ForReview => common_enums::AttemptStatus::Pending,
+            d24::D24DepositStatus::Unknown => common_enums::AttemptStatus::Pending,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: D24SyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for D24<T>
 {
@@ -388,6 +435,29 @@ macros::macro_connector_implementation!(
 // =============================================================================
 // REFUND — POST /v3/refunds
 // =============================================================================
+// Mirrors `From<D24RefundResult> for RefundStatus`: a synchronous SUCCESS result
+// settles the refund; REJECTED fails it; IN_PROGRESS (and an unannounced result)
+// is still in flight — the TryFrom maps an absent `refund_info` to the same
+// Pending default.
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: D24<T>,
+    flow: Refund,
+    source: d24::D24RefundResult,
+    mapping_status: |status| {
+        match status {
+            d24::D24RefundResult::Success => common_enums::RefundStatus::Success,
+            d24::D24RefundResult::Rejected => common_enums::RefundStatus::Failure,
+            d24::D24RefundResult::InProgress => common_enums::RefundStatus::Pending,
+            d24::D24RefundResult::Unknown => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: D24RefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.refund_info.as_ref().and_then(|info| info.result).unwrap_or(d24::D24RefundResult::InProgress)) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for D24<T>
 {
@@ -425,6 +495,33 @@ macros::macro_connector_implementation!(
 // =============================================================================
 // RSYNC — GET /v3/refunds/{refund_id}
 // =============================================================================
+// Mirrors `From<D24RefundSyncStatus> for RefundStatus`: COMPLETED settles the
+// refund; REJECTED and CANCELLED are terminal failures (a withdrawn refund is
+// `Failure`, not `TransactionFailure` — the underlying payment was fine);
+// INCORRECT_DETAILS waits on a human (`ManualReview`); PENDING, DELIVERED (handed
+// to the bank, can still bounce) and an unannounced status stay Pending.
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: D24<T>,
+    flow: RSync,
+    source: d24::D24RefundSyncStatus,
+    mapping_status: |status| {
+        match status {
+            d24::D24RefundSyncStatus::Completed => common_enums::RefundStatus::Success,
+            d24::D24RefundSyncStatus::Rejected => common_enums::RefundStatus::Failure,
+            d24::D24RefundSyncStatus::Cancelled => common_enums::RefundStatus::Failure,
+            d24::D24RefundSyncStatus::Pending => common_enums::RefundStatus::Pending,
+            d24::D24RefundSyncStatus::IncorrectDetails => common_enums::RefundStatus::ManualReview,
+            d24::D24RefundSyncStatus::Delivered => common_enums::RefundStatus::Pending,
+            d24::D24RefundSyncStatus::Unknown => common_enums::RefundStatus::Pending,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: D24RefundSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for D24<T>
 {

@@ -128,7 +128,7 @@ pub struct Shift4CreateCustomerRequest {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Shift4CreateCustomerResponse {
     /// Shift4 customer id (`cust_...`).
     pub id: Secret<String>,
@@ -934,7 +934,7 @@ impl<T: PaymentMethodDataTypes>
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let is_zero_amount = item.request.amount.amount == MinorUnit::new(0);
+        let is_zero_amount = item.request.minor_amount == MinorUnit::new(0);
         // Shift4 rejects a zero-amount charge that asks to be captured with
         // HTTP 400 `{"type":"invalid_request","message":"Zero amount charge cannot
         // be captured"}` (verified against api.shift4.com). A zero-amount charge is
@@ -1095,7 +1095,7 @@ impl<T: PaymentMethodDataTypes>
         //   cardholder's statement, so aliasing the descriptor onto it would
         //   silently change its meaning.
         Ok(Self {
-            amount: item.request.amount.amount,
+            amount: item.request.minor_amount,
             currency: item.request.currency,
             captured,
             description: item.resource_common_data.description.clone(),
@@ -1121,7 +1121,7 @@ impl<T: PaymentMethodDataTypes>
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Shift4PaymentsResponse {
     pub id: String,
@@ -1220,7 +1220,7 @@ fn get_shift4_attempt_status(response: &Shift4PaymentsResponse) -> AttemptStatus
 }
 
 /// The captured amount of a Shift4 charge, reported as `amount_captured` /
-/// `amount_captured` by every flow that reads a charge object (Authorize,
+/// `minor_amount_captured` by every flow that reads a charge object (Authorize,
 /// PSync, Capture, RepeatPayment, SetupMandate).
 ///
 /// Funds are captured only on a successful charge with `captured: true`, and the
@@ -1493,17 +1493,14 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsRespons
             })
         };
 
-        let amount_captured =
-            get_shift4_captured_amount(&item.response).map(|amount| common_utils::types::Money {
-                amount,
-                currency: item.router_data.request.currency,
-            });
+        let minor_amount_captured = get_shift4_captured_amount(&item.response);
 
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
-                amount_captured,
+                amount_captured: minor_amount_captured.map(MinorUnit::get_amount_as_i64),
+                minor_amount_captured,
                 // AVS / CVV / ANI results are reported on both the success and the
                 // decline path — a declined charge is precisely when the merchant
                 // needs to know the AVS or CVV verdict.
@@ -1553,17 +1550,14 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
             })
         };
 
-        let amount_captured =
-            get_shift4_captured_amount(&item.response).map(|amount| common_utils::types::Money {
-                amount,
-                currency: item.router_data.request.currency,
-            });
+        let minor_amount_captured = get_shift4_captured_amount(&item.response);
 
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
-                amount_captured,
+                amount_captured: minor_amount_captured.map(MinorUnit::get_amount_as_i64),
+                minor_amount_captured,
                 connector_response,
                 ..item.router_data.resource_common_data
             },
@@ -1590,7 +1584,7 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
         // 1000 authorization captured with 400 reads back `amount: 400`,
         // `amountRefunded: 0`), and the capture request carries no authorized
         // amount either (`PaymentsCaptureData` has none, and the gRPC capture
-        // leaves `amount_authorized` / `amount_capturable` unset). A
+        // leaves `minor_amount_authorized` / `minor_amount_capturable` unset). A
         // caller that knows the authorized amount can compare it with
         // `amount_to_capture` itself.
         //
@@ -1631,17 +1625,14 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
 
         // The charge `amount` is the captured amount after a capture, so a
         // partial capture of 400 reports 400 captured.
-        let amount_captured =
-            get_shift4_captured_amount(&item.response).map(|amount| common_utils::types::Money {
-                amount,
-                currency: item.router_data.request.currency,
-            });
+        let minor_amount_captured = get_shift4_captured_amount(&item.response);
 
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
-                amount_captured,
+                amount_captured: minor_amount_captured.map(MinorUnit::get_amount_as_i64),
+                minor_amount_captured,
                 connector_response,
                 ..item.router_data.resource_common_data
             },
@@ -1669,7 +1660,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             charge_id: item.request.connector_transaction_id.clone(),
-            amount: item.request.refund_amount.amount,
+            amount: item.request.minor_refund_amount,
         })
     }
 }
@@ -2050,7 +2041,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         }
 
         Ok(Self {
-            amount: request.amount_to_capture.amount,
+            amount: request.minor_amount_to_capture,
         })
     }
 }
@@ -2378,9 +2369,7 @@ impl<T: PaymentMethodDataTypes>
         // `subsequent_recurring`; every unscheduled use of the stored credential
         // is `merchant_initiated`.
         let transaction_type = match item.request.mit_category {
-            Some(
-                common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription,
-            )
+            Some(common_enums::MitCategory::Recurring)
             | Some(common_enums::MitCategory::Installment) => {
                 Shift4TransactionType::SubsequentRecurring
             }
@@ -2392,7 +2381,7 @@ impl<T: PaymentMethodDataTypes>
         // Same rule as Authorize: Shift4 rejects a captured zero-amount charge
         // ("Zero amount charge cannot be captured"), and no funds move on one.
         let captured =
-            item.request.amount.amount != MinorUnit::new(0) && item.request.is_auto_capture();
+            item.request.minor_amount != MinorUnit::new(0) && item.request.is_auto_capture();
 
         let is_payment_method_charge =
             matches!(source, Shift4RepeatPaymentSource::PaymentMethod { .. });
@@ -2401,7 +2390,7 @@ impl<T: PaymentMethodDataTypes>
         // (same reasoning as the Authorize builder): `billing_descriptor` and
         // Level 2 / Level 3 data have no field on `POST /charges`.
         Ok(Self {
-            amount: item.request.amount.amount,
+            amount: item.request.minor_amount,
             currency: item.request.currency,
             captured,
             description: item.resource_common_data.description.clone(),
@@ -2505,17 +2494,14 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4RepeatPaymentRe
             })
         };
 
-        let amount_captured =
-            get_shift4_captured_amount(&item.response).map(|amount| common_utils::types::Money {
-                amount,
-                currency: item.router_data.request.currency,
-            });
+        let minor_amount_captured = get_shift4_captured_amount(&item.response);
 
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
-                amount_captured,
+                amount_captured: minor_amount_captured.map(MinorUnit::get_amount_as_i64),
+                minor_amount_captured,
                 connector_response,
                 ..item.router_data.resource_common_data
             },
@@ -2583,7 +2569,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             line_items: vec![Shift4LineItem {
                 product: Shift4InlineProduct {
                     name: "Payment".to_string(),
-                    amount: router_data.request.amount.amount,
+                    amount: router_data.request.amount,
                     currency: router_data.request.currency,
                 },
                 quantity: 1,
@@ -2604,7 +2590,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 //
 // The `amount` field in the request is the INCREMENT amount (additional amount to
 // add to the existing authorization), not the new total. This matches CyberSource's
-// `additionalAmount` semantics and Prism's `PaymentsIncrementalAuthorizationData.amount.amount`.
+// `additionalAmount` semantics and Prism's `PaymentsIncrementalAuthorizationData.minor_amount`.
 // The response is the updated charge object, which mirrors `Shift4PaymentsResponse`.
 
 #[derive(Debug, Serialize)]
@@ -2642,7 +2628,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.router_data.request.amount.amount,
+            amount: item.router_data.request.minor_amount,
         })
     }
 }
@@ -2859,36 +2845,31 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // the caller must pass 0 explicitly if that's what they mean, so a
         // missing amount is always a client error rather than an implicit
         // zero-dollar auth.
-        let amount = item
-            .request
-            .amount
-            .as_ref()
-            .map(|amount| amount.amount)
-            .ok_or_else(|| {
-                error_stack::report!(IntegrationError::MissingRequiredField {
-                    field_name: "amount",
-                    context: IntegrationErrorContext {
-                        additional_context: Some(
-                            "Shift4 has no default charge amount: `POST /charges` requires an \
+        let amount = item.request.minor_amount.ok_or_else(|| {
+            error_stack::report!(IntegrationError::MissingRequiredField {
+                field_name: "amount",
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "Shift4 has no default charge amount: `POST /charges` requires an \
                          explicit `amount`, and `0` is not a stand-in for \"unset\" but a \
                          distinct instruction to run a card-on-file verification that stores \
                          the credential without moving funds. Defaulting a missing amount to \
                          `0` would silently turn a payment into a verification, so the setup \
                          is refused before anything reaches Shift4."
-                                .to_string(),
-                        ),
-                        suggested_action: Some(
-                            "Set the amount on the SetupRecurring request: the minor-unit amount \
+                            .to_string(),
+                    ),
+                    suggested_action: Some(
+                        "Set the amount on the SetupRecurring request: the minor-unit amount \
                          to charge while storing the credential, or `0` to store it with a \
                          zero-amount card-on-file verification."
-                                .to_string(),
-                        ),
-                        doc_url: Some(
-                            "https://dev.shift4.com/docs/api#create-a-new-charge".to_string(),
-                        ),
-                    },
-                })
-            })?;
+                            .to_string(),
+                    ),
+                    doc_url: Some(
+                        "https://dev.shift4.com/docs/api#create-a-new-charge".to_string(),
+                    ),
+                },
+            })
+        })?;
         let billing_details = item
             .resource_common_data
             .address
@@ -3034,12 +3015,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4SetupMandateRes
         // non-zero setup is sent captured, so it keeps the status Shift4 reports
         // for that charge (`Charged` on success).
         if status == AttemptStatus::Authorized
-            && item
-                .router_data
-                .request
-                .amount
-                .as_ref()
-                .is_some_and(|amount| amount.amount == MinorUnit::new(0))
+            && item.router_data.request.minor_amount == Some(MinorUnit::new(0))
         {
             status = AttemptStatus::Charged;
         }
@@ -3114,17 +3090,14 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4SetupMandateRes
         // A non-zero setup is sent captured, so its settled amount is reported
         // like any other captured charge's. A zero-amount verification is sent
         // uncaptured and reports none, although its status is `Charged`.
-        let amount_captured =
-            get_shift4_captured_amount(&item.response).map(|amount| common_utils::types::Money {
-                amount,
-                currency: item.router_data.request.currency,
-            });
+        let minor_amount_captured = get_shift4_captured_amount(&item.response);
 
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
-                amount_captured,
+                amount_captured: minor_amount_captured.map(MinorUnit::get_amount_as_i64),
+                minor_amount_captured,
                 connector_customer,
                 connector_response,
                 ..item.router_data.resource_common_data

@@ -54,26 +54,257 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Hipay<T>
 {
 }
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hipay<T>,
+    flow: Authorize,
+    source: hipay::HipayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            hipay::HipayPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            hipay::HipayPaymentStatus::Refused => common_enums::AttemptStatus::AuthorizationFailed,
+            hipay::HipayPaymentStatus::AuthenticationFailed => common_enums::AttemptStatus::AuthenticationFailed,
+            hipay::HipayPaymentStatus::Blocked => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Denied => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::AuthorizedAndPending => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            hipay::HipayPaymentStatus::CaptureRequested => common_enums::AttemptStatus::Authorizing,
+            hipay::HipayPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::PartialCharged,
+            hipay::HipayPaymentStatus::CaptureRefused => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::AwaitingTerminal => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthorizationCancellationRequested => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::ChallengeRequested => common_enums::AttemptStatus::AuthenticationPending,
+            hipay::HipayPaymentStatus::SoftDeclined => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::PendingPayment => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::ChargedBack => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Created => common_enums::AttemptStatus::Started,
+            hipay::HipayPaymentStatus::UnableToAuthenticate => common_enums::AttemptStatus::AuthenticationFailed,
+            hipay::HipayPaymentStatus::CouldNotAuthenticate => common_enums::AttemptStatus::AuthenticationFailed,
+            hipay::HipayPaymentStatus::CardholderAuthenticated => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthenticationAttempted => common_enums::AttemptStatus::AuthenticationPending,
+            hipay::HipayPaymentStatus::Collected => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::PartiallySettled => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::PartiallyCollected => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::Settled => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::AuthenticationRequested => common_enums::AttemptStatus::AuthenticationPending,
+            hipay::HipayPaymentStatus::Authenticated => common_enums::AttemptStatus::AuthenticationSuccessful,
+            hipay::HipayPaymentStatus::AcquirerNotFound => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::RiskAccepted => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthorizationRefused => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: HipayAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Hipay<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hipay<T>,
+    flow: PSync,
+    source: hipay::HipayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            hipay::HipayPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::Refused => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::AuthenticationFailed => common_enums::AttemptStatus::AuthenticationFailed,
+            hipay::HipayPaymentStatus::Blocked => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Denied => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::AuthorizedAndPending => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            hipay::HipayPaymentStatus::Authorized => common_enums::AttemptStatus::Authorized,
+            hipay::HipayPaymentStatus::CaptureRequested => common_enums::AttemptStatus::CaptureInitiated,
+            hipay::HipayPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::PartialCharged,
+            hipay::HipayPaymentStatus::CaptureRefused => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::AwaitingTerminal => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthorizationCancellationRequested => common_enums::AttemptStatus::VoidInitiated,
+            hipay::HipayPaymentStatus::ChallengeRequested => common_enums::AttemptStatus::AuthenticationPending,
+            hipay::HipayPaymentStatus::SoftDeclined => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::PendingPayment => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::ChargedBack => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Created => common_enums::AttemptStatus::Started,
+            hipay::HipayPaymentStatus::UnableToAuthenticate => common_enums::AttemptStatus::AuthenticationFailed,
+            hipay::HipayPaymentStatus::CouldNotAuthenticate => common_enums::AttemptStatus::AuthenticationFailed,
+            hipay::HipayPaymentStatus::CardholderAuthenticated => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthenticationAttempted => common_enums::AttemptStatus::AuthenticationPending,
+            hipay::HipayPaymentStatus::Collected => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::PartiallySettled => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::PartiallyCollected => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::Settled => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::AuthenticationRequested => common_enums::AttemptStatus::AuthenticationPending,
+            hipay::HipayPaymentStatus::Authenticated => common_enums::AttemptStatus::AuthenticationSuccessful,
+            hipay::HipayPaymentStatus::AcquirerNotFound => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::RiskAccepted => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthorizationRefused => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: PaymentsSyncData,
+        response: HipayPSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.flow_status()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Hipay<T>
 {
 }
 
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hipay<T>,
+    flow: Void,
+    source: hipay::HipayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            hipay::HipayPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
+            hipay::HipayPaymentStatus::Refused => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::AuthenticationFailed => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::Blocked => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Denied => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::AuthorizedAndPending => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Authorized => common_enums::AttemptStatus::VoidInitiated,
+            hipay::HipayPaymentStatus::CaptureRequested => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Captured => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::CaptureRefused => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AwaitingTerminal => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthorizationCancellationRequested => common_enums::AttemptStatus::VoidInitiated,
+            hipay::HipayPaymentStatus::ChallengeRequested => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::SoftDeclined => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::PendingPayment => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::ChargedBack => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Created => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::UnableToAuthenticate => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::CouldNotAuthenticate => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::CardholderAuthenticated => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthenticationAttempted => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Collected => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::PartiallySettled => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::PartiallyCollected => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::Settled => common_enums::AttemptStatus::VoidFailed,
+            hipay::HipayPaymentStatus::AuthenticationRequested => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Authenticated => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AcquirerNotFound => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::RiskAccepted => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthorizationRefused => common_enums::AttemptStatus::Failure,
+        }
+    },
+    runtime: {
+        request: PaymentVoidData,
+        response: HipayVoidResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentVoidV2 for Hipay<T>
 {
+}
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hipay<T>,
+    flow: RSync,
+    source: hipay::HipayRefundStatus,
+    mapping_status: |status| {
+        match status {
+            hipay::HipayRefundStatus::Refunded => common_enums::RefundStatus::Success,
+            hipay::HipayRefundStatus::RefundRefused => common_enums::RefundStatus::Failure,
+            hipay::HipayRefundStatus::RefundRequested => common_enums::RefundStatus::Pending,
+            hipay::HipayRefundStatus::PartiallyRefunded => common_enums::RefundStatus::Success,
+        }
+    },
+    runtime: {
+        request: RefundSyncData,
+        response: HipayRSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response.status {
+            25 => hipay::HipayRefundStatus::Refunded,
+            26 => hipay::HipayRefundStatus::PartiallyRefunded,
+            65 => hipay::HipayRefundStatus::RefundRefused,
+            _ => hipay::HipayRefundStatus::RefundRequested,
+        }) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundSyncV2 for Hipay<T>
 {
 }
+domain_types::impl_refund_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hipay<T>,
+    flow: Refund,
+    source: hipay::HipayRefundStatus,
+    mapping_status: |status| {
+        match status {
+            hipay::HipayRefundStatus::Refunded => common_enums::RefundStatus::Success,
+            hipay::HipayRefundStatus::RefundRefused => common_enums::RefundStatus::Failure,
+            hipay::HipayRefundStatus::RefundRequested => common_enums::RefundStatus::Pending,
+            hipay::HipayRefundStatus::PartiallyRefunded => common_enums::RefundStatus::Success,
+        }
+    },
+    runtime: {
+        request: RefundsData,
+        response: HipayRefundResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::RefundV2 for Hipay<T>
 {
+}
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Hipay<T>,
+    flow: Capture,
+    source: hipay::HipayPaymentStatus,
+    mapping_status: |status| {
+        match status {
+            hipay::HipayPaymentStatus::Captured => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::CaptureRefused => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::AuthenticationFailed => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::Blocked => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Denied => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::AuthorizedAndPending => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Refused => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::Expired => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Cancelled => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::Authorized => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::CaptureRequested => common_enums::AttemptStatus::CaptureInitiated,
+            hipay::HipayPaymentStatus::PartiallyCaptured => common_enums::AttemptStatus::PartialCharged,
+            hipay::HipayPaymentStatus::AwaitingTerminal => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthorizationCancellationRequested => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::ChallengeRequested => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::SoftDeclined => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::PendingPayment => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::ChargedBack => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::Created => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::UnableToAuthenticate => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::CouldNotAuthenticate => common_enums::AttemptStatus::CaptureFailed,
+            hipay::HipayPaymentStatus::CardholderAuthenticated => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthenticationAttempted => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Collected => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::PartiallySettled => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::PartiallyCollected => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::Settled => common_enums::AttemptStatus::Charged,
+            hipay::HipayPaymentStatus::AuthenticationRequested => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::Authenticated => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AcquirerNotFound => common_enums::AttemptStatus::Failure,
+            hipay::HipayPaymentStatus::RiskAccepted => common_enums::AttemptStatus::Pending,
+            hipay::HipayPaymentStatus::AuthorizationRefused => common_enums::AttemptStatus::CaptureFailed,
+        }
+    },
+    runtime: {
+        request: PaymentsCaptureData,
+        response: HipayCaptureResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(response.status.clone()) },
+    },
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Hipay<T>

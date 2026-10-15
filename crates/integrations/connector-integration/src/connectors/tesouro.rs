@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_enums::CurrencyUnit;
+use common_enums::{AttemptStatus, CurrencyUnit};
 use common_utils::{
     consts, errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit,
 };
@@ -400,6 +400,174 @@ crate::connectors::macros::macro_connector_payout_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize]
 );
+
+// ===== Flow status mappings =====
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tesouro<T>,
+    flow: Authorize,
+    // Outer Option: `None` when Tesouro returned a top-level GraphQL error envelope
+    // (a decline). Inner Option: `None` when the authorization response carries no
+    // `__typename` yet (pending).,
+    source: Option<Option<tesouro::AuthorizeTransactionResponseType>>,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |authorization_outcome, capture_method| { let auto_capture = !crate::utils::is_manual_capture(capture_method);
+        match authorization_outcome {
+            Some(Some(tesouro::AuthorizeTransactionResponseType::AuthorizationApproval)) => {
+                if auto_capture {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Authorized
+                }
+            }
+            Some(Some(tesouro::AuthorizeTransactionResponseType::AuthorizationDecline))
+            | None => {
+                if auto_capture {
+                    AttemptStatus::Failure
+                } else {
+                    AttemptStatus::AuthorizationFailed
+                }
+            }
+            Some(None) => AttemptStatus::Pending,
+        } },
+    runtime: {
+        request: PaymentsAuthorizeData<T>,
+        response: TesouroAuthorizeResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            tesouro::TesouroApiResponse::Success(success) => Some(
+                success
+                    .data
+                    .authorize_customer_initiated_transaction
+                    .authorization_response
+                    .as_ref()
+                    .and_then(|auth_response| auth_response.type_name.clone()),
+            ),
+            tesouro::TesouroApiResponse::Error(_) => None,
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tesouro<T>,
+    flow: RepeatPayment,
+    source: Option<Option<tesouro::AuthorizeTransactionResponseType>>,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |authorization_outcome, capture_method| { let auto_capture = !crate::utils::is_manual_capture(capture_method);
+        match authorization_outcome {
+            Some(Some(tesouro::AuthorizeTransactionResponseType::AuthorizationApproval)) => {
+                if auto_capture {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Authorized
+                }
+            }
+            Some(Some(tesouro::AuthorizeTransactionResponseType::AuthorizationDecline))
+            | None => {
+                if auto_capture {
+                    AttemptStatus::Failure
+                } else {
+                    AttemptStatus::AuthorizationFailed
+                }
+            }
+            Some(None) => AttemptStatus::Pending,
+        } },
+    runtime: {
+        request: RepeatPaymentData<T>,
+        response: TesouroRepeatPaymentResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            tesouro::TesouroApiResponse::Success(success) => Some(
+                success
+                    .data
+                    .authorize_customer_initiated_transaction
+                    .authorization_response
+                    .as_ref()
+                    .and_then(|auth_response| auth_response.type_name.clone()),
+            ),
+            tesouro::TesouroApiResponse::Error(_) => None,
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tesouro<T>,
+    flow: PSync,
+    source: Option<tesouro::TesouroSyncStatus>,
+    context: Option<common_enums::CaptureMethod>,
+    mapping_status: |status, capture_method| { let auto_capture = !crate::utils::is_manual_capture(capture_method);
+        match status {
+            Some(tesouro::TesouroSyncStatus::AcceptedSale)
+            | Some(tesouro::TesouroSyncStatus::ApprovedCapture)
+            | Some(tesouro::TesouroSyncStatus::Sale) => AttemptStatus::Charged,
+            Some(tesouro::TesouroSyncStatus::ApprovedAuthorization) => {
+                if auto_capture {
+                    AttemptStatus::Charged
+                } else {
+                    AttemptStatus::Authorized
+                }
+            }
+            Some(tesouro::TesouroSyncStatus::DeclinedAuthorization) => {
+                if auto_capture {
+                    AttemptStatus::Failure
+                } else {
+                    AttemptStatus::AuthorizationFailed
+                }
+            }
+            Some(tesouro::TesouroSyncStatus::ApprovedReversal) => AttemptStatus::Voided,
+            Some(tesouro::TesouroSyncStatus::DeclinedCapture) => AttemptStatus::CaptureFailed,
+            Some(tesouro::TesouroSyncStatus::DeclinedReversal) => AttemptStatus::VoidFailed,
+            // The handle_response body folds `GenericPaymentTransaction` and unknown
+            // `__typename`s (and a top-level GraphQL error) into the previous attempt
+            // status, which is unavailable here; Pending is the closest safe default.
+            Some(tesouro::TesouroSyncStatus::GenericPaymentTransaction)
+            | Some(tesouro::TesouroSyncStatus::Unknown)
+            | None => AttemptStatus::Pending,
+            Some(tesouro::TesouroSyncStatus::Authorization) => AttemptStatus::Authorizing,
+            Some(tesouro::TesouroSyncStatus::Capture) => AttemptStatus::CaptureInitiated,
+            Some(tesouro::TesouroSyncStatus::Reversal) => AttemptStatus::VoidInitiated,
+        } },
+    runtime: {
+        request: PaymentsSyncData,
+        response: TesouroSyncResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            tesouro::TesouroApiResponse::Success(success) => {
+                Some(success.data.payment_transaction.typename.clone())
+            }
+            tesouro::TesouroApiResponse::Error(_) => None,
+        }) },
+        context: |_resource_common_data, request, _response, _http_status_code| { Ok(request.capture_method) },
+    },
+}
+
+domain_types::impl_flow_status_mapping! {
+    generics: [T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    connector: Tesouro<T>,
+    flow: SetupMandate,
+    source: bool,
+    context: (),
+    mapping_status: |succeeded, _ctx| { if succeeded {
+            AttemptStatus::Charged
+        } else {
+            AttemptStatus::Failure
+        } },
+    runtime: {
+        request: SetupMandateRequestData<T>,
+        response: TesouroSetupMandateResponse,
+        source: |_resource_common_data, _request, response, _http_status_code| { Ok(match response {
+            tesouro::TesouroApiResponse::Success(success) => success
+                .data
+                .verify_account
+                .verify_account_response
+                .is_some(),
+            tesouro::TesouroApiResponse::Error(_) => false,
+        }) },
+        context: |_resource_common_data, _request, _response, _http_status_code| { Ok(()) },
+    },
+}
 
 // ===== Remaining flows: not implemented =====
 crate::connectors::macros::macro_connector_flow_status_impls!(
