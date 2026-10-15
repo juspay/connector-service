@@ -230,7 +230,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         })?;
 
         // A compact UUIDv7 fits Betterpayment's 35-character order_id limit.
-        let order_id = uuid::Uuid::now_v7().simple().to_string();
+        let order_id = common_utils::fp_utils::generate_uuid_v7().replace('-', "");
 
         match &request.payment_method_data {
             PaymentMethodData::Wallet(WalletData::Wero(_)) => {
@@ -358,31 +358,13 @@ pub struct BetterpaymentAuthorizeResponse {
     pub action_data: Option<BetterpaymentActionData>,
 }
 
-impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            BetterpaymentAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BetterpaymentAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BetterpaymentAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<BetterpaymentAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response: connector_response,
@@ -475,21 +457,13 @@ pub struct BetterpaymentPSyncResponse {
     pub message: Option<String>,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BetterpaymentPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<BetterpaymentPSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BetterpaymentPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<BetterpaymentPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response: connector_response,
@@ -653,13 +627,8 @@ impl BetterpaymentRSyncResponse {
     }
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            BetterpaymentRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<BetterpaymentRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -680,21 +649,13 @@ impl
     }
 }
 
-impl<F, Req>
-    TryFrom<
-        ResponseRouterData<
-            BetterpaymentRefundResponse,
-            RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>,
-        >,
-    > for RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>
+impl<F, Req> TryFrom<ResponseRouterData<BetterpaymentRefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            BetterpaymentRefundResponse,
-            RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<BetterpaymentRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response: refund,
