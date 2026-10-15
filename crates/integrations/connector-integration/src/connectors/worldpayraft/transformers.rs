@@ -3,6 +3,7 @@ use common_enums::{
     AttemptStatus, AuthorizationStatus, CardNetwork, FutureUsage, MitCategory, RefundStatus,
 };
 use common_utils::{
+    consts::NO_ERROR_MESSAGE,
     ext_traits::Encode,
     pii::SecretSerdeValue,
     types::{MinorUnit, Money, StringMajorUnit},
@@ -254,6 +255,19 @@ fn truncate_api_transaction_id(id: &str) -> String {
     id.chars().take(16).collect()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum WorldpayraftTransactionType {
+    Credit,
+    Debit,
+    Legacy,
+}
+
+impl WorldpayraftTransactionType {
+    pub(super) fn is_debit(self) -> bool {
+        self == Self::Debit
+    }
+}
+
 /// Parse a connector_transaction_id that encodes card type + auth trace numbers.
 ///
 /// New format: `"{prefix}|{AuthorizationNumber}|{RetrievalREFNumber}|{SystemTraceNumber}"`
@@ -262,18 +276,33 @@ fn truncate_api_transaction_id(id: &str) -> String {
 /// Legacy format (backwards compat, treated as credit):
 /// `"{AuthorizationNumber}|{RetrievalREFNumber}|{SystemTraceNumber}"`
 ///
-/// Returns `(is_debit, authorization_number, retrieval_ref_number, system_trace_number)`.
-pub(super) fn parse_connector_transaction_id(id: &str) -> (bool, &str, &str, &str) {
-    let mut iter = id.splitn(4, '|');
-    match (iter.next(), iter.next(), iter.next(), iter.next()) {
-        (Some(prefix), Some(auth_num), Some(retrieval_ref), Some(sys_trace)) => {
-            (prefix == TXN_TYPE_DEBIT, auth_num, retrieval_ref, sys_trace)
+/// Returns the transaction type and trace numbers, rejecting malformed IDs.
+pub(super) fn parse_connector_transaction_id(
+    id: &str,
+) -> Result<
+    (WorldpayraftTransactionType, &str, &str, &str),
+    error_stack::Report<errors::IntegrationError>,
+> {
+    let mut iter = id.split('|');
+    match (iter.next(), iter.next(), iter.next(), iter.next(), iter.next()) {
+        (Some(TXN_TYPE_CREDIT), Some(auth), Some(reference), Some(trace), None) => {
+            Ok((WorldpayraftTransactionType::Credit, auth, reference, trace))
         }
-        (Some(auth_num), Some(retrieval_ref), Some(sys_trace), None) => {
-            // Legacy format without prefix — treat as credit
-            (false, auth_num, retrieval_ref, sys_trace)
+        (Some(TXN_TYPE_DEBIT), Some(auth), Some(reference), Some(trace), None) => {
+            Ok((WorldpayraftTransactionType::Debit, auth, reference, trace))
         }
-        _ => (false, id, "", ""),
+        (Some(auth), Some(reference), Some(trace), None, None) => {
+            Ok((WorldpayraftTransactionType::Legacy, auth, reference, trace))
+        }
+        _ => Err(errors::IntegrationError::InvalidDataFormat {
+            field_name: "connector_transaction_id",
+            context: errors::IntegrationErrorContext {
+                additional_context: Some(
+                    "Expected C|AuthorizationNumber|RetrievalREFNumber|SystemTraceNumber or D|AuthorizationNumber|RetrievalREFNumber|SystemTraceNumber; legacy IDs omit the C| prefix".to_string(),
+                ),
+                ..Default::default()
+            },
+        }.into()),
     }
 }
 
@@ -1204,8 +1233,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card = CardFields::try_from(&request.payment_method_data)?;
         let is_debit = card.is_debit;
         let is_auto_capture = request.is_auto_capture();
-        if request.request_incremental_authorization == Some(true) && (is_debit || is_auto_capture)
-        {
+        let request_incremental_authorization =
+            request.request_incremental_authorization == Some(true) && !is_debit;
+        if request_incremental_authorization && is_auto_capture {
             return Err(errors::IntegrationError::NotSupported {
                 message: "Incremental authorization requires a credit card with manual capture"
                     .to_string(),
@@ -1262,7 +1292,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         } else {
             WorldpayraftBrandSpecificData::default()
         };
-        if request.request_incremental_authorization == Some(true) {
+        if request_incremental_authorization {
             pos.proc_flags
                 .get_or_insert_with(WorldpayraftProcFlags::default)
                 .estimated_auth = Some(WorldpayraftFlag::Yes);
@@ -1306,10 +1336,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .as_str();
         let inner = WorldpayraftCardAuthInner {
             misc_amounts_balances: WorldpayraftAmounts { transaction_amount },
-            account_codes_and_data: (request.request_incremental_authorization == Some(true))
-                .then_some(WorldpayraftCreditAccountData {
+            account_codes_and_data: request_incremental_authorization.then_some(
+                WorldpayraftCreditAccountData {
                     from_account_selected: WorldpayraftAccountType::CreditCard,
-                }),
+                },
+            ),
             card_info: WorldpayraftCardInfo {
                 pan: Some(card.pan),
                 expiration_date: Some(card.expiration_date),
@@ -1425,7 +1456,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .request
                     .request_incremental_authorization
                     .filter(|requested| *requested)
-                    .map(|_| !is_debit && status == AttemptStatus::Authorized),
+                    // Follow-up card data is unavailable until the shared contract is wired up.
+                    .map(|_| false),
                 splits: None,
                 status_code: item.http_code,
                 payment_account_reference: None,
@@ -1559,8 +1591,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?;
 
         let connector_txn_id = router_data.request.get_connector_transaction_id()?;
-        let (is_debit, auth_num, retrieval_ref, sys_trace) =
-            parse_connector_transaction_id(&connector_txn_id);
+        let (transaction_type, auth_num, retrieval_ref, sys_trace) =
+            parse_connector_transaction_id(&connector_txn_id)?;
+        let is_debit = transaction_type.is_debit();
 
         if auth_num.is_empty() && retrieval_ref.is_empty() {
             return Err(error_stack::report!(
@@ -1850,8 +1883,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?;
 
         let connector_txn_id = &router_data.request.connector_transaction_id;
-        let (is_debit, auth_num, retrieval_ref, sys_trace) =
-            parse_connector_transaction_id(connector_txn_id);
+        let (transaction_type, auth_num, retrieval_ref, sys_trace) =
+            parse_connector_transaction_id(connector_txn_id)?;
+        let is_debit = transaction_type.is_debit();
 
         if auth_num.is_empty() && retrieval_ref.is_empty() {
             return Err(error_stack::report!(
@@ -2564,7 +2598,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let connector_txn_id = &router_data.request.connector_transaction_id;
         let (_, auth_num, retrieval_ref, sys_trace) =
-            parse_connector_transaction_id(connector_txn_id);
+            parse_connector_transaction_id(connector_txn_id)?;
 
         if auth_num.is_empty() {
             return Err(error_stack::report!(
@@ -2726,6 +2760,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        // Populated once the shared follow-up payment method contract is available.
+        let card_details: Option<CardWithNoCvc> = None;
+        let card = card_details.as_ref().ok_or_else(|| {
+            errors::IntegrationError::not_implemented(
+                "Worldpay RAFT incremental authorization requires the shared follow-up card contract",
+                errors::IntegrationErrorContext {
+                    additional_context: Some(
+                        "The incremental authorization request cannot supply the original card yet".to_string(),
+                    ),
+                    ..Default::default()
+                },
+            )
+        })?;
         let router_data = &item.router_data;
         let request = &router_data.request;
         let auth = WorldpayraftAuthType::try_from(&router_data.connector_config)?;
@@ -2767,11 +2814,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             cumulative_amount: convert_amount(&request.amount, "CumulativeAmount")?,
         };
 
-        // Populated once the shared follow-up payment method contract is available.
-        let card_details: Option<CardWithNoCvc> = None;
-        let card = card_details
-            .as_ref()
-            .ok_or_else(missing_field_err("card_details"))?;
         let connector_transaction_id = request
             .connector_transaction_id
             .get_connector_transaction_id()
@@ -2786,15 +2828,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ..Default::default()
                 },
             })?;
-        let (_, authorization_number, retrieval_ref_number, _) =
-            parse_connector_transaction_id(&connector_transaction_id);
-        // The shared parser is permissive; increases require an original credit authorization.
-        let is_credit_reference = match connector_transaction_id.matches('|').count() {
-            2 => true, // Legacy format without a credit/debit prefix.
-            3 => connector_transaction_id.split('|').next() == Some(TXN_TYPE_CREDIT),
-            _ => false,
-        };
-        if !is_credit_reference
+        let (transaction_type, authorization_number, retrieval_ref_number, _) =
+            parse_connector_transaction_id(&connector_transaction_id)?;
+        if transaction_type.is_debit()
             || authorization_number.trim().is_empty()
             || retrieval_ref_number.trim().is_empty()
         {
@@ -2929,9 +2965,7 @@ impl TryFrom<ResponseRouterData<WorldpayraftIncrementalAuthorizationResponse, Se
                 } else {
                     response.return_code
                 },
-                message: response.reason_code.clone().unwrap_or_else(|| {
-                    "Worldpay RAFT declined the incremental authorization".to_string()
-                }),
+                message: NO_ERROR_MESSAGE.to_string(),
                 reason: response.reason_code,
                 connector_transaction_id: item
                     .router_data
