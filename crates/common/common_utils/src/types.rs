@@ -198,22 +198,20 @@ impl MinorUnit {
         self,
         currency: enums::Currency,
     ) -> Result<StringMajorUnit, error_stack::Report<ParsingError>> {
-        let amount_f64 = self.to_major_unit_as_f64(currency)?;
+        let amount_decimal =
+            Decimal::from_i64(self.0).ok_or(ParsingError::I64ToDecimalConversionFailure)?;
         let decimal_places = currency
             .number_of_digits_after_decimal_point()
             .change_context(ParsingError::StructParseFailure(
                 "currency decimal configuration",
             ))?;
 
-        let amount_string = if decimal_places == 0 {
-            amount_f64.0.to_string()
-        } else if decimal_places == 3 {
-            format!("{:.3}", amount_f64.0)
-        } else if decimal_places == 4 {
-            format!("{:.4}", amount_f64.0)
-        } else {
-            format!("{:.2}", amount_f64.0) // 2 decimal places
-        };
+        let scale = Decimal::from(10_i64.pow(u32::from(decimal_places)));
+        let amount = amount_decimal / scale;
+        let amount_string = format!(
+            "{amount:.precision$}",
+            precision = usize::from(decimal_places)
+        );
         Ok(StringMajorUnit::new(amount_string))
     }
 
@@ -638,5 +636,46 @@ impl ExecutionMode {
             Self::Primary => "primary",
             Self::Shadow => "shadow",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AmountConvertor, MinorUnit, StringMajorUnitForConnector};
+    use common_enums::enums::Currency;
+
+    #[test]
+    fn string_major_unit_formats_regular_usd_amount() {
+        let amount = StringMajorUnitForConnector
+            .convert(MinorUnit::new(1099), Currency::USD)
+            .unwrap();
+
+        assert_eq!(amount.get_amount_as_string(), "10.99");
+    }
+
+    #[test]
+    fn string_major_unit_avoids_float_precision_loss() {
+        let amount = StringMajorUnitForConnector
+            .convert(MinorUnit::new(7_036_874_417_766_401), Currency::USD)
+            .unwrap();
+
+        assert_eq!(amount.get_amount_as_string(), "70368744177664.01");
+    }
+
+    #[test]
+    fn string_major_unit_uses_currency_decimal_exponent() {
+        let zero_decimal = StringMajorUnitForConnector
+            .convert(MinorUnit::new(1099), Currency::JPY)
+            .unwrap();
+        let three_decimal = StringMajorUnitForConnector
+            .convert(MinorUnit::new(1099), Currency::BHD)
+            .unwrap();
+        let four_decimal = StringMajorUnitForConnector
+            .convert(MinorUnit::new(1099), Currency::CLF)
+            .unwrap();
+
+        assert_eq!(zero_decimal.get_amount_as_string(), "1099");
+        assert_eq!(three_decimal.get_amount_as_string(), "1.099");
+        assert_eq!(four_decimal.get_amount_as_string(), "0.1099");
     }
 }
