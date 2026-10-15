@@ -1106,6 +1106,7 @@ impl ForeignFrom<&CompositePaymentMethodEligibilityRequest>
     #[allow(deprecated)]
     fn foreign_from(item: &CompositePaymentMethodEligibilityRequest) -> Self {
         Self {
+            allow_amount_mismatch: item.allow_amount_mismatch,
             merchant_payment_method_id: item.merchant_payment_method_id.clone(),
             amount: item.amount,
             payment_method: item.payment_method.clone(),
