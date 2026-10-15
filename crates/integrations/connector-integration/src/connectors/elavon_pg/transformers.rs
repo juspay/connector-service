@@ -76,8 +76,8 @@ const ELAVON_PG_HPP_DO_THREE_D_SECURE: bool = true;
 /// `PaymentSessionInputOptions.doCreateTransaction` — when `false`, EPG turns what
 /// the shopper typed into the HPP into a single-use **HostedCard** instead of
 /// creating the `Transaction` itself, leaving the settle to
-/// `POST /transactions {"paymentSession": …}`. That is the completion call this
-/// connector's Authorize makes, so the switch is deliberately `false`.
+/// `POST /transactions {"paymentSession": …, "total": …}`. That is the completion
+/// call this connector's Authorize makes, so the switch is deliberately `false`.
 ///
 /// The published documentation example writes this as the *string* `"true"`, but
 /// the OpenAPI `PaymentSessionInputOptions` schema types it `"type": "boolean"`
@@ -368,19 +368,19 @@ pub enum ElavonPgAuthorizeRequest<T: PaymentMethodDataTypes> {
     PaymentSession(ElavonPgPaymentSessionSaleRequest),
 }
 
-/// The settle leg of the hosted-payment-page flow: `POST /transactions` whose only
-/// member is the payment session's resource URL (spec §5.2 step 5).
+/// The settle leg of the hosted-payment-page flow: `POST /transactions` with the
+/// payment session's resource URL and the transaction total (spec §5.2 step 5).
 ///
-/// The EPG documentation is explicit that nothing else belongs here: *"the body of
-/// the post only requires the payment session's resource URL […] For forward
-/// compatibility, do not include hostedCard in the request."* No `card`, no
-/// `threeDSecure` (the HPP already ran the authentication and EPG rejects
-/// authenticating in both places), no `type`.
+/// No `card` or `threeDSecure` belongs here: the HPP already collected the card and
+/// ran authentication. EPG still validates the implicit `sale` transaction like any
+/// other sale, so `total` must be present even though the payment session was opened
+/// against an Order carrying the same amount.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ElavonPgPaymentSessionSaleRequest {
     /// `PaymentSession` resource URL minted by the PreAuthenticate leg.
     pub payment_session: String,
+    pub total: ElavonPgAmount,
 }
 
 /// `SaleTransaction` — the raw-card Authorize body (spec §4.1).
@@ -1534,19 +1534,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let request = &router_data.request;
 
-        // Precedence (spec §5.2 step 5 vs §4.1/§5.1): a hosted-payment-page session
-        // href beats everything, because on that path EPG already holds the card and
-        // already ran 3DS — sending `card` or `threeDSecure` alongside it is rejected.
-        // Only then does the external/pass-through 3DS shape apply, and failing that,
-        // the plain card sale.
-        if let Some(payment_session) =
-            elavon_pg_payment_session_href(request.authentication_data.as_ref())
-        {
-            return Ok(Self::PaymentSession(ElavonPgPaymentSessionSaleRequest {
-                payment_session,
-            }));
-        }
-
         let amount = item
             .connector
             .amount_converter
@@ -1561,6 +1548,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ..Default::default()
                 },
             })?;
+
+        // Precedence (spec §5.2 step 5 vs §4.1/§5.1): a hosted-payment-page session
+        // href beats everything, because on that path EPG already holds the card and
+        // already ran 3DS — sending `card` or `threeDSecure` alongside it is rejected.
+        // Only then does the external/pass-through 3DS shape apply, and failing that,
+        // the plain card sale.
+        if let Some(payment_session) =
+            elavon_pg_payment_session_href(request.authentication_data.as_ref())
+        {
+            return Ok(Self::PaymentSession(ElavonPgPaymentSessionSaleRequest {
+                payment_session,
+                total: ElavonPgAmount {
+                    amount,
+                    currency_code: request.currency,
+                },
+            }));
+        }
 
         let card = get_card(&request.payment_method_data)?;
 
@@ -2109,5 +2113,42 @@ fn build_refund_router_data<F, Req>(
             ..router_data.resource_common_data
         },
         ..router_data
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use common_enums::Currency;
+    use common_utils::types::StringMajorUnit;
+    use serde_json::json;
+
+    use super::{ElavonPgAmount, ElavonPgPaymentSessionSaleRequest};
+
+    #[test]
+    fn payment_session_sale_includes_total() {
+        let amount = serde_json::from_value::<StringMajorUnit>(json!("10.00"))
+            .expect("a decimal-string amount should deserialize");
+        let request = ElavonPgPaymentSessionSaleRequest {
+            payment_session: "https://api.sandbox.elavonpayments.com/payment-sessions/session_123"
+                .to_string(),
+            total: ElavonPgAmount {
+                amount,
+                currency_code: Currency::USD,
+            },
+        };
+
+        let serialized = serde_json::to_value(request)
+            .expect("the payment-session sale request should serialize");
+
+        assert_eq!(
+            serialized,
+            json!({
+                "paymentSession": "https://api.sandbox.elavonpayments.com/payment-sessions/session_123",
+                "total": {
+                    "amount": "10.00",
+                    "currencyCode": "USD"
+                }
+            })
+        );
     }
 }
