@@ -930,14 +930,13 @@ fn split_street_and_number(
                     }
                 }
                 // line3 carries a bare number token ("Rua Augusta" / "Bela Vista" / "1234").
-                _ if line3_number.is_some() => Ok((
-                    Secret::new(line1),
-                    line3_number.expect("guarded by the match arm"),
-                )),
-                // No parseable number: fall back to the whole `line1` as `number`.
-                // ClearSale requires both fields; the street stays empty rather
-                // than hard-failing the order.
-                _ => Ok((Secret::new(String::new()), line1)),
+                _ => match line3_number {
+                    Some(number) => Ok((Secret::new(line1), number)),
+                    // No parseable number: fall back to the whole `line1` as `number`.
+                    // ClearSale requires both fields; the street stays empty rather
+                    // than hard-failing the order.
+                    None => Ok((Secret::new(String::new()), line1)),
+                },
             }
         }
         None => line3_number
@@ -1519,10 +1518,10 @@ pub struct ClearSaleTravelData {
     pub accommodations: Option<Vec<FrmAccommodation>>,
 }
 
-/// ClearSale-specific projections of the generic FRM travel types (defined in
-/// `domain_types::frm::frm_types`) onto the ClearSale wire contracts. Kept as
-/// free functions rather than inherent methods because the generic types now
-/// live outside this crate (orphan rule).
+// ClearSale-specific projections of the generic FRM travel types (defined in
+// `domain_types::frm::frm_types`) onto the ClearSale wire contracts. Kept as
+// free functions rather than inherent methods because the generic types now
+// live outside this crate (orphan rule).
 
 /// ClearSale `passengers[]` source; the only mandatory field is `name` —
 /// entries without a usable first/last name are dropped.
@@ -1579,7 +1578,7 @@ fn passenger_to_clear_sale(p: &FrmPassenger) -> Option<ClearSalePassenger> {
 /// ClearSale `connections[]` source; `company`, `origin`, `destination` are
 /// mandatory — an entry missing any is dropped.
 fn travel_segment_to_clear_sale(s: &FrmTravelSegment) -> Option<ClearSaleConnection> {
-    // Parse flight number to i64; skip if unparseable
+    // Parse flight number to i64; skip if it does not parse
     let identification_number = s
         .flight_number
         .as_deref()
@@ -2189,6 +2188,9 @@ impl TryFrom<ResponseRouterData<ClearSaleStatusUpdateResponse, Self>>
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
+#[allow(clippy::indexing_slicing)]
 mod tests {
     use super::*;
     use std::str::FromStr;
@@ -2455,7 +2457,7 @@ mod tests {
                 authentication_token: Some(Secret::new("123456abcd".to_string())),
             }),
             passengers: Some(vec![ClearSalePassenger {
-                name: Secret::new("Passanger name".to_string()),
+                name: Secret::new("Passenger name".to_string()),
                 company_mile_card: Some("Company Name".to_string()),
                 mile_card: Some("123456789".to_string()),
                 identification_type: Some(1),
@@ -2671,7 +2673,7 @@ mod tests {
     /// and when neither works the **whole `line1`** becomes `number` rather
     /// than hard-failing. Only a missing line1 still errors.
     #[test]
-    fn line1_falls_back_to_number_when_unparseable() {
+    fn line1_falls_back_to_number_when_not_parseable() {
         // Trailing token.
         let (street, number) =
             split_street_and_number(Some(&Secret::new("Rua Augusta, 1234".to_owned())), None)
@@ -2688,7 +2690,7 @@ mod tests {
         assert_eq!(street.peek(), "Rua Augusta");
         assert_eq!(number, "567");
 
-        // Unparseable ("Girija Building") + non-number line3 ("8th Block"):
+        // Not parseable ("Girija Building") + non-number line3 ("8th Block"):
         // whole line1 becomes the number.
         let (street, number) = split_street_and_number(
             Some(&Secret::new("Girija Building".to_owned())),
