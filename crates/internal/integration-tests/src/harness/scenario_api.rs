@@ -5499,6 +5499,19 @@ mod tests {
             request.pointer("/connector_feature_data/value"),
             Some(&json!(r#"{"disable_avs":false,"disable_cvn":false}"#))
         );
+
+        let three_ds_request = get_the_grpc_req_for_connector(
+            "PaymentService/Authorize",
+            "cybersource_three_ds_data_failed_authentication_refused",
+            "cybersource",
+        )
+        .expect("three_ds_data variant should retain its specific feature data");
+        assert_eq!(
+            three_ds_request.pointer("/connector_feature_data/value"),
+            Some(&json!(
+                r#"{"three_ds_data":{"paresStatus":"N","specificationVersion":"2.2.0","ecommerceIndicator":"internet"}}"#
+            ))
+        );
     }
 
     #[test]

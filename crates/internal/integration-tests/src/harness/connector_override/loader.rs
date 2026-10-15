@@ -9,6 +9,8 @@ use serde_json::Value;
 
 use crate::harness::{scenario_loader::connector_specs_root, scenario_types::ScenarioError};
 
+use super::json_merge::json_merge_patch;
+
 /// Override patch payload for one specific `(suite, scenario)` pair.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -124,15 +126,39 @@ pub fn load_scenario_override_patch(
                 return Ok(Some(patch.clone()));
             }
 
-            // A variant inherits the regular override of its common base.
-            // The variant's own template patch is applied before dependency
-            // context by the scenario loader; this base patch remains the
-            // final connector-specific layer, matching existing semantics.
+            // A variant inherits the regular override of its common base, but
+            // its more specific request/assertion patch must win on conflicts.
+            // Reapply the combined patch after dependency context so the base
+            // keeps the existing connector-override precedence without
+            // overwriting fields that distinguish the variant.
             if let Some((_, base_patch)) = suite_patch
                 .iter()
                 .find(|(_, patch)| patch.variants.contains_key(scenario))
             {
                 let mut inherited = base_patch.clone();
+                let variant = inherited
+                    .variants
+                    .get(scenario)
+                    .cloned()
+                    .ok_or_else(|| ScenarioError::InvalidConnectorSpec {
+                        path: connector_override_file_path(connector),
+                        message: format!(
+                            "{connector} variant {suite}/{scenario} disappeared while loading its base override"
+                        ),
+                    })?;
+
+                if let Some(variant_req) = variant.grpc_req.as_ref() {
+                    match inherited.grpc_req.as_mut() {
+                        Some(base_req) => json_merge_patch(base_req, variant_req),
+                        None => inherited.grpc_req = Some(variant_req.clone()),
+                    }
+                }
+                if let Some(variant_assertions) = variant.assert_rules {
+                    inherited
+                        .assert_rules
+                        .get_or_insert_with(BTreeMap::new)
+                        .extend(variant_assertions);
+                }
                 inherited.variants.clear();
                 return Ok(Some(inherited));
             }
@@ -393,10 +419,14 @@ mod tests {
             json!({
                 "PaymentService/Authorize": {
                     "no3ds_manual_capture_credit_card": {
-                        "grpc_req": { "metadata": { "value": "{}" } },
+                        "grpc_req": {
+                            "metadata": { "value": "{}" },
+                            "connector_feature_data": { "value": "base" }
+                        },
                         "variants": {
                             "shipping_details_shipto": {
                                 "grpc_req": {
+                                    "connector_feature_data": { "value": "variant" },
                                     "address": {
                                         "shipping_address": { "city": { "value": "Oakland" } }
                                     }
@@ -431,7 +461,20 @@ mod tests {
         .expect("variant should inherit a patch");
         assert_eq!(
             inherited.grpc_req,
-            Some(json!({ "metadata": { "value": "{}" } }))
+            Some(json!({
+                "metadata": { "value": "{}" },
+                "connector_feature_data": { "value": "variant" },
+                "address": {
+                    "shipping_address": { "city": { "value": "Oakland" } }
+                }
+            }))
+        );
+        assert_eq!(
+            inherited
+                .assert_rules
+                .as_ref()
+                .and_then(|rules| rules.get("status")),
+            Some(&json!({ "one_of": ["AUTHORIZED"] }))
         );
         assert!(inherited.variants.is_empty());
 

@@ -242,9 +242,11 @@ An override may also fan a common scenario out into named connector variants:
 ```
 
 Each variant is an independent execution derived from the named common scenario.
-Its template patch is applied before dependency context; the base connector override
-is applied afterwards. For suites with `dependency_scope: "scenario"`, prerequisites
-therefore run once for the base scenario and once for every variant.
+Its template patch is applied before dependency context. Afterwards the base connector
+override and then the variant patch are reapplied, so connector overrides retain their
+precedence while variant-specific fields win conflicts with the base. For suites with
+`dependency_scope: "scenario"`, prerequisites therefore run once for the base scenario
+and once for every variant.
 
 Validate after editing:
 
