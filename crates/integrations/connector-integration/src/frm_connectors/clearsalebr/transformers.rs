@@ -292,10 +292,12 @@ pub struct ClearSaleAddress {
 pub struct ClearSalePhone {
     #[serde(rename = "type")]
     pub phone_type: i32,
-    pub ddd: String,
-    pub number: Secret<String>,
+    /// Area code (2 digits). ClearSale expects integer, not string.
+    pub ddd: i64,
+    /// Phone number digits. ClearSale expects integer, not string.
+    pub number: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ddi: Option<String>,
+    pub ddi: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extension: Option<String>,
 }
@@ -372,7 +374,7 @@ pub struct ClearSaleItem {
     #[serde(rename = "sellerDocument", skip_serializing_if = "Option::is_none")]
     pub seller_document: Option<Secret<String>>,
     #[serde(rename = "isMarketPlace", skip_serializing_if = "Option::is_none")]
-    pub is_market_place: Option<bool>,
+    pub is_market_place: Option<String>,
     #[serde(rename = "sellerSegment", skip_serializing_if = "Option::is_none")]
     pub seller_segment: Option<String>,
     #[serde(rename = "shippingCompany", skip_serializing_if = "Option::is_none")]
@@ -463,17 +465,32 @@ pub struct ClearSaleList {
 /// Order `purchaseInformation` block (spec §5.1): account-history signals.
 #[derive(Debug, Clone, Serialize)]
 pub struct ClearSalePurchaseInformation {
-    #[serde(rename = "lastDateInsertedMail")]
+    #[serde(
+        rename = "lastDateInsertedMail",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_date_inserted_mail: Option<String>,
-    #[serde(rename = "lastDateChangePassword")]
+    #[serde(
+        rename = "lastDateChangePassword",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_date_change_password: Option<String>,
-    #[serde(rename = "lastDateChangePhone")]
+    #[serde(
+        rename = "lastDateChangePhone",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_date_change_phone: Option<String>,
-    #[serde(rename = "lastDateChangeMobilePhone")]
+    #[serde(
+        rename = "lastDateChangeMobilePhone",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_date_change_mobile_phone: Option<String>,
-    #[serde(rename = "lastDateInsertedAddress")]
+    #[serde(
+        rename = "lastDateInsertedAddress",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_date_inserted_address: Option<String>,
-    #[serde(rename = "purchaseLogged")]
+    #[serde(rename = "purchaseLogged", skip_serializing_if = "Option::is_none")]
     pub purchase_logged: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<common_utils::pii::Email>,
@@ -484,11 +501,14 @@ pub struct ClearSalePurchaseInformation {
 /// Order `socialNetwork` block (spec §5.1).
 #[derive(Debug, Clone, Serialize)]
 pub struct ClearSaleSocialNetwork {
-    #[serde(rename = "optInCompreConfie")]
+    #[serde(rename = "optInCompreConfie", skip_serializing_if = "Option::is_none")]
     pub opt_in_compre_confie: Option<i32>,
-    #[serde(rename = "typeSocialNetwork")]
+    #[serde(rename = "typeSocialNetwork", skip_serializing_if = "Option::is_none")]
     pub type_social_network: Option<i32>,
-    #[serde(rename = "authenticationToken")]
+    #[serde(
+        rename = "authenticationToken",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub authentication_token: Option<Secret<String>>,
 }
 
@@ -496,17 +516,24 @@ pub struct ClearSaleSocialNetwork {
 #[derive(Debug, Clone, Serialize)]
 pub struct ClearSalePassenger {
     pub name: Secret<String>,
-    #[serde(rename = "companyMileCard")]
+    #[serde(rename = "companyMileCard", skip_serializing_if = "Option::is_none")]
     pub company_mile_card: Option<String>,
-    #[serde(rename = "mileCard")]
+    #[serde(rename = "mileCard", skip_serializing_if = "Option::is_none")]
     pub mile_card: Option<String>,
-    #[serde(rename = "identificationType")]
+    /// ID type per spec: 1=CPF, 2=CNPJ, 3=RG, 4=IE, 5=Passport, 6=CTPS, 7=Voter ID.
+    /// Required only when identificationNumber is present.
+    #[serde(rename = "identificationType", skip_serializing_if = "Option::is_none")]
     pub identification_type: Option<i32>,
-    #[serde(rename = "identificationNumber")]
+    #[serde(
+        rename = "identificationNumber",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub identification_number: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gender: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub birthdate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cpf: Option<Secret<String>>,
 }
 
@@ -515,16 +542,23 @@ pub struct ClearSalePassenger {
 #[derive(Debug, Clone, Serialize)]
 pub struct ClearSaleConnection {
     pub company: String,
-    #[serde(rename = "identificationNumber")]
-    pub identification_number: Option<String>,
+    #[serde(
+        rename = "identificationNumber",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub identification_number: Option<i64>,
+    /// Departure date (required per spec); fall back from boarding if needed.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub date: Option<String>,
-    #[serde(rename = "seatClass")]
+    #[serde(rename = "seatClass", skip_serializing_if = "Option::is_none")]
     pub seat_class: Option<String>,
     pub origin: String,
     pub destination: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub boarding: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub arriving: Option<String>,
-    #[serde(rename = "fareClass")]
+    #[serde(rename = "fareClass", skip_serializing_if = "Option::is_none")]
     pub fare_class: Option<String>,
 }
 
@@ -532,22 +566,30 @@ pub struct ClearSaleConnection {
 #[derive(Debug, Clone, Serialize)]
 pub struct ClearSaleHotel {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
-    #[serde(rename = "reservationDate")]
+    #[serde(rename = "reservationDate", skip_serializing_if = "Option::is_none")]
     pub reservation_date: Option<String>,
-    #[serde(rename = "reserveExpirationDate")]
+    #[serde(
+        rename = "reserveExpirationDate",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub reserve_expiration_date: Option<String>,
-    #[serde(rename = "checkInDate")]
+    #[serde(rename = "checkInDate", skip_serializing_if = "Option::is_none")]
     pub check_in_date: Option<String>,
-    #[serde(rename = "checkOutDate")]
+    #[serde(rename = "checkOutDate", skip_serializing_if = "Option::is_none")]
     pub check_out_date: Option<String>,
 }
 
 /// Request body for both `POST /v1/orders/` (PreRiskCheck) and
 /// `PUT /v1/orders/` (PostRiskCheck re-analysis — same shape, spec §4).
+/// ClearSale expects the order fields FLAT at top level (no "order" wrapper).
 #[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
 pub struct ClearSaleOrderCreateRequest {
     pub order: ClearSaleOrderRequest,
 }
@@ -564,38 +606,57 @@ pub struct ClearSaleOrderReanalysisRequest(pub ClearSaleOrderCreateRequest);
 // ──────────────────────────────────────────────────────────────────────────
 
 /// ClearSale 3-letter order status codes (spec §6).
+///
+/// ClearSale sends these UPPERCASE on the wire (`"NVO"`, `"AMA"`, ...).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ClearSaleStatusEnum {
     /// Novo.
+    #[serde(rename = "NVO", alias = "Nvo")]
     Nvo,
     /// Análise manual.
+    #[serde(rename = "AMA", alias = "Ama")]
     Ama,
     /// Suspensão manual.
+    #[serde(rename = "SUS", alias = "Sus")]
     Sus,
     /// Aprovação automática.
+    #[serde(rename = "APA", alias = "Apa")]
     Apa,
     /// Aprovação manual.
+    #[serde(rename = "APM", alias = "Apm")]
     Apm,
     /// Aprovação por política.
+    #[serde(rename = "APP", alias = "App")]
     App,
     /// Aguardando pagamento.
+    #[serde(rename = "APG", alias = "Apg")]
     Apg,
     /// Reprovação automática.
+    #[serde(rename = "RPA", alias = "Rpa")]
     Rpa,
     /// Reprovado sem suspeita.
+    #[serde(rename = "RPM", alias = "Rpm")]
     Rpm,
     /// Reprovação por política.
+    #[serde(rename = "RPP", alias = "Rpp")]
     Rpp,
     /// Cancelado pelo cliente.
+    #[serde(rename = "CAN", alias = "Can")]
     Can,
     /// Fraude confirmada.
+    #[serde(rename = "FRD", alias = "Frd")]
     Frd,
     /// Legacy rule-engine statuses, kept so deserialization does not crash.
+    #[serde(rename = "AMM", alias = "Amm")]
     Amm,
+    #[serde(rename = "APR", alias = "Apr")]
     Apr,
+    #[serde(rename = "REA", alias = "Rea")]
     Rea,
+    #[serde(rename = "REP", alias = "Rep")]
     Rep,
     /// Processing error.
+    #[serde(rename = "ERR", alias = "Err")]
     Err,
     #[serde(other)]
     Unknown,
@@ -938,14 +999,16 @@ fn split_phone(number: &str, country_code: Option<&str>, phone_type: i32) -> Cle
         .map(|code| code.trim_start_matches('+'))
         .filter(|code| !code.is_empty())
     {
-        Some(code) => (Some(code.to_owned()), digits.clone()),
+        Some(code) => (code.parse::<i64>().ok(), digits.clone()),
         None => (None, digits.clone()),
     };
-    let (ddd, local) = national.split_at(national.len().min(2));
+    let (ddd_str, local_str) = national.split_at(national.len().min(2));
+    let ddd = ddd_str.parse::<i64>().unwrap_or(0);
+    let number = local_str.parse::<i64>().unwrap_or(0);
     ClearSalePhone {
         phone_type,
-        ddd: ddd.to_owned(),
-        number: Secret::new(local.to_owned()),
+        ddd,
+        number,
         ddi,
         extension: None,
     }
@@ -1484,13 +1547,18 @@ fn passenger_to_clear_sale(p: &FrmPassenger) -> Option<ClearSalePassenger> {
         name,
         company_mile_card: p.loyalty_program_name.clone(),
         mile_card: p.loyalty_program_number.clone(),
-        // ClearSale encodes document type as an enum int: 1=CPF, 2=RG, 3=CNH…
+        // ClearSale identification type enum (spec): 1=CPF, 2=CNPJ, 3=RG, 4=IE,
+        // 5=Passport, 6=CTPS, 7=Voter ID. CNPJ/CTPS/TITULO are B2B — rarely
+        // used for passengers. CNH has no dedicated code.
         identification_type: p.identification_type.as_deref().and_then(|t| {
             match t.trim().to_ascii_uppercase().as_str() {
                 "CPF" => Some(1),
-                "RG" => Some(2),
-                "CNH" => Some(3),
-                "PASSPORT" | "PASSAPORTE" => Some(4),
+                "CNPJ" => Some(2),
+                "RG" => Some(3),
+                "IE" => Some(4),
+                "PASSPORT" | "PASSAPORTE" => Some(5),
+                "CTPS" => Some(6),
+                "TITULO" | "TITULO_ELEITOR" | "TITULO DE ELEITOR" => Some(7),
                 _ => None,
             }
         }),
@@ -1511,10 +1579,20 @@ fn passenger_to_clear_sale(p: &FrmPassenger) -> Option<ClearSalePassenger> {
 /// ClearSale `connections[]` source; `company`, `origin`, `destination` are
 /// mandatory — an entry missing any is dropped.
 fn travel_segment_to_clear_sale(s: &FrmTravelSegment) -> Option<ClearSaleConnection> {
+    // Parse flight number to i64; skip if unparseable
+    let identification_number = s
+        .flight_number
+        .as_deref()
+        .and_then(|f| f.parse::<i64>().ok());
+    // Fall back: departure_date → boarding_date_time → fail
+    let date = s
+        .departure_date
+        .clone()
+        .or_else(|| s.boarding_date_time.clone())?;
     Some(ClearSaleConnection {
         company: s.carrier_code.as_deref()?.trim().to_owned(),
-        identification_number: s.flight_number.clone(),
-        date: s.departure_date.clone(),
+        identification_number,
+        date: Some(date),
         seat_class: s.cabin_class.clone(),
         origin: s.origin_code.as_deref()?.trim().to_owned(),
         destination: s.destination_code.as_deref()?.trim().to_owned(),
@@ -2156,6 +2234,49 @@ mod tests {
         assert_eq!(parsed.to_frm_decision(), FrmDecision::Review);
     }
 
+    /// ClearSale sends 3-letter statuses UPPERCASE on the wire (spec §5.2/§5.3).
+    #[test]
+    fn uppercase_wire_statuses_deserialize() {
+        use ClearSaleStatusEnum as S;
+        for (wire, variant) in [
+            ("NVO", S::Nvo),
+            ("AMA", S::Ama),
+            ("SUS", S::Sus),
+            ("APA", S::Apa),
+            ("APM", S::Apm),
+            ("APP", S::App),
+            ("APG", S::Apg),
+            ("RPA", S::Rpa),
+            ("RPM", S::Rpm),
+            ("RPP", S::Rpp),
+            ("CAN", S::Can),
+            ("FRD", S::Frd),
+            ("ERR", S::Err),
+        ] {
+            let parsed = serde_json::from_str::<ClearSaleStatusEnum>(&format!("\"{wire}\""))
+                .expect("uppercase wire status must deserialize");
+            assert_eq!(parsed, variant, "wire status {wire}");
+        }
+        assert_eq!(
+            serde_json::from_str::<ClearSaleStatusEnum>("\"NVO\"")
+                .expect("NVO")
+                .to_frm_decision(),
+            FrmDecision::Review
+        );
+        assert_eq!(
+            serde_json::from_str::<ClearSaleStatusEnum>("\"APA\"")
+                .expect("APA")
+                .to_frm_decision(),
+            FrmDecision::Approve
+        );
+        assert_eq!(
+            serde_json::from_str::<ClearSaleStatusEnum>("\"RPA\"")
+                .expect("RPA")
+                .to_frm_decision(),
+            FrmDecision::Reject
+        );
+    }
+
     /// Only a captured payment pushes PGA, and only a ClearSale rejection or
     /// an explicit failure pushes PGR.
     #[test]
@@ -2233,9 +2354,9 @@ mod tests {
                 },
                 phones: vec![ClearSalePhone {
                     phone_type: 1,
-                    ddi: Some("55".to_string()),
-                    ddd: "11".to_string(),
-                    number: Secret::new("33333333".to_string()),
+                    ddi: Some(55),
+                    ddd: 11,
+                    number: 33333333,
                     extension: Some("1111".to_string()),
                 }],
                 delivery_type: None,
@@ -2266,8 +2387,8 @@ mod tests {
                 phones: vec![ClearSalePhone {
                     phone_type: 1,
                     ddi: None,
-                    ddd: "11".to_string(),
-                    number: Secret::new("33333333".to_string()),
+                    ddd: 11,
+                    number: 33333333,
                     extension: None,
                 }],
                 delivery_type: Some("1".to_string()),
@@ -2345,7 +2466,7 @@ mod tests {
             }]),
             connections: Some(vec![ClearSaleConnection {
                 company: "JJ".to_string(),
-                identification_number: Some("12345".to_string()),
+                identification_number: Some(12345),
                 date: Some("2017-10-10T00:00:00.000".to_string()),
                 seat_class: Some("Seat Class".to_string()),
                 origin: "GRU".to_string(),
