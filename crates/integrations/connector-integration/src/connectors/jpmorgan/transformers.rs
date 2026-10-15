@@ -1829,6 +1829,8 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
         let mut response = build_payments_response_result(&item.response, item.http_code, status)?;
+        // PSync does not reconstruct the caller's stored-credential context.
+        // Preserve its original agreement, wallet classification, and network references for later payments.
         if let Some(feature_data) = item.router_data.request.connector_feature_data.as_ref() {
             let invalid = || ConnectorError::ResponseHandlingFailed {
                 context: domain_types::errors::ResponseTransformationErrorContext {
@@ -1841,7 +1843,6 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
             };
             let mut metadata = requests::JpmorganRequestMetadata::from_value(feature_data.peek())
                 .change_context(invalid())?;
-            // Get must return the original relationship context for later stored-credential payments.
             if let Some(context) = metadata.jpmorgan.as_mut() {
                 if context.other.contains_key("resource")
                     || context.wallet_account_number_type.is_some()
