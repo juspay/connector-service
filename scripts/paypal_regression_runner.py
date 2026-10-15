@@ -6,6 +6,8 @@ It never labels a local mapping check as a live PayPal outcome. Live modes requi
 explicit environment inputs, durable journals and read-only reconciliation.
 """
 import argparse
+import base64
+import functools
 import copy
 import contextlib
 import fcntl
@@ -41,8 +43,16 @@ def atomic(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + '.tmp')
-    temporary.write_text(json.dumps(value, indent=2) + '\n')
+    with temporary.open('w') as stream:
+        stream.write(json.dumps(value, indent=2) + '\n')
+        stream.flush()
+        os.fsync(stream.fileno())
     os.replace(temporary, path)
+    directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
 
 
 def strict_keys(value, allowed, required):
@@ -286,6 +296,111 @@ def verify_runtime(endpoint, binary):
     return matches[0]
 
 
+@functools.lru_cache(maxsize=1)
+def public_error_types():
+    """Generate real protobuf descriptors from the exact Git-bound API sources.
+
+    protoc and protobuf are the normal schema tools; no parallel wire decoder is
+    maintained here. Descriptor bytes and raw error payloads remain in memory.
+    """
+    import google.protobuf
+    from google.protobuf import descriptor_pb2, descriptor_pool, message_factory
+    directory = ROOT / 'crates/types-traits/grpc-api-types/proto'
+    sources = sorted(directory.glob('*.proto'))
+    commit = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
+                            capture_output=True, text=True, check=True).stdout.strip()
+    bindings = {}
+    for source in sources:
+        relative = str(source.relative_to(ROOT))
+        committed = subprocess.run(['git', 'show', commit + ':' + relative], cwd=ROOT,
+                                   capture_output=True, check=True).stdout
+        if committed != source.read_bytes():
+            raise ValueError('Error descriptor source differs from committed schema')
+        bindings[relative] = hashlib.sha256(committed).hexdigest()
+    generated = subprocess.run(['protoc', '-I', str(directory), '--include_imports',
+                                '--descriptor_set_out=/dev/stdout', 'sdk_config.proto'],
+                               cwd=directory, capture_output=True, check=True).stdout
+    descriptor = descriptor_pb2.FileDescriptorSet.FromString(generated)
+    pool = descriptor_pool.DescriptorPool()
+    pending = list(descriptor.file)
+    while pending:
+        progress = False
+        for item in pending[:]:
+            try:
+                pool.Add(item)
+            except TypeError:
+                continue
+            pending.remove(item)
+            progress = True
+        if not progress:
+            raise ValueError('Unresolved generated protobuf dependency')
+    classes = {name: message_factory.GetMessageClass(pool.FindMessageTypeByName('types.' + name))
+               for name in ['ConnectorError', 'IntegrationError', 'ErrorInfo']}
+    # Exercise the exact runtime API before any provider call is permitted.
+    from google.protobuf import json_format
+    probe = classes['IntegrationError'](error_message='PUBLIC_PREFLIGHT', error_code='NOT_SUPPORTED')
+    clone = classes['IntegrationError'].FromString(probe.SerializeToString())
+    if json_format.MessageToDict(clone, preserving_proto_field_name=True).get('error_code') != 'NOT_SUPPORTED':
+        raise ValueError('Incompatible protobuf runtime API')
+    return classes, {'commit': commit, 'protobuf_version': google.protobuf.__version__, 'proto_sources': bindings,
+                     'descriptor_sha256': hashlib.sha256(generated).hexdigest(),
+                     'types': {name: cls.DESCRIPTOR.full_name for name, cls in classes.items()}}
+
+
+def typed_public_error(statuses, streams):
+    """Follow scenario_api.rs: structured ErrorInfo before protobuf trailers."""
+    from google.protobuf import json_format
+    from google.protobuf.message import DecodeError
+    classes, provenance = public_error_types()
+    for status in statuses:
+        for detail in status.get('details', []):
+            if not isinstance(detail, dict):
+                continue
+            info = detail.get('errorInfo', detail.get('error_info'))
+            if info is not None:
+                if detail.get('@type') not in [None, 'type.googleapis.com/types.ConnectorError']:
+                    raise ValueError('Mismatched structured protobuf error type')
+                message = classes['ErrorInfo']()
+                try:
+                    json_format.ParseDict(info, message, ignore_unknown_fields=False)
+                except json_format.ParseError:
+                    # Protobuf diagnostics may contain raw provider field values.
+                    raise ValueError('Malformed structured protobuf ErrorInfo') from None
+                if not message.ListFields():
+                    raise ValueError('Empty structured ErrorInfo')
+                return {'error': json_format.MessageToDict(message, preserving_proto_field_name=True),
+                        'grpc_status': status['code']}, provenance
+    for stream in streams:
+        for line in stream.splitlines():
+            if not line.strip().startswith('grpc-status-details-bin:'):
+                continue
+            raw = base64.b64decode(line.strip().partition(':')[2].strip(), validate=True)
+            if not raw:
+                raise ValueError('Empty protobuf status details')
+            for name in ['ConnectorError', 'IntegrationError']:
+                message = classes[name]()
+                try:
+                    message.ParseFromString(raw)
+                except DecodeError:
+                    continue
+                # Reject unknown fields and an empty/partial accidental decode.
+                clean = classes[name]()
+                clean.CopyFrom(message)
+                clean.DiscardUnknownFields()
+                if clean.SerializeToString() != message.SerializeToString():
+                    continue
+                if not message.error_code or not message.error_message:
+                    continue
+                if name == 'ConnectorError':
+                    if not message.HasField('error_info') or not message.error_info.ListFields():
+                        continue
+                    info = message.error_info
+                else:
+                    info = message
+                return {'error': json_format.MessageToDict(info, preserving_proto_field_name=True)}, provenance
+    return None, provenance
+
+
 def parse_grpcurl_output(stdout, stderr):
     """Decode unary verbose output without treating metadata as response JSON.
 
@@ -304,6 +419,7 @@ def parse_grpcurl_output(stdout, stderr):
     if len(messages) > 1:
         raise ValueError('Unexpected multiple unary responses')
     errors = []
+    statuses = []
     protocol_errors = []
     for stream in [stdout, stderr]:
         # -format-error emits a standalone JSON error, optionally after ERROR:.
@@ -321,6 +437,7 @@ def parse_grpcurl_output(stdout, stderr):
             if (isinstance(value, dict) and isinstance(value.get('code'), int)
                     and not isinstance(value['code'], bool)
                     and value['code'] != 0 and isinstance(value.get('message'), str)):
+                statuses.append(value)
                 errors.append(value['message'])
                 # grpcurl reports mismatched status-details as a structured
                 # Internal error. Corroborate its exact public typed identity;
@@ -335,6 +452,13 @@ def parse_grpcurl_output(stdout, stderr):
     if not messages and not errors:
         raise ValueError('No unary response or structured gRPC error')
     response = normalize(messages[0]) if messages else {}
+    if statuses:
+        typed, provenance = typed_public_error(statuses, [stdout, stderr])
+        if typed:
+            if response:
+                raise ValueError('Conflicting unary response and typed error')
+            response = normalize(typed)
+            response['_error_descriptor_binding'] = provenance
     if protocol_errors:
         if any(item != protocol_errors[0] for item in protocol_errors):
             raise ValueError('Conflicting public gRPC errors')
@@ -344,7 +468,24 @@ def parse_grpcurl_output(stdout, stderr):
     return response, '\n'.join(errors), bool(errors)
 
 
+RPC_AUDIT = None
+
+
 def rpc(endpoint, method, request, config, token, inject_state=True, connector='paypal'):
+    audit = RPC_AUDIT
+    call_key = audit('started', method, request, None) if audit else None
+    try:
+        result = raw_rpc(endpoint, method, request, config, token, inject_state, connector)
+    except (Exception, KeyboardInterrupt):
+        if audit:
+            audit('uncertain', method, request, call_key)
+        raise
+    if audit:
+        audit('completed', method, request, (call_key, result))
+    return result
+
+
+def raw_rpc(endpoint, method, request, config, token, inject_state=True, connector='paypal'):
     # Configuration and OAuth remain memory-only. Never emit argv, raw stderr,
     # headers or an unfiltered provider response into an artifact.
     q = copy.deepcopy(request)
@@ -1065,7 +1206,96 @@ def source_assertions(response, assertions):
     return failures
 
 
+class DurableRows(list):
+    """Checkpoint every completed row without replacing previous-run evidence."""
+    def __init__(self, args, journal):
+        super().__init__()
+        self.args = args
+        self.journal = journal
+        self.previous = json.loads(args.out.read_text()) if args.out.exists() else None
+
+    def append(self, row):
+        super().append(row)
+        self.journal.setdefault('row_results', {})[row['case_id']] = row
+        atomic(self.args.journal, self.journal)
+        report = {'mode': self.args.mode, 'pass': False, 'complete': False,
+                  'rows': list(self), 'bindings': self.args.execution_binding,
+                  'provider_live_verified': False}
+        if self.previous:
+            report['previous_report'] = self.previous
+        atomic(self.args.out, report)
+
+
+def validate_imported_facts(path):
+    """Rebuild the import from immutable inputs and compare every original fact."""
+    data = json.loads(Path(path).read_text())
+    if data.get('schema') != 'paypal-imported-financial-facts/1':
+        raise ValueError('Invalid imported financial fact journal')
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix='paypal-import-proof-') as directory:
+        proof = {'schema': 'paypal-financial-fact-import/1', 'files': data['inputs']}
+        if isinstance(data['inputs'], dict) and data['inputs'].get('schema'):
+            proof = data['inputs']
+        context = Path(directory) / 'context.json'
+        context.write_text(json.dumps(proof))
+        destination = Path(directory) / 'journal.json'
+        import_financial_facts(argparse.Namespace(context=context, journal=destination))
+        rebuilt = json.loads(destination.read_text())
+        if rebuilt != data:
+            raise ValueError('Imported original financial provenance mismatch')
+    return data['facts']
+
+
+
+def child_chain_uncertainty(args, journal, identity):
+    """Read only the exact child journal, corroborated by parent RPC lineage."""
+    if not identity.endswith(('/operation_chain', '/financial_closure_chain')):
+        return None
+    path = args.journal.with_name(args.journal.name + '.' + hashlib.sha256(identity.encode()).hexdigest()[:16])
+    if not path.exists():
+        return None
+    try:
+        raw = path.read_bytes()
+        child = json.loads(raw)
+        if (child.get('schema') != 'paypal-financial-regression-journal/1'
+                or not isinstance(child.get('run_identity'), str) or not child['run_identity']
+                or not isinstance(child.get('operations'), dict)):
+            raise ValueError('Invalid child lineage')
+        pending = []
+        lineage_verified = True
+        for name, operation in child['operations'].items():
+            if operation.get('state') not in ['started', 'uncertain']:
+                continue
+            binding = operation.get('source_binding')
+            if (not isinstance(binding, dict)
+                    or not all(binding.get(key) for key in ['commit', 'source_sha256', 'binary_sha256'])
+                    or not re.fullmatch(r'[0-9a-f]{64}', operation.get('request_sha256', ''))):
+                raise ValueError('Invalid child provenance')
+            calls = [call for call in journal.get('rpc_calls', {}).values()
+                     if call.get('case_id') == identity
+                     and call.get('method') == operation.get('method')
+                     and call.get('request_sha256') == operation['request_sha256']]
+            if calls and not any(call.get('case_id') == identity
+                               and call.get('method') == operation.get('method')
+                               and call.get('request_sha256') == operation['request_sha256']
+                               and call.get('source_binding') == binding
+                               for call in calls):
+                raise ValueError('Uncorroborated child lineage')
+            if not calls:
+                lineage_verified = False
+            pending.append({'operation': name, 'state': operation['state'], 'source_binding': binding})
+        return ({'reason': 'AMBIGUOUS_CHILD_FINANCIAL_GET_ONLY', 'path': str(path),
+                 'sha256': hashlib.sha256(raw).hexdigest(), 'operations': pending,
+                 'lineage_verified': lineage_verified,
+                 'parent_audit': 'CORROBORATED' if lineage_verified else 'PARENT_AUDIT_ABSENT',
+                 'provenance': 'CORROBORATED' if lineage_verified else 'UNAVAILABLE'} if pending else None)
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {'reason': 'CHILD_FINANCIAL_LINEAGE_MISMATCH_GET_ONLY'}
+
+
 def matrix_execute(args):
+    # Dependencies/source/type compatibility must fail BEFORE a journal or RPC.
+    _, descriptor_binding = public_error_types()
     manifest=canonical_matrix()
     if json.loads(MATRIX.read_text())!=manifest: raise ValueError('Regenerate canonical matrix before execution')
     context=json.loads(args.context.read_text()) if args.context else {'cases':{}}
@@ -1073,9 +1303,7 @@ def matrix_execute(args):
     imported=[]
     if context.get('imported_facts'):
         imported_path=Path(context['imported_facts'])
-        imported_data=json.loads(imported_path.read_text())
-        if imported_data.get('schema')!='paypal-imported-financial-facts/1': raise ValueError('Invalid imported financial fact journal')
-        imported=imported_data['facts']
+        imported=validate_imported_facts(imported_path)
     selected=set(args.case_id or [])
     known={row['case_id'] for row in manifest['rows']}
     if selected-known: raise ValueError('Unknown canonical case selection')
@@ -1106,218 +1334,278 @@ def matrix_execute(args):
         if not isinstance(journal.get('session_seed'),str) or not journal['session_seed']:
             raise ValueError('Existing journal missing immutable session seed; preserve and reconcile')
         atomic(args.journal,journal)
-        result=[]
-        for row in manifest['rows']:
-            identity=row['case_id']; setup=context['cases'].get(identity)
-            if selected and identity not in selected:
-                result.append({'case_id':identity,'state':'NOT_RUN','reason':'Not selected'})
-                continue
-            preflight_reason=assertion_preflight(row)
-            if preflight_reason:
-                result.append({'case_id':identity,'state':'NOT_RUN','reason':preflight_reason,
-                               'provider_live_verified':False,'provider_wire_graded':False})
-                continue
-            sequential=identity.endswith(('/operation_chain','/financial_closure_chain'))
-            if sequential and setup and setup.get('allow_financial_write') is True:
-                chain_facts=[fact for fact in imported if fact['logical_key'].startswith('closure-' if identity.endswith('/financial_closure_chain') else 'capture-operation-')]
-                if chain_facts:
-                    # A completed write is immutable history. Retest the current
-                    # terminal GET contract, never the historical write mapping.
-                    orders={}
-                    for fact in chain_facts:
+        result=DurableRows(args, journal)
+        active_row = [None]
+        def audit(state, method, request, payload):
+            calls = journal.setdefault('rpc_calls', {})
+            if state == 'started':
+                key = str(uuid.uuid4())
+                calls[key] = {'state': state, 'method': method, 'case_id': active_row[0],
+                              'request_sha256': hashlib.sha256(json.dumps(request, sort_keys=True).encode()).hexdigest(),
+                              'source_binding': args.execution_binding, 'started_at_epoch': time.time()}
+            else:
+                key = payload[0] if state == 'completed' else payload
+                record = calls[key]
+                record.update(state=state, finished_at_epoch=time.time())
+                if state == 'completed':
+                    response, error, _ = payload[1]
+                    record.update(error_present=error, status=response.get('status'),
+                                  connector_transaction_id=response.get('connector_transaction_id'),
+                                  connector_refund_id=response.get('connector_refund_id'),
+                                  metadata=financial_metadata(response), captured_amount=response.get('captured_amount'))
+            atomic(args.journal, journal)
+            return key
+        global RPC_AUDIT
+        if RPC_AUDIT is not None:
+            raise ValueError('Concurrent matrix execution is forbidden')
+        RPC_AUDIT = audit
+        try:
+            for row in manifest['rows']:
+                active_row[0] = row['case_id']
+                try:
+                    identity=row['case_id']; setup=context['cases'].get(identity)
+                    if selected and identity not in selected:
+                        result.append({'case_id':identity,'state':'NOT_RUN','reason':'Not selected'})
+                        continue
+                    if row.get('fixture_id') or str(row.get('method', '')).startswith(('HS/', 'HS ')) or row.get('surface') in ['hs', 'hyperswitch', 'fixture']:
+                        result.append({'case_id':identity,'state':'NOT_RUN',
+                                       'reason':'SEPARATE_LOCAL_FIXTURE_CONSUMER' if row.get('fixture_id') else 'SEPARATE_HS_CONSUMER',
+                                       'provider_live_verified':False,'provider_wire_graded':False})
+                        continue
+                    preflight_reason=assertion_preflight(row)
+                    if preflight_reason:
+                        result.append({'case_id':identity,'state':'NOT_RUN','reason':preflight_reason,
+                                       'provider_live_verified':False,'provider_wire_graded':False})
+                        continue
+                    sequential=identity.endswith(('/operation_chain','/financial_closure_chain'))
+                    if sequential and setup and setup.get('allow_financial_write') is True:
+                        chain_facts=[fact for fact in imported if fact['logical_key'].startswith('closure-' if identity.endswith('/financial_closure_chain') else 'capture-operation-')]
+                        if chain_facts:
+                            # A completed write is immutable history. Retest the current
+                            # terminal GET contract, never the historical write mapping.
+                            orders={}
+                            for fact in chain_facts:
+                                meta=fact.get('metadata') or {}
+                                if meta.get('order_id'): orders[meta['order_id']]=meta
+                            observations=[]
+                            closure=identity.endswith('/financial_closure_chain')
+                            expected_amount=3000 if closure else 6000
+                            for order,meta in orders.items():
+                                observed,error,_=rpc(args.endpoint,'PaymentService/Get',{'connector_transaction_id':order,
+                                    'connector_feature_data':{'value':json.dumps(meta)},'amount':{'minor_amount':6000,'currency':'USD'},
+                                    'capture_method':'MANUAL_MULTIPLE','test_mode':True},config,token)
+                                expected={'status':{'equals':'PARTIAL_CHARGED' if closure else 'CHARGED'},
+                                          'captured_amount':{'equals':expected_amount}}
+                                failures=source_assertions(observed,expected)
+                                actual_meta=financial_metadata(observed)
+                                if actual_meta.get('order_id')!=order: failures.append('owned_order_identity')
+                                if closure and at(actual_meta,'capture_context.authorization_closed') is not True:
+                                    failures.append('authorization_closed')
+                                observations.append({'error_present':error,'status':observed.get('status'),
+                                    'captured_amount':observed.get('captured_amount'),'failed_assertion_paths':failures})
+                            current_pass=bool(observations) and all(not o['error_present'] and not o['failed_assertion_paths'] for o in observations)
+                            result.append({'case_id':identity,'state':'RECONCILED_READ_ONLY' if current_pass else 'FAIL',
+                                'current_mapping_verified':False,'current_terminal_get_verified':current_pass,
+                                'provider_live_verified':False,'original_write_mapping_verified':False,
+                                'reason':'Prior financial writes retained; only current terminal GET contract retested',
+                                'observations':observations})
+                            continue
+                        child=copy.copy(args);child.mode='closure-chain' if identity.endswith('/financial_closure_chain') else 'shared-chain'
+                        child.journal=args.journal.with_name(args.journal.name+'.'+hashlib.sha256(identity.encode()).hexdigest()[:16])
+                        child.authorize_request=materialize_request(suite_scenarios('PaymentService/Authorize')['no3ds_manual_capture_credit_card']['grpc_req'],
+                            journal['session_seed']+'-'+identity.replace('/','-'))
+                        child.protected_financial_ids=[value for fact in imported for key,value in fact.items()
+                            if key in ['order_id','capture_id','connector_transaction_id','connector_refund_id'] and isinstance(value,str)]
+                        chain_result=live_mode(child)
+                        result.append({'case_id':identity,'state':'VERIFIED' if chain_result.get('provider_live_verified') else 'FAIL',
+                            'current_mapping_verified':chain_result.get('provider_live_verified',False),'chain':chain_result})
+                        continue
+                    if (not setup or not row.get('request') or row.get('fixture_id')
+                            or (row.get('provisioning') or '').startswith(('SEQUENTIAL_CONTRACT_REQUIRED','API_UNSUPPORTED','PUBLIC_VARIANT_REQUIRED','PROVIDER_OUTCOME_REQUIRED','PROVIDER_DECLINE_REQUIRED'))):
+                        result.append({'case_id':identity,'state':'NOT_RUN','reason':row['provisioning'] or 'OPERATOR_CONTEXT_REQUIRED'})
+                        continue
+                    strict_keys(setup,['bindings','env_bindings','allow_financial_write','decline_evidence','wire_observation','dependency_bindings'],['bindings'])
+                    if setup.get('wire_observation'):
+                        raise ValueError('Authored context is not a production wire observation')
+                    if row.get('kind')=='decline':
+                        negative=setup.get('decline_evidence') or {}
+                        if (not negative.get('documentation_url','').startswith('https://developer.paypal.com/')
+                                or not negative.get('binding_paths')
+                                or not set(negative['binding_paths']) <= set(setup.get('bindings',{})) | set(setup.get('env_bindings',{}))
+                                or not negative.get('assertions')
+                                or not any('error' in path or 'status' in path for path in negative['assertions'])):
+                            result.append({'case_id':identity,'state':'NOT_RUN','reason':'DOCUMENTED_DECLINE_BINDING_AND_ORACLE_REQUIRED'});continue
+                        row=copy.deepcopy(row)
+                        row['assertions']=negative['assertions']
+                        preflight_reason=assertion_preflight(row)
+                        if preflight_reason:
+                            result.append({'case_id':identity,'state':'NOT_RUN','reason':preflight_reason});continue
+                    request=materialize_request(row['request'],'paypal-'+hashlib.sha256((journal['session_seed']+':'+identity).encode()).hexdigest()[:24])
+                    setup=copy.deepcopy(setup)
+                    for target,dependency in setup.get('dependency_bindings',{}).items():
+                        strict_keys(dependency,['case_id','path'],['case_id','path'])
+                        prior=journal['operations'].get(dependency['case_id'])
+                        if (not prior or prior.get('state')!='completed' or prior.get('failures')
+                                or not prior.get('source_binding',{}).get('commit')):
+                            raise ValueError('Dependency has no successful owned actual response')
+                        if dependency['path']=='connector_feature_data.value':
+                            value=json.dumps(prior.get('metadata') or {})
+                        else:
+                            if dependency['path'] not in ['connector_transaction_id','connector_refund_id','metadata.order_id','metadata.capture_id','metadata.authorize_id']:
+                                raise ValueError('Dependency path is not an allowlisted financial identity')
+                            value=at(prior,dependency['path'])
+                        if not value: raise ValueError('Unresolved actual prerequisite identity')
+                        if target in setup['bindings']: raise ValueError('Conflicting prerequisite sources')
+                        setup['bindings'][target]=value
+                    for path,value in setup['bindings'].items():
+                        if any(word in path.lower() for word in ['token','secret','credential','card','cvc','cryptogram','signature']):
+                            raise ValueError('Sensitive context must be resolved in memory, not persisted bindings')
+                        parts=path.split('.'); target=request
+                        for part in parts[:-1]:
+                            if part not in target or not isinstance(target[part],dict): raise ValueError('Unknown prerequisite binding')
+                            target=target[part]
+                        if parts[-1] not in target: raise ValueError('Unknown prerequisite field')
+                        target[parts[-1]]=value
+                    for path,variable in setup.get('env_bindings',{}).items():
+                        if not isinstance(variable,str) or not re.fullmatch(r'[A-Z][A-Z0-9_]+',variable) or variable not in os.environ:
+                            raise ValueError('Missing in-memory operator binding')
+                        parts=path.split('.'); target=request
+                        for part in parts[:-1]:
+                            if part not in target or not isinstance(target[part],dict): raise ValueError('Unknown environment prerequisite binding')
+                            target=target[part]
+                        if parts[-1] not in target: raise ValueError('Unknown environment prerequisite field')
+                        target[parts[-1]]=os.environ[variable]
+                    method=row['method']; readonly=method in ['PaymentService/Get','RefundService/Get']
+                    # Required bindings must be explicit; materializing auto_generate is
+                    # appropriate for merchant IDs, never proof of an owned resource.
+                    required=row.get('prerequisite_bindings',[])
+                    supplied=set(setup['bindings']) | set(setup.get('env_bindings',{}))
+                    if set(required)-supplied:
+                        result.append({'case_id':identity,'state':'NOT_RUN','reason':'EXPLICIT_PREREQUISITE_BINDINGS_REQUIRED','paths':sorted(set(required)-supplied)});continue
+                    request_sha=hashlib.sha256(json.dumps(request,sort_keys=True).encode()).hexdigest()
+                    existing=journal['operations'].get(identity)
+                    old_fact=next((fact for fact in imported if fact['logical_key']==identity),None)
+                    if existing and (existing.get('method')!=method or existing.get('request_sha256')!=request_sha
+                                     or not existing.get('source_binding',{}).get('commit')):
+                        raise ValueError('Journal method/request/source identity mismatch; no financial replay')
+                    if old_fact and readonly and old_fact.get('request_sha256') != request_sha:
+                        raise ValueError('Imported current readonly request binding mismatch')
+                    if old_fact or existing:
+                        fact=old_fact or existing
+                        if old_fact and old_fact.get('method')!=method:
+                            raise ValueError('Imported operation method mismatch; original request provenance is immutable')
+                        metadata=fact.get('metadata') or {}; order=metadata.get('order_id') or fact.get('order_id')
+                        if not order and not readonly:
+                            result.append({'case_id':identity,'state':'NOT_RUN','reason':'PRIOR_FINANCIAL_OPERATION_GET_ONLY_IDENTITY_UNRESOLVED','current_mapping_verified':False}); continue
+                        query=request if readonly else {'connector_transaction_id':order,'connector_feature_data':{'value':json.dumps(metadata)},'test_mode':True}
+                        response,error,_=rpc(args.endpoint,method if readonly else 'PaymentService/Get',query,config,token)
+                        current_get_failures=source_assertions(response,row['assertions']) if readonly else []
+                        if not readonly and (response.get('connector_transaction_id') != order
+                                             or financial_metadata(response).get('order_id') != order):
+                            current_get_failures.append('owned_order_identity')
+                        result.append({'case_id':identity,'state':'FAIL' if error or current_get_failures else 'VERIFIED' if readonly else 'RECONCILED_READ_ONLY',
+                                       'current_mapping_verified':readonly and not error and not current_get_failures,
+                                       'original_write_mapping_verified':False,'current_get_assertion_failures':current_get_failures,
+                                       'original_method':fact.get('method'),'original_request_sha256':fact.get('request_sha256'),
+                                       'original_source_commit':fact.get('original_source_commit') or at(fact,'source_binding.commit'),
+                                       'new_recipe_request_sha256':request_sha,
+                                       'historical_failures':fact.get('failures',[]),
+                                       'original_write_status':fact.get('status'),
+                                       'metadata':financial_metadata(response),'captured_amount':response.get('captured_amount')})
+                        continue
+                    if identity.endswith('/no3ds_fail_payment'):
+                        result.append({'case_id':identity,'state':'NOT_RUN','reason':'SPEC_GAP/PROVIDER_DECLINE_NOT_PROVISIONED',
+                                       'provider_live_verified':False})
+                        continue
+                    imported_ids=set(PROTECTED_FINANCIAL_IDS)
+                    for fact in imported:
+                        for key in ['order_id','capture_id','connector_transaction_id','connector_refund_id']:
+                            if fact.get(key): imported_ids.add(fact[key])
                         meta=fact.get('metadata') or {}
-                        if meta.get('order_id'): orders[meta['order_id']]=meta
-                    observations=[]
-                    closure=identity.endswith('/financial_closure_chain')
-                    expected_amount=3000 if closure else 6000
-                    for order,meta in orders.items():
-                        observed,error,_=rpc(args.endpoint,'PaymentService/Get',{'connector_transaction_id':order,
-                            'connector_feature_data':{'value':json.dumps(meta)},'amount':{'minor_amount':6000,'currency':'USD'},
-                            'capture_method':'MANUAL_MULTIPLE','test_mode':True},config,token)
-                        expected={'status':{'equals':'PARTIAL_CHARGED' if closure else 'CHARGED'},
-                                  'captured_amount':{'equals':expected_amount}}
-                        failures=source_assertions(observed,expected)
-                        actual_meta=financial_metadata(observed)
-                        if actual_meta.get('order_id')!=order: failures.append('owned_order_identity')
-                        if closure and at(actual_meta,'capture_context.authorization_closed') is not True:
-                            failures.append('authorization_closed')
-                        observations.append({'error_present':error,'status':observed.get('status'),
-                            'captured_amount':observed.get('captured_amount'),'failed_assertion_paths':failures})
-                    current_pass=bool(observations) and all(not o['error_present'] and not o['failed_assertion_paths'] for o in observations)
-                    result.append({'case_id':identity,'state':'RECONCILED_READ_ONLY' if current_pass else 'FAIL',
-                        'current_mapping_verified':False,'current_terminal_get_verified':current_pass,
-                        'provider_live_verified':False,'original_write_mapping_verified':False,
-                        'reason':'Prior financial writes retained; only current terminal GET contract retested',
-                        'observations':observations})
-                    continue
-                child=copy.copy(args);child.mode='closure-chain' if identity.endswith('/financial_closure_chain') else 'shared-chain'
-                child.journal=args.journal.with_name(args.journal.name+'.'+hashlib.sha256(identity.encode()).hexdigest()[:16])
-                child.authorize_request=materialize_request(suite_scenarios('PaymentService/Authorize')['no3ds_manual_capture_credit_card']['grpc_req'],
-                    journal['session_seed']+'-'+identity.replace('/','-'))
-                child.protected_financial_ids=[value for fact in imported for key,value in fact.items()
-                    if key in ['order_id','capture_id','connector_transaction_id','connector_refund_id'] and isinstance(value,str)]
-                chain_result=live_mode(child)
-                result.append({'case_id':identity,'state':'VERIFIED' if chain_result.get('provider_live_verified') else 'FAIL',
-                    'current_mapping_verified':chain_result.get('provider_live_verified',False),'chain':chain_result})
-                continue
-            if (not setup or not row.get('request') or row.get('fixture_id')
-                    or (row.get('provisioning') or '').startswith(('SEQUENTIAL_CONTRACT_REQUIRED','API_UNSUPPORTED','PUBLIC_VARIANT_REQUIRED','PROVIDER_OUTCOME_REQUIRED','PROVIDER_DECLINE_REQUIRED'))):
-                result.append({'case_id':identity,'state':'NOT_RUN','reason':row['provisioning'] or 'OPERATOR_CONTEXT_REQUIRED'})
-                continue
-            strict_keys(setup,['bindings','env_bindings','allow_financial_write','decline_evidence','wire_observation','dependency_bindings'],['bindings'])
-            if setup.get('wire_observation'):
-                raise ValueError('Authored context is not a production wire observation')
-            if row.get('kind')=='decline':
-                negative=setup.get('decline_evidence') or {}
-                if (not negative.get('documentation_url','').startswith('https://developer.paypal.com/')
-                        or not negative.get('binding_paths')
-                        or not set(negative['binding_paths']) <= set(setup.get('bindings',{})) | set(setup.get('env_bindings',{}))
-                        or not negative.get('assertions')
-                        or not any('error' in path or 'status' in path for path in negative['assertions'])):
-                    result.append({'case_id':identity,'state':'NOT_RUN','reason':'DOCUMENTED_DECLINE_BINDING_AND_ORACLE_REQUIRED'});continue
-                row=copy.deepcopy(row)
-                row['assertions']=negative['assertions']
-                preflight_reason=assertion_preflight(row)
-                if preflight_reason:
-                    result.append({'case_id':identity,'state':'NOT_RUN','reason':preflight_reason});continue
-            request=materialize_request(row['request'],'paypal-'+hashlib.sha256((journal['session_seed']+':'+identity).encode()).hexdigest()[:24])
-            setup=copy.deepcopy(setup)
-            for target,dependency in setup.get('dependency_bindings',{}).items():
-                strict_keys(dependency,['case_id','path'],['case_id','path'])
-                prior=journal['operations'].get(dependency['case_id'])
-                if (not prior or prior.get('state')!='completed' or prior.get('failures')
-                        or not prior.get('source_binding',{}).get('commit')):
-                    raise ValueError('Dependency has no successful owned actual response')
-                if dependency['path']=='connector_feature_data.value':
-                    value=json.dumps(prior.get('metadata') or {})
-                else:
-                    if dependency['path'] not in ['connector_transaction_id','connector_refund_id','metadata.order_id','metadata.capture_id','metadata.authorize_id']:
-                        raise ValueError('Dependency path is not an allowlisted financial identity')
-                    value=at(prior,dependency['path'])
-                if not value: raise ValueError('Unresolved actual prerequisite identity')
-                if target in setup['bindings']: raise ValueError('Conflicting prerequisite sources')
-                setup['bindings'][target]=value
-            for path,value in setup['bindings'].items():
-                if any(word in path.lower() for word in ['token','secret','credential','card','cvc','cryptogram','signature']):
-                    raise ValueError('Sensitive context must be resolved in memory, not persisted bindings')
-                parts=path.split('.'); target=request
-                for part in parts[:-1]:
-                    if part not in target or not isinstance(target[part],dict): raise ValueError('Unknown prerequisite binding')
-                    target=target[part]
-                if parts[-1] not in target: raise ValueError('Unknown prerequisite field')
-                target[parts[-1]]=value
-            for path,variable in setup.get('env_bindings',{}).items():
-                if not isinstance(variable,str) or not re.fullmatch(r'[A-Z][A-Z0-9_]+',variable) or variable not in os.environ:
-                    raise ValueError('Missing in-memory operator binding')
-                parts=path.split('.'); target=request
-                for part in parts[:-1]:
-                    if part not in target or not isinstance(target[part],dict): raise ValueError('Unknown environment prerequisite binding')
-                    target=target[part]
-                if parts[-1] not in target: raise ValueError('Unknown environment prerequisite field')
-                target[parts[-1]]=os.environ[variable]
-            method=row['method']; readonly=method in ['PaymentService/Get','RefundService/Get']
-            # Required bindings must be explicit; materializing auto_generate is
-            # appropriate for merchant IDs, never proof of an owned resource.
-            required=row.get('prerequisite_bindings',[])
-            supplied=set(setup['bindings']) | set(setup.get('env_bindings',{}))
-            if set(required)-supplied:
-                result.append({'case_id':identity,'state':'NOT_RUN','reason':'EXPLICIT_PREREQUISITE_BINDINGS_REQUIRED','paths':sorted(set(required)-supplied)});continue
-            request_sha=hashlib.sha256(json.dumps(request,sort_keys=True).encode()).hexdigest()
-            existing=journal['operations'].get(identity)
-            old_fact=next((fact for fact in imported if fact['logical_key']==identity),None)
-            if existing and (existing.get('method')!=method or existing.get('request_sha256')!=request_sha
-                             or not existing.get('source_binding',{}).get('commit')):
-                raise ValueError('Journal method/request/source identity mismatch; no financial replay')
-            if old_fact or existing:
-                fact=old_fact or existing
-                if old_fact and (old_fact.get('method')!=method or old_fact.get('request_sha256')!=request_sha):
-                    raise ValueError('Imported operation method/request mismatch; reconcile using exact original bindings')
-                metadata=fact.get('metadata') or {}; order=metadata.get('order_id') or fact.get('order_id')
-                if not order and not readonly:
-                    result.append({'case_id':identity,'state':'NOT_RUN','reason':'PRIOR_FINANCIAL_OPERATION_GET_ONLY_IDENTITY_UNRESOLVED','current_mapping_verified':False}); continue
-                query=request if readonly else {'connector_transaction_id':order,'connector_feature_data':{'value':json.dumps(metadata)},'test_mode':True}
-                response,error,_=rpc(args.endpoint,method if readonly else 'PaymentService/Get',query,config,token)
-                current_get_failures=source_assertions(response,row['assertions']) if readonly else []
-                result.append({'case_id':identity,'state':('FAIL' if error or current_get_failures else 'VERIFIED') if readonly else 'RECONCILED_READ_ONLY',
-                               'current_mapping_verified':readonly and not error and not current_get_failures,
-                               'original_write_mapping_verified':False,'current_get_assertion_failures':current_get_failures,
-                               'metadata':financial_metadata(response),'captured_amount':response.get('captured_amount')})
-                continue
-            imported_ids=set(PROTECTED_FINANCIAL_IDS)
-            for fact in imported:
-                for key in ['order_id','capture_id','connector_transaction_id','connector_refund_id']:
-                    if fact.get(key): imported_ids.add(fact[key])
-                meta=fact.get('metadata') or {}
-                imported_ids.update(value for key,value in meta.items() if key in ['order_id','authorize_id','capture_id','incremental_authorization_id'] and isinstance(value,str))
-                imported_ids.update((meta.get('capture_context') or {}).get('capture_amounts') or {})
-            required=row.get('prerequisite_bindings',[])
-            unresolved=[path for path in required if not at(request,path) or at(request,path)=='auto_generate']
-            if unresolved:
-                result.append({'case_id':identity,'state':'NOT_RUN','reason':'UNRESOLVED_PREREQUISITES','paths':unresolved});continue
-            if not readonly and method in ['PaymentService/Capture','PaymentService/Void','PaymentService/Refund']:
-                metadata=financial_metadata(request)
-                saved=request.get('connector_transaction_id')
-                owned=[record for record in list(journal['operations'].values())+imported
-                       if saved and (saved==record.get('connector_transaction_id')
-                           or saved in {value for key,value in (record.get('metadata') or {}).items()
-                                        if key in ['order_id','authorize_id','capture_id','incremental_authorization_id'] and isinstance(value,str)}
-                           or saved in ((record.get('metadata') or {}).get('capture_context') or {}).get('capture_amounts',{}))]
-                # Actual identity plus exact metadata, currency and known successful
-                # source are prerequisites; a caller-supplied amount/ID is not proof.
-                owned=[record for record in owned if record.get('metadata')==metadata
-                       and (record.get('source_binding',{}).get('commit') or record.get('original_source_commit'))
-                       and record.get('status') in ['AUTHORIZED','PARTIAL_CHARGED_AND_CHARGEABLE','PARTIAL_CHARGED','CHARGED']]
-                if not owned:
-                    result.append({'case_id':identity,'state':'NOT_RUN','reason':'JOURNAL_OWNED_FINANCIAL_PREREQUISITE_REQUIRED'});continue
-                money=request.get('amount_to_capture') or request.get('refund_amount') or request.get('amount')
-                authoritative=at(metadata,'capture_context.authorized_amount')
-                if money and (not authoritative or money.get('currency')!=authoritative.get('currency_code')):
-                    result.append({'case_id':identity,'state':'NOT_RUN','reason':'OWNED_CURRENCY_PROOF_REQUIRED'});continue
-            if not readonly and (setup.get('allow_financial_write') is not True or any(item in json.dumps(request) for item in imported_ids)):
-                result.append({'case_id':identity,'state':'NOT_RUN','reason':'FINANCIAL_WRITE_NOT_PROVISIONED_OR_PROTECTED_RESOURCE'});continue
-            if not row['assertions']:
-                result.append({'case_id':identity,'state':'NOT_RUN','reason':'MISSING_CURRENT_OUTCOME_ORACLE'});continue
-            journal['operations'][identity]={'method':method,'request_sha256':request_sha,'source_binding':args.execution_binding,'state':'started',
-                'request_money':request.get('amount_to_capture') or request.get('refund_amount') or request.get('amount')}
-            atomic(args.journal,journal)
-            response,error,_=rpc(args.endpoint,method,request,config,token)
-            failures=source_assertions(response,row['assertions'])
-            record=journal['operations'][identity]
-            record.update(state='completed',metadata=financial_metadata(response),status=response.get('status'),captured_amount=response.get('captured_amount'),
-                          connector_transaction_id=response.get('connector_transaction_id'),connector_refund_id=response.get('connector_refund_id'),failures=failures)
-            atomic(args.journal,journal)
-            wire_failures=[]
-            wire_oracle=row.get('wire_oracle')
-            wire_observed=False
-            if wire_oracle:
-                observation=setup.get('wire_observation') or {}
-                # Only an actual current-runtime observer can establish wire proof.
-                # Expected JSON supplied in context is never accepted as observation.
-                if observation:
-                    raise ValueError('Wire observations require a production observer binding; authored context is not evidence')
-                wire_failures=['WIRE_OBSERVER_NOT_PROVISIONED']
-            local_refusal=error or row.get('kind') in ['refusal','decline'] or bool(at(row['assertions'],'error.must_exist'))
-            actual_status=response.get('status')
-            outcome_oracle=not local_refusal and (
-                (actual_status=='AUTHORIZED' and 'status' in row['assertions'] and bool(response.get('connector_transaction_id')))
-                or (actual_status in ['CHARGED','PARTIAL_CHARGED','PARTIAL_CHARGED_AND_CHARGEABLE']
-                    and 'status' in row['assertions'] and request.get('amount_to_capture',request.get('amount',{})).get('minor_amount') is not None
-                    and number(response.get('captured_amount'))==number(request.get('amount_to_capture',request.get('amount'))['minor_amount']))
-                or (actual_status=='REFUND_SUCCESS' and 'status' in row['assertions'] and bool(response.get('connector_refund_id'))
-                    and response.get('refund_amount')==request.get('refund_amount'))
-                or (method=='EventService/HandleEvent' and response.get('source_verified') is True and 'source_verified' in row['assertions']))
-            verified=not failures and outcome_oracle
-            result.append({'case_id':identity,'state':'FAIL' if failures else 'OUTCOME_VERIFIED_WIRE_NOT_RUN' if wire_failures and verified else 'VERIFIED' if verified else 'LOCAL_ORACLE_PASS',
-                           'provider_live_verified':verified,'provider_wire_graded':wire_observed,'wire_oracle_state':'NOT_RUN' if wire_failures else 'NOT_APPLICABLE',
-                           'wire_oracle_failures':wire_failures,'current_mapping_verified':not failures,'failures':failures,
-                           'status':response.get('status'),'captured_amount':response.get('captured_amount'),'error_present':error})
+                        imported_ids.update(value for key,value in meta.items() if key in ['order_id','authorize_id','capture_id','incremental_authorization_id'] and isinstance(value,str))
+                        imported_ids.update((meta.get('capture_context') or {}).get('capture_amounts') or {})
+                    required=row.get('prerequisite_bindings',[])
+                    unresolved=[path for path in required if not at(request,path) or at(request,path)=='auto_generate']
+                    if unresolved:
+                        result.append({'case_id':identity,'state':'NOT_RUN','reason':'UNRESOLVED_PREREQUISITES','paths':unresolved});continue
+                    if not readonly and method in ['PaymentService/Capture','PaymentService/Void','PaymentService/Refund']:
+                        metadata=financial_metadata(request)
+                        saved=request.get('connector_transaction_id')
+                        owned=[record for record in list(journal['operations'].values())+imported
+                               if saved and (saved==record.get('connector_transaction_id')
+                                   or saved in {value for key,value in (record.get('metadata') or {}).items()
+                                                if key in ['order_id','authorize_id','capture_id','incremental_authorization_id'] and isinstance(value,str)}
+                                   or saved in ((record.get('metadata') or {}).get('capture_context') or {}).get('capture_amounts',{}))]
+                        # Actual identity plus exact metadata, currency and known successful
+                        # source are prerequisites; a caller-supplied amount/ID is not proof.
+                        owned=[record for record in owned if record.get('metadata')==metadata
+                               and (record.get('source_binding',{}).get('commit') or record.get('original_source_commit'))
+                               and record.get('status') in ['AUTHORIZED','PARTIAL_CHARGED_AND_CHARGEABLE','PARTIAL_CHARGED','CHARGED']]
+                        if not owned:
+                            result.append({'case_id':identity,'state':'NOT_RUN','reason':'JOURNAL_OWNED_FINANCIAL_PREREQUISITE_REQUIRED'});continue
+                        money=request.get('amount_to_capture') or request.get('refund_amount') or request.get('amount')
+                        authoritative=at(metadata,'capture_context.authorized_amount')
+                        if money and (not authoritative or money.get('currency')!=authoritative.get('currency_code')):
+                            result.append({'case_id':identity,'state':'NOT_RUN','reason':'OWNED_CURRENCY_PROOF_REQUIRED'});continue
+                    if not readonly and (setup.get('allow_financial_write') is not True or any(item in json.dumps(request) for item in imported_ids)):
+                        result.append({'case_id':identity,'state':'NOT_RUN','reason':'FINANCIAL_WRITE_NOT_PROVISIONED_OR_PROTECTED_RESOURCE'});continue
+                    if not row['assertions']:
+                        result.append({'case_id':identity,'state':'NOT_RUN','reason':'MISSING_CURRENT_OUTCOME_ORACLE'});continue
+                    journal['operations'][identity]={'method':method,'request_sha256':request_sha,'source_binding':args.execution_binding,'state':'started',
+                        'request_money':request.get('amount_to_capture') or request.get('refund_amount') or request.get('amount')}
+                    atomic(args.journal,journal)
+                    response,error,_=rpc(args.endpoint,method,request,config,token)
+                    failures=source_assertions(response,row['assertions'])
+                    record=journal['operations'][identity]
+                    record.update(state='completed',metadata=financial_metadata(response),status=response.get('status'),captured_amount=response.get('captured_amount'),
+                                  connector_transaction_id=response.get('connector_transaction_id'),connector_refund_id=response.get('connector_refund_id'),failures=failures)
+                    atomic(args.journal,journal)
+                    wire_failures=[]
+                    wire_oracle=row.get('wire_oracle')
+                    wire_observed=False
+                    if wire_oracle:
+                        observation=setup.get('wire_observation') or {}
+                        # Only an actual current-runtime observer can establish wire proof.
+                        # Expected JSON supplied in context is never accepted as observation.
+                        if observation:
+                            raise ValueError('Wire observations require a production observer binding; authored context is not evidence')
+                        wire_failures=['WIRE_OBSERVER_NOT_PROVISIONED']
+                    local_refusal=error or row.get('kind') in ['refusal','decline'] or bool(at(row['assertions'],'error.must_exist'))
+                    actual_status=response.get('status')
+                    outcome_oracle=not local_refusal and (
+                        (actual_status=='AUTHORIZED' and 'status' in row['assertions'] and bool(response.get('connector_transaction_id')))
+                        or (actual_status in ['CHARGED','PARTIAL_CHARGED','PARTIAL_CHARGED_AND_CHARGEABLE']
+                            and 'status' in row['assertions'] and request.get('amount_to_capture',request.get('amount',{})).get('minor_amount') is not None
+                            and number(response.get('captured_amount'))==number(request.get('amount_to_capture',request.get('amount'))['minor_amount']))
+                        or (actual_status=='REFUND_SUCCESS' and 'status' in row['assertions'] and bool(response.get('connector_refund_id'))
+                            and response.get('refund_amount')==request.get('refund_amount'))
+                        or (method=='EventService/HandleEvent' and response.get('source_verified') is True and 'source_verified' in row['assertions']))
+                    verified=not failures and outcome_oracle
+                    result.append({'case_id':identity,'state':'FAIL' if failures else 'OUTCOME_VERIFIED_WIRE_NOT_RUN' if wire_failures and verified else 'VERIFIED' if verified else 'LOCAL_ORACLE_PASS',
+                                   'provider_live_verified':verified,'provider_wire_graded':wire_observed,'wire_oracle_state':'NOT_RUN' if wire_failures else 'NOT_APPLICABLE',
+                                   'wire_oracle_failures':wire_failures,'current_mapping_verified':not failures,'failures':failures,
+                                   'status':response.get('status'),'captured_amount':response.get('captured_amount'),'error_present':error})
+                except (Exception, KeyboardInterrupt) as failure:
+                    pending = [entry for entry in journal.get('rpc_calls', {}).values()
+                               if entry.get('case_id') == active_row[0] and entry.get('state') in ['started', 'uncertain']]
+                    child_pending = child_chain_uncertainty(args, journal, active_row[0])
+                    result.append({'case_id': active_row[0], 'state': 'FAIL',
+                                   'reason': child_pending['reason'] if child_pending else 'AMBIGUOUS_RPC_GET_ONLY' if pending else 'EXECUTION_OR_CONTRACT_FAILURE',
+                                   'exception_type': type(failure).__name__, 'provider_live_verified': False,
+                                   'dependent_chain_blocked': bool(pending or child_pending),
+                                   'child_financial_uncertainty': child_pending})
+                    if isinstance(failure, KeyboardInterrupt):
+                        raise
+        finally:
+            RPC_AUDIT = None
         return {'pass':all(row['state']=='VERIFIED' for row in result),'mode':args.mode,'rows':result,
                 'provider_live_verified':bool(result) and all(row['state']=='VERIFIED' for row in result),
-                'case_count':len(manifest['rows']),'fixture_mapping':fixture_result}
+                'case_count':len(manifest['rows']),'fixture_mapping':fixture_result,
+                'previous_report':result.previous,'error_descriptor_binding':descriptor_binding,'complete':True}
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, epilog='Runtime prerequisites: protoc on PATH and Python google.protobuf (message_factory.GetMessageClass API). Schema sources must match Git HEAD; dependency/type/source checks run before RPCs.')
     parser.add_argument('mode', choices=['validate-contracts', 'fixture', 'live-read-only', 'shared-chain', 'closure-chain', 'matrix-plan', 'import-financial-facts', 'matrix-fixture', 'matrix-live'])
     parser.add_argument('--case-id', action='append')
     parser.add_argument('--generate-matrix', action='store_true')
@@ -1336,6 +1624,17 @@ def main():
             atomic(args.out,result)
             print(json.dumps({key:result[key] for key in ['mode','pass','provider_calls']}))
             return 0
+        if args.mode != 'validate-contracts':
+            try:
+                public_error_types()
+            except (ImportError, AttributeError, ValueError, OSError, subprocess.SubprocessError):
+                retained = json.loads(args.out.read_text()) if args.out.exists() else {}
+                retained.update(mode=args.mode, **{'pass': False,
+                                  'error': 'PROTOBUF_RUNTIME_DEPENDENCY_SOURCE_OR_TYPE_PREFLIGHT_FAILED',
+                                  'provider_calls': 0, 'provider_live_verified': False})
+                atomic(args.out, retained)
+                print('Protobuf preflight failed before RPC: install protoc/Python protobuf and verify committed schema sources.')
+                return 1
         cases = load_contracts()
         before = bindings(args.binary)
         if args.mode != 'validate-contracts' and not args.require_committed:
@@ -1371,8 +1670,10 @@ def main():
         return 0 if result['pass'] else 1
     except (ValueError, OSError, subprocess.SubprocessError, KeyError, TypeError):
         # Never serialize exception values: transports can include authentication.
-        atomic(args.out, {'mode': args.mode, 'pass': False, 'error': 'EXECUTION_OR_CONTRACT_FAILURE',
+        retained = json.loads(args.out.read_text()) if args.out.exists() else {}
+        retained.update(mode=args.mode, **{'pass': False, 'error': 'EXECUTION_OR_CONTRACT_FAILURE',
                           'evidence_state': 'IMPLEMENTED', 'provider_live_verified': False})
+        atomic(args.out, retained)
         print('Execution/contract failure; no response or credential values emitted.')
         return 1
 
