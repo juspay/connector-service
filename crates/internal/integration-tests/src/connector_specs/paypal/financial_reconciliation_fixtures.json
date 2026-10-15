@@ -1126,7 +1126,8 @@
         "amount_to_capture": {
           "minor_amount": 3000,
           "currency": "USD"
-        }
+        },
+        "capture_method": "MANUAL_MULTIPLE"
       },
       "http": {
         "method": "POST",
@@ -4296,10 +4297,12 @@
       "repeat": 1,
       "expect": {
         "error_present": true,
-        "status": "REFUND_PENDING",
+        "status": "REFUND_STATUS_UNSPECIFIED",
         "connector_refund_id": "PUBLIC_REFUND_ID",
         "refund_amount_minor": null,
-        "refund_amount_currency": null
+        "refund_amount_currency": null,
+        "error_code": "503",
+        "response.status_code": 503
       },
       "error_contains": null
     },
@@ -4446,7 +4449,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -4508,7 +4512,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -4570,7 +4575,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -4632,7 +4638,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -4694,7 +4701,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -4756,7 +4764,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -4815,7 +4824,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -4874,7 +4884,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -4933,7 +4944,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -5001,7 +5013,8 @@
         "redirection_response": {
           "params": "token=PUBLIC_ORDER"
         },
-        "test_mode": true
+        "test_mode": true,
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -5157,7 +5170,8 @@
           "params": "token=PUBLIC_ORDER"
         },
         "test_mode": true,
-        "connector_order_id": "PUBLIC_OTHER_ORDER"
+        "connector_order_id": "PUBLIC_OTHER_ORDER",
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -5273,7 +5287,8 @@
         "redirection_response": {
           "params": "token=PUBLIC_ORDER"
         },
-        "test_mode": true
+        "test_mode": true,
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -5389,7 +5404,8 @@
         "test_mode": true,
         "billing_descriptor": {
           "statement_descriptor": "PUBLIC STORE"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -5498,7 +5514,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -5557,7 +5574,8 @@
         "connector_order_reference_id": "PUBLIC_ORDER",
         "connector_feature_data": {
           "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "GET",
@@ -5643,7 +5661,52 @@
             }
           }
         },
-        "calls": 1
+        "calls": 2,
+        "steps": [
+          {
+            "method": "POST",
+            "path": "/v1/oauth2/token",
+            "response": {
+              "access_token": "PUBLIC_FRESH_WEBHOOK_TOKEN",
+              "token_type": "Bearer",
+              "expires_in": 300
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "grant_type": "client_credentials"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/notifications/verify-webhook-signature",
+            "response": {
+              "verification_status": "SUCCESS"
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "webhook_id": "PUBLIC_INERT_SUBSCRIPTION_ID",
+              "webhook_event": {
+                "id": "PUBLIC_EVENT",
+                "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
+                "resource_type": "authorization",
+                "resource": {
+                  "id": "PUBLIC_AUTH",
+                  "status": "VOIDED",
+                  "amount": {
+                    "value": "60.00",
+                    "currency_code": "USD"
+                  },
+                  "supplementary_data": {
+                    "related_ids": {
+                      "order_id": "PUBLIC_ORDER"
+                    }
+                  }
+                }
+              }
+            },
+            "authorization_matches_fresh_oauth": true
+          }
+        ]
       },
       "repeat": 1,
       "expect": {
@@ -5712,7 +5775,52 @@
             }
           }
         },
-        "calls": 1
+        "calls": 2,
+        "steps": [
+          {
+            "method": "POST",
+            "path": "/v1/oauth2/token",
+            "response": {
+              "access_token": "PUBLIC_FRESH_WEBHOOK_TOKEN",
+              "token_type": "Bearer",
+              "expires_in": 300
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "grant_type": "client_credentials"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/notifications/verify-webhook-signature",
+            "response": {
+              "verification_status": "FAILURE"
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "webhook_id": "PUBLIC_INERT_SUBSCRIPTION_ID",
+              "webhook_event": {
+                "id": "PUBLIC_EVENT",
+                "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
+                "resource_type": "authorization",
+                "resource": {
+                  "id": "PUBLIC_AUTH",
+                  "status": "VOIDED",
+                  "amount": {
+                    "value": "60.00",
+                    "currency_code": "USD"
+                  },
+                  "supplementary_data": {
+                    "related_ids": {
+                      "order_id": "PUBLIC_ORDER"
+                    }
+                  }
+                }
+              }
+            },
+            "authorization_matches_fresh_oauth": true
+          }
+        ]
       },
       "repeat": 1,
       "expect": {
@@ -5777,7 +5885,52 @@
             }
           }
         },
-        "calls": 1
+        "calls": 2,
+        "steps": [
+          {
+            "method": "POST",
+            "path": "/v1/oauth2/token",
+            "response": {
+              "access_token": "PUBLIC_FRESH_WEBHOOK_TOKEN",
+              "token_type": "Bearer",
+              "expires_in": 300
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "grant_type": "client_credentials"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/notifications/verify-webhook-signature",
+            "response": {
+              "verification_status": "SUCCESS"
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "webhook_id": "PUBLIC_INERT_SUBSCRIPTION_ID",
+              "webhook_event": {
+                "id": "PUBLIC_EVENT",
+                "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
+                "resource_type": "authorization",
+                "resource": {
+                  "id": "PUBLIC_AUTH",
+                  "status": "VOIDED",
+                  "amount": {
+                    "value": "60.00",
+                    "currency_code": "USD"
+                  },
+                  "supplementary_data": {
+                    "related_ids": {
+                      "order_id": "PUBLIC_ORDER"
+                    }
+                  }
+                }
+              }
+            },
+            "authorization_matches_fresh_oauth": true
+          }
+        ]
       },
       "repeat": 1,
       "expect": {
@@ -5832,7 +5985,52 @@
             }
           }
         },
-        "calls": 1
+        "calls": 2,
+        "steps": [
+          {
+            "method": "POST",
+            "path": "/v1/oauth2/token",
+            "response": {
+              "access_token": "PUBLIC_FRESH_WEBHOOK_TOKEN",
+              "token_type": "Bearer",
+              "expires_in": 300
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "grant_type": "client_credentials"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/notifications/verify-webhook-signature",
+            "response": {
+              "verification_status": "SUCCESS"
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "webhook_id": "PUBLIC_INERT_SUBSCRIPTION_ID",
+              "webhook_event": {
+                "id": "PUBLIC_EVENT",
+                "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
+                "resource_type": "authorization",
+                "resource": {
+                  "id": "PUBLIC_AUTH",
+                  "status": "VOIDED",
+                  "amount": {
+                    "value": "60.00",
+                    "currency_code": "USD"
+                  },
+                  "supplementary_data": {
+                    "related_ids": {
+                      "order_id": "PUBLIC_ORDER"
+                    }
+                  }
+                }
+              }
+            },
+            "authorization_matches_fresh_oauth": true
+          }
+        ]
       },
       "repeat": 1,
       "expect": {
@@ -5890,7 +6088,47 @@
             }
           }
         },
-        "calls": 1
+        "calls": 2,
+        "steps": [
+          {
+            "method": "POST",
+            "path": "/v1/oauth2/token",
+            "response": {
+              "access_token": "PUBLIC_FRESH_WEBHOOK_TOKEN",
+              "token_type": "Bearer",
+              "expires_in": 300
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "grant_type": "client_credentials"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/notifications/verify-webhook-signature",
+            "response": {
+              "verification_status": "SUCCESS"
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "webhook_id": "PUBLIC_INERT_SUBSCRIPTION_ID",
+              "webhook_event": {
+                "id": "PUBLIC_EVENT",
+                "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
+                "resource_type": "authorization",
+                "resource": {
+                  "id": "PUBLIC_AUTH",
+                  "status": "VOIDED",
+                  "amount": {
+                    "value": "60.00",
+                    "currency_code": "USD"
+                  }
+                }
+              }
+            },
+            "authorization_matches_fresh_oauth": true
+          }
+        ]
       },
       "repeat": 1,
       "expect": {
@@ -5953,7 +6191,52 @@
             }
           }
         },
-        "calls": 1
+        "calls": 2,
+        "steps": [
+          {
+            "method": "POST",
+            "path": "/v1/oauth2/token",
+            "response": {
+              "access_token": "PUBLIC_FRESH_WEBHOOK_TOKEN",
+              "token_type": "Bearer",
+              "expires_in": 300
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "grant_type": "client_credentials"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/notifications/verify-webhook-signature",
+            "response": {
+              "verification_status": "SUCCESS"
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "webhook_id": "PUBLIC_INERT_SUBSCRIPTION_ID",
+              "webhook_event": {
+                "id": "PUBLIC_EVENT",
+                "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
+                "resource_type": "authorization",
+                "resource": {
+                  "id": "PUBLIC_AUTH",
+                  "status": "CREATED",
+                  "amount": {
+                    "value": "60.00",
+                    "currency_code": "USD"
+                  },
+                  "supplementary_data": {
+                    "related_ids": {
+                      "order_id": "PUBLIC_ORDER"
+                    }
+                  }
+                }
+              }
+            },
+            "authorization_matches_fresh_oauth": true
+          }
+        ]
       },
       "repeat": 1,
       "expect": {
@@ -6015,7 +6298,51 @@
             }
           }
         },
-        "calls": 1
+        "calls": 2,
+        "steps": [
+          {
+            "method": "POST",
+            "path": "/v1/oauth2/token",
+            "response": {
+              "access_token": "PUBLIC_FRESH_WEBHOOK_TOKEN",
+              "token_type": "Bearer",
+              "expires_in": 300
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "grant_type": "client_credentials"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/notifications/verify-webhook-signature",
+            "response": {
+              "verification_status": "SUCCESS"
+            },
+            "response_status": 200,
+            "request_body_contains": {
+              "webhook_id": "PUBLIC_INERT_SUBSCRIPTION_ID",
+              "webhook_event": {
+                "id": "PUBLIC_EVENT",
+                "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
+                "resource_type": "authorization",
+                "resource": {
+                  "id": "PUBLIC_AUTH",
+                  "amount": {
+                    "value": "60.00",
+                    "currency_code": "USD"
+                  },
+                  "supplementary_data": {
+                    "related_ids": {
+                      "order_id": "PUBLIC_ORDER"
+                    }
+                  }
+                }
+              }
+            },
+            "authorization_matches_fresh_oauth": true
+          }
+        ]
       },
       "repeat": 1,
       "expect": {
@@ -6365,7 +6692,8 @@
             "card_network": "VISA",
             "eci": "05"
           }
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -6444,7 +6772,8 @@
             "eci": "05"
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -6521,7 +6850,8 @@
             "card_network": "VISA",
             "eci": "06"
           }
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -6600,7 +6930,8 @@
             "eci": "06"
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -6677,7 +7008,8 @@
             "card_network": "VISA",
             "eci": "07"
           }
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -6756,7 +7088,8 @@
             "eci": "07"
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -6833,7 +7166,8 @@
             "card_network": "MASTERCARD",
             "eci": "00"
           }
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -6912,7 +7246,8 @@
             "eci": "00"
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -6989,7 +7324,8 @@
             "card_network": "MASTERCARD",
             "eci": "01"
           }
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7068,7 +7404,8 @@
             "eci": "01"
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7145,7 +7482,8 @@
             "card_network": "MASTERCARD",
             "eci": "02"
           }
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7224,7 +7562,8 @@
             "eci": "02"
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7301,7 +7640,8 @@
             "card_network": "VISA",
             "eci": "02"
           }
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7376,7 +7716,8 @@
             "card_network": "MASTERCARD",
             "eci": "05"
           }
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7454,7 +7795,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7532,7 +7874,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7607,7 +7950,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7682,7 +8026,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7762,7 +8107,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7842,7 +8188,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -7933,7 +8280,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8024,7 +8372,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8099,7 +8448,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8174,7 +8524,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8264,7 +8615,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8354,7 +8706,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8432,7 +8785,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8510,7 +8864,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8579,7 +8934,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8648,7 +9004,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8718,7 +9075,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8788,7 +9146,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8858,7 +9217,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -8928,7 +9288,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9003,7 +9364,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9078,7 +9440,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9155,7 +9518,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9232,7 +9596,8 @@
           "trans_status": "TRANSACTION_STATUS_NOT_VERIFIED",
           "eci": "06",
           "cavv": ""
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9311,7 +9676,8 @@
         "authentication_data": {
           "trans_status": "TRANSACTION_STATUS_INFORMATION_ONLY",
           "eci": "05"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9389,7 +9755,8 @@
         },
         "authentication_data": {
           "cavv": "PUBLIC_ACS_CAVV"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9467,7 +9834,8 @@
           "trans_status": "TRANSACTION_STATUS_SUCCESS",
           "eci": "05"
         },
-        "connector_order_id": "PUBLIC_ORDER"
+        "connector_order_id": "PUBLIC_ORDER",
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9541,7 +9909,8 @@
             }
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9612,7 +9981,8 @@
             }
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9699,7 +10069,8 @@
             "transaction_identifier": "PUBLIC_APPLE_TRANSACTION"
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9785,7 +10156,8 @@
             }
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9852,7 +10224,8 @@
           }
         },
         "authentication_data": {},
-        "connector_order_id": "PUBLIC_ORDER"
+        "connector_order_id": "PUBLIC_ORDER",
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9919,7 +10292,8 @@
           }
         },
         "authentication_data": {},
-        "connector_order_id": "PUBLIC_ORDER"
+        "connector_order_id": "PUBLIC_ORDER",
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -9990,7 +10364,8 @@
             "transaction_identifier": "PUBLIC_APPLE_TRANSACTION"
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -10045,7 +10420,8 @@
             }
           }
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -10125,7 +10501,8 @@
         "billing_descriptor": {
           "statement_descriptor": "PUBLIC STORE"
         },
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -10247,7 +10624,8 @@
           "params": "token=PUBLIC_ORDER"
         },
         "test_mode": true,
-        "authentication_data": {}
+        "authentication_data": {},
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -10406,7 +10784,8 @@
         "state": {
           "access_token": {},
           "connector_customer_id": "PUBLIC_CUSTOMER"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -10572,7 +10951,8 @@
             "expires_in_seconds": 300
           },
           "connector_customer_id": "PUBLIC_CUSTOMER"
-        }
+        },
+        "address": {}
       },
       "http": {
         "method": "POST",
@@ -10712,7 +11092,8 @@
         "state": {
           "connector_customer_id": "PUBLIC_CUSTOMER"
         },
-        "return_url": "https://example.invalid/return"
+        "return_url": "https://example.invalid/return",
+        "address": {}
       },
       "http": {
         "method": "POST",

@@ -447,10 +447,12 @@
       "rpc": "RefundService/Get",
       "assert": {
         "error_present": true,
-        "status": "REFUND_PENDING",
+        "status": "REFUND_STATUS_UNSPECIFIED",
         "connector_refund_id": "PUBLIC_REFUND_ID",
         "refund_amount_minor": null,
-        "refund_amount_currency": null
+        "refund_amount_currency": null,
+        "error_code": "503",
+        "response.status_code": 503
       },
       "surface": "committed actual RSync gRPC/HTTP production mapper",
       "execution": "NOT_RUN",
@@ -460,7 +462,20 @@
         "known_implementation_gap": "Current generic HTTPerror producer drops known requestedRefundID. Desired strict preservation assertion retained; scoped CORE fix queued after S3.",
         "retained_as_history": true
       },
-      "source_reconciliation": "rev18 C30/P-RSync-05; domain_types/src/types.rs~10437, grpc/server/refunds.rs47, ffi/services/payments.rs936"
+      "source_reconciliation": "rev23 C41/P-RSync-07: HTTP503 error contains no observed refund resource.status; unspecified state with explicit503 error, queried identity and absent Money. No Rust change.",
+      "prior_runtime_assertion": {
+        "assert": {
+          "error_present": true,
+          "status": "REFUND_PENDING",
+          "connector_refund_id": "PUBLIC_REFUND_ID",
+          "refund_amount_minor": null,
+          "refund_amount_currency": null
+        },
+        "artifact": "test/grpc/c01-committed-production-mapper.json",
+        "protocol": "test/grpc/c01-committed-mapper-failure-protocol.json",
+        "result": "FAIL: status",
+        "retained_as_history": true
+      }
     },
     {
       "id": "rsync_currency_without_request_money_review",
@@ -505,7 +520,7 @@
   "rsync_terminal_contract": {
     "source_status": "COMPLETED success; missing/null/unknown Pending; own status_details.reason according to actual PayPal refund schema. Never read unrelated payment failure_reason.",
     "grpc_prior_refund_status_carrier": "ABSENT in RefundServiceGetRequest; no fake state restoration in connector",
-    "http401_503": "Strict known requested connectorRefundID preservation remains required and actual runtime NOT_RUN. Existing generate_refund_sync_response already falls back to request.connector_refund_id (types.rs10437; grpc47/FFI936); prior empty-ID premise inspected Refund CREATE, not RSync. No generic fix manufactured. HS independently retains stored ID and terminal status on Pending/Review/401/503/transport.",
+    "http401_503": "HTTP401 retains existing connector Pending fallback, not provider-state observation. HTTP503 has no observed refund resource.status: assert REFUND_STATUS_UNSPECIFIED plus explicit503 error/status_code, exact queried refundID and absent Money. Existing generate_refund_sync_response retains requested connector_refund_id. HS independently retains stored terminal Success/Failure/TransactionFailure and ID on Pending/Review/401/503/transport; nonterminal remains uncertain with error. Prior failed Pending503 oracle retained under prior_runtime_assertion; no Refund CREATE or Rust change.",
     "required_hs_oracle": "Actual stored terminalSuccess/Failure/TransactionFailure and actualstoredconnectorRefundID retained on Pending/Review/HTTPerror. Real HS faults+reconciliation required; NOT_RUN",
     "conflicting_resource": "Never import wrong refundID Success or Money; retain expectedID and ManualReview/error",
     "ownership_gap": "Optional metadata corroborates actual owned capture; independent vendor refund-to-capture association absent direct capture_id field; actual known-resource context/live provider oracle required",

@@ -117,7 +117,7 @@ def load_contracts():
                 raise ValueError('Invalid fixture HTTP sequence')
             for step in case['http']['steps']:
                 strict_keys(step, ['method', 'path', 'response', 'response_status', 'request_body_contains', 'request_body_equals', 'authorization_matches_fresh_oauth'], ['method', 'path', 'response', 'response_status', 'request_body_contains'])
-                if (step['method'] not in ['GET', 'POST'] or not step['path'].startswith(('/v1/oauth2/token', '/v2/'))
+                if (step['method'] not in ['GET', 'POST'] or not step['path'].startswith(('/v1/oauth2/token', '/v2/', '/v1/notifications/verify-webhook-signature'))
                         or step['response_status'] not in [200, 201, 204, 400, 401, 403, 404, 409, 422, 429, 500, 502, 503]
                         or not isinstance(step['request_body_contains'], dict)
                         or not isinstance(step.get('authorization_matches_fresh_oauth', False), bool)):
@@ -285,6 +285,49 @@ def verify_runtime(endpoint, binary):
     return matches[0]
 
 
+def parse_grpcurl_output(stdout, stderr):
+    """Decode unary verbose output without treating metadata as response JSON.
+
+    All input stays in memory. In particular, verbose request metadata and raw
+    connector request/response carriers must never be persisted as diagnostics.
+    Only the decoded response is used by the existing allowlisted assertions.
+    """
+    decoder = json.JSONDecoder()
+    messages = []
+    for marker in re.finditer(r'^Response contents:\s*\n', stdout, re.MULTILINE):
+        payload = stdout[marker.end():].lstrip()
+        value, _ = decoder.raw_decode(payload)
+        if not isinstance(value, dict):
+            raise ValueError('Invalid unary response object')
+        messages.append(value)
+    if len(messages) > 1:
+        raise ValueError('Unexpected multiple unary responses')
+    errors = []
+    for stream in [stdout, stderr]:
+        # -format-error emits a standalone JSON error, optionally after ERROR:.
+        # Do not scan arbitrary braces in echoed request metadata or trailers.
+        candidates = [stream.strip()]
+        candidates.extend(stream[m.end():].lstrip()
+                          for m in re.finditer(r'^ERROR:\s*\n', stream, re.MULTILINE))
+        for candidate in candidates:
+            if not candidate.startswith('{'):
+                continue
+            try:
+                value, _ = decoder.raw_decode(candidate)
+            except json.JSONDecodeError:
+                continue
+            if (isinstance(value, dict) and isinstance(value.get('code'), int)
+                    and not isinstance(value['code'], bool)
+                    and value['code'] != 0 and isinstance(value.get('message'), str)):
+                errors.append(value['message'])
+    if not messages and not errors:
+        raise ValueError('No unary response or structured gRPC error')
+    response = normalize(messages[0]) if messages else {}
+    # Guard matching sees only structured errors, never echoed credentials or
+    # request metadata that happens to contain an expected diagnostic string.
+    return response, '\n'.join(errors), bool(errors)
+
+
 def rpc(endpoint, method, request, config, token, inject_state=True, connector='paypal'):
     # Configuration and OAuth remain memory-only. Never emit argv, raw stderr,
     # headers or an unfiltered provider response into an artifact.
@@ -294,19 +337,16 @@ def rpc(endpoint, method, request, config, token, inject_state=True, connector='
     elif inject_state and not method.startswith('EventService/'):
         q['state'] = {'access_token': {'token': {'value': token}, 'token_type': 'Bearer',
                                      'expires_in_seconds': 300}}
-    command = ['grpcurl', '-plaintext', '-max-time', '40', '-format-error',
+    command = ['grpcurl', '-plaintext', '-max-time', '40', '-format-error', '-emit-defaults', '-v',
                '-expand-headers', '-H', 'x-connector-config: ${PAYPAL_REGRESSION_CONNECTOR_CONFIG}',
                '-H', 'x-connector: ' + connector, '-H', 'x-merchant-id: paypal-regression',
                '-H', 'x-tenant-id: public', '-d', '@', endpoint, 'types.' + method]
     environment = dict(os.environ, PAYPAL_REGRESSION_CONNECTOR_CONFIG=config)
     proc = subprocess.run(command, input=json.dumps(q), capture_output=True, text=True, timeout=45, env=environment)
-    try:
-        response = normalize(json.loads(proc.stdout)) if proc.stdout.strip() else {}
-    except json.JSONDecodeError:
-        response = {}
-    error = proc.returncode != 0 or bool(response.get('error'))
-    # Error text is used in-memory only for inert fixture local guard checks.
-    error_text = proc.stderr + proc.stdout
+    response, error_text, protocol_error = parse_grpcurl_output(proc.stdout, proc.stderr)
+    error = proc.returncode != 0 or protocol_error or bool(response.get('error'))
+    if response.get('error'):
+        error_text += '\n' + json.dumps(response['error'])
     return response, error, error_text
 
 

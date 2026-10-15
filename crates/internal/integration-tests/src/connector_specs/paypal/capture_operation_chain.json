@@ -119,7 +119,7 @@
     {
       "id": "saved_multiple_missing_request_mode",
       "surface": "local_request_negative",
-      "request": "Saved MANUAL_MULTIPLE, absent request capture_method and absent multiple_capture_data",
+      "request": "Saved MANUAL_MULTIPLE, matching explicit request capture_method MANUAL_MULTIPLE, absent multiple_capture_data.capture_reference; stable historical case ID retained",
       "assert": {
         "local_error_field": "multiple_capture_data.capture_reference",
         "financial_http_calls": 0
