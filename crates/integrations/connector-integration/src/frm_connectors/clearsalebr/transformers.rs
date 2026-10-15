@@ -3,19 +3,19 @@ use common_utils::types::FloatMajorUnit;
 use domain_types::{
     connector_flow::{FrmPaymentOutcome, PostRiskCheck, PreRiskCheck, ServerAuthenticationToken},
     connector_types::{
-        ServerAuthenticationTokenRequestData, ServerAuthenticationTokenResponseData,
+        DomainData, HotelData, ServerAuthenticationTokenRequestData,
+        ServerAuthenticationTokenResponseData, TravelLeg, Traveller,
     },
     errors,
     frm::frm_types::{
-        FrmAccommodation, FrmFlowData, FrmMetadata, FrmPassenger, FrmPaymentOutcomeRequest,
-        FrmPaymentOutcomeResponse, FrmTravelSegment, PostRiskCheckRequest, PostRiskCheckResponse,
-        PreRiskCheckRequest, PreRiskCheckResponse,
+        FrmFlowData, FrmMetadata, FrmPaymentOutcomeRequest, FrmPaymentOutcomeResponse,
+        PostRiskCheckRequest, PostRiskCheckResponse, PreRiskCheckRequest, PreRiskCheckResponse,
     },
     merchant_authentication_flow_data::MerchantAuthenticationFlowData,
     payment_address::OrderDetailsWithAmount,
     payment_method_data::{
-        Card, DefaultPCIHolder, IdentityCredentials as DomainIdentityCredentials,
-        PaymentMethodData, PaymentMethodDataTypes,
+        Card, CustomerDocumentDetails, DefaultPCIHolder, DocumentKind, PaymentMethodData,
+        PaymentMethodDataTypes,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -816,8 +816,8 @@ struct OrderInputs<'a> {
     address: Option<&'a domain_types::payment_address::PaymentAddress>,
     payment_method: Option<&'a PaymentMethodData<DefaultPCIHolder>>,
     order_details: Option<&'a Vec<OrderDetailsWithAmount>>,
-    /// Travel/hospitality blocks decoded from the order's
-    /// `merchant_transient_info` (responds with all-`None` lists for
+    /// Travel/hospitality blocks projected from the typed
+    /// `PreRiskCheckRequest::domain_data` (responds with all-`None` lists for
     /// non-travel orders).
     travel_data: ClearSaleTravelData,
 }
@@ -830,9 +830,7 @@ impl<'a> OrderInputs<'a> {
         config_product: Option<i32>,
         code: String,
     ) -> Self {
-        let travel_data = MerchantTransientInfo::parse(req.merchant_transient_info.as_ref())
-            .travel_data
-            .unwrap_or_default();
+        let travel_data = ClearSaleTravelData::from_domain_data(req.domain_data.as_ref());
         Self {
             code,
             feature_data,
@@ -867,8 +865,8 @@ impl<'a> OrderInputs<'a> {
             feature_data,
             b2b_b2c,
             config_product,
-            // PostRiskCheckRequest carries no `merchant_transient_info` —
-            // re-analysis replays the order body; travel blocks stay empty.
+            // PostRiskCheckRequest carries no `domain_data` — re-analysis
+            // replays the order body; travel blocks stay empty.
             travel_data: ClearSaleTravelData::default(),
             email: req
                 .customer_info
@@ -1059,10 +1057,9 @@ fn person_name(
 /// ClearSale-field names this connector cannot synthesize so the caller can
 /// fail once with the full list.
 /// Resolve the per-person CPF/CNPJ. The only document source is the request's
-/// typed `identity_credentials` (merged into `ClearSaleFeatureData` by
-/// `merged_with_euler_data`: `cpf`/`cnpj` → `billing_document`, `customer_cpf`
-/// → `shipping_document`), with `connector_feature_data` overrides
-/// (`billingDocument` / `shippingDocument`) taking precedence when set.
+/// typed `billing_document` / `shipping_document` (merged into
+/// `ClearSaleFeatureData` by `merged_with_euler_data`, shipping falling back
+/// to the billing document when absent).
 fn primary_document(feature_document: Option<&String>) -> Option<Secret<String>> {
     feature_document
         .map(|doc| doc.trim())
@@ -1381,10 +1378,11 @@ fn build_order_request(
             payments,
             items,
             // Travel / hospitality blocks (Buser passengers, connections,
-            // hotels) are merchant-supplied via the order's
-            // `merchant_transient_info.travel_data`. The social block comes
-            // from connector_feature_data / metadata; `list` and
-            // `purchaseInformation` have no carrier and stay off the wire.
+            // hotels) come from the typed `domain_data` on the pre risk check
+            // request (projected by `ClearSaleTravelData::from_domain_data`).
+            // The social block comes from connector_feature_data / metadata;
+            // `list` and `purchaseInformation` have no carrier and stay off
+            // the wire.
             list: None,
             purchase_information: None,
             social_network: feature_data.social_network.as_ref().map(|social| {
@@ -1428,9 +1426,15 @@ pub struct ClearSaleFeatureData {
     /// [`Self::merged_with_euler_data`].
     #[serde(skip)]
     pub session_id: Option<String>,
-    #[serde(default)]
+    /// Billing `primaryDocument` CPF/CNPJ — filled ONLY from the typed
+    /// [`PreRiskCheckRequest::billing_document`] field by
+    /// [`Self::merged_with_euler_data`] (`skip`: single source of truth).
+    #[serde(skip)]
     pub billing_document: Option<String>,
-    #[serde(default)]
+    /// Shipping `primaryDocument` — filled from the typed
+    /// [`PreRiskCheckRequest::shipping_document`] field, falling back to the
+    /// billing document by [`Self::merged_with_euler_data`].
+    #[serde(skip)]
     pub shipping_document: Option<String>,
     #[serde(default)]
     pub origin: Option<String>,
@@ -1474,66 +1478,59 @@ pub struct ClearSaleFeatureData {
     pub product: Option<i32>,
 }
 
-/// Merchant-supplied transient data for the order — the JSON blob euler
-/// caches in Redis as `merchant_transient_info_<merchant_id>_<order_id>` and
-/// forwards on `PreRiskCheckRequest::merchant_transient_info`. LOB-specific
-/// sub-payloads sit under their own keys (`airline_data`, `accommodation_data`,
-/// …); ClearSale reads the travel/hospitality `travel_data` block, which
-/// shares its shape with the FRM travel blocks (`passengers` /
-/// `travel_segments` / `accommodations`, euler `UcsFrmMetadata` spelling —
-/// both casings decode).
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MerchantTransientInfo {
-    /// Travel/hospitality block for ClearSale orders. Carrier key is
-    /// snake_case (`travel_data`), matching the other LOB sub-payloads
-    /// (`airline_data`, `accommodation_data`) in euler's transient info.
-    #[serde(default, rename = "travel_data", alias = "travelData")]
-    pub travel_data: Option<ClearSaleTravelData>,
+/// The three travel/hospitality blocks ClearSale maps onto its `passengers[]`
+/// / `connections[]` / `hotels[]`, projected from the typed
+/// `PreRiskCheckRequest::domain_data` (ground-travel `TravelData` +
+/// `HotelData`; built by [`ClearSaleTravelData::from_domain_data`]).
+#[derive(Debug, Clone, Default)]
+pub struct ClearSaleTravelData {
+    /// Travel/identity passengers (Buser per-seat travelers).
+    pub passengers: Option<Vec<Traveller>>,
+    /// Travel legs (Buser `connections[]`).
+    pub travel_segments: Option<Vec<TravelLeg>>,
+    /// Lodging block (`hotels[]`).
+    pub accommodations: Option<Vec<HotelData>>,
 }
 
-impl MerchantTransientInfo {
-    /// Decode the transient-info blob; a missing or malformed blob yields the
-    /// default so every absent signal reads as "not a travel order".
-    pub fn parse(raw: Option<&Secret<String>>) -> Self {
-        raw.and_then(|data| serde_json::from_str(data.peek()).ok())
-            .unwrap_or_default()
+impl ClearSaleTravelData {
+    /// Project the typed [`DomainData`] onto the ClearSale blocks; a request
+    /// with no travel/hotel blocks yields the default (every list `None`),
+    /// which reads as "not a travel order".
+    fn from_domain_data(domain_data: Option<&DomainData>) -> Self {
+        let travel = domain_data.and_then(|d| d.travel_data.as_ref());
+        Self {
+            passengers: travel
+                .filter(|t| !t.passengers.is_empty())
+                .map(|t| t.passengers.clone()),
+            travel_segments: travel
+                .filter(|t| !t.legs.is_empty())
+                .map(|t| t.legs.clone()),
+            accommodations: domain_data
+                .and_then(|d| d.hotel_data.as_ref())
+                .map(|hotel| vec![hotel.clone()]),
+        }
     }
 }
 
-/// The `travel_data` sub-payload of [`MerchantTransientInfo`]: the three
-/// travel/hospitality blocks ClearSale maps onto its `passengers[]` /
-/// `connections[]` / `hotels[]`.
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ClearSaleTravelData {
-    /// Travel/identity passengers (Buser per-seat travelers).
-    #[serde(default)]
-    pub passengers: Option<Vec<FrmPassenger>>,
-    /// Travel legs (Buser `connections[]`).
-    #[serde(default, rename = "travel_segments", alias = "travelSegments")]
-    pub travel_segments: Option<Vec<FrmTravelSegment>>,
-    /// Lodging blocks (`hotels[]`).
-    #[serde(default)]
-    pub accommodations: Option<Vec<FrmAccommodation>>,
-}
-
-// ClearSale-specific projections of the generic FRM travel types (defined in
-// `domain_types::frm::frm_types`) onto the ClearSale wire contracts. Kept as
-// free functions rather than inherent methods because the generic types now
+// ClearSale-specific projections of the generic domain travel types (defined
+// in `domain_types::connector_types`) onto the ClearSale wire contracts. Kept
+// as free functions rather than inherent methods because the generic types
 // live outside this crate (orphan rule).
 
 /// ClearSale `passengers[]` source; the only mandatory field is `name` —
 /// entries without a usable first/last name are dropped.
-fn passenger_to_clear_sale(p: &FrmPassenger) -> Option<ClearSalePassenger> {
+fn passenger_to_clear_sale(p: &Traveller) -> Option<ClearSalePassenger> {
     let name = match (p.first_name.as_ref(), p.last_name.as_ref()) {
         (None, None) => None,
         (first, last) => {
-            let full = [first.cloned(), last.cloned()]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>()
-                .join(" ");
+            let full = [
+                first.map(|s| s.peek().clone()),
+                last.map(|s| s.peek().clone()),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" ");
             let full = full.trim().to_owned();
             if full.is_empty() {
                 None
@@ -1544,74 +1541,65 @@ fn passenger_to_clear_sale(p: &FrmPassenger) -> Option<ClearSalePassenger> {
     }?;
     Some(ClearSalePassenger {
         name,
-        company_mile_card: p.loyalty_program_name.clone(),
-        mile_card: p.loyalty_program_number.clone(),
+        company_mile_card: p.loyalty_card_issuer.clone(),
+        mile_card: p.loyalty_card.as_ref().map(|card| card.peek().clone()),
         // ClearSale identification type enum (spec): 1=CPF, 2=CNPJ, 3=RG, 4=IE,
-        // 5=Passport, 6=CTPS, 7=Voter ID. CNPJ/CTPS/TITULO are B2B — rarely
-        // used for passengers. CNH has no dedicated code.
-        identification_type: p.identification_type.as_deref().and_then(|t| {
-            match t.trim().to_ascii_uppercase().as_str() {
-                "CPF" => Some(1),
-                "CNPJ" => Some(2),
-                "RG" => Some(3),
-                "IE" => Some(4),
-                "PASSPORT" | "PASSAPORTE" => Some(5),
-                "CTPS" => Some(6),
-                "TITULO" | "TITULO_ELEITOR" | "TITULO DE ELEITOR" => Some(7),
-                _ => None,
-            }
+        // 5=Passport, 6=CTPS, 7=Voter ID. PSN/Other have no ClearSale code.
+        identification_type: p.document.as_ref().and_then(|doc| match doc.document_type {
+            DocumentKind::Cpf => Some(1),
+            DocumentKind::Cnpj => Some(2),
+            DocumentKind::Other => Some(5),
+            DocumentKind::Psn => None,
         }),
-        identification_number: p
-            .identification_number
-            .as_deref()
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(|s| Secret::new(s.to_owned())),
+        identification_number: p.document.as_ref().and_then(|doc| {
+            let number = doc.document_number.peek().trim();
+            (!number.is_empty()).then(|| Secret::new(number.to_owned()))
+        }),
         gender: p.gender.clone(),
-        birthdate: p.birthdate.clone(),
+        birthdate: p.date_of_birth.as_ref().map(|dob| dob.peek().clone()),
         // CPF rides in the identificationNumber; no separate cpf carrier
-        // exists in euler's type.
+        // exists in the typed domain data.
         cpf: None,
     })
 }
 
 /// ClearSale `connections[]` source; `company`, `origin`, `destination` are
 /// mandatory — an entry missing any is dropped.
-fn travel_segment_to_clear_sale(s: &FrmTravelSegment) -> Option<ClearSaleConnection> {
-    // Parse flight number to i64; skip if it does not parse
+fn travel_segment_to_clear_sale(s: &TravelLeg) -> Option<ClearSaleConnection> {
+    // Parse the service number to i64; skip if it does not parse
     let identification_number = s
-        .flight_number
+        .service_number
         .as_deref()
         .and_then(|f| f.parse::<i64>().ok());
-    // Fall back: departure_date → boarding_date_time → fail
+    // Fall back: departure → boarding → fail
     let date = s
-        .departure_date
+        .departure_time
         .clone()
-        .or_else(|| s.boarding_date_time.clone())?;
+        .or_else(|| s.boarding_time.clone())?;
     Some(ClearSaleConnection {
         company: s.carrier_code.as_deref()?.trim().to_owned(),
         identification_number,
         date: Some(date),
-        seat_class: s.cabin_class.clone(),
-        origin: s.origin_code.as_deref()?.trim().to_owned(),
-        destination: s.destination_code.as_deref()?.trim().to_owned(),
-        boarding: s.boarding_date_time.clone(),
-        arriving: s.arrival_date_time.clone(),
+        seat_class: s.seat_class.clone().or_else(|| s.travel_class.clone()),
+        origin: s.origin.as_deref()?.trim().to_owned(),
+        destination: s.destination.as_deref()?.trim().to_owned(),
+        boarding: s.boarding_time.clone(),
+        arriving: s.arrival_time.clone(),
         fare_class: s.fare_class.clone(),
     })
 }
 
 /// ClearSale `hotels[]` source; `name` is mandatory.
-fn accommodation_to_clear_sale(a: &FrmAccommodation) -> Option<ClearSaleHotel> {
+fn accommodation_to_clear_sale(a: &HotelData) -> Option<ClearSaleHotel> {
     Some(ClearSaleHotel {
-        name: a.property_name.as_deref()?.trim().to_owned(),
-        city: a.city.clone(),
-        state: a.state.clone(),
-        country: a.country.clone(),
-        reservation_date: a.reservation_date_time.clone(),
-        reserve_expiration_date: a.reservation_expiry_date_time.clone(),
-        check_in_date: a.check_in_date.clone(),
-        check_out_date: a.check_out_date.clone(),
+        name: a.hotel_name.as_deref()?.trim().to_owned(),
+        city: a.hotel_city.clone(),
+        state: a.hotel_state.clone(),
+        country: a.hotel_country.clone(),
+        reservation_date: a.reservation_date.clone(),
+        reserve_expiration_date: a.reservation_expiration_date.clone(),
+        check_in_date: a.checkin.clone(),
+        check_out_date: a.checkout.clone(),
     })
 }
 
@@ -1636,40 +1624,25 @@ impl ClearSaleFeatureData {
 
     /// Merges the request `metadata` JSON (`{"sessionId","customFields"}` — the
     /// merchant-supplied extras ClearSale rides on) and the typed
-    /// `identity_credentials` field into the feature data.
+    /// `billing_document` / `shipping_document` fields into the feature data.
     ///
-    /// **Documents come ONLY from the typed `identity_credentials` field** —
-    /// single source of truth: `cpf`/`cnpj` → billing, `customer_cpf` →
-    /// shipping. Fields that have no proper ClearSale mapping are left `None`.
-    ///
-    /// The travel/hospitality blocks are NOT read here: they ride on the
-    /// first-class `merchant_transient_info.travel_data` field (decided with
-    /// [`MerchantTransientInfo::parse`] at the call site), not the FRM
-    /// metadata JSON.
+    /// **Documents come ONLY from the typed fields** — single source of truth:
+    /// `billing_document` → billing, `shipping_document` → shipping (falling
+    /// back to the billing document when absent — a bus-ticket order has one
+    /// payer). Fields that have no proper ClearSale mapping are left `None`.
     fn merged_with_euler_data(
         self,
         metadata: Option<&Secret<String>>,
-        typed_identity: Option<&DomainIdentityCredentials>,
+        billing_document: Option<&CustomerDocumentDetails>,
+        shipping_document: Option<&CustomerDocumentDetails>,
     ) -> Self {
         // euler encodes the metadata JSON in snake_case (`UcsFrmMetadata` uses
         // `camelTo2 '_'` for its wire keys) — `FrmMetadata` carries snake_case
         // `alias`es on every field so both casings decode into it.
-        //
-        // Documents strictly from the typed `identity_credentials` field.
-        let (billing_document, shipping_document) = match typed_identity {
-            Some(creds) => {
-                let cpf = creds.cpf.as_ref().map(|v| v.peek().clone());
-                let cnpj = creds.cnpj.as_ref().map(|v| v.peek().clone());
-                let customer_cpf = creds
-                    .customer_cpf
-                    .as_ref()
-                    .map(|v| v.peek().clone())
-                    .or_else(|| creds.cpf.as_ref().map(|v| v.peek().clone()))
-                    .or_else(|| creds.cnpj.as_ref().map(|v| v.peek().clone()));
-                (cpf.or(cnpj), customer_cpf)
-            }
-            None => (None, None),
-        };
+        let billing_document = billing_document.map(|doc| doc.document_number.peek().clone());
+        let shipping_document = shipping_document
+            .map(|doc| doc.document_number.peek().clone())
+            .or_else(|| billing_document.clone());
 
         // Decode the generic FRM metadata once — shared with every FRM
         // connector, not ClearSale-specific.
@@ -1856,8 +1829,8 @@ fn order_from_common(inputs: OrderInputs<'_>) -> Result<ClearSaleOrderCreateRequ
                     suggested_action: Some(
                         "sessionID comes from ClearSale's Behavior Analytics SDK and must be \
                          passed as `sessionId` in the request metadata; CPF/CNPJ documents \
-                         come from the typed `identity_credentials` field on the risk-check \
-                         request"
+                         come from the typed `billing_document` / `shipping_document` fields \
+                         on the risk-check request"
                             .to_owned(),
                     ),
                     doc_url: Some(CLEARSALE_DOC_URL.to_owned()),
@@ -1949,7 +1922,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
         })?;
         let feature_data = ClearSaleFeatureData::parse(req.connector_feature_data.as_ref())
-            .merged_with_euler_data(req.metadata.as_ref(), req.identity_credentials.as_ref());
+            .merged_with_euler_data(
+                req.metadata.as_ref(),
+                req.billing_document.as_ref(),
+                req.shipping_document.as_ref(),
+            );
         order_from_common(OrderInputs::from_pre_risk_check(
             req,
             &feature_data,
@@ -2000,11 +1977,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     },
                 })
             })?;
-        // PostRiskCheck carries no typed `identity_credentials` — documents can
-        // only come from a `connector_feature_data` override here, which
+        // PostRiskCheck carries no typed billing/shipping documents — the
+        // re-analysis replays the original order body; any document overrides
+        // ride on the merchant's `connector_feature_data`, which
         // `ClearSaleFeatureData::parse` already reads.
         let feature_data = ClearSaleFeatureData::parse(req.connector_feature_data.as_ref())
-            .merged_with_euler_data(req.metadata.as_ref(), None);
+            .merged_with_euler_data(req.metadata.as_ref(), None, None);
         order_from_common(OrderInputs::from_post_risk_check(
             req,
             &feature_data,
@@ -2193,6 +2171,7 @@ impl TryFrom<ResponseRouterData<ClearSaleStatusUpdateResponse, Self>>
 #[allow(clippy::indexing_slicing)]
 mod tests {
     use super::*;
+    use domain_types::connector_types::TravelData;
     use std::str::FromStr;
 
     /// The verdict mapping decides whether a payment proceeds, so every
@@ -2593,8 +2572,11 @@ mod tests {
                 }
             }
         }"#;
-        let merged = ClearSaleFeatureData::default()
-            .merged_with_euler_data(Some(&Secret::new(metadata.to_owned())), None);
+        let merged = ClearSaleFeatureData::default().merged_with_euler_data(
+            Some(&Secret::new(metadata.to_owned())),
+            None,
+            None,
+        );
 
         assert_eq!(merged.session_id.as_deref(), Some("sdk-session-42"));
         assert_eq!(merged.origin.as_deref(), Some("WebCheckout"));
@@ -2610,8 +2592,8 @@ mod tests {
         assert_eq!(social.opt_in_compre_confie, Some(1));
         assert_eq!(social.type_social_network, Some(2));
 
-        // With no typed identity_credentials, documents stay empty (None) —
-        // no mapping exists for them yet.
+        // Without typed billing/shipping documents, the document fields stay
+        // empty (None).
         assert_eq!(merged.billing_document, None);
         assert_eq!(merged.shipping_document, None);
 
@@ -2623,50 +2605,71 @@ mod tests {
             "session_id": "sdk-session-42",
             "custom_fields": { "origin": "WebCheckout" }
         }"#;
-        let merged = ClearSaleFeatureData::default()
-            .merged_with_euler_data(Some(&Secret::new(euler_metadata.to_owned())), None);
+        let merged = ClearSaleFeatureData::default().merged_with_euler_data(
+            Some(&Secret::new(euler_metadata.to_owned())),
+            None,
+            None,
+        );
         assert_eq!(merged.session_id.as_deref(), Some("sdk-session-42"));
         assert_eq!(merged.origin.as_deref(), Some("WebCheckout"));
     }
 
-    /// `cnpj` alone fills both document fields (a company payer); absent
-    /// typed credentials and metadata leave everything untouched.
+    /// A billing document alone fills both document fields (a single-payer
+    /// order: shipping falls back to billing); a separate shipping document
+    /// wins when present. Absent documents and metadata leave everything
+    /// untouched.
     #[test]
-    fn cnpj_fills_documents_when_no_cpf() {
-        let typed = DomainIdentityCredentials {
-            cnpj: Some(Secret::new("12345678000199".to_owned())),
-            ..DomainIdentityCredentials::default()
+    fn shipping_document_falls_back_to_billing() {
+        let billing = CustomerDocumentDetails {
+            document_type: DocumentKind::Cpf,
+            document_number: Secret::new("11122233344".to_owned()),
         };
-        let merged = ClearSaleFeatureData::default().merged_with_euler_data(None, Some(&typed));
-        assert_eq!(merged.billing_document.as_deref(), Some("12345678000199"));
-        assert_eq!(merged.shipping_document.as_deref(), Some("12345678000199"));
+        let shipping = CustomerDocumentDetails {
+            document_type: DocumentKind::Cpf,
+            document_number: Secret::new("55566677788".to_owned()),
+        };
 
-        let untouched = ClearSaleFeatureData::default().merged_with_euler_data(None, None);
+        let merged =
+            ClearSaleFeatureData::default().merged_with_euler_data(None, Some(&billing), None);
+        assert_eq!(merged.billing_document.as_deref(), Some("11122233344"));
+        assert_eq!(merged.shipping_document.as_deref(), Some("11122233344"));
+
+        let merged = ClearSaleFeatureData::default().merged_with_euler_data(
+            None,
+            Some(&billing),
+            Some(&shipping),
+        );
+        assert_eq!(merged.billing_document.as_deref(), Some("11122233344"));
+        assert_eq!(merged.shipping_document.as_deref(), Some("55566677788"));
+
+        let untouched = ClearSaleFeatureData::default().merged_with_euler_data(None, None, None);
         assert_eq!(untouched, ClearSaleFeatureData::default());
     }
 
-    /// Typed `identity_credentials` is the single source for documents:
-    /// `cpf`/`cnpj` → billing, `customer_cpf` → shipping; metadata has no
-    /// effect on documents even when it carries an identity blob.
+    /// Typed billing/shipping documents are the single source for documents;
+    /// metadata has no effect on documents.
     #[test]
-    fn typed_identity_credentials_are_the_only_document_source() {
-        let typed = DomainIdentityCredentials {
-            cpf: Some(Secret::new("11122233344".to_owned())),
-            customer_cpf: Some(Secret::new("55566677788".to_owned())),
-            ..DomainIdentityCredentials::default()
+    fn typed_documents_are_the_only_document_source() {
+        let billing = CustomerDocumentDetails {
+            document_type: DocumentKind::Cnpj,
+            document_number: Secret::new("12345678000199".to_owned()),
         };
-
-        // No metadata: typed field alone fills both documents.
-        let merged = ClearSaleFeatureData::default().merged_with_euler_data(None, Some(&typed));
-        assert_eq!(merged.billing_document.as_deref(), Some("11122233344"));
-        assert_eq!(merged.shipping_document.as_deref(), Some("55566677788"));
-
-        // Metadata carrying a different blob is ignored — typed wins.
+        let shipping = CustomerDocumentDetails {
+            document_type: DocumentKind::Cpf,
+            document_number: Secret::new("55566677788".to_owned()),
+        };
         let metadata = r#"{"identityCredentials": {"cpf": "99900011122"}}"#;
-        let merged = ClearSaleFeatureData::default()
-            .merged_with_euler_data(Some(&Secret::new(metadata.to_owned())), Some(&typed));
-        assert_eq!(merged.billing_document.as_deref(), Some("11122233344"));
+
+        let merged = ClearSaleFeatureData::default().merged_with_euler_data(
+            Some(&Secret::new(metadata.to_owned())),
+            Some(&billing),
+            Some(&shipping),
+        );
+        assert_eq!(merged.billing_document.as_deref(), Some("12345678000199"));
         assert_eq!(merged.shipping_document.as_deref(), Some("55566677788"));
+        // A stray identity blob in the metadata JSON does not decode into the
+        // generic FRM metadata parse — it stays inert.
+        assert_eq!(merged.session_id, None);
     }
 
     /// Street/number split: a trailing number token is used, then `line3`,
@@ -2711,50 +2714,56 @@ mod tests {
         assert!(split_street_and_number(None, Some(&Secret::new("8th Block".to_owned()))).is_err());
     }
 
-    /// The `merchant_transient_info.travel_data` blocks decode and pass
-    /// through to the ClearSale `passengers[]`/`connections[]`/`hotels[]`
-    /// wire fields. The same JSON with the keys at top level (the old FRM
-    /// metadata shape) decodes as *no* travel data.
+    /// The typed `domain_data` travel/hotel blocks project onto the ClearSale
+    /// `passengers[]`/`connections[]`/`hotels[]` wire fields. Requests without
+    /// a travel/hotel block yield no travel data at all.
     #[test]
-    fn merchant_transient_info_travel_blocks_pass_through() {
-        let travel_blocks = r#""passengers": [{
-            "firstName": "Joao",
-            "lastName": "Silva",
-            "email": "joao@x.com",
-            "nationality": "Brasileiro",
-            "loyaltyProgramName": "BuserClub",
-            "loyaltyProgramNumber": "BC-99",
-            "identificationType": "CPF",
-            "identificationNumber": "11122233344",
-            "gender": "M",
-            "birthdate": "1990-01-02T00:00:00Z"
-        }],
-        "travelSegments": [{
-            "carrierCode": "BUSER",
-            "flightNumber": "101",
-            "departureDate": "2025-06-01T08:00:00Z",
-            "cabinClass": "ECON",
-            "originCode": "SAO",
-            "destinationCode": "RIO",
-            "boardingDateTime": "2025-06-01T08:00:00Z",
-            "arrivalDateTime": "2025-06-01T12:00:00Z",
-            "fareClass": "Y"
-        }],
-        "accommodations": [{
-            "propertyName": "Hotel Rio",
-            "city": "Rio de Janeiro",
-            "state": "RJ",
-            "country": "BR",
-            "reservationDateTime": "2025-05-01T10:00:00Z",
-            "reservationExpiryDateTime": "2025-05-02T10:00:00Z",
-            "checkInDate": "2025-06-01",
-            "checkOutDate": "2025-06-05"
-        }]"#;
-        let transient_info = format!(r#"{{"travel_data": {{{travel_blocks}}}}}"#);
-        let parsed = MerchantTransientInfo::parse(Some(&Secret::new(transient_info)));
-        let travel = parsed.travel_data.expect("travel_data decoded");
+    fn domain_data_travel_blocks_pass_through() {
+        let domain_data = DomainData {
+            travel_data: Some(TravelData {
+                passengers: vec![Traveller {
+                    first_name: Some(Secret::new("Joao".to_owned())),
+                    last_name: Some(Secret::new("Silva".to_owned())),
+                    document: Some(CustomerDocumentDetails {
+                        document_type: DocumentKind::Cpf,
+                        document_number: Secret::new("11122233344".to_owned()),
+                    }),
+                    gender: Some("M".to_owned()),
+                    loyalty_card: Some(Secret::new("BC-99".to_owned())),
+                    loyalty_card_issuer: Some("BuserClub".to_owned()),
+                    ..Traveller::default()
+                }],
+                legs: vec![TravelLeg {
+                    carrier_code: Some("BUSER".to_owned()),
+                    service_number: Some("101".to_owned()),
+                    departure_time: Some("2025-06-01T08:00:00Z".to_owned()),
+                    boarding_time: Some("2025-06-01T08:00:00Z".to_owned()),
+                    arrival_time: Some("2025-06-01T12:00:00Z".to_owned()),
+                    origin: Some("SAO".to_owned()),
+                    destination: Some("RIO".to_owned()),
+                    seat_class: Some("ECON".to_owned()),
+                    fare_class: Some("Y".to_owned()),
+                    ..TravelLeg::default()
+                }],
+                ..TravelData::default()
+            }),
+            hotel_data: Some(HotelData {
+                hotel_name: Some("Hotel Rio".to_owned()),
+                hotel_city: Some("Rio de Janeiro".to_owned()),
+                hotel_state: Some("RJ".to_owned()),
+                hotel_country: Some("BR".to_owned()),
+                reservation_date: Some("2025-05-01T10:00:00Z".to_owned()),
+                reservation_expiration_date: Some("2025-05-02T10:00:00Z".to_owned()),
+                checkin: Some("2025-06-01".to_owned()),
+                checkout: Some("2025-06-05".to_owned()),
+                ..HotelData::default()
+            }),
+            ..DomainData::default()
+        };
 
-        let passengers = travel.passengers.expect("passengers decoded");
+        let travel = ClearSaleTravelData::from_domain_data(Some(&domain_data));
+
+        let passengers = travel.passengers.expect("passengers projected");
         let p = passenger_to_clear_sale(&passengers[0]).expect("passenger has a name");
         assert_eq!(p.name.peek(), "Joao Silva");
         assert_eq!(p.company_mile_card.as_deref(), Some("BuserClub"));
@@ -2766,35 +2775,44 @@ mod tests {
         );
         assert_eq!(p.gender.as_deref(), Some("M"));
 
-        let segments = travel.travel_segments.expect("segments decoded");
+        let segments = travel.travel_segments.expect("segments projected");
         let c = travel_segment_to_clear_sale(&segments[0]).expect("required fields present");
         assert_eq!(c.company, "BUSER");
         assert_eq!(c.origin, "SAO");
         assert_eq!(c.destination, "RIO");
         assert_eq!(c.seat_class.as_deref(), Some("ECON"));
 
-        let hotels = travel.accommodations.expect("hotels decoded");
+        let hotels = travel.accommodations.expect("hotel projected");
         let h = accommodation_to_clear_sale(&hotels[0]).expect("hotel name present");
         assert_eq!(h.name, "Hotel Rio");
         assert_eq!(h.check_in_date.as_deref(), Some("2025-06-01"));
         assert_eq!(h.check_out_date.as_deref(), Some("2025-06-05"));
 
-        // The old carrier (top-level keys in the FRM metadata JSON) no longer
-        // sources the travel blocks: the same JSON outside `travel_data`
-        // parses to nothing.
-        let stale = format!(r#"{{{travel_blocks}}}"#);
-        let stale_parsed = MerchantTransientInfo::parse(Some(&Secret::new(stale)));
-        assert!(stale_parsed.travel_data.is_none());
+        // No travel/hotel blocks at all → not a travel order.
+        let bare = DomainData::default();
+        let bare_travel = ClearSaleTravelData::from_domain_data(Some(&bare));
+        assert!(bare_travel.passengers.is_none());
+        assert!(bare_travel.travel_segments.is_none());
+        assert!(bare_travel.accommodations.is_none());
 
         // Entries missing mandatory ClearSale fields are dropped, not emitted.
-        let bad = FrmPassenger::default();
+        let bad = Traveller::default();
         assert!(passenger_to_clear_sale(&bad).is_none());
-        let bad_seg = FrmTravelSegment {
+        let bad_seg = TravelLeg {
             carrier_code: Some("BUSER".to_owned()),
-            ..FrmTravelSegment::default()
+            ..TravelLeg::default()
         };
         assert!(travel_segment_to_clear_sale(&bad_seg).is_none());
-        let bad_hotel = FrmAccommodation::default();
+        let bad_hotel = HotelData::default();
         assert!(accommodation_to_clear_sale(&bad_hotel).is_none());
+
+        // Empty passenger/leg lists (present but empty) yield None, not [].
+        let empty = DomainData {
+            travel_data: Some(TravelData::default()),
+            ..DomainData::default()
+        };
+        let empty_travel = ClearSaleTravelData::from_domain_data(Some(&empty));
+        assert!(empty_travel.passengers.is_none());
+        assert!(empty_travel.travel_segments.is_none());
     }
 }

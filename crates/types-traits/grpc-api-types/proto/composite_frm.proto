@@ -77,15 +77,19 @@ message CompositeFrmPreRiskCheckRequest {
   // Merchant details (id + MCC) for risk scoring.
   optional MerchantDetails merchant_details = 15;
 
-  // Payer/recipient identity documents (CPF/CNPJ/…), forwarded from euler /
-  // Hyperswitch. Mirrors PaymentServiceAuthorizeRequest.
-  optional IdentityCredentials identity_credentials = 16;
+  // Billing party's identity document (e.g. Brazilian CPF/CNPJ). Reuses the
+  // shared CustomerDocumentDetails (payment.proto) / DocumentKind.
+  optional CustomerDocumentDetails billing_document = 16;
 
-  // Merchant-supplied transient data for this order (JSON), forwarded verbatim
-  // from euler's Redis-cached `merchant_transient_info` (keyed by
-  // merchant_id + order_id). Pass-through onto the granular
-  // FrmServicePreRiskCheckRequest.
-  optional SecretString merchant_transient_info = 17;
+  // Domain-specific order context (travel, hotel, airline…) as a typed
+  // object. Replaces the earlier free-form merchant_transient_info JSON
+  // pass-through; producers populate the blocks they have data for, the
+  // composite forwards it verbatim onto the granular FRM request.
+  optional DomainData domain_data = 17;
+
+  // Shipping party's identity document, when it differs from the billing
+  // party's (e.g. ClearSale shipping.primaryDocument — the order's customerCPF).
+  optional CustomerDocumentDetails shipping_document = 18;
 }
 
 // Composite request for PostRiskCheck that includes all fields from

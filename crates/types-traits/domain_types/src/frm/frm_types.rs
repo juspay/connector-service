@@ -1,11 +1,11 @@
 use crate::{
     connector_types::{
-        ConnectorResponseHeaders, CustomerInfo, RawConnectorRequestResponse,
+        ConnectorResponseHeaders, CustomerInfo, DomainData, RawConnectorRequestResponse,
         ServerAuthenticationTokenResponseData,
     },
     mandates::MandateAmountData,
     payment_address::{OrderDetailsWithAmount, PaymentAddress},
-    payment_method_data::{DefaultPCIHolder, IdentityCredentials, PaymentMethodData},
+    payment_method_data::{CustomerDocumentDetails, DefaultPCIHolder, PaymentMethodData},
     router_request_types::BrowserInformation,
     types::Connectors,
 };
@@ -98,14 +98,15 @@ pub struct PreRiskCheckRequest {
     pub merchant_details: Option<MerchantDetails>,
     /// Payment method sub-type (e.g. `Card`, `GooglePay`, `UpiCollect`) for risk scoring.
     pub payment_method_type: Option<PaymentMethodType>,
-    /// Payer/recipient identity documents (CPF/CNPJ/…) forwarded from euler /
-    /// Hyperswitch for connectors that key risk on them.
-    pub identity_credentials: Option<IdentityCredentials>,
-    /// Merchant-supplied transient data for the order (JSON), forwarded
-    /// verbatim from euler's Redis-cached `merchant_transient_info` (keyed by
-    /// merchant_id + order_id). Connectors parse the blocks they know — e.g.
-    /// ClearSaleBR reads the travel/hospitality `travel_data` block.
-    pub merchant_transient_info: Option<Secret<String>>,
+    /// Billing party's identity document (e.g. Brazilian CPF/CNPJ), reusing the
+    /// shared CustomerDocumentDetails / DocumentKind.
+    pub billing_document: Option<CustomerDocumentDetails>,
+    /// Domain-specific order context (travel, hotel, airline…) as a typed
+    /// object. Replaces the earlier free-form merchant_transient_info JSON.
+    pub domain_data: Option<DomainData>,
+    /// Shipping party's identity document, when it differs from the billing
+    /// party's (e.g. ClearSale shipping.primaryDocument — the order's customerCPF).
+    pub shipping_document: Option<CustomerDocumentDetails>,
 }
 
 /// Response data for pre-risk check

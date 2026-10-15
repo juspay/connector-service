@@ -1182,32 +1182,6 @@ message OrderDetailsWithAmount {
   optional string product_link = 23;
 }
 
-// Document-bearing identity payload the caller (Euler / Hyperswitch) sends with a
-// transaction — a superset covering Brazilian CPF/CNPJ/pix and analogous types
-// elsewhere (Indonesian NIK, generic identity string, etc.). SecretString where
-// the value is credentialled (document numbers, passwords).
-message IdentityCredentials {
-  // Brazilian individual taxpayer ID
-  optional SecretString cpf = 1;
-  // Brazilian company taxpayer ID
-  optional SecretString cnpj = 2;
-  // PIX instant-payment identifier
-  optional SecretString pix_key = 3;
-  // Free-form document type hint (e.g. "CPF", "CNPJ", "PASSPORT")
-  optional string document_type = 4;
-  // Generic identity string for non-BR/ID schemes
-  optional SecretString identity = 5;
-  // Platform-drawn account/customer reference used by some fraud engines
-  optional string account_id = 6;
-  // Optional password/PIN some risk/locker APIs take inline
-  optional SecretString password = 7;
-  // Payer/recipient counterpart CPF used by Brazilian connectors
-  // (e.g. ClearSale billing.primaryDocument vs shipping.primaryDocument)
-  optional SecretString customer_cpf = 8;
-  // Indonesian national identity card number
-  optional SecretString nik = 9;
-}
-
 // Access token details
 message AccessToken {
   // The token string.
@@ -1538,6 +1512,8 @@ message L2L3Data {
 message DomainData {
   optional AirlineData airline_data = 1; // Airline / travel itinerary data
   optional EducationData education_data = 2; // Education / student data
+  optional HotelData hotel_data = 3;     // Hotel / accommodation booking data
+  optional TravelData travel_data = 4;   // Ground / sea travel data
 }
 
 // Connector-agnostic education data (e.g. Flywire tuition payments).
@@ -1551,6 +1527,109 @@ message StudentDetails {
   optional string student_first_name = 2;
   optional string student_last_name = 3;
   optional SecretString student_email = 4; // PII — student's email address
+}
+
+// Connector-agnostic hotel / accommodation booking data (shared with the
+// risk-schema work in PR #2517; extended fields needed by ClearSale BR use
+// tags 30+).
+message HotelData {
+  // Merchant's booking reference.
+  optional string booking_id = 1;
+  // Check-in date/time (RFC 3339 or yyyy-MM-dd).
+  optional string checkin = 2;
+  // Check-out date/time (RFC 3339 or yyyy-MM-dd).
+  optional string checkout = 3;
+  optional uint32 number_of_guests = 4;
+  optional uint32 number_of_rooms = 5;
+  // Hotel or property name.
+  optional string hotel_name = 6;
+  // City or its IATA code, e.g. RUH.
+  optional string hotel_city = 7;
+  // ISO 3166-1 alpha-2, e.g. SA.
+  optional string hotel_country = 8;
+  // Standard / Suite / Deluxe.
+  optional string room_class = 9;
+  // room / apartment / villa / suite.
+  optional string accommodation_type = 10;
+  TicketRefundability refundability = 11;
+
+  // Reservation creation timestamp (RFC 3339) — ClearSale hotels[].reservationDate.
+  optional string reservation_date = 30;
+  // Reservation hold expiry (RFC 3339) — ClearSale hotels[].reserveExpirationDate.
+  optional string reservation_expiration_date = 31;
+  // State / province of the property — ClearSale hotels[].state.
+  optional string hotel_state = 32;
+}
+
+// How the traveller is moving (bus / train / ferry …).
+enum TravelMode {
+  TRAVEL_MODE_UNSPECIFIED = 0;
+  TRAVEL_MODE_BUS = 1;
+  TRAVEL_MODE_TRAIN = 2;
+  TRAVEL_MODE_FERRY = 3;
+  TRAVEL_MODE_OTHER = 4;
+}
+
+// Cabin / seating class.
+enum TravelClass {
+  TRAVEL_CLASS_UNSPECIFIED = 0;
+  TRAVEL_CLASS_ECONOMY = 1;
+  TRAVEL_CLASS_PREMIUM_ECONOMY = 2;
+  TRAVEL_CLASS_BUSINESS = 3;
+  TRAVEL_CLASS_FIRST = 4;
+}
+
+// Connector-agnostic ground / sea travel data (shared with PR #2517;
+// extended with per-leg detail and passenger docs needed by ClearSale BR).
+message TravelData {
+  TravelMode mode = 1;
+  optional string origin = 2;
+  optional string destination = 3;
+  TravelClass travel_class = 4;
+  optional string carrier_name = 5;
+  repeated Traveller passengers = 6;
+  optional uint32 number_of_passengers = 7;
+  // Travel date (yyyy-MM-dd).
+  optional string travel_date = 8;
+  TicketRefundability refundability = 9;
+
+  // Per-leg detail, in journey order — ClearSale connections[][]. Added
+  // because the top-level origin/destination/date describe only the whole
+  // journey, not intermediate legs.
+  repeated TravelLeg legs = 20;
+}
+
+// One leg of a ground / sea journey.
+message TravelLeg {
+  optional string origin = 1;               // Origin station / terminal code
+  optional string destination = 2;          // Destination station / terminal code
+  optional string departure_time = 3;       // Departure (RFC 3339)
+  optional string arrival_time = 4;         // Arrival (RFC 3339)
+  optional string boarding_time = 5;        // Boarding gate opening (RFC 3339)
+  optional string carrier_code = 6;         // e.g. bus operator / train code
+  optional string service_number = 7;       // Trip / service / coach number
+  optional string travel_class = 8;         // Free-form class (e.g. "ECONOMY")
+  optional string fare_class = 9;           // Fare basis (e.g. "Y")
+  optional string seat_class = 10;          // Seat category when distinct from travel_class
+}
+
+// A person travelling (shared with PR #2517; tags 10+ are the ClearSale BR
+// extension).
+message Traveller {
+  optional SecretString first_name = 1;
+  optional SecretString last_name = 2;
+  optional SecretString phone_number = 3;
+  optional SecretString date_of_birth = 4; // yyyy-MM-dd
+
+  // Passenger identity document, when collected per-traveller rather than at
+  // order level — ClearSale passengers[].identificationType/Number.
+  optional CustomerDocumentDetails document = 10;
+  // M / F / X — ClearSale passengers[].gender.
+  optional string gender = 11;
+  // Passenger loyalty / frequent-traveller card number — ClearSale mileCard.
+  optional SecretString loyalty_card = 12;
+  // Issuer of the loyalty card (e.g. "Smiles") — ClearSale companyMileCard.
+  optional string loyalty_card_issuer = 13;
 }
 
 // Whether the ticket can be refunded

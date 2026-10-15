@@ -11,7 +11,6 @@ use crate::{
     errors::IntegrationError,
     mandates::MandateAmountData,
     payment_address::{OrderDetailsWithAmount, PaymentAddress},
-    payment_method_data::IdentityCredentials,
     router_request_types::BrowserInformation,
     types::{Connectors, PaymentMethodDataAction},
     utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
@@ -331,10 +330,27 @@ impl ForeignTryFrom<grpc_api_types::frm::FrmServicePreRiskCheckRequest> for PreR
             mandate_details,
             merchant_details: value.merchant_details.map(MerchantDetails::foreign_from),
             payment_method_type,
-            identity_credentials: value
-                .identity_credentials
-                .map(IdentityCredentials::foreign_from),
-            merchant_transient_info: value.merchant_transient_info,
+            billing_document: value
+                .billing_document
+                .as_ref()
+                .and_then(crate::types::map_customer_document_details),
+            domain_data: value
+                .domain_data
+                .map(crate::connector_types::DomainData::foreign_try_from)
+                .transpose()
+                .change_context(IntegrationError::InvalidDataFormat {
+                    field_name: "domain_data",
+                    context: crate::errors::IntegrationErrorContext {
+                        additional_context: Some(
+                            "Failed to parse domain data in pre-risk check".to_owned(),
+                        ),
+                        ..Default::default()
+                    },
+                })?,
+            shipping_document: value
+                .shipping_document
+                .as_ref()
+                .and_then(crate::types::map_customer_document_details),
         })
     }
 }

@@ -2095,32 +2095,6 @@ pub struct CustomerDocumentDetails {
     pub document_number: Secret<String>,
 }
 
-/// Transaction-level identity payload carrier. Superset covering Brazilian CPF/CNPJ/PIX
-/// plus equivalent document schemes elsewhere (Indonesian NIK, generic identity string, etc.).
-/// Distinct from [`CustomerDocumentDetails`], which is single-document scoped to a customer —
-/// this type lets a transaction carry *both* the payer's and the counterparty's documents.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub struct IdentityCredentials {
-    /// Brazilian individual taxpayer ID (payer)
-    pub cpf: Option<Secret<String>>,
-    /// Brazilian company taxpayer ID
-    pub cnpj: Option<Secret<String>>,
-    /// PIX instant-payment identifier
-    pub pix_key: Option<Secret<String>>,
-    /// Free-form document type hint ("CPF", "CNPJ", "PASSPORT", …)
-    pub document_type: Option<String>,
-    /// Generic identity string for non-BR/ID schemes
-    pub identity: Option<Secret<String>>,
-    /// Platform-drawn account/customer reference used by some risk engines
-    pub account_id: Option<String>,
-    /// Optional password/PIN some risk or locker APIs take inline
-    pub password: Option<Secret<String>>,
-    /// Counterparty CPF (e.g. ClearSale billing vs shipping primaryDocument)
-    pub customer_cpf: Option<Secret<String>>,
-    /// Indonesian national identity card number
-    pub nik: Option<Secret<String>>,
-}
-
 /// Customer Information Details
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct CustomerInfoDetails {

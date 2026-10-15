@@ -4912,12 +4912,128 @@ pub struct CurrencyConversionData {
 pub struct DomainData {
     pub airline_data: Option<AirlineData>,
     pub education_data: Option<EducationData>,
+    pub hotel_data: Option<HotelData>,
+    pub travel_data: Option<TravelData>,
 }
 
 /// Connector-agnostic education data (e.g. Flywire tuition payments).
 #[derive(Debug, Clone, Default)]
 pub struct EducationData {
     pub student_details: Option<StudentDetails>,
+}
+
+/// How the traveller is moving (bus / train / ferry …). Mirrors proto `TravelMode`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TravelMode {
+    #[default]
+    Unspecified,
+    Bus,
+    Train,
+    Ferry,
+    Other,
+}
+
+/// Cabin / seating class. Mirrors proto `TravelClass`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TravelClass {
+    #[default]
+    Unspecified,
+    Economy,
+    PremiumEconomy,
+    Business,
+    First,
+}
+
+/// Connector-agnostic hotel / accommodation booking data. Mirrors the proto
+/// `HotelData` (tags 30+ are the ClearSale BR extension).
+#[derive(Debug, Clone, Default)]
+pub struct HotelData {
+    /// Merchant's booking reference.
+    pub booking_id: Option<String>,
+    /// Check-in date/time (RFC 3339 or yyyy-MM-dd).
+    pub checkin: Option<String>,
+    /// Check-out date/time (RFC 3339 or yyyy-MM-dd).
+    pub checkout: Option<String>,
+    pub number_of_guests: Option<u32>,
+    pub number_of_rooms: Option<u32>,
+    /// Hotel or property name.
+    pub hotel_name: Option<String>,
+    /// City or its IATA code.
+    pub hotel_city: Option<String>,
+    /// ISO 3166-1 alpha-2.
+    pub hotel_country: Option<String>,
+    /// Standard / Suite / Deluxe.
+    pub room_class: Option<String>,
+    /// room / apartment / villa / suite.
+    pub accommodation_type: Option<String>,
+    pub refundability: Option<common_enums::TicketRefundability>,
+    /// Reservation creation timestamp — ClearSale hotels[].reservationDate.
+    pub reservation_date: Option<String>,
+    /// Reservation hold expiry — ClearSale hotels[].reserveExpirationDate.
+    pub reservation_expiration_date: Option<String>,
+    /// State / province of the property — ClearSale hotels[].state.
+    pub hotel_state: Option<String>,
+}
+
+/// Connector-agnostic ground / sea travel data. Mirrors the proto `TravelData`.
+#[derive(Debug, Clone, Default)]
+pub struct TravelData {
+    pub mode: Option<TravelMode>,
+    pub origin: Option<String>,
+    pub destination: Option<String>,
+    pub travel_class: Option<TravelClass>,
+    pub carrier_name: Option<String>,
+    pub passengers: Vec<Traveller>,
+    pub number_of_passengers: Option<u32>,
+    /// Travel date (yyyy-MM-dd) of the whole journey.
+    pub travel_date: Option<String>,
+    pub refundability: Option<common_enums::TicketRefundability>,
+    /// Per-leg detail, in journey order — ClearSale connections[].
+    pub legs: Vec<TravelLeg>,
+}
+
+/// One leg of a ground / sea journey. Mirrors the proto `TravelLeg`.
+#[derive(Debug, Clone, Default)]
+pub struct TravelLeg {
+    /// Origin station / terminal code.
+    pub origin: Option<String>,
+    /// Destination station / terminal code.
+    pub destination: Option<String>,
+    /// Departure (RFC 3339).
+    pub departure_time: Option<String>,
+    /// Arrival (RFC 3339).
+    pub arrival_time: Option<String>,
+    /// Boarding gate opening (RFC 3339).
+    pub boarding_time: Option<String>,
+    /// e.g. bus operator / train code.
+    pub carrier_code: Option<String>,
+    /// Trip / service / coach number.
+    pub service_number: Option<String>,
+    /// Free-form class (e.g. "ECONOMY").
+    pub travel_class: Option<String>,
+    /// Fare basis (e.g. "Y").
+    pub fare_class: Option<String>,
+    /// Seat category when distinct from travel_class.
+    pub seat_class: Option<String>,
+}
+
+/// A person travelling. Mirrors the proto `Traveller`.
+#[derive(Debug, Clone, Default)]
+pub struct Traveller {
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
+    pub phone_number: Option<Secret<String>>,
+    /// Date of birth (yyyy-MM-dd).
+    pub date_of_birth: Option<Secret<String>>,
+    /// Passenger identity document, when collected per-traveller rather than
+    /// at order level — ClearSale passengers[].identificationType/Number.
+    pub document: Option<crate::payment_method_data::CustomerDocumentDetails>,
+    /// M / F / X — ClearSale passengers[].gender.
+    pub gender: Option<String>,
+    /// Passenger loyalty / frequent-traveller card number — ClearSale mileCard.
+    pub loyalty_card: Option<Secret<String>>,
+    /// Issuer of the loyalty card (e.g. "Smiles") — ClearSale companyMileCard.
+    pub loyalty_card_issuer: Option<String>,
 }
 
 /// Student details for education payments (e.g. Flywire recipient fields).
