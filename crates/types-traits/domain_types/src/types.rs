@@ -6020,6 +6020,34 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             .map(ServerAuthenticationTokenResponseData::foreign_try_from)
             .transpose()?;
 
+        // Connector state survives composite OAuth/authentication legs. A meaningful
+        // explicit connector ID takes precedence; customer.id remains an internal ID.
+        let connector_customer = value
+            .customer
+            .as_ref()
+            .and_then(|customer| customer.connector_customer_id.as_ref())
+            .filter(|id| !id.is_empty())
+            .or_else(|| {
+                value
+                    .state
+                    .as_ref()
+                    .and_then(|state| state.connector_customer_id.as_ref())
+                    .filter(|id| !id.is_empty())
+            })
+            .cloned();
+        let validated_connector_customer = connector_customer
+            .clone()
+            .map(|id| CustomerId::try_from(Cow::from(id)))
+            .transpose()
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "customer.connector_customer_id",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Failed to parse Customer Id".to_string()),
+                    suggested_action: Some("Provide a valid connector customer ID".to_string()),
+                    doc_url: None,
+                },
+            })?;
+
         Ok(Self {
             raw_connector_status: None,
             merchant_id: merchant_id_from_header,
@@ -6038,23 +6066,8 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             connector_request_reference_id: extract_connector_request_reference_id(
                 &value.merchant_transaction_id,
             ),
-            customer_id: value
-                .customer
-                .clone()
-                .and_then(|customer| customer.connector_customer_id)
-                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
-                .transpose()
-                .change_context(IntegrationError::InvalidDataFormat {
-                    field_name: "customer.connector_customer_id",
-                    context: IntegrationErrorContext {
-                        additional_context: Some("Failed to parse Customer Id".to_string()),
-                        suggested_action: Some("Provide a valid connector customer ID".to_string()),
-                        doc_url: None,
-                    },
-                })?,
-            connector_customer: value
-                .customer
-                .and_then(|customer| customer.connector_customer_id),
+            customer_id: validated_connector_customer,
+            connector_customer,
             description: value.description,
             return_url: value.return_url.clone(),
             connector_feature_data,
@@ -6156,6 +6169,34 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
             .map(ServerAuthenticationTokenResponseData::foreign_try_from)
             .transpose()?;
 
+        // Connector state survives composite OAuth/authentication legs. A meaningful
+        // explicit connector ID takes precedence; customer.id remains an internal ID.
+        let connector_customer = value
+            .customer
+            .as_ref()
+            .and_then(|customer| customer.connector_customer_id.as_ref())
+            .filter(|id| !id.is_empty())
+            .or_else(|| {
+                value
+                    .state
+                    .as_ref()
+                    .and_then(|state| state.connector_customer_id.as_ref())
+                    .filter(|id| !id.is_empty())
+            })
+            .cloned();
+        let _validated_connector_customer = connector_customer
+            .clone()
+            .map(|id| CustomerId::try_from(Cow::from(id)))
+            .transpose()
+            .change_context(IntegrationError::InvalidDataFormat {
+                field_name: "customer.connector_customer_id",
+                context: IntegrationErrorContext {
+                    additional_context: Some("Failed to parse Customer Id".to_string()),
+                    suggested_action: Some("Provide a valid connector customer ID".to_string()),
+                    doc_url: None,
+                },
+            })?;
+
         Ok(Self {
             raw_connector_status: None,
             merchant_id: merchant_id_from_header,
@@ -6174,9 +6215,7 @@ impl ForeignTryFrom<(AuthorizationRequest, Connectors, &MaskedMetadata)> for Pay
                 &value.merchant_transaction_id,
             ),
             customer_id: Option::<CustomerId>::foreign_try_from(value.customer.clone())?,
-            connector_customer: value
-                .customer
-                .and_then(|customer| customer.connector_customer_id),
+            connector_customer,
             description: value.description,
             return_url: value.return_url.clone(),
             connector_feature_data,

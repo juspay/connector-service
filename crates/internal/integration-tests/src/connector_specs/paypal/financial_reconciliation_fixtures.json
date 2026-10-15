@@ -4791,9 +4791,19 @@
       },
       "repeat": 1,
       "expect": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
-      "error_contains": "authentication"
+      "error_contains": null
     },
     {
       "id": "native_success_no_liability_rejected",
@@ -4851,9 +4861,19 @@
       },
       "repeat": 1,
       "expect": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
-      "error_contains": "authentication"
+      "error_contains": null
     },
     {
       "id": "native_attempt_no_liability_rejected",
@@ -4911,9 +4931,19 @@
       },
       "repeat": 1,
       "expect": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
-      "error_contains": "authentication"
+      "error_contains": null
     },
     {
       "id": "native_missing_outcome_rejected",
@@ -4971,9 +5001,19 @@
       },
       "repeat": 1,
       "expect": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
-      "error_contains": "authentication"
+      "error_contains": null
     },
     {
       "id": "composite_fresh_oauth_post_and_completion_lineage",
@@ -5362,9 +5402,19 @@
       },
       "repeat": 1,
       "expect": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
-      "error_contains": "authentication"
+      "error_contains": null
     },
     {
       "id": "composite_fresh_oauth_initial_authenticate",
@@ -5601,9 +5651,19 @@
       },
       "repeat": 1,
       "expect": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
-      "error_contains": "authentication"
+      "error_contains": null
     },
     {
       "id": "webhook_voided_verified_pending_order_no_money",
@@ -10378,13 +10438,93 @@
         "request_body_contains": {
           "payment_source.apple_pay.token": "PUBLIC_INERT_ENCRYPTED_APPLE_DATA"
         },
-        "calls": 1
+        "calls": 3,
+        "steps": [
+          {
+            "method": "POST",
+            "path": "/v3/vault/setup-tokens",
+            "response": {
+              "id": "PUBLIC_SETUP_TOKEN",
+              "status": "APPROVED"
+            },
+            "response_status": 201,
+            "request_body_contains": {
+              "payment_source.apple_pay.token": "PUBLIC_INERT_ENCRYPTED_APPLE_DATA"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v3/vault/payment-tokens",
+            "response": {
+              "id": "PUBLIC_APPLE_PAYMENT_TOKEN",
+              "payment_source": {
+                "apple_pay": {}
+              }
+            },
+            "response_status": 201,
+            "request_body_contains": {
+              "payment_source.token.id": "PUBLIC_SETUP_TOKEN",
+              "payment_source.token.type": "SETUP_TOKEN"
+            },
+            "request_body_equals": {
+              "payment_source": {
+                "token": {
+                  "id": "PUBLIC_SETUP_TOKEN",
+                  "type": "SETUP_TOKEN"
+                }
+              }
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v2/checkout/orders",
+            "response": {
+              "id": "PUBLIC_ORDER",
+              "intent": "AUTHORIZE",
+              "status": "PAYER_ACTION_REQUIRED",
+              "purchase_units": [
+                {
+                  "invoice_id": "PUBLIC_REFERENCE",
+                  "reference_id": "PUBLIC_REFERENCE",
+                  "amount": {
+                    "currency_code": "USD",
+                    "value": "60.00"
+                  }
+                }
+              ],
+              "links": [
+                {
+                  "rel": "payer-action",
+                  "href": "https://example.invalid/paypal-approve?token=PUBLIC_ORDER",
+                  "method": "GET"
+                }
+              ]
+            },
+            "response_status": 201,
+            "request_body_contains": {
+              "intent": "AUTHORIZE",
+              "payment_source.apple_pay.vault_id": "PUBLIC_APPLE_PAYMENT_TOKEN",
+              "purchase_units.0.amount.value": "60.00",
+              "purchase_units.0.amount.currency_code": "USD"
+            }
+          }
+        ]
       },
       "repeat": 1,
       "expect": {
         "error_present": false,
-        "status": "PENDING",
-        "meta.continuation.stage": "setup_approved"
+        "status": "AUTHENTICATION_PENDING",
+        "meta.continuation.stage": "order_approval_required",
+        "captured_amount": null,
+        "meta.order_id": "PUBLIC_ORDER",
+        "meta.authorize_id": null,
+        "meta.capture_id": null,
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.setup_token_id": "PUBLIC_SETUP_TOKEN",
+        "meta.continuation.payment_token_id": "PUBLIC_APPLE_PAYMENT_TOKEN",
+        "response.redirection_data.form.endpoint": "https://example.invalid/paypal-approve",
+        "response.redirection_data.form.method": "HTTP_METHOD_GET",
+        "response.redirection_data.form.form_fields.token": "PUBLIC_ORDER"
       }
     },
     {
@@ -11687,6 +11827,1029 @@
         "error_present": true
       },
       "error_contains": "external ACS"
+    },
+    {
+      "id": "paypal_composite_explicit_customer_precedes_state",
+      "rpc": "CompositePaymentService/Authorize",
+      "omit_access_token": true,
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_order_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "THREE_DS",
+        "return_url": "https://example.invalid/paypal-return",
+        "continue_redirection_url": "https://example.invalid/paypal-continue",
+        "connector_feature_data": {
+          "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
+        },
+        "redirection_response": {
+          "params": "token=PUBLIC_ORDER"
+        },
+        "test_mode": true,
+        "state": {
+          "access_token": {
+            "token": {
+              "value": "PUBLIC_INERT_VALID_INPUT_TOKEN"
+            },
+            "token_type": "Bearer",
+            "expires_in_seconds": 300
+          },
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "address": {},
+        "customer": {
+          "connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/checkout/orders/PUBLIC_ORDER/authorize",
+        "response": {
+          "id": "PUBLIC_ORDER",
+          "intent": "AUTHORIZE",
+          "status": "COMPLETED",
+          "purchase_units": [
+            {
+              "reference_id": "PUBLIC_REFERENCE",
+              "amount": {
+                "currency_code": "USD",
+                "value": "60.00"
+              },
+              "payments": {
+                "authorizations": [
+                  {
+                    "id": "PUBLIC_AUTH",
+                    "status": "CREATED",
+                    "amount": {
+                      "currency_code": "USD",
+                      "value": "60.00"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "response_status": 201,
+        "request_body_contains": {},
+        "calls": 2,
+        "steps": [
+          {
+            "method": "GET",
+            "path": "/v2/checkout/orders/PUBLIC_ORDER?fields=payment_source",
+            "response": {
+              "id": "PUBLIC_ORDER",
+              "status": "APPROVED",
+              "payment_source": {
+                "card": {
+                  "authentication_result": {
+                    "liability_shift": "POSSIBLE",
+                    "three_d_secure": {
+                      "enrollment_status": "Y",
+                      "authentication_status": "Y"
+                    }
+                  }
+                }
+              }
+            },
+            "response_status": 200,
+            "request_body_contains": {}
+          },
+          {
+            "method": "POST",
+            "path": "/v2/checkout/orders/PUBLIC_ORDER/authorize",
+            "response": {
+              "id": "PUBLIC_ORDER",
+              "intent": "AUTHORIZE",
+              "status": "COMPLETED",
+              "purchase_units": [
+                {
+                  "reference_id": "PUBLIC_REFERENCE",
+                  "amount": {
+                    "currency_code": "USD",
+                    "value": "60.00"
+                  },
+                  "payments": {
+                    "authorizations": [
+                      {
+                        "id": "PUBLIC_AUTH",
+                        "status": "CREATED",
+                        "amount": {
+                          "currency_code": "USD",
+                          "value": "60.00"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "response_status": 201,
+            "request_body_contains": {},
+            "request_body_equals": {}
+          }
+        ]
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "response.composite_status": "COMPLETED",
+        "response.post_authenticate_response.status": "AUTHENTICATION_SUCCESSFUL",
+        "response.post_authenticate_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.status": "AUTHORIZED",
+        "response.authorize_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.state.connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+      },
+      "error_contains": null
+    },
+    {
+      "id": "paypal_composite_empty_customer_falls_back_to_state",
+      "rpc": "CompositePaymentService/Authorize",
+      "omit_access_token": true,
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_order_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "THREE_DS",
+        "return_url": "https://example.invalid/paypal-return",
+        "continue_redirection_url": "https://example.invalid/paypal-continue",
+        "connector_feature_data": {
+          "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
+        },
+        "redirection_response": {
+          "params": "token=PUBLIC_ORDER"
+        },
+        "test_mode": true,
+        "state": {
+          "access_token": {
+            "token": {
+              "value": "PUBLIC_INERT_VALID_INPUT_TOKEN"
+            },
+            "token_type": "Bearer",
+            "expires_in_seconds": 300
+          },
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "address": {},
+        "customer": {
+          "connector_customer_id": ""
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/checkout/orders/PUBLIC_ORDER/authorize",
+        "response": {
+          "id": "PUBLIC_ORDER",
+          "intent": "AUTHORIZE",
+          "status": "COMPLETED",
+          "purchase_units": [
+            {
+              "reference_id": "PUBLIC_REFERENCE",
+              "amount": {
+                "currency_code": "USD",
+                "value": "60.00"
+              },
+              "payments": {
+                "authorizations": [
+                  {
+                    "id": "PUBLIC_AUTH",
+                    "status": "CREATED",
+                    "amount": {
+                      "currency_code": "USD",
+                      "value": "60.00"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "response_status": 201,
+        "request_body_contains": {},
+        "calls": 2,
+        "steps": [
+          {
+            "method": "GET",
+            "path": "/v2/checkout/orders/PUBLIC_ORDER?fields=payment_source",
+            "response": {
+              "id": "PUBLIC_ORDER",
+              "status": "APPROVED",
+              "payment_source": {
+                "card": {
+                  "authentication_result": {
+                    "liability_shift": "POSSIBLE",
+                    "three_d_secure": {
+                      "enrollment_status": "Y",
+                      "authentication_status": "Y"
+                    }
+                  }
+                }
+              }
+            },
+            "response_status": 200,
+            "request_body_contains": {}
+          },
+          {
+            "method": "POST",
+            "path": "/v2/checkout/orders/PUBLIC_ORDER/authorize",
+            "response": {
+              "id": "PUBLIC_ORDER",
+              "intent": "AUTHORIZE",
+              "status": "COMPLETED",
+              "purchase_units": [
+                {
+                  "reference_id": "PUBLIC_REFERENCE",
+                  "amount": {
+                    "currency_code": "USD",
+                    "value": "60.00"
+                  },
+                  "payments": {
+                    "authorizations": [
+                      {
+                        "id": "PUBLIC_AUTH",
+                        "status": "CREATED",
+                        "amount": {
+                          "currency_code": "USD",
+                          "value": "60.00"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "response_status": 201,
+            "request_body_contains": {},
+            "request_body_equals": {}
+          }
+        ]
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "response.composite_status": "COMPLETED",
+        "response.post_authenticate_response.status": "AUTHENTICATION_SUCCESSFUL",
+        "response.post_authenticate_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.status": "AUTHORIZED",
+        "response.authorize_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "error_contains": null
+    },
+    {
+      "id": "paypal_composite_internal_customer_does_not_replace_connector",
+      "rpc": "CompositePaymentService/Authorize",
+      "omit_access_token": true,
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_order_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "THREE_DS",
+        "return_url": "https://example.invalid/paypal-return",
+        "continue_redirection_url": "https://example.invalid/paypal-continue",
+        "connector_feature_data": {
+          "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approval_required\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}}"
+        },
+        "redirection_response": {
+          "params": "token=PUBLIC_ORDER"
+        },
+        "test_mode": true,
+        "state": {
+          "access_token": {
+            "token": {
+              "value": "PUBLIC_INERT_VALID_INPUT_TOKEN"
+            },
+            "token_type": "Bearer",
+            "expires_in_seconds": 300
+          },
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "address": {},
+        "customer": {
+          "connector_customer_id": "",
+          "id": "PUBLIC_INTERNAL_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/checkout/orders/PUBLIC_ORDER/authorize",
+        "response": {
+          "id": "PUBLIC_ORDER",
+          "intent": "AUTHORIZE",
+          "status": "COMPLETED",
+          "purchase_units": [
+            {
+              "reference_id": "PUBLIC_REFERENCE",
+              "amount": {
+                "currency_code": "USD",
+                "value": "60.00"
+              },
+              "payments": {
+                "authorizations": [
+                  {
+                    "id": "PUBLIC_AUTH",
+                    "status": "CREATED",
+                    "amount": {
+                      "currency_code": "USD",
+                      "value": "60.00"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "response_status": 201,
+        "request_body_contains": {},
+        "calls": 2,
+        "steps": [
+          {
+            "method": "GET",
+            "path": "/v2/checkout/orders/PUBLIC_ORDER?fields=payment_source",
+            "response": {
+              "id": "PUBLIC_ORDER",
+              "status": "APPROVED",
+              "payment_source": {
+                "card": {
+                  "authentication_result": {
+                    "liability_shift": "POSSIBLE",
+                    "three_d_secure": {
+                      "enrollment_status": "Y",
+                      "authentication_status": "Y"
+                    }
+                  }
+                }
+              }
+            },
+            "response_status": 200,
+            "request_body_contains": {}
+          },
+          {
+            "method": "POST",
+            "path": "/v2/checkout/orders/PUBLIC_ORDER/authorize",
+            "response": {
+              "id": "PUBLIC_ORDER",
+              "intent": "AUTHORIZE",
+              "status": "COMPLETED",
+              "purchase_units": [
+                {
+                  "reference_id": "PUBLIC_REFERENCE",
+                  "amount": {
+                    "currency_code": "USD",
+                    "value": "60.00"
+                  },
+                  "payments": {
+                    "authorizations": [
+                      {
+                        "id": "PUBLIC_AUTH",
+                        "status": "CREATED",
+                        "amount": {
+                          "currency_code": "USD",
+                          "value": "60.00"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "response_status": 201,
+            "request_body_contains": {},
+            "request_body_equals": {}
+          }
+        ]
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "response.composite_status": "COMPLETED",
+        "response.post_authenticate_response.status": "AUTHENTICATION_SUCCESSFUL",
+        "response.post_authenticate_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.status": "AUTHORIZED",
+        "response.authorize_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "error_contains": null
+    },
+    {
+      "id": "stripe_composite_explicit_customer_precedes_state",
+      "connector": "Stripe",
+      "rpc": "CompositePaymentService/Authorize",
+      "omit_access_token": true,
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "NO_THREE_DS",
+        "connector_feature_data": {
+          "value": "{}"
+        },
+        "test_mode": true,
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "return_url": "https://example.invalid/return",
+        "address": {},
+        "customer": {
+          "connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v1/payment_intents",
+        "response": {
+          "id": "pi_PUBLIC_CONTROL",
+          "object": "payment_intent",
+          "amount": 6000,
+          "amount_capturable": 6000,
+          "amount_received": 0,
+          "currency": "usd",
+          "status": "requires_capture",
+          "customer": "PUBLIC_CUSTOMER"
+        },
+        "response_status": 200,
+        "request_body_contains": {
+          "customer": "PUBLIC_EXPLICIT_CUSTOMER",
+          "amount": "6000",
+          "currency": "USD"
+        },
+        "calls": 1
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "response.authorize_response.status": "AUTHORIZED"
+      }
+    },
+    {
+      "id": "stripe_composite_empty_customer_falls_back_to_state",
+      "connector": "Stripe",
+      "rpc": "CompositePaymentService/Authorize",
+      "omit_access_token": true,
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "NO_THREE_DS",
+        "connector_feature_data": {
+          "value": "{}"
+        },
+        "test_mode": true,
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "return_url": "https://example.invalid/return",
+        "address": {},
+        "customer": {
+          "connector_customer_id": ""
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v1/payment_intents",
+        "response": {
+          "id": "pi_PUBLIC_CONTROL",
+          "object": "payment_intent",
+          "amount": 6000,
+          "amount_capturable": 6000,
+          "amount_received": 0,
+          "currency": "usd",
+          "status": "requires_capture",
+          "customer": "PUBLIC_CUSTOMER"
+        },
+        "response_status": 200,
+        "request_body_contains": {
+          "customer": "PUBLIC_CUSTOMER",
+          "amount": "6000",
+          "currency": "USD"
+        },
+        "calls": 1
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "response.authorize_response.status": "AUTHORIZED"
+      }
+    },
+    {
+      "id": "stripe_composite_internal_customer_does_not_replace_connector",
+      "connector": "Stripe",
+      "rpc": "CompositePaymentService/Authorize",
+      "omit_access_token": true,
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "NO_THREE_DS",
+        "connector_feature_data": {
+          "value": "{}"
+        },
+        "test_mode": true,
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "return_url": "https://example.invalid/return",
+        "address": {},
+        "customer": {
+          "connector_customer_id": "",
+          "id": "PUBLIC_INTERNAL_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v1/payment_intents",
+        "response": {
+          "id": "pi_PUBLIC_CONTROL",
+          "object": "payment_intent",
+          "amount": 6000,
+          "amount_capturable": 6000,
+          "amount_received": 0,
+          "currency": "usd",
+          "status": "requires_capture",
+          "customer": "PUBLIC_CUSTOMER"
+        },
+        "response_status": 200,
+        "request_body_contains": {
+          "customer": "PUBLIC_CUSTOMER",
+          "amount": "6000",
+          "currency": "USD"
+        },
+        "calls": 1
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "response.authorize_response.status": "AUTHORIZED"
+      }
+    },
+    {
+      "id": "paypal_direct_card_explicit_customer_precedes_state",
+      "rpc": "PaymentService/Authorize",
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_order_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "NO_THREE_DS",
+        "connector_feature_data": {
+          "value": "{}"
+        },
+        "test_mode": true,
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "authentication_data": {},
+        "address": {},
+        "state": {
+          "access_token": {
+            "token": {
+              "value": "PUBLIC_INERT_VALID_INPUT_TOKEN"
+            },
+            "token_type": "Bearer",
+            "expires_in_seconds": 300
+          },
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "customer": {
+          "connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/checkout/orders",
+        "response": {
+          "id": "PUBLIC_ORDER",
+          "intent": "AUTHORIZE",
+          "status": "COMPLETED",
+          "purchase_units": [
+            {
+              "reference_id": "PUBLIC_REFERENCE",
+              "amount": {
+                "currency_code": "USD",
+                "value": "60.00"
+              },
+              "payments": {
+                "authorizations": [
+                  {
+                    "id": "PUBLIC_AUTH",
+                    "status": "CREATED",
+                    "amount": {
+                      "currency_code": "USD",
+                      "value": "60.00"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "response_status": 201,
+        "request_body_contains": {},
+        "calls": 1
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "AUTHORIZED",
+        "response.state.connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+      },
+      "omit_access_token": true
+    },
+    {
+      "id": "paypal_direct_card_empty_customer_falls_back_to_state",
+      "rpc": "PaymentService/Authorize",
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_order_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "NO_THREE_DS",
+        "connector_feature_data": {
+          "value": "{}"
+        },
+        "test_mode": true,
+        "payment_method": {
+          "card": {
+            "card_number": {
+              "value": "4111111111111111"
+            },
+            "card_exp_month": {
+              "value": "08"
+            },
+            "card_exp_year": {
+              "value": "30"
+            },
+            "card_cvc": {
+              "value": "737"
+            }
+          }
+        },
+        "authentication_data": {},
+        "address": {},
+        "state": {
+          "access_token": {
+            "token": {
+              "value": "PUBLIC_INERT_VALID_INPUT_TOKEN"
+            },
+            "token_type": "Bearer",
+            "expires_in_seconds": 300
+          },
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "customer": {
+          "connector_customer_id": ""
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/checkout/orders",
+        "response": {
+          "id": "PUBLIC_ORDER",
+          "intent": "AUTHORIZE",
+          "status": "COMPLETED",
+          "purchase_units": [
+            {
+              "reference_id": "PUBLIC_REFERENCE",
+              "amount": {
+                "currency_code": "USD",
+                "value": "60.00"
+              },
+              "payments": {
+                "authorizations": [
+                  {
+                    "id": "PUBLIC_AUTH",
+                    "status": "CREATED",
+                    "amount": {
+                      "currency_code": "USD",
+                      "value": "60.00"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "response_status": 201,
+        "request_body_contains": {},
+        "calls": 1
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "AUTHORIZED",
+        "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "omit_access_token": true
+    },
+    {
+      "id": "paypal_direct_wallet_token_explicit_customer_precedes_state",
+      "rpc": "PaymentService/Authorize",
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_order_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "NO_THREE_DS",
+        "connector_feature_data": {
+          "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approved\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}, \"authentication_result\": {\"liability_shift\": \"POSSIBLE\", \"three_d_secure\": {\"enrollment_status\": \"Y\", \"authentication_status\": \"Y\"}}}"
+        },
+        "test_mode": true,
+        "payment_method": {
+          "token": {
+            "token": {
+              "value": "PUBLIC_VAULT_TOKEN"
+            },
+            "token_payment_method_type": "APPLE_PAY"
+          }
+        },
+        "authentication_data": {},
+        "connector_order_id": "PUBLIC_ORDER",
+        "address": {},
+        "state": {
+          "access_token": {
+            "token": {
+              "value": "PUBLIC_INERT_VALID_INPUT_TOKEN"
+            },
+            "token_type": "Bearer",
+            "expires_in_seconds": 300
+          },
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "customer": {
+          "connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/checkout/orders/PUBLIC_ORDER/authorize",
+        "response": {
+          "id": "PUBLIC_ORDER",
+          "intent": "AUTHORIZE",
+          "status": "COMPLETED",
+          "purchase_units": [
+            {
+              "reference_id": "PUBLIC_REFERENCE",
+              "amount": {
+                "currency_code": "USD",
+                "value": "60.00"
+              },
+              "payments": {
+                "authorizations": [
+                  {
+                    "id": "PUBLIC_AUTH",
+                    "status": "CREATED",
+                    "amount": {
+                      "currency_code": "USD",
+                      "value": "60.00"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "response_status": 201,
+        "request_body_contains": {},
+        "calls": 1
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "AUTHORIZED",
+        "response.state.connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+      },
+      "omit_access_token": true
+    },
+    {
+      "id": "paypal_direct_wallet_token_empty_customer_falls_back_to_state",
+      "rpc": "PaymentService/Authorize",
+      "request": {
+        "merchant_transaction_id": "PUBLIC_REFERENCE",
+        "merchant_order_id": "PUBLIC_REFERENCE",
+        "merchant_request_id": "PUBLIC_REFERENCE",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "capture_method": "MANUAL",
+        "auth_type": "NO_THREE_DS",
+        "connector_feature_data": {
+          "value": "{\"order_id\": \"PUBLIC_ORDER\", \"authorize_id\": null, \"capture_id\": null, \"psync_flow\": \"AUTHORIZE\", \"reference_id\": \"PUBLIC_REFERENCE\", \"continuation\": {\"operation\": \"authorize\", \"stage\": \"order_approved\", \"intent\": \"AUTHORIZE\", \"setup_token_id\": null, \"payment_token_id\": null}, \"capture_context\": {\"capture_method\": \"manual\", \"capture_amounts\": {}, \"capture_history_complete\": false}, \"authentication_result\": {\"liability_shift\": \"POSSIBLE\", \"three_d_secure\": {\"enrollment_status\": \"Y\", \"authentication_status\": \"Y\"}}}"
+        },
+        "test_mode": true,
+        "payment_method": {
+          "token": {
+            "token": {
+              "value": "PUBLIC_VAULT_TOKEN"
+            },
+            "token_payment_method_type": "APPLE_PAY"
+          }
+        },
+        "authentication_data": {},
+        "connector_order_id": "PUBLIC_ORDER",
+        "address": {},
+        "state": {
+          "access_token": {
+            "token": {
+              "value": "PUBLIC_INERT_VALID_INPUT_TOKEN"
+            },
+            "token_type": "Bearer",
+            "expires_in_seconds": 300
+          },
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        },
+        "customer": {
+          "connector_customer_id": ""
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/checkout/orders/PUBLIC_ORDER/authorize",
+        "response": {
+          "id": "PUBLIC_ORDER",
+          "intent": "AUTHORIZE",
+          "status": "COMPLETED",
+          "purchase_units": [
+            {
+              "reference_id": "PUBLIC_REFERENCE",
+              "amount": {
+                "currency_code": "USD",
+                "value": "60.00"
+              },
+              "payments": {
+                "authorizations": [
+                  {
+                    "id": "PUBLIC_AUTH",
+                    "status": "CREATED",
+                    "amount": {
+                      "currency_code": "USD",
+                      "value": "60.00"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "response_status": 201,
+        "request_body_contains": {},
+        "calls": 1
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "AUTHORIZED",
+        "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "omit_access_token": true
     }
   ]
 }

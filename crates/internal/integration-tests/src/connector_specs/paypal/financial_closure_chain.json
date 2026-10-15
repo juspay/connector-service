@@ -595,37 +595,125 @@
       "id": "native_i_rejected",
       "rpc": "PaymentMethodAuthenticationService/PostAuthenticate",
       "assert": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
       "surface": "actual production composite/native gRPC and loopback provider sequence; synthetic noncredential OAuth marker only",
-      "execution": "NOT_RUN"
+      "execution": "NOT_RUN",
+      "prior_diagnostic_oracle": {
+        "expect": {
+          "error_present": true
+        },
+        "error_contains": "authentication",
+        "result": "FAIL: specific_local_error only; rejected outcome and sole GET checks passed",
+        "artifact": "test/grpc/c01-nn91-committed-production-mapper.json",
+        "diagnostic": "test/grpc/c01-nn91-mapper-diagnostic.json",
+        "granular_authentication_context": "NOT_OBSERVABLE: attach_printable context is not transported in public gRPC error",
+        "retained_as_history": true
+      },
+      "public_error_contract": "C43 exact structured Internal/code13 + RESPONSE_HANDLING_FAILED identity, sole expected ownedOrder GET path and count, no POST/charge/Money/approved continuation. All provider rejected outcome inputs unchanged; unrelated Internal cannot pass."
     },
     {
       "id": "native_success_no_liability_rejected",
       "rpc": "PaymentMethodAuthenticationService/PostAuthenticate",
       "assert": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
       "surface": "actual production composite/native gRPC and loopback provider sequence; synthetic noncredential OAuth marker only",
-      "execution": "NOT_RUN"
+      "execution": "NOT_RUN",
+      "prior_diagnostic_oracle": {
+        "expect": {
+          "error_present": true
+        },
+        "error_contains": "authentication",
+        "result": "FAIL: specific_local_error only; rejected outcome and sole GET checks passed",
+        "artifact": "test/grpc/c01-nn91-committed-production-mapper.json",
+        "diagnostic": "test/grpc/c01-nn91-mapper-diagnostic.json",
+        "granular_authentication_context": "NOT_OBSERVABLE: attach_printable context is not transported in public gRPC error",
+        "retained_as_history": true
+      },
+      "public_error_contract": "C43 exact structured Internal/code13 + RESPONSE_HANDLING_FAILED identity, sole expected ownedOrder GET path and count, no POST/charge/Money/approved continuation. All provider rejected outcome inputs unchanged; unrelated Internal cannot pass."
     },
     {
       "id": "native_attempt_no_liability_rejected",
       "rpc": "PaymentMethodAuthenticationService/PostAuthenticate",
       "assert": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
       "surface": "actual production composite/native gRPC and loopback provider sequence; synthetic noncredential OAuth marker only",
-      "execution": "NOT_RUN"
+      "execution": "NOT_RUN",
+      "prior_diagnostic_oracle": {
+        "expect": {
+          "error_present": true
+        },
+        "error_contains": "authentication",
+        "result": "FAIL: specific_local_error only; rejected outcome and sole GET checks passed",
+        "artifact": "test/grpc/c01-nn91-committed-production-mapper.json",
+        "diagnostic": "test/grpc/c01-nn91-mapper-diagnostic.json",
+        "granular_authentication_context": "NOT_OBSERVABLE: attach_printable context is not transported in public gRPC error",
+        "retained_as_history": true
+      },
+      "public_error_contract": "C43 exact structured Internal/code13 + RESPONSE_HANDLING_FAILED identity, sole expected ownedOrder GET path and count, no POST/charge/Money/approved continuation. All provider rejected outcome inputs unchanged; unrelated Internal cannot pass."
     },
     {
       "id": "native_missing_outcome_rejected",
       "rpc": "PaymentMethodAuthenticationService/PostAuthenticate",
       "assert": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
       "surface": "actual production composite/native gRPC and loopback provider sequence; synthetic noncredential OAuth marker only",
-      "execution": "NOT_RUN"
+      "execution": "NOT_RUN",
+      "prior_diagnostic_oracle": {
+        "expect": {
+          "error_present": true
+        },
+        "error_contains": "authentication",
+        "result": "FAIL: specific_local_error only; rejected outcome and sole GET checks passed",
+        "artifact": "test/grpc/c01-nn91-committed-production-mapper.json",
+        "diagnostic": "test/grpc/c01-nn91-mapper-diagnostic.json",
+        "granular_authentication_context": "NOT_OBSERVABLE: attach_printable context is not transported in public gRPC error",
+        "retained_as_history": true
+      },
+      "public_error_contract": "C43 exact structured Internal/code13 + RESPONSE_HANDLING_FAILED identity, sole expected ownedOrder GET path and count, no POST/charge/Money/approved continuation. All provider rejected outcome inputs unchanged; unrelated Internal cannot pass."
     },
     {
       "id": "composite_fresh_oauth_post_and_completion_lineage",
@@ -654,10 +742,32 @@
       "id": "composite_native_i_never_charged",
       "rpc": "CompositePaymentService/Authorize",
       "assert": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
       "surface": "actual production composite/native gRPC and loopback provider sequence; synthetic noncredential OAuth marker only",
-      "execution": "NOT_RUN"
+      "execution": "NOT_RUN",
+      "prior_diagnostic_oracle": {
+        "expect": {
+          "error_present": true
+        },
+        "error_contains": "authentication",
+        "result": "FAIL: specific_local_error only; rejected outcome and sole GET checks passed",
+        "artifact": "test/grpc/c01-nn91-committed-production-mapper.json",
+        "diagnostic": "test/grpc/c01-nn91-mapper-diagnostic.json",
+        "granular_authentication_context": "NOT_OBSERVABLE: attach_printable context is not transported in public gRPC error",
+        "retained_as_history": true
+      },
+      "public_error_contract": "C43 exact structured Internal/code13 + RESPONSE_HANDLING_FAILED identity, sole expected ownedOrder GET path and count, no POST/charge/Money/approved continuation. All provider rejected outcome inputs unchanged; unrelated Internal cannot pass."
     },
     {
       "id": "composite_fresh_oauth_initial_authenticate",
@@ -687,10 +797,32 @@
       "id": "native_no_cvc_i_rejected",
       "rpc": "PaymentMethodAuthenticationService/PostAuthenticate",
       "assert": {
-        "error_present": true
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "meta.continuation.stage": null,
+        "meta.order_id": null,
+        "response.authorize_response": null,
+        "response.authorize_response.captured_amount": null,
+        "response.post_authenticate_response": null,
+        "response.status": null
       },
       "surface": "actual native PostAuth CardWithNoCvc arm; not provider verified",
-      "execution": "NOT_RUN"
+      "execution": "NOT_RUN",
+      "prior_diagnostic_oracle": {
+        "expect": {
+          "error_present": true
+        },
+        "error_contains": "authentication",
+        "result": "FAIL: specific_local_error only; rejected outcome and sole GET checks passed",
+        "artifact": "test/grpc/c01-nn91-committed-production-mapper.json",
+        "diagnostic": "test/grpc/c01-nn91-mapper-diagnostic.json",
+        "granular_authentication_context": "NOT_OBSERVABLE: attach_printable context is not transported in public gRPC error",
+        "retained_as_history": true
+      },
+      "public_error_contract": "C43 exact structured Internal/code13 + RESPONSE_HANDLING_FAILED identity, sole expected ownedOrder GET path and count, no POST/charge/Money/approved continuation. All provider rejected outcome inputs unchanged; unrelated Internal cannot pass."
     },
     {
       "id": "tsp_visa_05_no_acs",
@@ -1090,11 +1222,34 @@
       "id": "ordinary_apple_psp_empty_authdata_setup",
       "assert": {
         "error_present": false,
-        "status": "PENDING",
-        "meta.continuation.stage": "setup_approved"
+        "status": "AUTHENTICATION_PENDING",
+        "meta.continuation.stage": "order_approval_required",
+        "captured_amount": null,
+        "meta.order_id": "PUBLIC_ORDER",
+        "meta.authorize_id": null,
+        "meta.capture_id": null,
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.setup_token_id": "PUBLIC_SETUP_TOKEN",
+        "meta.continuation.payment_token_id": "PUBLIC_APPLE_PAYMENT_TOKEN",
+        "response.redirection_data.form.endpoint": "https://example.invalid/paypal-approve",
+        "response.redirection_data.form.method": "HTTP_METHOD_GET",
+        "response.redirection_data.form.form_fields.token": "PUBLIC_ORDER"
       },
       "actual_mapping": "NOT_RUN",
-      "vendor_verification": "NOT_RUN; inert local fixture is not native ACS import/liability proof"
+      "vendor_verification": "NOT_RUN; inert local fixture is not native ACS import/liability proof",
+      "prior_runtime_oracle": {
+        "expect": {
+          "error_present": false,
+          "status": "PENDING",
+          "meta.continuation.stage": "setup_approved"
+        },
+        "calls": 1,
+        "result": "FAIL: approved setup advanced to exchange POST not represented by fixture",
+        "artifact": "test/grpc/c01-nn91-committed-production-mapper.json",
+        "retained_as_history": true
+      },
+      "actual_protocol": "Authorize USD60 requires setup APPROVED -> payment-token -> Order AUTHORIZE/PAYER_ACTION_REQUIRED, with both token IDs retained and no capture/authorization yet; SetupRecurring zeroAuth may stop after two calls and is unchanged.",
+      "endpoint_idempotency_observation": "NOT_OBSERVABLE in existing fixture schema: handler exposes authorization presence/body hash/method/path, not PayPal-Request-Id. Endpoint-specific header presence/distinction remains NOT_RUN; no schema or pass fabricated."
     },
     {
       "id": "ordinary_google_psp_vendor_carrier_limitation",
@@ -1220,6 +1375,135 @@
       },
       "actual_mapping": "NOT_RUN",
       "vendor_verification": "NOT_RUN; inert local fixture is not native ACS import/liability proof"
+    },
+    {
+      "id": "paypal_composite_explicit_customer_precedes_state",
+      "rpc": "CompositePaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "response.composite_status": "COMPLETED",
+        "response.post_authenticate_response.status": "AUTHENTICATION_SUCCESSFUL",
+        "response.post_authenticate_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.status": "AUTHORIZED",
+        "response.authorize_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.state.connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "paypal_composite_empty_customer_falls_back_to_state",
+      "rpc": "CompositePaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "response.composite_status": "COMPLETED",
+        "response.post_authenticate_response.status": "AUTHENTICATION_SUCCESSFUL",
+        "response.post_authenticate_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.status": "AUTHORIZED",
+        "response.authorize_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "paypal_composite_internal_customer_does_not_replace_connector",
+      "rpc": "CompositePaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "response.composite_status": "COMPLETED",
+        "response.post_authenticate_response.status": "AUTHENTICATION_SUCCESSFUL",
+        "response.post_authenticate_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.status": "AUTHORIZED",
+        "response.authorize_response.connector_transaction_id": "PUBLIC_ORDER",
+        "response.authorize_response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "stripe_composite_explicit_customer_precedes_state",
+      "rpc": "CompositePaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "response.authorize_response.status": "AUTHORIZED"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "stripe_composite_empty_customer_falls_back_to_state",
+      "rpc": "CompositePaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "response.authorize_response.status": "AUTHORIZED"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "stripe_composite_internal_customer_does_not_replace_connector",
+      "rpc": "CompositePaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "response.authorize_response.status": "AUTHORIZED"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "paypal_direct_card_explicit_customer_precedes_state",
+      "rpc": "PaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "status": "AUTHORIZED",
+        "response.state.connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "paypal_direct_card_empty_customer_falls_back_to_state",
+      "rpc": "PaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "status": "AUTHORIZED",
+        "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "paypal_direct_wallet_token_explicit_customer_precedes_state",
+      "rpc": "PaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "status": "AUTHORIZED",
+        "response.state.connector_customer_id": "PUBLIC_EXPLICIT_CUSTOMER"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "paypal_direct_wallet_token_empty_customer_falls_back_to_state",
+      "rpc": "PaymentService/Authorize",
+      "assert": {
+        "error_present": false,
+        "status": "AUTHORIZED",
+        "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "customer_contract": "C42 meaningful explicit connector_customer_id wins over state; empty explicit falls back; internal customer.id never becomes connector ID. OAuth and security outcome contracts unchanged.",
+      "surface": "actual production Authorize/composite gRPC to inert HTTP mapper",
+      "execution": "NOT_RUN"
     }
   ],
   "webhook_source_regressions": [

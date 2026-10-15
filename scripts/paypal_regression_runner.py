@@ -117,7 +117,7 @@ def load_contracts():
                 raise ValueError('Invalid fixture HTTP sequence')
             for step in case['http']['steps']:
                 strict_keys(step, ['method', 'path', 'response', 'response_status', 'request_body_contains', 'request_body_equals', 'authorization_matches_fresh_oauth'], ['method', 'path', 'response', 'response_status', 'request_body_contains'])
-                if (step['method'] not in ['GET', 'POST'] or not step['path'].startswith(('/v1/oauth2/token', '/v2/', '/v1/notifications/verify-webhook-signature'))
+                if (step['method'] not in ['GET', 'POST'] or not step['path'].startswith(('/v1/oauth2/token', '/v2/', '/v1/notifications/verify-webhook-signature', '/v3/vault/setup-tokens', '/v3/vault/payment-tokens'))
                         or step['response_status'] not in [200, 201, 204, 400, 401, 403, 404, 409, 422, 429, 500, 502, 503]
                         or not isinstance(step['request_body_contains'], dict)
                         or not isinstance(step.get('authorization_matches_fresh_oauth', False), bool)):
@@ -139,7 +139,7 @@ def load_contracts():
         if not isinstance(case['expect'], dict) or not case['expect']:
             raise ValueError('Missing response assertions')
         for key, value in case['expect'].items():
-            if key not in ['error_present', 'status', 'captured_amount', 'connector_refund_id', 'refund_amount_minor', 'refund_amount_currency', 'error_code', 'error_reason', 'source_verified'] and not key.startswith(('meta.', 'response.')):
+            if key not in ['error_present', 'status', 'captured_amount', 'connector_refund_id', 'refund_amount_minor', 'refund_amount_currency', 'error_code', 'error_reason', 'source_verified', 'grpc_error_code', 'grpc_error_status', 'grpc_error_identity'] and not key.startswith(('meta.', 'response.')):
                 raise ValueError('Unknown assertion path')
             if key == 'error_present' and not isinstance(value, bool):
                 raise ValueError('Invalid error assertion')
@@ -303,6 +303,7 @@ def parse_grpcurl_output(stdout, stderr):
     if len(messages) > 1:
         raise ValueError('Unexpected multiple unary responses')
     errors = []
+    protocol_errors = []
     for stream in [stdout, stderr]:
         # -format-error emits a standalone JSON error, optionally after ERROR:.
         # Do not scan arbitrary braces in echoed request metadata or trailers.
@@ -320,9 +321,23 @@ def parse_grpcurl_output(stdout, stderr):
                     and not isinstance(value['code'], bool)
                     and value['code'] != 0 and isinstance(value.get('message'), str)):
                 errors.append(value['message'])
+                # grpcurl reports mismatched status-details as a structured
+                # Internal error. Corroborate its exact public typed identity;
+                # unrelated Internal errors must never satisfy a native refusal.
+                message = value['message']
+                internal = (value['code'] == 13 and message.startswith(
+                    'grpc-status-details-bin mismatch: grpc-status=Internal, grpc-message='))
+                typed = re.search(r'grpc-status-details-bin=message:"(RESPONSE_HANDLING_FAILED)"(?:\s|$)', message)
+                protocol_errors.append({'code': value['code'],
+                                        'status': 'Internal' if internal else None,
+                                        'identity': typed.group(1) if internal and typed else None})
     if not messages and not errors:
         raise ValueError('No unary response or structured gRPC error')
     response = normalize(messages[0]) if messages else {}
+    if protocol_errors:
+        if any(item != protocol_errors[0] for item in protocol_errors):
+            raise ValueError('Conflicting public gRPC errors')
+        response['_grpc_error'] = protocol_errors[0]
     # Guard matching sees only structured errors, never echoed credentials or
     # request metadata that happens to contain an expected diagnostic string.
     return response, '\n'.join(errors), bool(errors)
@@ -358,6 +373,9 @@ def projection(response, error):
               'refund_amount_currency': at(response, 'refund_amount.currency'),
               'error_code': at(response, 'error.connector_details.code'),
               'error_reason': at(response, 'error.connector_details.reason'),
+              'grpc_error_code': at(response, '_grpc_error.code'),
+              'grpc_error_status': at(response, '_grpc_error.status'),
+              'grpc_error_identity': at(response, '_grpc_error.identity'),
               'response': response}
     raw = at(response, 'connector_feature_data.value')
     if isinstance(raw, str):
