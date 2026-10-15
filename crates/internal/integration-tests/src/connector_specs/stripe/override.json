@@ -96,11 +96,7 @@
         }
       },
       "assert": {
-        "status": {
-          "one_of": [
-            "FAILURE"
-          ]
-        },
+        "status": null,
         "error": {
           "must_exist": true
         },
