@@ -152,7 +152,6 @@ impl responses::JpmorganVerificationAuthenticationResult {
             .three_domain_secure_server_error_message_text
             .as_ref()
             .is_some_and(|message| !message.peek().trim().is_empty())
-            || !self.other.is_empty()
         {
             return Err(invalid());
         }
@@ -171,6 +170,21 @@ impl responses::JpmorganVerificationAuthenticationResult {
                 | Some(responses::JpmorganThreeDsTransactionStatus::DecoupledChallengeRequired) => {
                     Err(invalid())
                 }
+                Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationAttempted)
+                | Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationUnavailable)
+                | Some(responses::JpmorganThreeDsTransactionStatus::InformationalAcknowledged) => {
+                    // A proof of attempt or informational result does not complete verification.
+                    Err(ConnectorError::ResponseHandlingFailed {
+                        context: domain_types::errors::ResponseTransformationErrorContext {
+                            http_status_code: Some(http_code),
+                            additional_context: Some(
+                                "JPMorgan authentication did not complete account verification."
+                                    .to_owned(),
+                            ),
+                        },
+                    }
+                    .into())
+                }
                 _ => Err(invalid()),
             };
         }
@@ -180,6 +194,7 @@ impl responses::JpmorganVerificationAuthenticationResult {
             && self.three_domain_secure_challenge.is_none()
             && self.three_domain_secure_exemption.is_none()
             && self.three_domain_secure_server_error_message_text.is_none()
+            && self.other.is_empty()
         {
             Ok(AttemptStatus::Charged)
         } else {
@@ -521,69 +536,6 @@ impl requests::JpmorganStoredContext {
             }
         }
         Ok(Some(context))
-    }
-
-    pub(super) fn complete_payment_sync(
-        context: &mut requests::JpmorganPreservedContext,
-        requested_id: &ResponseId,
-        response: &responses::JpmorganPaymentsResponse,
-        status: AttemptStatus,
-    ) -> Result<(), Error> {
-        let Some(credential) = context.stored_credential.as_ref() else {
-            return Ok(());
-        };
-        Self {
-            stored_credential: credential.clone(),
-            recurring: context.recurring.clone(),
-            wallet: context.wallet.clone(),
-        }
-        .validate()?;
-        if credential.state != requests::JpmorganStorageState::Pending {
-            return Ok(());
-        }
-        let Some(initial_id) = credential.initialization_transaction_id.as_ref() else {
-            return Err(Self::invalid());
-        };
-        if !matches!(requested_id, ResponseId::ConnectorTransactionId(id) if id == initial_id)
-            || response.transaction_id != *initial_id
-        {
-            return Err(Self::invalid());
-        }
-        if matches!(status, AttemptStatus::Authorized | AttemptStatus::Charged) {
-            let card = response
-                .payment_method_type
-                .as_ref()
-                .and_then(|method| method.card.as_ref());
-            if let Some(wallet) = context.wallet.as_mut() {
-                if let Some(network) = response_card_network(card) {
-                    if wallet
-                        .network
-                        .as_ref()
-                        .is_some_and(|stored| stored != &network)
-                    {
-                        return Err(Self::invalid());
-                    }
-                    wallet.network = Some(network);
-                }
-            }
-            let network = card.and_then(|card| card.network_response.as_ref());
-            let credential = context
-                .stored_credential
-                .as_mut()
-                .ok_or_else(Self::invalid)?;
-            credential.original_network_transaction_id =
-                network.and_then(|network| network.network_transaction_id.clone());
-            credential.original_transaction_link_id =
-                network.and_then(|network| network.transaction_link_id.clone());
-            credential.state = requests::JpmorganStorageState::Established;
-            Self {
-                stored_credential: credential.clone(),
-                recurring: context.recurring.clone(),
-                wallet: context.wallet.clone(),
-            }
-            .validate()?;
-        }
-        Ok(())
     }
 }
 
@@ -2049,7 +2001,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganTransactionResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let (resource, mut metadata) =
+        let (resource, metadata) =
             requests::JpmorganSyncResource::from_request_with_context(&item.router_data.request)
                 .change_context(requests::JpmorganSyncResource::response_context(
                     item.http_code,
@@ -2061,33 +2013,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
                         requests::JpmorganSyncResource::response_context(item.http_code),
                     )?;
                 let status = AttemptStatus::try_from(&payment)?;
-                let mut response =
-                    build_payments_response_result(&payment, item.http_code, status)?;
-                // Get must return the original relationship context for later stored-credential payments.
-                if item.router_data.request.connector_feature_data.is_some() {
-                    if let Some(context) = metadata.jpmorgan.as_mut() {
-                        // Only the matching initialization can establish a pending stored relationship.
-                        requests::JpmorganStoredContext::complete_payment_sync(
-                            context,
-                            &item.router_data.request.connector_transaction_id,
-                            &payment,
-                            status,
-                        )
-                        .change_context(
-                            requests::JpmorganSyncResource::response_context(item.http_code),
-                        )?;
-                        context.resource = None;
-                    }
-                    if let Ok(PaymentsResponseData::TransactionResponse {
-                        connector_metadata,
-                        ..
-                    }) = &mut response
-                    {
-                        *connector_metadata = Some(serde_json::to_value(metadata).change_context(
-                            requests::JpmorganSyncResource::response_context(item.http_code),
-                        )?);
-                    }
-                }
+                let response = build_payments_response_result(&payment, item.http_code, status)?;
                 (status, response)
             }
             requests::JpmorganSyncResource::Verification(id) => {
