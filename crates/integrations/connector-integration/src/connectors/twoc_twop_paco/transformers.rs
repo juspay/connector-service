@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use common_enums::{AttemptStatus, CountryAlpha2, Currency, PaymentMethodType, RefundStatus};
+use common_enums::{AttemptStatus, CountryAlpha2, Currency, RefundStatus};
 use common_utils::{
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    consts::{Env, NO_ERROR_CODE, NO_ERROR_MESSAGE},
     crypto::jose::JoseConfig,
     request::Method,
     types::{FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit},
@@ -915,13 +915,33 @@ where
     };
 
     let common = &item.resource_common_data;
-    let bill_addr_state = common
+    let incoming_billing_details = common
         .address
         .get_payment_method_billing()
-        .and_then(|billing| billing.address.as_ref())
+        .and_then(|billing| billing.address.as_ref());
+    let is_development = Env::current_env() == Env::Development;
+    if is_development {
+        let incoming_state = incoming_billing_details
+            .and_then(|billing_details| billing_details.state.as_ref())
+            .map(|state| state.peek().to_owned());
+        tracing::info!(
+            ?incoming_state,
+            "PACO development log: incoming billing address state"
+        );
+    }
+    let bill_addr_state = incoming_billing_details
         .and_then(|billing_details| billing_details.to_state_code_as_optional().ok().flatten())
         .or_else(|| common.get_optional_billing_state())
         .filter(|state| state.peek().chars().count() <= 3);
+    if is_development {
+        let connector_state = bill_addr_state
+            .as_ref()
+            .map(|state| state.peek().to_owned());
+        tracing::info!(
+            ?connector_state,
+            "PACO development log: connector billing address state"
+        );
+    }
     let paco_billing_address = common
         .get_optional_billing()
         .and_then(|billing| billing.address.as_ref())
@@ -1544,6 +1564,8 @@ pub fn classify_refund_response_code(code: Option<&str>) -> Option<RefundStatus>
 pub struct PacoApiResponse {
     pub response_code: Option<String>,
     pub response_description: Option<String>,
+    #[serde(default)]
+    pub approval_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1564,17 +1586,6 @@ pub struct PacoPriorPaymentResponseDetails {
     pub approval_code: Option<String>,
 }
 
-fn connector_response_from_approval_code(
-    approval_code: Option<String>,
-    payment_method_type: Option<PaymentMethodType>,
-) -> Option<ConnectorResponseData> {
-    approval_code.and_then(|approval_code| {
-        payment_method_type.map(|payment_method_type| {
-            ConnectorResponseData::with_auth_code(approval_code, payment_method_type)
-        })
-    })
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoPaymentPage {
@@ -1585,6 +1596,8 @@ pub struct PacoPaymentPage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoPaymentResultBlock {
+    #[serde(default)]
+    pub approval_code: Option<String>,
     #[serde(default, rename = "invoiceNo2C2P")]
     pub invoice_no2c2p: Option<String>,
     #[serde(default)]
@@ -1595,6 +1608,8 @@ pub struct PacoPaymentResultBlock {
     pub payment_status_info: Option<PacoPaymentStatusInfo>,
     #[serde(default)]
     pub prior_payment_response_details: Option<PacoPriorPaymentResponseDetails>,
+    #[serde(default)]
+    pub psp_response: Option<PacoPriorPaymentResponseDetails>,
     #[serde(default)]
     pub payment_page: Option<PacoPaymentPage>,
     #[serde(default, alias = "paymentPageURL")]
@@ -1691,10 +1706,12 @@ impl TwocTwopPacoNonUiResponse {
         if data.payment_status_info.is_some() {
             return Some(PacoPaymentResultBlock {
                 invoice_no2c2p: data.invoice_no2c2p.clone(),
+                approval_code: None,
                 order_no: data.order_no.clone(),
                 controller_internal_id: None,
                 payment_status_info: data.payment_status_info.clone(),
                 prior_payment_response_details: data.psp_response.clone(),
+                psp_response: None,
                 payment_page: None,
                 payment_page_url: None,
                 web_payment_url: None,
@@ -1723,6 +1740,8 @@ where
         } = item;
         let result = response.merged_result();
         let api_response = response.api_response.clone();
+        let approval_code = result.and_then(|block| block.approval_code.clone());
+        let psp_response = result.and_then(|block| block.psp_response.clone());
 
         let (status, redirection_data, connector_txn_id, connector_response_reference_id, prior) =
             match result {
@@ -1825,17 +1844,23 @@ where
             });
         }
 
-        let connector_response = connector_response_from_approval_code(
-            prior
-                .as_ref()
-                .and_then(|details| details.approval_code.clone()),
-            router_data.resource_common_data.payment_method_type,
-        );
         let resource_id = connector_txn_id
             .clone()
             .map(ResponseId::ConnectorTransactionId)
             .unwrap_or(ResponseId::NoResponseId);
         let raw_connector_status = raw_connector_status_from_paco(&api_response, &prior);
+        let connector_response =
+            auth_code_from_paco_response(&approval_code, &psp_response, &api_response, &prior).map(
+                |auth_code| {
+                    ConnectorResponseData::with_auth_code(
+                        auth_code,
+                        router_data
+                            .resource_common_data
+                            .payment_method_type
+                            .unwrap_or(common_enums::PaymentMethodType::Card),
+                    )
+                },
+            );
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -2546,6 +2571,31 @@ fn raw_connector_status_from_paco(
         message,
         reason: None,
     })
+}
+
+fn auth_code_from_paco_response(
+    approval_code: &Option<String>,
+    psp_response: &Option<PacoPriorPaymentResponseDetails>,
+    api_response: &Option<PacoApiResponse>,
+    prior: &Option<PacoPriorPaymentResponseDetails>,
+) -> Option<String> {
+    approval_code
+        .clone()
+        .or_else(|| {
+            psp_response
+                .as_ref()
+                .and_then(|psp| psp.approval_code.clone())
+        })
+        .or_else(|| {
+            prior
+                .as_ref()
+                .and_then(|prior_details| prior_details.approval_code.clone())
+        })
+        .or_else(|| {
+            api_response
+                .as_ref()
+                .and_then(|api| api.approval_code.clone())
+        })
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
