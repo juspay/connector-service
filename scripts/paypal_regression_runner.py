@@ -318,7 +318,7 @@ def public_error_types():
             raise ValueError('Error descriptor source differs from committed schema')
         bindings[relative] = hashlib.sha256(committed).hexdigest()
     generated = subprocess.run(['protoc', '-I', str(directory), '--include_imports',
-                                '--descriptor_set_out=/dev/stdout', 'sdk_config.proto'],
+                                '--descriptor_set_out=/dev/stdout', 'sdk_config.proto', 'services.proto', 'composite_services.proto'],
                                cwd=directory, capture_output=True, check=True).stdout
     descriptor = descriptor_pb2.FileDescriptorSet.FromString(generated)
     pool = descriptor_pool.DescriptorPool()
@@ -1154,6 +1154,87 @@ def import_financial_facts(args):
             'provider_live_verified':False,'current_mapping_verified':False,'evidence_state':'IMPLEMENTED'}
 
 
+def original_payment_gap_reason(gap):
+    """Persist only declared provenance codes, never exception/provider text."""
+    allowed = {
+        'ORIGINAL_PAYMENT_ORDER_LINEAGE_MISSING',
+        'ORIGINAL_PAYMENT_AUTHORIZATION_INPUT_MISSING',
+        'ORIGINAL_PAYMENT_INPUT_DIGEST_CONFLICT',
+        'ORIGINAL_PAYMENT_SOURCE_LINEAGE_CONFLICT',
+        'ORIGINAL_PAYMENT_CASE_IDENTITY_MISSING',
+        'ORIGINAL_PAYMENT_RECIPE_MISSING',
+        'ORIGINAL_PAYMENT_REQUEST_SHA_CONFLICT',
+        'ORIGINAL_PAYMENT_INPUT_INCOMPLETE',
+        'ORIGINAL_PAYMENT_MONEY_CONFLICT',
+        'ORIGINAL_PAYMENT_AUTHORIZATION_INPUT_CONFLICT',
+    }
+    if type(gap) is ValueError and len(gap.args) == 1 and type(gap.args[0]) is str and gap.args[0] in allowed:
+        return gap.args[0]
+    return 'PROVENANCE_UNRESOLVED'
+
+
+def original_payment_input(fact, imported, imported_path, journal):
+    """Recover original authorization input; saved responses cannot supply money."""
+    metadata = fact.get('metadata') or {}
+    order = metadata.get('order_id') or fact.get('order_id')
+    if not order:
+        raise ValueError('ORIGINAL_PAYMENT_ORDER_LINEAGE_MISSING')
+    candidates = [item for item in imported + list(journal['operations'].values())
+                  if item.get('method') in ['PaymentService/Authorize','CompositePaymentService/Authorize',
+                                              'RecurringPaymentService/Charge','PaymentMethodAuthenticationService/Authenticate']
+                  and ((item.get('metadata') or {}).get('order_id') or item.get('order_id')) == order]
+    if fact.get('method') in ['PaymentService/Authorize','CompositePaymentService/Authorize',
+                                              'RecurringPaymentService/Charge','PaymentMethodAuthenticationService/Authenticate'] and fact not in candidates:
+        candidates.append(fact)
+    if not candidates:
+        raise ValueError('ORIGINAL_PAYMENT_AUTHORIZATION_INPUT_MISSING')
+    recovered = []
+    for original in candidates:
+        commit = original.get('original_source_commit') or at(original,'source_binding.commit')
+        request = None
+        provenance = {'commit':commit,'request_sha256':original.get('request_sha256'),'order_id':order}
+        if original.get('legacy_operation_sha256'):
+            data = json.loads(Path(imported_path).read_text())
+            entry = data['inputs']['calls']
+            if digest(entry['path']) != entry['sha256']:
+                raise ValueError('ORIGINAL_PAYMENT_INPUT_DIGEST_CONFLICT')
+            call = json.loads(Path(entry['path']).read_text())['calls'][original['legacy_operation_sha256']]
+            request = call['request']
+            if call.get('source_commit') != commit or call.get('logical_key') != original.get('logical_key'):
+                raise ValueError('ORIGINAL_PAYMENT_SOURCE_LINEAGE_CONFLICT')
+            provenance.update(input_path=entry['path'],input_sha256=entry['sha256'])
+        else:
+            # Exact historical Git recipe plus immutable session identity is usable
+            # only if the resulting FULL request hash matches the original journal.
+            source = str(MATRIX.relative_to(ROOT))
+            raw = subprocess.run(['git','show',commit+':'+source],cwd=ROOT,capture_output=True,check=True).stdout
+            manifest = json.loads(raw)
+            identities = [key for key,item in journal['operations'].items() if item is original]
+            if len(identities) != 1:
+                raise ValueError('ORIGINAL_PAYMENT_CASE_IDENTITY_MISSING')
+            identity = identities[0]
+            rows = [row for row in manifest['rows'] if row['case_id']==identity]
+            if len(rows) != 1 or not journal.get('session_seed'):
+                raise ValueError('ORIGINAL_PAYMENT_RECIPE_MISSING')
+            request = materialize_request(rows[0]['request'],'paypal-'+hashlib.sha256((journal['session_seed']+':'+identity).encode()).hexdigest()[:24])
+            provenance.update(case_id=identity,git_matrix_sha256=hashlib.sha256(raw).hexdigest())
+        if hashlib.sha256(json.dumps(request,sort_keys=True).encode()).hexdigest() != original.get('request_sha256'):
+            raise ValueError('ORIGINAL_PAYMENT_REQUEST_SHA_CONFLICT')
+        amount = request.get('amount')
+        method = request.get('capture_method')
+        if (not isinstance(amount,dict) or set(amount)!={'minor_amount','currency'}
+                or not isinstance(amount.get('currency'),str) or not re.fullmatch('[A-Z]{3}',amount['currency'])
+                or method not in ['AUTOMATIC','MANUAL','MANUAL_MULTIPLE','SCHEDULED','SEQUENTIAL_AUTOMATIC']):
+            raise ValueError('ORIGINAL_PAYMENT_INPUT_INCOMPLETE')
+        number(amount['minor_amount'])
+        if original.get('request_money') is not None and original['request_money'] != amount:
+            raise ValueError('ORIGINAL_PAYMENT_MONEY_CONFLICT')
+        recovered.append(({'amount':copy.deepcopy(amount),'capture_method':method},provenance))
+    if any(item[0] != recovered[0][0] for item in recovered):
+        raise ValueError('ORIGINAL_PAYMENT_AUTHORIZATION_INPUT_CONFLICT')
+    return recovered[0]
+
+
 def materialize_request(value, identity, path=''):
     if isinstance(value,dict): return {key:materialize_request(item,identity,path+'.'+key) for key,item in value.items()}
     if isinstance(value,list): return [materialize_request(item,identity,path) for item in value]
@@ -1190,15 +1271,51 @@ def assertion_preflight(row):
     return None
 
 
-def source_assertions(response, assertions):
+def response_field_descriptor(method, path):
+    """Resolve the public RPC output field, never infer types from field names."""
+    classes, _ = public_error_types()
+    pool = classes['ErrorInfo'].DESCRIPTOR.file.pool
+    service, operation = method.split('/')
+    try:
+        descriptor = pool.FindServiceByName('types.' + service).methods_by_name[operation].output_type
+    except KeyError:
+        return None
+    field = None
+    for part in path.removeprefix('res.').split('.'):
+        if part.isdigit() and field is not None and field.is_repeated:
+            continue
+        if descriptor is None or part not in descriptor.fields_by_name:
+            return None
+        field = descriptor.fields_by_name[part]
+        descriptor = field.message_type
+    return field
+
+
+def descriptor_equal(value, wanted, method, path):
+    field = response_field_descriptor(method, path) if method else None
+    if field is not None and field.type == field.TYPE_INT64:
+        def canonical(item):
+            if isinstance(item, str) and not re.fullmatch(r'(?:0|-[1-9][0-9]*|[1-9][0-9]*)', item):
+                raise ValueError('Noncanonical int64 projection')
+            return number(item)
+        try:
+            return canonical(value) == canonical(wanted)
+        except ValueError:
+            return False
+    if field is not None and field.message_type is not None and isinstance(value,dict) and isinstance(wanted,dict):
+        return set(value)==set(wanted) and all(descriptor_equal(value[key],wanted[key],method,path+'.'+key) for key in wanted)
+    return type(value) is type(wanted) and value == wanted
+
+
+def source_assertions(response, assertions, method=None):
     failures=[]
     for path, rules in assertions.items():
         value=at(response,path.removeprefix('res.'))
         if not isinstance(rules,dict) or set(rules)-{'equals','contains','must_exist','must_not_exist','one_of'}:
             raise ValueError('Unsupported current committed assertion rule')
         for operation,wanted in rules.items():
-            valid = ((value==wanted) if operation=='equals' else
-                     (value in wanted) if operation=='one_of' else
+            valid = (descriptor_equal(value,wanted,method,path) if operation=='equals' else
+                     any(descriptor_equal(value,item,method,path) for item in wanted) if operation=='one_of' else
                      (value is not None) if operation=='must_exist' and wanted is True else
                      (value is None) if operation=='must_not_exist' and wanted is True else
                      (isinstance(value,(str,list,dict)) and wanted in value) if operation=='contains' else False)
@@ -1301,6 +1418,7 @@ def matrix_execute(args):
     context=json.loads(args.context.read_text()) if args.context else {'cases':{}}
     strict_keys(context,['cases','imported_facts'],['cases'])
     imported=[]
+    imported_path=None
     if context.get('imported_facts'):
         imported_path=Path(context['imported_facts'])
         imported=validate_imported_facts(imported_path)
@@ -1391,20 +1509,27 @@ def matrix_execute(args):
                             closure=identity.endswith('/financial_closure_chain')
                             expected_amount=3000 if closure else 6000
                             for order,meta in orders.items():
+                                try:
+                                    original_input, original_provenance = original_payment_input(
+                                        {'metadata':meta},imported,imported_path,journal)
+                                except (ValueError, KeyError, subprocess.CalledProcessError):
+                                    observations.append({'error_present':False,'failed_assertion_paths':[],
+                                        'original_input_gap':True,'reason':'ORIGINAL_PAYMENT_INPUT_PROVENANCE_UNRESOLVED'})
+                                    continue
                                 observed,error,_=rpc(args.endpoint,'PaymentService/Get',{'connector_transaction_id':order,
-                                    'connector_feature_data':{'value':json.dumps(meta)},'amount':{'minor_amount':6000,'currency':'USD'},
-                                    'capture_method':'MANUAL_MULTIPLE','test_mode':True},config,token)
+                                    'connector_feature_data':{'value':json.dumps(meta)},**original_input,'test_mode':True},config,token)
                                 expected={'status':{'equals':'PARTIAL_CHARGED' if closure else 'CHARGED'},
                                           'captured_amount':{'equals':expected_amount}}
-                                failures=source_assertions(observed,expected)
+                                failures=source_assertions(observed,expected,'PaymentService/Get')
                                 actual_meta=financial_metadata(observed)
                                 if actual_meta.get('order_id')!=order: failures.append('owned_order_identity')
                                 if closure and at(actual_meta,'capture_context.authorization_closed') is not True:
                                     failures.append('authorization_closed')
                                 observations.append({'error_present':error,'status':observed.get('status'),
-                                    'captured_amount':observed.get('captured_amount'),'failed_assertion_paths':failures})
-                            current_pass=bool(observations) and all(not o['error_present'] and not o['failed_assertion_paths'] for o in observations)
-                            result.append({'case_id':identity,'state':'RECONCILED_READ_ONLY' if current_pass else 'FAIL',
+                                    'captured_amount':observed.get('captured_amount'),'failed_assertion_paths':failures,
+                                    'original_payment_input_provenance':original_provenance})
+                            current_pass=bool(observations) and all(not o['error_present'] and not o['failed_assertion_paths'] and not o.get('original_input_gap') for o in observations)
+                            result.append({'case_id':identity,'state':'RECONCILED_READ_ONLY' if current_pass else 'NOT_RUN' if any(o.get('original_input_gap') for o in observations) else 'FAIL',
                                 'current_mapping_verified':False,'current_terminal_get_verified':current_pass,
                                 'provider_live_verified':False,'original_write_mapping_verified':False,
                                 'reason':'Prior financial writes retained; only current terminal GET contract retested',
@@ -1497,9 +1622,17 @@ def matrix_execute(args):
                         metadata=fact.get('metadata') or {}; order=metadata.get('order_id') or fact.get('order_id')
                         if not order and not readonly:
                             result.append({'case_id':identity,'state':'NOT_RUN','reason':'PRIOR_FINANCIAL_OPERATION_GET_ONLY_IDENTITY_UNRESOLVED','current_mapping_verified':False}); continue
-                        query=request if readonly else {'connector_transaction_id':order,'connector_feature_data':{'value':json.dumps(metadata)},'test_mode':True}
+                        original_provenance=None
+                        original_input={}
+                        if not readonly:
+                            try:
+                                original_input,original_provenance=original_payment_input(fact,imported,imported_path,journal)
+                            except (ValueError, KeyError, subprocess.CalledProcessError) as gap:
+                                result.append({'case_id':identity,'state':'NOT_RUN','reason':original_payment_gap_reason(gap),
+                                    'current_mapping_verified':False,'financial_post_forbidden':True});continue
+                        query=request if readonly else {**original_input,'connector_transaction_id':order,'connector_feature_data':{'value':json.dumps(metadata)},'test_mode':True}
                         response,error,_=rpc(args.endpoint,method if readonly else 'PaymentService/Get',query,config,token)
-                        current_get_failures=source_assertions(response,row['assertions']) if readonly else []
+                        current_get_failures=source_assertions(response,row['assertions'],method) if readonly else []
                         if not readonly and (response.get('connector_transaction_id') != order
                                              or financial_metadata(response).get('order_id') != order):
                             current_get_failures.append('owned_order_identity')
@@ -1510,7 +1643,7 @@ def matrix_execute(args):
                                        'original_source_commit':fact.get('original_source_commit') or at(fact,'source_binding.commit'),
                                        'new_recipe_request_sha256':request_sha,
                                        'historical_failures':fact.get('failures',[]),
-                                       'original_write_status':fact.get('status'),
+                                       'original_write_status':fact.get('status'),'original_payment_input_provenance':original_provenance,
                                        'metadata':financial_metadata(response),'captured_amount':response.get('captured_amount')})
                         continue
                     if identity.endswith('/no3ds_fail_payment'):
@@ -1555,7 +1688,7 @@ def matrix_execute(args):
                         'request_money':request.get('amount_to_capture') or request.get('refund_amount') or request.get('amount')}
                     atomic(args.journal,journal)
                     response,error,_=rpc(args.endpoint,method,request,config,token)
-                    failures=source_assertions(response,row['assertions'])
+                    failures=source_assertions(response,row['assertions'],method)
                     record=journal['operations'][identity]
                     record.update(state='completed',metadata=financial_metadata(response),status=response.get('status'),captured_amount=response.get('captured_amount'),
                                   connector_transaction_id=response.get('connector_transaction_id'),connector_refund_id=response.get('connector_refund_id'),failures=failures)
