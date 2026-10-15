@@ -321,7 +321,7 @@ macros::create_all_prerequisites!(
             // Merchant-Id header
             let merchant_id_header = (
                 headers::MERCHANT_ID.to_string(),
-                req.resource_common_data.merchant_id().get_string_repr().to_string().into_masked(), // to be fixed
+                req.resource_common_data.merchant_id().get_string_repr().to_string().into_masked(), // to be fixed - [hyperswitch-cloud - #24029]
             );
 
             headers.push(auth_header);
