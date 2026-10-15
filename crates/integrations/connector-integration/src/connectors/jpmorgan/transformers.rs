@@ -136,7 +136,6 @@ impl responses::JpmorganVerificationAuthenticationResult {
             .three_domain_secure_server_error_message_text
             .as_ref()
             .is_some_and(|message| !message.peek().trim().is_empty())
-            || !self.other.is_empty()
         {
             return Err(invalid());
         }
@@ -155,6 +154,21 @@ impl responses::JpmorganVerificationAuthenticationResult {
                 | Some(responses::JpmorganThreeDsTransactionStatus::DecoupledChallengeRequired) => {
                     Err(invalid())
                 }
+                Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationAttempted)
+                | Some(responses::JpmorganThreeDsTransactionStatus::AuthenticationUnavailable)
+                | Some(responses::JpmorganThreeDsTransactionStatus::InformationalAcknowledged) => {
+                    // A proof of attempt or informational result does not complete verification.
+                    Err(ConnectorError::ResponseHandlingFailed {
+                        context: domain_types::errors::ResponseTransformationErrorContext {
+                            http_status_code: Some(http_code),
+                            additional_context: Some(
+                                "JPMorgan authentication did not complete account verification."
+                                    .to_owned(),
+                            ),
+                        },
+                    }
+                    .into())
+                }
                 _ => Err(invalid()),
             };
         }
@@ -164,6 +178,7 @@ impl responses::JpmorganVerificationAuthenticationResult {
             && self.three_domain_secure_challenge.is_none()
             && self.three_domain_secure_exemption.is_none()
             && self.three_domain_secure_server_error_message_text.is_none()
+            && self.other.is_empty()
         {
             Ok(AttemptStatus::Charged)
         } else {
@@ -2061,7 +2076,8 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
                 let status = AttemptStatus::try_from(&payment)?;
                 let mut response =
                     build_payments_response_result(&payment, item.http_code, status)?;
-                // Get must return the original relationship context for later stored-credential payments.
+                // PSync does not reconstruct the caller's stored-credential context.
+                // Preserve its original agreement, wallet classification, and network references for later payments.
                 if item.router_data.request.connector_feature_data.is_some() {
                     if let Some(context) = metadata.jpmorgan.as_mut() {
                         // Only the matching initialization can establish a pending stored relationship.
