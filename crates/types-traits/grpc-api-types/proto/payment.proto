@@ -3126,7 +3126,7 @@ message PaymentServiceVoidRequest {
   // split_payments contract (e.g. Stripe, Adyen).
   optional SplitPaymentsDetails split_payments = 13;
 
-  // Original payment method, for connectors that require it again on void.
+  // Original payment method, for connectors that require it again on void (e.g. Worldpay RAFT).
   optional PaymentMethod payment_method = 14;
 }
 
@@ -3418,7 +3418,7 @@ message PaymentServiceCaptureRequest {
   // N per-vendor splits. Supersedes split_payments; new connectors read this field.
   optional SplitSettlement split_settlement = 15;
 
-  // Original payment method, for connectors that require it again on capture.
+  // Original payment method, for connectors that require it again on capture (e.g. Worldpay RAFT).
   optional PaymentMethod payment_method = 16;
 }
 
@@ -3593,7 +3593,7 @@ message PaymentServiceRefundRequest {
   // Connector-side identifier for the original payment that this refund targets.
   optional string connector_order_id = 18;
 
-  // Original payment method, for connectors that require it again on refund.
+  // Original payment method, for connectors that require it again on refund (e.g. Worldpay RAFT).
   optional PaymentMethod payment_method = 19;
 
   // Split refund data for platform fee reversals and transfers
@@ -4431,7 +4431,7 @@ message PaymentServiceIncrementalAuthorizationRequest {
   // Network transaction ID returned by the original authorization.
   optional string network_transaction_id = 9;
 
-  // Original payment method, for connectors that require it again on an increase.
+  // Original payment method, for connectors that require it again on an increase (e.g. Worldpay RAFT).
   optional PaymentMethod payment_method = 10;
 }
 
