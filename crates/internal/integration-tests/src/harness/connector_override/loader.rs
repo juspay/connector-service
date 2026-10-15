@@ -1,8 +1,4 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fs,
-    path::PathBuf,
-};
+use std::{collections::BTreeMap, fs, path::PathBuf};
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -24,33 +20,6 @@ pub struct ScenarioOverridePatch {
     /// sync returns `CHARGED` without browser automation.
     #[serde(default)]
     pub pre_request_http: Option<PreRequestHttpHook>,
-    /// Additional named executions derived from this common scenario.
-    ///
-    /// A variant changes only the scenario template. The regular connector
-    /// override above is still applied later, after dependency context, just
-    /// as it is for the common scenario itself.
-    #[serde(default)]
-    pub variants: BTreeMap<String, ScenarioVariantPatch>,
-}
-
-/// Connector-specific variation of a scenario from the common corpus.
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ScenarioVariantPatch {
-    #[serde(default)]
-    pub grpc_req: Option<Value>,
-    #[serde(rename = "assert", default)]
-    pub assert_rules: Option<BTreeMap<String, Value>>,
-    #[serde(default)]
-    pub display_name: Option<String>,
-}
-
-/// A named variant and the common scenario from which it is derived.
-#[derive(Debug, Clone)]
-pub struct ConnectorScenarioVariant {
-    pub name: String,
-    pub base_scenario: String,
-    pub patch: ScenarioVariantPatch,
 }
 
 /// Fire-and-forget HTTP call issued before the scenario's gRPC request.
@@ -119,25 +88,10 @@ pub fn load_scenario_override_patch(
     scenario: &str,
 ) -> Result<Option<ScenarioOverridePatch>, ScenarioError> {
     if let Some(connector_patch) = load_connector_override_file(connector)? {
-        if let Some(suite_patch) = connector_patch.get(suite) {
-            if let Some(patch) = suite_patch.get(scenario) {
-                return Ok(Some(patch.clone()));
-            }
-
-            // A variant inherits the regular override of its common base.
-            // The variant's own template patch is applied before dependency
-            // context by the scenario loader; this base patch remains the
-            // final connector-specific layer, matching existing semantics.
-            if let Some((_, base_patch)) = suite_patch
-                .iter()
-                .find(|(_, patch)| patch.variants.contains_key(scenario))
-            {
-                let mut inherited = base_patch.clone();
-                inherited.variants.clear();
-                return Ok(Some(inherited));
-            }
-        }
-        return Ok(None);
+        return Ok(connector_patch
+            .get(suite)
+            .and_then(|suite_patch| suite_patch.get(scenario))
+            .cloned());
     }
 
     // Backward-compatible fallback for suite-level override files.
@@ -146,40 +100,6 @@ pub fn load_scenario_override_patch(
     }
 
     Ok(None)
-}
-
-/// Lists the connector's named variants for a suite.
-pub fn load_scenario_variants(
-    connector: &str,
-    suite: &str,
-) -> Result<Vec<ConnectorScenarioVariant>, ScenarioError> {
-    let Some(connector_patch) = load_connector_override_file(connector)? else {
-        return Ok(Vec::new());
-    };
-    let Some(suite_patch) = connector_patch.get(suite) else {
-        return Ok(Vec::new());
-    };
-
-    let mut variants = Vec::new();
-    let mut names = BTreeSet::new();
-    for (base_scenario, scenario_patch) in suite_patch {
-        for (name, patch) in &scenario_patch.variants {
-            if !names.insert(name.clone()) {
-                return Err(ScenarioError::InvalidConnectorSpec {
-                    path: connector_override_file_path(connector),
-                    message: format!(
-                        "{connector} defines duplicate variant name {suite}/{name} under multiple common scenarios"
-                    ),
-                });
-            }
-            variants.push(ConnectorScenarioVariant {
-                name: name.clone(),
-                base_scenario: base_scenario.clone(),
-                patch: patch.clone(),
-            });
-        }
-    }
-    Ok(variants)
 }
 
 /// Loads the optional `pre_request_http` hook for a scenario override.
@@ -308,8 +228,7 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        connector_override_file_path, load_scenario_override_patch, load_scenario_variants,
-        ScenarioOverridePatch,
+        connector_override_file_path, load_scenario_override_patch, ScenarioOverridePatch,
     };
 
     static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -376,71 +295,10 @@ mod tests {
                 "timeout_secs": 5
             }
         }))
-        .expect("the documented fields must keep parsing");
+        .expect("the three documented fields must keep parsing");
         assert!(patch.grpc_req.is_some());
         assert!(patch.assert_rules.is_some());
         assert!(patch.pre_request_http.is_some());
-    }
-
-    #[test]
-    fn loads_named_variants_and_inherits_their_base_override() {
-        let env_lock = ENV_LOCK.lock().expect("env lock should acquire");
-        let temp_root = unique_temp_dir();
-        let connector_dir = temp_root.join("cybersource");
-        fs::create_dir_all(&connector_dir).expect("connector directory should be created");
-        fs::write(
-            connector_dir.join("override.json"),
-            json!({
-                "PaymentService/Authorize": {
-                    "no3ds_manual_capture_credit_card": {
-                        "grpc_req": { "metadata": { "value": "{}" } },
-                        "variants": {
-                            "shipping_details_shipto": {
-                                "grpc_req": {
-                                    "address": {
-                                        "shipping_address": { "city": { "value": "Oakland" } }
-                                    }
-                                },
-                                "assert": { "status": { "one_of": ["AUTHORIZED"] } },
-                                "display_name": "shipping details"
-                            }
-                        }
-                    }
-                }
-            })
-            .to_string(),
-        )
-        .expect("override file should be written");
-
-        let previous = std::env::var("UCS_CONNECTOR_OVERRIDE_ROOT").ok();
-        std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", &temp_root);
-
-        let variants = load_scenario_variants("cybersource", "PaymentService/Authorize")
-            .expect("variants should load");
-        assert_eq!(variants.len(), 1);
-        let variant = variants.first().expect("one variant should be loaded");
-        assert_eq!(variant.name, "shipping_details_shipto");
-        assert_eq!(variant.base_scenario, "no3ds_manual_capture_credit_card");
-
-        let inherited = load_scenario_override_patch(
-            "cybersource",
-            "PaymentService/Authorize",
-            "shipping_details_shipto",
-        )
-        .expect("variant base override should load")
-        .expect("variant should inherit a patch");
-        assert_eq!(
-            inherited.grpc_req,
-            Some(json!({ "metadata": { "value": "{}" } }))
-        );
-        assert!(inherited.variants.is_empty());
-
-        match previous {
-            Some(value) => std::env::set_var("UCS_CONNECTOR_OVERRIDE_ROOT", value),
-            None => std::env::remove_var("UCS_CONNECTOR_OVERRIDE_ROOT"),
-        }
-        drop(env_lock);
-        let _ = fs::remove_dir_all(temp_root);
     }
 
     #[test]

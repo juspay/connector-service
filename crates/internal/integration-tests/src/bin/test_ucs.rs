@@ -719,12 +719,12 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
     }
 
     println!(
-        "\n  {} passed  {} failed  {} skipped  {} unsupported  {} connector variants",
+        "\n  {} passed  {} failed  {} skipped  {} unsupported  {} connector-specific",
         summary.passed,
         summary.failed,
         summary.skipped,
         summary.unsupported,
-        summary.connector_variants
+        summary.connector_specific
     );
 
     // Repeated here with their detail: a failure two hundred lines up, between

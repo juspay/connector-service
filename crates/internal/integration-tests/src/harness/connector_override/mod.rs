@@ -95,33 +95,7 @@ impl OverrideRegistry {
     }
 }
 
-pub use loader::{ConnectorScenarioVariant, PreRequestHttpHook};
-
-/// Lists connector-specific executions derived from common scenarios.
-pub fn connector_scenario_variants(
-    connector: &str,
-    suite: &str,
-) -> Result<Vec<ConnectorScenarioVariant>, ScenarioError> {
-    loader::load_scenario_variants(connector, suite)
-}
-
-/// Applies the template-level patch for a named connector variant.
-///
-/// This runs before dependency context is injected. Regular connector
-/// overrides continue to run afterwards, preserving their existing precedence.
-pub fn apply_connector_scenario_variant(
-    variant: &ConnectorScenarioVariant,
-    grpc_req: &mut Value,
-    assertions: &mut BTreeMap<String, FieldAssert>,
-) -> Result<(), ScenarioError> {
-    if let Some(req_patch) = variant.patch.grpc_req.as_ref() {
-        json_merge::json_merge_patch(grpc_req, req_patch);
-    }
-    if let Some(assertion_patch) = variant.patch.assert_rules.as_ref() {
-        apply_assertion_patch(assertions, assertion_patch)?;
-    }
-    Ok(())
-}
+pub use loader::PreRequestHttpHook;
 
 /// Returns the optional `pre_request_http` hook spec for a scenario.
 pub fn connector_pre_request_http_hook(

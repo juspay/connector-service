@@ -7,7 +7,9 @@ This harness supports connector-specific scenario overrides through a trait-base
 - Keep `src/global_suites/*` as the single global baseline.
 - Let connectors override only what differs.
 - Allow connector-side extra keys in request/assert payloads.
-- Anchor every override and named variant to an existing **global** scenario.
+- Restrict `override.json` to existing **global** scenarios. A scenario that exists only for one
+  connector goes in `connector_specific_scenarios.json` instead (see below) — it is additive, and
+  shadowing a global scenario name is a hard loader error.
 - Keep capability statements out of this file; they live in `specs.json`.
 
 ## Which file to use
@@ -19,7 +21,7 @@ Four files can carry connector-specific test data. Pick the first one that fits:
 | A global scenario already matches, and its assertions are true for this connector | nothing — just list the suite in `specs.json` `supported_suites` | the common case; prefer it |
 | The global scenario needs a connector-specific **input** (test card, metadata blob, 3DS lever) | `override.json` `grpc_req` | RFC 7396 merge patch. **Do not** patch a path that the suite's `suite_spec.json` lists as a `context_map` target — the override is applied *after* the context map (`scenario_api.rs`: `apply_context_map` then `apply_connector_overrides`), so it silently decouples the case from its dependency |
 | The global scenario's **expected outcome** differs for documented reasons | `override.json` `assert` | narrow or re-target a rule. A bare `null` deletion removes the rule entirely — replace it, do not just delete it |
-| One connector needs additional variations of a global scenario | `override.json` `variants` | each named variant is a separate execution; for scenario-scoped dependencies, each receives a fresh prerequisite chain |
+| The dimension exists **only** for this connector | `connector_specific_scenarios.json` | additive only; a name that collides with a global scenario is a hard error. `assert` is mandatory — `ScenarioDef` has no default for it, so a scenario with no assertions cannot be constructed. It inherits the suite's global `depends_on`; there is no per-scenario dependency override |
 | The scenario genuinely does not apply | `specs.json` `unsupported_scenarios` | skips, does not fail. The reason string is mandatory and is the only record of why |
 
 A waived scenario produces **no row in `report.json`** — it is removed before the run — so a waiver is
@@ -72,29 +74,6 @@ Each connector `override.json` is a map from `suite_name -> scenario_name -> pat
       "assert": {
         "status": { "one_of": ["FAILURE"] },
         "error.connector_details.message": { "contains": "declin" }
-      }
-    }
-  }
-}
-```
-
-The patch payload may contain `variants`, keyed by a new execution name. Each
-variant uses the same `grpc_req` and `assert` merge-patch format:
-
-```json
-{
-  "PaymentService/Authorize": {
-    "no3ds_manual_capture_credit_card": {
-      "variants": {
-        "shipping_details_shipto": {
-          "grpc_req": {
-            "address": {
-              "shipping_address": { "city": { "value": "Oakland" } }
-            }
-          },
-          "assert": { "status": { "one_of": ["AUTHORIZED"] } },
-          "display_name": "shipping details reach the connector"
-        }
       }
     }
   }
@@ -173,10 +152,9 @@ Core trait: `src/harness/connector_override/mod.rs`
 When loading a scenario for a connector:
 
 1. Load base from `global_suites/<suite>_suite/scenario.json`.
-2. Materialize each named variant from that common template.
-3. Apply dependency context independently for every scenario-scoped execution.
-4. Apply the base connector request/assertion override last.
-5. Execute the common scenario and its variants through the same runner.
+2. Load connector patch from `connector_specs/<connector>/override.json`.
+3. Apply request patch + assertion patch for that scenario.
+4. Execute with normal dependency/context pipeline.
 
 ## Common mistakes
 
