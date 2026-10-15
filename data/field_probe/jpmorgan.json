@@ -38,7 +38,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -124,7 +124,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -220,7 +220,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -350,7 +350,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -654,7 +654,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001/captures",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001/captures",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -779,7 +779,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -857,7 +857,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -905,7 +905,7 @@
           "setup_future_usage": "OFF_SESSION"
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -951,7 +951,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -996,7 +996,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/refunds",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/refunds",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -1025,7 +1025,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/refunds/probe_refund_id_001",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/refunds/probe_refund_id_001",
           "method": "Get",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -1083,7 +1083,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -1120,7 +1120,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
@@ -1159,7 +1159,7 @@
           }
         },
         "sample": {
-          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001",
+          "url": "https://api-ms-test.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001",
           "method": "Patch",
           "headers": {
             "authorization": "Bearer probe_access_token",
