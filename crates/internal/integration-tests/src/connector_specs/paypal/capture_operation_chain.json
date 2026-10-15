@@ -1,0 +1,102 @@
+{
+  "schema": "paypal-capture-operation-chain/1",
+  "case_id": "Capture/operation_chain",
+  "surface": "ucs_grpc_final_matrix",
+  "evidence_state": "IMPLEMENTED",
+  "live_outcome": "NOT_RUN",
+  "generic_suite_execution": "NOT_RUN: suite dependency_scope=scenario creates independent authorization; this contract requires dedicated final matrix shared-chain runner",
+  "authorization": {
+    "amount": {
+      "minor_amount": 6000,
+      "currency": "USD"
+    },
+    "capture_method": "MANUAL_MULTIPLE",
+    "stable_identity": "Generate one unique merchant_order_id and matching l2_l3_data.order_info.merchant_order_reference_id once per chain execution; persist and reuse on crash/retry. Never derive a new invoice while resuming."
+  },
+  "steps": [
+    {
+      "id": "authorize",
+      "rpc": "PaymentService/Authorize",
+      "assert": {
+        "status": "AUTHORIZED",
+        "authorized_amount": 6000
+      },
+      "bind": "Store actual original order/authorization IDs and connector_feature_data."
+    },
+    {
+      "id": "first",
+      "rpc": "PaymentService/Capture",
+      "amount": 3000,
+      "currency": "USD",
+      "capture_reference": "operation_a",
+      "capture_sequence": 1,
+      "context_from": "authorize",
+      "immutable_snapshot": "Persist exact request before first call, excluding/rebinding OAuth token only; actual HTTP body and operation identity immutable",
+      "assert": {
+        "status": "PARTIAL_CHARGED_AND_CHARGEABLE",
+        "captured_amount": 3000,
+        "capture_id": "present",
+        "wire.final_capture": false
+      }
+    },
+    {
+      "id": "second",
+      "rpc": "PaymentService/Capture",
+      "amount": 3000,
+      "currency": "USD",
+      "capture_reference": "operation_b",
+      "capture_sequence": 2,
+      "context_from": "first",
+      "assert": {
+        "status": "CHARGED",
+        "captured_amount": 3000,
+        "capture_id": "present_and_distinct_from_first",
+        "wire.final_capture": true,
+        "wire.idempotency_key": "different_from_first"
+      }
+    },
+    {
+      "id": "retry_first",
+      "rpc": "PaymentService/Capture",
+      "exact_request_snapshot_from": "first",
+      "context_from": "first_immutable_pre_call_snapshot",
+      "assert": {
+        "status": "PARTIAL_CHARGED_AND_CHARGEABLE",
+        "captured_amount": 3000,
+        "capture_id": "equals_first",
+        "wire.idempotency_key": "equals_first",
+        "wire.body_bytes": "equals_first"
+      },
+      "forbidden": "Do not use newest second metadata or infer global charged state from cached first response."
+    },
+    {
+      "id": "sync_latest",
+      "rpc": "PaymentService/Get",
+      "context_from": "second",
+      "assert": {
+        "status": "CHARGED",
+        "captured_amount": 6000,
+        "actual_capture_total": 6000,
+        "no_extra_collected_money": true
+      }
+    },
+    {
+      "id": "missing_reference",
+      "rpc": "PaymentService/Capture",
+      "capture_method": "MANUAL_MULTIPLE",
+      "capture_reference": "",
+      "assert": {
+        "local_error_field": "multiple_capture_data.capture_reference",
+        "outgoing_http_calls": 0
+      }
+    }
+  ],
+  "wire_oracle": "Use actual unnormalized raw_connector_request MEMORY ONLY; hash PayPal-Request-Id before persistence and redact Authorization/OAuth/bodycredentials. Field-probe normalizes every hex key to one placeholder and cannot prove key identity.",
+  "migration": {
+    "paypal_multiple_capture_first": "paypal_nonfinal_partial_capture_reference_a",
+    "paypal_multiple_capture_second": "paypal_nonfinal_partial_capture_reference_b",
+    "paypal_multiple_capture_retry": "paypal_nonfinal_partial_capture_same_reference_independent_authorization"
+  },
+  "authoring_validation_command": "python3 grace/runs/paypal-20261014T134132Z-b0bfbb/test/grpc/validate_capture_operation_chain.py",
+  "live_runner_binding": "Final gRPC stage must implement and publish exact dedicated runner command against this case; do not mark VERIFIED based on independent generic rows or validator."
+}

@@ -148,6 +148,7 @@ fn parse_flow_info(transformer_fn: &str, request_type: &str) -> Option<FlowInfo>
             | "token_authorize"
             | "proxy_setup_recurring"
             | "token_setup_recurring"
+            | "authenticate"
             | "pre_authenticate"
             | "post_authenticate"
     );

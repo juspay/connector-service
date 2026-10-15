@@ -15,6 +15,7 @@ use std::str::FromStr;
 
 #[allow(dead_code)]
 pub const SUPPORTED_FLOWS: &[&str] = &[
+    "authenticate",
     "authorize",
     "capture",
     "create_client_authentication_token",
@@ -57,6 +58,56 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
+pub fn build_authenticate_request() -> PaymentMethodAuthenticationServiceAuthenticateRequest {
+    PaymentMethodAuthenticationServiceAuthenticateRequest {
+        amount: Some(Money {
+            // Amount Information.
+            minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+        }),
+        payment_method: Some(PaymentMethod {
+            // Payment Method.
+            payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
+                card_number: Some(CardNumber::from_str("4111111111111111").unwrap()), // Card Identification.
+                card_exp_month: Some(Secret::new("03".to_string())),
+                card_exp_year: Some(Secret::new("2030".to_string())),
+                card_cvc: Some(Secret::new("737".to_string())),
+                card_holder_name: Some(Secret::new("John Doe".to_string())), // Cardholder Information.
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        address: Some(PaymentAddress {
+            // Address Information.
+            shipping_address: Some(Address {
+                first_name: Some(Secret::new("Jane".to_string())), // Personal Information.
+                last_name: Some(Secret::new("Doe".to_string())),
+                line1: Some(Secret::new("12 Main Street".to_string())), // Address Details.
+                city: Some(Secret::new("Seattle".to_string())),
+                state: Some(Secret::new("WA".to_string())),
+                zip_code: Some(Secret::new("98101".to_string())),
+                country_alpha2_code: Some(CountryAlpha2::Us.into()),
+                ..Default::default()
+            }),
+            billing_address: Some(Address {
+                ..Default::default()
+            }),
+        }),
+        return_url: Some("https://example.com/3ds-return".to_string()), // URLs for Redirection.
+        state: Some(ConnectorState {
+            // State Information.
+            access_token: Some(AccessToken {
+                // Access token obtained from connector.
+                token: Some(Secret::new("probe_access_token".to_string())), // The token string.
+                expires_in_seconds: Some(3600), // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()), // Token type (e.g., "Bearer", "Basic").
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
         merchant_transaction_id: Some("probe_txn_001".to_string()), // Identification.
@@ -65,6 +116,8 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
             minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
             currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
         }),
+        order_tax_amount: Some(100), // Tax amount for the order.
+        shipping_cost: Some(200),    // Cost of shipping for the order.
         payment_method: Some(PaymentMethod {
             // Payment method to be used.
             payment_method: Some(payment_method::PaymentMethod::Card(CardDetails {
@@ -84,13 +137,29 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
         ), // Method for capturing the payment.
         address: Some(PaymentAddress {
             // Address Information.
-            billing_address: Some(Address {
+            shipping_address: Some(Address {
+                first_name: Some(Secret::new("Jane".to_string())), // Personal Information.
+                last_name: Some(Secret::new("Doe".to_string())),
+                line1: Some(Secret::new("12 Main Street".to_string())), // Address Details.
+                city: Some(Secret::new("Seattle".to_string())),
+                state: Some(Secret::new("WA".to_string())),
+                zip_code: Some(Secret::new("98101".to_string())),
+                country_alpha2_code: Some(CountryAlpha2::Us.into()),
                 ..Default::default()
             }),
-            ..Default::default()
+            billing_address: Some(Address {
+                line2: Some(Secret::new("Suite 10".to_string())),
+                state: Some(Secret::new("WA".to_string())),
+                ..Default::default()
+            }),
         }),
         auth_type: AuthenticationType::NoThreeDs.into(), // Authentication Details.
         return_url: Some("https://example.com/return".to_string()), // URLs for Redirection and Webhooks.
+        billing_descriptor: Some(BillingDescriptor {
+            // Statement Descriptor.
+            statement_descriptor: Some("PROBE DESCRIPTOR".to_string()), // Complete description that appears on customers' statements.
+            ..Default::default()
+        }),
         state: Some(ConnectorState {
             // State Information.
             access_token: Some(AccessToken {
@@ -100,6 +169,21 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
                 token_type: Some("Bearer".to_string()), // Token type (e.g., "Bearer", "Basic").
             }),
             ..Default::default()
+        }),
+        l2_l3_data: Some(L2L3Data {
+            // Level 2 / Level 3 data for enhanced payment processing.
+            order_info: Some(OrderInfo {
+                // Order-level information.
+                // order_details: [{"product_name": "Probe item", "quantity": 1, "amount": 700, "total_tax_amount": 100, "product_id": "sku_probe_001", "description": "Probe line item", "unit_of_measure": "EACH", "commodity_code": "4900"}]  // Line items for the order.
+                merchant_order_reference_id: Some("probe_invoice_001".to_string()), // Merchant's internal reference ID for the order.
+                shipping_cost: Some(200), // Shipping cost for the order (in minor currency units).
+                ..Default::default()
+            }),
+            tax_info: Some(TaxInfo {
+                // Tax information.
+                order_tax_amount: Some(100), // Total tax amount for the order (in minor currency units).
+                ..Default::default()
+            }),
         }),
         ..Default::default()
     }
@@ -114,6 +198,7 @@ pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCa
             minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
             currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
         }),
+        capture_method: Some(CaptureMethod::Manual.into()), // Capture Settings.
         state: Some(ConnectorState {
             // State Information.
             access_token: Some(AccessToken {
@@ -243,7 +328,6 @@ pub fn build_post_authenticate_request() -> PaymentMethodAuthenticationServicePo
             }),
             ..Default::default()
         }),
-        connector_order_reference_id: Some("probe_order_ref_001".to_string()),
         state: Some(ConnectorState {
             // State Information.
             access_token: Some(AccessToken {
@@ -299,37 +383,60 @@ pub fn build_proxy_authorize_request() -> PaymentServiceProxyAuthorizeRequest {
 
 pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
     RecurringPaymentServiceChargeRequest {
-        connector_recurring_payment_id: Some(MandateReference {
-            // Reference to existing mandate.
-            // mandate_id_type: {"connector_mandate_id": {"connector_mandate_id": "probe-mandate-123"}}
+        merchant_charge_id: Some("probe_paypal_mit_charge".to_string()),  // Reference ID for tracking.
+        connector_recurring_payment_id: Some(MandateReference {  // Reference to existing mandate.
+            // mandate_id_type: {"network_mandate_id": {"network_transaction_id": "123456789012345"}}
             ..Default::default()
         }),
-        amount: Some(Money {
-            // Amount Information.
-            minor_amount: 1000, // Amount in minor units (e.g., 1000 = $10.00).
-            currency: Currency::Usd.into(), // ISO 4217 currency code (e.g., "USD", "EUR").
+        amount: Some(Money {  // Amount Information.
+            minor_amount: 1000,  // Amount in minor units (e.g., 1000 = $10.00).
+            currency: Currency::Usd.into(),  // ISO 4217 currency code (e.g., "USD", "EUR").
         }),
-        payment_method: Some(PaymentMethod {
-            // Optional payment Method Information (for network transaction flows).
-            payment_method: Some(payment_method::PaymentMethod::Token(
-                TokenPaymentMethodType {
-                    token: Some(Secret::new("probe_pm_token".to_string())), // The token string representing a payment method.
-                    ..Default::default()
-                },
-            )),
+        payment_method: Some(PaymentMethod {  // Optional payment Method Information (for network transaction flows).
+            payment_method: Some(payment_method::PaymentMethod::CardDetailsForNetworkTransactionId(CardDetailsForNetworkTransactionId {
+                card_number: Some(CardNumber::from_str("4111111111111111").unwrap()),
+                card_exp_month: Some(Secret::new("03".to_string())),
+                card_exp_year: Some(Secret::new("2030".to_string())),
+                card_network: Some(CardNetwork::Visa.into()),
+                card_holder_name: Some(Secret::new("John Doe".to_string())),
+                ..Default::default()
+            })),
             ..Default::default()
         }),
+        metadata: Some(Secret::new("{\"paypal_mit\":{\"version\":1,\"previous_network_transaction_reference\":{\"id\":\"123456789012345\",\"network\":\"VISA\",\"date\":\"1014\"}}}".to_string())),  // Additional metadata for the connector.
         return_url: Some("https://example.com/recurring-return".to_string()),
+        address: Some(PaymentAddress {  // Address Information.
+            shipping_address: Some(Address {
+                first_name: Some(Secret::new("Jane".to_string())),  // Personal Information.
+                last_name: Some(Secret::new("Doe".to_string())),
+                line1: Some(Secret::new("12 Main Street".to_string())),  // Address Details.
+                city: Some(Secret::new("Seattle".to_string())),
+                state: Some(Secret::new("WA".to_string())),
+                zip_code: Some(Secret::new("98101".to_string())),
+                country_alpha2_code: Some(CountryAlpha2::Us.into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
         connector_customer_id: Some("cust_probe_123".to_string()),
         payment_method_type: Some(PaymentMethodType::PayPal.into()),
-        off_session: Some(true), // Behavioral Flags and Preferences.
-        state: Some(ConnectorState {
-            // State Information.
-            access_token: Some(AccessToken {
-                // Access token obtained from connector.
-                token: Some(Secret::new("probe_access_token".to_string())), // The token string.
-                expires_in_seconds: Some(3600), // Expiration timestamp (seconds since epoch).
-                token_type: Some("Bearer".to_string()), // Token type (e.g., "Bearer", "Basic").
+        off_session: Some(true),  // Behavioral Flags and Preferences.
+        state: Some(ConnectorState {  // State Information.
+            access_token: Some(AccessToken {  // Access token obtained from connector.
+                token: Some(Secret::new("probe_access_token".to_string())),  // The token string.
+                expires_in_seconds: Some(3600),  // Expiration timestamp (seconds since epoch).
+                token_type: Some("Bearer".to_string()),  // Token type (e.g., "Bearer", "Basic").
+            }),
+            ..Default::default()
+        }),
+        billing_descriptor: Some(BillingDescriptor {  // Billing Descriptor.
+            statement_descriptor: Some("PROBE PAYPAL".to_string()),  // Complete description that appears on customers' statements.
+            ..Default::default()
+        }),
+        l2_l3_data: Some(L2L3Data {  // Level 2 / Level 3 data for enhanced payment processing.
+            order_info: Some(OrderInfo {  // Order-level information.
+                merchant_order_reference_id: Some("probe_paypal_mit".to_string()),  // Merchant's internal reference ID for the order.
+                ..Default::default()
             }),
             ..Default::default()
         }),
@@ -641,6 +748,18 @@ pub async fn process_get_payment(
     Ok(format!("Status: {:?}", get_response.status()))
 }
 
+// Flow: PaymentMethodAuthenticationService.Authenticate
+#[allow(dead_code)]
+pub async fn process_authenticate(
+    client: &ConnectorClient,
+    _merchant_transaction_id: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client
+        .authenticate(build_authenticate_request(), &HashMap::new(), None)
+        .await?;
+    Ok(format!("status: {:?}", response.status()))
+}
+
 // Flow: PaymentService.Authorize (Card)
 #[allow(dead_code)]
 pub async fn process_authorize(
@@ -670,7 +789,7 @@ pub async fn process_capture(
 ) -> Result<String, Box<dyn std::error::Error>> {
     let response = client
         .capture(
-            build_capture_request("probe_connector_txn_001"),
+            build_capture_request("probe_auth_001"),
             &HashMap::new(),
             None,
         )
@@ -729,11 +848,7 @@ pub async fn process_get(
     _merchant_transaction_id: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let response = client
-        .get(
-            build_get_request("probe_connector_txn_001"),
-            &HashMap::new(),
-            None,
-        )
+        .get(build_get_request("probe_cap_001"), &HashMap::new(), None)
         .await?;
     Ok(format!("status: {:?}", response.status()))
 }
@@ -824,11 +939,7 @@ pub async fn process_void(
     _merchant_transaction_id: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let response = client
-        .void(
-            build_void_request("probe_connector_txn_001"),
-            &HashMap::new(),
-            None,
-        )
+        .void(build_void_request("probe_auth_001"), &HashMap::new(), None)
         .await?;
     Ok(format!("status: {:?}", response.status()))
 }
@@ -846,6 +957,7 @@ async fn main() {
         "process_refund" => process_refund(&client, "order_001").await,
         "process_void_payment" => process_void_payment(&client, "order_001").await,
         "process_get_payment" => process_get_payment(&client, "order_001").await,
+        "process_authenticate" => process_authenticate(&client, "txn_001").await,
         "process_authorize" => process_authorize(&client, "txn_001").await,
         "process_capture" => process_capture(&client, "txn_001").await,
         "process_create_client_authentication_token" => {
@@ -864,7 +976,7 @@ async fn main() {
         "process_setup_recurring" => process_setup_recurring(&client, "txn_001").await,
         "process_void" => process_void(&client, "txn_001").await,
         _ => {
-            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authorize, process_capture, process_create_client_authentication_token, process_create_order, process_create_server_authentication_token, process_get, process_parse_event, process_post_authenticate, process_proxy_authorize, process_recurring_charge, process_refund_get, process_setup_recurring, process_void", flow);
+            eprintln!("Unknown flow: {}. Available: process_checkout_autocapture, process_checkout_card, process_refund, process_void_payment, process_get_payment, process_authenticate, process_authorize, process_capture, process_create_client_authentication_token, process_create_order, process_create_server_authentication_token, process_get, process_parse_event, process_post_authenticate, process_proxy_authorize, process_recurring_charge, process_refund_get, process_setup_recurring, process_void", flow);
             return;
         }
     };

@@ -1,0 +1,74 @@
+{
+  "schema": "paypal-financial-closure-chain/1",
+  "case_id": "Void/partial_capture_closure",
+  "surface": "ucs_grpc_and_hs_final_matrix",
+  "evidence_state": "IMPLEMENTED",
+  "live_outcome": "NOT_RUN after source correction",
+  "generic_suite_execution": "NOT_RUN: independent scenario dependencies cannot establish this shared financial chain",
+  "authorization": {
+    "minor_amount": 6000,
+    "currency": "USD",
+    "capture_method": "MANUAL_MULTIPLE"
+  },
+  "steps": [
+    {
+      "id": "authorize",
+      "rpc": "PaymentService/Authorize",
+      "assert": {
+        "status": "AUTHORIZED"
+      }
+    },
+    {
+      "id": "capture_partial",
+      "rpc": "PaymentService/Capture",
+      "amount": 3000,
+      "context_from": "authorize",
+      "capture_reference": "persist_one_logical_capture_reference",
+      "assert": {
+        "status": "PARTIAL_CHARGED_AND_CHARGEABLE",
+        "captured_amount": 3000,
+        "wire.final_capture": false
+      }
+    },
+    {
+      "id": "void_remainder",
+      "rpc": "PaymentService/Void",
+      "context_from": "capture_partial",
+      "assert": {
+        "status": "PARTIAL_CHARGED",
+        "captured_amount": 3000,
+        "wire.http_status": 204,
+        "metadata.authorization_closed": true,
+        "capturable_remaining": 0
+      }
+    },
+    {
+      "id": "sync_closed",
+      "rpc": "PaymentService/Get",
+      "context_from": "void_remainder",
+      "assert": {
+        "status": "PARTIAL_CHARGED",
+        "captured_amount": 3000,
+        "capturable_remaining": 0,
+        "metadata.authorization_closed": true
+      },
+      "forbidden": "Historic capture.final_capture=false must not reopen authorization."
+    },
+    {
+      "id": "refund_collected",
+      "rpc": "PaymentService/Refund",
+      "amount": 3000,
+      "actual_capture_id_from": "capture_partial",
+      "assert": {
+        "refund_amount.minor_amount": 3000,
+        "refund_amount.currency": "USD",
+        "refund_id": "present"
+      }
+    }
+  ],
+  "hs_surface": {
+    "assert": "Payment with actual collected3000 remains refundable after remainder cancellation; actual refund3000 outcome required",
+    "live_outcome": "NOT_RUN"
+  },
+  "reproducibility": "Final gRPC stage must consume this committed input and publish actual runner command; contract validation alone is not live verification."
+}
