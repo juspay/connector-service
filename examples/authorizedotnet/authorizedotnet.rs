@@ -84,9 +84,9 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
         address: Some(PaymentAddress {
             // Address Information.
             shipping_address: Some(Address {
-                first_name: Some(Secret::new("Jane".to_string())), // Personal Information.
+                first_name: Some(Secret::new("Jane".to_string())),
                 last_name: Some(Secret::new("Doe".to_string())),
-                line1: Some(Secret::new("12 Main Street".to_string())), // Address Details.
+                line1: Some(Secret::new("12 Main Street".to_string())),
                 city: Some(Secret::new("Seattle".to_string())),
                 state: Some(Secret::new("WA".to_string())),
                 zip_code: Some(Secret::new("98101".to_string())),
@@ -94,7 +94,7 @@ pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeR
                 ..Default::default()
             }),
             billing_address: Some(Address {
-                email: Some(Secret::new("billing.probe@example.com".to_string())), // Contact Information.
+                email: Some(Secret::new("billing.probe@example.com".to_string())),
                 phone_number: Some(Secret::new("4155550101".to_string())),
                 phone_country_code: Some("+1".to_string()),
                 ..Default::default()
@@ -301,9 +301,9 @@ pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest 
         address: Some(PaymentAddress {
             // Address Information.
             billing_address: Some(Address {
-                first_name: Some(Secret::new("John".to_string())), // Personal Information.
+                first_name: Some(Secret::new("John".to_string())),
                 last_name: Some(Secret::new("Doe".to_string())),
-                line1: Some(Secret::new("123 Main St".to_string())), // Address Details.
+                line1: Some(Secret::new("123 Main St".to_string())),
                 city: Some(Secret::new("Seattle".to_string())),
                 state: Some(Secret::new("WA".to_string())),
                 zip_code: Some(Secret::new("98101".to_string())),

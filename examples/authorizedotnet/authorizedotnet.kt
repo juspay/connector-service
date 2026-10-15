@@ -71,16 +71,16 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
         captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment.
         addressBuilder.apply {  // Address Information.
             shippingAddressBuilder.apply {
-                firstNameBuilder.value = "Jane"  // Personal Information.
+                firstNameBuilder.value = "Jane"
                 lastNameBuilder.value = "Doe"
-                line1Builder.value = "12 Main Street"  // Address Details.
+                line1Builder.value = "12 Main Street"
                 cityBuilder.value = "Seattle"
                 stateBuilder.value = "WA"
                 zipCodeBuilder.value = "98101"
                 countryAlpha2Code = CountryAlpha2.US
             }
             billingAddressBuilder.apply {
-                emailBuilder.value = "billing.probe@example.com"  // Contact Information.
+                emailBuilder.value = "billing.probe@example.com"
                 phoneNumberBuilder.value = "4155550101"
                 phoneCountryCode = "+1"
             }
@@ -431,9 +431,9 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
         returnUrl = "https://example.com/recurring-return"
         addressBuilder.apply {  // Address Information.
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information.
+                firstNameBuilder.value = "John"
                 lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details.
+                line1Builder.value = "123 Main St"
                 cityBuilder.value = "Seattle"
                 stateBuilder.value = "WA"
                 zipCodeBuilder.value = "98101"

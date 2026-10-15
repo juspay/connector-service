@@ -52,16 +52,16 @@ def _build_authorize_request(capture_method: str):
         capture_method=payment_pb2.CaptureMethod.Value(capture_method),  # Method for capturing the payment.
         address=payment_pb2.PaymentAddress(  # Address Information.
             shipping_address=common_types_pb2.Address(
-                first_name=payment_methods_pb2.SecretString(value="Jane"),  # Personal Information.
+                first_name=payment_methods_pb2.SecretString(value="Jane"),
                 last_name=payment_methods_pb2.SecretString(value="Doe"),
-                line1=payment_methods_pb2.SecretString(value="12 Main Street"),  # Address Details.
+                line1=payment_methods_pb2.SecretString(value="12 Main Street"),
                 city=payment_methods_pb2.SecretString(value="Seattle"),
                 state=payment_methods_pb2.SecretString(value="WA"),
                 zip_code=payment_methods_pb2.SecretString(value="98101"),
                 country_alpha2_code=payment_methods_pb2.CountryAlpha2.Value("US"),
             ),
             billing_address=common_types_pb2.Address(
-                email=payment_methods_pb2.SecretString(value="billing.probe@example.com"),  # Contact Information.
+                email=payment_methods_pb2.SecretString(value="billing.probe@example.com"),
                 phone_number=payment_methods_pb2.SecretString(value="4155550101"),
                 phone_country_code="+1",
             ),
@@ -209,9 +209,9 @@ def _build_recurring_charge_request():
         return_url="https://example.com/recurring-return",
         address=payment_pb2.PaymentAddress(  # Address Information.
             billing_address=common_types_pb2.Address(
-                first_name=payment_methods_pb2.SecretString(value="John"),  # Personal Information.
+                first_name=payment_methods_pb2.SecretString(value="John"),
                 last_name=payment_methods_pb2.SecretString(value="Doe"),
-                line1=payment_methods_pb2.SecretString(value="123 Main St"),  # Address Details.
+                line1=payment_methods_pb2.SecretString(value="123 Main St"),
                 city=payment_methods_pb2.SecretString(value="Seattle"),
                 state=payment_methods_pb2.SecretString(value="WA"),
                 zip_code=payment_methods_pb2.SecretString(value="98101"),

@@ -44,16 +44,16 @@ function _buildAuthorizeRequest(captureMethod: types.CaptureMethod): types.IPaym
         "captureMethod": captureMethod,  // Method for capturing the payment.
         "address": {  // Address Information.
             "shippingAddress": {
-                "firstName": {"value": "Jane"},  // Personal Information.
+                "firstName": {"value": "Jane"},
                 "lastName": {"value": "Doe"},
-                "line1": {"value": "12 Main Street"},  // Address Details.
+                "line1": {"value": "12 Main Street"},
                 "city": {"value": "Seattle"},
                 "state": {"value": "WA"},
                 "zipCode": {"value": "98101"},
                 "countryAlpha2Code": CountryAlpha2.US
             },
             "billingAddress": {
-                "email": {"value": "billing.probe@example.com"},  // Contact Information.
+                "email": {"value": "billing.probe@example.com"},
                 "phoneNumber": {"value": "4155550101"},
                 "phoneCountryCode": "+1"
             }
@@ -233,9 +233,9 @@ function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeReq
         "returnUrl": "https://example.com/recurring-return",
         "address": {  // Address Information.
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information.
+                "firstName": {"value": "John"},
                 "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details.
+                "line1": {"value": "123 Main St"},
                 "city": {"value": "Seattle"},
                 "state": {"value": "WA"},
                 "zipCode": {"value": "98101"}
