@@ -12850,6 +12850,1406 @@
         "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
       },
       "omit_access_token": true
+    },
+    {
+      "id": "vault_sync_created",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approval_required",
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_approved",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "APPROVED"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approved",
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_vaulted",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "VAULTED"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approval_required",
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_tokenized",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "TOKENIZED"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approval_required",
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_payer_no_redirect",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "PAYER_ACTION_REQUIRED"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approval_required",
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_payer_redirect",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "PAYER_ACTION_REQUIRED",
+          "links": [
+            {
+              "rel": "payer-action",
+              "href": "https://example.com/paypal/approval"
+            }
+          ]
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "AUTHENTICATION_PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approval_required",
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_setup_approved_poll",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approved\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "APPROVED"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approved",
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_payment_available",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_PAYMENT",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"payment_token_created\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":\"PUBLIC_PAYMENT\"},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/payment-tokens/PUBLIC_PAYMENT",
+        "response": {
+          "id": "PUBLIC_PAYMENT"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "payment_token_created",
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_unknown_status",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "FUTURE"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_missing_status",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_wrong_response_id",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "OTHER_SETUP",
+          "status": "APPROVED"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_unsafe_redirect",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "PAYER_ACTION_REQUIRED",
+          "links": [
+            {
+              "rel": "payer-action",
+              "href": "http://example.com/unsafe"
+            }
+          ]
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_customer_conflict",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "APPROVED",
+          "customer": {
+            "id": "OTHER_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_conflicting_order_id",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\",\"order_id\":\"PUBLIC_FINANCIAL\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_conflicting_authorize_id",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\",\"authorize_id\":\"PUBLIC_FINANCIAL\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_conflicting_capture_id",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\",\"capture_id\":\"PUBLIC_FINANCIAL\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_conflicting_incremental_authorization_id",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\",\"incremental_authorization_id\":\"PUBLIC_FINANCIAL\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_missing_saved_id",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":null,\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_unsafe_saved_id",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "unsafe/id",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"unsafe/id\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_wrong_supplied_id",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "OTHER_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_stage_resource_conflict",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":\"PUBLIC_PAYMENT\"},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_setup_recurring_refused",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"setup_recurring\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "CREATED"
+        },
+        "response_status": 200,
+        "calls": 0,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_http_401",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "name": "RESOURCE_NOT_FOUND",
+          "message": "Public inert failure",
+          "debug_id": "PUBLIC_DEBUG"
+        },
+        "response_status": 401,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_http_403",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "name": "RESOURCE_NOT_FOUND",
+          "message": "Public inert failure",
+          "debug_id": "PUBLIC_DEBUG"
+        },
+        "response_status": 403,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_http_404",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "name": "RESOURCE_NOT_FOUND",
+          "message": "Public inert failure",
+          "debug_id": "PUBLIC_DEBUG"
+        },
+        "response_status": 404,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_http_422",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "name": "RESOURCE_NOT_FOUND",
+          "message": "Public inert failure",
+          "debug_id": "PUBLIC_DEBUG"
+        },
+        "response_status": 422,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_http_503",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "name": "RESOURCE_NOT_FOUND",
+          "message": "Public inert failure",
+          "debug_id": "PUBLIC_DEBUG"
+        },
+        "response_status": 503,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_setup_customer_same",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "APPROVED",
+          "customer": {
+            "id": "PUBLIC_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approved",
+        "response.mandate_reference_details": null,
+        "response.connector_transaction_id": "PUBLIC_SETUP",
+        "response.connector_customer_id": "PUBLIC_CUSTOMER",
+        "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_setup_customer_mismatch",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "APPROVED",
+          "customer": {
+            "id": "OTHER_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "response.status": null,
+        "response.connector_customer_id": null,
+        "response.state.connector_customer_id": null,
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_setup_customer_absent",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "APPROVED",
+          "customer": {
+            "id": "PUBLIC_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approved",
+        "response.mandate_reference_details": null,
+        "response.connector_transaction_id": "PUBLIC_SETUP",
+        "response.connector_customer_id": null,
+        "response.state.connector_customer_id": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_setup_customer_empty",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": ""
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "APPROVED",
+          "customer": {
+            "id": "PUBLIC_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approved",
+        "response.mandate_reference_details": null,
+        "response.connector_transaction_id": "PUBLIC_SETUP",
+        "response.connector_customer_id": null,
+        "response.state.connector_customer_id": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_setup_customer_provider_customerless",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_SETUP",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"setup_approval_required\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":null},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/setup-tokens/PUBLIC_SETUP",
+        "response": {
+          "id": "PUBLIC_SETUP",
+          "status": "APPROVED"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "setup_approved",
+        "response.mandate_reference_details": null,
+        "response.connector_transaction_id": "PUBLIC_SETUP",
+        "response.connector_customer_id": "PUBLIC_CUSTOMER",
+        "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_payment_customer_same",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_PAYMENT",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"payment_token_created\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":\"PUBLIC_PAYMENT\"},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/payment-tokens/PUBLIC_PAYMENT",
+        "response": {
+          "id": "PUBLIC_PAYMENT",
+          "customer": {
+            "id": "PUBLIC_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "payment_token_created",
+        "response.mandate_reference_details": null,
+        "response.connector_transaction_id": "PUBLIC_PAYMENT",
+        "response.connector_customer_id": "PUBLIC_CUSTOMER",
+        "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_payment_customer_mismatch",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_PAYMENT",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"payment_token_created\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":\"PUBLIC_PAYMENT\"},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/payment-tokens/PUBLIC_PAYMENT",
+        "response": {
+          "id": "PUBLIC_PAYMENT",
+          "customer": {
+            "id": "OTHER_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true,
+        "grpc_error_code": 13,
+        "grpc_error_status": "Internal",
+        "grpc_error_identity": "RESPONSE_HANDLING_FAILED",
+        "captured_amount": null,
+        "response.status": null,
+        "response.connector_customer_id": null,
+        "response.state.connector_customer_id": null,
+        "response.mandate_reference_details": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_payment_customer_absent",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_PAYMENT",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"payment_token_created\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":\"PUBLIC_PAYMENT\"},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/payment-tokens/PUBLIC_PAYMENT",
+        "response": {
+          "id": "PUBLIC_PAYMENT",
+          "customer": {
+            "id": "PUBLIC_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "payment_token_created",
+        "response.mandate_reference_details": null,
+        "response.connector_transaction_id": "PUBLIC_PAYMENT",
+        "response.connector_customer_id": null,
+        "response.state.connector_customer_id": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_payment_customer_empty",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_PAYMENT",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"payment_token_created\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":\"PUBLIC_PAYMENT\"},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": ""
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/payment-tokens/PUBLIC_PAYMENT",
+        "response": {
+          "id": "PUBLIC_PAYMENT",
+          "customer": {
+            "id": "PUBLIC_CUSTOMER"
+          }
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "payment_token_created",
+        "response.mandate_reference_details": null,
+        "response.connector_transaction_id": "PUBLIC_PAYMENT",
+        "response.connector_customer_id": null,
+        "response.state.connector_customer_id": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "vault_sync_payment_customer_provider_customerless",
+      "rpc": "PaymentService/Get",
+      "request": {
+        "connector_transaction_id": "PUBLIC_PAYMENT",
+        "connector_feature_data": {
+          "value": "{\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"continuation\":{\"operation\":\"authorize\",\"stage\":\"payment_token_created\",\"intent\":\"AUTHORIZE\",\"setup_token_id\":\"PUBLIC_SETUP\",\"payment_token_id\":\"PUBLIC_PAYMENT\"},\"opaque_saved_fact\":\"PUBLIC_OPAQUE\"}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "amount": {
+          "minor_amount": 6000,
+          "currency": "USD"
+        },
+        "state": {
+          "connector_customer_id": "PUBLIC_CUSTOMER"
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/v3/vault/payment-tokens/PUBLIC_PAYMENT",
+        "response": {
+          "id": "PUBLIC_PAYMENT"
+        },
+        "response_status": 200,
+        "calls": 1,
+        "request_body_contains": {}
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.opaque_saved_fact": "PUBLIC_OPAQUE",
+        "meta.reference_id": "PUBLIC_REFERENCE",
+        "meta.continuation.operation": "authorize",
+        "meta.continuation.stage": "payment_token_created",
+        "response.mandate_reference_details": null,
+        "response.connector_transaction_id": "PUBLIC_PAYMENT",
+        "response.connector_customer_id": "PUBLIC_CUSTOMER",
+        "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
+      },
+      "error_contains": null
     }
   ]
 }

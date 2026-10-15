@@ -1251,61 +1251,135 @@ macros::macro_connector_implementation!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Paypal,
-    curl_response: PaypalSyncResponse,
-    flow_name: PSync,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
-    http_method: Get,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
-            let access_token = req.resource_common_data
-                .access_token
-                .clone()
-                .ok_or(IntegrationError::FailedToObtainAuthType { context: IntegrationErrorContext { additional_context: Some("PSync requires the preceding OAuth access token".to_owned()), ..Default::default() } })?;
-            let connector_metadata = req.resource_common_data.connector_feature_data
-                .as_ref()
-                .map(|secret| secret.clone().expose());
-            self.build_headers(
-                &access_token.access_token.expose(),
-                &req.resource_common_data.connector_request_reference_id,
-                &req.connector_config,
-                connector_metadata.as_ref(),
-            &self.get_url(req)?,
-            false,
-            )
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, IntegrationError> {
-            let metadata = paypal::sync_metadata(req)?;
-            let target = paypal::sync_target(req, &metadata)?;
-            let endpoint = format!("{}{}", self.connector_base_url_payments(req), target.path());
-            let parsed = url::Url::parse(&endpoint).map_err(|_| IntegrationError::InvalidDataFormat {
-                field_name: "paypal.sync_url",
-                context: IntegrationErrorContext { additional_context: Some("PSync requires a valid unfiltered resource URL".to_owned()), ..Default::default() },
-            })?;
-            // C25 requires a full unfiltered Orders GET. Configuration must not
-            // smuggle fields/filter/pagination into the otherwise fixed target.
-            if parsed.query().is_some() || parsed.fragment().is_some() {
-                return Err(IntegrationError::InvalidDataFormat {
-                    field_name: "paypal.sync_url",
-                context: IntegrationErrorContext { additional_context: Some("PSync requires a valid unfiltered resource URL".to_owned()), ..Default::default() },
-                }.into());
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Paypal<T>
+{
+    fn get_http_method(&self) -> common_utils::request::Method {
+        common_utils::request::Method::Get
+    }
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+        connector_config: &ConnectorSpecificConfig,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+        self.build_error_response(res, event_builder, connector_config)
+    }
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ConnectorError,
+    > {
+        use super::macros::BridgeRequestResponse;
+        let metadata = paypal::sync_metadata(data).change_context(
+            utils::response_handling_fail_for_connector(res.status_code, "paypal"),
+        )?;
+        let target = paypal::sync_target(data, &metadata).change_context(
+            utils::response_handling_fail_for_connector(res.status_code, "paypal"),
+        )?;
+        let vault = match target {
+            paypal::PaypalSyncTarget::SetupToken(_) => {
+                Some(paypal::PaypalVaultSyncResponse::Setup(
+                    res.response
+                        .parse_struct::<paypal::PaypalSetupTokenSyncResponse>(
+                            "PaypalSetupTokenSyncResponse",
+                        )
+                        .change_context(utils::response_handling_fail_for_connector(
+                            res.status_code,
+                            "paypal",
+                        ))?,
+                ))
             }
-            Ok(endpoint)
+            paypal::PaypalSyncTarget::PaymentToken(_) => {
+                Some(paypal::PaypalVaultSyncResponse::Payment(
+                    res.response
+                        .parse_struct::<paypal::PaypalPaymentTokenSyncResponse>(
+                            "PaypalPaymentTokenSyncResponse",
+                        )
+                        .change_context(utils::response_handling_fail_for_connector(
+                            res.status_code,
+                            "paypal",
+                        ))?,
+                ))
+            }
+            _ => None,
+        };
+        if let Some(response) = vault {
+            tracing::info!(response=?response, "response from connector");
+            finalize_connector_response!(event_builder, response, data, res.status_code)
+        } else {
+            let response = self.p_sync.response(res.response, res.status_code)?;
+            tracing::info!(response=?response, "response from connector");
+            finalize_connector_response!(event_builder, response, data, res.status_code)
         }
     }
-);
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, IntegrationError> {
+        let access_token = req.resource_common_data.access_token.clone().ok_or(
+            IntegrationError::FailedToObtainAuthType {
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "PSync requires the preceding OAuth access token".to_owned(),
+                    ),
+                    ..Default::default()
+                },
+            },
+        )?;
+        let connector_metadata = req
+            .resource_common_data
+            .connector_feature_data
+            .as_ref()
+            .map(|secret| secret.clone().expose());
+        self.build_headers(
+            &access_token.access_token.expose(),
+            &req.resource_common_data.connector_request_reference_id,
+            &req.connector_config,
+            connector_metadata.as_ref(),
+            &self.get_url(req)?,
+            false,
+        )
+    }
+    fn get_url(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<String, IntegrationError> {
+        let metadata = paypal::sync_metadata(req)?;
+        let target = paypal::sync_target(req, &metadata)?;
+        let endpoint = format!("{}{}", self.connector_base_url_payments(req), target.path());
+        let parsed =
+            url::Url::parse(&endpoint).map_err(|_| IntegrationError::InvalidDataFormat {
+                field_name: "paypal.sync_url",
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "PSync requires a valid unfiltered resource URL".to_owned(),
+                    ),
+                    ..Default::default()
+                },
+            })?;
+        // C25 requires a full unfiltered Orders GET. Configuration must not
+        // smuggle fields/filter/pagination into the otherwise fixed target.
+        if parsed.query().is_some() || parsed.fragment().is_some() {
+            return Err(IntegrationError::InvalidDataFormat {
+                field_name: "paypal.sync_url",
+                context: IntegrationErrorContext {
+                    additional_context: Some(
+                        "PSync requires a valid unfiltered resource URL".to_owned(),
+                    ),
+                    ..Default::default()
+                },
+            }
+            .into());
+        }
+        Ok(endpoint)
+    }
+}
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type],

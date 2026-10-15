@@ -93,7 +93,8 @@ def load_contracts():
                 + [c['id'] for c in closure.get('refund_source_regressions', [])]
                 + [c['id'] for c in closure.get('rsync_source_regressions', [])]
                 + [c['id'] for c in closure.get('threeds_source_regressions', [])]
-                + [c['id'] for c in closure.get('webhook_source_regressions', [])])
+                + [c['id'] for c in closure.get('webhook_source_regressions', [])]
+                + [c['id'] for c in closure.get('vault_sync_source_regressions', [])])
     actual = [c['id'] for c in fixture['cases']]
     if len(expected) != len(set(expected)) or len(actual) != len(set(actual)) or set(expected) != set(actual):
         raise ValueError('Missing, duplicate or unmatched contract case IDs')
@@ -124,7 +125,7 @@ def load_contracts():
                     raise ValueError('Invalid sequence step')
         if case['http'].get('base_url_suffix', '') not in ['', '?fields=payment_source', '#PUBLIC_FRAGMENT']:
             raise ValueError('Unsupported inert fixture base URL suffix')
-        if case['http']['method'] not in ['GET', 'POST'] or not case['http']['path'].startswith(('/v2/', '/v3/vault/setup-tokens', '/v1/notifications/verify-webhook-signature', '/v1/payment_intents')):
+        if case['http']['method'] not in ['GET', 'POST'] or not case['http']['path'].startswith(('/v2/', '/v3/vault/setup-tokens', '/v3/vault/payment-tokens', '/v1/notifications/verify-webhook-signature', '/v1/payment_intents')):
             raise ValueError('Invalid fixture HTTP contract')
         if (isinstance(case['http']['calls'], bool) or not isinstance(case['http']['calls'], int)
                 or not 0 <= case['http']['calls'] <= 8):
@@ -350,8 +351,8 @@ def rpc(endpoint, method, request, config, token, inject_state=True, connector='
     if inject_state and method == 'EventService/HandleEvent':
         q['access_token'] = {'token': {'value': token}, 'token_type': 'Bearer', 'expires_in_seconds': 300}
     elif inject_state and not method.startswith('EventService/'):
-        q['state'] = {'access_token': {'token': {'value': token}, 'token_type': 'Bearer',
-                                     'expires_in_seconds': 300}}
+        q.setdefault('state', {})['access_token'] = {'token': {'value': token}, 'token_type': 'Bearer',
+                                     'expires_in_seconds': 300}
     command = ['grpcurl', '-plaintext', '-max-time', '40', '-format-error', '-emit-defaults', '-v',
                '-expand-headers', '-H', 'x-connector-config: ${PAYPAL_REGRESSION_CONNECTOR_CONFIG}',
                '-H', 'x-connector: ' + connector, '-H', 'x-merchant-id: paypal-regression',
@@ -540,6 +541,7 @@ def locked_live_mode(args):
         raise ValueError('Unknown journal schema')
 
     cached_operations = []
+    protected=set(PROTECTED_FINANCIAL_IDS) | set(getattr(args,'protected_financial_ids',[]))
     current_source = args.execution_binding
 
     def save():
@@ -552,6 +554,8 @@ def locked_live_mode(args):
         return rpc(args.endpoint, 'PaymentService/Get', q, config, token)
 
     def perform(name, method, request):
+        if any(identity in json.dumps(request) for identity in protected):
+            raise ValueError('Protected historical resource is GET-only')
         operations = journal['operations']
         existing = operations.get(name)
         request_sha = hashlib.sha256(json.dumps(request, sort_keys=True).encode()).hexdigest()
@@ -597,6 +601,7 @@ def locked_live_mode(args):
             raise ValueError('OPERATION_ERROR: reconcile before any financial retry')
         safe = {'status': response.get('status'), 'captured_amount': response.get('captured_amount'),
                 'connector_transaction_id': response.get('connector_transaction_id'),
+                'connector_refund_id': response.get('connector_refund_id'), 'refund_amount':response.get('refund_amount'),
                 'connector_feature_data': {'value': json.dumps(financial_metadata(response))}}
         operations[name].update(state='completed', response=safe)
         save()
@@ -616,9 +621,9 @@ def locked_live_mode(args):
                 'provider_live_verified': passed, 'financial_posts': 0, 'protected_capture_replayed': False,
                 'status': response.get('status'), 'captured_amount': response.get('captured_amount'),
                 'actual_financial_metadata': observed, 'hs_reconciliation': 'NOT_RUN: separate actual HS before/after oracle required'}
-    if not args.authorize:
-        raise ValueError('Shared chain requires original public sandbox Authorize request file')
-    request = json.loads(args.authorize.read_text())
+    if not args.authorize and not getattr(args,'authorize_request',None):
+        raise ValueError('Shared chain requires original public sandbox Authorize request')
+    request = copy.deepcopy(args.authorize_request) if getattr(args,'authorize_request',None) else json.loads(args.authorize.read_text())
     # Shared-chain mode creates a fresh raw-card authorization. It cannot be used
     # to resume a wallet/vault/native order or mutate the protected original order.
     payment_method = request.get('payment_method', {})
@@ -639,6 +644,50 @@ def locked_live_mode(args):
     auth = financial_metadata(previous)
     if at(auth, 'capture_context.authorized_amount.value') != '60.00':
         raise ValueError('Actual authorized amount oracle failed')
+    if args.mode == 'closure-chain':
+        capture_request = {'connector_transaction_id':previous['connector_transaction_id'],
+            'connector_feature_data':previous['connector_feature_data'],
+            'amount_to_capture':{'minor_amount':3000,'currency':'USD'},'capture_method':'MANUAL_MULTIPLE',
+            'merchant_capture_id':identity+'-partial','merchant_request_id':identity+'-partial','test_mode':True,
+            'multiple_capture_data':{'capture_sequence':1,'capture_reference':identity+'-partial'}}
+        captured=perform('capture_partial','PaymentService/Capture',capture_request)
+        captured_meta=financial_metadata(captured)
+        actual_capture=captured_meta.get('capture_id')
+        if (captured.get('status')!='PARTIAL_CHARGED_AND_CHARGEABLE' or number(captured.get('captured_amount'))!=3000
+                or not actual_capture or at(captured_meta,'capture_context.capture_amounts.'+actual_capture+'.value')!='30.00'):
+            raise ValueError('Actual partial capture identity/money oracle failed')
+        voided=perform('void_remainder','PaymentService/Void',{'connector_transaction_id':captured_meta['order_id'],
+            'connector_feature_data':captured['connector_feature_data'],'merchant_void_id':identity+'-void',
+            'merchant_request_id':identity+'-void','cancellation_reason':'requested_by_customer','test_mode':True})
+        vm=financial_metadata(voided)
+        if (voided.get('status')!='PENDING' or at(vm,'capture_context.authorization_closed') is not True
+                or at(vm,'capture_context.capture_history_complete') is not False
+                or at(vm,'capture_context.capture_amounts.'+actual_capture+'.value')!='30.00'):
+            raise ValueError('Void Pending/retained actual ledger oracle failed; no public Void Money inferred')
+        synced,error,_=get_order(vm,vm['order_id'])
+        sm=financial_metadata(synced)
+        if (error or synced.get('status')!='PARTIAL_CHARGED' or number(synced.get('captured_amount'))!=3000
+                or at(sm,'capture_context.authorization_closed') is not True
+                or at(sm,'capture_context.capture_history_complete') is not True
+                or at(sm,'capture_context.capture_amounts.'+actual_capture+'.value')!='30.00'):
+            raise ValueError('Authoritative closed partial Order GET oracle failed')
+        refunded=perform('refund_collected','PaymentService/Refund',{'connector_transaction_id':actual_capture,
+            'connector_feature_data':synced['connector_feature_data'],'refund_amount':{'minor_amount':3000,'currency':'USD'},
+            'payment_amount':6000,'merchant_refund_id':identity+'-refund','merchant_request_id':identity+'-refund','test_mode':True})
+        refund_id=refunded.get('connector_refund_id')
+        if (refunded.get('status')!='REFUND_SUCCESS' or not refund_id or number(at(refunded,'refund_amount.minor_amount'))!=3000
+                or at(refunded,'refund_amount.currency')!='USD'):
+            raise ValueError('Actual captured-money refund oracle failed')
+        refund_sync,error,_=rpc(args.endpoint,'RefundService/Get',{'connector_transaction_id':actual_capture,
+            'connector_refund_id':refund_id,'refund_id':refund_id,'connector_feature_data':synced['connector_feature_data'],
+            'refund_amount':{'minor_amount':3000,'currency':'USD'},'test_mode':True},config,token)
+        if error or refund_sync.get('status')!='REFUND_SUCCESS' or refund_sync.get('connector_refund_id')!=refund_id:
+            raise ValueError('Actual refund GET terminal/identity oracle failed')
+        return {'mode':args.mode,'pass':not cached_operations,'evidence_state':'VERIFIED' if not cached_operations else 'IMPLEMENTED',
+                'provider_live_verified':not cached_operations,'provider_wire_graded':False,'cached_operations':cached_operations,
+                'actual_capture_id':actual_capture,'actual_refund_id':refund_id,'captured_amount':3000,
+                'authorization_closed':True,'capturable_remaining':0,'void_public_money_asserted':False,
+                'provider_void_http_status':'NOT_OBSERVED: not inferred from UCS status'}
     first_request = None
     for sequence in [1, 2]:
         q = {'connector_transaction_id': previous['connector_transaction_id'],
@@ -683,9 +732,595 @@ def locked_live_mode(args):
             'pass_scope': 'live financial outcome oracles; emitted-wire proof must be reported separately'}
 
 
+MATRIX = SPECS / 'regression_matrix.json'
+GLOBAL_SUITES = ROOT / 'crates/internal/integration-tests/src/global_suites'
+PROTECTED_FINANCIAL_IDS = {PROTECTED_ORDER, PROTECTED_CAPTURE}
+
+
+def merge_scenario(base, patch):
+    if not isinstance(base, dict) or not isinstance(patch, dict):
+        return copy.deepcopy(patch)
+    result = copy.deepcopy(base)
+    for key, value in patch.items():
+        if value is None:
+            result.pop(key, None)
+        else:
+            result[key] = merge_scenario(result.get(key), value)
+    return result
+
+
+def assertion_patch(base, patch):
+    # Match connector_override::apply_assertion_patch: replace the entire rule.
+    result = copy.deepcopy(base or {})
+    for field, rule in patch.items():
+        if rule is None:
+            result.pop(field, None)
+        else:
+            result[field] = copy.deepcopy(rule)
+    return result
+
+
+def patched_scenario(base, patch):
+    result = merge_scenario(base, {key:value for key,value in patch.items() if key != 'assert'})
+    if 'assert' in patch:
+        result['assert'] = assertion_patch(base.get('assert', {}), patch['assert'])
+    return result
+
+
+def suite_scenarios(suite):
+    path = GLOBAL_SUITES / suite.replace('/', '_') / 'scenario.json'
+    global_cases = json.loads(path.read_text()) if path.exists() else {}
+    custom = json.loads((SPECS / 'connector_specific_scenarios.json').read_text()).get(suite, {})
+    overrides = json.loads((SPECS / 'override.json').read_text()).get(suite, {})
+    return {name: patched_scenario(custom.get(name, global_cases.get(name, {})), overrides.get(name, {}))
+            for name in sorted(set(global_cases) | set(custom) | set(overrides))}
+
+
+def canonical_matrix():
+    manifest = json.loads(MATRIX.read_text())
+    strict_keys(manifest, ['schema', 'generator', 'legacy_identity_provenance', 'recipes', 'rows', 'sources'],
+                ['schema', 'legacy_identity_provenance', 'recipes'])
+    if manifest['schema'] != 'paypal-production-regression-matrix/1':
+        raise ValueError('Unknown production matrix schema')
+    sources = {str(Path(__file__).resolve().relative_to(ROOT)):digest(Path(__file__))}
+    for path in sorted(SPECS.glob('*.json')):
+        if path != MATRIX:
+            sources[str(path.relative_to(ROOT))] = digest(path)
+    for path in sorted(GLOBAL_SUITES.glob('*/scenario.json')):
+        sources[str(path.relative_to(ROOT))] = digest(path)
+    rows = []
+    def append(case_id, unit, method, request, assertions, source, provisioning=None, **extra):
+        rows.append(dict(case_id=case_id, unit=unit, method=method, request=request,
+                         assertions=assertions, source=source, provisioning=provisioning,
+                         evidence_state='IMPLEMENTED', **extra))
+    # Recipes preserve migration identities, not the old shadow runner's assertions.
+    # Every request and assertion is reloaded from the current committed suite.
+    pm_names = {'Card':'no3ds_auto_capture_credit_card',
+                'CardWithNoCvc':'paypal_card_without_cvc_supported',
+                'Wallet::ApplePay(PSP)':'paypal_applepay_psp_final',
+                'Wallet::ApplePay(Hyperswitch)':'paypal_applepay_hs_final',
+                'Wallet::GooglePay(PSP)':'paypal_googlepay_psp_api_unsupported',
+                'Wallet::GooglePay(Hyperswitch)':'paypal_googlepay_hs_final',
+                'NetworkToken':'paypal_networktoken_cit_no_trid',
+                'PaymentMethodToken(untyped)':'paypal_untyped_token_refused'}
+    for recipe in manifest['recipes']:
+        strict_keys(recipe, ['case_id','unit','payment_method','kind','requirement_ref','suite','provisioning','contract','scenario','request_patch','additional_assertions','prerequisite_bindings','wire_oracle','payment_method_source'],
+                    ['case_id','unit','payment_method','kind','suite'])
+        suite = recipe['suite']
+        scenarios = suite_scenarios(suite)
+        name = recipe.get('scenario') or (pm_names.get(recipe['payment_method']) if suite == 'PaymentService/Authorize' else None)
+        if recipe.get('requirement_ref') == 'R04': name = 'no3ds_manual_capture_credit_card'
+        if recipe.get('requirement_ref') == 'R10': name = 'paypal_external_rawcard_3ds_refused'
+        if name is None and suite != 'PaymentService/Authorize' and len(scenarios) == 1:
+            name = next(iter(scenarios))
+        # Multiple valid suite variants need an explicit recipe; do not silently
+        # choose the first happy input for a decline, webhook, or financial chain.
+        gap = recipe.get('provisioning')
+        if recipe['kind'] == 'decline':
+            # Keep a typed baseline available, but never execute it as a decline
+            # without an explicit documented negative binding and error oracle.
+            gap = 'DECLINE_BINDING_REQUIRED: documented negative input and decline oracle required'
+        source = {'suite':suite, 'scenario':name, 'requirement_ref':recipe.get('requirement_ref'), 'payment_method_source':recipe.get('payment_method_source')}
+        if name and name not in scenarios: raise ValueError('Unknown explicit current suite scenario')
+        scenario = copy.deepcopy(scenarios.get(name, {}))
+        if scenario:
+            scenario['grpc_req']=merge_scenario(scenario.get('grpc_req',{}),recipe.get('request_patch',{}))
+            scenario['assert']=assertion_patch(scenario.get('assert',{}),recipe.get('additional_assertions',{}))
+            if recipe.get('payment_method_source'):
+                instrument_source=recipe['payment_method_source']
+                instrument=suite_scenarios(instrument_source['suite'])[instrument_source['scenario']]['grpc_req']['payment_method']
+                scenario['grpc_req']['payment_method']=copy.deepcopy(instrument)
+        if not scenario:
+            gap = gap or 'SOURCE_RECIPE_REQUIRED: no unambiguous current committed suite variant for this coverage identity'
+        append(recipe['case_id'], recipe['unit'], suite, scenario.get('grpc_req'),
+               scenario.get('assert', {}), source, gap, kind=recipe['kind'],
+               payment_method=recipe['payment_method'], contract=recipe.get('contract'),
+               prerequisite_bindings=recipe.get('prerequisite_bindings',[]),wire_oracle=recipe.get('wire_oracle'))
+    closure = json.loads((SPECS/'financial_closure_chain.json').read_text())
+    groups = [('order_reconciliation_contract.json','cases','PSync','resource_id'),
+              ('capture_operation_chain.json','source_regressions','Capture','resource_id')]
+    groups += [('financial_closure_chain.json', name, unit, arm) for name,unit,arm in [
+        ('refund_source_regressions','Refund','resource_id'),('rsync_source_regressions','RSync','resource_id'),
+        ('threeds_source_regressions','ThreeDS','Card'),('webhook_source_regressions','IncomingWebhook','resource_id'),
+        ('vault_sync_source_regressions','PSync','resource_id')]]
+    fixtures = {case['id']:case for case in load_contracts()}
+    for filename, key, unit, arm in groups:
+        for case in json.loads((SPECS/filename).read_text()).get(key, []):
+            fixture = fixtures[case['id']]
+            append(unit+'/'+arm+'/'+case['id'], unit, fixture['rpc'], fixture['request'],
+                   fixture['expect'], {'contract':filename,'case_id':case['id']},
+                   'LOCAL_FIXTURE_MAPPING_ONLY: provider outcome is a separate oracle', fixture_id=case['id'])
+    custom = json.loads((SPECS/'connector_specific_scenarios.json').read_text())
+    overrides = json.loads((SPECS/'override.json').read_text())
+    units = {'PaymentService/Authorize':'Authorize','PaymentService/Capture':'Capture','PaymentService/Void':'Void',
+             'PaymentService/Refund':'Refund','RefundService/Get':'RSync','PaymentService/Get':'PSync',
+             'PaymentService/SetupRecurring':'SetupMandate','RecurringPaymentService/Charge':'RepeatPayment',
+             'PaymentService/CompleteAuthorize':'ThreeDS','PaymentMethodAuthenticationService/Authenticate':'ThreeDS',
+             'PaymentMethodAuthenticationService/PostAuthenticate':'ThreeDS','EventService/HandleEvent':'IncomingWebhook'}
+    for suite in sorted(set(custom)|set(overrides)):
+        scenarios = suite_scenarios(suite)
+        for name in sorted(set(custom.get(suite,{}))|set(overrides.get(suite,{}))):
+            case = scenarios[name]
+            append(units[suite]+'/committed/'+name, units[suite],
+                   'PaymentService/Authorize' if suite=='PaymentService/CompleteAuthorize' else suite,
+                   case.get('grpc_req'),case.get('assert',{}),{'suite':suite,'scenario':name}, kind='committed')
+    for case in json.loads((SPECS/'hs_refund_reconciliation_regressions.json').read_text())['cases']:
+        append(case['case_id'],'RSync','HS forced refund sync',None,case['assert'],
+               {'contract':'hs_refund_reconciliation_regressions.json','case_id':case['case_id']},
+               'HS_SURFACE: execute with the committed HS consumer, never fake UCS fields')
+    for case in json.loads((SPECS/'applepay_manufacturer_wire_contract.json').read_text())['cases']:
+        append(case['case_id'],'Authorize','PaymentService/Authorize',case['grpc_req'],case['wire_assert'],
+               {'contract':'applepay_manufacturer_wire_contract.json','case_id':case['case_id']},
+               'WIRE_OBSERVER_REQUIRED: gRPC wrapper status cannot prove vendor wire shape')
+    ids = [row['case_id'] for row in rows]
+    legacy = manifest['legacy_identity_provenance']['case_ids']
+    if len(ids)!=len(set(ids)) or len(legacy)!=385 or len(set(legacy))!=385 or not set(legacy)<=set(ids):
+        raise ValueError('Matrix identity migration contains duplicate or missing canonical cases')
+    manifest.update(rows=sorted(rows,key=lambda row:row['case_id']),sources=sources)
+    return manifest
+
+
+def matrix_plan(args):
+    generated = canonical_matrix()
+    if set(args.case_id or [])-{row['case_id'] for row in generated['rows']}:
+        raise ValueError('Unknown canonical matrix selection')
+    if args.generate_matrix:
+        atomic(MATRIX, generated)
+    elif json.loads(MATRIX.read_text()) != generated:
+        raise ValueError('Committed matrix and production generator disagree')
+    return {'pass':True,'mode':'matrix-plan','case_count':len(generated['rows']),
+            'legacy_case_count':385,'new_case_count':len(generated['rows'])-385,
+            'provider_calls':0,'provider_live_verified':False,'evidence_state':'IMPLEMENTED',
+            'matrix_sha256':digest(MATRIX), 'sources':generated['sources'],
+            'rows':[{'case_id':row['case_id'],'state':'NOT_RUN','reason':row['provisioning'] or 'Actual source-bound execution required'} for row in generated['rows']]}
+
+
+def import_financial_facts(args):
+    # Caller supplies an immutable input manifest, not arbitrary response files.
+    # Import is GET-only provenance preparation and never executes any RPC.
+    proof = json.loads(args.context.read_text())
+    if proof.get('schema') == 'paypal-financial-fact-import/2':
+        strict_keys(proof,['schema','operations'],['schema','operations'])
+        facts=[]
+        identities=set()
+        for entry in proof['operations']:
+            strict_keys(entry,['path','sha256','operation_key'],['path','sha256','operation_key'])
+            path=Path(entry['path'])
+            if digest(path)!=entry['sha256']: raise ValueError('Financial input digest mismatch')
+            source=json.loads(path.read_text())
+            operation=source.get('operations',{}).get(entry['operation_key'])
+            if not isinstance(operation,dict): raise ValueError('Missing original operation')
+            required=['method','request_sha256','source_binding','state']
+            if any(not operation.get(key) for key in required) or not operation['source_binding'].get('commit'):
+                raise ValueError('Missing original source/request provenance')
+            key=entry['operation_key']
+            if key in identities: raise ValueError('Duplicate imported operation')
+            identities.add(key)
+            response=operation.get('response') or {}
+            metadata=operation.get('metadata') or operation.get('reconcile_metadata') or financial_metadata(response)
+            facts.append({'logical_key':key,'method':operation['method'],'request_sha256':operation['request_sha256'],
+                          'original_source_commit':operation['source_binding']['commit'],
+                          'metadata':metadata,'status':operation.get('status') or response.get('status'),
+                          'connector_transaction_id':operation.get('connector_transaction_id') or response.get('connector_transaction_id'),
+                          'connector_refund_id':operation.get('connector_refund_id') or response.get('connector_refund_id'),
+                          'request_money':operation.get('request_money'),'financial_post_forbidden':True,
+                          'current_mapping_verified':False,'input_binding':entry})
+        with journal_lock(args.journal):
+            if args.journal.exists(): raise ValueError('Never overwrite imported evidence')
+            atomic(args.journal,{'schema':'paypal-imported-financial-facts/1','inputs':proof,
+                                'facts':facts,'provider_calls':0,'current_mapping_verified':False})
+        return {'pass':True,'mode':'import-financial-facts','fact_count':len(facts),'provider_calls':0,
+                'provider_live_verified':False,'current_mapping_verified':False,'evidence_state':'IMPLEMENTED'}
+    strict_keys(proof,['schema','files'],['schema','files'])
+    if proof['schema'] != 'paypal-financial-fact-import/1': raise ValueError('Invalid import schema')
+    required = {'calls','inventory','descriptor','loader','resolution','financial_inventory'}
+    if set(proof['files']) != required: raise ValueError('Incomplete financial provenance chain')
+    loaded = {}
+    for name, entry in proof['files'].items():
+        strict_keys(entry,['path','sha256'],['path','sha256'])
+        path=Path(entry['path'])
+        if digest(path)!=entry['sha256']: raise ValueError('Financial provenance digest mismatch')
+        loaded[name]=json.loads(path.read_text())
+    inventory=loaded['inventory']; descriptor=loaded['descriptor']; loader=loaded['loader']
+    sidecar=inventory.get('recovery_sidecar',{})
+    if (descriptor.get('financial_post_retried') is not False
+        or proof['files']['descriptor']['sha256'] != sidecar.get('sha256')
+        or not inventory.get('shadow_114_results_not_gate_passes')
+        or loader.get('prohibited_future_financial_calls') is not True):
+        raise ValueError('Descriptor or paused-loader ownership mismatch')
+    for name in ['calls','descriptor','loader','financial_inventory']:
+        entry=proof['files'][name]
+        owners=[value for path,value in inventory.get('ownership_manifest',{}).items()
+                if Path(path).name==Path(entry['path']).name]
+        if len(owners)!=1 or owners[0].get('sha256')!=entry['sha256']:
+            raise ValueError('Financial input not owned by the immutable inventory')
+    resolution=loaded['resolution']
+    if (resolution.get('status')!='EXTERNALLY_GONE'
+        or resolution.get('paused_inventory_sha256')!=proof['files']['inventory']['sha256']
+        or resolution.get('descriptor_sidecar_sha256')!=proof['files']['descriptor']['sha256']
+        or resolution.get('new_durable_post_pause_progress_or_financial_journal_advancement') is not False):
+        raise ValueError('Original parent resolution or immutable inventory binding mismatch')
+    inflight=list(loaded['calls'].get('inflight',{}).values())
+    if len(inflight)!=1 or any(inflight[0].get(key)!=descriptor.get(other) for key,other in [
+        ('request_id','request_id'),('request_sha256','pending_request_sha256'),('key','logical_operation')]):
+        raise ValueError('Descriptor sidecar does not own the interrupted operation')
+    facts=[]
+    for request_sha, operation in loaded['calls']['calls'].items():
+        if operation.get('logical_key')=='oauth': continue
+        request=operation.get('request')
+        if not isinstance(request,dict) or not operation.get('source_commit') or not operation.get('request_id'):
+            raise ValueError('Financial call missing original source or request identity')
+        # The legacy journal key is not a request hash; retain both identities.
+        method=re.search(r'types\.([A-Za-z]+Service/[A-Za-z]+)',operation.get('command',''))
+        if not method: raise ValueError('Original RPC identity unavailable')
+        expected_key=hashlib.sha256(json.dumps([method.group(1),request,operation['logical_key']],sort_keys=True).encode()).hexdigest()
+        if expected_key != request_sha: raise ValueError('Original method/request/logical identity mismatch')
+        response=normalize(operation.get('response') or {})
+        facts.append({'logical_key':operation['logical_key'],'method':method.group(1),
+                      'legacy_operation_sha256':request_sha,
+                      'request_sha256':hashlib.sha256(json.dumps(request,sort_keys=True).encode()).hexdigest(),
+                      'request_id':operation['request_id'],'original_source_commit':operation['source_commit'],
+                      'request_money':request.get('amount_to_capture') or request.get('refund_amount') or request.get('amount'),
+                      'metadata':financial_metadata(response),'status':response.get('status'),
+                      'captured_amount':response.get('captured_amount'),
+                      'connector_transaction_id':response.get('connector_transaction_id'),
+                      'connector_refund_id':response.get('connector_refund_id'),
+                      'current_mapping_verified':False,'financial_post_forbidden':True})
+    financial_inventory=loaded['financial_inventory']
+    if len(facts)!=financial_inventory.get('completed_call_count_excluding_oauth') or len(facts)!=resolution.get('financial_inventory_count'):
+        raise ValueError('Original non-OAuth financial inventory count mismatch')
+    indexed={row['logical_key']:row for row in financial_inventory['rows']}
+    if len(indexed)!=len(facts): raise ValueError('Duplicate or missing imported ownership identity')
+    for fact in facts:
+        prior=indexed.get(fact['logical_key'],{})
+        if prior.get('request_id')!=fact['request_id'] or prior.get('source_commit')!=fact['original_source_commit']:
+            raise ValueError('Financial fact source/request ownership mismatch')
+    provider=descriptor['actual_provider_response_projection']
+    actual=descriptor['actual_response_projection']
+    if (provider.get('id')!=actual.get('connector_transaction_id') or provider.get('id')!=sidecar.get('actual_order_id')
+            or len(provider.get('captures',[]))!=1 or provider['captures'][0].get('id')!=sidecar.get('actual_provider_capture_id')):
+        raise ValueError('Recovered descriptor resource ownership mismatch')
+    facts.append({'logical_key':descriptor['logical_operation'],'method':'PaymentService/Authorize',
+                  'request_id':descriptor['request_id'],'request_sha256':descriptor['pending_request_sha256'],
+                  'original_source_commit':descriptor['source_commit'],
+                  'order_id':provider['id'],'capture_id':provider['captures'][0]['id'],
+                  'current_mapping_verified':False,'financial_post_forbidden':True})
+    with journal_lock(args.journal):
+        if args.journal.exists(): raise ValueError('Import destination already exists; never overwrite financial evidence')
+        atomic(args.journal,{'schema':'paypal-imported-financial-facts/1','inputs':proof['files'],
+                            'facts':facts,'provider_calls':0,'current_mapping_verified':False})
+    return {'pass':True,'mode':'import-financial-facts','fact_count':len(facts),'provider_calls':0,
+            'provider_live_verified':False,'current_mapping_verified':False,'evidence_state':'IMPLEMENTED'}
+
+
+def materialize_request(value, identity, path=''):
+    if isinstance(value,dict): return {key:materialize_request(item,identity,path+'.'+key) for key,item in value.items()}
+    if isinstance(value,list): return [materialize_request(item,identity,path) for item in value]
+    if value=='auto_generate':
+        if 'email' in path: return 'paypal-regression@example.com'
+        if 'zip_code' in path: return '95131'
+        if 'phone_number' in path: return '6505550100'
+        if any(name in path for name in ['first_name','last_name','card_holder_name','customer.name']): return 'Public Customer'
+        if 'city' in path: return 'San Jose'
+        if 'line' in path: return '2211 N First Street'
+        return identity
+    return value
+
+
+def assertion_preflight(row):
+    assertions = row.get('assertions')
+    wire_surface = (row.get('source', {}).get('contract') == 'applepay_manufacturer_wire_contract.json'
+                    or (row.get('provisioning') or '').startswith('WIRE_OBSERVER_REQUIRED')
+                    or bool(row.get('wire_oracle')))
+    if wire_surface:
+        # No current-runtime provider wire observer is implemented here. Preserve
+        # wire assertions exactly; never evaluate them against a gRPC response.
+        return 'WIRE_OBSERVER_NOT_PROVISIONED'
+    if not isinstance(assertions, dict):
+        return 'UNSUPPORTED_CURRENT_ASSERTION_SCHEMA'
+    for path, rules in assertions.items():
+        if (not isinstance(path, str) or not isinstance(rules, dict) or not rules
+                or set(rules) - {'equals','contains','must_exist','must_not_exist','one_of'}):
+            return 'UNSUPPORTED_CURRENT_ASSERTION_SCHEMA'
+        if any(rules.get(key) is not True for key in ['must_exist','must_not_exist'] if key in rules):
+            return 'UNSUPPORTED_CURRENT_ASSERTION_SCHEMA'
+        if 'one_of' in rules and not isinstance(rules['one_of'], list):
+            return 'UNSUPPORTED_CURRENT_ASSERTION_SCHEMA'
+    return None
+
+
+def source_assertions(response, assertions):
+    failures=[]
+    for path, rules in assertions.items():
+        value=at(response,path.removeprefix('res.'))
+        if not isinstance(rules,dict) or set(rules)-{'equals','contains','must_exist','must_not_exist','one_of'}:
+            raise ValueError('Unsupported current committed assertion rule')
+        for operation,wanted in rules.items():
+            valid = ((value==wanted) if operation=='equals' else
+                     (value in wanted) if operation=='one_of' else
+                     (value is not None) if operation=='must_exist' and wanted is True else
+                     (value is None) if operation=='must_not_exist' and wanted is True else
+                     (isinstance(value,(str,list,dict)) and wanted in value) if operation=='contains' else False)
+            if not valid: failures.append(path+'.'+operation)
+    return failures
+
+
+def matrix_execute(args):
+    manifest=canonical_matrix()
+    if json.loads(MATRIX.read_text())!=manifest: raise ValueError('Regenerate canonical matrix before execution')
+    context=json.loads(args.context.read_text()) if args.context else {'cases':{}}
+    strict_keys(context,['cases','imported_facts'],['cases'])
+    imported=[]
+    if context.get('imported_facts'):
+        imported_path=Path(context['imported_facts'])
+        imported_data=json.loads(imported_path.read_text())
+        if imported_data.get('schema')!='paypal-imported-financial-facts/1': raise ValueError('Invalid imported financial fact journal')
+        imported=imported_data['facts']
+    selected=set(args.case_id or [])
+    known={row['case_id'] for row in manifest['rows']}
+    if selected-known: raise ValueError('Unknown canonical case selection')
+    cases=load_contracts()
+    fixture_ids={row['fixture_id'] for row in manifest['rows'] if row.get('fixture_id') and (not selected or row['case_id'] in selected)}
+    fixture_result=fixture_mode(args,[case for case in cases if case['id'] in fixture_ids]) if fixture_ids and args.mode=='matrix-fixture' else {'rows':[]}
+    # Fixture execution and provider execution are separate modes and provenance.
+    if args.mode=='matrix-fixture':
+        observed={case['case_id']:case for case in fixture_result.get('cases',[])}
+        outcomes=[]
+        for row in manifest['rows']:
+            observation=observed.get(row.get('fixture_id'))
+            outcomes.append({'case_id':row['case_id'],
+                             'state':observation['local_mapping_oracle'] if observation else 'NOT_RUN',
+                             'evidence_state':'IMPLEMENTED','current_local_mapping_verified':bool(observation and observation['local_mapping_oracle']=='PASS'),
+                             'provider_live_verified':False,'failed_assertion_paths':observation.get('failed_assertion_paths',[]) if observation else [],
+                             'reason':None if observation else row['provisioning'] or 'Not selected or not a fixture surface'})
+        return {'pass':bool(observed) and fixture_result.get('pass',False),'mode':args.mode,'case_count':len(manifest['rows']),
+                'fixture_mapping':fixture_result,'provider_calls':0,'provider_live_verified':False,'rows':outcomes}
+    config=os.environ.get('UCS_CONNECTOR_CONFIG'); token=os.environ.get('PAYPAL_ACCESS_TOKEN')
+    cfg=json.loads(config or '{}'); host=urllib.parse.urlparse(at(cfg,'config.Paypal.base_url') or '')
+    if not token or host.scheme!='https' or host.hostname not in ['api-m.sandbox.paypal.com','api.sandbox.paypal.com']:
+        raise ValueError('Explicit sandbox configuration required')
+    if not args.journal: raise ValueError('Durable matrix journal required')
+    with journal_lock(args.journal):
+        journal=json.loads(args.journal.read_text()) if args.journal.exists() else {'schema':'paypal-production-matrix-journal/1','operations':{},'session_seed':str(uuid.uuid4())}
+        if journal.get('schema')!='paypal-production-matrix-journal/1': raise ValueError('Invalid matrix journal schema')
+        if not isinstance(journal.get('session_seed'),str) or not journal['session_seed']:
+            raise ValueError('Existing journal missing immutable session seed; preserve and reconcile')
+        atomic(args.journal,journal)
+        result=[]
+        for row in manifest['rows']:
+            identity=row['case_id']; setup=context['cases'].get(identity)
+            if selected and identity not in selected:
+                result.append({'case_id':identity,'state':'NOT_RUN','reason':'Not selected'})
+                continue
+            preflight_reason=assertion_preflight(row)
+            if preflight_reason:
+                result.append({'case_id':identity,'state':'NOT_RUN','reason':preflight_reason,
+                               'provider_live_verified':False,'provider_wire_graded':False})
+                continue
+            sequential=identity.endswith(('/operation_chain','/financial_closure_chain'))
+            if sequential and setup and setup.get('allow_financial_write') is True:
+                chain_facts=[fact for fact in imported if fact['logical_key'].startswith('closure-' if identity.endswith('/financial_closure_chain') else 'capture-operation-')]
+                if chain_facts:
+                    # A completed write is immutable history. Retest the current
+                    # terminal GET contract, never the historical write mapping.
+                    orders={}
+                    for fact in chain_facts:
+                        meta=fact.get('metadata') or {}
+                        if meta.get('order_id'): orders[meta['order_id']]=meta
+                    observations=[]
+                    closure=identity.endswith('/financial_closure_chain')
+                    expected_amount=3000 if closure else 6000
+                    for order,meta in orders.items():
+                        observed,error,_=rpc(args.endpoint,'PaymentService/Get',{'connector_transaction_id':order,
+                            'connector_feature_data':{'value':json.dumps(meta)},'amount':{'minor_amount':6000,'currency':'USD'},
+                            'capture_method':'MANUAL_MULTIPLE','test_mode':True},config,token)
+                        expected={'status':{'equals':'PARTIAL_CHARGED' if closure else 'CHARGED'},
+                                  'captured_amount':{'equals':expected_amount}}
+                        failures=source_assertions(observed,expected)
+                        actual_meta=financial_metadata(observed)
+                        if actual_meta.get('order_id')!=order: failures.append('owned_order_identity')
+                        if closure and at(actual_meta,'capture_context.authorization_closed') is not True:
+                            failures.append('authorization_closed')
+                        observations.append({'error_present':error,'status':observed.get('status'),
+                            'captured_amount':observed.get('captured_amount'),'failed_assertion_paths':failures})
+                    current_pass=bool(observations) and all(not o['error_present'] and not o['failed_assertion_paths'] for o in observations)
+                    result.append({'case_id':identity,'state':'RECONCILED_READ_ONLY' if current_pass else 'FAIL',
+                        'current_mapping_verified':False,'current_terminal_get_verified':current_pass,
+                        'provider_live_verified':False,'original_write_mapping_verified':False,
+                        'reason':'Prior financial writes retained; only current terminal GET contract retested',
+                        'observations':observations})
+                    continue
+                child=copy.copy(args);child.mode='closure-chain' if identity.endswith('/financial_closure_chain') else 'shared-chain'
+                child.journal=args.journal.with_name(args.journal.name+'.'+hashlib.sha256(identity.encode()).hexdigest()[:16])
+                child.authorize_request=materialize_request(suite_scenarios('PaymentService/Authorize')['no3ds_manual_capture_credit_card']['grpc_req'],
+                    journal['session_seed']+'-'+identity.replace('/','-'))
+                child.protected_financial_ids=[value for fact in imported for key,value in fact.items()
+                    if key in ['order_id','capture_id','connector_transaction_id','connector_refund_id'] and isinstance(value,str)]
+                chain_result=live_mode(child)
+                result.append({'case_id':identity,'state':'VERIFIED' if chain_result.get('provider_live_verified') else 'FAIL',
+                    'current_mapping_verified':chain_result.get('provider_live_verified',False),'chain':chain_result})
+                continue
+            if (not setup or not row.get('request') or row.get('fixture_id')
+                    or (row.get('provisioning') or '').startswith(('SEQUENTIAL_CONTRACT_REQUIRED','API_UNSUPPORTED','PUBLIC_VARIANT_REQUIRED','PROVIDER_OUTCOME_REQUIRED','PROVIDER_DECLINE_REQUIRED'))):
+                result.append({'case_id':identity,'state':'NOT_RUN','reason':row['provisioning'] or 'OPERATOR_CONTEXT_REQUIRED'})
+                continue
+            strict_keys(setup,['bindings','env_bindings','allow_financial_write','decline_evidence','wire_observation','dependency_bindings'],['bindings'])
+            if setup.get('wire_observation'):
+                raise ValueError('Authored context is not a production wire observation')
+            if row.get('kind')=='decline':
+                negative=setup.get('decline_evidence') or {}
+                if (not negative.get('documentation_url','').startswith('https://developer.paypal.com/')
+                        or not negative.get('binding_paths')
+                        or not set(negative['binding_paths']) <= set(setup.get('bindings',{})) | set(setup.get('env_bindings',{}))
+                        or not negative.get('assertions')
+                        or not any('error' in path or 'status' in path for path in negative['assertions'])):
+                    result.append({'case_id':identity,'state':'NOT_RUN','reason':'DOCUMENTED_DECLINE_BINDING_AND_ORACLE_REQUIRED'});continue
+                row=copy.deepcopy(row)
+                row['assertions']=negative['assertions']
+                preflight_reason=assertion_preflight(row)
+                if preflight_reason:
+                    result.append({'case_id':identity,'state':'NOT_RUN','reason':preflight_reason});continue
+            request=materialize_request(row['request'],'paypal-'+hashlib.sha256((journal['session_seed']+':'+identity).encode()).hexdigest()[:24])
+            setup=copy.deepcopy(setup)
+            for target,dependency in setup.get('dependency_bindings',{}).items():
+                strict_keys(dependency,['case_id','path'],['case_id','path'])
+                prior=journal['operations'].get(dependency['case_id'])
+                if (not prior or prior.get('state')!='completed' or prior.get('failures')
+                        or not prior.get('source_binding',{}).get('commit')):
+                    raise ValueError('Dependency has no successful owned actual response')
+                if dependency['path']=='connector_feature_data.value':
+                    value=json.dumps(prior.get('metadata') or {})
+                else:
+                    if dependency['path'] not in ['connector_transaction_id','connector_refund_id','metadata.order_id','metadata.capture_id','metadata.authorize_id']:
+                        raise ValueError('Dependency path is not an allowlisted financial identity')
+                    value=at(prior,dependency['path'])
+                if not value: raise ValueError('Unresolved actual prerequisite identity')
+                if target in setup['bindings']: raise ValueError('Conflicting prerequisite sources')
+                setup['bindings'][target]=value
+            for path,value in setup['bindings'].items():
+                if any(word in path.lower() for word in ['token','secret','credential','card','cvc','cryptogram','signature']):
+                    raise ValueError('Sensitive context must be resolved in memory, not persisted bindings')
+                parts=path.split('.'); target=request
+                for part in parts[:-1]:
+                    if part not in target or not isinstance(target[part],dict): raise ValueError('Unknown prerequisite binding')
+                    target=target[part]
+                if parts[-1] not in target: raise ValueError('Unknown prerequisite field')
+                target[parts[-1]]=value
+            for path,variable in setup.get('env_bindings',{}).items():
+                if not isinstance(variable,str) or not re.fullmatch(r'[A-Z][A-Z0-9_]+',variable) or variable not in os.environ:
+                    raise ValueError('Missing in-memory operator binding')
+                parts=path.split('.'); target=request
+                for part in parts[:-1]:
+                    if part not in target or not isinstance(target[part],dict): raise ValueError('Unknown environment prerequisite binding')
+                    target=target[part]
+                if parts[-1] not in target: raise ValueError('Unknown environment prerequisite field')
+                target[parts[-1]]=os.environ[variable]
+            method=row['method']; readonly=method in ['PaymentService/Get','RefundService/Get']
+            # Required bindings must be explicit; materializing auto_generate is
+            # appropriate for merchant IDs, never proof of an owned resource.
+            required=row.get('prerequisite_bindings',[])
+            supplied=set(setup['bindings']) | set(setup.get('env_bindings',{}))
+            if set(required)-supplied:
+                result.append({'case_id':identity,'state':'NOT_RUN','reason':'EXPLICIT_PREREQUISITE_BINDINGS_REQUIRED','paths':sorted(set(required)-supplied)});continue
+            request_sha=hashlib.sha256(json.dumps(request,sort_keys=True).encode()).hexdigest()
+            existing=journal['operations'].get(identity)
+            old_fact=next((fact for fact in imported if fact['logical_key']==identity),None)
+            if existing and (existing.get('method')!=method or existing.get('request_sha256')!=request_sha
+                             or not existing.get('source_binding',{}).get('commit')):
+                raise ValueError('Journal method/request/source identity mismatch; no financial replay')
+            if old_fact or existing:
+                fact=old_fact or existing
+                if old_fact and (old_fact.get('method')!=method or old_fact.get('request_sha256')!=request_sha):
+                    raise ValueError('Imported operation method/request mismatch; reconcile using exact original bindings')
+                metadata=fact.get('metadata') or {}; order=metadata.get('order_id') or fact.get('order_id')
+                if not order and not readonly:
+                    result.append({'case_id':identity,'state':'NOT_RUN','reason':'PRIOR_FINANCIAL_OPERATION_GET_ONLY_IDENTITY_UNRESOLVED','current_mapping_verified':False}); continue
+                query=request if readonly else {'connector_transaction_id':order,'connector_feature_data':{'value':json.dumps(metadata)},'test_mode':True}
+                response,error,_=rpc(args.endpoint,method if readonly else 'PaymentService/Get',query,config,token)
+                current_get_failures=source_assertions(response,row['assertions']) if readonly else []
+                result.append({'case_id':identity,'state':('FAIL' if error or current_get_failures else 'VERIFIED') if readonly else 'RECONCILED_READ_ONLY',
+                               'current_mapping_verified':readonly and not error and not current_get_failures,
+                               'original_write_mapping_verified':False,'current_get_assertion_failures':current_get_failures,
+                               'metadata':financial_metadata(response),'captured_amount':response.get('captured_amount')})
+                continue
+            imported_ids=set(PROTECTED_FINANCIAL_IDS)
+            for fact in imported:
+                for key in ['order_id','capture_id','connector_transaction_id','connector_refund_id']:
+                    if fact.get(key): imported_ids.add(fact[key])
+                meta=fact.get('metadata') or {}
+                imported_ids.update(value for key,value in meta.items() if key in ['order_id','authorize_id','capture_id','incremental_authorization_id'] and isinstance(value,str))
+                imported_ids.update((meta.get('capture_context') or {}).get('capture_amounts') or {})
+            required=row.get('prerequisite_bindings',[])
+            unresolved=[path for path in required if not at(request,path) or at(request,path)=='auto_generate']
+            if unresolved:
+                result.append({'case_id':identity,'state':'NOT_RUN','reason':'UNRESOLVED_PREREQUISITES','paths':unresolved});continue
+            if not readonly and method in ['PaymentService/Capture','PaymentService/Void','PaymentService/Refund']:
+                metadata=financial_metadata(request)
+                saved=request.get('connector_transaction_id')
+                owned=[record for record in list(journal['operations'].values())+imported
+                       if saved and (saved==record.get('connector_transaction_id')
+                           or saved in {value for key,value in (record.get('metadata') or {}).items()
+                                        if key in ['order_id','authorize_id','capture_id','incremental_authorization_id'] and isinstance(value,str)}
+                           or saved in ((record.get('metadata') or {}).get('capture_context') or {}).get('capture_amounts',{}))]
+                # Actual identity plus exact metadata, currency and known successful
+                # source are prerequisites; a caller-supplied amount/ID is not proof.
+                owned=[record for record in owned if record.get('metadata')==metadata
+                       and (record.get('source_binding',{}).get('commit') or record.get('original_source_commit'))
+                       and record.get('status') in ['AUTHORIZED','PARTIAL_CHARGED_AND_CHARGEABLE','PARTIAL_CHARGED','CHARGED']]
+                if not owned:
+                    result.append({'case_id':identity,'state':'NOT_RUN','reason':'JOURNAL_OWNED_FINANCIAL_PREREQUISITE_REQUIRED'});continue
+                money=request.get('amount_to_capture') or request.get('refund_amount') or request.get('amount')
+                authoritative=at(metadata,'capture_context.authorized_amount')
+                if money and (not authoritative or money.get('currency')!=authoritative.get('currency_code')):
+                    result.append({'case_id':identity,'state':'NOT_RUN','reason':'OWNED_CURRENCY_PROOF_REQUIRED'});continue
+            if not readonly and (setup.get('allow_financial_write') is not True or any(item in json.dumps(request) for item in imported_ids)):
+                result.append({'case_id':identity,'state':'NOT_RUN','reason':'FINANCIAL_WRITE_NOT_PROVISIONED_OR_PROTECTED_RESOURCE'});continue
+            if not row['assertions']:
+                result.append({'case_id':identity,'state':'NOT_RUN','reason':'MISSING_CURRENT_OUTCOME_ORACLE'});continue
+            journal['operations'][identity]={'method':method,'request_sha256':request_sha,'source_binding':args.execution_binding,'state':'started',
+                'request_money':request.get('amount_to_capture') or request.get('refund_amount') or request.get('amount')}
+            atomic(args.journal,journal)
+            response,error,_=rpc(args.endpoint,method,request,config,token)
+            failures=source_assertions(response,row['assertions'])
+            record=journal['operations'][identity]
+            record.update(state='completed',metadata=financial_metadata(response),status=response.get('status'),captured_amount=response.get('captured_amount'),
+                          connector_transaction_id=response.get('connector_transaction_id'),connector_refund_id=response.get('connector_refund_id'),failures=failures)
+            atomic(args.journal,journal)
+            wire_failures=[]
+            wire_oracle=row.get('wire_oracle')
+            wire_observed=False
+            if wire_oracle:
+                observation=setup.get('wire_observation') or {}
+                # Only an actual current-runtime observer can establish wire proof.
+                # Expected JSON supplied in context is never accepted as observation.
+                if observation:
+                    raise ValueError('Wire observations require a production observer binding; authored context is not evidence')
+                wire_failures=['WIRE_OBSERVER_NOT_PROVISIONED']
+            local_refusal=error or row.get('kind') in ['refusal','decline'] or bool(at(row['assertions'],'error.must_exist'))
+            actual_status=response.get('status')
+            outcome_oracle=not local_refusal and (
+                (actual_status=='AUTHORIZED' and 'status' in row['assertions'] and bool(response.get('connector_transaction_id')))
+                or (actual_status in ['CHARGED','PARTIAL_CHARGED','PARTIAL_CHARGED_AND_CHARGEABLE']
+                    and 'status' in row['assertions'] and request.get('amount_to_capture',request.get('amount',{})).get('minor_amount') is not None
+                    and number(response.get('captured_amount'))==number(request.get('amount_to_capture',request.get('amount'))['minor_amount']))
+                or (actual_status=='REFUND_SUCCESS' and 'status' in row['assertions'] and bool(response.get('connector_refund_id'))
+                    and response.get('refund_amount')==request.get('refund_amount'))
+                or (method=='EventService/HandleEvent' and response.get('source_verified') is True and 'source_verified' in row['assertions']))
+            verified=not failures and outcome_oracle
+            result.append({'case_id':identity,'state':'FAIL' if failures else 'OUTCOME_VERIFIED_WIRE_NOT_RUN' if wire_failures and verified else 'VERIFIED' if verified else 'LOCAL_ORACLE_PASS',
+                           'provider_live_verified':verified,'provider_wire_graded':wire_observed,'wire_oracle_state':'NOT_RUN' if wire_failures else 'NOT_APPLICABLE',
+                           'wire_oracle_failures':wire_failures,'current_mapping_verified':not failures,'failures':failures,
+                           'status':response.get('status'),'captured_amount':response.get('captured_amount'),'error_present':error})
+        return {'pass':all(row['state']=='VERIFIED' for row in result),'mode':args.mode,'rows':result,
+                'provider_live_verified':bool(result) and all(row['state']=='VERIFIED' for row in result),
+                'case_count':len(manifest['rows']),'fixture_mapping':fixture_result}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['validate-contracts', 'fixture', 'live-read-only', 'shared-chain'])
+    parser.add_argument('mode', choices=['validate-contracts', 'fixture', 'live-read-only', 'shared-chain', 'closure-chain', 'matrix-plan', 'import-financial-facts', 'matrix-fixture', 'matrix-live'])
+    parser.add_argument('--case-id', action='append')
+    parser.add_argument('--generate-matrix', action='store_true')
     parser.add_argument('--endpoint', default='127.0.0.1:8001')
     parser.add_argument('--binary', type=Path)
     parser.add_argument('--out', type=Path, required=True)
@@ -696,6 +1331,11 @@ def main():
     parser.add_argument('--build-receipt', type=Path)
     args = parser.parse_args()
     try:
+        if args.mode in ['matrix-plan','import-financial-facts']:
+            result = matrix_plan(args) if args.mode=='matrix-plan' else import_financial_facts(args)
+            atomic(args.out,result)
+            print(json.dumps({key:result[key] for key in ['mode','pass','provider_calls']}))
+            return 0
         cases = load_contracts()
         before = bindings(args.binary)
         if args.mode != 'validate-contracts' and not args.require_committed:
@@ -709,6 +1349,8 @@ def main():
                       'provider_live_verified': False, 'provider_calls': 0}
         elif args.mode == 'fixture':
             result = fixture_mode(args, cases)
+        elif args.mode in ['matrix-fixture','matrix-live']:
+            result = matrix_execute(args)
         else:
             if not args.journal:
                 raise ValueError('Live execution requires a durable journal')

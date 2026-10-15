@@ -6581,7 +6581,12 @@ impl
             auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: value.merchant_transaction_id.unwrap_or_default(),
             customer_id: None,
-            connector_customer: None,
+            connector_customer: value
+                .state
+                .as_ref()
+                .and_then(|state| state.connector_customer_id.as_ref())
+                .filter(|id| !id.is_empty())
+                .cloned(),
             description: None,
             return_url: None,
             connector_feature_data: value

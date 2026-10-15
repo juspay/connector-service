@@ -4036,6 +4036,8 @@ impl TryFrom<ResponseRouterData<PaypalPaymentsSyncResponse, Self>>
             PaypalSyncTarget::Capture(id) if id == &item.response.id => true,
             PaypalSyncTarget::Authorization(id) if id == &item.response.id => false,
             PaypalSyncTarget::Order(_)
+            | PaypalSyncTarget::SetupToken(_)
+            | PaypalSyncTarget::PaymentToken(_)
             | PaypalSyncTarget::Capture(_)
             | PaypalSyncTarget::Authorization(_) => return Err(fail().into()),
         };
@@ -7714,10 +7716,119 @@ pub fn sync_metadata(
         .map_err(|_| sync_invalid("PayPal sync metadata is malformed or has an unsupported intent"))
 }
 
+// Vault GET resources are parsed only after the saved continuation chooses the target.
+// They deliberately do not participate in the untagged Orders response union.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaypalVaultSyncCustomer {
+    pub id: Secret<String>,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaypalSetupTokenSyncResponse {
+    pub id: Secret<String>,
+    pub status: String,
+    pub customer: Option<PaypalVaultSyncCustomer>,
+    #[serde(default)]
+    pub links: Vec<PaypalLinks>,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaypalPaymentTokenSyncResponse {
+    pub id: Secret<String>,
+    pub customer: Option<PaypalVaultSyncCustomer>,
+}
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum PaypalVaultSyncResponse {
+    Setup(PaypalSetupTokenSyncResponse),
+    Payment(PaypalPaymentTokenSyncResponse),
+}
+impl TryFrom<ResponseRouterData<PaypalVaultSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PaypalVaultSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let fail = || crate::utils::response_handling_fail_for_connector(item.http_code, "paypal");
+        let mut meta = sync_metadata(&item.router_data).change_context(fail())?;
+        let target = sync_target(&item.router_data, &meta).change_context(fail())?;
+        let mut redirect = None;
+        let mut status = common_enums::AttemptStatus::Pending;
+        let (id, customer) = match (target, item.response) {
+            (PaypalSyncTarget::SetupToken(expected), PaypalVaultSyncResponse::Setup(response))
+                if response.id.peek() == &expected =>
+            {
+                match response.status.as_str() {
+                    "CREATED" | "VAULTED" | "TOKENIZED" => {}
+                    "APPROVED" => {
+                        meta.continuation.as_mut().ok_or_else(fail)?.stage =
+                            PaypalContinuationStage::SetupApproved;
+                    }
+                    "PAYER_ACTION_REQUIRED" => {
+                        if let Some(link) = get_setup_redirect_url(response.links)? {
+                            status = common_enums::AttemptStatus::AuthenticationPending;
+                            redirect = Some(Box::new(RedirectForm::Form {
+                                endpoint: link.to_string(),
+                                method: Method::Get,
+                                form_fields: std::collections::HashMap::new(),
+                            }));
+                        }
+                    }
+                    _ => return Err(fail().into()),
+                }
+                (response.id, response.customer)
+            }
+            (
+                PaypalSyncTarget::PaymentToken(expected),
+                PaypalVaultSyncResponse::Payment(response),
+            ) if response.id.peek() == &expected => (response.id, response.customer),
+            _ => return Err(fail().into()),
+        };
+        if let Some(customer) = customer {
+            if customer.id.peek().trim().is_empty()
+                || item
+                    .router_data
+                    .resource_common_data
+                    .connector_customer
+                    .as_ref()
+                    .filter(|saved| !saved.trim().is_empty())
+                    .is_some_and(|saved| saved != customer.id.peek())
+            {
+                return Err(fail().into());
+            }
+        }
+        let value = merge_setup_metadata(&item.router_data.resource_common_data, &meta)
+            .change_context(fail())?;
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                amount_captured: None,
+                connector_feature_data: Some(Secret::new(value.clone())),
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(id.expose()),
+                redirection_data: redirect,
+                mandate_reference: None,
+                connector_metadata: Some(value),
+                network_txn_id: None,
+                network_txn_link_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+                splits: None,
+                payment_account_reference: None,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
 pub enum PaypalSyncTarget {
     Order(String),
     Authorization(String),
     Capture(String),
+    SetupToken(String),
+    PaymentToken(String),
 }
 impl PaypalSyncTarget {
     pub fn path(&self) -> String {
@@ -7725,6 +7836,8 @@ impl PaypalSyncTarget {
             Self::Order(id) => format!("v2/checkout/orders/{id}"),
             Self::Authorization(id) => format!("v2/payments/authorizations/{id}"),
             Self::Capture(id) => format!("v2/payments/captures/{id}"),
+            Self::SetupToken(id) => format!("v3/vault/setup-tokens/{id}"),
+            Self::PaymentToken(id) => format!("v3/vault/payment-tokens/{id}"),
         }
     }
 }
@@ -7758,6 +7871,70 @@ pub fn sync_target(
                 ..Default::default()
             },
         })?;
+    if let Some(continuation) = metadata.continuation.as_ref().filter(|value| {
+        matches!(
+            value.stage,
+            PaypalContinuationStage::SetupApprovalRequired
+                | PaypalContinuationStage::SetupApproved
+                | PaypalContinuationStage::PaymentTokenCreated
+        )
+    }) {
+        let financial_context = metadata.capture_context.as_ref().is_some_and(|context| {
+            context.authorization_closed == Some(true)
+                || context
+                    .capture_amounts
+                    .as_ref()
+                    .is_some_and(|amounts| !amounts.is_empty())
+        });
+        if continuation.operation != PaypalContinuationOperation::Authorize
+            || metadata.order_id.is_some()
+            || metadata.authorize_id.is_some()
+            || metadata.capture_id.is_some()
+            || metadata.incremental_authorization_id.is_some()
+            || metadata.authentication_result.is_some()
+            || financial_context
+            || data
+                .resource_common_data
+                .amount_captured
+                .as_ref()
+                .is_some_and(|money| money.amount.get_amount_as_i64() != 0)
+        {
+            return Err(sync_invalid(
+                "Vault continuation conflicts with financial resource history",
+            ));
+        }
+        let (id, payment) = match continuation.stage {
+            PaypalContinuationStage::SetupApprovalRequired
+            | PaypalContinuationStage::SetupApproved => {
+                if continuation.payment_token_id.is_some() {
+                    return Err(sync_invalid(
+                        "Setup continuation conflicts with a payment token",
+                    ));
+                }
+                (continuation.setup_token_id.as_ref(), false)
+            }
+            PaypalContinuationStage::PaymentTokenCreated => {
+                (continuation.payment_token_id.as_ref(), true)
+            }
+            _ => unreachable!(),
+        };
+        let id = id
+            .map(|value| value.peek())
+            .filter(|id| valid_sync_id(id) && id.is_ascii() && !id.contains('\\'))
+            .ok_or_else(|| {
+                sync_invalid("Vault continuation requires its exact safe saved token id")
+            })?;
+        if supplied != *id {
+            return Err(sync_invalid(
+                "Supplied token id conflicts with saved vault continuation",
+            ));
+        }
+        return Ok(if payment {
+            PaypalSyncTarget::PaymentToken(id.clone())
+        } else {
+            PaypalSyncTarget::SetupToken(id.clone())
+        });
+    }
     if !valid_sync_id(&supplied)
         || [
             metadata.order_id.as_ref(),
@@ -7840,7 +8017,9 @@ pub fn sync_target(
     if let Some(target) = target {
         let resource = match &target {
             PaypalSyncTarget::Capture(id) | PaypalSyncTarget::Authorization(id) => id,
-            PaypalSyncTarget::Order(id) => id,
+            PaypalSyncTarget::Order(id)
+            | PaypalSyncTarget::SetupToken(id)
+            | PaypalSyncTarget::PaymentToken(id) => id,
         };
         if metadata
             .order_id
@@ -7889,6 +8068,8 @@ fn validate_sync_order_identity(
     match expected {
         PaypalSyncTarget::Order(id) if id == actual => Ok(()),
         PaypalSyncTarget::Order(_)
+        | PaypalSyncTarget::SetupToken(_)
+        | PaypalSyncTarget::PaymentToken(_)
         | PaypalSyncTarget::Authorization(_)
         | PaypalSyncTarget::Capture(_) => {
             Err(crate::utils::response_handling_fail_for_connector(http_code, "paypal").into())
