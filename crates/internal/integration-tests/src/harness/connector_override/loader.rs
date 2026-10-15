@@ -418,11 +418,9 @@ mod tests {
         let variants = load_scenario_variants("cybersource", "PaymentService/Authorize")
             .expect("variants should load");
         assert_eq!(variants.len(), 1);
-        assert_eq!(variants[0].name, "shipping_details_shipto");
-        assert_eq!(
-            variants[0].base_scenario,
-            "no3ds_manual_capture_credit_card"
-        );
+        let variant = variants.first().expect("one variant should be loaded");
+        assert_eq!(variant.name, "shipping_details_shipto");
+        assert_eq!(variant.base_scenario, "no3ds_manual_capture_credit_card");
 
         let inherited = load_scenario_override_patch(
             "cybersource",
