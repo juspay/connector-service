@@ -18,7 +18,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Maskable};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, decode::BodyDecoding,
     verification::ConnectorSourceVerificationSecrets,
@@ -224,7 +224,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             status_code: 200,
             response_headers: None,
             amount_captured: None,
-            minor_amount_captured: None,
             network_txn_id: None,
             payment_method_update: None,
             sender_payment_instrument_id: None,
@@ -282,7 +281,7 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Basic {}", encoded).into(),
+                    format!("Basic {}", encoded).into_masked(),
                 ),
             ])
         }
@@ -361,7 +360,7 @@ macros::macro_connector_implementation!(
                 ),
                 (
                     headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {}", access_token).into(),
+                    format!("Bearer {}", access_token).into_masked(),
                 ),
             ])
         }

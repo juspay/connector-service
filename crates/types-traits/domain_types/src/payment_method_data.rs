@@ -95,6 +95,12 @@ impl CardWithNoCvc {
         expand_expiry_year_to_four_digits(&self.card_exp_year)
     }
 
+    pub fn get_expiry_date_as_yymm(&self) -> Result<Secret<String>, IntegrationError> {
+        let year = self.get_card_expiry_year_2_digit()?;
+        let month = self.get_card_expiry_month_2_digit()?;
+        Ok(Secret::new(format!("{}{}", year.peek(), month.peek())))
+    }
+
     pub fn get_expiry_date_as_mmyy(&self) -> Result<Secret<String>, IntegrationError> {
         let year = self.get_card_expiry_year_2_digit()?;
         let month = self.get_card_expiry_month_2_digit()?;
@@ -1727,6 +1733,7 @@ pub struct DecryptedWalletTokenDetailsForNetworkTransactionId {
     pub eci: Option<String>,
     pub token_source: Option<TokenSource>,
     pub card_network: Option<CardNetwork>,
+    pub device_manufacturer_identifier: Option<Secret<String>>,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
