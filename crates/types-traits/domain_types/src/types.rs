@@ -10669,6 +10669,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceReverseRequest>
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             connector_transaction_id: value.connector_transaction_id,
+            currency: value
+                .currency
+                .map(|currency| {
+                    common_enums::Currency::foreign_try_from(
+                        grpc_api_types::payments::Currency::try_from(currency).unwrap_or_default(),
+                    )
+                })
+                .transpose()?,
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
             integrity_object: None,
