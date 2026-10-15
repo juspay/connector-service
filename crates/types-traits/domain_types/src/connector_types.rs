@@ -4948,7 +4948,7 @@ pub struct AirlineData {
     // Booking / ticket level
     pub pnr_code: Option<String>,
     pub booking_reference: Option<String>,
-    pub ticket_number: Option<String>,
+    pub ticket_number: Option<Secret<String>>,
     pub ticket_issue_date: Option<String>,
     pub booking_date_time: Option<String>,
     pub flight_date: Option<String>,
@@ -4995,7 +4995,7 @@ pub struct AirlineSegment {
     pub fee_amount: Option<common_utils::types::Money>,
     pub tax_amount: Option<common_utils::types::Money>,
     // Exchange / coupon details
-    pub exchange_ticket_number: Option<String>,
+    pub exchange_ticket_number: Option<Secret<String>>,
     pub conjunction_ticket: Option<String>,
     pub coupon_number: Option<String>,
     pub endorsements_restrictions: Option<String>,
@@ -5011,7 +5011,7 @@ pub struct AirlineSegment {
 #[derive(Debug, Clone, Default)]
 pub struct TicketDeliveryContact {
     pub email: Option<Secret<String>>,
-    pub phone: Option<Secret<String>>,
+    pub phone_number: Option<Secret<String>>,
 }
 
 /// A flight endpoint, reused for both departure and arrival.
@@ -5063,9 +5063,9 @@ pub struct HotelData {
     /// ISO 3166-1 alpha-2, e.g. SA.
     pub hotel_country: Option<String>,
     /// Standard / Suite / Deluxe.
-    pub room_class: Option<String>,
+    pub room_class: Option<common_enums::RoomClass>,
     /// room / apartment / villa / suite.
-    pub accommodation_type: Option<String>,
+    pub accommodation_type: Option<common_enums::AccommodationType>,
     /// Customer can request a refund.
     pub refundability: Option<common_enums::TicketRefundability>,
     /// Ticket recipient, email or phone.
@@ -5096,7 +5096,7 @@ pub struct HotelData {
 /// Host details for hosted accommodations (rental / homestay platforms).
 #[derive(Debug, Clone, Default)]
 pub struct HostDetails {
-    pub name: Option<String>,
+    pub name: Option<Secret<String>>,
     /// Unique host ID on the merchant platform.
     pub host_id: Option<String>,
     /// rental_agency / owner / hotel / hostel.

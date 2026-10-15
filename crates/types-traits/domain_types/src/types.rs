@@ -4601,142 +4601,108 @@ fn map_customer_document_details(
 
 // ---- proto DomainData / AirlineData -> domain types (all fields optional) ----
 
-// Each `map_*_enum` helper converts a proto enum field to its domain
-// counterpart, returning `None` when the field is unset (proto `UNSPECIFIED`
-// zero value).
+// Proto enums convert to their `common_enums` counterpart via `ForeignTryFrom`.
+// The proto `UNSPECIFIED` zero value is an error, so optional fields discard
+// the `Result` with `.ok()` — `UNSPECIFIED` becomes `None`.
+macro_rules! impl_enum_foreign_try_from {
+    ($($proto_enum:ident => $domain_enum:ident { $($proto_variant:ident => $domain_variant:ident),+ $(,)? }),+ $(,)?) => {
+        $(
+            impl ForeignTryFrom<grpc_payment_types::$proto_enum> for common_enums::$domain_enum {
+                type Error = IntegrationError;
 
-fn map_ticket_refundability(
-    value: grpc_payment_types::TicketRefundability,
-) -> Option<common_enums::TicketRefundability> {
-    match value {
-        grpc_payment_types::TicketRefundability::Refundable => {
-            Some(common_enums::TicketRefundability::Refundable)
-        }
-        grpc_payment_types::TicketRefundability::NonRefundable => {
-            Some(common_enums::TicketRefundability::NonRefundable)
-        }
-        grpc_payment_types::TicketRefundability::Unspecified => None,
-    }
+                fn foreign_try_from(
+                    value: grpc_payment_types::$proto_enum,
+                ) -> Result<Self, error_stack::Report<Self::Error>> {
+                    match value {
+                        $(grpc_payment_types::$proto_enum::$proto_variant => {
+                            Ok(common_enums::$domain_enum::$domain_variant)
+                        })+
+                        grpc_payment_types::$proto_enum::Unspecified => Err(error_stack::report!(
+                            IntegrationError::InvalidDataFormat {
+                                field_name: stringify!($proto_enum),
+                                context: IntegrationErrorContext::default(),
+                            }
+                        )),
+                    }
+                }
+            }
+        )+
+    };
 }
 
-fn map_trip_type(value: grpc_payment_types::TripType) -> Option<common_enums::TripType> {
-    match value {
-        grpc_payment_types::TripType::OneWay => Some(common_enums::TripType::OneWay),
-        grpc_payment_types::TripType::Return => Some(common_enums::TripType::Return),
-        grpc_payment_types::TripType::MultipleDestination => {
-            Some(common_enums::TripType::MultipleDestination)
-        }
-        grpc_payment_types::TripType::Unknown => Some(common_enums::TripType::Unknown),
-        grpc_payment_types::TripType::Unspecified => None,
-    }
-}
-
-fn map_education_type(
-    value: grpc_payment_types::EducationType,
-) -> Option<common_enums::EducationType> {
-    match value {
-        grpc_payment_types::EducationType::Course => Some(common_enums::EducationType::Course),
-        grpc_payment_types::EducationType::Workshop => Some(common_enums::EducationType::Workshop),
-        grpc_payment_types::EducationType::Tutoring => Some(common_enums::EducationType::Tutoring),
-        grpc_payment_types::EducationType::Unspecified => None,
-    }
-}
-
-fn map_online_status(
-    value: grpc_payment_types::OnlineStatus,
-) -> Option<common_enums::OnlineStatus> {
-    match value {
-        grpc_payment_types::OnlineStatus::Online => Some(common_enums::OnlineStatus::Online),
-        grpc_payment_types::OnlineStatus::Offline => Some(common_enums::OnlineStatus::Offline),
-        grpc_payment_types::OnlineStatus::Unspecified => None,
-    }
-}
-
-fn map_purchase_type(
-    value: grpc_payment_types::PurchaseType,
-) -> Option<common_enums::PurchaseType> {
-    match value {
-        grpc_payment_types::PurchaseType::Online => Some(common_enums::PurchaseType::Online),
-        grpc_payment_types::PurchaseType::Offline => Some(common_enums::PurchaseType::Offline),
-        grpc_payment_types::PurchaseType::Unspecified => None,
-    }
-}
-
-fn map_host_type(value: grpc_payment_types::HostType) -> Option<common_enums::HostType> {
-    match value {
-        grpc_payment_types::HostType::RentalAgency => Some(common_enums::HostType::RentalAgency),
-        grpc_payment_types::HostType::Owner => Some(common_enums::HostType::Owner),
-        grpc_payment_types::HostType::Hotel => Some(common_enums::HostType::Hotel),
-        grpc_payment_types::HostType::Hostel => Some(common_enums::HostType::Hostel),
-        grpc_payment_types::HostType::Unspecified => None,
-    }
-}
-
-fn map_travel_mode(value: grpc_payment_types::TravelMode) -> Option<common_enums::TravelMode> {
-    match value {
-        grpc_payment_types::TravelMode::Train => Some(common_enums::TravelMode::Train),
-        grpc_payment_types::TravelMode::Bus => Some(common_enums::TravelMode::Bus),
-        grpc_payment_types::TravelMode::Ferry => Some(common_enums::TravelMode::Ferry),
-        grpc_payment_types::TravelMode::Unspecified => None,
-    }
-}
-
-fn map_travel_class(value: grpc_payment_types::TravelClass) -> Option<common_enums::TravelClass> {
-    match value {
-        grpc_payment_types::TravelClass::Economy => Some(common_enums::TravelClass::Economy),
-        grpc_payment_types::TravelClass::PremiumEconomy => {
-            Some(common_enums::TravelClass::PremiumEconomy)
-        }
-        grpc_payment_types::TravelClass::Business => Some(common_enums::TravelClass::Business),
-        grpc_payment_types::TravelClass::First => Some(common_enums::TravelClass::First),
-        grpc_payment_types::TravelClass::Unspecified => None,
-    }
-}
-
-fn map_deposit_payment_type(
-    value: grpc_payment_types::DepositPaymentType,
-) -> Option<common_enums::DepositPaymentType> {
-    match value {
-        grpc_payment_types::DepositPaymentType::Cash => {
-            Some(common_enums::DepositPaymentType::Cash)
-        }
-        grpc_payment_types::DepositPaymentType::CreditCard => {
-            Some(common_enums::DepositPaymentType::CreditCard)
-        }
-        grpc_payment_types::DepositPaymentType::DebitCard => {
-            Some(common_enums::DepositPaymentType::DebitCard)
-        }
-        grpc_payment_types::DepositPaymentType::PrepaidCard => {
-            Some(common_enums::DepositPaymentType::PrepaidCard)
-        }
-        grpc_payment_types::DepositPaymentType::Unspecified => None,
-    }
-}
-
-fn map_distance_unit(
-    value: grpc_payment_types::DistanceUnit,
-) -> Option<common_enums::DistanceUnit> {
-    match value {
-        grpc_payment_types::DistanceUnit::Miles => Some(common_enums::DistanceUnit::Miles),
-        grpc_payment_types::DistanceUnit::Kilometers => {
-            Some(common_enums::DistanceUnit::Kilometers)
-        }
-        grpc_payment_types::DistanceUnit::Unspecified => None,
-    }
-}
-
-fn map_premium_customer_status(
-    value: grpc_payment_types::PremiumCustomerStatus,
-) -> Option<common_enums::PremiumCustomerStatus> {
-    match value {
-        grpc_payment_types::PremiumCustomerStatus::PremiumCustomer => {
-            Some(common_enums::PremiumCustomerStatus::PremiumCustomer)
-        }
-        grpc_payment_types::PremiumCustomerStatus::NonPremiumCustomer => {
-            Some(common_enums::PremiumCustomerStatus::NonPremiumCustomer)
-        }
-        grpc_payment_types::PremiumCustomerStatus::Unspecified => None,
-    }
+impl_enum_foreign_try_from! {
+    TicketRefundability => TicketRefundability {
+        Refundable => Refundable,
+        NonRefundable => NonRefundable,
+    },
+    TicketDeliveryType => TicketDeliveryType {
+        Electronic => Electronic,
+        Paper => Paper,
+    },
+    CardholderTravelStatus => CardholderTravelStatus {
+        CardholderTraveling => Traveling,
+        CardholderNotTraveling => NotTraveling,
+    },
+    TripType => TripType {
+        OneWay => OneWay,
+        Return => Return,
+        MultipleDestination => MultipleDestination,
+    },
+    RoomClass => RoomClass {
+        Standard => Standard,
+        Suite => Suite,
+        Deluxe => Deluxe,
+    },
+    AccommodationType => AccommodationType {
+        Room => Room,
+        Apartment => Apartment,
+        Villa => Villa,
+        Suite => Suite,
+    },
+    EducationType => EducationType {
+        Course => Course,
+        Workshop => Workshop,
+        Tutoring => Tutoring,
+    },
+    OnlineStatus => OnlineStatus {
+        Online => Online,
+        Offline => Offline,
+    },
+    PurchaseType => PurchaseType {
+        Online => Online,
+        Offline => Offline,
+    },
+    HostType => HostType {
+        RentalAgency => RentalAgency,
+        Owner => Owner,
+        Hotel => Hotel,
+        Hostel => Hostel,
+    },
+    TravelMode => TravelMode {
+        Train => Train,
+        Bus => Bus,
+        Ferry => Ferry,
+    },
+    TravelClass => TravelClass {
+        Economy => Economy,
+        PremiumEconomy => PremiumEconomy,
+        Business => Business,
+        First => First,
+    },
+    DepositPaymentType => DepositPaymentType {
+        Cash => Cash,
+        CreditCard => CreditCard,
+        DebitCard => DebitCard,
+        PrepaidCard => PrepaidCard,
+    },
+    DistanceUnit => DistanceUnit {
+        Miles => Miles,
+        Kilometers => Kilometers,
+    },
+    PremiumCustomerStatus => PremiumCustomerStatus {
+        PremiumCustomer => PremiumCustomer,
+        NonPremiumCustomer => NonPremiumCustomer,
+    },
 }
 
 impl ForeignTryFrom<grpc_payment_types::DomainData> for connector_types::DomainData {
@@ -4781,9 +4747,12 @@ impl ForeignTryFrom<grpc_payment_types::EducationData> for connector_types::Educ
         education_data: grpc_payment_types::EducationData,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Read enum getters (which borrow `education_data`) before moving fields out.
-        let education_type = map_education_type(education_data.education_type());
-        let is_online = map_online_status(education_data.is_online());
-        let purchase_type = map_purchase_type(education_data.purchase_type());
+        let education_type =
+            common_enums::EducationType::foreign_try_from(education_data.education_type()).ok();
+        let is_online =
+            common_enums::OnlineStatus::foreign_try_from(education_data.is_online()).ok();
+        let purchase_type =
+            common_enums::PurchaseType::foreign_try_from(education_data.purchase_type()).ok();
         Ok(Self {
             student_details: education_data.student_details.map(|student_details| {
                 connector_types::StudentDetails {
@@ -4810,8 +4779,10 @@ impl ForeignTryFrom<grpc_payment_types::RiskAssessmentData>
     fn foreign_try_from(
         risk_assessment_data: grpc_payment_types::RiskAssessmentData,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let is_premium_customer =
-            map_premium_customer_status(risk_assessment_data.is_premium_customer());
+        let is_premium_customer = common_enums::PremiumCustomerStatus::foreign_try_from(
+            risk_assessment_data.is_premium_customer(),
+        )
+        .ok();
         Ok(Self {
             is_premium_customer,
             customer_account_creation_date: risk_assessment_data.customer_account_creation_date,
@@ -4994,34 +4965,16 @@ impl ForeignTryFrom<grpc_payment_types::AirlineData> for connector_types::Airlin
         airline_data: grpc_payment_types::AirlineData,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Read enum getters (which borrow `airline_data`) before moving fields out.
-        let refundability = match airline_data.refundability() {
-            grpc_payment_types::TicketRefundability::Refundable => {
-                Some(common_enums::TicketRefundability::Refundable)
-            }
-            grpc_payment_types::TicketRefundability::NonRefundable => {
-                Some(common_enums::TicketRefundability::NonRefundable)
-            }
-            grpc_payment_types::TicketRefundability::Unspecified => None,
-        };
-        let ticket_delivery_type = match airline_data.ticket_delivery_type() {
-            grpc_payment_types::TicketDeliveryType::Electronic => {
-                Some(common_enums::TicketDeliveryType::Electronic)
-            }
-            grpc_payment_types::TicketDeliveryType::Paper => {
-                Some(common_enums::TicketDeliveryType::Paper)
-            }
-            grpc_payment_types::TicketDeliveryType::Unspecified => None,
-        };
-        let cardholder_travel_status = match airline_data.cardholder_travel_status() {
-            grpc_payment_types::CardholderTravelStatus::CardholderTraveling => {
-                Some(common_enums::CardholderTravelStatus::Traveling)
-            }
-            grpc_payment_types::CardholderTravelStatus::CardholderNotTraveling => {
-                Some(common_enums::CardholderTravelStatus::NotTraveling)
-            }
-            grpc_payment_types::CardholderTravelStatus::Unspecified => None,
-        };
-        let trip_type = map_trip_type(airline_data.trip_type());
+        let refundability =
+            common_enums::TicketRefundability::foreign_try_from(airline_data.refundability()).ok();
+        let ticket_delivery_type =
+            common_enums::TicketDeliveryType::foreign_try_from(airline_data.ticket_delivery_type())
+                .ok();
+        let cardholder_travel_status = common_enums::CardholderTravelStatus::foreign_try_from(
+            airline_data.cardholder_travel_status(),
+        )
+        .ok();
+        let trip_type = common_enums::TripType::foreign_try_from(airline_data.trip_type()).ok();
         Ok(Self {
             pnr_code: airline_data.pnr_code.map(|s| s.expose()),
             booking_reference: airline_data.booking_reference,
@@ -5171,7 +5124,7 @@ impl ForeignTryFrom<grpc_payment_types::TicketDeliveryContact>
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             email: contact.email,
-            phone: contact.phone,
+            phone_number: contact.phone_number,
         })
     }
 }
@@ -5233,7 +5186,7 @@ impl ForeignTryFrom<grpc_payment_types::HostDetails> for connector_types::HostDe
     fn foreign_try_from(
         host: grpc_payment_types::HostDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let host_type = map_host_type(host.host_type());
+        let host_type = common_enums::HostType::foreign_try_from(host.host_type()).ok();
         Ok(Self {
             name: host.name,
             host_id: host.host_id,
@@ -5252,7 +5205,11 @@ impl ForeignTryFrom<grpc_payment_types::HotelData> for connector_types::HotelDat
         hotel_data: grpc_payment_types::HotelData,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Read enum getters (which borrow `hotel_data`) before moving fields out.
-        let refundability = map_ticket_refundability(hotel_data.refundability());
+        let refundability =
+            common_enums::TicketRefundability::foreign_try_from(hotel_data.refundability()).ok();
+        let room_class = common_enums::RoomClass::foreign_try_from(hotel_data.room_class()).ok();
+        let accommodation_type =
+            common_enums::AccommodationType::foreign_try_from(hotel_data.accommodation_type()).ok();
         Ok(Self {
             booking_id: hotel_data.booking_id,
             checkin: hotel_data.checkin,
@@ -5267,8 +5224,8 @@ impl ForeignTryFrom<grpc_payment_types::HotelData> for connector_types::HotelDat
             hotel_name: hotel_data.hotel_name,
             hotel_city: hotel_data.hotel_city,
             hotel_country: hotel_data.hotel_country,
-            room_class: hotel_data.room_class,
-            accommodation_type: hotel_data.accommodation_type,
+            room_class,
+            accommodation_type,
             refundability,
             ticket_delivery_recipient: hotel_data
                 .ticket_delivery_recipient
@@ -5338,9 +5295,11 @@ impl ForeignTryFrom<grpc_payment_types::TravelData> for connector_types::TravelD
         travel_data: grpc_payment_types::TravelData,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Read enum getters (which borrow `travel_data`) before moving fields out.
-        let mode = map_travel_mode(travel_data.mode());
-        let travel_class = map_travel_class(travel_data.travel_class());
-        let refundability = map_ticket_refundability(travel_data.refundability());
+        let mode = common_enums::TravelMode::foreign_try_from(travel_data.mode()).ok();
+        let travel_class =
+            common_enums::TravelClass::foreign_try_from(travel_data.travel_class()).ok();
+        let refundability =
+            common_enums::TicketRefundability::foreign_try_from(travel_data.refundability()).ok();
         Ok(Self {
             mode,
             origin: travel_data.origin,
@@ -5418,7 +5377,7 @@ impl ForeignTryFrom<grpc_payment_types::TotalDistance> for connector_types::Tota
     fn foreign_try_from(
         distance: grpc_payment_types::TotalDistance,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let unit = map_distance_unit(distance.unit());
+        let unit = common_enums::DistanceUnit::foreign_try_from(distance.unit()).ok();
         Ok(Self {
             amount: distance.amount,
             unit,
@@ -5433,7 +5392,9 @@ impl ForeignTryFrom<grpc_payment_types::RentalData> for connector_types::RentalD
         rental_data: grpc_payment_types::RentalData,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Read enum getters (which borrow `rental_data`) before moving fields out.
-        let deposit_payment_type = map_deposit_payment_type(rental_data.deposit_payment_type());
+        let deposit_payment_type =
+            common_enums::DepositPaymentType::foreign_try_from(rental_data.deposit_payment_type())
+                .ok();
         Ok(Self {
             booking_id: rental_data.booking_id,
             rental_company: rental_data.rental_company,

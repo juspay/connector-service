@@ -112,13 +112,12 @@ enum TripType {
   TRIP_TYPE_ONE_WAY = 1;
   TRIP_TYPE_RETURN = 2;
   TRIP_TYPE_MULTIPLE_DESTINATION = 3;
-  TRIP_TYPE_UNKNOWN = 4;
 }
 
 // Contact used for delivering a ticket (email or phone).
 message TicketDeliveryContact {
   optional SecretString email = 1;
-  optional SecretString phone = 2;
+  optional SecretString phone_number = 2;
 }
 
 // Connector-agnostic airline / travel itinerary data. The union of fields
@@ -130,7 +129,7 @@ message AirlineData {
   // ---- Booking / ticket level ----
   optional SecretString pnr_code = 1;                 // PNR / reservation-system code
   optional string booking_reference = 2;        // Merchant booking / customer reference
-  optional string ticket_number = 3;            // Airline ticket number
+  optional SecretString ticket_number = 3;      // Airline ticket number
   optional string ticket_issue_date = 4;        // Date the ticket was issued
   optional string booking_date_time = 5;        // Booking timestamp (RFC 3339)
   optional string flight_date = 6;              // Departure date of the first leg
@@ -181,7 +180,7 @@ message AirlineSegment {
   optional Money tax_amount = 12;               // Departure tax for this leg
 
   // Exchange / coupon details
-  optional string exchange_ticket_number = 13;  // New ticket number on exchange
+  optional SecretString exchange_ticket_number = 13; // New ticket number on exchange
   optional string conjunction_ticket = 14;      // Conjunction ticket for >4 legs
   optional string coupon_number = 15;           // Coupon number for this leg
   optional string endorsements_restrictions = 16; // Endorsements / restrictions
@@ -233,8 +232,8 @@ message HotelData {
   optional string hotel_name = 7;           // Hotel or property name
   optional string hotel_city = 8;           // City IATA code, e.g. RUH
   optional string hotel_country = 9;        // ISO 3166-1 alpha-2, e.g. SA
-  optional string room_class = 10;          // Standard / Suite / Deluxe
-  optional string accommodation_type = 11;  // room / apartment / villa / suite
+  optional RoomClass room_class = 10;       // Standard / Suite / Deluxe
+  optional AccommodationType accommodation_type = 11; // room / apartment / villa / suite
   TicketRefundability refundability = 12;   // Customer can request a refund
   optional TicketDeliveryContact ticket_delivery_recipient = 13; // email or phone
   optional HostDetails host = 14;           // Host details
@@ -250,9 +249,26 @@ message HotelData {
   optional string discount_code = 27;       // Corporate client / discount programme code
 }
 
+// Room category booked.
+enum RoomClass {
+  ROOM_CLASS_UNSPECIFIED = 0;
+  ROOM_CLASS_STANDARD = 1;
+  ROOM_CLASS_SUITE = 2;
+  ROOM_CLASS_DELUXE = 3;
+}
+
+// Kind of accommodation unit booked.
+enum AccommodationType {
+  ACCOMMODATION_TYPE_UNSPECIFIED = 0;
+  ACCOMMODATION_TYPE_ROOM = 1;
+  ACCOMMODATION_TYPE_APARTMENT = 2;
+  ACCOMMODATION_TYPE_VILLA = 3;
+  ACCOMMODATION_TYPE_SUITE = 4;
+}
+
 // Host details for hosted accommodations (rental / homestay platforms).
 message HostDetails {
-  optional string name = 1;                     // Host name
+  optional SecretString name = 1;               // Host name
   optional string host_id = 2;                  // Unique host ID on the merchant platform
   optional HostType host_type = 3;              // rental_agency / owner / hotel / hostel
   optional string host_country_of_domicile = 4; // Host's country, ISO 3166-1 alpha-2

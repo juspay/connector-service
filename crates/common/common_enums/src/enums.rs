@@ -3370,6 +3370,51 @@ pub enum TicketRefundability {
     NonRefundable,
 }
 
+/// Room category booked.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Deserialize,
+    Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum RoomClass {
+    Standard,
+    Suite,
+    Deluxe,
+}
+
+/// Kind of accommodation unit booked.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Deserialize,
+    Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum AccommodationType {
+    Room,
+    Apartment,
+    Villa,
+    Suite,
+}
+
 /// Ticket medium — electronic vs paper.
 #[derive(
     Clone,
@@ -3432,7 +3477,6 @@ pub enum TripType {
     OneWay,
     Return,
     MultipleDestination,
-    Unknown,
 }
 
 /// Kind of education product purchased.
