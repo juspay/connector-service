@@ -1355,6 +1355,15 @@ fn is_unresolved_connector_feature_data(value: &Value) -> bool {
 /// leakage shape, not a full schema validator.
 /// Check response roots used by optional dependency overlays against actual typed messages.
 pub(super) fn suite_response_has_top_level_field(suite: &str, field: &str) -> bool {
+    // This entry point checks a root only; the loader validates full paths.
+    if field.is_empty()
+        || !field
+            .bytes()
+            .enumerate()
+            .all(|(i, c)| c == b'_' || c.is_ascii_alphabetic() || (i > 0 && c.is_ascii_digit()))
+    {
+        return false;
+    }
     fn check<T: DeserializeOwned>(field: &str) -> bool {
         let probe = serde_json::json!({field:Value::Null});
         let Ok(serialized) = serde_json::to_string(&probe) else {
@@ -1365,16 +1374,74 @@ pub(super) fn suite_response_has_top_level_field(suite: &str, field: &str) -> bo
         let _: Result<T, _> = serde_ignored::deserialize(&mut deserializer, |_| ignored = true);
         !ignored
     }
-    match suite {
-        "PaymentService/SetupRecurring" => {
-            check::<grpc_api_types::payments::PaymentServiceSetupRecurringResponse>(field)
+    // Use the same actual registry as request validation. Aliases may chain,
+    // but a missing suite, unresolved alias or cycle cannot certify a field.
+    let mut effective_suite = suite.to_owned();
+    let mut visited = std::collections::BTreeSet::new();
+    loop {
+        if !visited.insert(effective_suite.clone()) {
+            return false;
         }
-        "PaymentMethodAuthenticationService/Authenticate" => check::<
-            grpc_api_types::payments::PaymentMethodAuthenticationServiceAuthenticateResponse,
-        >(field),
-        "PaymentMethodAuthenticationService/PostAuthenticate" => check::<
-            grpc_api_types::payments::PaymentMethodAuthenticationServicePostAuthenticateResponse,
-        >(field),
+        let Ok(spec) = load_suite_spec(&effective_suite) else {
+            return false;
+        };
+        match spec.alias_for {
+            Some(alias) => effective_suite = alias,
+            None => break,
+        }
+    }
+    match effective_suite.as_str() {
+        "EventService/ParseEvent" => check::<grpc_api_types::payments::EventServiceParseResponse>(field),
+        "EventService/HandleEvent" => check::<grpc_api_types::payments::EventServiceHandleResponse>(field),
+        "EventService/NotifyConnector" => check::<grpc_api_types::payments::NotifyConnectorResponse>(field),
+        "PaymentService/Authorize" | "PaymentService/CompleteAuthorize" => check::<grpc_api_types::payments::PaymentServiceAuthorizeResponse>(field),
+        "PaymentService/Get" => check::<grpc_api_types::payments::PaymentServiceGetResponse>(field),
+        "PaymentService/Void" => check::<grpc_api_types::payments::PaymentServiceVoidResponse>(field),
+        "PaymentService/Reverse" => check::<grpc_api_types::payments::PaymentServiceReverseResponse>(field),
+        "PaymentService/Capture" => check::<grpc_api_types::payments::PaymentServiceCaptureResponse>(field),
+        "PaymentService/CreateOrder" => check::<grpc_api_types::payments::PaymentServiceCreateOrderResponse>(field),
+        "PaymentService/Refund" => check::<grpc_api_types::payments::RefundResponse>(field),
+        "PaymentService/IncrementalAuthorization" => check::<grpc_api_types::payments::PaymentServiceIncrementalAuthorizationResponse>(field),
+        "PaymentService/VerifyRedirectResponse" => check::<grpc_api_types::payments::PaymentServiceVerifyRedirectResponseResponse>(field),
+        "PaymentService/SetupRecurring" => check::<grpc_api_types::payments::PaymentServiceSetupRecurringResponse>(field),
+        "PaymentService/TokenAuthorize" => check::<grpc_api_types::payments::PaymentServiceAuthorizeResponse>(field),
+        "PaymentService/TokenSetupRecurring" => check::<grpc_api_types::payments::PaymentServiceSetupRecurringResponse>(field),
+        "PaymentService/ProxyAuthorize" => check::<grpc_api_types::payments::PaymentServiceAuthorizeResponse>(field),
+        "PaymentService/ProxySetupRecurring" => check::<grpc_api_types::payments::PaymentServiceSetupRecurringResponse>(field),
+        "RecurringPaymentService/Charge" => check::<grpc_api_types::payments::RecurringPaymentServiceChargeResponse>(field),
+        "RecurringPaymentService/Revoke" => check::<grpc_api_types::payments::RecurringPaymentServiceRevokeResponse>(field),
+        "RefundService/Get" => check::<grpc_api_types::payments::RefundResponse>(field),
+        "RefundService/VoidPostRefund" => check::<grpc_api_types::payments::RefundResponse>(field),
+        "DisputeService/SubmitEvidence" => check::<grpc_api_types::payments::DisputeServiceSubmitEvidenceResponse>(field),
+        "DisputeService/Get" => check::<grpc_api_types::payments::DisputeResponse>(field),
+        "DisputeService/Defend" => check::<grpc_api_types::payments::DisputeServiceDefendResponse>(field),
+        "DisputeService/Accept" => check::<grpc_api_types::payments::DisputeServiceAcceptResponse>(field),
+        "PaymentMethodService/Tokenize" => check::<grpc_api_types::payments::PaymentMethodServiceTokenizeResponse>(field),
+        "PaymentMethodService/Create" => check::<grpc_api_types::payments::PaymentMethodServiceCreateResponse>(field),
+        "PaymentMethodService/Get" => check::<grpc_api_types::payments::PaymentMethodServiceGetResponse>(field),
+        "PaymentMethodService/Refresh" => check::<grpc_api_types::payments::PaymentMethodServiceRefreshResponse>(field),
+        "PaymentMethodService/Recharge" => check::<grpc_api_types::payments::PaymentMethodServiceRechargeResponse>(field),
+        "PaymentMethodService/Eligibility" => check::<grpc_api_types::payments::PaymentMethodServiceEligibilityResponse>(field),
+        "CustomerService/Create" => check::<grpc_api_types::payments::CustomerServiceCreateResponse>(field),
+        "CustomerService/Get" => check::<grpc_api_types::payments::CustomerServiceGetResponse>(field),
+        "MerchantAuthenticationService/CreateServerAuthenticationToken" => check::<grpc_api_types::payments::MerchantAuthenticationServiceCreateServerAuthenticationTokenResponse>(field),
+        "MerchantAuthenticationService/CreateServerSessionAuthenticationToken" => check::<grpc_api_types::payments::MerchantAuthenticationServiceCreateServerSessionAuthenticationTokenResponse>(field),
+        "MerchantAuthenticationService/CreateClientAuthenticationToken" => check::<grpc_api_types::payments::MerchantAuthenticationServiceCreateClientAuthenticationTokenResponse>(field),
+        "PaymentMethodAuthenticationService/PreAuthenticate" => check::<grpc_api_types::payments::PaymentMethodAuthenticationServicePreAuthenticateResponse>(field),
+        "PaymentMethodAuthenticationService/Authenticate" => check::<grpc_api_types::payments::PaymentMethodAuthenticationServiceAuthenticateResponse>(field),
+        "PaymentMethodAuthenticationService/PostAuthenticate" => check::<grpc_api_types::payments::PaymentMethodAuthenticationServicePostAuthenticateResponse>(field),
+        "PayoutService/Create" => check::<grpc_api_types::payments::PayoutServiceCreateResponse>(field),
+        "PayoutService/Transfer" => check::<grpc_api_types::payments::PayoutServiceTransferResponse>(field),
+        "PayoutService/Get" => check::<grpc_api_types::payments::PayoutServiceGetResponse>(field),
+        "PayoutService/Void" => check::<grpc_api_types::payments::PayoutServiceVoidResponse>(field),
+        "PayoutService/Stage" => check::<grpc_api_types::payments::PayoutServiceStageResponse>(field),
+        "PayoutService/CreateLink" => check::<grpc_api_types::payments::PayoutServiceCreateLinkResponse>(field),
+        "PayoutService/CreateRecipient" => check::<grpc_api_types::payments::PayoutServiceCreateRecipientResponse>(field),
+        "PayoutService/EnrollDisburseAccount" => check::<grpc_api_types::payments::PayoutServiceEnrollDisburseAccountResponse>(field),
+        "PayoutService/Eligibility" => check::<grpc_api_types::payments::PayoutMethodEligibilityResponse>(field),
+        "SurchargeService/Calculate" => check::<grpc_api_types::payments::SurchargeServiceCalculateResponse>(field),
+        "FraudAndRiskManagementService/PreRiskCheck" => check::<grpc_api_types::payments::FrmServicePreRiskCheckResponse>(field),
+        "FraudAndRiskManagementService/PostRiskCheck" => check::<grpc_api_types::payments::FrmServicePostRiskCheckResponse>(field),
         _ => false,
     }
 }

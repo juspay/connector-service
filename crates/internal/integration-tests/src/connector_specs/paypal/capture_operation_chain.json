@@ -98,5 +98,125 @@
     "paypal_multiple_capture_retry": "paypal_nonfinal_partial_capture_same_reference_independent_authorization"
   },
   "authoring_validation_command": "python3 grace/runs/paypal-20261014T134132Z-b0bfbb/test/grpc/validate_capture_operation_chain.py",
-  "live_runner_binding": "Final gRPC stage must implement and publish exact dedicated runner command against this case; do not mark VERIFIED based on independent generic rows or validator."
+  "live_runner_binding": "Final gRPC stage must implement and publish exact dedicated runner command against this case; do not mark VERIFIED based on independent generic rows or validator.",
+  "capture_history_complete_contract": {
+    "true": "Only actual newly created authorization/fresh execution or full owned Orders collection certifies complete capture history",
+    "false": "Retain observed capture IDs/amounts; successful capture has unresolved actual Money",
+    "absent": "Legacy unknown, never proof of zero or complete balance",
+    "recovery": "Actual full owned Orders collection restores true, with checked unique per-ID gross capture amounts",
+    "protected_capture": "2K728570VG9010042 must never be replayed; original order reconciliation is read-only"
+  },
+  "source_regressions": [
+    {
+      "id": "capture_method_conflict",
+      "surface": "local_request_negative",
+      "request": "Saved MANUAL_MULTIPLE and explicitly requested MANUAL",
+      "assert": {
+        "local_error": "Capture method conflicts with original authorization",
+        "financial_http_calls": 0
+      }
+    },
+    {
+      "id": "saved_multiple_missing_request_mode",
+      "surface": "local_request_negative",
+      "request": "Saved MANUAL_MULTIPLE, absent request capture_method and absent multiple_capture_data",
+      "assert": {
+        "local_error_field": "multiple_capture_data.capture_reference",
+        "financial_http_calls": 0
+      }
+    },
+    {
+      "id": "capture_unsafe_response_id",
+      "surface": "explicit_response_fixture",
+      "response": {
+        "id": "invalid/path",
+        "status": "COMPLETED"
+      },
+      "assert": {
+        "error": "response handling failure",
+        "persisted_money": "unchanged"
+      }
+    },
+    {
+      "id": "collected_missing_money_known_partial_history",
+      "surface": "explicit_response_fixture",
+      "context": "Known prior capture amount3000 and complete ledger; next COMPLETED actualID omits amount",
+      "assert": {
+        "amount_captured": "absent, never request fallback",
+        "capture_id": "actual newly observed resource ID",
+        "prior_capture_map": "retained",
+        "capture_history_complete": false,
+        "captured_total": "unknown",
+        "remaining": "unknown unless actual authorization closure proves zero"
+      }
+    },
+    {
+      "id": "collected_missing_money_final_capture",
+      "surface": "explicit_response_fixture",
+      "response": {
+        "id": "PUBLIC_CAPTURE_ID",
+        "status": "COMPLETED",
+        "final_capture": true
+      },
+      "assert": {
+        "capture_history_complete": false,
+        "authorization_closed": true,
+        "amount_captured": "absent",
+        "subsequent_bare_voided_status": "PENDING, never VOIDED zero money"
+      }
+    },
+    {
+      "id": "legacy_missing_flag_empty_map",
+      "surface": "explicit_response_fixture",
+      "context": "Old metadata contains capture_amounts={} without capture_history_complete",
+      "assert": {
+        "captured_total": "unknown",
+        "remaining": "unknown, never authorization minus invented zero",
+        "manual_multiple_request_final_capture": false
+      }
+    },
+    {
+      "id": "legacy_missing_flag_partial_map",
+      "surface": "explicit_response_fixture",
+      "context": "Old metadata contains prior actual captureID3000 without capture_history_complete",
+      "assert": {
+        "observed_id_and_amount": "retained",
+        "captured_total": "unknown aggregate",
+        "remaining": "unknown aggregate"
+      }
+    },
+    {
+      "id": "bare_voided_lost_capture",
+      "surface": "explicit_response_fixture",
+      "context": "Pre-capture saved empty ledger plus bare VOIDED order without capture collection",
+      "assert": {
+        "status": "PENDING",
+        "capture_history_complete": false,
+        "previously_recorded_amount": "retained",
+        "never_infer_zero": true
+      }
+    },
+    {
+      "id": "owned_orders_restores_completeness",
+      "surface": "real_order_get_or_explicit_response_fixture",
+      "context": "Legacy/incomplete ledger plus actual full correlated Orders capture collection",
+      "assert": {
+        "capture_history_complete": true,
+        "captured_amount": "checked actual unique gross capture total",
+        "remaining": "actual authorization less captured, or zero only if actually closed"
+      }
+    },
+    {
+      "id": "manual_to_multiple_context_upgrade",
+      "surface": "real_capture_chain_or_explicit_response_fixture",
+      "context": "Originally MANUAL authorization followed by explicit MANUAL_MULTIPLE partial capture",
+      "assert": {
+        "operation": "allowed",
+        "returned_capture_method": "MANUAL_MULTIPLE",
+        "subsequent_sync_resource": "original_order",
+        "known_partial_captured_amount": "actual response amount, never requested fallback"
+      }
+    }
+  ],
+  "source_regression_execution": "NOT_RUN until approved committed consumer executes each case; no pass from JSON/static source checks"
 }

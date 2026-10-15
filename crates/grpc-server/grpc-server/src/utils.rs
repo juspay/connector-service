@@ -419,6 +419,8 @@ fn sanitize_log_value(value: &mut Value) {
                         | "body"
                         | "webhookbody"
                         | "headers"
+                        | "encrypteddata"
+                        | "paymentdata"
                 ) {
                     *value = Value::String("***".to_owned());
                 } else {

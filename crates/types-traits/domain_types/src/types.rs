@@ -1676,7 +1676,9 @@ impl<
     pub fn convert_to_domain_model_for_non_card_payment_methods(
         value: grpc_api_types::payments::PaymentMethod,
     ) -> Result<Self, error_stack::Report<IntegrationError>> {
-        tracing::info!("Non-card PaymentMethod data received: {:?}", value);
+        // The generated wallet messages contain plain-string encrypted credentials.
+        // Never format the payload here: type-based masking cannot protect them.
+        tracing::debug!("Converting non-card payment method");
 
         match value.payment_method {
             Some(data) => match data {

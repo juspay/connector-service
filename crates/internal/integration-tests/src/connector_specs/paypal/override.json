@@ -15,7 +15,15 @@
     },
     "no3ds_auto_capture_credit_card": {
       "grpc_req": {
-        "shipping_cost": 100
+        "shipping_cost": 100,
+        "connector_feature_data": {
+          "value": "{\"opaque_network_metadata\":{\"network\":{\"nested\":{\"marker\":\"PUBLIC_NESTED_VALUE_C01\"},\"reference\":\"PUBLIC_OPAQUE_REFERENCE_C01\",\"scheme\":\"VISA\"}},\"psync_flow\":\"CAPTURE\"}"
+        }
+      },
+      "assert": {
+        "connector_feature_data.value": {
+          "contains": "\"opaque_network_metadata\":{\"network\":{\"nested\":{\"marker\":\"PUBLIC_NESTED_VALUE_C01\"},\"reference\":\"PUBLIC_OPAQUE_REFERENCE_C01\",\"scheme\":\"VISA\"}}"
+        }
       }
     },
     "no3ds_auto_capture_debit_card": {

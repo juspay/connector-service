@@ -52,6 +52,7 @@ function _buildAuthenticateRequest(): types.IPaymentMethodAuthenticationServiceA
             "billingAddress": {
             }
         },
+        "connectorFeatureData": {"value": "{\"authentication_order_context\":{\"version\":1,\"request\":{\"merchant_transaction_id\":\"probe_paypal_native\",\"merchant_order_id\":\"probe_native_order\",\"order_tax_amount\":100,\"shipping_cost\":200,\"setup_future_usage\":\"OFF_SESSION\",\"billing_descriptor\":{\"statement_descriptor\":\"PROBE NATIVE\"},\"l2_l3_data\":{\"order_info\":{\"merchant_order_reference_id\":\"probe_native_l23\",\"order_details\":[]}},\"description\":\"Native safe context probe\"}}}"},  // Connector-specific metadata for the transaction.
         "returnUrl": "https://example.com/3ds-return",  // URLs for Redirection.
         "state": {  // State Information.
             "accessToken": {  // Access token obtained from connector.
@@ -98,6 +99,7 @@ function _buildAuthorizeRequest(captureMethod: types.CaptureMethod): types.IPaym
             }
         },
         "authType": AuthenticationType.NO_THREE_DS,  // Authentication Details.
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},  // Connector-specific feature data for the transaction.
         "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks.
         "billingDescriptor": {  // Statement Descriptor.
             "statementDescriptor": "PROBE DESCRIPTOR"  // Complete description that appears on customers' statements.
@@ -141,6 +143,7 @@ function _buildCaptureRequest(connectorTransactionId: string): types.IPaymentSer
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},  // Connector-specific metadata for the transaction.
         "captureMethod": CaptureMethod.MANUAL,  // Capture Settings.
         "state": {  // State Information.
             "accessToken": {  // Access token obtained from connector.
@@ -155,6 +158,7 @@ function _buildCaptureRequest(connectorTransactionId: string): types.IPaymentSer
 function _buildCreateClientAuthenticationTokenRequest(): types.IMerchantAuthenticationServiceCreateClientAuthenticationTokenRequest {
     return {
         "merchantClientSessionId": "probe_sdk_session_001",  // Infrastructure.
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},
         "payment": {
             "amount": {
                 "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
@@ -171,6 +175,7 @@ function _buildCreateOrderRequest(): types.IPaymentServiceCreateOrderRequest {
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},  // Connector-specific metadata for the transaction.
         "state": {  // State Information.
             "accessToken": {  // Access token obtained from connector.
                 "token": {"value": "probe_access_token"},  // The token string.
@@ -183,6 +188,7 @@ function _buildCreateOrderRequest(): types.IPaymentServiceCreateOrderRequest {
 
 function _buildCreateServerAuthenticationTokenRequest(): types.IMerchantAuthenticationServiceCreateServerAuthenticationTokenRequest {
     return {
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"}  // Connector-specific metadata for the transaction.
     };
 }
 
@@ -200,7 +206,8 @@ function _buildGetRequest(connectorTransactionId: string): types.IPaymentService
                 "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch).
                 "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
-        }
+        },
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"}  // Connector-specific metadata for the transaction.
     };
 }
 
@@ -248,6 +255,7 @@ function _buildPostAuthenticateRequest(): types.IPaymentMethodAuthenticationServ
             "billingAddress": {
             }
         },
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},  // Connector-specific metadata for the transaction.
         "state": {  // State Information.
             "accessToken": {  // Access token obtained from connector.
                 "token": {"value": "probe_access_token"},  // The token string.
@@ -280,6 +288,7 @@ function _buildProxyAuthorizeRequest(): types.IPaymentServiceProxyAuthorizeReque
         "captureMethod": CaptureMethod.AUTOMATIC,
         "authType": AuthenticationType.NO_THREE_DS,
         "returnUrl": "https://example.com/return",
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},
         "state": {
             "accessToken": {  // Access token obtained from connector.
                 "token": {"value": "probe_access_token"},  // The token string.
@@ -294,6 +303,9 @@ function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeReq
     return {
         "merchantChargeId": "probe_paypal_mit_charge",  // Reference ID for tracking.
         "connectorRecurringPaymentId": {  // Reference to existing mandate.
+            "networkMandateId": {  // network_mandate_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data.
+                "networkTransactionId": "123456789012345"
+            }
         },
         "amount": {  // Amount Information.
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
@@ -309,6 +321,7 @@ function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeReq
             }
         },
         "metadata": {"value": "{\"paypal_mit\":{\"version\":1,\"previous_network_transaction_reference\":{\"id\":\"123456789012345\",\"network\":\"VISA\",\"date\":\"1014\"}}}"},  // Additional metadata for the connector.
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},  // Connector-specific metadata for the transaction.
         "returnUrl": "https://example.com/recurring-return",
         "address": {  // Address Information.
             "shippingAddress": {
@@ -352,6 +365,7 @@ function _buildRefundRequest(connectorTransactionId: string): types.IPaymentServ
             "currency": Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         },
         "reason": "customer_request",  // Reason for the refund.
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},  // Connector-specific metadata for the transaction.
         "state": {  // State data for access token storage and.
             "accessToken": {  // Access token obtained from connector.
                 "token": {"value": "probe_access_token"},  // The token string.
@@ -399,6 +413,7 @@ function _buildSetupRecurringRequest(): types.IPaymentServiceSetupRecurringReque
         },
         "authType": AuthenticationType.NO_THREE_DS,  // Type of authentication to be used.
         "enrolledFor_3ds": false,  // Indicates if the customer is enrolled for 3D Secure.
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},  // Connector-specific metadata for the transaction.
         "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup.
         "setupFutureUsage": FutureUsage.OFF_SESSION,  // Indicates future usage intention.
         "requestIncrementalAuthorization": false,  // Indicates if incremental authorization is requested.
@@ -420,6 +435,7 @@ function _buildVoidRequest(connectorTransactionId: string): types.IPaymentServic
     return {
         "merchantVoidId": "probe_void_001",  // Identification.
         "connectorTransactionId": connectorTransactionId,
+        "connectorFeatureData": {"value": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"},  // Connector-specific metadata for the transaction.
         "state": {  // State Information.
             "accessToken": {  // Access token obtained from connector.
                 "token": {"value": "probe_access_token"},  // The token string.

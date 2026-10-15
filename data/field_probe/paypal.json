@@ -30,6 +30,7 @@
             },
             "billing_address": {}
           },
+          "connector_feature_data": "{\"authentication_order_context\":{\"version\":1,\"request\":{\"merchant_transaction_id\":\"probe_paypal_native\",\"merchant_order_id\":\"probe_native_order\",\"order_tax_amount\":100,\"shipping_cost\":200,\"setup_future_usage\":\"OFF_SESSION\",\"billing_descriptor\":{\"statement_descriptor\":\"PROBE NATIVE\"},\"l2_l3_data\":{\"order_info\":{\"merchant_order_reference_id\":\"probe_native_l23\",\"order_details\":[]}},\"description\":\"Native safe context probe\"}}}",
           "return_url": "https://example.com/3ds-return",
           "state": {
             "access_token": {
@@ -60,8 +61,8 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "AchBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Affirm": {
         "status": "not_supported",
@@ -72,8 +73,8 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "Alfamart": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "AliPayRedirect": {
         "status": "not_supported",
@@ -123,6 +124,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -167,7 +169,7 @@
             "prefer": "return=representation",
             "via": "HyperSwitch"
           },
-          "body": "{\"payment_source\":{\"apple_pay\":{\"token\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"}}}"
+          "body": "{\"payment_source\":{\"apple_pay\":{\"token\":\"eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSIsImhlYWRlciI6eyJlcGhlbWVyYWxQdWJsaWNLZXkiOiJwcm9iZSIsInB1YmxpY0tleUhhc2giOiJwcm9iZSIsInRyYW5zYWN0aW9uSWQiOiJwcm9iZV90eG5faWQifX0=\"}}}"
         }
       },
       "ApplePayDecrypted": {
@@ -220,6 +222,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -276,16 +279,16 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "BacsBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "BancontactCard": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "BcaBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Becs": {
         "status": "not_supported",
@@ -296,28 +299,28 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "Bizum": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Blik": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Bluecode": {
         "status": "not_supported",
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "BniVaBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Boleto": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "BriVaBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Card": {
         "status": "supported",
@@ -355,6 +358,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -411,8 +415,8 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "CimbVaBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "ClassicReward": {
         "status": "not_supported",
@@ -427,8 +431,8 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "DanamonVaBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "DuitNow": {
         "status": "not_implemented",
@@ -443,12 +447,12 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "Efecty": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Eft": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Eps": {
         "status": "supported",
@@ -482,6 +486,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -530,8 +535,8 @@
         }
       },
       "FamilyMart": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "GCash": {
         "status": "not_supported",
@@ -569,6 +574,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -675,6 +681,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -758,6 +765,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -806,28 +814,28 @@
         }
       },
       "Indomaret": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "IndonesianBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "InstantBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "InstantBankTransferFinland": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "InstantBankTransferPoland": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Interac": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "KakaoPay": {
         "status": "not_supported",
@@ -838,24 +846,24 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "Lawson": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "LazyPayRedirect": {
         "status": "not_supported",
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "LocalBankRedirect": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "LocalBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "MandiriVaBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "MbWay": {
         "status": "not_supported",
@@ -866,8 +874,8 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "MiniStop": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "MobilePayRedirect": {
         "status": "not_implemented",
@@ -878,60 +886,60 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "MultibancoBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Netbanking": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "OnlineBankingCzechRepublic": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "OnlineBankingFinland": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "OnlineBankingFpx": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "OnlineBankingPoland": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "OnlineBankingSlovakia": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "OnlineBankingThailand": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "OpenBanking": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "OpenBankingPis": {
         "status": "not_implemented",
         "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "OpenBankingUk": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Oxxo": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "PagoEfectivo": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "PayEasy": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "PaySafeCard": {
         "status": "not_supported",
@@ -973,6 +981,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -1052,6 +1061,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -1108,32 +1118,32 @@
         "error": "This feature is not implemented: payment_method. The provided payment method variant is not yet supported by this flow"
       },
       "PermataBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "PhonePeRedirect": {
         "status": "not_supported",
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "Pix": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Przelewy24": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Pse": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "RedCompra": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "RedPagos": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "RevolutPay": {
         "status": "not_supported",
@@ -1148,24 +1158,24 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "Seicomart": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Sepa": {
         "status": "not_supported",
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "SepaBankTransfer": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "SepaGuaranteedDebit": {
         "status": "not_supported",
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "SevenEleven": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Skrill": {
         "status": "not_supported",
@@ -1203,6 +1213,7 @@
             }
           },
           "auth_type": "NO_THREE_DS",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/return",
           "billing_descriptor": {
             "statement_descriptor": "PROBE DESCRIPTOR"
@@ -1259,8 +1270,8 @@
         "error": "Selected payment method through Paypal is not supported by Paypal"
       },
       "Trustly": {
-        "status": "not_implemented",
-        "error": "This feature is not implemented: Selected payment method through Paypal"
+        "status": "not_supported",
+        "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no supported PayPal Orders payment_source mapping"
       },
       "Twint": {
         "status": "not_supported",
@@ -1305,6 +1316,7 @@
             "minor_amount": 1000,
             "currency": "USD"
           },
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "capture_method": "MANUAL",
           "state": {
             "access_token": {
@@ -1334,6 +1346,7 @@
         "status": "supported",
         "proto_request": {
           "merchant_client_session_id": "probe_sdk_session_001",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "domain_context": {
             "payment": {
               "amount": {
@@ -1364,6 +1377,7 @@
             "minor_amount": 1000,
             "currency": "USD"
           },
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -1390,7 +1404,9 @@
     "create_server_authentication_token": {
       "default": {
         "status": "supported",
-        "proto_request": {},
+        "proto_request": {
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"
+        },
         "sample": {
           "url": "https://api-m.sandbox.paypal.com/v1/oauth2/token",
           "method": "Post",
@@ -1466,7 +1482,8 @@
               "expires_in_seconds": 3600,
               "token_type": "Bearer"
             }
-          }
+          },
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"
         },
         "sample": {
           "url": "https://api-m.sandbox.paypal.com/v2/payments/captures/probe_cap_001",
@@ -1552,6 +1569,7 @@
           "address": {
             "billing_address": {}
           },
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -1603,6 +1621,7 @@
           "capture_method": "AUTOMATIC",
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -1658,6 +1677,7 @@
             }
           },
           "metadata": "{\"paypal_mit\":{\"version\":1,\"previous_network_transaction_reference\":{\"id\":\"123456789012345\",\"network\":\"VISA\",\"date\":\"1014\"}}}",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/recurring-return",
           "address": {
             "shipping_address": {
@@ -1727,6 +1747,7 @@
             "currency": "USD"
           },
           "reason": "customer_request",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -1808,6 +1829,7 @@
           },
           "auth_type": "NO_THREE_DS",
           "enrolled_for_3ds": false,
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "return_url": "https://example.com/mandate-return",
           "setup_future_usage": "OFF_SESSION",
           "request_incremental_authorization": false,
@@ -1850,6 +1872,32 @@
         "error": "Selected payment method through Paypal is not supported by Paypal. This payment method has no direct PayPal zero-value vault request carrier"
       }
     },
+    "tokenize": {
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method_token flow for paypal"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method_token flow for paypal"
+      },
+      "ApplePayThirdPartySdk": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method_token flow for paypal"
+      },
+      "Card": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method_token flow for paypal"
+      },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method_token flow for paypal"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This feature is not implemented: payment_method_token flow for paypal"
+      }
+    },
     "verify_redirect": {
       "default": {
         "status": "not_implemented"
@@ -1861,6 +1909,7 @@
         "proto_request": {
           "merchant_void_id": "probe_void_001",
           "connector_transaction_id": "probe_auth_001",
+          "connector_feature_data": "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}",
           "state": {
             "access_token": {
               "token": "probe_access_token",

@@ -204,25 +204,33 @@
           "paypal-cert-url": "https://api.sandbox.paypal.com/v1/notifications/certs/CERT-public-probe"
         },
         "body": {
-          "id": "WH-public-probe",
-          "event_type": "PAYMENT.CAPTURE.COMPLETED",
-          "resource_type": "capture",
+          "id": "PUBLIC_EVENT",
+          "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
+          "resource_type": "authorization",
           "resource": {
-            "id": "CAPTURE-public-probe",
-            "status": "COMPLETED",
+            "id": "PUBLIC_AUTH",
+            "status": "VOIDED",
+            "amount": {
+              "value": "60.00",
+              "currency_code": "USD"
+            },
             "supplementary_data": {
               "related_ids": {
-                "order_id": "ORDER-public-probe"
+                "order_id": "PUBLIC_ORDER"
               }
-            },
-            "amount": {
-              "currency_code": "USD",
-              "value": "20.00"
             }
           }
         }
       },
-      "merchant_event_id": "paypal_authorization_voided"
+      "merchant_event_id": "paypal_authorization_voided",
+      "event_context": {
+        "payment": {
+          "connector_transaction_id": "PUBLIC_ORDER",
+          "related_connector_transaction_ids": [
+            "PUBLIC_AUTH"
+          ]
+        }
+      }
     }
   },
   "paypal_capture_pending": {

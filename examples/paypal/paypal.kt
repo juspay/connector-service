@@ -85,6 +85,7 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details.
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific feature data for the transaction.
         returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks.
         billingDescriptorBuilder.apply {  // Statement Descriptor.
             statementDescriptor = "PROBE DESCRIPTOR"  // Complete description that appears on customers' statements.
@@ -98,7 +99,16 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
         }
         l2L3DataBuilder.apply {  // Level 2 / Level 3 data for enhanced payment processing.
             orderInfoBuilder.apply {  // Order-level information.
-                // orderDetails: [{"product_name": "Probe item", "quantity": 1, "amount": 700, "total_tax_amount": 100, "product_id": "sku_probe_001", "description": "Probe line item", "unit_of_measure": "EACH", "commodity_code": "4900"}]  // Line items for the order.
+                addOrderDetails(OrderDetailsWithAmount.newBuilder().apply {  // Line items for the order.
+                    productName = "Probe item"  // Name of the product that is being purchased.
+                    quantity = 1  // The quantity of the product to be purchased.
+                    amount = 700L  // Amount per quantity (in minor currency units).
+                    totalTaxAmount = 100L  // Total tax amount (in minor currency units).
+                    productId = "sku_probe_001"  // ID of the product that is being purchased.
+                    description = "Probe line item"  // Description for the item.
+                    unitOfMeasure = "EACH"  // Unit of measure used for the item quantity.
+                    commodityCode = "4900"  // Commodity code describing the product classification.
+                }.build())
                 merchantOrderReferenceId = "probe_invoice_001"  // Merchant's internal reference ID for the order.
                 shippingCost = 200L  // Shipping cost for the order (in minor currency units).
             }
@@ -117,6 +127,7 @@ private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServi
             minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
         captureMethod = CaptureMethod.MANUAL  // Capture Settings.
         stateBuilder.apply {  // State Information.
             accessTokenBuilder.apply {  // Access token obtained from connector.
@@ -143,6 +154,7 @@ private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGe
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
         }
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
     }.build()
 }
 
@@ -156,6 +168,7 @@ private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServic
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
         reason = "customer_request"  // Reason for the refund.
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
         stateBuilder.apply {  // State data for access token storage and.
             accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
@@ -170,6 +183,7 @@ private fun buildVoidRequest(connectorTransactionIdStr: String): PaymentServiceV
     return PaymentServiceVoidRequest.newBuilder().apply {
         merchantVoidId = "probe_void_001"  // Identification.
         connectorTransactionId = connectorTransactionIdStr
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
         stateBuilder.apply {  // State Information.
             accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
@@ -308,6 +322,7 @@ fun authenticate(txnId: String, config: ConnectorConfig = _defaultConfig) {
             billingAddressBuilder.apply {
             }
         }
+        connectorFeatureDataBuilder.value = "{\"authentication_order_context\":{\"version\":1,\"request\":{\"merchant_transaction_id\":\"probe_paypal_native\",\"merchant_order_id\":\"probe_native_order\",\"order_tax_amount\":100,\"shipping_cost\":200,\"setup_future_usage\":\"OFF_SESSION\",\"billing_descriptor\":{\"statement_descriptor\":\"PROBE NATIVE\"},\"l2_l3_data\":{\"order_info\":{\"merchant_order_reference_id\":\"probe_native_l23\",\"order_details\":[]}},\"description\":\"Native safe context probe\"}}}"  // Connector-specific metadata for the transaction.
         returnUrl = "https://example.com/3ds-return"  // URLs for Redirection.
         stateBuilder.apply {  // State Information.
             accessTokenBuilder.apply {  // Access token obtained from connector.
@@ -348,6 +363,7 @@ fun createClientAuthenticationToken(txnId: String, config: ConnectorConfig = _de
     val client = MerchantAuthenticationClient(config)
     val request = MerchantAuthenticationServiceCreateClientAuthenticationTokenRequest.newBuilder().apply {
         merchantClientSessionId = "probe_sdk_session_001"  // Infrastructure.
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"
         paymentBuilder.apply {
             amountBuilder.apply {
                 minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
@@ -368,6 +384,7 @@ fun createOrder(txnId: String, config: ConnectorConfig = _defaultConfig) {
             minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00).
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR").
         }
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
         stateBuilder.apply {  // State Information.
             accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
@@ -384,7 +401,7 @@ fun createOrder(txnId: String, config: ConnectorConfig = _defaultConfig) {
 fun createServerAuthenticationToken(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val client = MerchantAuthenticationClient(config)
     val request = MerchantAuthenticationServiceCreateServerAuthenticationTokenRequest.newBuilder().apply {
-
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
     }.build()
     val response = client.create_server_authentication_token(request)
     println("StatusCode: ${response.statusCode}")
@@ -450,6 +467,7 @@ fun postAuthenticate(txnId: String, config: ConnectorConfig = _defaultConfig) {
             billingAddressBuilder.apply {
             }
         }
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
         stateBuilder.apply {  // State Information.
             accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
@@ -486,6 +504,7 @@ fun proxyAuthorize(txnId: String, config: ConnectorConfig = _defaultConfig) {
         captureMethod = CaptureMethod.AUTOMATIC
         authType = AuthenticationType.NO_THREE_DS
         returnUrl = "https://example.com/return"
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"
         stateBuilder.apply {
             accessTokenBuilder.apply {  // Access token obtained from connector.
                 tokenBuilder.value = "probe_access_token"  // The token string.
@@ -522,6 +541,7 @@ fun recurringCharge(txnId: String, config: ConnectorConfig = _defaultConfig) {
             }
         }
         metadataBuilder.value = "{\"paypal_mit\":{\"version\":1,\"previous_network_transaction_reference\":{\"id\":\"123456789012345\",\"network\":\"VISA\",\"date\":\"1014\"}}}"  // Additional metadata for the connector.
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
         returnUrl = "https://example.com/recurring-return"
         addressBuilder.apply {  // Address Information.
             shippingAddressBuilder.apply {
@@ -612,6 +632,7 @@ fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
         }
         authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used.
         enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure.
+        connectorFeatureDataBuilder.value = "{\"authorize_id\":\"probe_auth_001\",\"capture_id\":\"probe_cap_001\",\"psync_flow\":\"CAPTURE\",\"order_id\":\"probe_order_001\"}"  // Connector-specific metadata for the transaction.
         returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup.
         setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention.
         requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested.

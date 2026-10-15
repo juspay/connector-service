@@ -1097,13 +1097,17 @@
         "session_token": ""
       },
       "assert": {
-        "error": {
-          "must_exist": true
-        },
         "error.error_code": {
-          "must_exist": true
+          "equals": "INVALID_DATA_FORMAT"
+        },
+        "error.error_message": {
+          "equals": "Invalid data format: payment_method.network_token. CIT requires the provisioned one-use token cryptogram"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
         }
-      }
+      },
+      "display_name": "paypal_networktoken_missing_crypto_refused \u2014 specific local refusal; no financial outbound request required"
     },
     "paypal_networktoken_unknown_eci_refused": {
       "grpc_req": {
@@ -1249,13 +1253,17 @@
         "session_token": ""
       },
       "assert": {
-        "error": {
-          "must_exist": true
-        },
         "error.error_code": {
-          "must_exist": true
+          "equals": "INVALID_DATA_FORMAT"
+        },
+        "error.error_message": {
+          "equals": "Invalid data format: payment_method.network_token. Unsupported numeric/descriptive ECI; use a documented enum or network-specific ECI00/01/02/05/06/07"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
         }
-      }
+      },
+      "display_name": "paypal_networktoken_unknown_eci_refused \u2014 specific local refusal; no financial outbound request required"
     },
     "paypal_networktoken_information_only_full_eci_refused": {
       "grpc_req": {
@@ -1405,13 +1413,20 @@
         }
       },
       "assert": {
+        "error.error_code": {
+          "equals": "NOT_SUPPORTED"
+        },
+        "error.error_message": {
+          "equals": "PayPal Orders has no documented external ACS authentication result carrier is not supported by paypal. Use native PayPal authentication or a genuine TSP token cryptogram/ECI; ACS CAVV/trans_status cannot be imported through a wallet or network token"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
+        },
         "error": {
           "must_exist": true
-        },
-        "error.error_code": {
-          "must_exist": true
         }
-      }
+      },
+      "display_name": "Explicit external InformationOnly ACS result refused before network-token charge; genuine TSP ECI is separate"
     },
     "paypal_networktoken_native_three_ds_refused": {
       "grpc_req": {
@@ -1557,13 +1572,17 @@
         "session_token": ""
       },
       "assert": {
-        "error": {
-          "must_exist": true
-        },
         "error.error_code": {
-          "must_exist": true
+          "equals": "INVALID_DATA_FORMAT"
+        },
+        "error.error_message": {
+          "equals": "Invalid data format: payment_method.network_token. Hosted native 3DS is not supported for this network-token carrier; use the genuine TSP token cryptogram and ECI without an external ACS result"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
         }
-      }
+      },
+      "display_name": "paypal_networktoken_native_three_ds_refused \u2014 specific local refusal; no financial outbound request required"
     },
     "paypal_googlepay_hs_pan_only_no_signed_expiry": {
       "grpc_req": {
@@ -1884,13 +1903,17 @@
         "session_token": ""
       },
       "assert": {
-        "error": {
-          "must_exist": true
-        },
         "error.error_code": {
-          "must_exist": true
+          "equals": "INVALID_DATA_FORMAT"
+        },
+        "error.error_message": {
+          "equals": "Invalid data format: payment_method.network_token. The original signed Google Pay message has expired"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
         }
-      }
+      },
+      "display_name": "paypal_googlepay_expired_refused \u2014 specific local refusal; no financial outbound request required"
     },
     "paypal_googlepay_malformed_expiration_refused": {
       "grpc_req": {
@@ -2046,13 +2069,17 @@
         "session_token": ""
       },
       "assert": {
-        "error": {
-          "must_exist": true
-        },
         "error.error_code": {
-          "must_exist": true
+          "equals": "INVALID_DATA_FORMAT"
+        },
+        "error.error_message": {
+          "equals": "Invalid data format: payment_method.network_token. Google message_expiration must be13 ASCII digits in UTC milliseconds"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
         }
-      }
+      },
+      "display_name": "paypal_googlepay_malformed_expiration_refused \u2014 specific local refusal; no financial outbound request required"
     },
     "paypal_googlepay_crypto_method_missing_crypto_refused": {
       "grpc_req": {
@@ -2205,13 +2232,17 @@
         "session_token": ""
       },
       "assert": {
-        "error": {
-          "must_exist": true
-        },
         "error.error_code": {
-          "must_exist": true
+          "equals": "INVALID_DATA_FORMAT"
+        },
+        "error.error_message": {
+          "equals": "Invalid data format: payment_method.network_token. Explicit Google CRYPTOGRAM_3DS requires the provisioned cryptogram"
+        },
+        "connector_transaction_id": {
+          "must_not_exist": true
         }
-      }
+      },
+      "display_name": "paypal_googlepay_crypto_method_missing_crypto_refused \u2014 specific local refusal; no financial outbound request required"
     },
     "paypal_card_without_cvc_supported": {
       "grpc_req": {
@@ -2575,35 +2606,49 @@
             "paypal-cert-url": "https://api.sandbox.paypal.com/v1/notifications/certs/CERT-public-probe"
           },
           "body": {
-            "id": "WH-public-probe",
+            "id": "PUBLIC_EVENT",
             "event_type": "PAYMENT.AUTHORIZATION.VOIDED",
             "resource_type": "authorization",
             "resource": {
-              "id": "AUTH-public-probe",
+              "id": "PUBLIC_AUTH",
               "status": "VOIDED",
               "amount": {
-                "currency_code": "USD",
-                "value": "60.00"
+                "value": "60.00",
+                "currency_code": "USD"
               },
               "supplementary_data": {
                 "related_ids": {
-                  "order_id": "ORDER-public-probe"
+                  "order_id": "PUBLIC_ORDER"
                 }
               }
             }
           }
         },
-        "merchant_event_id": "paypal_authorization_voided"
+        "merchant_event_id": "paypal_authorization_voided",
+        "event_context": {
+          "payment": {
+            "connector_transaction_id": "PUBLIC_ORDER",
+            "related_connector_transaction_ids": [
+              "PUBLIC_AUTH"
+            ]
+          }
+        }
       },
       "assert": {
-        "error": {
-          "must_exist": true
+        "source_verified": {
+          "equals": true
         },
-        "event_content.payments_response": {
+        "event_type": {
+          "equals": "PAYMENT_INTENT_PROCESSING"
+        },
+        "event_content.payments_response.status": {
+          "equals": "PENDING"
+        },
+        "event_content.payments_response.captured_amount": {
           "must_not_exist": true
         }
       },
-      "display_name": "AUTHORIZATION.VOIDED financial-context gap: must fail closed even with authentic source; live NOT_RUN without authentic fixture"
+      "display_name": "Authentic AUTHORIZATION.VOIDED delivery requires authoritative Order reconciliation; Pending is not cancellation; NOT_RUN without real delivery"
     },
     "paypal_capture_pending": {
       "grpc_req": {
@@ -3975,9 +4020,12 @@
         },
         "error": {
           "must_not_exist": true
+        },
+        "connector_feature_data.value": {
+          "contains": "\"opaque_network_metadata\":{\"network\":{\"nested\":{\"marker\":\"PUBLIC_NESTED_VALUE_C01\"},\"reference\":\"PUBLIC_OPAQUE_REFERENCE_C01\",\"scheme\":\"VISA\"}}"
         }
       },
-      "display_name": "Actual capture sync preserves original metadata and actualMoney"
+      "display_name": "Actual capture sync preserves exact public nested opaque network metadata from its Authorize prerequisite"
     }
   },
   "PaymentService/SetupRecurring": {

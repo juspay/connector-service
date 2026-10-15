@@ -199,9 +199,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(WebhookError::WebhookBodyDecodingFailed)?;
         use paypal::PaypalWebhookEventType as E;
         match envelope.event_type {
-            E::PaymentAuthorizationVoided => Err(report!(WebhookError::WebhooksNotImplemented {
-                operation: "PAYMENT.AUTHORIZATION.VOIDED requires actual captured-money history; EventContext has no financial ledger, so cancellation cannot be safely inferred",
-            })),
+            E::PaymentAuthorizationVoided => {
+                let details: paypal::PaypalWebhooksBody = request
+                    .body
+                    .parse_struct("PaypalAuthorizationVoidedWebhook")
+                    .change_context(WebhookError::WebhookBodyDecodingFailed)?;
+                let paypal::PaypalResource::PaypalCardWebhooks(resource) = details.resource else {
+                    return Err(report!(WebhookError::WebhookResourceObjectNotFound));
+                };
+                paypal_webhook_order_id(&resource)?;
+                paypal_check_webhook_resource_status(
+                    envelope.event_type,
+                    resource.status.as_deref(),
+                )?;
+                Ok(domain_types::connector_types::EventType::PaymentIntentProcessing)
+            }
             E::CustomerDisputeCreated | E::CustomerDisputeResolved | E::CustomerDisputedUpdated => {
                 let details: paypal::PaypalWebhooksBody = request
                     .body
@@ -319,7 +331,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-        _event_context: Option<EventContext>,
+        event_context: Option<EventContext>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
         error_stack::Report<WebhookError>,
@@ -331,6 +343,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let (id, status, amount_captured, reference, reason) = match details.resource {
             paypal::PaypalResource::PaypalCardWebhooks(resource) => {
                 let id = paypal_webhook_order_id(&resource)?.to_owned();
+                if details.event_type == paypal::PaypalWebhookEventType::PaymentAuthorizationVoided
+                {
+                    let context = event_context.as_ref().ok_or_else(|| {
+                        report!(WebhookError::WebhookMissingRequiredContext {
+                            field: "payment.connector_transaction_id",
+                            origin: "stored canonical PayPal order"
+                        })
+                    })?;
+                    if context.connector_transaction_id.as_deref() != Some(id.as_str()) {
+                        return Err(report!(WebhookError::WebhookSourceVerificationFailed)
+                            .attach_printable("PayPal voided authorization order does not belong to the stored payment"));
+                    }
+                }
                 let status = get_paypal_payment_webhook_status(details.event_type)?;
                 paypal_check_webhook_resource_status(
                     details.event_type,
@@ -666,7 +691,7 @@ fn get_paypal_event_type(
             R::PaymentIntentFailure
         }
         E::PaymentAuthorizationCreated => R::PaymentIntentAuthorizationSuccess,
-        E::PaymentAuthorizationVoided => R::IncomingWebhookEventUnspecified,
+        E::PaymentAuthorizationVoided => R::PaymentIntentProcessing,
         E::PaymentCaptureRefunded => R::RefundSuccess,
         E::PaymentRefundPending => R::RefundProcessing,
         E::PaymentRefundFailed => R::RefundFailure,
@@ -694,9 +719,9 @@ fn get_paypal_payment_webhook_status(
         E::PaymentCapturePending | E::CheckoutOrderProcessed => AttemptStatus::Pending,
         E::PaymentCaptureDeclined | E::PaymentCaptureDenied => AttemptStatus::Failure,
         E::PaymentAuthorizationCreated => AttemptStatus::Authorized,
-        E::PaymentAuthorizationVoided => return Err(report!(WebhookError::WebhooksNotImplemented {
-            operation: "PAYMENT.AUTHORIZATION.VOIDED requires actual captured-money history; authorization amount is not captured amount",
-        })),
+        // An authorization closure is not evidence of the whole payment's
+        // captured amount. The caller must reconcile the canonical order.
+        E::PaymentAuthorizationVoided => AttemptStatus::Pending,
         E::PaymentCaptureReversed => AttemptStatus::Unresolved,
         _ => return Err(report!(WebhookError::WebhookEventTypeNotFound)),
     })
@@ -716,7 +741,9 @@ fn paypal_check_webhook_resource_status(
         E::PaymentAuthorizationVoided => "VOIDED",
         _ => return Err(report!(WebhookError::WebhookEventTypeNotFound)),
     };
-    if status.is_some_and(|status| status != expected) {
+    if status.is_some_and(|status| status != expected)
+        || (event == E::PaymentAuthorizationVoided && status.is_none())
+    {
         return Err(report!(WebhookError::WebhookProcessingFailed)
             .attach_printable("PayPal payment webhook event and resource status disagree"));
     }
@@ -1262,7 +1289,20 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, IntegrationError> {
             let metadata = paypal::sync_metadata(req)?;
             let target = paypal::sync_target(req, &metadata)?;
-            Ok(format!("{}{}", self.connector_base_url_payments(req), target.path()))
+            let endpoint = format!("{}{}", self.connector_base_url_payments(req), target.path());
+            let parsed = url::Url::parse(&endpoint).map_err(|_| IntegrationError::InvalidDataFormat {
+                field_name: "paypal.sync_url",
+                context: IntegrationErrorContext { additional_context: Some("PSync requires a valid unfiltered resource URL".to_owned()), ..Default::default() },
+            })?;
+            // C25 requires a full unfiltered Orders GET. Configuration must not
+            // smuggle fields/filter/pagination into the otherwise fixed target.
+            if parsed.query().is_some() || parsed.fragment().is_some() {
+                return Err(IntegrationError::InvalidDataFormat {
+                    field_name: "paypal.sync_url",
+                context: IntegrationErrorContext { additional_context: Some("PSync requires a valid unfiltered resource URL".to_owned()), ..Default::default() },
+                }.into());
+            }
+            Ok(endpoint)
         }
     }
 );
@@ -1302,7 +1342,9 @@ macros::macro_connector_implementation!(
             let connector_metadata = req.resource_common_data.connector_feature_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
-            let operation_reference = if req.request.capture_method == Some(common_enums::CaptureMethod::ManualMultiple)
+            let metadata = paypal::capture_metadata(req)?;
+            let saved_mode = metadata.capture_context.as_ref().and_then(|context| context.capture_method);
+            let operation_reference = if req.request.capture_method.or(saved_mode) == Some(common_enums::CaptureMethod::ManualMultiple)
                 || req.request.multiple_capture_data.is_some()
             {
                 req.request.multiple_capture_data.as_ref()

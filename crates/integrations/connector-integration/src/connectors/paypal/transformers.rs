@@ -595,13 +595,72 @@ fn network_token_invalid(message: &str) -> Report<IntegrationError> {
     .into()
 }
 
+// An empty generated message carries no ACS result. Inspect every actual
+// AuthenticationData field rather than refusing Some(default).
+fn meaningful_external_authentication(
+    data: Option<&domain_types::router_request_types::AuthenticationData>,
+) -> bool {
+    let Some(data) = data else {
+        return false;
+    };
+    let nonempty = |value: Option<&str>| value.is_some_and(|value| !value.trim().is_empty());
+    data.trans_status.is_some()
+        || nonempty(data.eci.as_deref())
+        || data
+            .cavv
+            .as_ref()
+            .is_some_and(|value| !value.peek().trim().is_empty())
+        || nonempty(data.ucaf_collection_indicator.as_deref())
+        || nonempty(data.threeds_server_transaction_id.as_deref())
+        || data.message_version.is_some()
+        || nonempty(data.ds_trans_id.as_deref())
+        || nonempty(data.acs_transaction_id.as_deref())
+        || nonempty(data.transaction_id.as_deref())
+        || data
+            .network_params
+            .as_ref()
+            .is_some_and(|params| params.cartes_bancaires.is_some())
+        || data.exemption_indicator.is_some()
+        || data.created_at.is_some()
+        || nonempty(data.challenge_code.as_deref())
+        || nonempty(data.challenge_cancel.as_deref())
+        || nonempty(data.challenge_code_reason.as_deref())
+        || data
+            .message_extension
+            .as_ref()
+            .is_some_and(|value| match value.peek() {
+                serde_json::Value::Null => false,
+                serde_json::Value::Object(value) => !value.is_empty(),
+                serde_json::Value::Array(value) => !value.is_empty(),
+                serde_json::Value::String(value) => !value.trim().is_empty(),
+                _ => true,
+            })
+        || data.authentication_type.is_some()
+}
+fn reject_external_authentication(
+    data: Option<&domain_types::router_request_types::AuthenticationData>,
+) -> Result<(), Report<IntegrationError>> {
+    if meaningful_external_authentication(data) {
+        return Err(IntegrationError::NotSupported {
+            message: "PayPal Orders has no documented external ACS authentication result carrier".to_owned(),
+            connector: "paypal",
+            context: domain_types::errors::IntegrationErrorContext {
+                doc_url: Some("https://developer.paypal.com/api/orders/v2/schema.json".to_owned()),
+                additional_context: Some("Use native PayPal authentication or a genuine TSP token cryptogram/ECI; ACS CAVV/trans_status cannot be imported through a wallet or network token".to_owned()),
+                ..Default::default()
+            },
+        }.into());
+    }
+    Ok(())
+}
+
 fn network_token_eci<T: PaymentMethodDataTypes>(
     token: &domain_types::payment_method_data::NetworkTokenData,
     request: &PaymentsAuthorizeData<T>,
     auth_type: common_enums::AuthenticationType,
 ) -> Result<String, Report<IntegrationError>> {
     if auth_type == common_enums::AuthenticationType::ThreeDs {
-        return Err(network_token_invalid("Hosted native 3DS is not supported for this network-token carrier; provide corroborated external token authentication instead"));
+        return Err(network_token_invalid("Hosted native 3DS is not supported for this network-token carrier; use the genuine TSP token cryptogram and ECI without an external ACS result"));
     }
     let cryptogram = token.token_cryptogram.as_ref().ok_or_else(|| {
         network_token_invalid("CIT requires the provisioned one-use token cryptogram")
@@ -619,6 +678,10 @@ fn network_token_eci<T: PaymentMethodDataTypes>(
     let network_known = token.card_network.is_some();
     let eci = match raw {
         "00" => "MASTERCARD_NON_3D_SECURE_TRANSACTION",
+        "01" => "MASTERCARD_ATTEMPTED_AUTHENTICATION_TRANSACTION",
+        "02" => "MASTERCARD_FULLY_AUTHENTICATED_TRANSACTION",
+        "05" => "FULLY_AUTHENTICATED_TRANSACTION",
+        "06" => "ATTEMPTED_AUTHENTICATION_TRANSACTION",
         "07" => "NON_3D_SECURE_TRANSACTION",
         "MASTERCARD_NON_3D_SECURE_TRANSACTION"
         | "MASTERCARD_ATTEMPTED_AUTHENTICATION_TRANSACTION"
@@ -628,7 +691,7 @@ fn network_token_eci<T: PaymentMethodDataTypes>(
         | "NON_3D_SECURE_TRANSACTION" => raw,
         _ => {
             return Err(network_token_invalid(
-                "Unsupported numeric/descriptive ECI; use a documented enum,00 or07",
+                "Unsupported numeric/descriptive ECI; use a documented enum or network-specific ECI00/01/02/05/06/07",
             ))
         }
     };
@@ -637,45 +700,8 @@ fn network_token_eci<T: PaymentMethodDataTypes>(
             "ECI must be corroborated by the explicit card network",
         ));
     }
-    if request.authentication_data.as_ref().is_some_and(|data| {
-        data.cavv
-            .as_ref()
-            .is_some_and(|cavv| !cavv.peek().is_empty())
-    }) {
-        return Err(network_token_invalid(
-            "External CAVV cannot replace or be imported as the network-token cryptogram",
-        ));
-    }
-    let expected = match eci {
-        "MASTERCARD_FULLY_AUTHENTICATED_TRANSACTION" => {
-            Some((common_enums::TransactionStatus::Success, "02"))
-        }
-        "FULLY_AUTHENTICATED_TRANSACTION" => Some((common_enums::TransactionStatus::Success, "05")),
-        "MASTERCARD_ATTEMPTED_AUTHENTICATION_TRANSACTION" => {
-            Some((common_enums::TransactionStatus::NotVerified, "01"))
-        }
-        "ATTEMPTED_AUTHENTICATION_TRANSACTION" => {
-            Some((common_enums::TransactionStatus::NotVerified, "06"))
-        }
-        "MASTERCARD_NON_3D_SECURE_TRANSACTION" | "NON_3D_SECURE_TRANSACTION" => None,
-        _ => return Err(network_token_invalid("Unsupported descriptive ECI")),
-    };
-    if let Some((status, expected_eci)) = expected {
-        let outcome = request.authentication_data.as_ref().ok_or_else(|| {
-            network_token_invalid("Authenticated/attempted ECI requires an authentication outcome")
-        })?;
-        if outcome.trans_status.as_ref() != Some(&status)
-            || outcome.eci.as_deref() != Some(expected_eci)
-        {
-            return Err(network_token_invalid(
-                "Authentication outcome does not corroborate network-token ECI",
-            ));
-        }
-    } else if request.authentication_data.is_some() {
-        return Err(network_token_invalid(
-            "A supplied external authentication outcome cannot authorize a nonsecure token ECI",
-        ));
-    }
+    // TSP ECI describes the token transaction, not an imported ACS outcome.
+    reject_external_authentication(request.authentication_data.as_ref())?;
     Ok(eci.to_owned())
 }
 
@@ -755,12 +781,9 @@ pub struct ApplePayDecryptedToken {
     pub payment_data_type: Option<String>,
     pub payment_data: ApplePayPaymentDataRequest,
     pub transaction_amount: OrderAmount,
-    // Required by PayPal for customer-initiated payments.
-    // This is the deviceManufacturerIdentifier from Apple's decrypted token.
-    // UCS domain_types does not currently carry this field through the gRPC layer,
-    // so we use the well-known Apple Pay identifier. A future improvement would
-    // thread the real value from ApplePayDecryptedData.
-    pub device_manufacturer_id: String,
+    // Optional original deviceManufacturerIdentifier from Apple's decrypted token.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_manufacturer_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1384,7 +1407,7 @@ pub struct Customer {
 // (https://developer.paypal.com/docs/api/orders/v2/#definition-apple_pay_decrypted_token_data)
 // which carries the DPAN, expiry, cryptogram, and ECI indicator — preserving
 // the 3DS liability shift and correct interchange treatment.
-// Encrypted-only Apple Pay tokens are not supported and will return MissingRequiredField.
+// Encrypted Apple Pay tokens use the separate PSP vault setup and approval path.
 fn build_paypal_apple_pay_source<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
@@ -1479,13 +1502,9 @@ fn build_paypal_apple_pay_source<
                 currency_code: currency,
                 value: amount_value,
             },
-            // TODO(#1149): Hardcoded fallback — `deviceManufacturerIdentifier` from Apple's
-            // decrypted token is not currently propagated through the UCS proto / domain_types.
-            // This works in sandbox but will cause failures in production where PayPal validates
-            // the field. Fix requires adding the field to `ApplePayDecryptedData` in
-            // payment_methods.proto, domain_types, and the HS decryption path.
-            // See: https://github.com/juspay/hyperswitch-prism/issues/1149
-            device_manufacturer_id: "040010030273".to_string(),
+            device_manufacturer_id: apple_pay_decrypted_data
+                .device_manufacturer_identifier
+                .clone(),
         }),
     }))
 }
@@ -2539,11 +2558,24 @@ pub struct ProcessorResponse {
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentsCollection {
     authorizations: Option<Vec<PaymentsCollectionItem>>,
+    // Missing is vendor-observed absence; explicit null is not the documented
+    // array type and must never qualify as a zero capture collection.
+    #[serde(default, deserialize_with = "deserialize_capture_collection")]
     captures: Option<Vec<PaymentsCollectionItem>>,
+}
+
+fn deserialize_capture_collection<'de, D>(
+    deserializer: D,
+) -> Result<Option<Vec<PaymentsCollectionItem>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Vec::<PaymentsCollectionItem>::deserialize(deserializer).map(Some)
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct PurchaseUnitItem {
+    pub amount: Option<OrderAmount>,
     pub reference_id: Option<String>,
     pub invoice_id: Option<String>,
     pub payments: PaymentsCollection,
@@ -2643,6 +2675,10 @@ pub enum AuthenticationStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaypalOrdersResponse {
+    // Internal transport provenance, never accepted from provider JSON. Only
+    // PSync on our fixed unfiltered Orders GET can set this after target checks.
+    #[serde(skip)]
+    full_owned_get: bool,
     id: String,
     intent: PaypalPaymentIntent,
     // PayPal can omit the top-level order `status` in some Orders v2 responses (observed in PSync
@@ -2782,6 +2818,7 @@ pub struct PaypalPaymentsSyncResponse {
     #[serde(default)]
     status: PaypalSyncStatus,
     amount: Option<OrderAmount>,
+    expiration_time: Option<String>,
     final_capture: Option<bool>,
     status_details: Option<PaypalCaptureStatusDetails>,
     invoice_id: Option<String>,
@@ -2955,6 +2992,15 @@ where
         } else {
             match resources.as_slice() {
                 [resource] => Some(resource),
+                // Only a display/processor representative: the complete Orders
+                // ledger below determines money/status. Never save this arbitrary
+                // member as a refund target when multiple captures were discovered.
+                [resource, ..]
+                    if item.router_data.request.uses_saved_payment_identity()
+                        && payment_intent == PaypalPaymentIntent::Capture =>
+                {
+                    Some(resource)
+                }
                 _ => None,
             }
         }
@@ -2987,6 +3033,7 @@ where
                 .is_none()
             {
                 context.capture_amounts = Some(std::collections::BTreeMap::new());
+                context.capture_history_complete = Some(true);
             }
         } else if matches!(
             payment_collection_item.status,
@@ -3004,6 +3051,7 @@ where
                         .is_none_or(|meta| meta.authorize_id.is_none() && meta.capture_id.is_none())
                 {
                     context.capture_amounts = Some(std::collections::BTreeMap::new());
+                    context.capture_history_complete = Some(true);
                 }
                 record_capture_amount(
                     context,
@@ -3015,6 +3063,53 @@ where
                 )?;
             }
         }
+        // C25 is a narrow vendor-observed qualification, not a general JSON
+        // omission rule. A prior capture fact contradicts an empty aggregate.
+        let qualified_zero = item.response.full_owned_get
+            && item.response.purchase_units.len() == 1
+            && previous.as_ref().is_some_and(|meta| {
+                meta.order_id.as_ref() == Some(&item.response.id)
+                    && meta.reference_id.is_some()
+                    && meta.reference_id == purchase_units.reference_id
+                    && meta.capture_id.is_none()
+                    && meta.capture_context.as_ref().is_some_and(|context| {
+                        context
+                            .capture_amounts
+                            .as_ref()
+                            .is_none_or(|map| map.is_empty())
+                            && context.authorized_amount.as_ref().is_some_and(|amount| {
+                                purchase_units.amount.as_ref().is_some_and(|unit_amount| {
+                                    amount.currency_code == unit_amount.currency_code
+                                        && amount.value == unit_amount.value
+                                        && item.router_data.request.expected_currency()
+                                            == Some(amount.currency_code)
+                                })
+                            })
+                    })
+                    && purchase_units.payments.authorizations.as_ref().is_some_and(
+                        |authorizations| {
+                            matches!(authorizations.as_slice(), [authorization]
+                            if meta.authorize_id.as_ref() == Some(&authorization.id)
+                                && authorization.status == PaypalPaymentStatus::Voided
+                                && purchase_units.amount.as_ref().is_some_and(|amount| {
+                                    amount.currency_code == authorization.amount.currency_code
+                                        && amount.value == authorization.amount.value
+                                }))
+                        },
+                    )
+            })
+            && item
+                .router_data
+                .resource_common_data
+                .amount_captured
+                .as_ref()
+                .is_none_or(|money| money.amount.get_amount_as_i64() == 0)
+            && purchase_units
+                .payments
+                .captures
+                .as_ref()
+                .is_none_or(|captures| captures.is_empty());
+        let mut observed_authorization_id = None;
         if item.router_data.request.uses_saved_payment_identity() {
             if let Some(authorizations) = purchase_units.payments.authorizations.as_ref() {
                 let authorization = match previous
@@ -3037,7 +3132,28 @@ where
                         _ => None,
                     },
                 };
+                if !authorizations.is_empty() && authorization.is_none() {
+                    return Err(crate::utils::response_handling_fail_for_connector(
+                        item.http_code,
+                        "paypal",
+                    )
+                    .into());
+                }
                 if let Some(authorization) = authorization {
+                    if !valid_sync_id(&authorization.id)
+                        || item
+                            .router_data
+                            .request
+                            .expected_currency()
+                            .is_some_and(|currency| currency != authorization.amount.currency_code)
+                    {
+                        return Err(crate::utils::response_handling_fail_for_connector(
+                            item.http_code,
+                            "paypal",
+                        )
+                        .into());
+                    }
+                    observed_authorization_id = Some(authorization.id.clone());
                     capture_minor(&authorization.amount).change_context(
                         crate::utils::response_handling_fail_for_connector(
                             item.http_code,
@@ -3049,17 +3165,44 @@ where
                         .authorized_amount = Some(authorization.amount.clone());
                 }
             }
-            if let Some(captures) = purchase_units.payments.captures.as_ref() {
+            if let Some(captures) = purchase_units
+                .payments
+                .captures
+                .as_ref()
+                .filter(|captures| !captures.is_empty() || qualified_zero)
+            {
                 let context = capture_context.get_or_insert_with(PaypalCaptureContext::default);
+                let previous_captures = context.capture_amounts.clone();
                 context.capture_amounts = Some(std::collections::BTreeMap::new());
+                context.capture_history_complete = Some(true);
+                let mut observed_ids = std::collections::BTreeSet::new();
                 for capture in captures {
+                    if !valid_sync_id(&capture.id)
+                        || !observed_ids.insert(&capture.id)
+                        || item
+                            .router_data
+                            .request
+                            .expected_currency()
+                            .is_some_and(|currency| currency != capture.amount.currency_code)
+                    {
+                        return Err(crate::utils::response_handling_fail_for_connector(
+                            item.http_code,
+                            "paypal",
+                        )
+                        .into());
+                    }
+                    capture_minor(&capture.amount).change_context(
+                        crate::utils::response_handling_fail_for_connector(
+                            item.http_code,
+                            "paypal",
+                        ),
+                    )?;
                     if matches!(
                         capture.status,
                         PaypalPaymentStatus::Completed
                             | PaypalPaymentStatus::Captured
                             | PaypalPaymentStatus::Refunded
                             | PaypalPaymentStatus::PartiallyRefunded
-                            | PaypalPaymentStatus::PartiallyCaptured
                     ) {
                         record_capture_amount(context, &capture.id, &capture.amount)
                             .change_context(crate::utils::response_handling_fail_for_connector(
@@ -3068,10 +3211,40 @@ where
                             ))?;
                     }
                 }
+                // A delayed/incomplete order cannot erase already observed money.
+                // Refunded resources still carry their original gross capture value.
+                if previous_captures.as_ref().is_some_and(|previous| {
+                    previous.iter().any(|(id, amount)| {
+                        context
+                            .capture_amounts
+                            .as_ref()
+                            .and_then(|current| current.get(id))
+                            != Some(amount)
+                    })
+                }) {
+                    return Err(crate::utils::response_handling_fail_for_connector(
+                        item.http_code,
+                        "paypal",
+                    )
+                    .into());
+                }
             }
         }
         let mut current_hold_open = false;
         if item.router_data.request.uses_saved_payment_identity() {
+            if purchase_units
+                .payments
+                .captures
+                .as_ref()
+                .is_none_or(|captures| captures.is_empty())
+            {
+                if let Some(context) = capture_context.as_mut() {
+                    context.capture_history_complete = Some(qualified_zero);
+                    if qualified_zero {
+                        context.capture_amounts = Some(std::collections::BTreeMap::new());
+                    }
+                }
+            }
             if let Some(authorizations) = purchase_units.payments.authorizations.as_ref() {
                 for authorization in authorizations {
                     if previous
@@ -3082,13 +3255,23 @@ where
                         continue;
                     }
                     if let Some(context) = capture_context.as_mut() {
-                        if matches!(authorization.status, PaypalPaymentStatus::Voided) {
+                        let expired =
+                            authorization_expired(authorization.expiration_time.as_deref())
+                                .change_context(
+                                    crate::utils::response_handling_fail_for_connector(
+                                        item.http_code,
+                                        "paypal",
+                                    ),
+                                )?;
+                        if matches!(authorization.status, PaypalPaymentStatus::Voided) || expired {
                             context.authorization_closed = Some(true);
                         }
-                        current_hold_open |= matches!(
-                            authorization.status,
-                            PaypalPaymentStatus::Created | PaypalPaymentStatus::PartiallyCaptured
-                        );
+                        current_hold_open |= !expired
+                            && matches!(
+                                authorization.status,
+                                PaypalPaymentStatus::Created
+                                    | PaypalPaymentStatus::PartiallyCaptured
+                            );
                     }
                 }
             }
@@ -3101,7 +3284,10 @@ where
                         capture.final_capture == Some(true)
                             && matches!(
                                 capture.status,
-                                PaypalPaymentStatus::Completed | PaypalPaymentStatus::Captured
+                                PaypalPaymentStatus::Completed
+                                    | PaypalPaymentStatus::Captured
+                                    | PaypalPaymentStatus::Refunded
+                                    | PaypalPaymentStatus::PartiallyRefunded
                             )
                     })
                 })
@@ -3117,8 +3303,18 @@ where
                     &item.router_data.resource_common_data,
                     &PaypalMeta {
                         capture_context: capture_context.clone(),
-                        authorize_id: previous.as_ref().and_then(|meta| meta.authorize_id.clone()),
-                        capture_id: Some(id),
+                        authorize_id: previous
+                            .as_ref()
+                            .and_then(|meta| meta.authorize_id.clone())
+                            .or(observed_authorization_id),
+                        capture_id: if item.router_data.request.uses_saved_payment_identity()
+                            && resources.len() > 1
+                            && requested_id.is_none()
+                        {
+                            None
+                        } else {
+                            Some(id)
+                        },
                         incremental_authorization_id: previous
                             .as_ref()
                             .and_then(|meta| meta.incremental_authorization_id.clone()),
@@ -3260,6 +3456,21 @@ where
                 status = financial_sync_status(context, status, current_hold_open).change_context(
                     crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"),
                 )?;
+                // Missing/pending authorization information is not evidence that
+                // an outstanding ManualMultiple hold was closed. Keep actual
+                // captured money while the closure outcome remains uncertain.
+                if matches!(
+                    context.capture_method,
+                    Some(
+                        common_enums::CaptureMethod::ManualMultiple
+                            | common_enums::CaptureMethod::Manual
+                    )
+                ) && context.authorization_closed != Some(true)
+                    && !current_hold_open
+                    && status == common_enums::AttemptStatus::PartialCharged
+                {
+                    status = common_enums::AttemptStatus::Pending;
+                }
                 if let Some(money) = captured_ledger_money(context).change_context(
                     crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"),
                 )? {
@@ -3286,6 +3497,13 @@ where
                     None => status,
                 };
             }
+        }
+        if item.router_data.request.uses_saved_payment_identity() && captured.is_none() {
+            captured = item
+                .router_data
+                .resource_common_data
+                .amount_captured
+                .clone();
         }
         match utils::is_payment_failure(status) {
             true => {
@@ -3419,13 +3637,17 @@ impl TryFrom<ResponseRouterData<PaypalSyncResponse, Self>>
             crate::utils::response_handling_fail_for_connector(item.http_code, "paypal"),
         )?;
         match item.response {
-            PaypalSyncResponse::PaypalOrdersSyncResponse(response) => {
+            PaypalSyncResponse::PaypalOrdersSyncResponse(mut response) => {
                 validate_sync_order_identity(
                     &item.router_data,
                     &metadata,
                     &response.id,
                     item.http_code,
                 )?;
+                // get_url for PSync builds exactly the saved target path, with
+                // no fields/filter/pagination query. The target check above
+                // excludes direct authorization/capture responses.
+                response.full_owned_get = true;
                 Self::try_from(ResponseRouterData {
                     response,
                     router_data: item.router_data,
@@ -3910,18 +4132,58 @@ impl TryFrom<ResponseRouterData<PaypalPaymentsSyncResponse, Self>>
                     .authorized_amount = Some(amount.clone());
             }
         }
+        let expired = !is_capture
+            && authorization_expired(item.response.expiration_time.as_deref())
+                .change_context(fail())?;
         let current_open = !is_capture
+            && !expired
             && matches!(
                 resource_status,
                 PaypalPaymentStatus::Created | PaypalPaymentStatus::PartiallyCaptured
             );
+        // Payments GET is one resource, not a complete current Orders ledger.
+        // Neither a bare void nor a collected resource without actual Money can
+        // preserve a prior complete-history certificate.
+        if !is_capture
+            || matches!(resource_status, PaypalPaymentStatus::Voided)
+            || (collected && item.response.amount.is_none())
+            || metadata.capture_context.as_ref().is_some_and(|context| {
+                context.capture_method == Some(common_enums::CaptureMethod::ManualMultiple)
+            })
+        {
+            metadata
+                .capture_context
+                .get_or_insert_with(PaypalCaptureContext::default)
+                .capture_history_complete = Some(false);
+        }
         if let Some(context) = metadata.capture_context.as_mut() {
             if matches!(resource_status, PaypalPaymentStatus::Voided)
+                || expired
                 || (collected && item.response.final_capture == Some(true))
             {
                 context.authorization_closed = Some(true);
             }
             status = financial_sync_status(context, status, current_open).change_context(fail())?;
+            if !is_capture
+                && current_open
+                && matches!(resource_status, PaypalPaymentStatus::PartiallyCaptured)
+                && context.authorization_closed != Some(true)
+            {
+                // The actual authorization reports an open partial hold. This
+                // proves the state, not an exact aggregate or remaining amount.
+                status = common_enums::AttemptStatus::PartialChargedAndChargeable;
+            } else if (collected && item.response.amount.is_none())
+                || (context.capture_history_complete != Some(true)
+                    && (matches!(
+                        status,
+                        common_enums::AttemptStatus::Charged
+                            | common_enums::AttemptStatus::PartialCharged
+                            | common_enums::AttemptStatus::PartialChargedAndChargeable
+                            | common_enums::AttemptStatus::Voided
+                    ) || (!is_capture && utils::is_payment_failure(status))))
+            {
+                status = common_enums::AttemptStatus::Pending;
+            }
             if let Some(money) = captured_ledger_money(context).change_context(fail())? {
                 captured = Some(money);
             }
@@ -3929,6 +4191,12 @@ impl TryFrom<ResponseRouterData<PaypalPaymentsSyncResponse, Self>>
             // Authorization status alone does not establish zero collected money.
             status = common_enums::AttemptStatus::Pending;
         }
+        captured = captured.or_else(|| {
+            item.router_data
+                .resource_common_data
+                .amount_captured
+                .clone()
+        });
         let processor = item.response.processor_response.as_ref();
         let checks = processor.map(|value| {
             domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
@@ -4065,11 +4333,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "Capture amount exceeds actual remaining authorized amount",
             ));
         }
-        let mode = item
+        let saved_mode = context.and_then(|context| context.capture_method);
+        if item
             .router_data
             .request
             .capture_method
-            .or_else(|| context.and_then(|context| context.capture_method));
+            .zip(saved_mode)
+            .is_some_and(|(requested, saved)| {
+                // An ordinary PayPal authorization can be captured in multiple
+                // operations. Never downgrade a saved multiple-capture operation
+                // to Manual and accidentally close its remaining hold.
+                requested != saved
+                    && !(saved == common_enums::CaptureMethod::Manual
+                        && requested == common_enums::CaptureMethod::ManualMultiple)
+            })
+        {
+            return Err(sync_invalid(
+                "Capture method conflicts with original authorization",
+            ));
+        }
+        let mode = item.router_data.request.capture_method.or(saved_mode);
         if mode.is_some_and(|mode| {
             !matches!(
                 mode,
@@ -4175,7 +4458,24 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let fail = || crate::utils::response_handling_fail_for_connector(item.http_code, "paypal");
         let mut metadata = capture_metadata(&item.router_data).change_context(fail())?;
-        let actual_id = item.response.id.as_ref().filter(|id| !id.is_empty());
+        if item.router_data.request.capture_method
+            == Some(common_enums::CaptureMethod::ManualMultiple)
+            || item.router_data.request.multiple_capture_data.is_some()
+        {
+            metadata
+                .capture_context
+                .get_or_insert_with(PaypalCaptureContext::default)
+                .capture_method = Some(common_enums::CaptureMethod::ManualMultiple);
+        }
+        if item
+            .response
+            .id
+            .as_ref()
+            .is_some_and(|id| !valid_sync_id(id))
+        {
+            return Err(fail().into());
+        }
+        let actual_id = item.response.id.as_ref();
         let state = item
             .response
             .status
@@ -4239,6 +4539,12 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
         if let Some(id) = actual_id {
             metadata.capture_id = Some(id.clone());
             if collected {
+                if item.response.amount.is_none() {
+                    metadata
+                        .capture_context
+                        .get_or_insert_with(PaypalCaptureContext::default)
+                        .capture_history_complete = Some(false);
+                }
                 if item.response.final_capture == Some(true) {
                     metadata
                         .capture_context
@@ -4261,6 +4567,16 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
                     .change_context(fail())?;
                 }
             }
+        }
+        if collected
+            && metadata.capture_context.as_ref().is_some_and(|context| {
+                context.capture_method == Some(common_enums::CaptureMethod::ManualMultiple)
+                    && context.capture_history_complete != Some(true)
+            })
+        {
+            // The operation has an actual successful capture ID, but its whole
+            // payment total is unresolved. Orders sync must establish that total.
+            status = common_enums::AttemptStatus::Pending;
         }
         metadata.psync_flow = PaypalPaymentIntent::Capture;
         let processor = item.response.processor_response.as_ref();
@@ -4390,8 +4706,8 @@ impl TryFrom<ResponseRouterData<PaypalPaymentsCancelResponse, Self>>
         }
         let closed =
             item.http_code == 204 || item.response.status == Some(PaypalCancelStatus::Voided);
-        let mut status = common_enums::AttemptStatus::Pending;
-        let mut captured = item
+        let status = common_enums::AttemptStatus::Pending;
+        let captured = item
             .router_data
             .resource_common_data
             .amount_captured
@@ -4401,10 +4717,11 @@ impl TryFrom<ResponseRouterData<PaypalPaymentsCancelResponse, Self>>
                 .capture_context
                 .get_or_insert_with(PaypalCaptureContext::default);
             context.authorization_closed = Some(true);
-            status = financial_sync_status(context, status, false).change_context(fail())?;
-            if let Some(actual) = captured_ledger_money(context).change_context(fail())? {
-                captured = Some(actual);
-            }
+            // A void acknowledges closure of the hold, not the current capture
+            // collection. A capture may have completed since the saved ledger.
+            // Preserve observed money and reconcile the owned Order before
+            // reporting a final aggregate or an uncaptured void.
+            context.capture_history_complete = Some(false);
         }
         let merged = merge_setup_metadata(&item.router_data.resource_common_data, &metadata)
             .change_context(fail())?;
@@ -4992,7 +5309,7 @@ impl TryFrom<ResponseRouterData<RefundResponse, Self>>
 pub struct RefundSyncResponse {
     id: Option<String>,
     #[serde(default)]
-    status: RefundStatus,
+    status: Option<RefundStatus>,
     amount: Option<OrderAmount>,
     status_details: Option<PaypalCaptureStatusDetails>,
 }
@@ -5029,19 +5346,70 @@ impl TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
         } else {
             observed.ok().flatten()
         };
+        // Optional caller refund_money is not the only currency/gross proof:
+        // corroborate a response against the actual selected capture ledger too.
+        // rsync_refund_id above already validated metadata agreement/shape.
+        let known_capture = item
+            .router_data
+            .request
+            .connector_feature_data
+            .as_ref()
+            .or(item
+                .router_data
+                .resource_common_data
+                .connector_feature_data
+                .as_ref())
+            .and_then(|value| serde_json::from_value::<PaypalMeta>(value.clone().expose()).ok())
+            .and_then(|metadata| {
+                let captures = metadata
+                    .capture_context
+                    .as_ref()?
+                    .capture_amounts
+                    .as_ref()?;
+                let supplied = &item.router_data.request.connector_transaction_id;
+                captures
+                    .get(supplied)
+                    .or_else(|| {
+                        (metadata.order_id.as_ref() == Some(supplied))
+                            .then(|| metadata.capture_id.as_ref().and_then(|id| captures.get(id)))
+                            .flatten()
+                    })
+                    .cloned()
+            });
+        let known_capture = known_capture
+            .as_ref()
+            .map(|amount| {
+                capture_minor(amount).map(|minor| Money {
+                    amount: MinorUnit::new(minor),
+                    currency: amount.currency_code,
+                })
+            })
+            .transpose()
+            .change_context(fail())?;
         let mismatch = invalid_amount
+            || amount
+                .as_ref()
+                .is_some_and(|actual| actual.amount.get_amount_as_i64() <= 0)
+            || amount
+                .as_ref()
+                .zip(known_capture.as_ref())
+                .is_some_and(|(actual, capture)| {
+                    actual.currency != capture.currency
+                        || actual.amount.get_amount_as_i64() > capture.amount.get_amount_as_i64()
+                })
             || amount
                 .as_ref()
                 .zip(item.router_data.request.refund_money.as_ref())
                 .is_some_and(|(actual, requested)| actual != requested);
-        let raw_status = serde_json::to_value(&item.response.status)
+        let observed_status = item.response.status.unwrap_or_default();
+        let raw_status = serde_json::to_value(&observed_status)
             .ok()
             .and_then(|value| value.as_str().map(str::to_owned));
         let reason = item
             .response
             .status_details
             .and_then(|details| details.reason);
-        let mut status = common_enums::RefundStatus::from(item.response.status);
+        let mut status = common_enums::RefundStatus::from(observed_status);
         let resource_failed = status == common_enums::RefundStatus::Failure;
         if mismatch || conflicting_id {
             status = common_enums::RefundStatus::ManualReview;
@@ -5136,27 +5504,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             .into());
         }
-        if matches!(
-            req.payment_method_data,
-            PaymentMethodData::Card(_)
-                | PaymentMethodData::CardWithNoCvc(_)
-                | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
-        ) && req.authentication_data.is_some()
-        {
-            return Err(paypal_mit_unsupported(
-                "External raw-card3DS is unsupported by PayPal card_request schema",
-            ));
-        }
-        if matches!(
-            req.payment_method_data,
-            PaymentMethodData::NetworkToken(_)
-                | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
-        ) && req.authentication_data.is_some()
-        {
-            return Err(paypal_mit_unsupported(
-                "Network-token MIT cannot replay external authentication; use the original network reference without fresh authentication data",
-            ));
-        }
+        reject_external_authentication(req.authentication_data.as_ref())?;
         let intent = if req.is_auto_capture() {
             PaypalPaymentIntent::Capture
         } else {
@@ -6174,20 +6522,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             .into());
         }
-        if matches!(
-            data.request.payment_method_data,
-            PaymentMethodData::Card(_) | PaymentMethodData::CardWithNoCvc(_)
-        ) && data.request.authentication_data.is_some()
-        {
-            return Err(IntegrationError::NotSupported {
-                message: "PayPal Orders raw-card request has no external CAVV/DS authentication fields".to_owned(),
-                connector: "paypal",
-                context: domain_types::errors::IntegrationErrorContext {
-                    doc_url: Some("https://developer.paypal.com/api/orders/v2/schema.json".to_owned()),
-                    additional_context: Some("Use the native hosted 3DS flow; externally supplied authentication cannot be silently discarded".to_owned()), ..Default::default()
-                }
-            }.into());
-        }
+        // Apply before ALL instruments and native continuation metadata.
+        // Caller-controlled order_approved metadata cannot authorize ACS import.
+        reject_external_authentication(data.request.authentication_data.as_ref())?;
         if matches!(
             data.request.payment_method_data,
             PaymentMethodData::CardDetailsForNetworkTransactionId(_)
@@ -7435,6 +7772,32 @@ pub fn sync_target(
             "PayPal resource identifiers must be nonempty, unescaped path segments",
         ));
     }
+    // A payment-level sync must observe the complete order ledger, including a
+    // capture whose response was lost before its ID could be persisted locally.
+    // A closed authorization still needs aggregate reconciliation for webhooks.
+    if metadata.capture_context.as_ref().is_some_and(|context| {
+        matches!(
+            context.capture_method,
+            Some(common_enums::CaptureMethod::ManualMultiple | common_enums::CaptureMethod::Manual)
+        )
+    }) {
+        if let Some(order) = metadata.order_id.as_ref() {
+            if ![
+                Some(order),
+                metadata.authorize_id.as_ref(),
+                metadata.capture_id.as_ref(),
+            ]
+            .into_iter()
+            .flatten()
+            .any(|id| id == &supplied)
+            {
+                return Err(sync_invalid(
+                    "Supplied payment id conflicts with canonical order resources",
+                ));
+            }
+            return Ok(PaypalSyncTarget::Order(order.clone()));
+        }
+    }
     if metadata.capture_context.as_ref().is_some_and(|context| {
         context.capture_method == Some(common_enums::CaptureMethod::ManualMultiple)
             && context.authorization_closed != Some(true)
@@ -7558,15 +7921,23 @@ fn sync_order_state(
     };
     let mut captured = None;
     if let Some(context) = metadata.capture_context.as_mut() {
+        // Every status-only Orders observation lacks the current resource ledger;
+        // COMPLETED alone cannot certify an outstanding hold has been closed.
+        context.capture_history_complete = Some(false);
         if matches!(order_status, PaypalOrderStatus::Voided) {
             context.authorization_closed = Some(true);
+            // This response has no capture collection. A pre-capture snapshot
+            // cannot prove that no capture occurred while its response was lost.
+            context.capture_history_complete = Some(false);
         }
         status = financial_sync_status(context, status, false).change_context(
             crate::utils::response_handling_fail_for_connector(http_code, "paypal"),
         )?;
-        captured = captured_ledger_money(context).change_context(
-            crate::utils::response_handling_fail_for_connector(http_code, "paypal"),
-        )?;
+        captured = captured_ledger_money(context)
+            .change_context(crate::utils::response_handling_fail_for_connector(
+                http_code, "paypal",
+            ))?
+            .or_else(|| data.resource_common_data.amount_captured.clone());
     } else if matches!(order_status, PaypalOrderStatus::Voided) {
         status = common_enums::AttemptStatus::Pending;
     }
@@ -7630,6 +8001,10 @@ fn paypal_resource_status(
 /// Additive metadata: None history means unknown, not zero; unique IDs prevent replay double counting.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PaypalCaptureContext {
+    // Only Some(true) certifies a complete actual resource history.
+    // None is legacy/unknown; false retains observed resources with missing money.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capture_history_complete: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authorization_closed: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -7687,6 +8062,9 @@ fn capture_minor(amount: &OrderAmount) -> Result<i64, Report<IntegrationError>> 
     Ok(minor)
 }
 fn captured_total(context: &PaypalCaptureContext) -> Result<Option<i64>, Report<IntegrationError>> {
+    if context.capture_history_complete != Some(true) {
+        return Ok(None);
+    }
     let Some(captures) = context.capture_amounts.as_ref() else {
         return Ok(None);
     };
@@ -7722,6 +8100,19 @@ fn captured_ledger_money(
             })
     }))
 }
+fn authorization_expired(expiration: Option<&str>) -> Result<bool, Report<IntegrationError>> {
+    expiration
+        .map(|value| {
+            time::OffsetDateTime::parse(value, &time::format_description::well_known::Rfc3339)
+                .map(|expires| {
+                    expires.unix_timestamp() <= common_utils::date_time::now_unix_timestamp()
+                })
+                .map_err(|_| sync_invalid("PayPal authorization expiration_time is invalid"))
+        })
+        .transpose()
+        .map(|expired| expired.unwrap_or(false))
+}
+
 fn financial_sync_status(
     context: &PaypalCaptureContext,
     fallback: common_enums::AttemptStatus,
@@ -7803,6 +8194,10 @@ fn capture_remaining(
         .checked_sub(total)
         .filter(|remaining| *remaining >= 0)
         .ok_or_else(|| sync_invalid("PayPal captured amount exceeds authorization"))?;
+    if context.capture_history_complete != Some(true) && context.authorization_closed != Some(true)
+    {
+        return Ok(None);
+    }
     Ok(Some(if context.authorization_closed == Some(true) {
         0
     } else {
@@ -8035,37 +8430,78 @@ pub fn refund_metadata(
             "Refund payment metadata is invalid",
         )
     })?;
-    let capture = metadata
-        .capture_id
-        .as_ref()
-        .filter(|id| valid_sync_id(id))
-        .ok_or_else(|| {
-            refund_invalid(
-                "connector_feature_data.capture_id",
-                "Refund requires a valid original capture ID",
-            )
-        })?;
-    if &data.request.connector_transaction_id != capture
-        && metadata.order_id.as_ref() != Some(&data.request.connector_transaction_id)
-    {
+    let supplied = &data.request.connector_transaction_id;
+    if !valid_sync_id(supplied) {
         return Err(refund_invalid(
             "connector_transaction_id",
-            "Refund payment ID conflicts with original order or capture",
+            "Refund requires a valid capture or original order identity",
         ));
     }
-    if let Some(actual) = metadata
+    let ledger = metadata
         .capture_context
         .as_ref()
-        .and_then(|context| context.capture_amounts.as_ref())
-        .and_then(|captures| captures.get(capture))
+        .and_then(|context| context.capture_amounts.as_ref());
+    // An explicit owned capture wins over a legacy saved first-capture pointer.
+    // An order ID can use only the saved actual target, never an arbitrary map entry.
+    let capture = if ledger.is_some_and(|captures| captures.contains_key(supplied))
+        || metadata.capture_id.as_ref() == Some(supplied)
     {
-        if actual.currency_code != data.request.currency {
+        supplied.clone()
+    } else if metadata.order_id.as_ref() == Some(supplied) {
+        metadata
+            .capture_id
+            .clone()
+            .filter(|id| valid_sync_id(id))
+            .ok_or_else(|| {
+                refund_invalid(
+                    "connector_feature_data.capture_id",
+                    "Select an actual owned capture ID; an order ledger is not a refund target",
+                )
+            })?
+    } else {
+        return Err(refund_invalid(
+            "connector_transaction_id",
+            "Refund target is not a known owned capture or original order",
+        ));
+    };
+    let actual = ledger.and_then(|captures| captures.get(&capture));
+    if metadata
+        .capture_context
+        .as_ref()
+        .is_some_and(|context| context.capture_history_complete == Some(true))
+        && actual.is_none()
+    {
+        return Err(refund_invalid(
+            "connector_feature_data.capture_id",
+            "Selected capture is absent from the complete owned ledger",
+        ));
+    }
+    if let Some(actual) = actual {
+        let gross = capture_minor(actual)?;
+        if actual.currency_code != data.request.currency
+            || data.request.refund_amount.currency != actual.currency_code
+            || gross <= 0
+            || data.request.refund_amount.amount.get_amount_as_i64() > gross
+        {
             return Err(refund_invalid(
-                "currency",
-                "Refund currency differs from actual capture",
+                "refund_amount",
+                "Refund must fit the selected actual capture gross amount and currency",
             ));
         }
     }
+    if data.request.refund_amount.amount.get_amount_as_i64() <= 0
+        || data.request.refund_amount.amount.get_amount_as_i64()
+            > data.request.payment_amount.amount.get_amount_as_i64()
+    {
+        return Err(refund_invalid(
+            "refund_amount",
+            "Refund must be positive and within the original payment amount",
+        ));
+    }
+    // Closure of the remaining authorization does not erase captured funds.
+    // Prior refunds are not guessed from gross money: PayPal validates net limits.
+    let mut metadata = metadata;
+    metadata.capture_id = Some(capture);
     Ok(metadata)
 }
 
@@ -8108,14 +8544,51 @@ pub fn rsync_refund_id(
                 "Refund sync payment metadata is invalid",
             )
         })?;
-        if metadata.order_id.as_ref().is_some_and(|order| {
-            order != &data.request.connector_transaction_id
-                && metadata.capture_id.as_ref() != Some(&data.request.connector_transaction_id)
-        }) {
+        let supplied = &data.request.connector_transaction_id;
+        if !valid_sync_id(supplied) {
             return Err(refund_invalid(
                 "connector_transaction_id",
-                "Refund sync payment ID conflicts with original order or capture",
+                "Refund sync requires a valid original order or capture identity",
             ));
+        }
+        let ledger = metadata
+            .capture_context
+            .as_ref()
+            .and_then(|context| context.capture_amounts.as_ref());
+        let explicit_owned_capture = ledger.and_then(|captures| captures.get(supplied));
+        let actual_capture = explicit_owned_capture.or_else(|| {
+            (metadata.order_id.as_ref() == Some(supplied))
+                .then(|| {
+                    metadata
+                        .capture_id
+                        .as_ref()
+                        .and_then(|id| ledger.and_then(|captures| captures.get(id)))
+                })
+                .flatten()
+        });
+        if metadata.order_id.as_ref() != Some(supplied)
+            && metadata.capture_id.as_ref() != Some(supplied)
+            && explicit_owned_capture.is_none()
+        {
+            return Err(refund_invalid(
+                "connector_transaction_id",
+                "Refund sync payment ID conflicts with original order or owned capture",
+            ));
+        }
+        if let Some(actual) = actual_capture {
+            let gross = capture_minor(actual)?;
+            if gross <= 0
+                || data.request.refund_money.as_ref().is_some_and(|requested| {
+                    requested.currency != actual.currency_code
+                        || requested.amount.get_amount_as_i64() <= 0
+                        || requested.amount.get_amount_as_i64() > gross
+                })
+            {
+                return Err(refund_invalid(
+                    "refund_amount",
+                    "Refund sync amount/currency contradicts the selected owned capture",
+                ));
+            }
         }
     }
     Ok(id.clone())
@@ -9005,11 +9478,7 @@ pub fn native_authorize_router<
         }
         .into());
     }
-    if req.authentication_data.is_some() {
-        return Err(paypal_mit_unsupported(
-            "External raw-card3DS cannot be imported into native PayPal authentication",
-        ));
-    }
+    reject_external_authentication(req.authentication_data.as_ref())?;
     if data
         .resource_common_data
         .connector_feature_data

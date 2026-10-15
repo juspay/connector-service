@@ -72,6 +72,23 @@
         }
       ],
       "strict_dependencies": true
+    },
+    "PaymentService/Get": {
+      "reason": "PayPal Get requires the actual canonical order metadata, including capture context and opaque caller keys; use the actual Authorize response, never a fake resource or independent scalar override.",
+      "depends_on": [
+        "MerchantAuthenticationService/CreateServerAuthenticationToken",
+        {
+          "suite": "PaymentService/Authorize",
+          "scenario": "no3ds_auto_capture_credit_card",
+          "context_map": {
+            "connector_transaction_id": "res.connector_transaction_id",
+            "amount.minor_amount": "req.amount.minor_amount",
+            "amount.currency": "req.amount.currency",
+            "connector_feature_data": "res.connector_feature_data"
+          }
+        }
+      ],
+      "strict_dependencies": true
     }
   }
 }
