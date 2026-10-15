@@ -1093,9 +1093,6 @@
     },
     "threeds_manual_capture_credit_card": {
       "grpc_req": {
-        "connector_feature_data": {
-          "value": "{\"disable_avs\":false,\"disable_cvn\":false}"
-        },
         "metadata": {
           "value": "{}"
         },

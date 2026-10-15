@@ -175,7 +175,7 @@ When loading a scenario for a connector:
 1. Load base from `global_suites/<suite>_suite/scenario.json`.
 2. Materialize each named variant from that common template.
 3. Apply dependency context independently for every scenario-scoped execution.
-4. Apply the base connector request/assertion override, then the variant patch, last.
+4. Apply the base connector request/assertion override last.
 5. Execute the common scenario and its variants through the same runner.
 
 ## Common mistakes
