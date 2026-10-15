@@ -2558,7 +2558,7 @@ impl PaymentMethod {
         request_data_constructor: PaymentMethodEligibilityData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
         generate_response_fn: generate_payment_method_eligibility_response,
-        connector_data_types: [ConnectorData<DefaultPCIHolder>],
+        connector_data_types: [ConnectorData<DefaultPCIHolder>, AuthenticatorConnectorData],
         all_keys_required: None
     );
 
@@ -2768,8 +2768,11 @@ impl PaymentMethod {
             payment_method_data: dummy_pm_data, // unused by authenticator path
             metadata: request.metadata.clone(),
             connector_feature_data,
-            amount: common_utils::types::MinorUnit::new(0), // unused by authenticator path
-            currency: common_enums::Currency::USD,          // unused by authenticator path
+            amount: common_utils::types::Money {
+                amount: common_utils::types::MinorUnit::new(0),
+                currency: common_enums::Currency::USD,
+            }, // unused by authenticator path
+            currency: common_enums::Currency::USD, // unused by authenticator path
             browser_info: None,
             capture_method: None,
             customer_acceptance: None,

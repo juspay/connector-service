@@ -405,9 +405,9 @@ impl TryFrom<&DecryptedWalletTokenDetailsForNetworkTransactionId>
             application_primary_account_number: Secret::new(token.decrypted_token.get_card_no()),
             application_expiration_date: token
                 .get_card_expiry_month_year_2_digit_with_delimiter(String::new())?,
-            electronic_commerce_indicator: None,
+            electronic_commerce_indicator: token.eci.clone(),
             online_payment_cryptogram: None,
-            device_manufacturer_identifier: None,
+            device_manufacturer_identifier: token.device_manufacturer_identifier.clone(),
             card_brand: token
                 .card_network
                 .as_ref()
@@ -679,7 +679,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.minor_amount,
+                    item.router_data.request.amount.amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -1088,7 +1088,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.minor_refund_amount,
+                    item.router_data.request.refund_amount.amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {
@@ -1275,7 +1275,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector
                     .amount_converter
                     .convert(
-                        item.router_data.request.minor_amount_to_capture,
+                        item.router_data.request.amount_to_capture.amount,
                         item.router_data.request.currency,
                     )
                     .change_context(IntegrationError::AmountConversionFailed {
@@ -1344,7 +1344,7 @@ where
             .map(|(minor_amount, currency)| {
                 item.connector
                     .amount_converter
-                    .convert(minor_amount, currency)
+                    .convert(minor_amount.amount, currency)
             })
             .transpose()
             .change_context(IntegrationError::AmountConversionFailed {
@@ -1523,19 +1523,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(
                 ref wallet_token,
-            ) => {
-                if item.router_data.resource_common_data.is_three_ds() {
-                    Err(IntegrationError::NotSupported {
-                        message: "Wallet 3DS".to_string(),
-                        connector: "revolv3",
-                        context: Default::default(),
-                    })?
-                };
-                Some(Revolv3PaymentMethodData::set_wallet_token_data_for_ntid(
-                    wallet_token,
-                    &item.router_data.resource_common_data,
-                )?)
-            }
+            ) => Some(Revolv3PaymentMethodData::set_wallet_token_data_for_ntid(
+                wallet_token,
+                &item.router_data.resource_common_data,
+            )?),
             // The stored payment method is addressed by the id in the URL path.
             PaymentMethodData::MandatePayment => None,
             _ => Err(IntegrationError::NotImplemented(
@@ -1549,7 +1540,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(
-                    item.router_data.request.minor_amount,
+                    item.router_data.request.amount.amount,
                     item.router_data.request.currency,
                 )
                 .change_context(IntegrationError::AmountConversionFailed {

@@ -113,9 +113,8 @@ checkout.base_url = "https://api.checkout.com/"
 authorizedotnet.base_url = "https://api.authorize.net/xml/v1/request.api"
 phonepe.base_url = "https://api.phonepe.com/apis/hermes/"
 cashfree.base_url = "https://sandbox.cashfree.com/"
-fiuu.base_url = "https://pay.merchant.razer.com/"
-fiuu.secondary_base_url = "https://api.merchant.razer.com/"
-fiuu.third_base_url="https://api.merchant.razer.com/"
+fiuu.base_url = "https://pay.fiuu.com/"
+fiuu.secondary_base_url = "https://api.fiuu.com/"
 payload.base_url = "https://api.payload.com"
 forte.base_url = "https://api.forte.net/v3"
 payu.base_url = "https://secure.payu.com/api/"
@@ -214,7 +213,7 @@ enqueue_timeout_ms = 5000
 # sasl_password = ""
 
 [unmasked_headers]
-keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id","x-shadow-mode","x-proxy-name"]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id","x-shadow-mode","x-proxy-name","x-payment-method","x-payment-method-type"]
 
 # Connectors that require an external API call for webhook source verification
 [webhook_source_verification_call] # comma-separated list of connector names (case-insensitive)
