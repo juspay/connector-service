@@ -142,7 +142,6 @@
               "contains": "\"paymentSolution\":\"012\""
             },
             "connector_transaction_id": {
-              "must_exist": null,
               "must_not_exist": true
             }
           },
@@ -245,8 +244,6 @@
                 "CHARGED"
               ]
             },
-            "connector_transaction_id": {},
-            "error": {},
             "raw_connector_request.value": {
               "contains": "\"purchaseLevel\":\"3\""
             }
@@ -310,7 +307,6 @@
             "connector_transaction_id": null,
             "status": null,
             "error": {
-              "must_not_exist": null,
               "must_exist": true
             },
             "error.connector_details.code": {
@@ -386,7 +382,6 @@
               ]
             },
             "error": {
-              "must_not_exist": null,
               "must_exist": true
             },
             "error.connector_details.code": {
@@ -482,9 +477,6 @@
             "browser_info": {}
           },
           "assert": {
-            "status": {},
-            "connector_transaction_id": {},
-            "error": {},
             "raw_connector_request.value": {
               "contains": "\"shipTo\":{"
             }
@@ -571,9 +563,6 @@
             }
           },
           "assert": {
-            "status": {},
-            "connector_transaction_id": {},
-            "error": {},
             "raw_connector_request.value": {
               "contains": "\"purchaseLevel\":\"3\""
             }
@@ -639,9 +628,6 @@
             "statement_descriptor_name": "GRACE MATRIX"
           },
           "assert": {
-            "status": {},
-            "connector_transaction_id": {},
-            "error": {},
             "raw_connector_request.value": {
               "contains": "\"merchantDescriptor\":{"
             }
@@ -715,9 +701,6 @@
             }
           },
           "assert": {
-            "status": {},
-            "connector_transaction_id": {},
-            "error": {},
             "redirection_data": {
               "must_not_exist": true
             },
@@ -796,9 +779,6 @@
             }
           },
           "assert": {
-            "status": {},
-            "connector_transaction_id": {},
-            "error": {},
             "redirection_data": {
               "must_not_exist": true
             },
@@ -860,9 +840,6 @@
             "browser_info": {}
           },
           "assert": {
-            "status": {},
-            "connector_transaction_id": {},
-            "error": {},
             "connector_response.additional_payment_method_data.card.payment_checks": {
               "must_exist": true
             }
@@ -937,9 +914,6 @@
             }
           },
           "assert": {
-            "status": {},
-            "connector_transaction_id": {},
-            "error": {},
             "redirection_data": {
               "must_not_exist": true
             },
@@ -1022,7 +996,6 @@
               "equals": "INVALID_DATA_FORMAT"
             },
             "connector_transaction_id": {
-              "must_exist": null,
               "must_not_exist": true
             }
           },
@@ -1101,7 +1074,6 @@
               "equals": "INVALID_DATA_FORMAT"
             },
             "connector_transaction_id": {
-              "must_exist": null,
               "must_not_exist": true
             }
           },
@@ -1205,7 +1177,6 @@
               "equals": "INVALID_DATA_FORMAT"
             },
             "connector_transaction_id": {
-              "must_exist": null,
               "must_not_exist": true
             }
           },
@@ -1281,7 +1252,6 @@
               "equals": "INVALID_DATA_FORMAT"
             },
             "connector_transaction_id": {
-              "must_exist": null,
               "must_not_exist": true
             }
           },
@@ -1357,7 +1327,6 @@
               "equals": "INVALID_DATA_FORMAT"
             },
             "connector_transaction_id": {
-              "must_exist": null,
               "must_not_exist": true
             }
           },
@@ -1432,8 +1401,6 @@
                 "AUTHORIZED"
               ]
             },
-            "connector_transaction_id": {},
-            "error": {},
             "redirection_data": {
               "must_not_exist": true
             },
@@ -1512,8 +1479,6 @@
                 "AUTHORIZED"
               ]
             },
-            "connector_transaction_id": {},
-            "error": {},
             "redirection_data": {
               "must_not_exist": true
             },
@@ -1592,8 +1557,6 @@
                 "AUTHORIZED"
               ]
             },
-            "connector_transaction_id": {},
-            "error": {},
             "redirection_data": {
               "must_not_exist": true
             },
@@ -1688,7 +1651,6 @@
               "contains": "\"paymentSolution\":\"001\""
             },
             "connector_transaction_id": {
-              "must_exist": null,
               "must_not_exist": true
             }
           },
@@ -1748,9 +1710,7 @@
               "one_of": [
                 "CHARGED"
               ]
-            },
-            "connector_transaction_id": {},
-            "error": {}
+            }
           },
           "display_name": "Apple Pay, Cybersource decryption: a device-minted token is charged (cannot run: no device-minted token, see specs.json)"
         }
@@ -1851,7 +1811,6 @@
           },
           "assert": {
             "event_status": null,
-            "source_verified": {},
             "event_type": {
               "one_of": [
                 "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
@@ -1879,7 +1838,6 @@
           },
           "assert": {
             "event_status": null,
-            "source_verified": {},
             "event_type": {
               "one_of": [
                 "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
@@ -1907,7 +1865,6 @@
           },
           "assert": {
             "event_status": null,
-            "source_verified": {},
             "event_type": {
               "one_of": [
                 "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
@@ -1933,7 +1890,6 @@
           },
           "assert": {
             "event_status": null,
-            "source_verified": {},
             "event_type": {
               "one_of": [
                 "PAYMENT_INTENT_AUTHORIZATION_SUCCESS"
@@ -1961,7 +1917,6 @@
           },
           "assert": {
             "event_status": null,
-            "source_verified": {},
             "event_type": {
               "one_of": [
                 "PAYMENT_INTENT_PROCESSING"
@@ -1989,7 +1944,6 @@
           },
           "assert": {
             "event_status": null,
-            "source_verified": {},
             "event_type": {
               "one_of": [
                 "PAYMENT_INTENT_PROCESSING"
