@@ -355,7 +355,7 @@ const _SECRET_STRING_FIELDS: Record<string, readonly string[]> = {
   D24Config: ["apiKey", "key1", "apiSecret"],
   PaydotcomConfig: ["apiKey"],
   PayhereConfig: ["appId", "merchantId", "appSecret", "merchantSecret"],
-  BetterpaymentConfig: ["apiKey", "key1", "apiSecret"],
+  BetterpaymentConfig: ["apiKey", "apiPassword", "webhookKey"],
   PaymentServiceTokenAuthorizeRequest: ["connectorToken", "metadata", "connectorFeatureData"],
   PaymentServiceTokenSetupRecurringRequest: ["connectorToken", "metadata", "connectorFeatureData"],
   PaymentServiceProxyAuthorizeRequest: ["metadata", "connectorFeatureData"],

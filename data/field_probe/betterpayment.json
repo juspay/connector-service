@@ -658,7 +658,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"transaction_id\":\"probe_connector_txn_001\",\"amount\":10.0}"
+          "body": "{\"transaction_id\":\"probe_connector_txn_001\",\"amount\":\"10.00\"}"
         }
       }
     },

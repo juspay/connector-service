@@ -25,8 +25,8 @@ config = sdk_config_pb2.ConnectorConfig(
     connector_config=payment_pb2.ConnectorSpecificConfig(
         betterpayment=payment_pb2.BetterpaymentConfig(
             api_key=payment_methods_pb2.SecretString(value="YOUR_API_KEY"),
-            key1=payment_methods_pb2.SecretString(value="YOUR_KEY1"),
-            api_secret=payment_methods_pb2.SecretString(value="YOUR_API_SECRET"),
+            api_password=payment_methods_pb2.SecretString(value="YOUR_API_PASSWORD"),
+            webhook_key=payment_methods_pb2.SecretString(value="YOUR_WEBHOOK_KEY"),
             base_url="YOUR_BASE_URL",
         ),
     ),
@@ -51,8 +51,8 @@ const config = ConnectorConfig.create({
     auth: {
         betterpayment: {
             apiKey: { value: 'YOUR_API_KEY' },
-            key1: { value: 'YOUR_KEY1' },
-            apiSecret: { value: 'YOUR_API_SECRET' },
+            apiPassword: { value: 'YOUR_API_PASSWORD' },
+            webhookKey: { value: 'YOUR_WEBHOOK_KEY' },
             baseUrl: 'YOUR_BASE_URL',
         }
     },
@@ -73,8 +73,8 @@ val config = ConnectorConfig.newBuilder()
         ConnectorSpecificConfig.newBuilder()
             .setBetterpayment(BetterpaymentConfig.newBuilder()
                 .setApiKey(SecretString.newBuilder().setValue("YOUR_API_KEY").build())
-                .setKey1(SecretString.newBuilder().setValue("YOUR_KEY1").build())
-                .setApiSecret(SecretString.newBuilder().setValue("YOUR_API_SECRET").build())
+                .setApiPassword(SecretString.newBuilder().setValue("YOUR_API_PASSWORD").build())
+                .setWebhookKey(SecretString.newBuilder().setValue("YOUR_WEBHOOK_KEY").build())
                 .setBaseUrl("YOUR_BASE_URL")
                 .build())
             .build()
@@ -97,8 +97,8 @@ let config = ConnectorConfig {
     connector_config: Some(ConnectorSpecificConfig {
             config: Some(connector_specific_config::Config::Betterpayment(BetterpaymentConfig {
                 api_key: Some(hyperswitch_masking::Secret::new("YOUR_API_KEY".to_string())),  // Authentication credential
-                key1: Some(hyperswitch_masking::Secret::new("YOUR_KEY1".to_string())),  // Authentication credential
-                api_secret: Some(hyperswitch_masking::Secret::new("YOUR_API_SECRET".to_string())),  // Authentication credential
+                api_password: Some(hyperswitch_masking::Secret::new("YOUR_API_PASSWORD".to_string())),  // Authentication credential
+                webhook_key: Some(hyperswitch_masking::Secret::new("YOUR_WEBHOOK_KEY".to_string())),  // Authentication credential
                 base_url: Some("https://sandbox.example.com".to_string()),  // Base URL for API calls
                 ..Default::default()
             })),
