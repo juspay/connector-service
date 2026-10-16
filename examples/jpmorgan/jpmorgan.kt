@@ -451,7 +451,7 @@ fun setupRecurring(txnId: String, config: ConnectorConfig = _defaultConfig) {
     val response = client.setup_recurring(request)
     when (response.status.name) {
         "FAILED" -> throw RuntimeException("Setup failed: ${response.error.unifiedDetails.message}")
-        else     -> println("Mandate stored: ${response.connectorRecurringPaymentId}")
+        else     -> println("Verification status: ${response.status.name}")
     }
 }
 

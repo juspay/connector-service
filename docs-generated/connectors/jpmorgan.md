@@ -380,7 +380,8 @@ Authorize using vault-aliased card data. Proxy substitutes before connector.
 
 #### PaymentService.ProxySetupRecurring
 
-Setup recurring mandate using vault-aliased card data.
+Verify credentials with a zero-value request.
+This flow does not create a connector mandate.
 
 | | Message |
 |---|---------|
@@ -402,7 +403,8 @@ Process a partial or full refund for a captured payment. Returns funds to the cu
 
 #### PaymentService.SetupRecurring
 
-Configure a payment method for recurring billing. Sets up the mandate and payment details needed for future automated charges.
+Verify credentials with a zero-value request.
+This flow does not create a connector mandate.
 
 | | Message |
 |---|---------|
