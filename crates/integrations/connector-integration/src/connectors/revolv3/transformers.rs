@@ -1214,21 +1214,13 @@ impl TryFrom<ResponseRouterData<Revolv3RefundSyncResponse, Self>>
         let refund_status = RefundStatus::from(&item.response.invoice_status);
         let response = if is_refund_failure(refund_status) {
             let latest_attempt = get_latest_attempt(&item.response.invoice_attempts);
-            let error_message = latest_attempt.as_ref().and_then(|attempt| {
-                attempt
-                    .revolv3_response_message
-                    .clone()
-                    .or_else(|| attempt.response_message.clone())
-            });
+            let error_message = latest_attempt
+                .as_ref()
+                .and_then(|attempt| attempt.revolv3_response_message.clone());
             Err(domain_types::router_data::ErrorResponse {
                 code: latest_attempt
                     .as_ref()
-                    .and_then(|attempt| {
-                        attempt
-                            .revolv3_response_code
-                            .clone()
-                            .or_else(|| attempt.response_code.clone())
-                    })
+                    .and_then(|attempt| attempt.revolv3_response_code.clone())
                     .unwrap_or(common_utils::consts::NO_ERROR_CODE.to_string()),
                 message: error_message
                     .clone()
