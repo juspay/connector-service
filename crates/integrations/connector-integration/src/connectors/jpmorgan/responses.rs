@@ -253,8 +253,9 @@ pub enum JpmorganVerificationStatus {
 pub type JpmorganSetupMandateResponse = JpmorganVerificationResponse;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(transparent)]
-pub struct JpmorganPSyncResponse {
-    pub body: Secret<serde_json::Value>,
+#[serde(untagged)]
+pub enum JpmorganPSyncResponse {
+    Payment(Box<JpmorganPaymentsResponse>),
+    Verification(Box<JpmorganVerificationResponse>),
 }
 pub type JpmorganRepeatPaymentResponse = JpmorganPaymentsResponse;
