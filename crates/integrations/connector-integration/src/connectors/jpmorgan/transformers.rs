@@ -99,10 +99,15 @@ impl requests::JpmorganRequestMetadata {
                 .get("jpmorgan")
                 .is_some_and(serde_json::Value::is_null)
         {
-            return Err(requests::JpmorganStoredContext::invalid());
+            return Err(requests::JpmorganStoredContext::invalid_with_reason(
+                "Payment metadata must be an object with a non-null JPMorgan context.",
+            ));
         }
-        serde_json::from_value(value.clone())
-            .map_err(|_| requests::JpmorganStoredContext::invalid())
+        serde_json::from_value(value.clone()).map_err(|_| {
+            requests::JpmorganStoredContext::invalid_with_reason(
+                "The JPMorgan metadata has an invalid field type.",
+            )
+        })
     }
 }
 
@@ -118,9 +123,11 @@ impl requests::JpmorganRecurring {
         let Some(context) = metadata.jpmorgan else {
             return Self::default_initial(category);
         };
-        let recurring = context
-            .recurring
-            .ok_or_else(requests::JpmorganStoredContext::invalid)?;
+        let recurring = context.recurring.ok_or_else(|| {
+            requests::JpmorganStoredContext::invalid_with_reason(
+                "Initial scheduled storage requires recurring agreement details.",
+            )
+        })?;
         if context.stored_credential.is_some()
             || context.wallet.is_some()
             || context.wallet_account_number_type.is_some()
@@ -136,7 +143,7 @@ impl requests::JpmorganRecurring {
             })
             || recurring.is_variable_amount.is_none()
         {
-            return Err(requests::JpmorganStoredContext::invalid());
+            return Err(requests::JpmorganStoredContext::invalid_with_reason("Initial scheduled storage requires FIRST, an amount classification, and a valid optional agreement ID. Do not supply stored credentials or wallet classification."));
         }
         Ok(Some(recurring))
     }
@@ -176,18 +183,21 @@ impl requests::JpmorganRecurring {
 }
 
 impl requests::JpmorganStoredContext {
-    pub(super) fn invalid() -> Error {
+    fn invalid_with_reason(reason: &'static str) -> Error {
         IntegrationError::InvalidDataFormat {
             field_name: "metadata.jpmorgan",
             context: IntegrationErrorContext {
                 suggested_action: Some("Return successful storage context unchanged for another checkout with the same credential and agreement.".to_owned()),
+                additional_context: Some(reason.to_owned()),
                 ..Default::default()
             },
         }.into()
     }
 
     pub(super) fn from_value(value: &serde_json::Value) -> Result<Self, Error> {
-        let context: Self = serde_json::from_value(value.clone()).map_err(|_| Self::invalid())?;
+        let context: Self = serde_json::from_value(value.clone()).map_err(|_| {
+            Self::invalid_with_reason("The stored credential context has an invalid field type or a missing required field.")
+        })?;
         context.validate()
     }
 
@@ -211,7 +221,9 @@ impl requests::JpmorganStoredContext {
                         .original_transaction_link_id
                         .is_some()))
         {
-            return Err(Self::invalid());
+            return Err(Self::invalid_with_reason(
+                "The initialization transaction ID or pending storage references are invalid.",
+            ));
         }
         if self
             .stored_credential
@@ -229,7 +241,9 @@ impl requests::JpmorganStoredContext {
                 .as_ref()
                 .is_some_and(|id| id.trim().is_empty())
         {
-            return Err(Self::invalid());
+            return Err(Self::invalid_with_reason(
+                "The initialization reference or an original network reference is empty.",
+            ));
         }
         if let Some(recurring) = &self.recurring {
             if recurring.agreement_id.as_deref().is_some_and(|id| {
@@ -237,7 +251,7 @@ impl requests::JpmorganStoredContext {
             }) || recurring.is_variable_amount.is_none()
                 || recurring.recurring_sequence != requests::JpmorganRecurringSequence::First
             {
-                return Err(Self::invalid());
+                return Err(Self::invalid_with_reason("The recurring agreement requires FIRST, an amount classification, and a valid optional agreement ID."));
             }
         }
         Ok(self)
@@ -252,7 +266,9 @@ impl requests::JpmorganStoredContext {
             .as_ref()
             .is_some_and(|data| !data.peek().is_object())
         {
-            return Err(Self::invalid());
+            return Err(Self::invalid_with_reason(
+                "Payment metadata must be a JSON object.",
+            ));
         }
         let Some(value) = request
             .metadata
@@ -261,11 +277,15 @@ impl requests::JpmorganStoredContext {
         else {
             return Ok(None);
         };
-        let supplied: requests::JpmorganPreservedContext =
-            serde_json::from_value(value.clone()).map_err(|_| Self::invalid())?;
+        let supplied: requests::JpmorganPreservedContext = serde_json::from_value(value.clone())
+            .map_err(|_| {
+                Self::invalid_with_reason(
+                    "The JPMorgan context has an invalid field type or a missing required field.",
+                )
+            })?;
         if supplied.other.contains_key("resource") || supplied.wallet_account_number_type.is_some()
         {
-            return Err(Self::invalid());
+            return Err(Self::invalid_with_reason("Authorize does not accept a resource marker or wallet_account_number_type in stored context."));
         }
         if supplied.stored_credential.is_none() {
             requests::JpmorganRecurring::from_initial_context(
@@ -276,26 +296,42 @@ impl requests::JpmorganStoredContext {
         }
         let context = Self::from_value(value)?;
         if context.stored_credential.state != requests::JpmorganStorageState::Established {
-            return Err(Self::invalid());
+            return Err(Self::invalid_with_reason(
+                "Only established storage context can be reused.",
+            ));
         }
         if context.stored_credential.initialization_reference == reference {
-            return Err(Self::invalid());
+            return Err(Self::invalid_with_reason(
+                "A subsequent checkout must use a different request reference.",
+            ));
         }
         match request.mit_category {
             Some(
                 common_enums::MitCategory::Recurring | common_enums::MitCategory::Subscription,
-            ) if context.recurring.is_none() => return Err(Self::invalid()),
+            ) if context.recurring.is_none() => {
+                return Err(Self::invalid_with_reason(
+                    "Scheduled payments require the original recurring agreement.",
+                ))
+            }
             Some(common_enums::MitCategory::Unscheduled) if context.recurring.is_some() => {
-                return Err(Self::invalid())
+                return Err(Self::invalid_with_reason(
+                    "Unscheduled payments must not contain a recurring agreement.",
+                ))
             }
             Some(
                 common_enums::MitCategory::Installment | common_enums::MitCategory::Resubmission,
-            ) => return Err(Self::invalid()),
+            ) => {
+                return Err(Self::invalid_with_reason(
+                    "Stored context does not support installment or resubmission payments.",
+                ))
+            }
             _ => (),
         }
         if let Some(terms) = request.setup_mandate_details.as_ref() {
             if terms.update_mandate_id.is_some() {
-                return Err(Self::invalid());
+                return Err(Self::invalid_with_reason(
+                    "Stored context cannot update an existing mandate.",
+                ));
             }
         }
         Ok(Some(context))
@@ -695,13 +731,15 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
         if let Some(context) = context {
             requests::JpmorganCard::validate_apple_pay_storage(&request.payment_method_data)?;
             if card.wallet_provider.is_some() != context.wallet.is_some() {
-                return Err(requests::JpmorganStoredContext::invalid());
+                return Err(requests::JpmorganStoredContext::invalid_with_reason(
+                    "The stored wallet classification does not match the supplied credential type.",
+                ));
             }
             if let Some(wallet) = context.wallet {
                 if card.wallet_provider.as_ref() != Some(&wallet.provider)
                     || card.account_number_type.as_ref() != Some(&wallet.account_number_type)
                 {
-                    return Err(requests::JpmorganStoredContext::invalid());
+                    return Err(requests::JpmorganStoredContext::invalid_with_reason("The wallet provider or account-number type differs from the stored context."));
                 }
             }
             return Ok((requests::JpmorganAccountOnFile::Stored, None));
@@ -1735,8 +1773,8 @@ impl<T: PaymentMethodDataTypes, F>
                     .map(requests::JpmorganStoredContext::validate)
                     .transpose()
                     .change_context(response_context())?;
-                // Return this context through connector_feature_data for later Authorize and Get calls.
-                // It preserves the initial agreement, wallet classification, and network references.
+                // A later Authorize request must supply this context in metadata.jpmorgan.
+                // Returning it does not load it automatically for another payment.
                 *connector_metadata = stored
                     .map(|jpmorgan| {
                         serde_json::to_value(requests::JpmorganStoredFeatureData { jpmorgan })
@@ -1785,7 +1823,10 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::try_from(&item.response)?;
+        let status = match AttemptStatus::try_from(&item.response)? {
+            AttemptStatus::Failure => AttemptStatus::CaptureFailed,
+            status => status,
+        };
         let response = build_payments_response_result(&item.response, item.http_code, status)?;
 
         Ok(Self {
@@ -1806,7 +1847,10 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = AttemptStatus::try_from(&item.response)?;
+        let status = match AttemptStatus::try_from(&item.response)? {
+            AttemptStatus::Failure => AttemptStatus::VoidFailed,
+            status => status,
+        };
         let response = build_payments_response_result(&item.response, item.http_code, status)?;
 
         Ok(Self {
@@ -2166,30 +2210,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 context: Default::default(),
             })?;
 
-        // For a subsequent MIT, the request shape depends on the mandate handle:
-        //   ConnectorMandateId  → reference the stored credential by JPMorgan's
-        //                         own transactionId via paymentMethodType.transactionReference;
-        //                         no card data is sent.
-        //   NetworkMandateId    → JPMorgan still requires card.{accountNumber,
-        //                         expiry}; the originalNetworkTransactionId is
-        //                         what reclassifies the txn as MIT (paired with
-        //                         initiatorType=MERCHANT, accountOnFile=STORED,
-        //                         recurringSequence=SUBSEQUENT), not a substitute
-        //                         for the card payload.
+        // NetworkMandateId requires card credentials and the original network transaction ID.
+        // A payment transaction ID is not a reusable processor token.
         let payment_method_type = match &router_data.request.mandate_reference {
-            MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
-                let transaction_reference_id = connector_mandate_ref
-                    .get_connector_mandate_id()
-                    .ok_or(IntegrationError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                        context: Default::default(),
-                    })?;
-                requests::JpmorganRepeatPaymentMethodType {
-                    card: None,
-                    transaction_reference: Some(requests::JpmorganTransactionReference {
-                        transaction_reference_id,
-                    }),
-                }
+            MandateReferenceId::ConnectorMandateId(_) => {
+                return Err(IntegrationError::NotSupported {
+                    message: "Connector mandate references for repeat payments".to_owned(),
+                    connector: "jpmorgan",
+                    context: IntegrationErrorContext {
+                        suggested_action: Some(
+                            "Supply card credentials and the original network transaction ID through NetworkMandateId.".to_owned(),
+                        ),
+                        ..Default::default()
+                    },
+                }.into());
             }
             MandateReferenceId::NetworkMandateId(nti) => {
                 let card_data = match &router_data.request.payment_method_data {
@@ -2209,7 +2243,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         expiry,
                         original_network_transaction_id: nti.network_transaction_id.clone(),
                     }),
-                    transaction_reference: None,
                 }
             }
             MandateReferenceId::NetworkTokenWithNTI(_) => {
@@ -2218,12 +2251,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .to_string(),
                     IntegrationErrorContext {
                         suggested_action: Some(
-                            "Use ConnectorMandateId for stored JPMorgan transaction_reference repeat payments, or use NetworkMandateId with card data for raw-card NTI MITs. NetworkTokenWithNTI is not mapped for JPMorgan RepeatPayment."
+                            "Supply card credentials and the original network transaction ID through NetworkMandateId."
                                 .to_string(),
                         ),
                         doc_url: Some(JPMORGAN_GETTING_STARTED_DOC.to_owned()),
                         additional_context: Some(
-                            "JPMorgan RepeatPayment received a NetworkTokenWithNTI mandate reference. This transformer builds either transaction_reference from connector_mandate_id or card.accountNumber, expiry, and originalNetworkTransactionId from NetworkMandateId; it does not build a JPMorgan MIT payload from network token credentials plus NTI."
+                            "This transformer does not support network token credentials with NetworkTokenWithNTI."
                                 .to_string(),
                         ),
                     },

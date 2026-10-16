@@ -251,14 +251,6 @@ pub struct JpmorganMitCardByNti<T: PaymentMethodDataTypes> {
     pub original_network_transaction_id: String,
 }
 
-/// JPMorgan stored-credential reference used by RepeatPayment when the
-/// upstream mandate is JPMorgan's own `transactionId` from the prior auth.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JpmorganTransactionReference {
-    pub transaction_reference_id: String,
-}
-
 /// SetupMandate's payment method type — always carries `card`.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -266,16 +258,12 @@ pub struct JpmorganSetupMandatePaymentMethodType<T: PaymentMethodDataTypes> {
     pub card: JpmorganSetupMandateCard<T>,
 }
 
-/// RepeatPayment's payment method type — exactly one of `card` (PAN + expiry +
-/// NTI) or `transaction_reference` is set, depending on which mandate handle
-/// the upstream gave us.
+/// RepeatPayment carries card credentials and the original network transaction ID.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganRepeatPaymentMethodType<T: PaymentMethodDataTypes> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card: Option<JpmorganMitCardByNti<T>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub transaction_reference: Option<JpmorganTransactionReference>,
 }
 
 /// SetupMandate request (initial CIT with credential storage)
