@@ -1074,11 +1074,7 @@ def generate_connector_doc(
             a(f"#### {flow_heading}")
             a("")
 
-            if connector_name == "jpmorgan" and rpc in ("SetupRecurring", "ProxySetupRecurring"):
-                a("Verify credentials with a zero-value request.")
-                a("This flow does not create a connector mandate.")
-                a("")
-            elif meta.get("description"):
+            if meta.get("description"):
                 a(meta["description"])
                 a("")
 

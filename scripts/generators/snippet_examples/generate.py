@@ -3436,15 +3436,10 @@ def render_consolidated_kotlin(
                 '    }'
             )
         elif flow_key == "setup_recurring":
-            setup_result = (
-                'Verification status: ${response.status.name}'
-                if connector_name == "jpmorgan"
-                else 'Mandate stored: ${response.connectorRecurringPaymentId}'
-            )
             status_block = (
                 '    when (response.status.name) {\n'
                 '        "FAILED" -> throw RuntimeException("Setup failed: ${response.error.unifiedDetails.message}")\n'
-                f'        else     -> println("{setup_result}")\n'
+                '        else     -> println("Mandate stored: ${response.connectorRecurringPaymentId}")\n'
                 '    }'
             )
         elif flow_key in ("capture", "refund", "recurring_charge", "void"):

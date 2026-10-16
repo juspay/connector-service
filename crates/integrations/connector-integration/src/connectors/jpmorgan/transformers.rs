@@ -1528,21 +1528,21 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPSyncResponse, Self>>
             .change_context(requests::JpmorganSyncResource::response_context(
                 item.http_code,
             ))?;
-        let (status, response) = match resource {
-            requests::JpmorganSyncResource::Payment(_) => {
-                let payment: responses::JpmorganPaymentsResponse =
-                    serde_json::from_value(item.response.body.peek().clone()).change_context(
-                        requests::JpmorganSyncResource::response_context(item.http_code),
-                    )?;
+        let (status, response) = match (resource, item.response) {
+            (
+                requests::JpmorganSyncResource::Payment(_),
+                responses::JpmorganPSyncResponse::Payment(payment),
+            ) => {
+                let payment = *payment;
                 let status = AttemptStatus::try_from(&payment)?;
                 let response = build_payments_response_result(&payment, item.http_code, status)?;
                 (status, response)
             }
-            requests::JpmorganSyncResource::Verification(id) => {
-                let verification: responses::JpmorganVerificationResponse =
-                    serde_json::from_value(item.response.body.peek().clone()).change_context(
-                        requests::JpmorganSyncResource::response_context(item.http_code),
-                    )?;
+            (
+                requests::JpmorganSyncResource::Verification(id),
+                responses::JpmorganPSyncResponse::Verification(verification),
+            ) => {
+                let verification = *verification;
                 if verification.transaction_id != id {
                     return Err(requests::JpmorganSyncResource::response_error(
                         item.http_code,
@@ -1550,6 +1550,11 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPSyncResponse, Self>>
                 }
                 let status = verification.status(item.http_code)?;
                 (status, verification.into_payment_response(item.http_code)?)
+            }
+            _ => {
+                return Err(requests::JpmorganSyncResource::response_error(
+                    item.http_code,
+                ));
             }
         };
 
