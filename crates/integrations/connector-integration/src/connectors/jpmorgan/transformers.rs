@@ -92,15 +92,11 @@ fn merchant_order_number(merchant_order_id: Option<&str>, reference: &str) -> St
         .to_owned()
 }
 
-impl requests::JpmorganRequestMetadata {
+impl requests::JpmorganPreservedContext {
     fn from_value(value: &serde_json::Value) -> Result<Self, Error> {
-        if !value.is_object()
-            || value
-                .get("jpmorgan")
-                .is_some_and(serde_json::Value::is_null)
-        {
+        if !value.is_object() || value.get("jpmorgan").is_some() {
             return Err(requests::JpmorganStoredContext::invalid_with_reason(
-                "Payment metadata must be an object with a non-null JPMorgan context.",
+                "Supply typed context fields directly in metadata without a jpmorgan wrapper.",
             ));
         }
         serde_json::from_value(value.clone()).map_err(|_| {
@@ -119,10 +115,18 @@ impl requests::JpmorganRecurring {
         let Some(metadata) = metadata else {
             return Self::default_initial(category);
         };
-        let metadata = requests::JpmorganRequestMetadata::from_value(metadata)?;
-        let Some(context) = metadata.jpmorgan else {
+        let context = requests::JpmorganPreservedContext::from_value(metadata)?;
+        if ![
+            "recurring",
+            "stored_credential",
+            "wallet",
+            "wallet_account_number_type",
+        ]
+        .iter()
+        .any(|field| metadata.get(field).is_some())
+        {
             return Self::default_initial(category);
-        };
+        }
         let recurring = context.recurring.ok_or_else(|| {
             requests::JpmorganStoredContext::invalid_with_reason(
                 "Initial scheduled storage requires recurring agreement details.",
@@ -185,7 +189,7 @@ impl requests::JpmorganRecurring {
 impl requests::JpmorganStoredContext {
     fn invalid_with_reason(reason: &'static str) -> Error {
         IntegrationError::InvalidDataFormat {
-            field_name: "metadata.jpmorgan",
+            field_name: "metadata",
             context: IntegrationErrorContext {
                 suggested_action: Some("Return successful storage context unchanged for another checkout with the same credential and agreement.".to_owned()),
                 additional_context: Some(reason.to_owned()),
@@ -261,28 +265,10 @@ impl requests::JpmorganStoredContext {
         request: &PaymentsAuthorizeData<T>,
         reference: &str,
     ) -> Result<Option<Self>, Error> {
-        if request
-            .metadata
-            .as_ref()
-            .is_some_and(|data| !data.peek().is_object())
-        {
-            return Err(Self::invalid_with_reason(
-                "Payment metadata must be a JSON object.",
-            ));
-        }
-        let Some(value) = request
-            .metadata
-            .as_ref()
-            .and_then(|data| data.peek().get("jpmorgan"))
-        else {
+        let Some(value) = request.metadata.as_ref().map(|data| data.peek()) else {
             return Ok(None);
         };
-        let supplied: requests::JpmorganPreservedContext = serde_json::from_value(value.clone())
-            .map_err(|_| {
-                Self::invalid_with_reason(
-                    "The JPMorgan context has an invalid field type or a missing required field.",
-                )
-            })?;
+        let supplied = requests::JpmorganPreservedContext::from_value(value)?;
         if supplied.other.contains_key("resource") || supplied.wallet_account_number_type.is_some()
         {
             return Err(Self::invalid_with_reason("Authorize does not accept a resource marker or wallet_account_number_type in stored context."));
@@ -691,10 +677,16 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganPaymentsRequest<T> {
     fn requires_storage_context(request: &PaymentsAuthorizeData<T>) -> bool {
         Self::has_saving_intent(request)
             || request.mit_category.is_some()
-            || request
-                .metadata
-                .as_ref()
-                .is_some_and(|data| data.peek().get("jpmorgan").is_some())
+            || request.metadata.as_ref().is_some_and(|data| {
+                [
+                    "stored_credential",
+                    "recurring",
+                    "wallet",
+                    "wallet_account_number_type",
+                ]
+                .iter()
+                .any(|field| data.peek().get(field).is_some())
+            })
     }
 
     fn supports_initial_storage(payment_method: &PaymentMethodData<T>) -> bool {
@@ -886,6 +878,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
+        if let Some(metadata) = &router_data.request.metadata {
+            requests::JpmorganPreservedContext::from_value(metadata.peek())?;
+        }
         if Self::requires_storage_context(&router_data.request)
             && !Self::supports_initial_storage(&router_data.request.payment_method_data)
         {
@@ -1773,12 +1768,10 @@ impl<T: PaymentMethodDataTypes, F>
                     .map(requests::JpmorganStoredContext::validate)
                     .transpose()
                     .change_context(response_context())?;
-                // A later Authorize request must supply this context in metadata.jpmorgan.
+                // A later Authorize request must supply these typed fields directly in metadata.
                 // Returning it does not load it automatically for another payment.
                 *connector_metadata = stored
-                    .map(|jpmorgan| {
-                        serde_json::to_value(requests::JpmorganStoredFeatureData { jpmorgan })
-                    })
+                    .map(serde_json::to_value)
                     .transpose()
                     .change_context(response_context())?;
             }
