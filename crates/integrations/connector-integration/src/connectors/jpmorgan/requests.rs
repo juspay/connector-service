@@ -275,7 +275,8 @@ pub struct JpmorganSetupMandateRequest<T: PaymentMethodDataTypes> {
     pub currency: common_enums::Currency,
     pub merchant: JpmorganMerchant,
     pub payment_method_type: JpmorganSetupMandatePaymentMethodType<T>,
-    pub recurring: JpmorganRecurring,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurring: Option<JpmorganRecurring>,
     pub initiator_type: JpmorganInitiatorType,
     pub account_on_file: JpmorganAccountOnFile,
     pub is_amount_final: bool,

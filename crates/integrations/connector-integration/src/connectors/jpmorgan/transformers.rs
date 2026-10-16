@@ -1629,12 +1629,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     },
                 };
 
-                // Use connector_request_reference_id as agreement_id
-                let agreement_id = router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone();
-
                 let amount = router_data
                     .request
                     .amount
@@ -1651,10 +1645,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .transpose()?
                     .unwrap_or(common_utils::types::MinorUnit::new(0));
 
-                let recurring = requests::JpmorganRecurring {
-                    recurring_sequence: requests::JpmorganRecurringSequence::First,
-                    agreement_id: Some(agreement_id),
-                    is_variable_amount: Some(false),
+                let recurring = match router_data.request.mit_category {
+                    Some(
+                        common_enums::MitCategory::Recurring
+                        | common_enums::MitCategory::Subscription,
+                    ) => Some(requests::JpmorganRecurring {
+                        recurring_sequence: requests::JpmorganRecurringSequence::First,
+                        agreement_id: None,
+                        is_variable_amount: Some(true),
+                    }),
+                    Some(
+                        common_enums::MitCategory::Installment
+                        | common_enums::MitCategory::Resubmission,
+                    ) => {
+                        return Err(IntegrationError::NotSupported {
+                            message: "Installment or resubmission agreements".to_owned(),
+                            connector: "jpmorgan",
+                            context: Default::default(),
+                        }
+                        .into())
+                    }
+                    _ => None,
                 };
 
                 Ok(Self {
