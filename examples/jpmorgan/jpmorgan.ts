@@ -184,9 +184,6 @@ function _buildProxySetupRecurringRequest(): types.IPaymentServiceProxySetupRecu
 function _buildRecurringChargeRequest(): types.IRecurringPaymentServiceChargeRequest {
     return {
         "connectorRecurringPaymentId": {  // Reference to existing mandate.
-            "networkMandateId": {  // network_mandate_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data.
-                "networkTransactionId": "probe_network_txn_001"
-            }
         },
         "amount": {  // Amount Information.
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00).
