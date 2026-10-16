@@ -77,28 +77,27 @@ impl requests::JpmorganSyncResource {
             }
             .validate()?;
         }
-        if let Some(resource) = context.and_then(|context| context.resource.as_ref()) {
-            let id = match &request.connector_transaction_id {
-                ResponseId::ConnectorTransactionId(id) => {
-                    if resource.id.as_ref().is_some_and(|legacy| legacy != id) {
-                        return Err(invalid().into());
-                    }
-                    id.clone()
-                }
-                ResponseId::NoResponseId => resource.id.clone().ok_or_else(invalid)?,
-                _ => return Err(invalid().into()),
-            };
+        let id = request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(IntegrationError::MissingConnectorTransactionID {
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "Supply the original connector_transaction_id for this Get request."
+                            .to_owned(),
+                    ),
+                    ..Default::default()
+                },
+            })?;
+        if context
+            .and_then(|context| context.resource.as_ref())
+            .is_some()
+        {
             if !Self::valid_verification_id(&id) {
                 return Err(invalid().into());
             }
             return Ok((Self::Verification(id), metadata));
         }
-        let id = request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(IntegrationError::MissingConnectorTransactionID {
-                context: Default::default(),
-            })?;
         Ok((Self::Payment(id), metadata))
     }
 
@@ -238,7 +237,6 @@ impl responses::JpmorganVerificationResponse {
         }
         jpmorgan.resource = Some(requests::JpmorganResourceContext {
             resource_type: requests::JpmorganResourceType::Verification,
-            id: None,
         });
         let metadata = serde_json::to_value(metadata)
             .change_context(requests::JpmorganSyncResource::response_context(http_code))?;
@@ -490,17 +488,16 @@ impl requests::JpmorganStoredContext {
         if supplied.wallet_account_number_type.is_some() {
             return Err(Self::invalid());
         }
-        if let Some(resource) = &supplied.resource {
-            if !matches!(
+        if supplied.resource.is_some()
+            && !matches!(
                 supplied
                     .stored_credential
                     .as_ref()
                     .map(|credential| &credential.source),
                 Some(requests::JpmorganStorageSource::Verification)
-            ) || resource.id.is_some()
-            {
-                return Err(Self::invalid());
-            }
+            )
+        {
+            return Err(Self::invalid());
         }
         if supplied.stored_credential.is_none() {
             requests::JpmorganRecurring::from_initial_context(

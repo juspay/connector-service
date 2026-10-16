@@ -437,11 +437,10 @@ pub struct JpmorganPreservedContext {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct JpmorganResourceContext {
     #[serde(rename = "type")]
     pub resource_type: JpmorganResourceType,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]

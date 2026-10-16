@@ -13186,25 +13186,12 @@ impl<
 
         let setup_future_usage = value.setup_future_usage();
 
-        // Preserve supplied setup terms and fill only missing acceptance.
-        let setup_mandate_details = match value.setup_mandate_details.clone() {
-            Some(details) => {
-                let mut details = MandateData::foreign_try_from(details)?;
-                if details.customer_acceptance.is_none() {
-                    details.customer_acceptance =
-                        Some(mandates::CustomerAcceptance::foreign_try_from(
-                            customer_acceptance.clone(),
-                        )?);
-                }
-                details
-            }
-            None => MandateData {
-                update_mandate_id: None,
-                customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                    customer_acceptance.clone(),
-                )?),
-                mandate_type: None,
-            },
+        let setup_mandate_details = MandateData {
+            update_mandate_id: None,
+            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
+            mandate_type: None,
         };
 
         let billing_descriptor =
