@@ -6,8 +6,7 @@ use error_stack::{report, Report};
 const MAX_ERROR_SOURCE_DEPTH: usize = 8;
 
 /// Sends an HTTP request via reqwest, automatically retrying once if the
-/// connection was closed before the message completed or a request error occurs.
-/// Request errors can occur after transmission; this is a client-level replay policy.
+/// connection was closed by the remote side before the message completed.
 ///
 /// This handles a well-known race condition in HTTP connection pooling: hyper
 /// maintains a pool of idle keep-alive connections and occasionally selects one
@@ -27,7 +26,7 @@ const MAX_ERROR_SOURCE_DEPTH: usize = 8;
 /// original error is returned.
 ///
 /// Returns `(response, retried)` where `retried` is `true` if the first attempt
-/// hit a connection-closed or request error and a retry was attempted.
+/// hit a connection-closed error and a retry was attempted.
 ///
 /// The retry is done on the client returned by `make_retry_client`, evaluated
 /// lazily only when the retry is needed. Pass a client with a brand-new
@@ -48,8 +47,7 @@ pub async fn send_request_with_retry(
 
     match response {
         Err(ref error)
-            if error.current_context() == &ApiClientError::ConnectionClosedIncompleteMessage
-                || matches!(error.current_context(), ApiClientError::RequestNotSent(kind) if kind == "request error") =>
+            if error.current_context() == &ApiClientError::ConnectionClosedIncompleteMessage =>
         {
             match cloned_request {
                 Some(cloned_req) => match make_retry_client() {
@@ -74,7 +72,9 @@ pub async fn send_request_with_retry(
                     }
                 },
                 None => {
-                    tracing::info!("Cannot retry request: request body is not cloneable");
+                    tracing::info!(
+                        "Cannot retry connection-closed error: request body is not cloneable"
+                    );
                     (response, false)
                 }
             }
@@ -135,7 +135,7 @@ fn map_reqwest_error(error: reqwest::Error) -> Report<ApiClientError> {
         source = cause
             .downcast_ref::<std::io::Error>()
             .and_then(std::io::Error::get_ref)
-            .map(|inner| inner as &(dyn StdError + 'static))
+            .map(|inner| -> &(dyn StdError + 'static) { inner })
             .or_else(|| cause.source());
     }
     tracing::warn!(
@@ -544,28 +544,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn request_errors_use_the_same_retry_path_once() {
-        for reset_first in [1, usize::MAX] {
-            let (url, seen) = spawn_server_with_reset(reset_first, true).await;
-            let factory_calls = AtomicUsize::new(0);
-            let (response, retried) =
-                send_request_with_retry(reqwest::Client::new().post(url), || {
-                    factory_calls.fetch_add(1, Ordering::SeqCst);
-                    Ok(reqwest::Client::new())
-                })
-                .await;
-            assert!(retried);
-            assert_eq!(factory_calls.load(Ordering::SeqCst), 1);
-            assert_eq!(seen.load(Ordering::SeqCst), 2);
-            if reset_first == 1 {
-                assert_eq!(response.unwrap().status(), 200);
-            } else {
-                assert_eq!(
-                    response.unwrap_err().current_context(),
-                    &ApiClientError::RequestNotSent("request error".to_string())
-                );
-            }
-        }
+    async fn request_errors_after_transmission_are_not_retried() {
+        let (url, seen) = spawn_server_with_reset(1, true).await;
+        let factory_calls = AtomicUsize::new(0);
+        let (response, retried) = send_request_with_retry(reqwest::Client::new().post(url), || {
+            factory_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(reqwest::Client::new())
+        })
+        .await;
+        assert!(!retried);
+        assert_eq!(factory_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(seen.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            response.unwrap_err().current_context(),
+            &ApiClientError::RequestNotSent("request error".to_string())
+        );
     }
 }
 
@@ -598,7 +591,10 @@ mod transport_diagnostic_tests {
     struct Capture(Arc<Mutex<Vec<u8>>>);
     impl Write for Capture {
         fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-            self.0.lock().unwrap().extend_from_slice(bytes);
+            self.0
+                .lock()
+                .map_err(|_| std::io::Error::other("log capture lock poisoned"))?
+                .extend_from_slice(bytes);
             Ok(bytes.len())
         }
         fn flush(&mut self) -> std::io::Result<()> {
@@ -625,8 +621,16 @@ mod transport_diagnostic_tests {
         );
         assert!(!log.contains("http://") && !log.contains("https://"));
         let event: serde_json::Value = serde_json::from_str(log).unwrap();
-        let sources: serde_json::Value =
-            serde_json::from_str(event["fields"]["error_sources"].as_str().unwrap()).unwrap();
+        let sources: serde_json::Value = serde_json::from_str(
+            event
+                .get("fields")
+                .unwrap()
+                .get("error_sources")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap();
         assert!(sources
             .as_array()
             .is_some_and(|sources| !sources.is_empty()));
@@ -639,10 +643,11 @@ mod transport_diagnostic_tests {
         let stack = ::openssl::pkey::PKey::private_key_from_pem(SECRET.as_bytes()).unwrap_err();
         let safe = safe_openssl_cause(&stack).unwrap();
         let value: serde_json::Value = serde_json::from_str(&safe).unwrap();
-        assert!(!value["errors"].as_array().unwrap().is_empty());
-        assert!(value["errors"][0]["code"].is_number());
-        assert!(value["errors"][0]["reason"].is_string());
-        assert_eq!(value["attached_data_omitted"], true);
+        let errors = value.get("errors").unwrap().as_array().unwrap();
+        let error = errors.first().unwrap();
+        assert!(error.get("code").unwrap().is_number());
+        assert!(error.get("reason").unwrap().is_string());
+        assert_eq!(value.get("attached_data_omitted").unwrap(), true);
         assert!(!safe.contains(SECRET));
     }
 
@@ -745,10 +750,9 @@ mod transport_diagnostic_tests {
         impl reqwest::dns::Resolve for Resolver {
             fn resolve(&self, _: reqwest::dns::Name) -> reqwest::dns::Resolving {
                 Box::pin(async {
-                    Err(
-                        Box::new(std::io::Error::other(CustomError(SECRET.to_string())))
-                            as Box<dyn StdError + Send + Sync>,
-                    )
+                    let error: Box<dyn StdError + Send + Sync> =
+                        Box::new(std::io::Error::other(CustomError(SECRET.to_string())));
+                    Err(error)
                 })
             }
         }

@@ -1688,7 +1688,7 @@ pub async fn call_connector_api(
         tracing::info!(
             connector = %connector_host,
             retry_received_http_response = response.is_ok(),
-            "Auto-retried request after a connection-closed or request error"
+            "Auto-retried request due to connection closed before message completed"
         );
     }
 
