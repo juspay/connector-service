@@ -25,6 +25,7 @@ use grpc_api_types::payments::{
     PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,
     RefundServiceGetRequest,
 };
+use hyperswitch_masking::ExposeInterface;
 
 use crate::utils::{
     get_access_token, get_connector_customer_id, get_payment_method_token, get_session_token,
@@ -192,7 +193,7 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
             customer_name: item
                 .customer_name
                 .clone()
-                .or_else(|| customer.and_then(|c| c.name.clone())),
+                .or_else(|| customer.and_then(|c| c.name.clone()).map(|n| n.expose())),
             email: item
                 .email
                 .clone()

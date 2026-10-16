@@ -80,7 +80,7 @@ enum PurchaseType {
 // Student details for education payments (e.g. Flywire recipient fields).
 message StudentDetails {
   optional string student_id = 1;
-  optional string student_first_name = 2;
+  optional SecretString student_first_name = 2; // PII — student's first name
   optional string student_last_name = 3;
   optional SecretString student_email = 4; // PII — student's email address
 }
@@ -135,7 +135,7 @@ message AirlineData {
   optional string flight_date = 6;              // Departure date of the first leg
   optional string issuing_carrier_code = 7;     // IATA code of the ticket issuer
   optional string airline_code = 8;             // IATA numeric accounting code
-  optional string passenger_name = 9;           // Primary passenger name
+  optional SecretString passenger_name = 9;     // Primary passenger name
   optional uint32 number_of_passengers = 10;    // Passenger count on the ticket
   optional string document_type = 11;           // Travel document type code
   TicketRefundability refundability = 12;       // Refundable / non-refundable

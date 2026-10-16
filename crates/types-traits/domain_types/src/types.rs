@@ -5645,7 +5645,8 @@ impl<
             customer_name: value
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.name.clone()),
+                .and_then(|customer| customer.name.clone())
+                .map(|n| n.expose()),
             billing_descriptor,
             router_return_url: value.return_url.clone(),
             complete_authorize_url: value.complete_authorize_url,
@@ -5860,7 +5861,8 @@ impl<
             customer_name: value
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.name.clone()),
+                .and_then(|customer| customer.name.clone())
+                .map(|n| n.expose()),
             return_url: value.complete_authorize_url.clone(),
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
                 value.payment_method.clone().ok_or_else(|| {
@@ -13748,7 +13750,8 @@ impl<
             customer_name: value
                 .customer
                 .as_ref()
-                .and_then(|customer| customer.name.clone()),
+                .and_then(|customer| customer.name.clone())
+                .map(|n| n.expose()),
             return_url: value.return_url.clone(),
             payment_method_type: value
                 .payment_method
@@ -14108,7 +14111,7 @@ impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
         Ok(Self {
             customer_id,
             customer_email,
-            customer_name: value.name.clone().map(Into::into),
+            customer_name: value.name.clone(),
             first_name: value.first_name.clone().map(Into::into),
             last_name: value.last_name.clone().map(Into::into),
             customer_phone_number: value.phone_number.clone(),
@@ -14123,7 +14126,7 @@ impl ForeignFrom<connector_types::CustomerInfo> for grpc_api_types::payments::Cu
     fn foreign_from(info: connector_types::CustomerInfo) -> Self {
         Self {
             id: info.customer_id.map(|id| id.get_string_repr().to_string()),
-            name: info.customer_name.map(|n| n.expose()),
+            name: info.customer_name,
             first_name: info.first_name.map(|f| f.expose()),
             last_name: info.last_name.map(|l| l.expose()),
             email: info
@@ -15734,7 +15737,6 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for ConnectorCustomerData {
             .customer
             .clone()
             .and_then(|customer| customer.name)
-            .map(Secret::new)
             .or_else(|| {
                 value
                     .address
@@ -15898,7 +15900,7 @@ impl ForeignTryFrom<PaymentServiceSetupRecurringRequest> for ConnectorCustomerDa
                 Ok(Self {
                     customer_id: customer.id.map(Secret::new),
                     email: email.map(Secret::new),
-                    name: customer.name.map(Secret::new),
+                    name: customer.name,
                     description: None,
                     phone: None,
                     preprocessing_id: None,
