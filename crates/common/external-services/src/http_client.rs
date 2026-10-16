@@ -3,8 +3,11 @@ use std::error::Error as StdError;
 use common_enums::ApiClientError;
 use error_stack::{report, Report};
 
+const MAX_ERROR_SOURCE_DEPTH: usize = 8;
+
 /// Sends an HTTP request via reqwest, automatically retrying once if the
-/// connection was closed by the remote side before the message completed.
+/// connection was closed before the message completed or a request error occurs.
+/// Request errors can occur after transmission; this is a client-level replay policy.
 ///
 /// This handles a well-known race condition in HTTP connection pooling: hyper
 /// maintains a pool of idle keep-alive connections and occasionally selects one
@@ -24,7 +27,7 @@ use error_stack::{report, Report};
 /// original error is returned.
 ///
 /// Returns `(response, retried)` where `retried` is `true` if the first attempt
-/// hit a connection-closed error and a retry was attempted.
+/// hit a connection-closed or request error and a retry was attempted.
 ///
 /// The retry is done on the client returned by `make_retry_client`, evaluated
 /// lazily only when the retry is needed. Pass a client with a brand-new
@@ -45,13 +48,15 @@ pub async fn send_request_with_retry(
 
     match response {
         Err(ref error)
-            if error.current_context() == &ApiClientError::ConnectionClosedIncompleteMessage =>
+            if error.current_context() == &ApiClientError::ConnectionClosedIncompleteMessage
+                || matches!(error.current_context(), ApiClientError::RequestNotSent(kind) if kind == "request error") =>
         {
             match cloned_request {
                 Some(cloned_req) => match make_retry_client() {
                     Ok(retry_client) => {
                         tracing::info!(
-                            "Retrying request on a fresh client (new connection) due to connection closed before message completed"
+                            retry_reason = %error.current_context(),
+                            "Retrying request once on a fresh client (new connection)"
                         );
                         (
                             send_request_with_client(&retry_client, cloned_req).await,
@@ -69,9 +74,7 @@ pub async fn send_request_with_retry(
                     }
                 },
                 None => {
-                    tracing::info!(
-                        "Cannot retry connection-closed error: request body is not cloneable"
-                    );
+                    tracing::info!("Cannot retry request: request body is not cloneable");
                     (response, false)
                 }
             }
@@ -104,6 +107,44 @@ async fn send_request_with_client(
 }
 
 fn map_reqwest_error(error: reqwest::Error) -> Report<ApiClientError> {
+    // Inspect typed causes before mapping discards them. Never log their raw
+    // text: URLs, custom I/O errors and TLS errors can contain request secrets.
+    let (mut channel_closed, mut canceled, mut incomplete_message) = (false, false, false);
+    let (mut io_kind, mut os_error) = (None, None);
+    let mut error_sources = Vec::new();
+    let mut source = error.source();
+    for _ in 0..MAX_ERROR_SOURCE_DEPTH {
+        let Some(cause) = source else { break };
+        if let Some(cause) = cause.downcast_ref::<hyper::Error>() {
+            channel_closed |= cause.is_closed();
+            canceled |= cause.is_canceled();
+            incomplete_message |= cause.is_incomplete_message();
+            // Hyper 1.8.1 Display contains only its fixed error-kind message.
+            error_sources.push(cause.to_string());
+        }
+        if let Some(cause) = cause.downcast_ref::<std::io::Error>() {
+            io_kind = Some(cause.kind());
+            os_error = cause.raw_os_error();
+            error_sources.push(match cause.raw_os_error() {
+                Some(code) => std::io::Error::from_raw_os_error(code).to_string(),
+                None => format!("I/O error: {:?}", cause.kind()),
+            });
+        }
+        source = cause.source();
+    }
+    tracing::warn!(
+        connect_error = error.is_connect(),
+        request_error = error.is_request(),
+        timeout = error.is_timeout(),
+        channel_closed,
+        canceled,
+        incomplete_message,
+        ?io_kind,
+        ?os_error,
+        ?error_sources,
+        source_chain_truncated = source.is_some(),
+        "Connector HTTP request failed"
+    );
     let api_error = match error {
         error if error.is_timeout() => ApiClientError::RequestTimeoutReceived,
         error if is_connection_closed_before_message_could_complete(&error) => {
@@ -162,6 +203,13 @@ mod tests {
     /// Local server that closes the first `close_first` connections without answering
     /// (what hyper sees when it picks a stale keep-alive connection), then replies 200.
     async fn spawn_server(close_first: usize) -> (String, Arc<AtomicUsize>) {
+        spawn_server_with_reset(close_first, false).await
+    }
+
+    async fn spawn_server_with_reset(
+        close_first: usize,
+        reset: bool,
+    ) -> (String, Arc<AtomicUsize>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}/", listener.local_addr().unwrap());
         let seen = Arc::new(AtomicUsize::new(0));
@@ -179,6 +227,8 @@ mod tests {
                                 b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok",
                             )
                             .await;
+                    } else if reset {
+                        stream.set_zero_linger().unwrap();
                     }
                 });
             }
@@ -290,5 +340,30 @@ mod tests {
             &ApiClientError::ConnectionClosedIncompleteMessage
         );
         assert_eq!(seen.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn request_errors_use_the_same_retry_path_once() {
+        for reset_first in [1, usize::MAX] {
+            let (url, seen) = spawn_server_with_reset(reset_first, true).await;
+            let factory_calls = AtomicUsize::new(0);
+            let (response, retried) =
+                send_request_with_retry(reqwest::Client::new().post(url), || {
+                    factory_calls.fetch_add(1, Ordering::SeqCst);
+                    Ok(reqwest::Client::new())
+                })
+                .await;
+            assert!(retried);
+            assert_eq!(factory_calls.load(Ordering::SeqCst), 1);
+            assert_eq!(seen.load(Ordering::SeqCst), 2);
+            if reset_first == 1 {
+                assert_eq!(response.unwrap().status(), 200);
+            } else {
+                assert_eq!(
+                    response.unwrap_err().current_context(),
+                    &ApiClientError::RequestNotSent("request error".to_string())
+                );
+            }
+        }
     }
 }
