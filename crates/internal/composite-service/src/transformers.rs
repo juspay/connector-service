@@ -310,7 +310,7 @@ impl
             .or_else(|| item.connector_order_id.clone());
 
         Self {
-            allow_amount_mismatch: item.allow_amount_mismatch,
+            integrity_specifications: item.integrity_specifications,
             split_settlement: item.split_settlement.clone(),
             merchant_transaction_id: item.merchant_transaction_id.clone(),
             amount: item.amount,
@@ -418,7 +418,7 @@ impl
         });
 
         Self {
-            allow_amount_mismatch: item.allow_amount_mismatch,
+            integrity_specifications: item.integrity_specifications,
             is_overcapture_enabled: item.is_overcapture_enabled,
             enable_partial_authorization: item.enable_partial_authorization,
             connector_transaction_id: item.connector_transaction_id.clone(),
@@ -844,9 +844,9 @@ impl
         });
 
         Self {
-            allow_amount_mismatch: item.allow_amount_mismatch,
+            integrity_specifications: item.integrity_specifications,
             // Composite capture doesn't take an overcapture flag; amount tolerance there comes
-            // only from allow_amount_mismatch.
+            // only from integrity_specifications.allow_amount_mismatch.
             is_overcapture_enabled: None,
             split_settlement: item.split_settlement.clone(),
             merchant_capture_id: item.merchant_capture_id.clone(),
@@ -1080,7 +1080,7 @@ impl ForeignFrom<&CompositePaymentMethodGetRequest> for PaymentMethodServiceToke
     #[allow(deprecated)]
     fn foreign_from(item: &CompositePaymentMethodGetRequest) -> Self {
         Self {
-            allow_amount_mismatch: item.allow_amount_mismatch,
+            integrity_specifications: item.integrity_specifications,
             merchant_payment_method_id: item.merchant_payment_method_id.clone(),
             amount: item.amount,
             payment_method: item.payment_method.clone(),
@@ -1106,7 +1106,7 @@ impl ForeignFrom<&CompositePaymentMethodEligibilityRequest>
     #[allow(deprecated)]
     fn foreign_from(item: &CompositePaymentMethodEligibilityRequest) -> Self {
         Self {
-            allow_amount_mismatch: item.allow_amount_mismatch,
+            integrity_specifications: item.integrity_specifications,
             merchant_payment_method_id: item.merchant_payment_method_id.clone(),
             amount: item.amount,
             payment_method: item.payment_method.clone(),
@@ -1256,7 +1256,7 @@ impl
         });
 
         Self {
-            allow_amount_mismatch: request.allow_amount_mismatch,
+            integrity_specifications: request.integrity_specifications,
             split_settlement: request.split_settlement.clone(),
             merchant_transaction_id: request.merchant_transaction_id.clone(),
             merchant_order_id: request.merchant_order_id.clone(),
