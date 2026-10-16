@@ -358,19 +358,24 @@ pub struct GooglePaySignedMessage {
 pub struct JpmorganStoredWallet {
     pub provider: JpmorganWalletProvider,
     pub account_number_type: JpmorganAccountNumberType,
-    pub network: Option<common_enums::CardNetwork>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganMitRecurring {
+    /// JPMorgan requires 1–100 characters. JPMorgan validates the length.
+    pub agreement_id: String,
+    pub is_variable_amount: bool,
 }
 
 #[derive(Default, Deserialize)]
 pub struct JpmorganMitMetadata {
     #[serde(default)]
-    pub recurring: Option<JpmorganRecurring>,
+    pub recurring: Option<JpmorganMitRecurring>,
     #[serde(default)]
     pub wallet: Option<JpmorganStoredWallet>,
     #[serde(default)]
     pub wallet_account_number_type: Option<JpmorganAccountNumberType>,
-    #[serde(default, rename = "resource")]
-    pub _resource: Option<JpmorganResourceContext>,
 }
 
 #[derive(Serialize)]
