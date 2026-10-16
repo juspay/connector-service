@@ -332,6 +332,19 @@ macros::create_all_prerequisites!(
     }
 );
 
+/// AsiaPay's path context root differs per environment: the test host serves
+/// `/b2cDemo/…`, production hosts serve `/b2c2/…` — swapping only the host in
+/// the URL 404s. Resolved from the effective base_url so env TOMLs and
+/// account-level overrides keep working (prod brand mirrors such as
+/// `asiapay.<brand>.com` also serve `b2c2`).
+fn paydollar_context_root(base_url: &str) -> &'static str {
+    if base_url.contains("test.paydollar.com") {
+        "b2cDemo"
+    } else {
+        "b2c2"
+    }
+}
+
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Asiapay,
@@ -357,9 +370,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, domain_types::errors::IntegrationError> {
+            let base_url = self.connector_base_url_payments(req);
             Ok(format!(
-                "{}/b2cDemo/eng/payment/payForm.jsp",
-                self.connector_base_url_payments(req)
+                "{}/{}/eng/payment/payForm.jsp",
+                base_url,
+                paydollar_context_root(base_url)
             ))
         }
     }
@@ -390,9 +405,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, domain_types::errors::IntegrationError> {
+            let base_url = self.connector_base_url_payments(req);
             Ok(format!(
-                "{}/b2cDemo/eng/merchant/api/orderApi.jsp",
-                self.connector_base_url_payments(req)
+                "{}/{}/eng/merchant/api/orderApi.jsp",
+                base_url,
+                paydollar_context_root(base_url)
             ))
         }
     }
@@ -423,9 +440,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, domain_types::errors::IntegrationError> {
+            let base_url = self.connector_base_url_refunds(req);
             Ok(format!(
-                "{}/b2cDemo/eng/merchant/api/orderApi.jsp",
-                self.connector_base_url_refunds(req)
+                "{}/{}/eng/merchant/api/orderApi.jsp",
+                base_url,
+                paydollar_context_root(base_url)
             ))
         }
     }
@@ -456,9 +475,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, domain_types::errors::IntegrationError> {
+            let base_url = self.connector_base_url_refunds(req);
             Ok(format!(
-                "{}/b2cDemo/eng/merchant/api/orderApi.jsp",
-                self.connector_base_url_refunds(req)
+                "{}/{}/eng/merchant/api/orderApi.jsp",
+                base_url,
+                paydollar_context_root(base_url)
             ))
         }
     }
