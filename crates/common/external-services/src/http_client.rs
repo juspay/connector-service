@@ -65,7 +65,7 @@ pub async fn send_request_with_retry(
                         // Fall back to retrying on the already-created client
                         // (shared pool) rather than failing outright.
                         tracing::warn!(
-                            ?client_error,
+                            client_error = %client_error.current_context(),
                             "Cannot build fresh retry client; retrying on the existing client"
                         );
                         (send_request(cloned_req).await, true)
@@ -649,6 +649,37 @@ mod transport_diagnostic_tests {
         assert!(error.get("reason").unwrap().is_string());
         assert_eq!(value.get("attached_data_omitted").unwrap(), true);
         assert!(!safe.contains(SECRET));
+    }
+
+    #[tokio::test]
+    async fn fresh_client_failure_does_not_log_report_attachments() {
+        let capture = Capture::default();
+        let writer = capture.clone();
+        let subscriber = tracing_subscriber::fmt()
+            .json()
+            .without_time()
+            .with_writer(move || writer.clone())
+            .finish();
+        let _guard = tracing::subscriber::set_default(subscriber);
+        let endpoint = responding_socket(b"").await;
+        let (_, retried) = send_request_with_retry(reqwest::Client::new().get(endpoint), || {
+            Err(report!(ApiClientError::ClientConstructionFailed).attach_printable(SECRET))
+        })
+        .await;
+        assert!(retried);
+        let bytes = capture.0.lock().unwrap();
+        let log = std::str::from_utf8(&bytes).unwrap();
+        assert!(log.contains("Cannot build fresh retry client"));
+        let expected = ApiClientError::ClientConstructionFailed.to_string();
+        assert!(log.lines().any(|line| {
+            let event: serde_json::Value = serde_json::from_str(line).unwrap();
+            event
+                .get("fields")
+                .and_then(|fields| fields.get("client_error"))
+                .and_then(serde_json::Value::as_str)
+                == Some(expected.as_str())
+        }));
+        assert!(!log.contains(SECRET));
     }
 
     #[test]
