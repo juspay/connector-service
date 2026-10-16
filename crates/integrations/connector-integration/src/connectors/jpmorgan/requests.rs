@@ -354,45 +354,6 @@ pub struct GooglePaySignedMessage {
     pub ephemeral_public_key: Secret<String>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JpmorganStoredCredential {
-    pub initialization_reference: String,
-    pub source: JpmorganStorageSource,
-    #[serde(default)]
-    pub state: JpmorganStorageState,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub initialization_transaction_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub original_network_transaction_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub original_transaction_link_id: Option<String>,
-}
-
-#[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum JpmorganStorageState {
-    Pending,
-    #[default]
-    Established,
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum JpmorganStorageSource {
-    Payment,
-    Verification,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct JpmorganStoredContext {
-    pub stored_credential: JpmorganStoredCredential,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub recurring: Option<JpmorganRecurring>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub wallet: Option<JpmorganStoredWallet>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JpmorganStoredWallet {
     pub provider: JpmorganWalletProvider,
@@ -402,8 +363,6 @@ pub struct JpmorganStoredWallet {
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct JpmorganPreservedContext {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub stored_credential: Option<JpmorganStoredCredential>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recurring: Option<JpmorganRecurring>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

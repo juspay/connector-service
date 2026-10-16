@@ -180,7 +180,7 @@ def _build_proxy_setup_recurring_request():
 def _build_recurring_charge_request():
     return payment_pb2.RecurringPaymentServiceChargeRequest(
         connector_recurring_payment_id=payment_pb2.MandateReference(  # Reference to existing mandate.
-            network_mandate_id=payment_pb2.NetworkMandateId(  # network_mandate_id sent by Issuer to connector, Used for PG agnostic mandate txns along with card data.
+            network_mandate_id=payment_pb2.NetworkMandateId(
                 network_transaction_id="probe_network_txn_001",
             ),
         ),
