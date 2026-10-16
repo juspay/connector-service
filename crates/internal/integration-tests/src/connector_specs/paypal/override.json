@@ -467,7 +467,11 @@
   },
   "PaymentService/Capture": {
     "capture_full_amount": {
-      "grpc_req": {},
+      "grpc_req": {
+        "connector_feature_data": {
+          "value": ""
+        }
+      },
       "assert": {
         "status": {
           "equals": "CHARGED"
@@ -487,6 +491,9 @@
       "grpc_req": {
         "amount_to_capture": {
           "minor_amount": 3000
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assert": {
@@ -508,7 +515,11 @@
       }
     },
     "capture_with_merchant_order_id": {
-      "grpc_req": {},
+      "grpc_req": {
+        "connector_feature_data": {
+          "value": ""
+        }
+      },
       "assert": {
         "status": {
           "equals": "CHARGED"
@@ -596,6 +607,9 @@
         "refund_amount": {
           "minor_amount": 6000,
           "currency": "USD"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assert": {
@@ -612,6 +626,9 @@
         "refund_amount": {
           "minor_amount": 3000,
           "currency": "USD"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assert": {
@@ -628,6 +645,9 @@
         "refund_amount": {
           "minor_amount": 6000,
           "currency": "USD"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assert": {

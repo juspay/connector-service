@@ -3830,6 +3830,9 @@
         "multiple_capture_data": {
           "capture_sequence": 1,
           "capture_reference": ""
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assert": {
@@ -3875,6 +3878,9 @@
         "multiple_capture_data": {
           "capture_sequence": 1,
           "capture_reference": "paypal-capture-operation-one"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assert": {
@@ -3923,6 +3929,9 @@
         "multiple_capture_data": {
           "capture_sequence": 2,
           "capture_reference": "paypal-capture-operation-two"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assert": {
@@ -3971,6 +3980,9 @@
         "multiple_capture_data": {
           "capture_sequence": 1,
           "capture_reference": "paypal-capture-operation-one"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assert": {

@@ -17220,6 +17220,9 @@
             "token_type": "",
             "expires_in_seconds": 0
           }
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -17275,6 +17278,9 @@
             "token_type": "",
             "expires_in_seconds": 0
           }
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -17331,6 +17337,9 @@
             "token_type": "",
             "expires_in_seconds": 0
           }
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -17391,6 +17400,9 @@
         "multiple_capture_data": {
           "capture_sequence": 1,
           "capture_reference": ""
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -17445,6 +17457,9 @@
         "multiple_capture_data": {
           "capture_sequence": 1,
           "capture_reference": "paypal-capture-operation-one"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -17502,6 +17517,9 @@
         "multiple_capture_data": {
           "capture_sequence": 2,
           "capture_reference": "paypal-capture-operation-two"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -17559,6 +17577,9 @@
         "multiple_capture_data": {
           "capture_sequence": 1,
           "capture_reference": "paypal-capture-operation-one"
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -23724,6 +23745,9 @@
             "token_type": "",
             "expires_in_seconds": 0
           }
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -23775,6 +23799,9 @@
             "token_type": "",
             "expires_in_seconds": 0
           }
+        },
+        "connector_feature_data": {
+          "value": ""
         }
       },
       "assertions": {
@@ -23827,7 +23854,10 @@
             "expires_in_seconds": 0
           }
         },
-        "reason": "customer_requested"
+        "reason": "customer_requested",
+        "connector_feature_data": {
+          "value": ""
+        }
       },
       "assertions": {
         "status": {
@@ -35698,13 +35728,13 @@
     "crates/internal/integration-tests/src/connector_specs/paypal/applepay_manufacturer_wire_contract.json": "98bded6b53a7dc64b9525de8e32cbb99017ccff98650d6d83acbac72d288a734",
     "crates/internal/integration-tests/src/connector_specs/paypal/browser_automation_spec.json": "efe4842fb0c9260e219a259563ec5f5fcbeefef39258bc0013b219392f47bee4",
     "crates/internal/integration-tests/src/connector_specs/paypal/capture_operation_chain.json": "c956691e1541797eb271c88fa1833aa518b366f362e82b0e39f4df7f358cdf0a",
-    "crates/internal/integration-tests/src/connector_specs/paypal/connector_specific_scenarios.json": "a542ceb2530da1ea736778b03868e8364c2165ef38971b82a904a15bfe749843",
+    "crates/internal/integration-tests/src/connector_specs/paypal/connector_specific_scenarios.json": "735511018f05a0bf1c76255d0a07d5133cc02940bf900663cb3aebb30032e0ee",
     "crates/internal/integration-tests/src/connector_specs/paypal/dependency_overrides.json": "3d705ba12211e6c5d31be0b0826b09f029e516c3af0b712c4f61a45eaf0526fe",
     "crates/internal/integration-tests/src/connector_specs/paypal/financial_closure_chain.json": "500a303a527cbe3ef0fae4b97d5751ed59d04c05041b8ddd5662cf6aec4009a6",
     "crates/internal/integration-tests/src/connector_specs/paypal/financial_reconciliation_fixtures.json": "98688ee3b10e8d2dd7f1594d4351434989a8e327abd3610362f16fe09188da7c",
     "crates/internal/integration-tests/src/connector_specs/paypal/hs_refund_reconciliation_regressions.json": "01f51d0a9bcea30b29813ca9aba281b6ecbca77a31fe82a0307782d9d8778c3d",
     "crates/internal/integration-tests/src/connector_specs/paypal/order_reconciliation_contract.json": "974e9baf7cab197b507f9862f18a0ad1a29214810403ccbc0905190ba151616e",
-    "crates/internal/integration-tests/src/connector_specs/paypal/override.json": "a1539f188172ddf70e86f46c8b6c85c3dda6d3e220249ac7707787faeeac2356",
+    "crates/internal/integration-tests/src/connector_specs/paypal/override.json": "cd7bdc54f277d333cfbec433e84214a908eb19c50e166021f58a47687b2c9133",
     "crates/internal/integration-tests/src/connector_specs/paypal/specs.json": "46ddb301c839fde12689316dbfa3b7a3f3f40e0a94a343a968c84c3b2c2032fc",
     "crates/internal/integration-tests/src/connector_specs/paypal/webhook_payload.json": "bf87eba43e47774f267561ec2cea2df8258aeb7d2f404be430056e274013b9bc",
     "crates/internal/integration-tests/src/global_suites/CustomerService_Create/scenario.json": "a2611bef0a52ee5bb3b096ee984c1be3a0cafd1c357783bbfa3d2a102b831194",
