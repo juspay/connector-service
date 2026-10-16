@@ -206,9 +206,12 @@ impl JpmorganAuthType {
                     ..Default::default()
                 },
             })?;
-        url::Url::parse(base_url).change_context(invalid_oauth_config("secondary_base_url"))?;
+        let token_url = url::Url::parse(base_url)
+            .change_context(invalid_oauth_config("secondary_base_url"))?
+            .join("/adfs/oauth2/token")
+            .change_context(invalid_oauth_config("secondary_base_url"))?;
 
-        Ok(format!("{}/adfs/oauth2/token", base_url))
+        Ok(token_url.to_string())
     }
 
     pub(super) fn token_request(
