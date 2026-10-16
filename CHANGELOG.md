@@ -19,6 +19,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.16.0
+
+### Features
+
+- **connector:** Handle different pos flag for raft cit and mit ([#2476](https://github.com/juspay/connector-service/pull/2476)) ([`6a4b09b`](https://github.com/juspay/connector-service/commit/6a4b09bf2551defe9f8b315f206d12dcea0abe24))
+
+**Full Changelog:** [`2026.10.15.0...2026.10.16.0`](https://github.com/juspay/connector-service/compare/2026.10.15.0...2026.10.16.0)
+
+- - -
+
+## 2026.10.15.0
+
+### Features
+
+- **connector:**
+  - [Authorizedotnet] close 13 field and behaviour gaps across six flows ([#2515](https://github.com/juspay/connector-service/pull/2515)) ([`9c51e83`](https://github.com/juspay/connector-service/commit/9c51e8390f7aafeb69b24f4f39fccf437a6727d2))
+  - APPLEPAY_APM Addition for Travelhub ([#2470](https://github.com/juspay/connector-service/pull/2470)) ([`b8993a3`](https://github.com/juspay/connector-service/commit/b8993a3a58f586a3ec5b8e350731dae7e632d89b))
+
+### Bug Fixes
+
+- **PROTO:** Add connector PMT aliases ([#2410](https://github.com/juspay/connector-service/pull/2410)) ([`250638e`](https://github.com/juspay/connector-service/commit/250638e725214548352fdf18d8d00e2d0ade23f7))
+- **connector:** [Ppro] verify webhook via HMAC-SHA256 and add raw connector status ([#2435](https://github.com/juspay/connector-service/pull/2435)) ([`d01b9a4`](https://github.com/juspay/connector-service/commit/d01b9a4278bf5b1f4b381aaf2341f89bfa3144bc))
+- **fiuu:** Migrate to fiuu.com and align API handling ([#2507](https://github.com/juspay/connector-service/pull/2507)) ([`0b68390`](https://github.com/juspay/connector-service/commit/0b683908c613fbce5ac201ca625291818d2c8684))
+
+**Full Changelog:** [`2026.10.14.0...2026.10.15.0`](https://github.com/juspay/connector-service/compare/2026.10.14.0...2026.10.15.0)
+
+- - -
+
 ## 2026.10.14.0
 
 ### Features
