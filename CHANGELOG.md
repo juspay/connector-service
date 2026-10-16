@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.10.16.2
+
+### Bug Fixes
+
+- **connector:** [Revolv3] Update error details population logic ([#2544](https://github.com/juspay/connector-service/pull/2544)) ([`3232383`](https://github.com/juspay/connector-service/commit/323238355078fea28a241ef338bd2c24f421ac0a))
+- **framework:** Log connector HTTP transport error causes ([#2537](https://github.com/juspay/connector-service/pull/2537)) ([`014960c`](https://github.com/juspay/connector-service/commit/014960c979e18e522c2653498a2efb73bc79a318))
+
+**Full Changelog:** [`2026.10.16.1...2026.10.16.2`](https://github.com/juspay/connector-service/compare/2026.10.16.1...2026.10.16.2)
+
+- - -
+
 ## 2026.10.16.1
 
 ### Features
