@@ -733,7 +733,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             merchant_id: m(),
             username: u(),
             password: p(),
-            secure_hash_secret: None,
+            secure_hash_secret: s(),
             base_url: None,
         },
         ConnectorEnum::TsysTransit => ConnectorSpecificConfig::TsysTransit {

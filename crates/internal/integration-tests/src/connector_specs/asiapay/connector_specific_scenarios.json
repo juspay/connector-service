@@ -40,8 +40,34 @@
             "value": "auto_generate"
           }
         },
-        "address": {},
-        "auth_type": "NO_THREE_DS",
+        "address": {
+          "billing_address": {
+            "line1": {
+              "value": "1 Test Street"
+            },
+            "line2": {
+              "value": "Level 42"
+            },
+            "city": {
+              "value": "Hong Kong"
+            },
+            "state": {
+              "value": "HK"
+            },
+            "zip_code": {
+              "value": "000000"
+            },
+            "country_alpha2_code": "HK",
+            "email": {
+              "value": "auto_generate"
+            },
+            "phone_number": {
+              "value": "91234567"
+            },
+            "phone_country_code": "852"
+          }
+        },
+        "auth_type": "THREE_DS",
         "enrolled_for_3ds": true,
         "return_url": "https://example.com/payment/return",
         "webhook_url": "https://example.com/payment/webhook",
@@ -64,7 +90,10 @@
       },
       "assert": {
         "status": {
-          "one_of": ["CHARGED", "PENDING"]
+          "one_of": [
+            "CHARGED",
+            "PENDING"
+          ]
         },
         "error": {
           "must_not_exist": true
@@ -136,7 +165,9 @@
       },
       "assert": {
         "status": {
-          "one_of": ["PENDING"]
+          "one_of": [
+            "PENDING"
+          ]
         },
         "error": {
           "must_not_exist": true

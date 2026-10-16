@@ -14,10 +14,13 @@
 use std::fmt::Debug;
 
 use bytes::Bytes;
-use common_enums::{AttemptStatus, CaptureMethod, Currency, RefundStatus};
+use common_enums::{
+    AttemptStatus, AuthenticationType, CaptureMethod, CountryAlpha2, Currency, RefundStatus,
+};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
+    pii::Email,
     types::StringMajorUnit,
 };
 use domain_types::{
@@ -51,7 +54,7 @@ pub struct AsiapayAuthType {
     pub merchant_id: Secret<String>,
     pub username: Secret<String>,
     pub password: Secret<String>,
-    pub secure_hash_secret: Option<Secret<String>>,
+    pub secure_hash_secret: Secret<String>,
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for AsiapayAuthType {
@@ -234,8 +237,9 @@ impl AsiapayError {
 // ---------------------------------------------------------------------------
 // Authorize — DPC form post of the card + order fields to payForm.jsp
 // (spec:## Complete Endpoint Inventory — Authorize). All fields are required
-// for card payments; `secureHash` only when the account's Secure Hash
-// function is enabled (production; sandbox runs unsigned, plan UD-02).
+// for card payments; `secureHash` is always sent since the Secure Hash Secret
+// is a mandatory config field (accounts with hash checking disabled ignore
+// the field; once enabled the gateway drops unsigned posts).
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
@@ -270,8 +274,66 @@ pub struct AsiapayPaymentsRequest<
     pub fail_url: String,
     #[serde(rename = "errorUrl")]
     pub error_url: String,
-    #[serde(rename = "secureHash", skip_serializing_if = "Option::is_none")]
-    pub secure_hash: Option<Secret<String>>,
+    #[serde(rename = "secureHash")]
+    pub secure_hash: Secret<String>,
+    // -------------------------------------------------------------------
+    // 3-D Secure 2.x enrichment inputs (spec:## Authorize params — the
+    // gateway's own payment page consumes these when present; observed live
+    // on the sandbox page's hidden threeDS* inputs). ONLY populated when the
+    // UCS request asks for 3-D Secure (`auth_type = THREE_DS`): transType and
+    // challengePreference get the documented defaults and the data-derived
+    // fields come from the UCS billing address. For NO_THREE_DS (or
+    // AUTHENTICATION_TYPE_UNSPECIFIED → domain NoThreeDs) every threeDS*
+    // field stays None and is omitted from the form post — the no-3DS wire
+    // shape stays byte-identical to before the 3DS fields existed.
+    // -------------------------------------------------------------------
+    /// EMV-3DS transaction type; `"01"` = goods/service purchase (default).
+    #[serde(rename = "threeDSTransType", skip_serializing_if = "Option::is_none")]
+    pub three_ds_trans_type: Option<String>,
+    /// Challenge preference (`"01"` no preference … `"04"` mandate challenge).
+    #[serde(
+        rename = "threeDSChallengePreference",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub three_ds_challenge_preference: Option<String>,
+    #[serde(
+        rename = "threeDSCustomerEmail",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub three_ds_customer_email: Option<Email>,
+    #[serde(
+        rename = "threeDSMobilePhoneCountryCode",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub three_ds_mobile_phone_country_code: Option<String>,
+    #[serde(
+        rename = "threeDSMobilePhoneNumber",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub three_ds_mobile_phone_number: Option<Secret<String>>,
+    /// Billing country as ISO-3166 numeric code (AsiaPay table, e.g. HK=344).
+    #[serde(
+        rename = "threeDSBillingCountryCode",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub three_ds_billing_country_code: Option<String>,
+    #[serde(rename = "threeDSBillingCity", skip_serializing_if = "Option::is_none")]
+    pub three_ds_billing_city: Option<Secret<String>>,
+    #[serde(
+        rename = "threeDSBillingLine1",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub three_ds_billing_line1: Option<Secret<String>>,
+    #[serde(
+        rename = "threeDSBillingLine2",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub three_ds_billing_line2: Option<Secret<String>>,
+    #[serde(
+        rename = "threeDSBillingPostalCode",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub three_ds_billing_postal_code: Option<Secret<String>>,
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -406,20 +468,40 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             });
 
         // secureHash (spec:## Authentication — Secure Hash): SHA-1 hex over
-        // merchantId|orderRef|currCode|amount|payType|secret. Sandbox: omitted
-        // (no secret provisioned, plan UD-02).
-        let secure_hash = auth.secure_hash_secret.as_ref().map(|secret| {
-            let verify_string = format!(
-                "{}|{}|{}|{}|{}|{}",
-                auth.merchant_id.peek(),
-                order_ref,
-                curr_code,
-                amount.get_amount_as_string(),
-                pay_type,
-                secret.peek()
-            );
-            Secret::new(sha1_hex(&verify_string))
-        });
+        // merchantId|orderRef|currCode|amount|payType|secret. Enforced for
+        // every payment-page post: accounts with the hash function disabled
+        // ignore the field; once AsiaPay support enables it the gateway drops
+        // unsigned requests (spec:## Secure Hash enablement).
+        let verify_string = format!(
+            "{}|{}|{}|{}|{}|{}",
+            auth.merchant_id.peek(),
+            order_ref,
+            curr_code,
+            amount.get_amount_as_string(),
+            pay_type,
+            auth.secure_hash_secret.peek()
+        );
+        let secure_hash = Secret::new(sha1_hex(&verify_string));
+
+        // 3DS 2.x enrichment (struct docs): ONLY sent when the caller asked
+        // for 3-D Secure (`auth_type = THREE_DS`). For a NO_THREE_DS request
+        // every threeDS* field is None and dropped by skip_serializing_if,
+        // keeping the no-3DS wire shape byte-identical to before.
+        let is_three_ds = router_data.resource_common_data.auth_type == AuthenticationType::ThreeDs;
+        let billing = is_three_ds
+            .then(|| {
+                router_data
+                    .resource_common_data
+                    .address
+                    .get_payment_billing()
+            })
+            .flatten();
+        let billing_details = billing.and_then(|b| b.address.as_ref());
+        let billing_phone = billing.and_then(|b| b.phone.as_ref());
+
+        let three_ds_billing_country_code = billing_details
+            .and_then(|d| d.country)
+            .map(|country| format!("{:03}", CountryAlpha2::to_numeric(country)));
 
         Ok(Self {
             merchant_id: auth.merchant_id,
@@ -438,6 +520,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             fail_url: return_url.clone(),
             error_url: return_url,
             secure_hash,
+            three_ds_trans_type: is_three_ds.then(|| "01".to_string()),
+            three_ds_challenge_preference: is_three_ds.then(|| "01".to_string()),
+            three_ds_customer_email: billing.and_then(|b| b.email.clone()),
+            three_ds_mobile_phone_country_code: billing_phone
+                .and_then(|p| p.country_code.clone())
+                .map(|cc| cc.trim_start_matches('+').to_string()),
+            three_ds_mobile_phone_number: billing_phone.and_then(|p| p.number.clone()),
+            three_ds_billing_country_code,
+            three_ds_billing_city: billing_details.and_then(|d| d.city.clone()),
+            three_ds_billing_line1: billing_details.and_then(|d| d.line1.clone()),
+            three_ds_billing_line2: billing_details.and_then(|d| d.line2.clone()),
+            three_ds_billing_postal_code: billing_details.and_then(|d| d.zip.clone()),
         })
     }
 }

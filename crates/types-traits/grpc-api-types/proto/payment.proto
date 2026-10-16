@@ -5221,7 +5221,7 @@ message AsiapayConfig {
   SecretString merchant_id = 1;
   SecretString username = 2;
   SecretString password = 3;
-  optional SecretString secure_hash_secret = 4;
+  SecretString secure_hash_secret = 4;
   optional string base_url = 50;
 }
 

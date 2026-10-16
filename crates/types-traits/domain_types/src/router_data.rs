@@ -1138,14 +1138,15 @@ pub enum ConnectorSpecificConfig {
         base_url: Option<String>,
     },
     /// AsiaPay (PayDollar). `merchant_id` = merchantId; `username` = Merchant
-    /// API loginId; `password` = Merchant API password; `secure_hash_secret` is
-    /// absent on accounts without the Secure Hash function (sandbox runs
-    /// unsigned) and required once AsiaPay support enables it (production).
+    /// API loginId; `password` = Merchant API password; `secure_hash_secret`
+    /// signs the payment-page post (secureHash) — required: accounts with the
+    /// Secure Hash function disabled ignore the field, and once AsiaPay support
+    /// enables it the gateway drops unsigned requests.
     Asiapay {
         merchant_id: Secret<String>,
         username: Secret<String>,
         password: Secret<String>,
-        secure_hash_secret: Option<Secret<String>>,
+        secure_hash_secret: Secret<String>,
         base_url: Option<String>,
     },
 }
@@ -2221,7 +2222,7 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 merchant_id: asiapay.merchant_id.ok_or_else(err)?,
                 username: asiapay.username.ok_or_else(err)?,
                 password: asiapay.password.ok_or_else(err)?,
-                secure_hash_secret: asiapay.secure_hash_secret,
+                secure_hash_secret: asiapay.secure_hash_secret.ok_or_else(err)?,
                 base_url: asiapay.base_url,
             }),
             AuthType::Bambora(bambora) => Ok(Self::Bambora {
@@ -4193,21 +4194,12 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                 // key1=loginId, key2=API password. The x-connector-config
                 // header path above is the primary one; this exists only so
                 // the legacy header pair stays usable.
-                ConnectorEnum::Asiapay => match auth {
-                    ConnectorAuthType::MultiAuthKey {
-                        api_key,
-                        key1,
-                        key2,
-                        ..
-                    } => Ok(Self::Asiapay {
-                        merchant_id: api_key.clone(),
-                        username: key1.clone(),
-                        password: key2.clone(),
-                        secure_hash_secret: None,
-                        base_url: None,
-                    }),
-                    _ => Err(err().into()),
-                },
+                // secure_hash_secret is mandatory for Asiapay config (it signs
+                // the payment-page secureHash); the legacy MultiAuthKey shape
+                // cannot carry it, so that shape is unsupported here. Use the
+                // flat AsiapayConfig creds shape (merchant_id/username/password/
+                // secure_hash_secret).
+                ConnectorEnum::Asiapay => Err(err().into()),
                 ConnectorEnum::Boost => match auth {
                     ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Boost {
                         client_id: api_key.clone(),
