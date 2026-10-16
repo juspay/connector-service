@@ -238,7 +238,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            response_body: JpmorganTransactionResponse,
+            response_body: JpmorganPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
@@ -587,7 +587,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Jpmorgan,
-    curl_response: JpmorganTransactionResponse,
+    curl_response: JpmorganPSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
