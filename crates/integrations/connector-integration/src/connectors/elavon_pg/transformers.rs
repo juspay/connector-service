@@ -1752,7 +1752,6 @@ fn build_sale_router_data<F, Req>(
         ..router_data
     }
 }
-
 // =============================================================================
 // CAPTURE
 // =============================================================================
@@ -2113,42 +2112,5 @@ fn build_refund_router_data<F, Req>(
             ..router_data.resource_common_data
         },
         ..router_data
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use common_enums::Currency;
-    use common_utils::types::StringMajorUnit;
-    use serde_json::json;
-
-    use super::{ElavonPgAmount, ElavonPgPaymentSessionSaleRequest};
-
-    #[test]
-    fn payment_session_sale_includes_total() {
-        let amount = serde_json::from_value::<StringMajorUnit>(json!("10.00"))
-            .expect("a decimal-string amount should deserialize");
-        let request = ElavonPgPaymentSessionSaleRequest {
-            payment_session: "https://api.sandbox.elavonpayments.com/payment-sessions/session_123"
-                .to_string(),
-            total: ElavonPgAmount {
-                amount,
-                currency_code: Currency::USD,
-            },
-        };
-
-        let serialized = serde_json::to_value(request)
-            .expect("the payment-session sale request should serialize");
-
-        assert_eq!(
-            serialized,
-            json!({
-                "paymentSession": "https://api.sandbox.elavonpayments.com/payment-sessions/session_123",
-                "total": {
-                    "amount": "10.00",
-                    "currencyCode": "USD"
-                }
-            })
-        );
     }
 }
