@@ -400,19 +400,6 @@ pub struct JpmorganStoredWallet {
     pub network: Option<common_enums::CardNetwork>,
 }
 
-#[derive(Serialize)]
-pub struct JpmorganStoredFeatureData {
-    pub jpmorgan: JpmorganStoredContext,
-}
-
-#[derive(Default, Serialize, Deserialize)]
-pub struct JpmorganRequestMetadata {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub jpmorgan: Option<JpmorganPreservedContext>,
-    #[serde(flatten)]
-    pub other: serde_json::Map<String, serde_json::Value>,
-}
-
 #[derive(Default, Serialize, Deserialize)]
 pub struct JpmorganPreservedContext {
     #[serde(default, skip_serializing_if = "Option::is_none")]
