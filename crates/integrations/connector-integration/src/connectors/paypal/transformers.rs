@@ -4558,6 +4558,18 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
                     item.response.amount.as_ref(),
                 ) {
                     record_capture_amount(context, id, amount).change_context(fail())?;
+                    if matches!(
+                        state,
+                        PaypalPaymentStatus::Completed | PaypalPaymentStatus::Captured
+                    ) && item.response.final_capture == Some(false)
+                        && context.capture_history_complete == Some(true)
+                        && context.authorized_amount.is_some()
+                        && context.authorization_closed != Some(true)
+                    {
+                        // Preserve the explicit provider nonfinal-capture witness for
+                        // HS's authoritative ledger guard; absence is never openness.
+                        context.authorization_closed = Some(false);
+                    }
                     if item.response.final_capture == Some(true) {
                         context.authorization_closed = Some(true);
                     }

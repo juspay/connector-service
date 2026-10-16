@@ -216,6 +216,60 @@
         "subsequent_sync_resource": "original_order",
         "known_partial_captured_amount": "actual response amount, never requested fallback"
       }
+    },
+    {
+      "id": "c62_completed_final_true_absent_closed",
+      "surface": "explicit_response_fixture",
+      "context": "C62 source-like absent closure witness; unchanged authoritative guards",
+      "assert": {
+        "declarative_fixture": "c62_completed_final_true_absent_closed",
+        "oracle": "Exact existing production financial_reconciliation fixture assertions"
+      }
+    },
+    {
+      "id": "c62_completed_nonfinal_absent_closed",
+      "surface": "explicit_response_fixture",
+      "context": "C62 source-like absent closure witness; unchanged authoritative guards",
+      "assert": {
+        "declarative_fixture": "c62_completed_nonfinal_absent_closed",
+        "oracle": "Exact existing production financial_reconciliation fixture assertions"
+      }
+    },
+    {
+      "id": "c62_incomplete_nonfinal_absent_closed",
+      "surface": "explicit_response_fixture",
+      "context": "C62 source-like absent closure witness; unchanged authoritative guards",
+      "assert": {
+        "declarative_fixture": "c62_incomplete_nonfinal_absent_closed",
+        "oracle": "Exact existing production financial_reconciliation fixture assertions"
+      }
+    },
+    {
+      "id": "c62_missing_final_absent_closed",
+      "surface": "explicit_response_fixture",
+      "context": "C62 source-like absent closure witness; unchanged authoritative guards",
+      "assert": {
+        "declarative_fixture": "c62_missing_final_absent_closed",
+        "oracle": "Exact existing production financial_reconciliation fixture assertions"
+      }
+    },
+    {
+      "id": "c62_pending_nonfinal_absent_closed",
+      "surface": "explicit_response_fixture",
+      "context": "C62 source-like absent closure witness; unchanged authoritative guards",
+      "assert": {
+        "declarative_fixture": "c62_pending_nonfinal_absent_closed",
+        "oracle": "Exact existing production financial_reconciliation fixture assertions"
+      }
+    },
+    {
+      "id": "c62_prior_closed_true_refused",
+      "surface": "explicit_response_fixture",
+      "context": "C62 source-like absent closure witness; unchanged authoritative guards",
+      "assert": {
+        "declarative_fixture": "c62_prior_closed_true_refused",
+        "oracle": "Exact existing production financial_reconciliation fixture assertions"
+      }
     }
   ],
   "source_regression_execution": "NOT_RUN until approved committed consumer executes each case; no pass from JSON/static source checks"

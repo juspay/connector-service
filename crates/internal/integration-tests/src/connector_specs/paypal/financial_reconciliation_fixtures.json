@@ -14250,6 +14250,292 @@
         "response.state.connector_customer_id": "PUBLIC_CUSTOMER"
       },
       "error_contains": null
+    },
+    {
+      "id": "c62_completed_nonfinal_absent_closed",
+      "rpc": "PaymentService/Capture",
+      "request": {
+        "connector_transaction_id": "PUBLIC_ORDER",
+        "connector_feature_data": {
+          "value": "{\"order_id\":\"PUBLIC_ORDER\",\"authorize_id\":\"PUBLIC_AUTH\",\"capture_id\":null,\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"capture_context\":{\"authorized_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"capture_amounts\":{},\"capture_method\":\"manual_multiple\",\"capture_history_complete\":true}}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "capture_method": "MANUAL_MULTIPLE",
+        "merchant_capture_id": "PUBLIC_CAPTURE_OPERATION",
+        "amount_to_capture": {
+          "minor_amount": 3000,
+          "currency": "USD"
+        },
+        "multiple_capture_data": {
+          "capture_sequence": 1,
+          "capture_reference": "PUBLIC_CAPTURE_REFERENCE"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/payments/authorizations/PUBLIC_AUTH/capture",
+        "response": {
+          "id": "PUBLIC_CAPTURE_A",
+          "amount": {
+            "currency_code": "USD",
+            "value": "30.00"
+          },
+          "status": "COMPLETED",
+          "final_capture": false
+        },
+        "response_status": 201,
+        "calls": 1,
+        "request_body_contains": {
+          "final_capture": false
+        }
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PARTIAL_CHARGED_AND_CHARGEABLE",
+        "captured_amount": 3000,
+        "meta.capture_context.authorization_closed": false,
+        "meta.capture_context.capture_history_complete": true
+      },
+      "error_contains": null
+    },
+    {
+      "id": "c62_prior_closed_true_refused",
+      "rpc": "PaymentService/Capture",
+      "request": {
+        "connector_transaction_id": "PUBLIC_ORDER",
+        "connector_feature_data": {
+          "value": "{\"order_id\":\"PUBLIC_ORDER\",\"authorize_id\":\"PUBLIC_AUTH\",\"capture_id\":null,\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"capture_context\":{\"authorized_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"capture_amounts\":{},\"capture_method\":\"manual_multiple\",\"capture_history_complete\":true,\"authorization_closed\":true}}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "capture_method": "MANUAL_MULTIPLE",
+        "merchant_capture_id": "PUBLIC_CAPTURE_OPERATION",
+        "amount_to_capture": {
+          "minor_amount": 3000,
+          "currency": "USD"
+        },
+        "multiple_capture_data": {
+          "capture_sequence": 1,
+          "capture_reference": "PUBLIC_CAPTURE_REFERENCE"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/payments/authorizations/PUBLIC_AUTH/capture",
+        "response": {
+          "id": "PUBLIC_CAPTURE_A",
+          "amount": {
+            "currency_code": "USD",
+            "value": "30.00"
+          },
+          "status": "COMPLETED",
+          "final_capture": false
+        },
+        "response_status": 201,
+        "calls": 0,
+        "request_body_contains": {
+          "final_capture": false
+        }
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": true
+      },
+      "error_contains": "remaining authorized amount"
+    },
+    {
+      "id": "c62_incomplete_nonfinal_absent_closed",
+      "rpc": "PaymentService/Capture",
+      "request": {
+        "connector_transaction_id": "PUBLIC_ORDER",
+        "connector_feature_data": {
+          "value": "{\"order_id\":\"PUBLIC_ORDER\",\"authorize_id\":\"PUBLIC_AUTH\",\"capture_id\":null,\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"capture_context\":{\"authorized_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"capture_amounts\":{},\"capture_method\":\"manual_multiple\",\"capture_history_complete\":false}}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "capture_method": "MANUAL_MULTIPLE",
+        "merchant_capture_id": "PUBLIC_CAPTURE_OPERATION",
+        "amount_to_capture": {
+          "minor_amount": 3000,
+          "currency": "USD"
+        },
+        "multiple_capture_data": {
+          "capture_sequence": 1,
+          "capture_reference": "PUBLIC_CAPTURE_REFERENCE"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/payments/authorizations/PUBLIC_AUTH/capture",
+        "response": {
+          "id": "PUBLIC_CAPTURE_A",
+          "amount": {
+            "currency_code": "USD",
+            "value": "30.00"
+          },
+          "status": "COMPLETED",
+          "final_capture": false
+        },
+        "response_status": 201,
+        "calls": 1,
+        "request_body_contains": {
+          "final_capture": false
+        }
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": 3000,
+        "meta.capture_context.authorization_closed": null,
+        "meta.capture_context.capture_history_complete": false
+      },
+      "error_contains": null
+    },
+    {
+      "id": "c62_missing_final_absent_closed",
+      "rpc": "PaymentService/Capture",
+      "request": {
+        "connector_transaction_id": "PUBLIC_ORDER",
+        "connector_feature_data": {
+          "value": "{\"order_id\":\"PUBLIC_ORDER\",\"authorize_id\":\"PUBLIC_AUTH\",\"capture_id\":null,\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"capture_context\":{\"authorized_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"capture_amounts\":{},\"capture_method\":\"manual_multiple\",\"capture_history_complete\":true}}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "capture_method": "MANUAL_MULTIPLE",
+        "merchant_capture_id": "PUBLIC_CAPTURE_OPERATION",
+        "amount_to_capture": {
+          "minor_amount": 3000,
+          "currency": "USD"
+        },
+        "multiple_capture_data": {
+          "capture_sequence": 1,
+          "capture_reference": "PUBLIC_CAPTURE_REFERENCE"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/payments/authorizations/PUBLIC_AUTH/capture",
+        "response": {
+          "id": "PUBLIC_CAPTURE_A",
+          "amount": {
+            "currency_code": "USD",
+            "value": "30.00"
+          },
+          "status": "COMPLETED"
+        },
+        "response_status": 201,
+        "calls": 1,
+        "request_body_contains": {
+          "final_capture": false
+        }
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PARTIAL_CHARGED",
+        "captured_amount": 3000,
+        "meta.capture_context.authorization_closed": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "c62_pending_nonfinal_absent_closed",
+      "rpc": "PaymentService/Capture",
+      "request": {
+        "connector_transaction_id": "PUBLIC_ORDER",
+        "connector_feature_data": {
+          "value": "{\"order_id\":\"PUBLIC_ORDER\",\"authorize_id\":\"PUBLIC_AUTH\",\"capture_id\":null,\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"capture_context\":{\"authorized_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"capture_amounts\":{},\"capture_method\":\"manual_multiple\",\"capture_history_complete\":true}}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "capture_method": "MANUAL_MULTIPLE",
+        "merchant_capture_id": "PUBLIC_CAPTURE_OPERATION",
+        "amount_to_capture": {
+          "minor_amount": 3000,
+          "currency": "USD"
+        },
+        "multiple_capture_data": {
+          "capture_sequence": 1,
+          "capture_reference": "PUBLIC_CAPTURE_REFERENCE"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/payments/authorizations/PUBLIC_AUTH/capture",
+        "response": {
+          "id": "PUBLIC_CAPTURE_A",
+          "amount": {
+            "currency_code": "USD",
+            "value": "30.00"
+          },
+          "status": "PENDING",
+          "final_capture": false
+        },
+        "response_status": 201,
+        "calls": 1,
+        "request_body_contains": {
+          "final_capture": false
+        }
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PENDING",
+        "captured_amount": null,
+        "meta.capture_context.authorization_closed": null
+      },
+      "error_contains": null
+    },
+    {
+      "id": "c62_completed_final_true_absent_closed",
+      "rpc": "PaymentService/Capture",
+      "request": {
+        "connector_transaction_id": "PUBLIC_ORDER",
+        "connector_feature_data": {
+          "value": "{\"order_id\":\"PUBLIC_ORDER\",\"authorize_id\":\"PUBLIC_AUTH\",\"capture_id\":null,\"psync_flow\":\"AUTHORIZE\",\"reference_id\":\"PUBLIC_REFERENCE\",\"capture_context\":{\"authorized_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"capture_amounts\":{},\"capture_method\":\"manual_multiple\",\"capture_history_complete\":true}}"
+        },
+        "test_mode": true,
+        "merchant_request_id": "PUBLIC_OPERATION",
+        "capture_method": "MANUAL_MULTIPLE",
+        "merchant_capture_id": "PUBLIC_CAPTURE_OPERATION",
+        "amount_to_capture": {
+          "minor_amount": 3000,
+          "currency": "USD"
+        },
+        "multiple_capture_data": {
+          "capture_sequence": 1,
+          "capture_reference": "PUBLIC_CAPTURE_REFERENCE"
+        }
+      },
+      "http": {
+        "method": "POST",
+        "path": "/v2/payments/authorizations/PUBLIC_AUTH/capture",
+        "response": {
+          "id": "PUBLIC_CAPTURE_A",
+          "amount": {
+            "currency_code": "USD",
+            "value": "30.00"
+          },
+          "status": "COMPLETED",
+          "final_capture": true
+        },
+        "response_status": 201,
+        "calls": 1,
+        "request_body_contains": {
+          "final_capture": false
+        }
+      },
+      "repeat": 1,
+      "expect": {
+        "error_present": false,
+        "status": "PARTIAL_CHARGED",
+        "captured_amount": 3000,
+        "meta.capture_context.authorization_closed": true
+      },
+      "error_contains": null
     }
   ]
 }
