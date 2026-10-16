@@ -2688,22 +2688,20 @@ fn convert_to_additional_payment_method_connector_response(
         payment_checks.insert("cavv_result_code".to_string(), serde_json::json!(code));
     }
 
-            Some(
-                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
-                    authentication_data: None,
-                    payment_checks: Some(payment_checks),
-                    card_network: None,
-                    domestic_network: None,
-                    auth_code: None,
-                    processor_card_network: None,
-                    card_subtype: None,
-                    card_segment_type: None,
-                    funding_source: None,
-                    card_type: None,
-                    issuer_name: None,
-                    issuer_country: None,
-                },
-            )
+    (!payment_checks.is_empty()).then(|| {
+        domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
+            authentication_data: None,
+            payment_checks: Some(serde_json::Value::Object(payment_checks)),
+            card_network: None,
+            domestic_network: None,
+            auth_code: None,
+            processor_card_network: None,
+            card_subtype: None,
+            card_segment_type: None,
+            funding_source: None,
+            card_type: None,
+            issuer_name: None,
+            issuer_country: None,
         }
     })
 }

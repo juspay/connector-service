@@ -187,6 +187,21 @@ pub(super) fn get_worldpayxml_connector_response(
     let issuer_country = card_bin
         .and_then(|card_bin| card_bin.issuer_country_code.as_deref())
         .and_then(utils::parse_country_code);
+    // Wallet replies can also carry issuer details outside the extended BIN metadata.
+    let (issuer_name, issuer_country) = match payment_method_type {
+        Some(
+            common_enums::PaymentMethodType::GooglePay | common_enums::PaymentMethodType::ApplePay,
+        ) => (
+            issuer_name.or_else(|| payment.issuer_name.clone()),
+            issuer_country.or_else(|| {
+                payment
+                    .issuer_country_code
+                    .as_deref()
+                    .and_then(utils::parse_country_code)
+            }),
+        ),
+        _ => (issuer_name, issuer_country),
+    };
     let card_subtype = token
         .and_then(|token| token.payment_instrument.as_ref())
         .and_then(|instrument| instrument.emvco_token_details.as_ref())
