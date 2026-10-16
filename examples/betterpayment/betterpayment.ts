@@ -16,8 +16,8 @@ const _defaultConfig: types.IConnectorConfig = {
     connectorConfig: {
         betterpayment: {
             apiKey: { value: 'YOUR_API_KEY' },
-            key1: { value: 'YOUR_KEY1' },
-            apiSecret: { value: 'YOUR_API_SECRET' },
+            apiPassword: { value: 'YOUR_API_PASSWORD' },
+            webhookKey: { value: 'YOUR_WEBHOOK_KEY' },
             baseUrl: 'YOUR_BASE_URL',
         }
     },

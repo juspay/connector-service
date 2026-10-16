@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod test;
 pub mod transformers;
 
 use std::{fmt::Debug, sync::LazyLock};
@@ -10,7 +12,7 @@ use common_utils::{
     errors::CustomResult,
     events,
     ext_traits::ByteSliceExt,
-    types::FloatMajorUnit,
+    types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
@@ -50,7 +52,7 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-macros::create_amount_converter_wrapper!(connector_name: Betterpayment, amount_type: FloatMajorUnit);
+macros::create_amount_converter_wrapper!(connector_name: Betterpayment, amount_type: StringMajorUnit);
 
 static BETTERPAYMENT_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Betterpayment",
@@ -102,7 +104,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter: FloatMajorUnit
+        amount_converter: StringMajorUnit
     ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
@@ -153,7 +155,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn get_currency_unit(&self) -> CurrencyUnit {
-        // Betterpayment uses FloatMajorUnit (e.g. 10.00), which is a major/base unit.
+        // Betterpayment uses StringMajorUnit (e.g. "10.00"), which is a major/base unit.
         CurrencyUnit::Base
     }
 
@@ -173,15 +175,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             errors::IntegrationError::FailedToObtainAuthType {
                 context: betterpayment::integration_error_context(
                     betterpayment::PAYMENT_DOC_URL,
-                    "Configure Betterpayment api_key, key1 (API password), and api_secret (webhook key).",
-                    "Betterpayment uses HTTP Basic authentication with api_key and key1.",
+                    "Configure Betterpayment api_key, api_password (API password), and webhook_key (webhook key).",
+                    "Betterpayment uses HTTP Basic authentication with api_key and api_password.",
                 ),
             },
         )?;
-        // Betterpayment uses HTTP Basic Auth: `Authorization: Basic base64(api_key:key1)`.
+        // Betterpayment uses HTTP Basic Auth: `Authorization: Basic base64(api_key:api_password)`.
         // `.into_masked()` (the `Mask` trait), NOT `.into()`: `impl From<T> for
         // Maskable<T>` builds `Maskable::Normal`, which logs the credentials in clear.
-        let credentials = format!("{}:{}", auth.api_key.expose(), auth.key1.expose());
+        let credentials = format!("{}:{}", auth.api_key.expose(), auth.api_password.expose());
         let encoded = BASE64_ENGINE.encode(credentials);
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
@@ -336,7 +338,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::WebhookError::WebhookSourceVerificationFailed)?;
 
         let webhook_secret = ConnectorWebhookSecrets {
-            secret: auth.api_secret.expose().into_bytes(),
+            secret: auth.webhook_key.expose().into_bytes(),
             additional_secret: None,
         };
 

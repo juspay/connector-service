@@ -2,7 +2,7 @@ use common_enums::AttemptStatus;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     request::Method,
-    types::FloatMajorUnit,
+    types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
@@ -46,9 +46,9 @@ pub struct BetterpaymentAuthType {
     /// API key — used as the HTTP Basic Auth username.
     pub api_key: Secret<String>,
     /// API password — used as the HTTP Basic Auth password.
-    pub key1: Secret<String>,
+    pub api_password: Secret<String>,
     /// Outgoing key — used only for webhook signature verification.
-    pub api_secret: Secret<String>,
+    pub webhook_key: Secret<String>,
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for BetterpaymentAuthType {
@@ -58,19 +58,19 @@ impl TryFrom<&ConnectorSpecificConfig> for BetterpaymentAuthType {
         match auth_type {
             ConnectorSpecificConfig::Betterpayment {
                 api_key,
-                key1,
-                api_secret,
+                api_password,
+                webhook_key,
                 ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
-                key1: key1.to_owned(),
-                api_secret: api_secret.to_owned(),
+                api_password: api_password.to_owned(),
+                webhook_key: webhook_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
                 errors::IntegrationError::FailedToObtainAuthType {
                     context: integration_error_context(
                         PAYMENT_DOC_URL,
-                        "Configure Betterpayment api_key, key1 (API password), and api_secret (webhook key).",
+                        "Configure Betterpayment api_key, api_password (API password), and webhook_key (webhook key).",
                         "Betterpayment requires its connector-specific credentials and uses HTTP Basic authentication.",
                     )
                 }
@@ -98,8 +98,8 @@ pub enum BetterpaymentPaymentType {
 pub struct BetterpaymentAuthorizeRequest {
     pub payment_type: BetterpaymentPaymentType,
     pub order_id: String,
-    pub amount: FloatMajorUnit,
-    pub currency: String,
+    pub amount: StringMajorUnit,
+    pub currency: common_enums::Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_reference: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -278,7 +278,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     payment_type: BetterpaymentPaymentType::Wero,
                     order_id,
                     amount,
-                    currency: request.amount.currency.to_string(),
+                    currency: request.amount.currency,
                     merchant_reference: request.merchant_order_id.clone(),
                     postback_url: Some(postback_url),
                     success_url: Some(return_url.clone()),
@@ -551,7 +551,7 @@ impl From<BetterpaymentRefundStatus> for common_enums::RefundStatus {
 #[derive(Debug, Serialize)]
 pub struct BetterpaymentRefundRequest {
     pub transaction_id: String,
-    pub amount: FloatMajorUnit,
+    pub amount: StringMajorUnit,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>

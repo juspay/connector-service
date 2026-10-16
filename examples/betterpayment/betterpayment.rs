@@ -20,9 +20,9 @@ fn build_client() -> ConnectorClient {
             config: Some(connector_specific_config::Config::Betterpayment(
                 BetterpaymentConfig {
                     api_key: Some(hyperswitch_masking::Secret::new("YOUR_API_KEY".to_string())), // Authentication credential
-                    key1: Some(hyperswitch_masking::Secret::new("YOUR_KEY1".to_string())), // Authentication credential
-                    api_secret: Some(hyperswitch_masking::Secret::new(
-                        "YOUR_API_SECRET".to_string(),
+                    api_password: Some(hyperswitch_masking::Secret::new("YOUR_API_PASSWORD".to_string())), // Authentication credential
+                    webhook_key: Some(hyperswitch_masking::Secret::new(
+                        "YOUR_WEBHOOK_KEY".to_string(),
                     )), // Authentication credential
                     base_url: Some("https://sandbox.example.com".to_string()), // Base URL for API calls
                     ..Default::default()

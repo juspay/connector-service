@@ -1139,8 +1139,8 @@ pub enum ConnectorSpecificConfig {
     },
     Betterpayment {
         api_key: Secret<String>,
-        key1: Secret<String>,
-        api_secret: Secret<String>,
+        api_password: Secret<String>,
+        webhook_key: Secret<String>,
         base_url: Option<String>,
     },
 }
@@ -1586,8 +1586,8 @@ impl ConnectorSpecificConfig {
             },
             Betterpayment {
                 api_key,
-                key1,
-                api_secret
+                api_password,
+                webhook_key
             },
             Imerchantsolutions { api_key },
             Interpayments { api_key },
@@ -2128,8 +2128,8 @@ impl ConnectorSpecificConfig {
                 },
                 Betterpayment {
                     api_key,
-                    key1,
-                    api_secret
+                    api_password,
+                    webhook_key
                 },
                 Imerchantsolutions { api_key },
                 Interpayments { api_key },
@@ -2865,8 +2865,8 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
             }),
             AuthType::Betterpayment(betterpayment) => Ok(Self::Betterpayment {
                 api_key: betterpayment.api_key.ok_or_else(err)?,
-                key1: betterpayment.key1.ok_or_else(err)?,
-                api_secret: betterpayment.api_secret.ok_or_else(err)?,
+                api_password: betterpayment.api_password.ok_or_else(err)?,
+                webhook_key: betterpayment.webhook_key.ok_or_else(err)?,
                 base_url: betterpayment.base_url,
             }),
             AuthType::Imerchantsolutions(imerchantsolutions) => Ok(Self::Imerchantsolutions {
@@ -4284,8 +4284,8 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorVariant)>
                         api_secret,
                     } => Ok(Self::Betterpayment {
                         api_key: api_key.clone(),
-                        key1: key1.clone(),
-                        api_secret: api_secret.clone(),
+                        api_password: key1.clone(),
+                        webhook_key: api_secret.clone(),
                         base_url: None,
                     }),
                     _ => Err(err().into()),

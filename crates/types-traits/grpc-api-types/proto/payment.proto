@@ -6133,8 +6133,8 @@ message PayhereConfig {
 
 message BetterpaymentConfig {
   SecretString api_key = 1;
-  SecretString key1 = 2;
-  SecretString api_secret = 3;
+  SecretString api_password = 2;
+  SecretString webhook_key = 3;
   optional string base_url = 50;
 }
 

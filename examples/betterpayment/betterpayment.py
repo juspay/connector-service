@@ -19,8 +19,8 @@ _default_config = sdk_config_pb2.ConnectorConfig(
     connector_config=payment_pb2.ConnectorSpecificConfig(
         betterpayment=payment_pb2.BetterpaymentConfig(
             api_key=payment_methods_pb2.SecretString(value="YOUR_API_KEY"),
-            key1=payment_methods_pb2.SecretString(value="YOUR_KEY1"),
-            api_secret=payment_methods_pb2.SecretString(value="YOUR_API_SECRET"),
+            api_password=payment_methods_pb2.SecretString(value="YOUR_API_PASSWORD"),
+            webhook_key=payment_methods_pb2.SecretString(value="YOUR_WEBHOOK_KEY"),
             base_url="YOUR_BASE_URL",
         ),
     ),
