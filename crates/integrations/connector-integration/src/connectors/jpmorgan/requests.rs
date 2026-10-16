@@ -347,22 +347,3 @@ pub struct GooglePayIntermediateSigningKey {
 pub struct GooglePaySignedMessage {
     pub ephemeral_public_key: Secret<String>,
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JpmorganStoredWallet {
-    pub provider: JpmorganWalletProvider,
-    pub account_number_type: JpmorganAccountNumberType,
-    pub network: Option<common_enums::CardNetwork>,
-}
-
-#[derive(Default, Serialize, Deserialize)]
-pub struct JpmorganPreservedContext {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub recurring: Option<JpmorganRecurring>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub wallet: Option<JpmorganStoredWallet>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub wallet_account_number_type: Option<JpmorganAccountNumberType>,
-    #[serde(flatten)]
-    pub other: serde_json::Map<String, serde_json::Value>,
-}

@@ -3,14 +3,14 @@
     "no3ds_auto_capture_apple_pay_decrypted_cit": {
       "assert": {
         "mandate_reference.connector_mandate_id.connector_mandate_id": { "must_not_exist": true },
-        "connector_feature_data": { "contains": "APPLE_PAY" },
+        "connector_feature_data": { "must_not_exist": true },
         "network_transaction_id": { "must_exist": true }
       }
     },
     "no3ds_auto_capture_google_pay_decrypted_cit": {
       "assert": {
         "mandate_reference.connector_mandate_id.connector_mandate_id": { "must_not_exist": true },
-        "connector_feature_data": { "contains": "GOOGLE_PAY" },
+        "connector_feature_data": { "must_not_exist": true },
         "network_transaction_id": { "must_exist": true }
       }
     }
