@@ -607,6 +607,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         let typed =
             macros::serialize_typed_connector_payload(&response, "typed_connector_response");
+        let connector_transaction_id = response
+            .error
+            .payment_intent
+            .as_ref()
+            .or(response.error.setup_intent.as_ref())
+            .map(|intent| intent.id.clone());
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response
@@ -660,7 +666,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     | stripe::StripePaymentStatus::Unknown => None,
                 })
                 .map(FlowStatus::Payment),
-            connector_transaction_id: response.error.payment_intent.map(|pi| pi.id),
+            connector_transaction_id,
             network_advice_code: response.error.network_advice_code,
             network_decline_code: response.error.network_decline_code,
             network_error_message: response.error.decline_code.or(response.error.advice_code),

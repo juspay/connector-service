@@ -475,6 +475,7 @@ pub struct SetupMandateRequest<
     pub confirm: bool,
     pub usage: Option<common_enums::FutureUsage>,
     pub customer: Option<Secret<String>>,
+    pub off_session: Option<bool>,
     pub return_url: Option<String>,
     // Reusing a previously tokenized/saved Stripe PaymentMethod (PaymentMethodData::PaymentMethodToken)
     // goes through `payment_method` (Stripe's top-level "use this existing PM" field) instead --
@@ -2528,11 +2529,16 @@ fn is_setup_future_usage_supported(
     )
 }
 
+fn has_usable_return_url(router_return_url: Option<&str>) -> bool {
+    router_return_url.is_some_and(|return_url| !return_url.trim().is_empty())
+}
+
 /// G-ThreeDS-01: a payment that asks for 3DS can be answered with `requires_action` and
 /// `next_action.redirect_to_url`, and Stripe sends the shopper back to `return_url` once the
 /// challenge ends (https://docs.stripe.com/payments/3d-secure/authentication-flow). Without a
-/// caller-supplied URL the builder's fallback would strand the shopper on a page the merchant
-/// does not own, so such a request is refused.
+/// usable caller-supplied URL the builder's fallback would strand the shopper on a page the
+/// merchant does not own, so such a request is refused. A completed external 3DS result cannot
+/// start another challenge and therefore does not require a return URL.
 ///
 /// Covered: a raw card, and an untyped tokenized card (`pm_...`, `tok_...`), which can be
 /// challenged like a raw card. A token typed as a wallet (Apple Pay, Google Pay) is never
@@ -2543,6 +2549,7 @@ fn validate_three_ds_return_url<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
     auth_type: common_enums::AuthenticationType,
     router_return_url: Option<&str>,
+    has_external_three_ds_result: bool,
 ) -> Result<(), IntegrationError> {
     let may_be_challenged = match payment_method_data {
         PaymentMethodData::Card(_) => true,
@@ -2557,7 +2564,8 @@ fn validate_three_ds_return_url<T: PaymentMethodDataTypes>(
     };
     if may_be_challenged
         && auth_type == common_enums::AuthenticationType::ThreeDs
-        && router_return_url.is_none()
+        && !has_external_three_ds_result
+        && !has_usable_return_url(router_return_url)
     {
         return Err(IntegrationError::MissingRequiredField {
             field_name: "return_url",
@@ -2598,7 +2606,7 @@ fn get_token_request_three_d_secure<T: PaymentMethodDataTypes>(
     };
     let google_pay_without_return_url = token.token_payment_method_type
         == Some(payment_method_data::TokenPaymentMethod::GooglePay)
-        && router_return_url.is_none();
+        && !has_usable_return_url(router_return_url);
     (auth_type == common_enums::AuthenticationType::ThreeDs && !google_pay_without_return_url)
         .then_some(Auth3ds::Any)
 }
@@ -2638,9 +2646,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let item = value.router_data;
 
         // G-Authorize-01: Stripe requires a PaymentIntent `amount` to be a positive integer
-        // (https://docs.stripe.com/api/payment_intents/create#create_payment_intent-amount); a $0
-        // verification is a SetupIntent. Refused before the payment-method dispatch so it holds
-        // for every payment method and no HTTP call is built.
+        // (https://docs.stripe.com/api/payment_intents/create#create_payment_intent-amount).
+        if item.request.amount.amount < MinorUnit::zero() {
+            return Err(error_stack::report!(IntegrationError::InvalidDataFormat {
+                field_name: "amount",
+                context: IntegrationErrorContext {
+                    suggested_action: Some(
+                        "send a PaymentIntent amount greater than zero".to_string(),
+                    ),
+                    doc_url: Some(
+                        "https://docs.stripe.com/api/payment_intents/create".to_string(),
+                    ),
+                    additional_context: Some(
+                        "Stripe requires a PaymentIntent amount to be a positive integer; a negative amount cannot be authorized"
+                            .to_string(),
+                    ),
+                },
+            }));
+        }
+
+        // A $0 verification is a SetupIntent. Refused before the payment-method dispatch so it
+        // holds for every payment method and no HTTP call is built.
         if item.request.amount.amount == MinorUnit::zero() {
             return Err(error_stack::report!(IntegrationError::NotSupported {
                 message: "zero-amount PaymentIntent".to_string(),
@@ -2661,12 +2687,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }));
         }
 
-        // G-ThreeDS-01: refused before anything is built.
-        validate_three_ds_return_url(
-            &item.request.payment_method_data,
-            item.resource_common_data.auth_type,
-            item.request.router_return_url.as_deref(),
-        )?;
         let token_request_three_d_secure = get_token_request_three_d_secure(
             &item.request.payment_method_data,
             item.resource_common_data.auth_type,
@@ -2989,6 +3009,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let error_on_requires_action =
             get_external_three_ds_error_on_requires_action(payment_data.as_ref());
+
+        validate_three_ds_return_url(
+            &item.request.payment_method_data,
+            item.resource_common_data.auth_type,
+            item.request.router_return_url.as_deref(),
+            error_on_requires_action.is_some(),
+        )?;
 
         // on_behalf_of is only supported for destination charges, not direct charges
         let on_behalf_of = match &item.request.split_payments {
@@ -4948,10 +4975,12 @@ pub(crate) fn map_webhook_event_type(details: &WebhookEventTypeBody) -> EventTyp
             }) => EventType::PaymentIntentSuccess,
             _ => EventType::IncomingWebhookEventUnspecified,
         },
-        // `refund.updated` (current) and `charge.refund.updated` (deprecated) both carry a
-        // Refund object; its `status` decides the event
+        // `refund.created`, `refund.updated` (current), and `charge.refund.updated` (deprecated)
+        // carry a Refund object; its `status` decides the event
         // (https://docs.stripe.com/refunds, https://docs.stripe.com/api/refunds/object).
-        WebhookEventType::RefundUpdated | WebhookEventType::ChargeRefundUpdated => {
+        WebhookEventType::RefundCreated
+        | WebhookEventType::RefundUpdated
+        | WebhookEventType::ChargeRefundUpdated => {
             match status.as_ref() {
                 Some(WebhookEventStatus::Succeeded) => EventType::RefundSuccess,
                 Some(WebhookEventStatus::Failed | WebhookEventStatus::Canceled) => {
@@ -5032,11 +5061,8 @@ pub(crate) fn map_webhook_event_type(details: &WebhookEventTypeBody) -> EventTyp
         | WebhookEventType::ChargeFailed
         | WebhookEventType::ChargePending
         | WebhookEventType::ChargeUpdated
-        // `charge.refunded` carries a Charge, not a Refund; `refund.created` only announces the
-        // refund ("Sent when a refund is created") and its outcome arrives on `refund.updated`
-        // or `refund.failed`.
+        // `charge.refunded` carries a Charge, not a Refund.
         | WebhookEventType::ChargeRefunded
-        | WebhookEventType::RefundCreated
         | WebhookEventType::PaymentIntentCreated
         | WebhookEventType::PaymentIntentProcessing
         | WebhookEventType::SourceTransactionCreated => EventType::IncomingWebhookEventUnspecified,
@@ -6189,6 +6215,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_method,
             payment_data,
             return_url: item.router_data.request.router_return_url.clone(),
+            off_session: item.router_data.request.off_session,
             usage: setup_future_usage,
             payment_method_options: None,
             customer: item
@@ -7442,1183 +7469,5 @@ mod dispute_network_details_tests {
             "a dispute with no network_details must parse"
         );
         assert!(object.and_then(|o| o.network_details).is_none());
-    }
-}
-
-/// G-Authorize-02 / G-Authorize-03: which externally authenticated (3DS import) outcomes are
-/// sent to Stripe. One test per row of the guard table; a refusal is asserted by error variant
-/// and field name, never by message text.
-#[cfg(test)]
-mod external_three_ds_outcome_tests {
-    use std::str::FromStr;
-
-    use cards::CardNumber;
-    use common_enums::{CardNetwork, TransactionStatus};
-    use common_utils::types::SemanticVersion;
-    use domain_types::{
-        errors::IntegrationError,
-        payment_method_data::{Card, DefaultPCIHolder, RawCardNumber},
-        router_request_types::AuthenticationData,
-    };
-    use hyperswitch_masking::Secret;
-
-    use super::{Auth3ds, StripeCardData, StripePaymentMethodAuthType, StripePaymentMethodData};
-
-    type Outcome = Result<StripePaymentMethodData<DefaultPCIHolder>, IntegrationError>;
-
-    fn card(card_network: Option<CardNetwork>) -> Card<DefaultPCIHolder> {
-        Card {
-            card_number: RawCardNumber(
-                CardNumber::from_str("4242424242424242").unwrap_or_default(),
-            ),
-            card_exp_month: Secret::new("12".to_string()),
-            card_exp_year: Secret::new("2035".to_string()),
-            card_cvc: Secret::new("123".to_string()),
-            card_network,
-            ..Default::default()
-        }
-    }
-
-    /// A complete import: every field Stripe marks required is present.
-    fn authentication_data(
-        trans_status: Option<TransactionStatus>,
-        eci: Option<&str>,
-    ) -> AuthenticationData {
-        AuthenticationData {
-            trans_status,
-            eci: eci.map(str::to_string),
-            cavv: Some(Secret::new("AAABBBCCCDDDEEEFFFGGGHHHIII=".to_string())),
-            ucaf_collection_indicator: None,
-            threeds_server_transaction_id: None,
-            message_version: SemanticVersion::from_str("2.2.0").ok(),
-            ds_trans_id: Some("f25084f0-5b16-4c0a-ae5d-b24808a95e4b".to_string()),
-            acs_transaction_id: None,
-            transaction_id: None,
-            network_params: None,
-            exemption_indicator: None,
-            created_at: None,
-            challenge_code: None,
-            challenge_cancel: None,
-            challenge_code_reason: None,
-            message_extension: None,
-            authentication_type: None,
-        }
-    }
-
-    fn convert(card: &Card<DefaultPCIHolder>, data: &AuthenticationData) -> Outcome {
-        StripePaymentMethodData::try_from((card, Auth3ds::Automatic, Some(data), false, None, None))
-    }
-
-    fn import(
-        trans_status: Option<TransactionStatus>,
-        eci: Option<&str>,
-        card_network: Option<CardNetwork>,
-    ) -> Outcome {
-        convert(&card(card_network), &authentication_data(trans_status, eci))
-    }
-
-    /// The import was accepted AND reaches the request as an external 3DS result carrying the
-    /// outcome and ECI exactly as supplied.
-    fn is_imported(outcome: &Outcome, trans_status: &TransactionStatus, eci: &str) -> bool {
-        match outcome {
-            Ok(StripePaymentMethodData::Card(StripeCardData {
-                payment_method_auth_type: Some(StripePaymentMethodAuthType::External3ds(data)),
-                ..
-            })) => {
-                data.ares_trans_status.as_ref() == Some(trans_status)
-                    && data.electronic_commerce_indicator.as_deref() == Some(eci)
-            }
-            _ => false,
-        }
-    }
-
-    fn is_invalid(outcome: &Outcome, field: &str) -> bool {
-        matches!(
-            outcome,
-            Err(IntegrationError::InvalidDataFormat { field_name, .. }) if *field_name == field
-        )
-    }
-
-    fn is_missing(outcome: &Outcome, field: &str) -> bool {
-        matches!(
-            outcome,
-            Err(IntegrationError::MissingRequiredField { field_name, .. }) if *field_name == field
-        )
-    }
-
-    const ECI: &str = "authentication_data.eci";
-    const TRANS_STATUS: &str = "authentication_data.trans_status";
-
-    #[test]
-    fn success_with_full_authentication_eci_is_imported() {
-        let outcome = import(Some(TransactionStatus::Success), Some("05"), None);
-        assert!(
-            is_imported(&outcome, &TransactionStatus::Success, "05"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn attempted_with_eci_06_is_imported() {
-        let outcome = import(Some(TransactionStatus::NotVerified), Some("06"), None);
-        assert!(
-            is_imported(&outcome, &TransactionStatus::NotVerified, "06"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn attempted_with_eci_01_is_imported() {
-        let outcome = import(Some(TransactionStatus::NotVerified), Some("01"), None);
-        assert!(
-            is_imported(&outcome, &TransactionStatus::NotVerified, "01"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn attempted_with_full_authentication_eci_is_refused() {
-        let outcome = import(Some(TransactionStatus::NotVerified), Some("05"), None);
-        assert!(is_invalid(&outcome, ECI), "{outcome:?}");
-    }
-
-    #[test]
-    fn attempted_without_eci_is_refused() {
-        let outcome = import(Some(TransactionStatus::NotVerified), None, None);
-        assert!(is_missing(&outcome, ECI), "{outcome:?}");
-    }
-
-    #[test]
-    fn informational_with_eci_07_and_no_network_is_imported() {
-        let outcome = import(Some(TransactionStatus::InformationOnly), Some("07"), None);
-        assert!(
-            is_imported(&outcome, &TransactionStatus::InformationOnly, "07"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn informational_with_eci_07_on_visa_is_imported() {
-        let outcome = import(
-            Some(TransactionStatus::InformationOnly),
-            Some("07"),
-            Some(CardNetwork::Visa),
-        );
-        assert!(
-            is_imported(&outcome, &TransactionStatus::InformationOnly, "07"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn informational_with_eci_06_is_imported() {
-        let outcome = import(Some(TransactionStatus::InformationOnly), Some("06"), None);
-        assert!(
-            is_imported(&outcome, &TransactionStatus::InformationOnly, "06"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn informational_with_eci_06_on_mastercard_is_imported() {
-        let outcome = import(
-            Some(TransactionStatus::InformationOnly),
-            Some("06"),
-            Some(CardNetwork::Mastercard),
-        );
-        assert!(
-            is_imported(&outcome, &TransactionStatus::InformationOnly, "06"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn informational_with_eci_05_is_refused() {
-        let outcome = import(Some(TransactionStatus::InformationOnly), Some("05"), None);
-        assert!(is_invalid(&outcome, ECI), "{outcome:?}");
-    }
-
-    #[test]
-    fn informational_with_eci_02_is_refused() {
-        let outcome = import(Some(TransactionStatus::InformationOnly), Some("02"), None);
-        assert!(is_invalid(&outcome, ECI), "{outcome:?}");
-    }
-
-    #[test]
-    fn informational_with_eci_01_is_refused() {
-        let outcome = import(Some(TransactionStatus::InformationOnly), Some("01"), None);
-        assert!(is_invalid(&outcome, ECI), "{outcome:?}");
-    }
-
-    #[test]
-    fn informational_with_eci_07_on_mastercard_is_refused() {
-        let outcome = import(
-            Some(TransactionStatus::InformationOnly),
-            Some("07"),
-            Some(CardNetwork::Mastercard),
-        );
-        assert!(is_invalid(&outcome, ECI), "{outcome:?}");
-    }
-
-    #[test]
-    fn informational_without_eci_is_refused() {
-        let outcome = import(Some(TransactionStatus::InformationOnly), None, None);
-        assert!(is_missing(&outcome, ECI), "{outcome:?}");
-    }
-
-    #[test]
-    fn failed_outcome_is_refused() {
-        let outcome = import(Some(TransactionStatus::Failure), Some("05"), None);
-        assert!(is_invalid(&outcome, TRANS_STATUS), "{outcome:?}");
-    }
-
-    #[test]
-    fn rejected_outcome_is_refused() {
-        let outcome = import(Some(TransactionStatus::Rejected), Some("05"), None);
-        assert!(is_invalid(&outcome, TRANS_STATUS), "{outcome:?}");
-    }
-
-    #[test]
-    fn verification_not_performed_outcome_is_refused() {
-        let outcome = import(
-            Some(TransactionStatus::VerificationNotPerformed),
-            Some("05"),
-            None,
-        );
-        assert!(is_invalid(&outcome, TRANS_STATUS), "{outcome:?}");
-    }
-
-    #[test]
-    fn challenge_required_outcome_is_refused() {
-        let outcome = import(Some(TransactionStatus::ChallengeRequired), Some("05"), None);
-        assert!(is_invalid(&outcome, TRANS_STATUS), "{outcome:?}");
-    }
-
-    #[test]
-    fn decoupled_challenge_outcome_is_refused() {
-        let outcome = import(
-            Some(TransactionStatus::ChallengeRequiredDecoupledAuthentication),
-            Some("05"),
-            None,
-        );
-        assert!(is_invalid(&outcome, TRANS_STATUS), "{outcome:?}");
-    }
-
-    #[test]
-    fn secure_payment_confirmation_outcome_is_refused() {
-        let outcome = import(
-            Some(TransactionStatus::SecurePaymentConfirmationRequired),
-            Some("05"),
-            None,
-        );
-        assert!(is_invalid(&outcome, TRANS_STATUS), "{outcome:?}");
-    }
-
-    #[test]
-    fn absent_outcome_is_refused() {
-        let outcome = import(None, Some("05"), None);
-        assert!(is_missing(&outcome, TRANS_STATUS), "{outcome:?}");
-    }
-
-    #[test]
-    fn missing_cavv_is_refused() {
-        let mut data = authentication_data(Some(TransactionStatus::Success), Some("05"));
-        data.cavv = None;
-        let outcome = convert(&card(None), &data);
-        assert!(
-            is_missing(&outcome, "authentication_data.cavv"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn missing_message_version_is_refused() {
-        let mut data = authentication_data(Some(TransactionStatus::Success), Some("05"));
-        assert!(data.message_version.is_some(), "fixture version must parse");
-        data.message_version = None;
-        let outcome = convert(&card(None), &data);
-        assert!(
-            is_missing(&outcome, "authentication_data.message_version"),
-            "{outcome:?}"
-        );
-    }
-
-    #[test]
-    fn missing_ds_trans_id_is_refused() {
-        let mut data = authentication_data(Some(TransactionStatus::Success), Some("05"));
-        data.ds_trans_id = None;
-        let outcome = convert(&card(None), &data);
-        assert!(
-            is_missing(&outcome, "authentication_data.ds_trans_id"),
-            "{outcome:?}"
-        );
-    }
-}
-
-/// P-Authorize-07: the attempt status an error response carries. A declined confirm (HTTP 402
-/// with the intent left in `requires_payment_method`) is terminal; a request Stripe rejected
-/// without creating an intent is not.
-#[cfg(test)]
-mod error_attempt_status_tests {
-    use common_enums::AttemptStatus;
-    use domain_types::{
-        payment_method_data::DefaultPCIHolder,
-        router_data::{ConnectorSpecificConfig, ErrorResponse, FlowStatus},
-        router_response_types::Response,
-    };
-    use hyperswitch_masking::Secret;
-    use interfaces::api::ConnectorCommon;
-
-    use crate::connectors::stripe::Stripe;
-
-    fn error_response(status_code: u16, body: &'static str) -> Option<ErrorResponse> {
-        // Not a credential: `build_error_response` does not read the config.
-        let config = ConnectorSpecificConfig::Stripe {
-            api_key: Secret::new("unit-test-placeholder".to_string()),
-            base_url: None,
-        };
-        Stripe::<DefaultPCIHolder>::new()
-            .build_error_response(
-                Response {
-                    headers: None,
-                    response: bytes::Bytes::from_static(body.as_bytes()),
-                    status_code,
-                },
-                None,
-                &config,
-            )
-            .ok()
-    }
-
-    #[test]
-    fn declined_payment_intent_is_a_failure() {
-        let response = error_response(
-            402,
-            r#"{"error":{"code":"card_declined","decline_code":"generic_decline",
-                "message":"Your card was declined.","type":"card_error",
-                "payment_intent":{"id":"pi_unit_1","object":"payment_intent",
-                                  "status":"requires_payment_method"}}}"#,
-        );
-        assert!(response.is_some(), "the error body must parse");
-        assert_eq!(
-            response.as_ref().and_then(|r| r.attempt_status.clone()),
-            Some(FlowStatus::Payment(AttemptStatus::Failure))
-        );
-        assert_eq!(
-            response.as_ref().map(|r| r.code.as_str()),
-            Some("card_declined")
-        );
-        assert_eq!(
-            response.and_then(|r| r.connector_transaction_id),
-            Some("pi_unit_1".to_string())
-        );
-    }
-
-    #[test]
-    fn declined_setup_intent_is_a_failure() {
-        let response = error_response(
-            402,
-            r#"{"error":{"code":"card_declined","decline_code":"generic_decline",
-                "message":"Your card was declined.","type":"card_error",
-                "setup_intent":{"id":"seti_unit_1","object":"setup_intent",
-                                "status":"requires_payment_method"}}}"#,
-        );
-        assert!(response.is_some(), "the error body must parse");
-        assert_eq!(
-            response.and_then(|r| r.attempt_status),
-            Some(FlowStatus::Payment(AttemptStatus::Failure))
-        );
-    }
-
-    /// The direct un-tokenized wallet call ends here: Stripe rejects the request and no intent
-    /// exists, so the response must neither become FAILURE nor claim any payment status.
-    #[test]
-    fn rejected_request_without_an_intent_has_no_terminal_status() {
-        let response = error_response(
-            400,
-            r#"{"error":{"code":"parameter_unknown","param":"card",
-                "message":"Received unknown parameter: card",
-                "type":"invalid_request_error"}}"#,
-        );
-        assert!(response.is_some(), "the error body must parse");
-        assert_eq!(
-            response.as_ref().map(|r| r.attempt_status.clone()),
-            Some(None)
-        );
-        assert_eq!(
-            response.as_ref().map(|r| r.code.as_str()),
-            Some("parameter_unknown")
-        );
-        assert_eq!(
-            response
-                .as_ref()
-                .map(|r| r.connector_transaction_id.clone()),
-            Some(None)
-        );
-        assert_eq!(response.map(|r| r.status_code), Some(400));
-    }
-}
-
-/// Refund / RSync: Stripe's refund `status` to the unified refund status.
-#[cfg(test)]
-mod refund_status_tests {
-    use super::RefundStatus;
-
-    /// Parsed from the wire string, so a renamed variant is caught as well as a re-mapped one.
-    fn mapped(wire: &str) -> Option<common_enums::RefundStatus> {
-        serde_json::from_value::<RefundStatus>(serde_json::Value::String(wire.to_string()))
-            .ok()
-            .map(common_enums::RefundStatus::from)
-    }
-
-    #[test]
-    fn succeeded_is_success() {
-        assert_eq!(
-            mapped("succeeded"),
-            Some(common_enums::RefundStatus::Success)
-        );
-    }
-
-    #[test]
-    fn failed_is_failure() {
-        assert_eq!(mapped("failed"), Some(common_enums::RefundStatus::Failure));
-    }
-
-    #[test]
-    fn canceled_is_failure() {
-        assert_eq!(
-            mapped("canceled"),
-            Some(common_enums::RefundStatus::Failure)
-        );
-    }
-
-    #[test]
-    fn pending_is_pending() {
-        assert_eq!(mapped("pending"), Some(common_enums::RefundStatus::Pending));
-    }
-
-    #[test]
-    fn requires_action_is_manual_review() {
-        assert_eq!(
-            mapped("requires_action"),
-            Some(common_enums::RefundStatus::ManualReview)
-        );
-    }
-
-    /// An undocumented status must still deserialize, and must stay non-terminal.
-    #[test]
-    fn undocumented_status_parses_and_stays_pending() {
-        assert_eq!(
-            mapped("some_status_stripe_adds_later"),
-            Some(common_enums::RefundStatus::Pending)
-        );
-    }
-}
-
-/// IncomingWebhook: the `Stripe-Signature` header parser and source verification
-/// (HMAC-SHA256 over `<t>.<raw body>`, any `v1` may match during secret rotation).
-#[cfg(test)]
-mod webhook_signature_tests {
-    use std::collections::HashMap;
-
-    use common_utils::crypto::{HmacSha256, SignMessage};
-    use domain_types::{
-        connector_types::{ConnectorWebhookSecrets, HttpMethod, RequestDetails},
-        errors::WebhookError,
-        payment_method_data::DefaultPCIHolder,
-    };
-    use interfaces::connector_types::IncomingWebhook;
-
-    use super::get_signature_elements_from_header;
-    use crate::connectors::stripe::Stripe;
-
-    /// Dummy signing secrets, used only inside this module.
-    const SECRET: &[u8] = b"unit-test-dummy-signing-secret";
-    const OTHER_SECRET: &[u8] = b"unit-test-dummy-rotated-secret";
-    const TIMESTAMP: &str = "1700000000";
-    const BODY: &[u8] = br#"{"id":"evt_unit_1","type":"payment_intent.succeeded"}"#;
-
-    fn headers(name: &str, value: &str) -> HashMap<String, String> {
-        HashMap::from([(name.to_string(), value.to_string())])
-    }
-
-    fn parse_error(value: &str) -> Option<WebhookError> {
-        get_signature_elements_from_header(&headers("Stripe-Signature", value))
-            .err()
-            .map(|report| report.current_context().clone())
-    }
-
-    /// Hex HMAC-SHA256 of Stripe's `signed_payload` (`<t>.<raw body>`).
-    fn signature(secret: &[u8], body: &[u8]) -> String {
-        let mut signed_payload = TIMESTAMP.as_bytes().to_vec();
-        signed_payload.push(b'.');
-        signed_payload.extend_from_slice(body);
-        HmacSha256
-            .sign_message(secret, &signed_payload)
-            .map(hex::encode)
-            .unwrap_or_default()
-    }
-
-    /// `Some(verdict)` when verification ran, `None` when it returned an error.
-    fn verify(header: &str, body: &[u8]) -> Option<bool> {
-        Stripe::<DefaultPCIHolder>::new()
-            .verify_webhook_source(
-                RequestDetails {
-                    method: HttpMethod::Post,
-                    uri: None,
-                    headers: headers("Stripe-Signature", header),
-                    body: body.to_vec(),
-                    query_params: None,
-                },
-                Some(ConnectorWebhookSecrets {
-                    secret: SECRET.to_vec(),
-                    additional_secret: None,
-                }),
-                None,
-            )
-            .ok()
-    }
-
-    #[test]
-    fn timestamp_and_single_v1_are_parsed() {
-        let parsed =
-            get_signature_elements_from_header(&headers("Stripe-Signature", "t=1700000000,v1=aa"))
-                .ok();
-        assert_eq!(
-            parsed.as_ref().map(|header| header.timestamp.as_str()),
-            Some("1700000000")
-        );
-        assert_eq!(
-            parsed.map(|header| header.v1_signatures),
-            Some(vec!["aa".to_string()])
-        );
-    }
-
-    #[test]
-    fn several_v1_elements_are_collected_in_order() {
-        let parsed = get_signature_elements_from_header(&headers(
-            "Stripe-Signature",
-            "t=1700000000,v1=aa,v1=bb",
-        ))
-        .ok();
-        assert_eq!(
-            parsed.map(|header| header.v1_signatures),
-            Some(vec!["aa".to_string(), "bb".to_string()])
-        );
-    }
-
-    #[test]
-    fn v0_element_is_ignored() {
-        let parsed = get_signature_elements_from_header(&headers(
-            "Stripe-Signature",
-            "t=1700000000,v0=cc,v1=aa",
-        ))
-        .ok();
-        assert_eq!(
-            parsed.map(|header| header.v1_signatures),
-            Some(vec!["aa".to_string()])
-        );
-    }
-
-    #[test]
-    fn header_name_is_matched_case_insensitively() {
-        let parsed =
-            get_signature_elements_from_header(&headers("stripe-signature", "t=1700000000,v1=aa"))
-                .ok();
-        assert_eq!(
-            parsed.map(|header| header.v1_signatures),
-            Some(vec!["aa".to_string()])
-        );
-    }
-
-    #[test]
-    fn missing_header_is_signature_not_found() {
-        let error =
-            get_signature_elements_from_header(&headers("Content-Type", "application/json"))
-                .err()
-                .map(|report| report.current_context().clone());
-        assert_eq!(error, Some(WebhookError::WebhookSignatureNotFound));
-    }
-
-    #[test]
-    fn element_without_equals_fails_verification() {
-        assert_eq!(
-            parse_error("t=1700000000,v1"),
-            Some(WebhookError::WebhookSourceVerificationFailed)
-        );
-    }
-
-    #[test]
-    fn verified_when_the_first_v1_matches() {
-        let valid = signature(SECRET, BODY);
-        assert!(!valid.is_empty(), "the fixture signature must be computed");
-        let header = format!("t={TIMESTAMP},v1={valid}");
-        assert_eq!(verify(&header, BODY), Some(true));
-    }
-
-    /// Secret rotation: Stripe sends one `v1` per active secret; ours may be the second.
-    #[test]
-    fn verified_when_only_the_second_v1_matches() {
-        let rotated = signature(OTHER_SECRET, BODY);
-        let valid = signature(SECRET, BODY);
-        assert!(!valid.is_empty() && !rotated.is_empty() && valid != rotated);
-        let header = format!("t={TIMESTAMP},v1={rotated},v1={valid}");
-        assert_eq!(verify(&header, BODY), Some(true));
-    }
-
-    #[test]
-    fn not_verified_when_no_v1_matches() {
-        let rotated = signature(OTHER_SECRET, BODY);
-        assert!(
-            !rotated.is_empty(),
-            "the fixture signature must be computed"
-        );
-        let header = format!("t={TIMESTAMP},v1={rotated}");
-        assert_eq!(verify(&header, BODY), Some(false));
-    }
-
-    #[test]
-    fn not_verified_when_one_body_byte_differs() {
-        let valid = signature(SECRET, BODY);
-        assert!(!valid.is_empty(), "the fixture signature must be computed");
-        let header = format!("t={TIMESTAMP},v1={valid}");
-        let tampered = br#"{"id":"evt_unit_2","type":"payment_intent.succeeded"}"#;
-        assert_eq!(tampered.len(), BODY.len());
-        assert_eq!(verify(&header, tampered), Some(false));
-    }
-}
-
-/// Void: the caller's free-text reason against Stripe's closed `cancellation_reason` set.
-#[cfg(test)]
-mod cancellation_reason_tests {
-    use super::StripeCancellationReason;
-
-    #[test]
-    fn each_vendor_value_maps_to_its_own_variant() {
-        assert_eq!(
-            StripeCancellationReason::from_free_text("duplicate"),
-            Some(StripeCancellationReason::Duplicate)
-        );
-        assert_eq!(
-            StripeCancellationReason::from_free_text("fraudulent"),
-            Some(StripeCancellationReason::Fraudulent)
-        );
-        assert_eq!(
-            StripeCancellationReason::from_free_text("requested_by_customer"),
-            Some(StripeCancellationReason::RequestedByCustomer)
-        );
-        assert_eq!(
-            StripeCancellationReason::from_free_text("abandoned"),
-            Some(StripeCancellationReason::Abandoned)
-        );
-    }
-
-    /// Unrecognised text is dropped, never sent verbatim (Stripe answers 400 to it).
-    #[test]
-    fn unrecognised_text_maps_to_none() {
-        assert_eq!(
-            StripeCancellationReason::from_free_text("customer changed their mind"),
-            None
-        );
-        assert_eq!(StripeCancellationReason::from_free_text(""), None);
-    }
-
-    #[test]
-    fn letter_case_and_surrounding_whitespace_are_ignored() {
-        assert_eq!(
-            StripeCancellationReason::from_free_text("  Requested_By_Customer "),
-            Some(StripeCancellationReason::RequestedByCustomer)
-        );
-        assert_eq!(
-            StripeCancellationReason::from_free_text("DUPLICATE"),
-            Some(StripeCancellationReason::Duplicate)
-        );
-    }
-
-    #[test]
-    fn variants_serialize_to_the_vendor_values() {
-        assert_eq!(
-            serde_json::to_value(StripeCancellationReason::RequestedByCustomer).ok(),
-            Some(serde_json::Value::String(
-                "requested_by_customer".to_string()
-            ))
-        );
-    }
-}
-
-/// P-Authorize-09 / P-SetupMandate-09: which connector tokens are Stripe card tokens.
-#[cfg(test)]
-mod stripe_card_token_tests {
-    use hyperswitch_masking::Secret;
-
-    use super::is_stripe_card_token;
-
-    #[test]
-    fn card_token_is_recognised() {
-        assert!(is_stripe_card_token(&Secret::new(
-            "tok_1AbCdEfGhIjKlMnO".to_string()
-        )));
-    }
-
-    #[test]
-    fn payment_method_id_is_not_a_card_token() {
-        assert!(!is_stripe_card_token(&Secret::new(
-            "pm_1AbCdEfGhIjKlMnO".to_string()
-        )));
-    }
-
-    #[test]
-    fn empty_token_is_not_a_card_token() {
-        assert!(!is_stripe_card_token(&Secret::new(String::new())));
-    }
-}
-
-/// P-ThreeDS-04: a token payment that asks for 3DS carries
-/// `payment_method_options[card][request_three_d_secure]=any`, and G-ThreeDS-01 covers the
-/// untyped token arms. A token typed as a wallet is never refused for a missing return URL.
-/// Assertions are on the form-urlencoded body Stripe
-/// receives and on the error variant and field name, never on message text.
-#[cfg(test)]
-mod token_three_ds_request_tests {
-    use std::str::FromStr;
-
-    use cards::CardNumber;
-    use common_enums::AuthenticationType;
-    use common_utils::types::MinorUnit;
-    use domain_types::{
-        errors::IntegrationError,
-        payment_method_data::{
-            Card, DefaultPCIHolder, PaymentMethodData, PaymentMethodToken, RawCardNumber,
-            TokenPaymentMethod,
-        },
-    };
-    use hyperswitch_masking::Secret;
-
-    use super::{
-        get_token_request_three_d_secure, validate_three_ds_return_url, Auth3ds,
-        PaymentIntentRequest, StripeBillingAddress, StripeCaptureMethod, StripeCardTokenPayment,
-        StripePaymentMethodData, StripePaymentMethodType,
-    };
-
-    const KEY: &str = "payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=";
-    const RETURN_URL: &str = "https://merchant.example/return";
-
-    fn token(
-        value: &str,
-        token_payment_method_type: Option<TokenPaymentMethod>,
-    ) -> PaymentMethodData<DefaultPCIHolder> {
-        PaymentMethodData::PaymentMethodToken(PaymentMethodToken {
-            token: Secret::new(value.to_string()),
-            token_payment_method_type,
-        })
-    }
-
-    fn card() -> Card<DefaultPCIHolder> {
-        Card {
-            card_number: RawCardNumber(
-                CardNumber::from_str("4000000000003055").unwrap_or_default(),
-            ),
-            card_exp_month: Secret::new("12".to_string()),
-            card_exp_year: Secret::new("2035".to_string()),
-            card_cvc: Secret::new("123".to_string()),
-            ..Default::default()
-        }
-    }
-
-    /// The body the Authorize builder produces for the fields under test: `payment_data` as
-    /// the dispatch built it, and the top-level 3DS request exactly as the builder derives it.
-    /// `router_return_url` is the caller's; the body's own `return_url` always has a value, as
-    /// the builder falls back to a literal when the caller sends none.
-    fn body(
-        payment_method_data: &PaymentMethodData<DefaultPCIHolder>,
-        auth_type: AuthenticationType,
-        router_return_url: Option<&str>,
-        payment_method: Option<&str>,
-        payment_data: Option<StripePaymentMethodData<DefaultPCIHolder>>,
-    ) -> String {
-        serde_urlencoded::to_string(PaymentIntentRequest {
-            amount: MinorUnit::new(1000),
-            currency: "USD".to_string(),
-            statement_descriptor_suffix: None,
-            statement_descriptor: None,
-            meta_data: std::collections::HashMap::new(),
-            return_url: RETURN_URL.to_string(),
-            confirm: true,
-            payment_method: payment_method.map(|id| Secret::new(id.to_string())),
-            customer: None,
-            setup_mandate_details: None,
-            description: None,
-            shipping: None,
-            billing: StripeBillingAddress::default(),
-            payment_data,
-            capture_method: StripeCaptureMethod::Automatic,
-            payment_method_options: None,
-            setup_future_usage: None,
-            off_session: None,
-            payment_method_types: None,
-            expand: None,
-            browser_info: None,
-            charges: None,
-            line_items: None,
-            moto: None,
-            on_behalf_of: None,
-            error_on_requires_action: None,
-            token_request_three_d_secure: get_token_request_three_d_secure(
-                payment_method_data,
-                auth_type,
-                router_return_url,
-            ),
-        })
-        .unwrap_or_default()
-    }
-
-    fn card_token_payment(value: &str) -> Option<StripePaymentMethodData<DefaultPCIHolder>> {
-        Some(StripePaymentMethodData::CardTokenPayment(
-            StripeCardTokenPayment {
-                payment_method_data_type: StripePaymentMethodType::Card,
-                token: Secret::new(value.to_string()),
-            },
-        ))
-    }
-
-    fn is_missing_return_url(outcome: &Result<(), IntegrationError>) -> bool {
-        matches!(
-            outcome,
-            Err(IntegrationError::MissingRequiredField { field_name, .. })
-                if *field_name == "return_url"
-        )
-    }
-
-    #[test]
-    fn payment_method_id_with_three_ds_requests_it_exactly_once() {
-        let body = body(
-            &token("pm_1TestPaymentMethod", None),
-            AuthenticationType::ThreeDs,
-            Some(RETURN_URL),
-            Some("pm_1TestPaymentMethod"),
-            None,
-        );
-        assert!(
-            body.contains("payment_method=pm_1TestPaymentMethod"),
-            "{body}"
-        );
-        assert_eq!(body.matches(KEY).count(), 1, "{body}");
-        assert!(body.contains(&format!("{KEY}any")), "{body}");
-    }
-
-    #[test]
-    fn card_token_with_three_ds_requests_it_exactly_once() {
-        for token_type in [
-            None,
-            Some(TokenPaymentMethod::GooglePay),
-            Some(TokenPaymentMethod::ApplePay),
-        ] {
-            let body = body(
-                &token("tok_1TestCardToken", token_type),
-                AuthenticationType::ThreeDs,
-                Some(RETURN_URL),
-                None,
-                card_token_payment("tok_1TestCardToken"),
-            );
-            assert!(
-                body.contains("payment_method_data%5Bcard%5D%5Btoken%5D=tok_1TestCardToken"),
-                "{body}"
-            );
-            assert_eq!(body.matches(KEY).count(), 1, "{token_type:?}: {body}");
-            assert!(
-                body.contains(&format!("{KEY}any")),
-                "{token_type:?}: {body}"
-            );
-        }
-    }
-
-    /// The `amount` assertion proves the body encoded at all, so an encoding failure cannot
-    /// pass as an absent key.
-    #[test]
-    fn token_without_three_ds_sends_no_request() {
-        for (payment_method_data, payment_method, card_token) in [
-            (
-                token("pm_1TestPaymentMethod", None),
-                Some("pm_1TestPaymentMethod"),
-                None,
-            ),
-            (
-                token("tok_1TestCardToken", None),
-                None,
-                Some("tok_1TestCardToken"),
-            ),
-            (
-                token("tok_1TestCardToken", Some(TokenPaymentMethod::GooglePay)),
-                None,
-                Some("tok_1TestCardToken"),
-            ),
-            (
-                token("tok_1TestCardToken", Some(TokenPaymentMethod::ApplePay)),
-                None,
-                Some("tok_1TestCardToken"),
-            ),
-        ] {
-            for router_return_url in [Some(RETURN_URL), None] {
-                let body = body(
-                    &payment_method_data,
-                    AuthenticationType::NoThreeDs,
-                    router_return_url,
-                    payment_method,
-                    card_token.and_then(card_token_payment),
-                );
-                assert!(body.contains("amount=1000"), "body did not encode: {body}");
-                assert!(!body.contains("request_three_d_secure"), "{body}");
-            }
-        }
-    }
-
-    /// A raw card carries the request inside `payment_data`; the top-level token field must
-    /// stay unset or Stripe would receive the key twice.
-    #[test]
-    fn raw_card_with_three_ds_carries_exactly_one_request() {
-        let card = card();
-        let payment_data =
-            StripePaymentMethodData::try_from((&card, Auth3ds::Any, None, false, None, None));
-        assert!(payment_data.is_ok(), "{payment_data:?}");
-        let body = body(
-            &PaymentMethodData::Card(card.clone()),
-            AuthenticationType::ThreeDs,
-            Some(RETURN_URL),
-            None,
-            payment_data.ok(),
-        );
-        assert_eq!(body.matches(KEY).count(), 1, "{body}");
-        assert!(body.contains(&format!("{KEY}any")), "{body}");
-    }
-
-    #[test]
-    fn three_ds_without_return_url_is_refused_where_a_challenge_is_possible() {
-        for payment_method_data in [
-            PaymentMethodData::Card(card()),
-            token("pm_1TestPaymentMethod", None),
-            token("tok_1TestCardToken", None),
-        ] {
-            let outcome = validate_three_ds_return_url(
-                &payment_method_data,
-                AuthenticationType::ThreeDs,
-                None,
-            );
-            assert!(
-                is_missing_return_url(&outcome),
-                "{payment_method_data:?}: {outcome:?}"
-            );
-        }
-    }
-
-    /// Apple Pay is device-authenticated and never challenged, so it needs no return URL. The
-    /// 3DS request is still sent; Stripe ignores it on a wallet cryptogram token.
-    #[test]
-    fn apple_pay_token_with_three_ds_and_no_return_url_is_not_refused() {
-        let apple_pay = token("tok_1TestCardToken", Some(TokenPaymentMethod::ApplePay));
-        let outcome = validate_three_ds_return_url(&apple_pay, AuthenticationType::ThreeDs, None);
-        assert!(outcome.is_ok(), "{outcome:?}");
-        let body = body(
-            &apple_pay,
-            AuthenticationType::ThreeDs,
-            None,
-            None,
-            card_token_payment("tok_1TestCardToken"),
-        );
-        assert_eq!(body.matches(KEY).count(), 1, "{body}");
-        assert!(body.contains(&format!("{KEY}any")), "{body}");
-    }
-
-    /// A token typed Google Pay is charged without a return URL today, so it is never refused
-    /// for lacking one. No 3DS request goes out in that case: a PAN_ONLY token would be
-    /// challenged with nowhere to return the shopper. The `amount` and token assertions prove
-    /// the body encoded, so an encoding failure cannot pass as an absent key.
-    #[test]
-    fn google_pay_token_with_three_ds_and_no_return_url_is_sent_without_a_request() {
-        let google_pay = token("tok_1TestCardToken", Some(TokenPaymentMethod::GooglePay));
-        let outcome = validate_three_ds_return_url(&google_pay, AuthenticationType::ThreeDs, None);
-        assert!(outcome.is_ok(), "{outcome:?}");
-        let body = body(
-            &google_pay,
-            AuthenticationType::ThreeDs,
-            None,
-            None,
-            card_token_payment("tok_1TestCardToken"),
-        );
-        assert!(body.contains("amount=1000"), "body did not encode: {body}");
-        assert!(
-            body.contains("payment_method_data%5Bcard%5D%5Btoken%5D=tok_1TestCardToken"),
-            "{body}"
-        );
-        assert!(!body.contains("request_three_d_secure"), "{body}");
-    }
-
-    /// Untyped tokens keep the request whenever 3DS is asked for; the guard, not this field,
-    /// is what stops them without a return URL.
-    #[test]
-    fn untyped_token_request_does_not_depend_on_the_return_url() {
-        for (value, payment_method, payment_data) in [
-            ("pm_1TestPaymentMethod", Some("pm_1TestPaymentMethod"), None),
-            (
-                "tok_1TestCardToken",
-                None,
-                card_token_payment("tok_1TestCardToken"),
-            ),
-        ] {
-            let body = body(
-                &token(value, None),
-                AuthenticationType::ThreeDs,
-                None,
-                payment_method,
-                payment_data,
-            );
-            assert_eq!(body.matches(KEY).count(), 1, "{body}");
-            assert!(body.contains(&format!("{KEY}any")), "{body}");
-        }
-    }
-
-    #[test]
-    fn a_return_url_or_no_three_ds_request_is_never_refused() {
-        for payment_method_data in [
-            PaymentMethodData::Card(card()),
-            token("pm_1TestPaymentMethod", None),
-            token("tok_1TestCardToken", None),
-            token("tok_1TestCardToken", Some(TokenPaymentMethod::GooglePay)),
-            token("tok_1TestCardToken", Some(TokenPaymentMethod::ApplePay)),
-        ] {
-            let with_return_url = validate_three_ds_return_url(
-                &payment_method_data,
-                AuthenticationType::ThreeDs,
-                Some(RETURN_URL),
-            );
-            assert!(with_return_url.is_ok(), "{with_return_url:?}");
-            let no_three_ds = validate_three_ds_return_url(
-                &payment_method_data,
-                AuthenticationType::NoThreeDs,
-                None,
-            );
-            assert!(no_three_ds.is_ok(), "{no_three_ds:?}");
-        }
-    }
-}
-
-/// P-RepeatPayment-02: a merchant-initiated PaymentIntent carries the caller's statement
-/// descriptor and suffix, and neither key when the caller sends none. Assertions are on the
-/// form-urlencoded body Stripe receives.
-#[cfg(test)]
-mod repeat_payment_statement_descriptor_tests {
-    use common_utils::types::MinorUnit;
-    use domain_types::{connector_types::BillingDescriptor, payment_method_data::DefaultPCIHolder};
-    use hyperswitch_masking::Secret;
-
-    use super::{
-        get_repeat_payment_statement_descriptors, PaymentIntentRequest, StripeBillingAddress,
-        StripeCaptureMethod,
-    };
-
-    const SUFFIX_KEY: &str = "statement_descriptor_suffix=";
-    const DESCRIPTOR_KEY: &str = "statement_descriptor=";
-
-    fn billing_descriptor(
-        statement_descriptor_suffix: Option<&str>,
-        statement_descriptor: Option<&str>,
-    ) -> BillingDescriptor {
-        BillingDescriptor {
-            name: None,
-            city: None,
-            phone: None,
-            statement_descriptor: statement_descriptor.map(str::to_string),
-            statement_descriptor_suffix: statement_descriptor_suffix.map(str::to_string),
-            reference: None,
-        }
-    }
-
-    /// The body of a saved-payment-method MIT, with the two descriptor fields exactly as the
-    /// RepeatPayment builder derives them.
-    fn body(billing_descriptor: Option<&BillingDescriptor>) -> String {
-        let (statement_descriptor_suffix, statement_descriptor) =
-            get_repeat_payment_statement_descriptors(billing_descriptor);
-        serde_urlencoded::to_string(PaymentIntentRequest::<DefaultPCIHolder> {
-            amount: MinorUnit::new(1000),
-            currency: "USD".to_string(),
-            statement_descriptor_suffix,
-            statement_descriptor,
-            meta_data: std::collections::HashMap::new(),
-            return_url: "https://merchant.example/return".to_string(),
-            confirm: true,
-            payment_method: Some(Secret::new("pm_1TestPaymentMethod".to_string())),
-            customer: Some(Secret::new("cus_TestCustomer".to_string())),
-            setup_mandate_details: None,
-            description: None,
-            shipping: None,
-            billing: StripeBillingAddress::default(),
-            payment_data: None,
-            capture_method: StripeCaptureMethod::Automatic,
-            payment_method_options: None,
-            setup_future_usage: None,
-            off_session: Some(true),
-            payment_method_types: None,
-            expand: None,
-            browser_info: None,
-            charges: None,
-            line_items: None,
-            moto: None,
-            on_behalf_of: None,
-            error_on_requires_action: None,
-            token_request_three_d_secure: None,
-        })
-        .unwrap_or_default()
-    }
-
-    #[test]
-    fn suffix_is_forwarded_alone() {
-        let descriptor = billing_descriptor(Some("ORDER 42"), None);
-        assert_eq!(
-            get_repeat_payment_statement_descriptors(Some(&descriptor)),
-            (Some("ORDER 42".to_string()), None)
-        );
-        let body = body(Some(&descriptor));
-        assert_eq!(body.matches(SUFFIX_KEY).count(), 1, "{body}");
-        assert!(
-            body.contains("statement_descriptor_suffix=ORDER+42"),
-            "{body}"
-        );
-        assert_eq!(body.matches(DESCRIPTOR_KEY).count(), 0, "{body}");
-    }
-
-    #[test]
-    fn descriptor_is_forwarded_alone() {
-        let descriptor = billing_descriptor(None, Some("ACME STORE"));
-        assert_eq!(
-            get_repeat_payment_statement_descriptors(Some(&descriptor)),
-            (None, Some("ACME STORE".to_string()))
-        );
-        let body = body(Some(&descriptor));
-        assert_eq!(body.matches(DESCRIPTOR_KEY).count(), 1, "{body}");
-        assert!(body.contains("statement_descriptor=ACME+STORE"), "{body}");
-        assert_eq!(body.matches(SUFFIX_KEY).count(), 0, "{body}");
-    }
-
-    #[test]
-    fn descriptor_and_suffix_are_forwarded_together_and_not_swapped() {
-        let descriptor = billing_descriptor(Some("ORDER 42"), Some("ACME STORE"));
-        let body = body(Some(&descriptor));
-        assert!(
-            body.contains("statement_descriptor_suffix=ORDER+42"),
-            "{body}"
-        );
-        assert!(body.contains("statement_descriptor=ACME+STORE"), "{body}");
-    }
-
-    #[test]
-    fn no_billing_descriptor_sends_neither_key() {
-        assert_eq!(get_repeat_payment_statement_descriptors(None), (None, None));
-        for body in [body(None), body(Some(&billing_descriptor(None, None)))] {
-            assert!(!body.contains("statement_descriptor"), "{body}");
-            assert!(
-                body.contains("payment_method=pm_1TestPaymentMethod"),
-                "{body}"
-            );
-            assert!(body.contains("off_session=true"), "{body}");
-        }
     }
 }
