@@ -378,16 +378,9 @@ pub(super) fn generate_xml<T: Serialize>(request: &T) -> Result<String, Report<I
     ))
 }
 
-fn generate_logged_xml<T: Serialize>(request: &T, fallback_root: &str) -> String {
+fn generate_xml_or_fallback<T: Serialize>(request: &T, fallback_root: &str) -> String {
     let fallback = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<{fallback_root}/>");
-    let xml = generate_xml(request).unwrap_or(fallback);
-    tracing::info!(
-        connector = "tsysTransit",
-        root = fallback_root,
-        raw_request_xml = %xml,
-        "tsysTransit raw connector request"
-    );
-    xml
+    generate_xml(request).unwrap_or(fallback)
 }
 
 fn log_tsys_transit_response<T: Debug>(flow: &str, status_code: u16, response: &T) {
@@ -418,7 +411,7 @@ impl GetSoapXml for TsysTransitRepeatPaymentRequest {
 
 impl GetSoapXml for TsysTransitAuthorizeRequest {
     fn to_soap_xml(&self) -> String {
-        generate_logged_xml(self, "Sale")
+        generate_xml_or_fallback(self, "Sale")
     }
 }
 #[derive(Debug, Serialize)]
@@ -562,7 +555,7 @@ pub struct TsysTransitTransactionInquiryRequest {
 
 impl GetSoapXml for TsysTransitTransactionInquiryRequest {
     fn to_soap_xml(&self) -> String {
-        generate_logged_xml(self, "SearchTransaction")
+        generate_xml_or_fallback(self, "SearchTransaction")
     }
 }
 pub type TsysTransitRSyncRequest = TsysTransitTransactionInquiryRequest;
@@ -589,7 +582,7 @@ pub struct TsysTransitCaptureRequest {
 
 impl GetSoapXml for TsysTransitCaptureRequest {
     fn to_soap_xml(&self) -> String {
-        generate_logged_xml(self, "Capture")
+        generate_xml_or_fallback(self, "Capture")
     }
 }
 #[derive(Debug, Serialize)]
@@ -617,7 +610,7 @@ pub struct TsysTransitReturnRequest {
 
 impl GetSoapXml for TsysTransitReturnRequest {
     fn to_soap_xml(&self) -> String {
-        generate_logged_xml(self, "Return")
+        generate_xml_or_fallback(self, "Return")
     }
 }
 #[derive(Debug, Serialize)]
@@ -639,7 +632,7 @@ pub struct TsysTransitVoidRequest {
 
 impl GetSoapXml for TsysTransitVoidRequest {
     fn to_soap_xml(&self) -> String {
-        generate_logged_xml(self, "Void")
+        generate_xml_or_fallback(self, "Void")
     }
 }
 
@@ -664,7 +657,7 @@ pub type TsysTransitVoidPCResponse = TsysTransitVoidResponse;
 
 impl GetSoapXml for TsysTransitVoidPCRequest {
     fn to_soap_xml(&self) -> String {
-        generate_logged_xml(self, "Void")
+        generate_xml_or_fallback(self, "Void")
     }
 }
 
@@ -687,7 +680,7 @@ pub struct TsysTransitVoidPostRefundRequest {
 
 impl GetSoapXml for TsysTransitVoidPostRefundRequest {
     fn to_soap_xml(&self) -> String {
-        generate_logged_xml(self, "Void")
+        generate_xml_or_fallback(self, "Void")
     }
 }
 #[derive(Debug, Serialize)]
@@ -783,7 +776,7 @@ pub struct TsysTransitCardAuthenticationRequest {
 
 impl GetSoapXml for TsysTransitCardAuthenticationRequest {
     fn to_soap_xml(&self) -> String {
-        generate_logged_xml(self, "CardAuthentication")
+        generate_xml_or_fallback(self, "CardAuthentication")
     }
 }
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
