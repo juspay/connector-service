@@ -236,8 +236,8 @@ message Customer {
       4;                                  // Customer ID in the connector system
   optional SecretString phone_number = 5; // Customer's phone number
   optional string phone_country_code = 6; // Customer's phone country code
-  optional string first_name = 7;       // Customer's first name
-  optional string last_name = 8;        // Customer's last name
+  optional SecretString first_name = 7; // Customer's first name
+  optional SecretString last_name = 8;  // Customer's last name
   optional string salutation = 9;       // Customer's salutation (Mr., Ms., etc.)
   optional CustomerDocumentDetails customer_document_details =
       10; // Customer identification document

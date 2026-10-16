@@ -540,7 +540,7 @@ pub struct PacoAirlineData {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PacoBookingReference {
-    pub pnr_code: String,
+    pub pnr_code: Secret<String>,
     pub booking_date_time: String,
 }
 

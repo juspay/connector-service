@@ -4936,7 +4936,7 @@ pub struct EducationData {
 pub struct StudentDetails {
     pub student_id: Option<String>,
     pub student_first_name: Option<Secret<String>>,
-    pub student_last_name: Option<String>,
+    pub student_last_name: Option<Secret<String>>,
     pub student_email: Option<Secret<String>>,
 }
 
@@ -4946,7 +4946,7 @@ pub struct StudentDetails {
 #[derive(Debug, Clone, Default)]
 pub struct AirlineData {
     // Booking / ticket level
-    pub pnr_code: Option<String>,
+    pub pnr_code: Option<Secret<String>>,
     pub booking_reference: Option<String>,
     pub ticket_number: Option<Secret<String>>,
     pub ticket_issue_date: Option<String>,
@@ -5054,7 +5054,7 @@ pub struct HotelData {
     pub checkout: Option<String>,
     pub number_of_guests: Option<u32>,
     /// Guest details.
-    pub guests: Option<CustomerInfo>,
+    pub guests: Vec<CustomerInfo>,
     pub number_of_rooms: Option<u32>,
     /// Hotel or property name.
     pub hotel_name: Option<String>,
@@ -5112,24 +5112,43 @@ pub struct HostDetails {
 /// Connector-agnostic ground / sea travel data (train, bus, ferry).
 #[derive(Debug, Clone, Default)]
 pub struct TravelData {
+    /// Mode of transport (train, bus, ferry).
     pub mode: Option<common_enums::TravelMode>,
-    pub origin: Option<String>,
-    pub destination: Option<String>,
-    pub travel_class: Option<common_enums::TravelClass>,
+    /// Carrier name, e.g. "Amtrak".
     pub carrier_name: Option<String>,
-    pub passengers: Vec<Traveller>,
+    /// Number of passengers on the booking.
     pub number_of_passengers: Option<u32>,
     /// Travel date (yyyy-MM-dd).
     pub travel_date: Option<String>,
+    /// Refundable / non-refundable.
     pub refundability: Option<common_enums::TicketRefundability>,
+    /// Travel legs, in itinerary order.
+    pub travel_segments: Vec<TravelSegment>,
+}
+
+/// One travel leg (origin/destination/travel class and the leg's passengers).
+#[derive(Debug, Clone, Default)]
+pub struct TravelSegment {
+    /// Origin station / port.
+    pub origin: Option<String>,
+    /// Destination station / port.
+    pub destination: Option<String>,
+    /// Cabin / service class.
+    pub travel_class: Option<common_enums::TravelClass>,
+    /// Passenger details for this leg.
+    pub passengers: Option<Traveller>,
 }
 
 /// A passenger on a ground / sea travel booking.
 #[derive(Debug, Clone, Default)]
 pub struct Traveller {
+    /// Passenger's first name.
     pub first_name: Option<Secret<String>>,
+    /// Passenger's last name.
     pub last_name: Option<Secret<String>>,
+    /// Passenger's phone number.
     pub phone_number: Option<Secret<String>>,
+    /// Passenger's date of birth.
     pub date_of_birth: Option<Secret<String>>,
 }
 
@@ -5273,7 +5292,7 @@ pub struct RiskAssessmentData {
     pub risk_score: Option<u32>,
     pub date_first_paid: Option<String>,
     pub date_last_paid: Option<String>,
-    pub number_of_order_in_past_24h: Option<u32>,
+    pub number_of_orders_in_past_24h: Option<u32>,
     pub customer_reference: Option<String>,
 }
 

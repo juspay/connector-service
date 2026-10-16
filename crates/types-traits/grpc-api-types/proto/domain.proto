@@ -69,19 +69,18 @@ enum OnlineStatus {
   ONLINE_STATUS_OFFLINE = 2;
 }
 
-// How the education purchase was made. Placeholder values — extend once the
-// connector taxonomy is confirmed.
+// How the education purchase was made.
 enum PurchaseType {
   PURCHASE_TYPE_UNSPECIFIED = 0;
-  PURCHASE_TYPE_ONLINE = 1;
-  PURCHASE_TYPE_OFFLINE = 2;
+  PURCHASE_TYPE_ONLINE = 1;  // Purchased online
+  PURCHASE_TYPE_OFFLINE = 2; // Purchased offline / in person
 }
 
 // Student details for education payments (e.g. Flywire recipient fields).
 message StudentDetails {
   optional string student_id = 1;
   optional SecretString student_first_name = 2; // PII — student's first name
-  optional string student_last_name = 3;
+  optional SecretString student_last_name = 3; // PII — student's last name
   optional SecretString student_email = 4; // PII — student's email address
 }
 
@@ -227,7 +226,7 @@ message HotelData {
   optional string checkin = 2;              // Check-in date/time (RFC 3339)
   optional string checkout = 3;             // Check-out date/time (RFC 3339)
   optional uint32 number_of_guests = 4;     // Number of guests
-  optional Customer guests = 5;             // Guest details
+  repeated Customer guests = 5;             // Guest details
   optional uint32 number_of_rooms = 6;      // Number of rooms
   optional string hotel_name = 7;           // Hotel or property name
   optional string hotel_city = 8;           // City IATA code, e.g. RUH
@@ -287,15 +286,21 @@ enum HostType {
 
 // Connector-agnostic ground / sea travel data (train, bus, ferry).
 message TravelData {
-  optional TravelMode mode = 1;
-  optional string origin = 2;
-  optional string destination = 3;
-  optional TravelClass travel_class = 4;
-  optional string carrier_name = 5;
-  repeated Traveller passengers = 6;
-  optional uint32 number_of_passengers = 7;
-  optional string travel_date = 8; // Travel date (yyyy-MM-dd)
-  TicketRefundability refundability = 9;
+  optional TravelMode mode = 1;                 // Mode of transport (train, bus, ferry)
+  optional string carrier_name = 2;             // Carrier name, e.g. "Amtrak"
+  optional uint32 number_of_passengers = 3;     // Number of passengers on the booking
+  optional string travel_date = 4;              // Travel date (yyyy-MM-dd)
+  TicketRefundability refundability = 5;        // Refundable / non-refundable
+  repeated TravelSegment travel_segments = 6;   // Travel legs, in itinerary order
+}
+
+// One travel leg. origin/destination/travel_class and the leg's passengers moved
+// here from TravelData, mirroring how AirlineData carries AirlineSegment legs.
+message TravelSegment {
+  optional string origin = 1;                   // Origin station / port
+  optional string destination = 2;              // Destination station / port
+  optional TravelClass travel_class = 3;        // Cabin / service class
+  optional Traveller passengers = 4;            // Passenger details for this leg
 }
 
 // Mode of ground / sea transport.
@@ -317,10 +322,10 @@ enum TravelClass {
 
 // A passenger on a ground / sea travel booking.
 message Traveller {
-  optional SecretString first_name = 1;
-  optional SecretString last_name = 2;
-  optional SecretString phone_number = 4;
-  optional SecretString date_of_birth = 5;
+  optional SecretString first_name = 1;    // Passenger's first name
+  optional SecretString last_name = 2;     // Passenger's last name
+  optional SecretString phone_number = 4;  // Passenger's phone number
+  optional SecretString date_of_birth = 5; // Passenger's date of birth
 }
 
 // Connector-agnostic vehicle sales data.

@@ -2503,13 +2503,25 @@ message PaymentServiceAuthorizeRequest {
 // Customer risk-assessment signals supplied by the merchant, used by
 // connectors that factor account history into risk decisions.
 message RiskAssessmentData {
+  // Whether the customer is a premium customer of the merchant.
   optional PremiumCustomerStatus is_premium_customer = 1;
+  // Date the customer's account was created with the merchant (dd-mm-yyyy).
   optional string customer_account_creation_date = 2;
+  // Number of successful orders the customer has placed with the merchant.
   optional uint32 number_of_orders = 3;
+  // Aggregated transaction/customer risk score computed by the merchant, on a
+  // scale of 0 (lowest risk) to 100 (highest risk).
   optional uint32 risk_score = 4;
+  // Date of the customer's first successful payment (dd-mm-yyyy); null if this
+  // is the customer's first order.
   optional string date_first_paid = 5;
+  // Date of the customer's most recent successful payment (dd-mm-yyyy); null if
+  // this is the customer's first order.
   optional string date_last_paid = 6;
-  optional uint32 number_of_order_in_past_24h = 7;
+  // Number of successful orders the customer placed with the merchant in the
+  // last 24 hours.
+  optional uint32 number_of_orders_in_past_24h = 7;
+  // Merchant-assigned reference identifying the customer.
   optional string customer_reference = 8;
 }
 

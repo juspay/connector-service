@@ -287,7 +287,11 @@ fn domain_data_to_recipient_fields(
                 ),
                 (
                     FIELD_STUDENT_LAST_NAME,
-                    student_details.student_last_name.clone(),
+                    // student_last_name is secret; reveal it only for the outbound request.
+                    student_details
+                        .student_last_name
+                        .as_ref()
+                        .map(|e| e.peek().clone()),
                 ),
                 (
                     FIELD_STUDENT_EMAIL,
