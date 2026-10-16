@@ -361,18 +361,21 @@ pub struct JpmorganStoredWallet {
     pub network: Option<common_enums::CardNetwork>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-pub struct JpmorganPreservedContext {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+#[derive(Default, Deserialize)]
+pub struct JpmorganMitMetadata {
+    #[serde(default)]
     pub recurring: Option<JpmorganRecurring>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub wallet: Option<JpmorganStoredWallet>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub wallet_account_number_type: Option<JpmorganAccountNumberType>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub resource: Option<JpmorganResourceContext>,
-    #[serde(flatten)]
-    pub other: serde_json::Map<String, serde_json::Value>,
+    #[serde(default, rename = "resource")]
+    pub _resource: Option<JpmorganResourceContext>,
+}
+
+#[derive(Serialize)]
+pub struct JpmorganVerificationMetadata {
+    pub resource: JpmorganResourceContext,
 }
 
 #[derive(Serialize, Deserialize)]

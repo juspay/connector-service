@@ -45,12 +45,6 @@ const JPMORGAN_AGREEMENT_ID_MAX_LENGTH: usize = 100;
 
 impl requests::JpmorganSyncResource {
     pub(super) fn from_request(request: &PaymentsSyncData) -> Result<Self, Error> {
-        Self::from_request_with_context(request).map(|(resource, _)| resource)
-    }
-
-    fn from_request_with_context(
-        request: &PaymentsSyncData,
-    ) -> Result<(Self, requests::JpmorganPreservedContext), Error> {
         let invalid = || IntegrationError::InvalidDataFormat {
             field_name: "connector_feature_data.resource",
             context: IntegrationErrorContext {
@@ -60,7 +54,7 @@ impl requests::JpmorganSyncResource {
                 ..Default::default()
             },
         };
-        let metadata = request
+        let resource: Option<requests::JpmorganResourceContext> = request
             .connector_feature_data
             .as_ref()
             .map(|data| -> Result<_, Error> {
@@ -73,15 +67,11 @@ impl requests::JpmorganSyncResource {
                     .map(|resource| serde_json::from_value(resource.clone()))
                     .transpose()
                     .change_context(invalid())?;
-                Ok(requests::JpmorganPreservedContext {
-                    resource,
-                    ..Default::default()
-                })
+                Ok(resource)
             })
             .transpose()
             .change_context(invalid())?
-            .unwrap_or_default();
-        let context = &metadata;
+            .flatten();
         let id = request
             .connector_transaction_id
             .get_connector_transaction_id()
@@ -94,13 +84,13 @@ impl requests::JpmorganSyncResource {
                     ..Default::default()
                 },
             })?;
-        if context.resource.is_some() {
+        if resource.is_some() {
             if !Self::valid_verification_id(&id) {
                 return Err(invalid().into());
             }
-            return Ok((Self::Verification(id), metadata));
+            return Ok(Self::Verification(id));
         }
-        Ok((Self::Payment(id), metadata))
+        Ok(Self::Payment(id))
     }
 
     fn valid_verification_id(id: &str) -> bool {
@@ -213,7 +203,6 @@ impl responses::JpmorganVerificationResponse {
     fn into_payment_response(
         self,
         http_code: u16,
-        mut metadata: requests::JpmorganPreservedContext,
     ) -> Result<Result<PaymentsResponseData, ErrorResponse>, ResponseError> {
         if !requests::JpmorganSyncResource::valid_verification_id(&self.transaction_id) {
             return Err(requests::JpmorganSyncResource::response_error(http_code));
@@ -230,9 +219,11 @@ impl responses::JpmorganVerificationResponse {
                 ..Default::default()
             }));
         }
-        metadata.resource = Some(requests::JpmorganResourceContext {
-            resource_type: requests::JpmorganResourceType::Verification,
-        });
+        let metadata = requests::JpmorganVerificationMetadata {
+            resource: requests::JpmorganResourceContext {
+                resource_type: requests::JpmorganResourceType::Verification,
+            },
+        };
         let metadata = serde_json::to_value(metadata)
             .change_context(requests::JpmorganSyncResource::response_context(http_code))?;
         let network = self
@@ -264,7 +255,7 @@ fn merchant_order_number(merchant_order_id: Option<&str>, reference: &str) -> St
         .to_owned()
 }
 
-impl requests::JpmorganPreservedContext {
+impl requests::JpmorganMitMetadata {
     fn from_value(value: &serde_json::Value) -> Result<Self, Error> {
         if !value.is_object()
             || value.get("jpmorgan").is_some()
@@ -283,7 +274,7 @@ impl requests::JpmorganPreservedContext {
     }
 }
 
-impl requests::JpmorganPreservedContext {
+impl requests::JpmorganMitMetadata {
     fn invalid_with_reason(reason: &'static str) -> Error {
         IntegrationError::InvalidDataFormat {
             field_name: "metadata",
@@ -1594,11 +1585,10 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganTransactionResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let (resource, metadata) =
-            requests::JpmorganSyncResource::from_request_with_context(&item.router_data.request)
-                .change_context(requests::JpmorganSyncResource::response_context(
-                    item.http_code,
-                ))?;
+        let resource = requests::JpmorganSyncResource::from_request(&item.router_data.request)
+            .change_context(requests::JpmorganSyncResource::response_context(
+                item.http_code,
+            ))?;
         let (status, response) = match resource {
             requests::JpmorganSyncResource::Payment(_) => {
                 let payment: responses::JpmorganPaymentsResponse =
@@ -1620,10 +1610,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
                     ));
                 }
                 let status = verification.status(item.http_code)?;
-                (
-                    status,
-                    verification.into_payment_response(item.http_code, metadata)?,
-                )
+                (status, verification.into_payment_response(item.http_code)?)
             }
         };
 
@@ -2032,8 +2019,7 @@ impl<T: PaymentMethodDataTypes>
             ));
         }
         let status = verification.status(item.http_code)?;
-        let metadata = requests::JpmorganPreservedContext::default();
-        let response = verification.into_payment_response(item.http_code, metadata)?;
+        let response = verification.into_payment_response(item.http_code)?;
 
         Ok(Self {
             response,
@@ -2095,7 +2081,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
 
     fn mit_recurring(
         request: &RepeatPaymentData<T>,
-        context: &requests::JpmorganPreservedContext,
+        context: &requests::JpmorganMitMetadata,
     ) -> Result<Option<requests::JpmorganRecurring>, Error> {
         match request.mit_category {
             Some(common_enums::MitCategory::Unscheduled) => Ok(None),
@@ -2117,7 +2103,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
                     })
                     || original.is_variable_amount.is_none()
                 {
-                    return Err(requests::JpmorganPreservedContext::invalid_with_reason(
+                    return Err(requests::JpmorganMitMetadata::invalid_with_reason(
                         "Scheduled repeat payments require valid original recurring terms.",
                     ));
                 }
@@ -2141,7 +2127,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
     }
 
     fn stored_wallet(
-        context: &requests::JpmorganPreservedContext,
+        context: &requests::JpmorganMitMetadata,
         provider: &requests::JpmorganWalletProvider,
     ) -> Result<requests::JpmorganStoredWallet, Error> {
         let wallet = context
@@ -2183,7 +2169,7 @@ impl<T: PaymentMethodDataTypes> requests::JpmorganRepeatPaymentRequest<T> {
 
     fn mit_card(
         request: &RepeatPaymentData<T>,
-        context: &requests::JpmorganPreservedContext,
+        context: &requests::JpmorganMitMetadata,
         ntid: String,
         tlid: Option<String>,
     ) -> Result<requests::JpmorganMitCardByNti<T>, Error> {
@@ -2429,10 +2415,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let metadata = request
             .metadata
             .as_ref()
-            .map(|value| requests::JpmorganPreservedContext::from_value(value.peek()))
+            .map(|value| requests::JpmorganMitMetadata::from_value(value.peek()))
             .transpose()
             .map_err(|_| {
-                requests::JpmorganPreservedContext::invalid_with_reason(
+                requests::JpmorganMitMetadata::invalid_with_reason(
                     "The repeat payment metadata has an invalid field type.",
                 )
             })?
