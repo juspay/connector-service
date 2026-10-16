@@ -254,5 +254,7 @@ pub type JpmorganSetupMandateResponse = JpmorganVerificationResponse;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(transparent)]
-pub struct JpmorganTransactionResponse(pub Secret<serde_json::Value>);
+pub struct JpmorganPSyncResponse {
+    pub body: Secret<serde_json::Value>,
+}
 pub type JpmorganRepeatPaymentResponse = JpmorganPaymentsResponse;
