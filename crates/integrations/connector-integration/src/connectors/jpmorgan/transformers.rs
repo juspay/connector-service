@@ -42,12 +42,6 @@ const JPMORGAN_THREE_DS_NOT_IMPLEMENTED: &str = "3DS payments";
 
 impl requests::JpmorganSyncResource {
     pub(super) fn from_request(request: &PaymentsSyncData) -> Result<Self, Error> {
-        Self::from_request_with_context(request).map(|(resource, _)| resource)
-    }
-
-    fn from_request_with_context(
-        request: &PaymentsSyncData,
-    ) -> Result<(Self, requests::JpmorganPreservedContext), Error> {
         let invalid = || IntegrationError::InvalidDataFormat {
             field_name: "connector_feature_data.resource",
             context: IntegrationErrorContext {
@@ -57,7 +51,7 @@ impl requests::JpmorganSyncResource {
                 ..Default::default()
             },
         };
-        let metadata = request
+        let resource: Option<requests::JpmorganResourceContext> = request
             .connector_feature_data
             .as_ref()
             .map(|data| -> Result<_, Error> {
@@ -70,12 +64,11 @@ impl requests::JpmorganSyncResource {
                     .map(|resource| serde_json::from_value(resource.clone()))
                     .transpose()
                     .change_context(invalid())?;
-                Ok(requests::JpmorganPreservedContext { resource })
+                Ok(resource)
             })
             .transpose()
             .change_context(invalid())?
-            .unwrap_or_default();
-        let context = &metadata;
+            .flatten();
         let id = request
             .connector_transaction_id
             .get_connector_transaction_id()
@@ -88,13 +81,13 @@ impl requests::JpmorganSyncResource {
                     ..Default::default()
                 },
             })?;
-        if context.resource.is_some() {
+        if resource.is_some() {
             if !Self::valid_verification_id(&id) {
                 return Err(invalid().into());
             }
-            return Ok((Self::Verification(id), metadata));
+            return Ok(Self::Verification(id));
         }
-        Ok((Self::Payment(id), metadata))
+        Ok(Self::Payment(id))
     }
 
     fn valid_verification_id(id: &str) -> bool {
@@ -207,7 +200,6 @@ impl responses::JpmorganVerificationResponse {
     fn into_payment_response(
         self,
         http_code: u16,
-        mut metadata: requests::JpmorganPreservedContext,
     ) -> Result<Result<PaymentsResponseData, ErrorResponse>, ResponseError> {
         if !requests::JpmorganSyncResource::valid_verification_id(&self.transaction_id) {
             return Err(requests::JpmorganSyncResource::response_error(http_code));
@@ -224,9 +216,11 @@ impl responses::JpmorganVerificationResponse {
                 ..Default::default()
             }));
         }
-        metadata.resource = Some(requests::JpmorganResourceContext {
-            resource_type: requests::JpmorganResourceType::Verification,
-        });
+        let metadata = requests::JpmorganVerificationMetadata {
+            resource: requests::JpmorganResourceContext {
+                resource_type: requests::JpmorganResourceType::Verification,
+            },
+        };
         let metadata = serde_json::to_value(metadata)
             .change_context(requests::JpmorganSyncResource::response_context(http_code))?;
         let network = self
@@ -1556,11 +1550,10 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
     fn try_from(
         item: ResponseRouterData<responses::JpmorganTransactionResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let (resource, metadata) =
-            requests::JpmorganSyncResource::from_request_with_context(&item.router_data.request)
-                .change_context(requests::JpmorganSyncResource::response_context(
-                    item.http_code,
-                ))?;
+        let resource = requests::JpmorganSyncResource::from_request(&item.router_data.request)
+            .change_context(requests::JpmorganSyncResource::response_context(
+                item.http_code,
+            ))?;
         let (status, response) = match resource {
             requests::JpmorganSyncResource::Payment(_) => {
                 let payment: responses::JpmorganPaymentsResponse =
@@ -1582,10 +1575,7 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganTransactionResponse, Self>
                     ));
                 }
                 let status = verification.status(item.http_code)?;
-                (
-                    status,
-                    verification.into_payment_response(item.http_code, metadata)?,
-                )
+                (status, verification.into_payment_response(item.http_code)?)
             }
         };
 
@@ -1994,8 +1984,7 @@ impl<T: PaymentMethodDataTypes>
             ));
         }
         let status = verification.status(item.http_code)?;
-        let metadata = requests::JpmorganPreservedContext::default();
-        let response = verification.into_payment_response(item.http_code, metadata)?;
+        let response = verification.into_payment_response(item.http_code)?;
 
         Ok(Self {
             response,

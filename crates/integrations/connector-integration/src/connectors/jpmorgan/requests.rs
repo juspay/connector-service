@@ -349,10 +349,9 @@ pub struct GooglePaySignedMessage {
     pub ephemeral_public_key: Secret<String>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-pub struct JpmorganPreservedContext {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub resource: Option<JpmorganResourceContext>,
+#[derive(Serialize)]
+pub struct JpmorganVerificationMetadata {
+    pub resource: JpmorganResourceContext,
 }
 
 #[derive(Serialize, Deserialize)]
