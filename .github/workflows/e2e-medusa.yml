@@ -13,7 +13,14 @@ permissions:
 jobs:
   e2e:
     name: Playwright E2E (UI + API)
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
     defaults:
       run:
         # The plugin is a self-contained npm workspace under plugins/medusa;
