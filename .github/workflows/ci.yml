@@ -46,7 +46,14 @@ jobs:
   # ── Change Detection ──────────────────────────────────────────────────────
   changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
     permissions:
       pull-requests: read
     outputs:
@@ -342,7 +349,14 @@ jobs:
   typos:
     name: Spell check
     if: "!github.event.pull_request.draft"
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -356,7 +370,14 @@ jobs:
     name: Clippy check
     needs: changes
     if: "!github.event.pull_request.draft && (needs.changes.outputs.any-rust == 'true' || needs.changes.outputs.proto == 'true')"
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -396,7 +417,14 @@ jobs:
        needs.changes.outputs.docs-trigger == 'true' ||
        needs.changes.outputs.sdk == 'true' ||
        needs.changes.outputs.proto == 'true')
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
     permissions:
       contents: write
     outputs:
@@ -571,7 +599,14 @@ jobs:
       github.event_name != 'pull_request' &&
       (needs.changes.outputs.any-rs == 'true' ||
        needs.changes.outputs.ci == 'true')
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -600,7 +635,14 @@ jobs:
       (needs.changes.outputs.any-rust == 'true' ||
        needs.changes.outputs.proto == 'true' ||
        needs.changes.outputs.ci == 'true')
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
 
     env:
       RUSTFLAGS: "-D warnings"
@@ -656,7 +698,14 @@ jobs:
       (needs.changes.outputs.any-rust == 'true' ||
        needs.changes.outputs.proto == 'true' ||
        needs.changes.outputs.ci == 'true')
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
 
     env:
       RUSTFLAGS: "-D warnings"
@@ -921,7 +970,14 @@ jobs:
        needs.changes.outputs.proto == 'true' ||
        needs.changes.outputs.ci == 'true' ||
        needs.changes.outputs.stripe == 'true')
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
 
     env:
       RUSTFLAGS: "-D warnings"
@@ -1018,7 +1074,14 @@ jobs:
     name: SDK Tests (${{ matrix.name }})
     needs: [sdk-build]
     if: needs.sdk-build.result == 'success'
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
 
     strategy:
       fail-fast: false
@@ -1150,7 +1213,14 @@ jobs:
     name: CI Result
     if: always()
     needs: [typos, clippy, formatting, auto-fix, check, test, sdk-build, sdk-test]
-    runs-on: ubuntu-latest
+    # Keep public-fork code off the shared ARC fleet; reserve the merge pool
+    # for merge-group and main-push jobs, and use the regular pool for PRs.
+    runs-on: >-
+      ${{ github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          'ubuntu-latest' ||
+          (github.event_name == 'merge_group' || github.event_name == 'push') &&
+          'hyperswitch-runners-merge' || 'hyperswitch-runners' }}
     steps:
       - name: Evaluate CI results
         run: |
