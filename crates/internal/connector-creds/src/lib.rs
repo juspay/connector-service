@@ -62,14 +62,22 @@ pub enum CredentialError {
     InvalidConfig(String, String),
 }
 
-/// PascalCase variant name used by the `ConnectorSpecificConfig` oneof. Proto
-/// field names are all-lowercase, so capitalising the first letter is enough.
+/// PascalCase variant name used by the `ConnectorSpecificConfig` oneof.
+/// Underscore-separated connector names map to the prost oneof variant
+/// (`clearsale_br` → `ClearsaleBr`); single-word names just capitalise the
+/// first letter (`stripe` → `Stripe`).
 fn pascal_connector_name(connector: &str) -> String {
-    let mut chars = connector.chars();
-    match chars.next() {
-        None => String::new(),
-        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-    }
+    connector
+        .split('_')
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        })
+        .collect()
 }
 
 /// Unwraps `{"value": "…"}` into the string it holds, recursively. Every other
@@ -266,6 +274,8 @@ mod tests {
     fn pascal_names() {
         assert_eq!(pascal_connector_name("stripe"), "Stripe");
         assert_eq!(pascal_connector_name("authorizedotnet"), "Authorizedotnet");
+        assert_eq!(pascal_connector_name("clearsale_br"), "ClearsaleBr");
+        assert_eq!(pascal_connector_name("globalpayments_heartland"), "GlobalpaymentsHeartland");
         assert_eq!(pascal_connector_name(""), "");
     }
 
