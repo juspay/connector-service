@@ -212,7 +212,7 @@ impl FrmConnectorData {
             FrmConnectorEnum::Nsure => Box::new(frm_connectors::Nsure::<
                 domain_types::payment_method_data::DefaultPCIHolder,
             >::new()),
-            FrmConnectorEnum::ClearsaleBR => Box::new(frm_connectors::ClearSaleBR::<
+            FrmConnectorEnum::ClearsaleBr => Box::new(frm_connectors::ClearSaleBr::<
                 domain_types::payment_method_data::DefaultPCIHolder,
             >::new()),
         }

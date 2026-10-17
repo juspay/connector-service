@@ -330,8 +330,8 @@ impl ForeignTryFrom<grpc_api_types::frm::FrmServicePreRiskCheckRequest> for PreR
             mandate_details,
             merchant_details: value.merchant_details.map(MerchantDetails::foreign_from),
             payment_method_type,
-            billing_document: value
-                .billing_document
+            document_details: value
+                .document_details
                 .as_ref()
                 .and_then(crate::types::map_customer_document_details),
             domain_data: value
@@ -347,10 +347,6 @@ impl ForeignTryFrom<grpc_api_types::frm::FrmServicePreRiskCheckRequest> for PreR
                         ..Default::default()
                     },
                 })?,
-            shipping_document: value
-                .shipping_document
-                .as_ref()
-                .and_then(crate::types::map_customer_document_details),
         })
     }
 }

@@ -217,11 +217,11 @@ pub enum SurchargeConnectorEnum {
 pub enum FrmConnectorEnum {
     Kount,
     Nsure,
-    // Pinned explicitly: the header `x-frm-connector: clearsalebr` is parsed
+    // Pinned explicitly: the header `x-frm-connector: clearsale_br` is parsed
     // via this enum's `from_str`, and heck's snake_case would otherwise split
     // the trailing acronym ("clearsale_frmbr").
-    #[strum(serialize = "clearsalebr")]
-    ClearsaleBR,
+    #[strum(serialize = "clearsale_br")]
+    ClearsaleBr,
 }
 
 /// Enum representing connectors that support authenticator flows (account linking, identity verification)
@@ -361,7 +361,7 @@ impl ForeignTryFrom<AuthType> for FrmConnectorEnum {
         match config {
             AuthType::Kount(_) => Ok(Self::Kount),
             AuthType::Nsure(_) => Ok(Self::Nsure),
-            AuthType::Clearsalebr(_) => Ok(Self::ClearsaleBR),
+            AuthType::ClearsaleBr(_) => Ok(Self::ClearsaleBr),
             _ => Err(error_stack::Report::new(
                 IntegrationError::InvalidDataFormat {
                     field_name: "connector",
@@ -4912,8 +4912,10 @@ pub struct CurrencyConversionData {
 pub struct DomainData {
     pub airline_data: Option<AirlineData>,
     pub education_data: Option<EducationData>,
-    pub hotel_data: Option<HotelData>,
-    pub travel_data: Option<TravelData>,
+    pub hotel_data: Vec<HotelData>,
+    /// One entry per leg of a ground / sea journey — ClearSale maps each
+    /// entry onto connections[] and appends every leg's passengers.
+    pub travel_data: Vec<TravelData>,
 }
 
 /// Connector-agnostic education data (e.g. Flywire tuition payments).
@@ -4933,16 +4935,9 @@ pub enum TravelMode {
     Other,
 }
 
-/// Cabin / seating class. Mirrors proto `TravelClass`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum TravelClass {
-    #[default]
-    Unspecified,
-    Economy,
-    PremiumEconomy,
-    Business,
-    First,
-}
+// Cabin / seating class is a free-form string at the wire (e.g. "ECONOMY") so
+// carriers can pass their own vocabulary; the domain field is plain
+// `Option<String>` on `TravelData::travel_class`.
 
 /// Connector-agnostic hotel / accommodation booking data. Mirrors the proto
 /// `HotelData` (tags 30+ are the ClearSale BR extension).
@@ -4975,30 +4970,27 @@ pub struct HotelData {
     pub hotel_state: Option<String>,
 }
 
-/// Connector-agnostic ground / sea travel data. Mirrors the proto `TravelData`.
+/// Connector-agnostic ground / sea travel data — one leg of the journey
+/// (a multi-leg journey sends one entry per leg; ClearSale maps each entry
+/// onto connections[]). Mirrors the proto `TravelData` (tags 20+ are the
+/// ClearSale BR leg extension).
 #[derive(Debug, Clone, Default)]
 pub struct TravelData {
     pub mode: Option<TravelMode>,
+    /// Origin station / terminal code of this leg.
     pub origin: Option<String>,
+    /// Destination station / terminal code of this leg.
     pub destination: Option<String>,
-    pub travel_class: Option<TravelClass>,
+    /// Free-form cabin / seating class (e.g. "ECONOMY"); an empty string
+    /// deserializes to `None`.
+    pub travel_class: Option<String>,
     pub carrier_name: Option<String>,
+    /// Passengers on this leg.
     pub passengers: Vec<Traveller>,
     pub number_of_passengers: Option<u32>,
-    /// Travel date (yyyy-MM-dd) of the whole journey.
+    /// Travel date of this leg (yyyy-MM-dd or RFC 3339).
     pub travel_date: Option<String>,
     pub refundability: Option<common_enums::TicketRefundability>,
-    /// Per-leg detail, in journey order — ClearSale connections[].
-    pub legs: Vec<TravelLeg>,
-}
-
-/// One leg of a ground / sea journey. Mirrors the proto `TravelLeg`.
-#[derive(Debug, Clone, Default)]
-pub struct TravelLeg {
-    /// Origin station / terminal code.
-    pub origin: Option<String>,
-    /// Destination station / terminal code.
-    pub destination: Option<String>,
     /// Departure (RFC 3339).
     pub departure_time: Option<String>,
     /// Arrival (RFC 3339).
@@ -5009,8 +5001,6 @@ pub struct TravelLeg {
     pub carrier_code: Option<String>,
     /// Trip / service / coach number.
     pub service_number: Option<String>,
-    /// Free-form class (e.g. "ECONOMY").
-    pub travel_class: Option<String>,
     /// Fare basis (e.g. "Y").
     pub fare_class: Option<String>,
     /// Seat category when distinct from travel_class.
@@ -6227,7 +6217,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Affirm(_) => Ok(Self::Payment(ConnectorEnum::Affirm)),
             AuthType::Plaid(_) => Ok(Self::Authenticator(AuthenticatorConnectorEnum::Plaid)),
             AuthType::Nsure(_) => Ok(Self::Frm(FrmConnectorEnum::Nsure)),
-            AuthType::Clearsalebr(_) => Ok(Self::Frm(FrmConnectorEnum::ClearsaleBR)),
+            AuthType::ClearsaleBr(_) => Ok(Self::Frm(FrmConnectorEnum::ClearsaleBr)),
             AuthType::Givepayments(_) => Ok(Self::Payment(ConnectorEnum::Givepayments)),
             AuthType::Santander(_) => Ok(Self::Payout(PayoutConnectorEnum::Santander)),
         }

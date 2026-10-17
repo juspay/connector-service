@@ -98,15 +98,14 @@ pub struct PreRiskCheckRequest {
     pub merchant_details: Option<MerchantDetails>,
     /// Payment method sub-type (e.g. `Card`, `GooglePay`, `UpiCollect`) for risk scoring.
     pub payment_method_type: Option<PaymentMethodType>,
-    /// Billing party's identity document (e.g. Brazilian CPF/CNPJ), reusing the
-    /// shared CustomerDocumentDetails / DocumentKind.
-    pub billing_document: Option<CustomerDocumentDetails>,
+    /// Payer's identity document (e.g. Brazilian CPF/CNPJ in `document_number`).
+    /// The buyer's document, when distinct, is sent as `DocumentKind.CUSTOMER_CPF` —
+    /// ClearSale maps CPF/CNPJ → billing.primaryDocument and CUSTOMER_CPF →
+    /// shipping.primaryDocument (falling back to billing when absent).
+    pub document_details: Option<CustomerDocumentDetails>,
     /// Domain-specific order context (travel, hotel, airline…) as a typed
     /// object. Replaces the earlier free-form merchant_transient_info JSON.
     pub domain_data: Option<DomainData>,
-    /// Shipping party's identity document, when it differs from the billing
-    /// party's (e.g. ClearSale shipping.primaryDocument — the order's customerCPF).
-    pub shipping_document: Option<CustomerDocumentDetails>,
 }
 
 /// Response data for pre-risk check
@@ -244,15 +243,9 @@ pub struct FrmMetadata {
     /// own custom-field contract.
     #[serde(default, alias = "custom_fields")]
     pub custom_fields: Option<std::collections::HashMap<String, serde_json::Value>>,
-    /// Travel/identity passengers (per-seat travelers for transport merchants).
-    #[serde(default)]
-    pub passengers: Option<Vec<FrmPassenger>>,
-    /// Travel legs (euler `travelSegments`).
-    #[serde(default, alias = "travel_segments")]
-    pub travel_segments: Option<Vec<FrmTravelSegment>>,
-    /// Lodging blocks (euler `accommodations`).
-    #[serde(default)]
-    pub accommodations: Option<Vec<FrmAccommodation>>,
+    // Travel/hotel blocks (passengers / travelSegments / accommodations) are
+    // intentionally NOT consumed here — they ride on the typed
+    // `PreRiskCheckRequest::domain_data` (DomainData.travel_data / hotel_data).
 }
 
 impl FrmMetadata {
@@ -284,82 +277,3 @@ impl FrmMetadata {
     }
 }
 
-/// FRM passenger (euler `UcsFrmPassenger`). Generic identity/loyalty shape;
-/// each FRM provider projects it onto its own passenger contract (ClearSale
-/// `passengers[]`, …).
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FrmPassenger {
-    #[serde(default)]
-    pub first_name: Option<String>,
-    #[serde(default)]
-    pub last_name: Option<String>,
-    #[serde(default)]
-    pub status: Option<String>,
-    #[serde(default)]
-    pub phone: Option<String>,
-    #[serde(default)]
-    pub email: Option<String>,
-    #[serde(default)]
-    pub nationality: Option<String>,
-    #[serde(default)]
-    pub loyalty_program_name: Option<String>,
-    #[serde(default)]
-    pub loyalty_program_number: Option<String>,
-    #[serde(default)]
-    pub identification_type: Option<String>,
-    #[serde(default)]
-    pub identification_number: Option<String>,
-    #[serde(default)]
-    pub gender: Option<String>,
-    /// RFC 3339 datetime string (euler `UTCTime`).
-    #[serde(default)]
-    pub birthdate: Option<String>,
-}
-
-/// FRM travel leg (euler `UcsFrmTravelSegment`).
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FrmTravelSegment {
-    #[serde(default)]
-    pub carrier_code: Option<String>,
-    #[serde(default)]
-    pub flight_number: Option<String>,
-    #[serde(default)]
-    pub departure_date: Option<String>,
-    #[serde(default)]
-    pub cabin_class: Option<String>,
-    #[serde(default)]
-    pub origin_code: Option<String>,
-    #[serde(default)]
-    pub destination_code: Option<String>,
-    #[serde(default)]
-    pub boarding_date_time: Option<String>,
-    #[serde(default)]
-    pub arrival_date_time: Option<String>,
-    #[serde(default)]
-    pub fare_class: Option<String>,
-}
-
-/// FRM lodging block (euler `UcsFrmAccommodation`).
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FrmAccommodation {
-    #[serde(default)]
-    pub property_name: Option<String>,
-    #[serde(default)]
-    pub city: Option<String>,
-    #[serde(default)]
-    pub state: Option<String>,
-    #[serde(default)]
-    pub country: Option<String>,
-    #[serde(default)]
-    pub reservation_date_time: Option<String>,
-    #[serde(default)]
-    pub reservation_expiry_date_time: Option<String>,
-    /// `Day` (`YYYY-MM-DD`) on the wire.
-    #[serde(default)]
-    pub check_in_date: Option<String>,
-    #[serde(default)]
-    pub check_out_date: Option<String>,
-}

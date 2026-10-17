@@ -230,13 +230,16 @@ enum DocumentKind {
   CPF = 1; // Cadastro de Pessoas Físicas - Brazilian individual taxpayer ID.
   CNPJ = 2; // Cadastro Nacional da Pessoa Jurídica - Brazilian business ID.
   PSN = 3; // Philippine PhilSys Number (12-digit national ID), required by dLocal for GCash.
-  OTHER = 4; // Generic / other non-Brazilian national document; the connector validates it per country. Kept last as the catch-all.
+  // Identifier for the customer who actually buys the product or service
+  // (ClearSale shipping.primaryDocument).
+  CUSTOMER_CPF = 4;
+  OTHER = 5; // Generic / other non-Brazilian national document; the connector validates it per country. Kept last as the catch-all.
 }
 
 // Customer's country-specific identification document.
 message CustomerDocumentDetails {
   DocumentKind document_type = 1;   // The customer's document type
-  SecretString document_number = 2; // The customer's document number
+  SecretString document_number = 2; // The customer's document number (CPF)
 }
 
 // ============================================================================
@@ -930,7 +933,7 @@ enum Connector {
   MERCHANTE = 150;
   ELAVON_PG = 151;
   GLOBALPAYMENTS_REALEX = 152;
-  CLEARSALEBR = 153;
+  CLEARSALE_BR = 153;
 }
 
 // Payment method types
@@ -1512,8 +1515,8 @@ message L2L3Data {
 message DomainData {
   optional AirlineData airline_data = 1; // Airline / travel itinerary data
   optional EducationData education_data = 2; // Education / student data
-  optional HotelData hotel_data = 3;     // Hotel / accommodation booking data
-  optional TravelData travel_data = 4;   // Ground / sea travel data
+  repeated HotelData hotel_data = 3;     // Hotel / accommodation bookings
+  repeated TravelData travel_data = 4;   // Ground / sea travel legs
 }
 
 // Connector-agnostic education data (e.g. Flywire tuition payments).
@@ -1570,47 +1573,35 @@ enum TravelMode {
   TRAVEL_MODE_OTHER = 4;
 }
 
-// Cabin / seating class.
-enum TravelClass {
-  TRAVEL_CLASS_UNSPECIFIED = 0;
-  TRAVEL_CLASS_ECONOMY = 1;
-  TRAVEL_CLASS_PREMIUM_ECONOMY = 2;
-  TRAVEL_CLASS_BUSINESS = 3;
-  TRAVEL_CLASS_FIRST = 4;
-}
-
-// Connector-agnostic ground / sea travel data (shared with PR #2517;
-// extended with per-leg detail and passenger docs needed by ClearSale BR).
+// Connector-agnostic ground / sea travel data — one leg of the journey
+// (shared with PR #2517; extended with per-leg detail and passenger docs
+// needed by ClearSale BR, tags 20+). A multi-leg journey sends one entry per
+// leg; ClearSale maps each entry onto connections[].
 message TravelData {
   TravelMode mode = 1;
+  // Origin station / terminal code of this leg.
   optional string origin = 2;
+  // Destination station / terminal code of this leg.
   optional string destination = 3;
-  TravelClass travel_class = 4;
+  // Free-form cabin / seating class (e.g. "ECONOMY", "PREMIUM_ECONOMY",
+  // "BUSINESS", "FIRST").
+  optional string travel_class = 4;
   optional string carrier_name = 5;
+  // Passengers on this leg — ClearSale appends all legs' passengers into
+  // its order-level passengers[].
   repeated Traveller passengers = 6;
   optional uint32 number_of_passengers = 7;
-  // Travel date (yyyy-MM-dd).
+  // Travel date of this leg (yyyy-MM-dd or RFC 3339).
   optional string travel_date = 8;
   TicketRefundability refundability = 9;
 
-  // Per-leg detail, in journey order — ClearSale connections[][]. Added
-  // because the top-level origin/destination/date describe only the whole
-  // journey, not intermediate legs.
-  repeated TravelLeg legs = 20;
-}
-
-// One leg of a ground / sea journey.
-message TravelLeg {
-  optional string origin = 1;               // Origin station / terminal code
-  optional string destination = 2;          // Destination station / terminal code
-  optional string departure_time = 3;       // Departure (RFC 3339)
-  optional string arrival_time = 4;         // Arrival (RFC 3339)
-  optional string boarding_time = 5;        // Boarding gate opening (RFC 3339)
-  optional string carrier_code = 6;         // e.g. bus operator / train code
-  optional string service_number = 7;       // Trip / service / coach number
-  optional string travel_class = 8;         // Free-form class (e.g. "ECONOMY")
-  optional string fare_class = 9;           // Fare basis (e.g. "Y")
-  optional string seat_class = 10;          // Seat category when distinct from travel_class
+  optional string departure_time = 20;    // Departure (RFC 3339)
+  optional string arrival_time = 21;      // Arrival (RFC 3339)
+  optional string boarding_time = 22;     // Boarding gate opening (RFC 3339)
+  optional string carrier_code = 23;      // e.g. bus operator / train code
+  optional string service_number = 24;    // Trip / service / coach number
+  optional string fare_class = 25;        // Fare basis (e.g. "Y")
+  optional string seat_class = 26;        // Seat category when distinct from travel_class
 }
 
 // A person travelling (shared with PR #2517; tags 10+ are the ClearSale BR
@@ -6052,7 +6043,7 @@ message NsureConfig {
   optional string base_url = 50;
 }
 
-message ClearsaleBRConfig {
+message ClearsaleBrConfig {
   // ClearSale account username, sent as `name` on POST /v1/authenticate.
   // This is the RiskManagementAccount accountDetailsJson field name.
   SecretString username = 1;
@@ -6605,8 +6596,8 @@ message ConnectorSpecificConfig {
     ElavonPgConfig elavon_pg = 162;
     // GLOBALPAYMENTS_REALEX = 152
     GlobalpaymentsRealexConfig globalpayments_realex = 163;
-    // CLEARSALEBR = 153
-    ClearsaleBRConfig clearsalebr = 164;
+    // CLEARSALE_BR = 153
+    ClearsaleBrConfig clearsale_br = 164;
   }
 }
 

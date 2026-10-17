@@ -57,17 +57,17 @@ const CLEARSALE_AUTHENTICATE_PATH: &str = "/v1/authenticate";
 /// Order create / re-analysis endpoint (spec §4).
 const CLEARSALE_ORDERS_PATH: &str = "/v1/orders/";
 
-// Credentials come from the proto `ClearsaleBRConfig` oneof entry
-// (`CLEARSALEBR` = 153, field `clearsalebr` = 164): `username`/`password` are
+// Credentials come from the proto `ClearsaleBrConfig` oneof entry
+// (`CLEARSALE_BR` = 153, field `clearsale_br` = 164): `username`/`password` are
 // the ClearSale account login name and password, both sent on
 // POST /v1/authenticate.
 
 // ClearSale amounts are JSON numbers in the major currency unit — `99.99` is
 // R$99.99, not 9999 centavos (spec §7).
-macros::create_amount_converter_wrapper!(connector_name: ClearSaleBR, amount_type: FloatMajorUnit);
+macros::create_amount_converter_wrapper!(connector_name: ClearSaleBr, amount_type: FloatMajorUnit);
 
 macros::create_all_prerequisites!(
-    connector_name: ClearSaleBR,
+    connector_name: ClearSaleBr,
     generic_type: T,
     api: [
         (
@@ -143,10 +143,10 @@ macros::create_all_prerequisites!(
 // CONNECTOR COMMON
 // =============================================================================
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for ClearSaleBR<T>
+    for ClearSaleBr<T>
 {
     fn id(&self) -> &'static str {
-        "clearsalebr"
+        "clearsale_br"
     }
 
     fn get_currency_unit(&self) -> CurrencyUnit {
@@ -159,7 +159,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.clearsalebr.base_url
+        &connectors.clearsale_br.base_url
     }
 
     /// Content-negotiation headers common to every ClearSale call. There is no
@@ -230,17 +230,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
-    for ClearSaleBR<T>
+    for ClearSaleBr<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
-    for ClearSaleBR<T>
+    for ClearSaleBr<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Send + Serialize>
-    connector_types::VerifyRedirectResponse for ClearSaleBR<T>
+    connector_types::VerifyRedirectResponse for ClearSaleBr<T>
 {
 }
 
@@ -251,7 +251,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Send + Serializ
 // returns true so the composite layer runs ServerAuthenticationToken and
 // threads the token onto `state.access_token` before the FRM flows.
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for ClearSaleBR<T>
+    connector_types::ValidationTrait for ClearSaleBr<T>
 {
     fn should_do_access_token(&self, _payment_method: Option<common_enums::PaymentMethod>) -> bool {
         true
@@ -265,7 +265,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // payload carries no status and no documented signature; the integrator must
 // follow up with `GET /v1/orders/{code}/status`.
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for ClearSaleBR<T>
+    connector_types::IncomingWebhook for ClearSaleBr<T>
 {
     /// No webhook signature is documented by ClearSale (spec §11 open question
     /// 2). For now every verified-source check accepts; the payload is logged
@@ -358,39 +358,39 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // =============================================================================
 // Not generic over `T` for the same reason as nSure/Kount: FrmServiceTrait
 // requires `PaymentPreAuthenticateV2<DefaultPCIHolder>` (fixed), which
-// `ClearSaleBR<T>` only provides for the matching `T`.
+// `ClearSaleBr<T>` only provides for the matching `T`.
 impl connector_types::FrmServiceTrait
-    for ClearSaleBR<domain_types::payment_method_data::DefaultPCIHolder>
+    for ClearSaleBr<domain_types::payment_method_data::DefaultPCIHolder>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PreRiskCheckV2 for ClearSaleBR<T>
+    connector_types::PreRiskCheckV2 for ClearSaleBr<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PostRiskCheckV2 for ClearSaleBR<T>
+    connector_types::PostRiskCheckV2 for ClearSaleBr<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::FrmPaymentOutcomeV2 for ClearSaleBR<T>
+    connector_types::FrmPaymentOutcomeV2 for ClearSaleBr<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::FrmRefundProcessedV2 for ClearSaleBR<T>
+    connector_types::FrmRefundProcessedV2 for ClearSaleBr<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::FrmChargebackReceivedV2 for ClearSaleBR<T>
+    connector_types::FrmChargebackReceivedV2 for ClearSaleBr<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ServerAuthentication for ClearSaleBR<T>
+    connector_types::ServerAuthentication for ClearSaleBr<T>
 {
 }
 
@@ -400,7 +400,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // PreAuthenticate is stubbed alongside every non-FRM payment flow this
 // connector does not implement.
 macros::macro_connector_flow_status_impls!(
-    connector: ClearSaleBR,
+    connector: ClearSaleBr,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     not_implemented: [
@@ -440,7 +440,7 @@ macros::macro_connector_flow_status_impls!(
 // =============================================================================
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: ClearSaleBR,
+    connector: ClearSaleBr,
     curl_request: Json(ClearSaleAuthenticateRequest),
     curl_response: ClearSaleAuthenticateResponse,
     flow_name: ServerAuthenticationToken,
@@ -457,7 +457,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, IntegrationError> {
             Ok(format!(
                 "{}{}",
-                req.resource_common_data.connectors.clearsalebr.base_url,
+                req.resource_common_data.connectors.clearsale_br.base_url,
                 CLEARSALE_AUTHENTICATE_PATH
             ))
         }
@@ -469,7 +469,7 @@ macros::macro_connector_implementation!(
 // =============================================================================
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: ClearSaleBR,
+    connector: ClearSaleBr,
     curl_request: Json(ClearSaleOrderCreateRequest),
     curl_response: ClearSaleOrderCreateResponse,
     flow_name: PreRiskCheck,
@@ -497,7 +497,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, IntegrationError> {
             Ok(format!(
                 "{}{}",
-                req.resource_common_data.connectors.clearsalebr.base_url,
+                req.resource_common_data.connectors.clearsale_br.base_url,
                 CLEARSALE_ORDERS_PATH
             ))
         }
@@ -509,7 +509,7 @@ macros::macro_connector_implementation!(
 // =============================================================================
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: ClearSaleBR,
+    connector: ClearSaleBr,
     curl_request: Json(ClearSaleOrderReanalysisRequest),
     curl_response: ClearSaleOrderReanalysisResponse,
     flow_name: PostRiskCheck,
@@ -537,7 +537,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, IntegrationError> {
             Ok(format!(
                 "{}{}",
-                req.resource_common_data.connectors.clearsalebr.base_url,
+                req.resource_common_data.connectors.clearsale_br.base_url,
                 CLEARSALE_ORDERS_PATH
             ))
         }
@@ -549,7 +549,7 @@ macros::macro_connector_implementation!(
 // =============================================================================
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: ClearSaleBR,
+    connector: ClearSaleBr,
     curl_request: Json(ClearSaleStatusUpdateRequest),
     curl_response: ClearSaleStatusUpdateResponse,
     flow_name: FrmPaymentOutcome,
@@ -599,7 +599,7 @@ macros::macro_connector_implementation!(
                 })?;
             Ok(format!(
                 "{}{}{}/status",
-                req.resource_common_data.connectors.clearsalebr.base_url,
+                req.resource_common_data.connectors.clearsale_br.base_url,
                 CLEARSALE_ORDERS_PATH,
                 order_code
             ))
@@ -614,7 +614,7 @@ macros::macro_connector_implementation!(
 // API — the order lifecycle ends at the risk decision plus the PGA/PGR
 // payment push.
 macros::frm_flow_not_implemented!(
-    connector: ClearSaleBR,
+    connector: ClearSaleBr,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     flow: FrmRefundProcessed,
@@ -626,7 +626,7 @@ macros::frm_flow_not_implemented!(
 // FrmChargebackReceived: ClearSale's chargeback API is the separate /v2
 // surface (spec §2), deliberately out of scope for this foundation.
 macros::frm_flow_not_implemented!(
-    connector: ClearSaleBR,
+    connector: ClearSaleBr,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     flow: FrmChargebackReceived,

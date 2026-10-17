@@ -3,7 +3,7 @@
 
 //! FRM (Fraud and Risk Management) flow tests.
 //!
-//! `clearsalebr_session_id_*` replicate the Buser PreRiskCheck request shape:
+//! `clearsale_br_session_id_*` replicate the Buser PreRiskCheck request shape:
 //! the device-fingerprint `sessionID` must come from the request `metadata`
 //! (`sessionId` / snake_case `session_id` — euler's `buildUcsFrmMetadata`
 //! encodes via `camelTo2 '_'`), and a `sessionID` smuggled in
@@ -27,7 +27,7 @@ use grpc_api_types::{
 };
 use tonic::{transport::Channel, Request};
 
-const CONNECTOR_NAME: &str = "clearsalebr";
+const CONNECTOR_NAME: &str = "clearsale_br";
 const MERCHANT_ID: &str = "merchant_1234";
 const TEST_AMOUNT: i64 = 10_000; // R$ 100.00
 const TEST_EMAIL: &str = "sabujohn@example.com";
@@ -144,7 +144,7 @@ fn pre_risk_check_request() -> FrmServicePreRiskCheckRequest {
 /// report `sessionID` as missing — whatever fails next (missing creds,
 /// billing/shipping, upstream auth) must be a *different* field.
 #[tokio::test]
-async fn clearsalebr_session_id_from_metadata_is_accepted() {
+async fn clearsale_br_session_id_from_metadata_is_accepted() {
     grpc_test!(client, FraudAndRiskManagementServiceClient<Channel>, {
         let mut grpc_request = Request::new(pre_risk_check_request());
         add_frm_metadata(&mut grpc_request);
@@ -175,7 +175,7 @@ async fn clearsalebr_session_id_from_metadata_is_accepted() {
 /// validation with `sessionID` listed among the missing fields — proving the
 /// feature-data key is ignored rather than used as a fallback.
 #[tokio::test]
-async fn clearsalebr_feature_data_session_id_is_ignored() {
+async fn clearsale_br_feature_data_session_id_is_ignored() {
     grpc_test!(client, FraudAndRiskManagementServiceClient<Channel>, {
         // No top-level session_id in the metadata blob.
         let metadata = serde_json::json!({
@@ -231,7 +231,7 @@ async fn clearsalebr_feature_data_session_id_is_ignored() {
 /// The camelCase `sessionId` at the metadata top level is also a valid source
 /// (both casings decode through `FrmMetadata`'s serde aliases).
 #[tokio::test]
-async fn clearsalebr_session_id_camel_case_metadata_is_accepted() {
+async fn clearsale_br_session_id_camel_case_metadata_is_accepted() {
     grpc_test!(client, FraudAndRiskManagementServiceClient<Channel>, {
         let metadata = serde_json::json!({
             "sessionId": "camelcase-session-99",

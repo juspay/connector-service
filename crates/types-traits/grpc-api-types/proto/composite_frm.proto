@@ -77,19 +77,16 @@ message CompositeFrmPreRiskCheckRequest {
   // Merchant details (id + MCC) for risk scoring.
   optional MerchantDetails merchant_details = 15;
 
-  // Billing party's identity document (e.g. Brazilian CPF/CNPJ). Reuses the
-  // shared CustomerDocumentDetails (payment.proto) / DocumentKind.
-  optional CustomerDocumentDetails billing_document = 16;
+  // Payer's identity document (e.g. Brazilian CPF/CNPJ in `document_number`)
+  // The buyer's document, when distinct, is sent as `DocumentKind.CUSTOMER_CPF` —
+  // billing.primaryDocument and shipping.primaryDocument respectively.
+  optional CustomerDocumentDetails document_details = 16;
 
   // Domain-specific order context (travel, hotel, airline…) as a typed
   // object. Replaces the earlier free-form merchant_transient_info JSON
   // pass-through; producers populate the blocks they have data for, the
   // composite forwards it verbatim onto the granular FRM request.
   optional DomainData domain_data = 17;
-
-  // Shipping party's identity document, when it differs from the billing
-  // party's (e.g. ClearSale shipping.primaryDocument — the order's customerCPF).
-  optional CustomerDocumentDetails shipping_document = 18;
 }
 
 // Composite request for PostRiskCheck that includes all fields from

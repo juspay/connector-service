@@ -429,7 +429,7 @@ pub struct Connectors {
     pub affirm: ConnectorParams,
     pub kount: ConnectorParams,
     pub nsure: ConnectorParams,
-    pub clearsalebr: ConnectorParams,
+    pub clearsale_br: ConnectorParams,
     pub plaid: ConnectorParams,
     pub givepayments: ConnectorParams,
     pub grabpay: ConnectorParams,
@@ -928,7 +928,7 @@ impl Connectors {
         match connector {
             FrmConnectorEnum::Kount => patched.kount.apply(params_patch),
             FrmConnectorEnum::Nsure => patched.nsure.apply(params_patch),
-            FrmConnectorEnum::ClearsaleBR => patched.clearsalebr.apply(params_patch),
+            FrmConnectorEnum::ClearsaleBr => patched.clearsale_br.apply(params_patch),
         }
         Ok(patched)
     }
@@ -4562,6 +4562,7 @@ impl TryFrom<grpc_payment_types::DocumentKind> for crate::payment_method_data::D
             grpc_payment_types::DocumentKind::Cpf => Ok(Self::Cpf),
             grpc_payment_types::DocumentKind::Cnpj => Ok(Self::Cnpj),
             grpc_payment_types::DocumentKind::Psn => Ok(Self::Psn),
+            grpc_payment_types::DocumentKind::CustomerCpf => Ok(Self::CustomerCpf),
             grpc_payment_types::DocumentKind::Other => Ok(Self::Other),
             grpc_payment_types::DocumentKind::Unspecified => Err(()),
         }
@@ -4576,6 +4577,7 @@ impl From<crate::payment_method_data::DocumentKind> for grpc_payment_types::Docu
             crate::payment_method_data::DocumentKind::Cpf => Self::Cpf,
             crate::payment_method_data::DocumentKind::Cnpj => Self::Cnpj,
             crate::payment_method_data::DocumentKind::Psn => Self::Psn,
+            crate::payment_method_data::DocumentKind::CustomerCpf => Self::CustomerCpf,
             crate::payment_method_data::DocumentKind::Other => Self::Other,
         }
     }
@@ -4666,10 +4668,14 @@ impl ForeignTryFrom<grpc_payment_types::DomainData> for connector_types::DomainD
             }),
             hotel_data: domain_data
                 .hotel_data
-                .map(connector_types::HotelData::foreign_from),
+                .into_iter()
+                .map(connector_types::HotelData::foreign_from)
+                .collect(),
             travel_data: domain_data
                 .travel_data
-                .map(connector_types::TravelData::foreign_from),
+                .into_iter()
+                .map(connector_types::TravelData::foreign_from)
+                .collect(),
         })
     }
 }
@@ -4721,23 +4727,12 @@ impl ForeignFrom<grpc_payment_types::TravelData> for connector_types::TravelData
             grpc_payment_types::TravelMode::Ferry => Some(connector_types::TravelMode::Ferry),
             grpc_payment_types::TravelMode::Other => Some(connector_types::TravelMode::Other),
         };
-        let travel_class = match travel.travel_class() {
-            grpc_payment_types::TravelClass::Unspecified => None,
-            grpc_payment_types::TravelClass::Economy => Some(connector_types::TravelClass::Economy),
-            grpc_payment_types::TravelClass::PremiumEconomy => {
-                Some(connector_types::TravelClass::PremiumEconomy)
-            }
-            grpc_payment_types::TravelClass::Business => {
-                Some(connector_types::TravelClass::Business)
-            }
-            grpc_payment_types::TravelClass::First => Some(connector_types::TravelClass::First),
-        };
         let refundability = ticket_refundability_from_proto(travel.refundability());
         Self {
             mode,
             origin: travel.origin,
             destination: travel.destination,
-            travel_class,
+            travel_class: travel.travel_class,
             carrier_name: travel.carrier_name,
             passengers: travel
                 .passengers
@@ -4747,28 +4742,13 @@ impl ForeignFrom<grpc_payment_types::TravelData> for connector_types::TravelData
             number_of_passengers: travel.number_of_passengers,
             travel_date: travel.travel_date,
             refundability,
-            legs: travel
-                .legs
-                .into_iter()
-                .map(connector_types::TravelLeg::foreign_from)
-                .collect(),
-        }
-    }
-}
-
-impl ForeignFrom<grpc_payment_types::TravelLeg> for connector_types::TravelLeg {
-    fn foreign_from(leg: grpc_payment_types::TravelLeg) -> Self {
-        Self {
-            origin: leg.origin,
-            destination: leg.destination,
-            departure_time: leg.departure_time,
-            arrival_time: leg.arrival_time,
-            boarding_time: leg.boarding_time,
-            carrier_code: leg.carrier_code,
-            service_number: leg.service_number,
-            travel_class: leg.travel_class,
-            fare_class: leg.fare_class,
-            seat_class: leg.seat_class,
+            departure_time: travel.departure_time,
+            arrival_time: travel.arrival_time,
+            boarding_time: travel.boarding_time,
+            carrier_code: travel.carrier_code,
+            service_number: travel.service_number,
+            fare_class: travel.fare_class,
+            seat_class: travel.seat_class,
         }
     }
 }
