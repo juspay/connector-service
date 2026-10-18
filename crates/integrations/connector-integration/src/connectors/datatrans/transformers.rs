@@ -847,7 +847,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // payment amount/currency) goes into the `mcp` object.
         let (amount, currency) = resolve_settlement_leg(
             router_data.request.currency_conversion_data.as_ref(),
-            router_data.request.minor_amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -883,7 +883,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             apl,
             mcp: build_mcp_data(
                 router_data.request.currency_conversion_data.as_ref(),
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             )?,
         })
@@ -1573,14 +1573,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ),
             // MIT charges an already-3DS-authenticated alias; no cardholder challenge / redirect.
             three_ds: None,
-        };
+        });
 
         // Datatrans MCP leg placement: the top-level `amount`/`currency` are the merchant
         // settlement leg from the conversion quote; the customer-facing leg (the original
         // payment amount/currency) goes into the `mcp` object.
         let (amount, currency) = resolve_settlement_leg(
             router_data.request.currency_conversion_data.as_ref(),
-            router_data.request.minor_amount,
+            router_data.request.amount.amount,
             router_data.request.currency,
         )?;
 
@@ -1608,7 +1608,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             apl: None,
             mcp: build_mcp_amount(
                 router_data.request.currency_conversion_data.as_ref(),
-                router_data.request.minor_amount,
+                router_data.request.amount.amount,
                 router_data.request.currency,
             ),
         })
@@ -2042,7 +2042,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         // The customer-facing capture amount (what the shopper was charged).
-        let customer_amount = router_data.request.minor_amount_to_capture;
+        let customer_amount = router_data.request.amount_to_capture.amount;
         let customer_currency = router_data.request.currency;
 
         // Datatrans MCP leg placement: the top-level `amount`/`currency` are the merchant
@@ -2156,7 +2156,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let customer_amount = router_data.request.minor_refund_amount;
+        let customer_amount = router_data.request.refund_amount.amount;
         let customer_currency = router_data.request.currency;
         let (amount, currency) = resolve_settlement_leg(
             router_data.request.currency_conversion_data.as_ref(),

@@ -3423,7 +3423,7 @@ message PaymentServiceCaptureRequest {
 
   // Currency conversion quote and decision data passed through the
   // capture flow for future connector-specific processing.
-  optional CurrencyConversionData currency_conversion_data = 15;
+  optional CurrencyConversionData currency_conversion_data = 16;
 }
 
 // Response message for a payment capture operation
@@ -3606,7 +3606,7 @@ message PaymentServiceRefundRequest {
   optional SplitSettlementRefund split_settlement_refund = 21;
 
   // Currency conversion details for the refund's settlement leg.
-  optional CurrencyConversionData currency_conversion_data = 21;
+  optional CurrencyConversionData currency_conversion_data = 22;
 }
 
 // Response message for a refund operation (unified for both Create and Get)
@@ -4074,6 +4074,7 @@ message RecurringPaymentServiceChargeRequest {
   // Channel through which the repeat payment was initiated.
   optional PaymentChannel payment_channel = 38;
 
+
   // Indicates whether this payment is an account funding transaction (AFT).
   // When set to true, recipient_details must also be provided for the flow to be valid.
   optional bool is_account_funding_transaction = 40;
@@ -4084,9 +4085,12 @@ message RecurringPaymentServiceChargeRequest {
   // Additional connector-specific information received from the merchant for the transaction
   optional AdditionalConnectorDetails additional_connector_details = 42;
 
+    
   // Currency conversion quote and decision data passed through the
   // recurring flow for future connector-specific processing.
-  optional CurrencyConversionData currency_conversion_data = 39;
+  optional CurrencyConversionData currency_conversion_data = 43;
+
+
 }
 
 // Response message for repeat payment operation

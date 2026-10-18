@@ -358,7 +358,7 @@ message CompositeRefundRequest {
   optional SplitSettlementRefund split_settlement_refund = 22;
 
   // Currency conversion quote and customer decision supplied for the refund.
-  optional CurrencyConversionData currency_conversion_data = 22;
+  optional CurrencyConversionData currency_conversion_data = 23;
 }
 
 // Response message for composite refund flow.
@@ -521,7 +521,7 @@ message CompositeCaptureRequest {
   optional SplitSettlement split_settlement = 17;
 
   // Currency conversion quote and customer decision supplied for the capture.
-  optional CurrencyConversionData currency_conversion_data = 17;
+  optional CurrencyConversionData currency_conversion_data = 18;
 }
 
 // Response message for composite capture flow.
