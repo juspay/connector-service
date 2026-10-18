@@ -5136,7 +5136,7 @@ pub struct TravelSegment {
     /// Cabin / service class.
     pub travel_class: Option<common_enums::TravelClass>,
     /// Passenger details for this leg.
-    pub passengers: Option<Traveller>,
+    pub passengers: Vec<Traveller>,
 }
 
 /// A passenger on a ground / sea travel booking.

@@ -300,7 +300,7 @@ message TravelSegment {
   optional string origin = 1;                   // Origin station / port
   optional string destination = 2;              // Destination station / port
   optional TravelClass travel_class = 3;        // Cabin / service class
-  optional Traveller passengers = 4;            // Passenger details for this leg
+  repeated Traveller passengers = 4;            // Passenger details for this leg
 }
 
 // Mode of ground / sea transport.

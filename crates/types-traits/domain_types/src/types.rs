@@ -5318,8 +5318,9 @@ impl ForeignTryFrom<grpc_payment_types::TravelSegment> for connector_types::Trav
             travel_class,
             passengers: segment
                 .passengers
+                .into_iter()
                 .map(connector_types::Traveller::foreign_try_from)
-                .transpose()?,
+                .collect::<Result<Vec<_>, _>>()?,
         })
     }
 }
