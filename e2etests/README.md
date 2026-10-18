@@ -1,8 +1,6 @@
 # Hyperswitch → UCS card OTP tests
 
-Playwright API tests exercise fresh-card, No3DS one-time payments through **Hyperswitch → UCS → processor sandbox**. They use our own sandbox credentials per connector. Production traffic patterns inform which lifecycles and request differences matter; committed tests contain no customer inventory, customer credentials, account identifiers, or production payment data.
-
-The first cut has one baseline suite per connector: Adyen, Cybersource, Stripe, PayPal, Authorize.net, and Checkout. Equivalent merchant payment behaviors share a scenario. Additional synthetic request variants target only their relevant lifecycle, rather than repeating every test for each merchant.
+Playwright API tests for No3DS card one-time payments through **Hyperswitch → UCS → processor sandbox**. Supported connectors: Adyen, Cybersource, Stripe, PayPal, Authorize.net, and Checkout.
 
 ## Coverage
 
@@ -15,26 +13,22 @@ The first cut has one baseline suite per connector: Adyen, Cybersource, Stripe, 
 
 **Adyen exception:** UCS does not implement Adyen refund sync. Its test is named `automatic-refund-submission`: it verifies refund submission is accepted (`pending` or `succeeded`) and reports this limit explicitly. It does not establish terminal refund completion, webhook handling, or RSync coverage. Payment sync still runs; connector preflight may intentionally preserve the current status without an external request.
 
-There are 24 baseline scenarios plus six focused variants (30 discovered tests). Adyen variants cover GBP with request metadata/manual capture, and EUR/CHF/AUD/HKD with automatic capture. Stripe adds a descriptor variant. These are synthetic request shapes, not a claim of exact production parity. Sandbox accounts may require account-specific configuration or currency support; failures need investigation rather than silent skipping.
+The suite includes 24 baseline scenarios and six request variants. Adyen variants cover GBP with metadata/manual capture and EUR, CHF, AUD, and HKD with automatic capture. Stripe includes a statement-descriptor variant. The configured sandbox account must support the selected currencies and features.
 
-Each scenario creates an isolated HS test merchant, business profile, MCA and routing rule using the same connector sandbox credentials. The payment's recorded gateway in HS PostgreSQL must equal `unified_connector_service`; native HS connector execution cannot pass this check. Capture, void, sync and refund calls follow that isolated payment. Retries are disabled to avoid automatically resubmitting financial operations.
-
-## Why Playwright
-
-This cut uses Playwright Test's HTTP API client, assertions, polling, filtering, and reporters. It makes normal HTTP calls to HS. No browser is launched and no Web SDK is exercised yet. Later browser scenarios can use Playwright's `page` fixture and reuse the backend setup/evidence helpers.
+Each scenario creates an isolated HS merchant, business profile, connector account, and routing rule. Tests verify payment amounts/statuses and check that the recorded gateway in PostgreSQL is `unified_connector_service`. Test retries are disabled.
 
 ## Local execution
 
-Prerequisites: Node.js 22+, Docker Compose v2, a reachable UCS gRPC server, and our existing HS sandbox `creds.json`. Browser installation is unnecessary for API-only tests. Use dedicated sandbox services; do not point the harness at production.
+Prerequisites: Node.js 22+, Docker Compose v2, a reachable UCS gRPC server, and a sandbox credentials JSON file in the HS connector-credentials format. Browser installation is unnecessary for API-only tests. Use dedicated sandbox services; do not point the harness at production.
 
 ```sh
 cd e2etests
 npm ci
-export CONNECTOR_AUTH_FILE_PATH=/absolute/private/path/to/creds.json
+export CONNECTOR_AUTH_FILE_PATH=/absolute/path/to/creds.json
 
-# Optional download/decryption of the existing HS sandbox credential file.
+# Alternatively, download an encrypted credentials file from S3.
 # Configure AWS credentials/region through the normal environment/profile.
-export CONNECTOR_CREDS_S3_BUCKET_URI='s3://YOUR_PRIVATE_BUCKET'
+export CONNECTOR_CREDS_S3_BUCKET_URI='s3://YOUR_BUCKET'
 export S3_SOURCE_FILE_NAME='YOUR_ENCRYPTED_CREDENTIALS_FILE.json.gpg'
 # Supply CONNECTOR_AUTH_PASSPHRASE through your secret manager/environment.
 npm run credentials
@@ -53,24 +47,24 @@ npm test
 npm run stack:down
 ```
 
-Run connectors in this order for the first validation pass: Adyen, Cybersource, Stripe, PayPal, Authorize.net, Checkout. Filesystem order is not treated as a deployment priority: run each connector explicitly or select a subset using Playwright path filtering.
+Use Playwright path filtering to select a connector, or `E2E_VARIANT` to select a request variant.
 
 `stack:up` reuses HS main's Compose dependencies, config, superposition seed, and migrations. It starts the router image and its dependencies, without compiling HS. It forces the six connectors into `ucs_only_connectors`. Tests create `ucs_enabled=true` when absent and fail if an existing value disables UCS.
 
 Default upstream host ports are 8080 (HS), 5432 (PostgreSQL), 6379 (Redis), and 8081 (Superposition); existing services may conflict. For an existing dedicated sandbox HS instance, configure UCS routing and set `HS_BASE_URL`, `HS_ADMIN_API_KEY`, and `HS_DATABASE_URL`, then skip `stack:up`.
 
-| Variable                   | Purpose/default                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `HS_IMAGE`                 | `docker.juspay.io/juspaydotin/hyperswitch-router:latest`                                 |
-| `HS_REF`                   | `main`; initial config/migrations checkout                                               |
-| `HS_SOURCE_DIR`            | Optional existing HS checkout                                                            |
-| `UCS_BASE_URL`             | Container-to-UCS gRPC endpoint; `http://host.docker.internal:8000`                       |
-| `HS_BASE_URL`              | Runner-to-HS API endpoint; `http://localhost:8080`                                       |
-| `HS_ADMIN_API_KEY`         | Local config default `test_admin`                                                        |
-| `HS_DATABASE_URL`          | `postgresql://db_user:db_pass@localhost:5432/hyperswitch_db`                             |
-| `CONNECTOR_AUTH_FILE_PATH` | Private HS sandbox credentials JSON; accepts `CYPRESS_CONNECTOR_AUTH_FILE_PATH` fallback |
-| `E2E_VARIANT`              | Optional synthetic variant ID such as `baseline`                                         |
-| `E2E_OVERRIDES_FILE`       | Optional private JSON file for our sandbox configuration                                 |
+| Variable                   | Purpose/default                                                               |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `HS_IMAGE`                 | `docker.juspay.io/juspaydotin/hyperswitch-router:latest`                      |
+| `HS_REF`                   | `main`; initial config/migrations checkout                                    |
+| `HS_SOURCE_DIR`            | Optional existing HS checkout                                                 |
+| `UCS_BASE_URL`             | Container-to-UCS gRPC endpoint; `http://host.docker.internal:8000`            |
+| `HS_BASE_URL`              | Runner-to-HS API endpoint; `http://localhost:8080`                            |
+| `HS_ADMIN_API_KEY`         | Local config default `test_admin`                                             |
+| `HS_DATABASE_URL`          | `postgresql://db_user:db_pass@localhost:5432/hyperswitch_db`                  |
+| `CONNECTOR_AUTH_FILE_PATH` | Sandbox credentials JSON; accepts `CYPRESS_CONNECTOR_AUTH_FILE_PATH` fallback |
+| `E2E_VARIANT`              | Optional request variant ID such as `baseline`                                |
+| `E2E_OVERRIDES_FILE`       | Optional JSON file with sandbox configuration overrides                       |
 
 For reproducibility, use an HS image digest/release and matching source revision. Floating `latest` and `main` may drift. `.runtime/versions.json` records the requested image, UCS endpoint and config checkout commit. The checkout is retained between runs; update it or supply `HS_SOURCE_DIR` when changing versions. Accounts remain in the test database for debugging; `stack:down` preserves volumes.
 
@@ -90,25 +84,27 @@ e2etests/
     authorizedotnet/card-no3ds/payment.spec.ts
     checkout/card-no3ds/payment.spec.ts
   support/
-    cases.ts                 # Lifecycle selection and explicit verification limits
+    cases.ts                 # Lifecycle definitions and verification modes
     otp-scenarios.ts         # Shared sandbox setup and payment assertions
-    config.ts                # Private credentials and small configuration patches
+    config.ts                # Credential loading and configuration overrides
     hs.ts                    # HS HTTP client and database gateway verification
-  scripts/                   # Docker setup and private credential download
+  scripts/                   # Docker setup and credential download
   unit/                      # Offline harness checks; no processor calls
   playwright.config.ts
 ```
 
-Add a distinct request shape to the relevant connector's `variants.ts`, select the lifecycle(s) needed, and call `otpSuite(connector, variants)` from its spec. Use public connector API fields and synthetic data. Keep real customer identities, mappings, credentials, tokens, payment IDs and production request samples outside the repository. CIT/MIT, wallets, 3DS, SDK/browser flows and nightly Jenkins wiring are later extensions.
+Add request variants in the connector's `variants.ts`, select the applicable lifecycles, and pass them to `otpSuite(connector, variants)` in its spec. Use synthetic test data.
 
-`overrides.example.json` demonstrates the optional private configuration file. Copy it to an ignored `overrides.local.json`, replace placeholders with our sandbox account settings, and set `E2E_OVERRIDES_FILE`. The format has:
+Copy `overrides.example.json` to an ignored `overrides.local.json`, configure the sandbox account, and set `E2E_OVERRIDES_FILE`:
 
-- `connectors.<connector>`: our sandbox account's `credential` selector, connector metadata, business-profile flags and common payment fields.
-- `variants.<connector>/<synthetic-variant>`: request metadata/currency or configuration differences for that variant. Variants cannot select credentials.
+- `connectors.<connector>`: credential-entry selector, connector metadata, business-profile flags, and common payment fields.
+- `variants.<connector>/<variant>`: payment/configuration overrides for a named request variant. Credentials are selected at connector level.
 
-Resolution: shared sandbox defaults → external connector settings → built-in request variant → external variant patch. Nested objects merge, arrays replace, and `null` clears a field. Connector metadata starts with metadata from our selected credential entry. Credentials themselves always come from the private credential file. Guards reject mandate/setup fields, wallet/3DS changes, and the old merchant-inventory format.
+Resolution order: shared defaults → connector settings → built-in request variant → variant overrides. Nested objects merge, arrays replace, and `null` clears a field. Connector metadata also inherits values from the selected credential entry. OTP guards reject mandate/setup fields and wallet/3DS requests.
 
-## Reports and validation limits
+Keep credential files and environment-specific overrides out of version control.
+
+## Reports and checks
 
 ```sh
 npm run check       # TypeScript only; no payment verification
@@ -117,6 +113,12 @@ npm run list        # Discover scenarios only
 npm test            # Live HS → UCS → processor sandbox tests
 ```
 
-`npm test` automatically generates terminal results, HTML at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Reports identify the connector, request variant and lifecycle, with an explicit annotation for live sandbox execution and the Adyen refund coverage limit. Passing tests attach gateway evidence without payment IDs, account identifiers, credential values, or raw requests/responses. API traces, screenshots and videos are disabled. Keep runtime reports private; do not commit or publish them automatically.
+`npm test` generates terminal results, an HTML report at `playwright-report/`, and JUnit XML at `test-results/results.xml`. Reports include the connector, variant, lifecycle, and verification mode. Gateway evidence excludes credentials and raw API payloads. API traces, screenshots, and videos are disabled.
 
-A passing typecheck, offline test, or discovered scenario does not establish that a payment passed. Before treating this suite as deployment evidence, actually run the selected sandbox lifecycles against the UCS build being deployed and review failures and explicit coverage limits. Immediate refunds may need processor settlement; pending refunds do not pass the terminal verification cases. There is no Jenkins trigger in this PR.
+Open the HTML report with:
+
+```sh
+npx playwright show-report
+```
+
+Type checks, unit tests, and test discovery do not execute sandbox payments. Run `npm test` against the target UCS build to validate payment behavior. Refund completion may depend on processor settlement; pending refunds do not satisfy tests that require a terminal result.
