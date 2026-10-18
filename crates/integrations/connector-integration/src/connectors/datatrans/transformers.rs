@@ -243,6 +243,7 @@ pub struct RedirectUrls {
 #[serde(rename_all = "camelCase")]
 pub struct DatatransPaymentsRequest<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+    Mcp = DatatransMcp,
 > {
     pub currency: Currency,
     pub refno: String,
@@ -265,7 +266,7 @@ pub struct DatatransPaymentsRequest<
     #[serde(rename = "APL", skip_serializing_if = "Option::is_none")]
     pub apl: Option<DatatransApplePayRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mcp: Option<DatatransMcp>,
+    pub mcp: Option<Mcp>,
 }
 
 /// Datatrans multi-currency processing (MCP) object.
@@ -287,7 +288,7 @@ pub struct DatatransMcp {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CaptureMCPData {
+pub struct DatatransMcpAmount {
     pub currency: Currency,
     pub amount: MinorUnit,
 }
@@ -305,15 +306,15 @@ fn get_mcp_quote(
         })
 }
 
-/// Builds the slimmer `mcp` object for a Capture (settle) request. The customer-facing
-/// leg — the original capture amount/currency — is echoed here; the settlement leg stays
+/// Builds the slimmer `mcp` object for repeat payment, capture and refund. The
+/// customer-facing amount/currency is echoed here; the settlement leg stays
 /// on the request's top-level `amount`/`currency`.
-fn build_capture_mcp_data(
+fn build_mcp_amount(
     currency_conversion_data: Option<&CurrencyConversionData>,
     customer_amount: MinorUnit,
     customer_currency: Currency,
-) -> Option<CaptureMCPData> {
-    get_mcp_quote(currency_conversion_data).map(|_| CaptureMCPData {
+) -> Option<DatatransMcpAmount> {
+    get_mcp_quote(currency_conversion_data).map(|_| DatatransMcpAmount {
         currency: customer_currency,
         amount: customer_amount,
     })
@@ -487,7 +488,8 @@ pub type DatatransSetupMandateResponse = DatatransPaymentsResponse;
 /// MIT / RepeatPayment reuses the Authorize request and response shapes: the stored alias
 /// is charged via the same `/v1/transactions/authorize` endpoint. These aliases give the
 /// Bridge macro distinct per-flow templating type names without duplicating the structs.
-pub type DatatransRepeatPaymentRequest<T> = DatatransPaymentsRequest<T>;
+/// Repeat payments use the amount/currency-only MCP shape, as capture and refund do.
+pub type DatatransRepeatPaymentRequest<T> = DatatransPaymentsRequest<T, DatatransMcpAmount>;
 pub type DatatransRepeatPaymentResponse = DatatransPaymentsResponse;
 
 // Payment options for Datatrans API
@@ -1149,7 +1151,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for DatatransPaymentsRequest<T>
+    > for DatatransRepeatPaymentRequest<T>
 {
     type Error = error_stack::Report<IntegrationError>;
 
@@ -1265,11 +1267,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             option: None,
             pay: None,
             apl: None,
-            mcp: build_mcp_data(
+            mcp: build_mcp_amount(
                 router_data.request.currency_conversion_data.as_ref(),
                 router_data.request.minor_amount,
                 router_data.request.currency,
-            )?,
+            ),
         })
     }
 }
@@ -1649,7 +1651,7 @@ pub struct DatatransCaptureRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refno2: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mcp: Option<CaptureMCPData>,
+    pub mcp: Option<DatatransMcpAmount>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -1689,7 +1691,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .clone(),
             refno2: None,
-            mcp: build_capture_mcp_data(
+            mcp: build_mcp_amount(
                 router_data.request.currency_conversion_data.as_ref(),
                 customer_amount,
                 customer_currency,
@@ -1762,6 +1764,8 @@ pub struct DatatransRefundRequest {
     pub refno: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refno2: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mcp: Option<DatatransMcpAmount>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -1781,16 +1785,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        // Get the refund amount from RefundsData
-        let amount = router_data.request.minor_refund_amount;
+        let customer_amount = router_data.request.minor_refund_amount;
+        let customer_currency = router_data.request.currency;
+        let (amount, currency) = resolve_settlement_leg(
+            router_data.request.currency_conversion_data.as_ref(),
+            customer_amount,
+            customer_currency,
+        )?;
 
         Ok(Self {
             amount,
-            currency: router_data.request.currency,
+            currency,
             // Send the refund's own id as the Datatrans `refno` (mirrors HS Direct, which uses
             // `refund_id`), so the credit is reconciled against the refund rather than the payment.
             refno: router_data.request.refund_id.clone(),
             refno2: None,
+            mcp: build_mcp_amount(
+                router_data.request.currency_conversion_data.as_ref(),
+                customer_amount,
+                customer_currency,
+            ),
         })
     }
 }

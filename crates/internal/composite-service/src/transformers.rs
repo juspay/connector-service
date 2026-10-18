@@ -490,6 +490,7 @@ impl
             connector_order_id: item.connector_order_id.clone(),
             payment_method: item.payment_method.clone(),
             split_refunds: item.split_refunds.clone(),
+            currency_conversion_data: item.currency_conversion_data.clone(),
         }
     }
 }

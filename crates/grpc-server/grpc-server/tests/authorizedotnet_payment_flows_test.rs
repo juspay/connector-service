@@ -467,6 +467,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     let refund_metadata_json = serde_json::to_string(&refund_metadata_map).unwrap();
 
     PaymentServiceRefundRequest {
+        currency_conversion_data: None,
         merchant_refund_id: Some(generate_unique_request_ref_id("refund")),
         connector_transaction_id: transaction_id.to_string(),
         payment_amount: TEST_AMOUNT,

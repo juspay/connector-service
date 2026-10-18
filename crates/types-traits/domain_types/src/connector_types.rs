@@ -3433,6 +3433,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RedirectResponseSecrets>
 #[derive(Debug, Default, Clone)]
 pub struct RefundsData {
     pub refund_id: String,
+    pub currency_conversion_data: Option<CurrencyConversionData>,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
     pub customer_id: Option<String>,
