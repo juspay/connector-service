@@ -97,6 +97,12 @@ message CurrencyConversionQuote {
 
   // Time when the quote expires, in Unix epoch seconds.
   optional int64 expires_at = 11;
+
+  // Provider-defined code describing the reason or classification for this currency conversion.
+  optional string conversion_reason_code = 12;
+
+  // Identifier assigned to the user by the currency conversion provider.
+  optional string user_id = 13;
 }
 
 // Identifies the currency conversion model used for the payment.
@@ -3414,6 +3420,10 @@ message PaymentServiceCaptureRequest {
   // Unified, connector-agnostic split settlement: a marketplace/platform cut plus
   // N per-vendor splits. Supersedes split_payments; new connectors read this field.
   optional SplitSettlement split_settlement = 15;
+
+  // Currency conversion quote and decision data passed through the
+  // capture flow for future connector-specific processing.
+  optional CurrencyConversionData currency_conversion_data = 16;
 }
 
 // Response message for a payment capture operation
@@ -3594,6 +3604,9 @@ message PaymentServiceRefundRequest {
   optional SplitRefundsDetails split_refunds = 20;
   // Split settlement refund (supersedes split_refunds).
   optional SplitSettlementRefund split_settlement_refund = 21;
+
+  // Currency conversion details for the refund's settlement leg.
+  optional CurrencyConversionData currency_conversion_data = 22;
 }
 
 // Response message for a refund operation (unified for both Create and Get)
@@ -4061,6 +4074,7 @@ message RecurringPaymentServiceChargeRequest {
   // Channel through which the repeat payment was initiated.
   optional PaymentChannel payment_channel = 38;
 
+
   // Indicates whether this payment is an account funding transaction (AFT).
   // When set to true, recipient_details must also be provided for the flow to be valid.
   optional bool is_account_funding_transaction = 40;
@@ -4070,6 +4084,13 @@ message RecurringPaymentServiceChargeRequest {
 
   // Additional connector-specific information received from the merchant for the transaction
   optional AdditionalConnectorDetails additional_connector_details = 42;
+
+    
+  // Currency conversion quote and decision data passed through the
+  // recurring flow for future connector-specific processing.
+  optional CurrencyConversionData currency_conversion_data = 43;
+
+
 }
 
 // Response message for repeat payment operation

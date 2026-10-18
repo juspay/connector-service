@@ -4749,6 +4749,8 @@ impl ForeignTryFrom<grpc_payment_types::CurrencyConversionQuote>
                 .transpose()?,
             quoted_at: value.quoted_at,
             expires_at: value.expires_at,
+            conversion_reason_code: value.conversion_reason_code,
+            user_id: value.user_id,
         })
     }
 }
@@ -5029,8 +5031,8 @@ impl<
         let merchant_config_currency = amount.currency;
 
         let connector_feature_data = value
-            .clone()
             .connector_feature_data
+            .clone()
             .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
             .transpose()?;
         let merchant_account_id = connector_feature_data
@@ -11906,6 +11908,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .transpose()?
                 .map(Box::new),
             refund_id: extract_connector_request_reference_id(&value.merchant_refund_id.clone()),
+            currency_conversion_data: value
+                .currency_conversion_data
+                .map(connector_types::CurrencyConversionData::foreign_try_from)
+                .transpose()?,
             connector_transaction_id,
             connector_refund_id: None, // refund_id field is used as refund_id, not connector_refund_id
             customer_id: value.customer_id.clone(),
@@ -12422,6 +12428,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
             connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
+                .transpose()?,
+            currency_conversion_data: value
+                .currency_conversion_data
+                .map(connector_types::CurrencyConversionData::foreign_try_from)
                 .transpose()?,
             merchant_order_id: value.merchant_order_id,
             order_tax_amount: value
@@ -16659,6 +16669,10 @@ impl<
             }),
             merchant_account_id: value.merchant_account_id,
             merchant_configured_currency,
+            currency_conversion_data: value
+                .currency_conversion_data
+                .map(connector_types::CurrencyConversionData::foreign_try_from)
+                .transpose()?,
             additional_payment_data: value
                 .additional_payment_data
                 .and_then(Option::<AdditionalPaymentData>::foreign_from),

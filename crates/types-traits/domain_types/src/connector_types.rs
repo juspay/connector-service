@@ -3666,6 +3666,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RedirectResponseSecrets>
 #[derive(Debug, Default, Clone)]
 pub struct RefundsData {
     pub refund_id: String,
+    pub currency_conversion_data: Option<CurrencyConversionData>,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
     pub customer_id: Option<String>,
@@ -3750,6 +3751,7 @@ pub struct PaymentsCaptureData {
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_feature_data: Option<SecretSerdeValue>,
+    pub currency_conversion_data: Option<CurrencyConversionData>,
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
@@ -3943,6 +3945,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub connector_testing_data: Option<SecretSerdeValue>,
     pub merchant_account_id: Option<Secret<String>>,
     pub merchant_configured_currency: Option<Currency>,
+    pub currency_conversion_data: Option<CurrencyConversionData>,
     pub additional_payment_data: Option<AdditionalPaymentData>,
     /// Partner / merchant application identifiers (e.g. Adyen applicationInfo).
     pub partner_merchant_identifier_details: Option<PartnerMerchantIdentifierDetails>,
@@ -4891,6 +4894,8 @@ pub struct CurrencyConversionQuote {
     pub currency_conversion_type: Option<CurrencyConversionType>,
     pub quoted_at: Option<i64>,
     pub expires_at: Option<i64>,
+    pub conversion_reason_code: Option<String>,
+    pub user_id: Option<String>,
 }
 
 /// A validated currency conversion decision and the quote presented to the cardholder.
