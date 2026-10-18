@@ -251,6 +251,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                     .ok_or(WebhookError::WebhookReferenceIdNotFound)?,
                             ),
                             merchant_transaction_id: None,
+                            connector_preprocessing_id: None,
                         }),
                     )),
                     Some(NuveiTransactionType::Credit) => Ok(Some(
